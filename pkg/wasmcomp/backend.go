@@ -255,6 +255,9 @@ func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, uppe
 }
 
 func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[int]int) {
+	// Enable line packing for function bodies
+	c.packLines = true
+	c.packer = newLinePacker(&c.sb, c.indent)
 	name := fmt.Sprintf("f%d", funcIdx)
 	if f.ExportName != "" {
 		name = sanitizeABAP(f.ExportName)
@@ -308,6 +311,9 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 	}
 
 	c.indent--
+	c.flushPacker()
+	c.packLines = false
+	c.packer = nil
 	c.line("ENDFORM.")
 	c.line("")
 }

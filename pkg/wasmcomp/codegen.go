@@ -33,6 +33,10 @@ type compiler struct {
 	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
 	useFUGR       bool
 	fugrRedirects map[int]int
+
+	// Line packing: multiple statements per line
+	packLines bool
+	packer    *linePacker
 }
 
 func (c *compiler) emit() string {
@@ -310,6 +314,10 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	// Branch depth flag (for multi-level br)
 	c.line("DATA lv_br TYPE i.")
 
+	// Enable line packing for function body
+	c.packLines = true
+	c.packer = newLinePacker(&c.sb, c.indent)
+
 	// Emit instructions
 	stack := &virtualStack{}
 	c.blockStack = nil // reset block stack for each function
@@ -319,6 +327,10 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	if len(f.Type.Results) > 0 && stack.depth > 0 {
 		c.line("rv = %s.", stack.peek())
 	}
+
+	c.flushPacker()
+	c.packLines = false
+	c.packer = nil
 
 	c.indent--
 	c.line("ENDMETHOD.")
@@ -1413,10 +1425,23 @@ func (s *virtualStack) peek() string {
 // --- Helpers ---
 
 func (c *compiler) line(format string, args ...any) {
+	stmt := fmt.Sprintf(format, args...)
+	if c.packLines && c.packer != nil {
+		c.packer.setIndent(c.indent)
+		c.packer.add(stmt)
+		return
+	}
 	prefix := strings.Repeat("  ", c.indent)
 	c.sb.WriteString(prefix)
-	fmt.Fprintf(&c.sb, format, args...)
+	c.sb.WriteString(stmt)
 	c.sb.WriteByte('\n')
+}
+
+// flushPacker writes any pending packed statements.
+func (c *compiler) flushPacker() {
+	if c.packer != nil {
+		c.packer.flush()
+	}
 }
 
 func sanitizeABAP(name string) string {
