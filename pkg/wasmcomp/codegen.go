@@ -29,6 +29,10 @@ type compiler struct {
 	sb         strings.Builder
 	indent     int
 	blockStack []blockKind // tracks what to close on OpEnd
+
+	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
+	useFUGR       bool
+	fugrRedirects map[int]int
 }
 
 func (c *compiler) emit() string {
@@ -357,10 +361,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %s.", c.localName(f, inst.LocalIndex), v)
 		case OpGlobalGet:
 			v := stack.push()
-			c.line("%s = mv_g%d.", v, inst.GlobalIndex)
+			c.line("%s = %s%d.", v, c.globalPrefix(), inst.GlobalIndex)
 		case OpGlobalSet:
 			v := stack.pop()
-			c.line("mv_g%d = %s.", inst.GlobalIndex, v)
+			c.line("%s%d = %s.", c.globalPrefix(), inst.GlobalIndex, v)
 
 		// i32 arithmetic
 		case OpI32Add:
@@ -503,7 +507,7 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		case OpMemorySize:
 			r := stack.push()
-			c.line("%s = mv_mem_pages.", r)
+			c.line("%s = %s.", r, c.memPagesVar())
 		case OpMemoryGrow:
 			pages := stack.pop()
 			r := stack.push()
@@ -1129,10 +1133,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 	// Determine if it's an import or local function
 	if funcIndex < c.mod.NumImportedFuncs {
-		// Import call
 		imp := c.findImport(funcIndex)
 		if imp != nil {
-			c.line("\" IMPORT: %s.%s (TODO)", imp.Module, imp.Name)
+			// WASI imports — emit stub based on function name
+			c.emitWASICall(imp, stack)
 		}
 		return
 	}
@@ -1141,6 +1145,13 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 	if localIdx >= len(c.mod.Functions) {
 		c.line("\" ERROR: invalid function index %d", funcIndex)
 		return
+	}
+
+	// Check dedup redirect
+	if c.useFUGR && c.fugrRedirects != nil {
+		if canonIdx, ok := c.fugrRedirects[localIdx]; ok {
+			localIdx = canonIdx
+		}
 	}
 
 	target := &c.mod.Functions[localIdx]
@@ -1154,32 +1165,50 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 		args[i] = stack.pop()
 	}
 
-	// Build call
 	name := fmt.Sprintf("f%d", localIdx)
 	if target.ExportName != "" {
 		name = sanitizeABAP(target.ExportName)
 	}
 
-	if len(target.Type.Results) > 0 {
-		result := stack.push()
-		if len(args) > 0 {
-			var paramParts []string
-			for i, a := range args {
-				paramParts = append(paramParts, fmt.Sprintf("p%d = %s", i, a))
+	if c.useFUGR {
+		// PERFORM-based call
+		if len(target.Type.Results) > 0 {
+			result := stack.push()
+			if len(args) > 0 {
+				c.line("PERFORM %s USING %s CHANGING %s.", name, strings.Join(args, " "), result)
+			} else {
+				c.line("PERFORM %s CHANGING %s.", name, result)
 			}
-			c.line("%s = %s( %s ).", result, name, strings.Join(paramParts, " "))
 		} else {
-			c.line("%s = %s( ).", result, name)
+			if len(args) > 0 {
+				c.line("PERFORM %s USING %s.", name, strings.Join(args, " "))
+			} else {
+				c.line("PERFORM %s.", name)
+			}
 		}
 	} else {
-		if len(args) > 0 {
-			var paramParts []string
-			for i, a := range args {
-				paramParts = append(paramParts, fmt.Sprintf("p%d = %s", i, a))
+		// Method-based call
+		if len(target.Type.Results) > 0 {
+			result := stack.push()
+			if len(args) > 0 {
+				var paramParts []string
+				for i, a := range args {
+					paramParts = append(paramParts, fmt.Sprintf("p%d = %s", i, a))
+				}
+				c.line("%s = %s( %s ).", result, name, strings.Join(paramParts, " "))
+			} else {
+				c.line("%s = %s( ).", result, name)
 			}
-			c.line("%s( %s ).", name, strings.Join(paramParts, " "))
 		} else {
-			c.line("%s( ).", name)
+			if len(args) > 0 {
+				var paramParts []string
+				for i, a := range args {
+					paramParts = append(paramParts, fmt.Sprintf("p%d = %s", i, a))
+				}
+				c.line("%s( %s ).", name, strings.Join(paramParts, " "))
+			} else {
+				c.line("%s( ).", name)
+			}
 		}
 	}
 }
@@ -1218,6 +1247,102 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 	}
 }
 
+func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
+	if imp.Type == nil {
+		c.line("\" IMPORT: %s.%s (no type info)", imp.Module, imp.Name)
+		return
+	}
+
+	// Pop arguments
+	args := make([]string, len(imp.Type.Params))
+	for i := len(args) - 1; i >= 0; i-- {
+		args[i] = stack.pop()
+	}
+
+	mem := c.memVar()
+
+	switch imp.Name {
+	case "fd_write":
+		// fd_write(fd, iovs_ptr, iovs_len, nwritten_ptr) -> errno
+		result := stack.push()
+		c.line("\" WASI fd_write: fd=%s iovs=%s iovs_len=%s nwritten=%s", args[0], args[1], args[2], args[3])
+		c.line("DATA lv_wasi_written TYPE i.")
+		c.line("DATA lv_wasi_iov_ptr TYPE i.")
+		c.line("DATA lv_wasi_iov_len TYPE i.")
+		c.line("DATA lv_wasi_str_ptr TYPE i.")
+		c.line("DATA lv_wasi_str_len TYPE i.")
+		c.line("lv_wasi_written = 0.")
+		c.line("DO %s TIMES.", args[2])
+		c.indent++
+		c.line("lv_wasi_iov_ptr = %s + ( sy-index - 1 ) * 8.", args[1])
+		c.line("PERFORM mem_ld_i32 USING lv_wasi_iov_ptr CHANGING lv_wasi_str_ptr.")
+		c.line("PERFORM mem_ld_i32 USING lv_wasi_iov_ptr + 4 CHANGING lv_wasi_str_len.")
+		c.line("IF lv_wasi_str_len > 0.")
+		c.indent++
+		c.line("DATA(lv_wasi_bytes) = %s+lv_wasi_str_ptr(lv_wasi_str_len).", mem)
+		c.line("\" Output bytes (could be WRITE or collect in buffer)")
+		c.indent--
+		c.line("ENDIF.")
+		c.line("lv_wasi_written = lv_wasi_written + lv_wasi_str_len.")
+		c.indent--
+		c.line("ENDDO.")
+		c.line("PERFORM mem_st_i32 USING %s lv_wasi_written.", args[3])
+		c.line("%s = 0. \" errno = success", result)
+
+	case "fd_read":
+		result := stack.push()
+		c.line("\" WASI fd_read: stub (return 0 bytes read)")
+		c.line("PERFORM mem_st_i32 USING %s 0.", args[3])
+		c.line("%s = 0.", result)
+
+	case "fd_close":
+		result := stack.push()
+		c.line("%s = 0. \" WASI fd_close: stub", result)
+
+	case "fd_seek":
+		result := stack.push()
+		c.line("%s = 8. \" WASI fd_seek: EBADF", result)
+
+	case "fd_fdstat_get":
+		result := stack.push()
+		c.line("\" WASI fd_fdstat_get: return filetype=regular")
+		c.line("PERFORM mem_st_i32_8 USING %s 4.", args[1]) // filetype = regular file
+		c.line("%s = 0.", result)
+
+	case "clock_time_get":
+		result := stack.push()
+		c.line("\" WASI clock_time_get: return current time in nanoseconds")
+		c.line("GET TIME STAMP FIELD DATA(lv_wasi_ts).")
+		c.line("DATA(lv_wasi_ns) = CONV int8( lv_wasi_ts * 1000000000 ).")
+		c.line("zcl_wasm_rt=>mem_st_i64( EXPORTING iv_val = lv_wasi_ns iv_addr = %s CHANGING cv_mem = %s ).", args[2], mem)
+		c.line("%s = 0.", result)
+
+	case "environ_sizes_get":
+		result := stack.push()
+		c.line("\" WASI environ_sizes_get: 0 env vars")
+		c.line("PERFORM mem_st_i32 USING %s 0.", args[0])
+		c.line("PERFORM mem_st_i32 USING %s 0.", args[1])
+		c.line("%s = 0.", result)
+
+	case "environ_get":
+		result := stack.push()
+		c.line("%s = 0. \" WASI environ_get: stub", result)
+
+	case "proc_exit":
+		c.line("\" WASI proc_exit: %s", args[0])
+		c.line("RETURN. \" exit")
+
+	default:
+		// Pop all args, push result if needed
+		if len(imp.Type.Results) > 0 {
+			result := stack.push()
+			c.line("%s = 0. \" WASI %s.%s: unimplemented stub", result, imp.Module, imp.Name)
+		} else {
+			c.line("\" WASI %s.%s: unimplemented stub", imp.Module, imp.Name)
+		}
+	}
+}
+
 func (c *compiler) findImport(funcIndex int) *Import {
 	for i := range c.mod.Imports {
 		if c.mod.Imports[i].Kind == 0 && c.mod.Imports[i].FuncIndex == funcIndex {
@@ -1225,6 +1350,30 @@ func (c *compiler) findImport(funcIndex int) *Import {
 		}
 	}
 	return nil
+}
+
+// globalPrefix returns "gv_g" for FUGR mode, "mv_g" for class mode.
+func (c *compiler) globalPrefix() string {
+	if c.useFUGR {
+		return "gv_g"
+	}
+	return "mv_g"
+}
+
+// memVar returns the memory variable name.
+func (c *compiler) memVar() string {
+	if c.useFUGR {
+		return "gv_mem"
+	}
+	return "mv_mem"
+}
+
+// memPagesVar returns the memory pages variable name.
+func (c *compiler) memPagesVar() string {
+	if c.useFUGR {
+		return "gv_mem_pages"
+	}
+	return "mv_mem_pages"
 }
 
 func (c *compiler) localName(f *Function, index int) string {
