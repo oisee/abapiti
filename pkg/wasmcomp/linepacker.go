@@ -87,33 +87,20 @@ func (lp *linePacker) setIndent(indent int) {
 	}
 }
 
-// mustOwnLine returns true for statements that need their own line.
+// mustOwnLine returns true for statements that TRULY need their own line.
+// For machine-generated code, only structural boundaries matter.
+// IF/ELSE/ENDIF/DO/ENDDO/CASE etc. can all pack onto the same line.
 func mustOwnLine(stmt string) bool {
-	// Control flow keywords that affect structure
 	for _, kw := range []string{
-		"IF ", "ELSE.", "ELSEIF ", "ENDIF.",
-		"DO ", "DO.", "ENDDO.",
-		"WHILE ", "ENDWHILE.",
-		"CASE ", "WHEN ", "ENDCASE.",
-		"LOOP ", "ENDLOOP.",
-		"TRY.", "CATCH ", "ENDTRY.",
+		// Only top-level structural boundaries
 		"FORM ", "ENDFORM.",
 		"METHOD ", "ENDMETHOD.",
 		"CLASS ", "ENDCLASS.",
 		"FUNCTION ", "ENDFUNCTION.",
-		"RETURN.",
-		"RAISE ",
-		"PERFORM wasm_init",
 	} {
 		if strings.HasPrefix(stmt, kw) {
 			return true
 		}
 	}
-
-	// Comments
-	if strings.HasPrefix(stmt, "\"") {
-		return true
-	}
-
 	return false
 }
