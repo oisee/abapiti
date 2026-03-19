@@ -296,26 +296,12 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	c.line("METHOD %s.", sanitizeABAP(name))
 	c.indent++
 
-	// Enable line packing BEFORE declarations — DATA packs too
+	// Emit chained DATA declaration
+	c.line("%s", emitChainedDATA(f))
+
+	// Enable line packing for code
 	c.packLines = true
 	c.packer = newLinePacker(&c.sb, c.indent)
-
-	// All params + locals as local variables
-	totalLocals := len(f.Type.Params) + len(f.Locals)
-	for i := 0; i < len(f.Locals); i++ {
-		localIdx := len(f.Type.Params) + i
-		c.line("DATA l%d TYPE %s.", localIdx, f.Locals[i].ABAPType())
-	}
-
-	// Stack variables
-	maxStack := estimateMaxStack(f.Code)
-	for i := 0; i < maxStack; i++ {
-		c.line("DATA s%d TYPE i.", i)
-	}
-
-	_ = totalLocals
-
-	c.line("DATA lv_br TYPE i.")
 
 	// Emit instructions
 	stack := &virtualStack{}
@@ -1361,6 +1347,51 @@ func (c *compiler) findImport(funcIndex int) *Import {
 		}
 	}
 	return nil
+}
+
+// emitChainedDATA produces a single chained DATA: statement for all locals + stack vars.
+func emitChainedDATA(f *Function) string {
+	var parts []string
+
+	// Declared locals (after params)
+	for i := 0; i < len(f.Locals); i++ {
+		localIdx := len(f.Type.Params) + i
+		parts = append(parts, fmt.Sprintf("l%d TYPE %s", localIdx, f.Locals[i].ABAPType()))
+	}
+
+	// Stack variables
+	maxStack := estimateMaxStack(f.Code)
+	for i := 0; i < maxStack; i++ {
+		parts = append(parts, fmt.Sprintf("s%d TYPE i", i))
+	}
+
+	// Branch depth flag
+	parts = append(parts, "lv_br TYPE i")
+
+	if len(parts) == 0 {
+		return "DATA lv_br TYPE i."
+	}
+
+	// Build chained declaration, splitting across lines if needed
+	var lines []string
+	current := "DATA: "
+	for i, p := range parts {
+		suffix := ","
+		if i == len(parts)-1 {
+			suffix = "."
+		}
+		entry := p + suffix
+		// If adding this entry would exceed line limit, start new line
+		if len(current)+len(entry) > 235 {
+			// End current line with trailing comma already there
+			lines = append(lines, current)
+			current = "      " // continuation indent
+		}
+		current += " " + entry
+	}
+	lines = append(lines, current)
+
+	return strings.Join(lines, "\n")
 }
 
 // globalPrefix returns "gv_g" for FUGR mode, "mv_g" for class mode.

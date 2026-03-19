@@ -283,22 +283,12 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 	}
 	c.indent++
 
-	// Enable packing BEFORE declarations
+	// Chained DATA declaration
+	c.line("%s", emitChainedDATA(f))
+
+	// Enable packing for code
 	c.packLines = true
 	c.packer = newLinePacker(&c.sb, c.indent)
-
-	// Locals
-	for i := 0; i < len(f.Locals); i++ {
-		localIdx := len(f.Type.Params) + i
-		c.line("DATA l%d TYPE %s.", localIdx, f.Locals[i].ABAPType())
-	}
-
-	// Stack vars
-	maxStack := estimateMaxStack(f.Code)
-	for i := 0; i < maxStack; i++ {
-		c.line("DATA s%d TYPE i.", i)
-	}
-	c.line("DATA lv_br TYPE i.")
 
 	// Emit instructions with FUGR-style
 	stack := &virtualStack{}
