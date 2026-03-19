@@ -296,6 +296,10 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	c.line("METHOD %s.", sanitizeABAP(name))
 	c.indent++
 
+	// Enable line packing BEFORE declarations — DATA packs too
+	c.packLines = true
+	c.packer = newLinePacker(&c.sb, c.indent)
+
 	// All params + locals as local variables
 	totalLocals := len(f.Type.Params) + len(f.Locals)
 	for i := 0; i < len(f.Locals); i++ {
@@ -303,20 +307,15 @@ func (c *compiler) emitFunction(name string, f *Function) {
 		c.line("DATA l%d TYPE %s.", localIdx, f.Locals[i].ABAPType())
 	}
 
-	// Stack variables (we'll need to figure out the max stack depth)
+	// Stack variables
 	maxStack := estimateMaxStack(f.Code)
 	for i := 0; i < maxStack; i++ {
-		c.line("DATA s%d TYPE i.", i) // simplified: all TYPE i for now
+		c.line("DATA s%d TYPE i.", i)
 	}
 
 	_ = totalLocals
 
-	// Branch depth flag (for multi-level br)
 	c.line("DATA lv_br TYPE i.")
-
-	// Enable line packing for function body
-	c.packLines = true
-	c.packer = newLinePacker(&c.sb, c.indent)
 
 	// Emit instructions
 	stack := &virtualStack{}

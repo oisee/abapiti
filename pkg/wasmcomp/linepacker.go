@@ -101,7 +101,6 @@ func mustOwnLine(stmt string) bool {
 		"METHOD ", "ENDMETHOD.",
 		"CLASS ", "ENDCLASS.",
 		"FUNCTION ", "ENDFUNCTION.",
-		"DATA(",  // inline DATA(x) is OK to pack, but DATA declarations vary
 		"RETURN.",
 		"RAISE ",
 		"PERFORM wasm_init",

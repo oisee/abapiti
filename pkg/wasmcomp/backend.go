@@ -255,9 +255,6 @@ func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, uppe
 }
 
 func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[int]int) {
-	// Enable line packing for function bodies
-	c.packLines = true
-	c.packer = newLinePacker(&c.sb, c.indent)
 	name := fmt.Sprintf("f%d", funcIdx)
 	if f.ExportName != "" {
 		name = sanitizeABAP(f.ExportName)
@@ -286,6 +283,10 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 	}
 	c.indent++
 
+	// Enable packing BEFORE declarations
+	c.packLines = true
+	c.packer = newLinePacker(&c.sb, c.indent)
+
 	// Locals
 	for i := 0; i < len(f.Locals); i++ {
 		localIdx := len(f.Type.Params) + i
@@ -299,7 +300,7 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 	}
 	c.line("DATA lv_br TYPE i.")
 
-	// Emit instructions with FUGR-style: direct global access, PERFORM for calls
+	// Emit instructions with FUGR-style
 	stack := &virtualStack{}
 	c.blockStack = nil
 	c.useFUGR = true
