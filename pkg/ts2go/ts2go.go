@@ -105,6 +105,9 @@ func defaultTypeMap() map[string]string {
 }
 
 func (t *transpiler) mapType(tsType string) string {
+	if tsType == "" {
+		return ""
+	}
 	if strings.HasSuffix(tsType, "[]") {
 		elem := tsType[:len(tsType)-2]
 		return "[]" + t.mapType(elem)
@@ -117,6 +120,33 @@ func (t *transpiler) mapType(tsType string) string {
 	}
 	// Class/interface reference → pointer
 	return "*" + tsType
+}
+
+func (t *transpiler) inferType(init *Node) string {
+	if init == nil {
+		return "interface{}"
+	}
+	switch init.Kind {
+	case "NumericLiteral":
+		if strings.Contains(init.Value, ".") {
+			return "float64"
+		}
+		return "int"
+	case "StringLiteral":
+		return "string"
+	case "BooleanLiteral":
+		return "bool"
+	case "ArrayLiteral":
+		return "[]interface{}"
+	case "NullLiteral":
+		return "interface{}"
+	case "NewExpression":
+		return "*" + init.Name
+	case "PrefixUnaryExpression":
+		// e.g., -1
+		return t.inferType(init.Expression)
+	}
+	return "interface{}"
 }
 
 func (t *transpiler) line(format string, args ...any) {
@@ -158,7 +188,8 @@ func (t *transpiler) transpileClass(node *Node) {
 	for _, f := range fields {
 		goType := t.mapType(f.Type)
 		if goType == "" {
-			goType = "interface{}"
+			// Infer type from initializer
+			goType = t.inferType(f.Init)
 		}
 		t.line("%s %s", goFieldName(f.Name), goType)
 	}
@@ -199,6 +230,8 @@ func (t *transpiler) emitMethod(className string, node *Node) {
 	ret := ""
 	if node.ReturnType != "" && node.ReturnType != "void" {
 		ret = " " + t.mapType(node.ReturnType)
+	} else if node.ReturnType == "" && hasReturnValue(node.Body) {
+		ret = " interface{}" // infer: method returns something but type unknown
 	}
 	t.line("func (l *%s) %s(%s)%s {", className, methodName, params, ret)
 	t.indent++
@@ -208,6 +241,15 @@ func (t *transpiler) emitMethod(className string, node *Node) {
 	t.indent--
 	t.line("}")
 	t.line("")
+}
+
+func hasReturnValue(body []*Node) bool {
+	for _, s := range body {
+		if s.Kind == "ReturnStatement" && s.Expression != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *transpiler) goParams(params []*Node) string {
@@ -305,9 +347,9 @@ func (t *transpiler) emitIf(node *Node) {
 	t.indent--
 	if node.Else != nil {
 		if node.Else.Kind == "IfStatement" {
-			t.raw(strings.Repeat("\t", t.indent))
-			t.raw("} else ")
-			// Continue with else-if (no newline before if)
+			// else if — emit on same line
+			t.sb.WriteString(strings.Repeat("\t", t.indent))
+			t.sb.WriteString("} else ")
 			t.emitIf(node.Else)
 			return
 		}
@@ -336,8 +378,15 @@ func (t *transpiler) emitFor(node *Node) {
 	}
 	inc := ""
 	if node.Increment != nil {
-		if node.Increment.Kind == "Assignment" {
-			inc = fmt.Sprintf("%s = %s", t.expr(node.Increment.Left), t.expr(node.Increment.Right))
+		switch node.Increment.Kind {
+		case "Assignment":
+			if node.Increment.Operator != "" && node.Increment.Operator != "=" {
+				inc = fmt.Sprintf("%s %s %s", t.expr(node.Increment.Left), node.Increment.Operator, t.expr(node.Increment.Right))
+			} else {
+				inc = fmt.Sprintf("%s = %s", t.expr(node.Increment.Left), t.expr(node.Increment.Right))
+			}
+		case "ExpressionStatement":
+			inc = t.expr(node.Increment.Expression)
 		}
 	}
 	t.line("for %s; %s; %s {", init, cond, inc)
@@ -392,6 +441,11 @@ func (t *transpiler) expr(node *Node) string {
 		return "l"
 	case "PropertyAccess":
 		obj := t.expr(node.Object)
+		// JS/TS built-in property mappings
+		switch node.Property {
+		case "length":
+			return fmt.Sprintf("len(%s)", obj)
+		}
 		return fmt.Sprintf("%s.%s", obj, goFieldName(node.Property))
 	case "IndexAccess":
 		return fmt.Sprintf("%s[%s]", t.expr(node.Object), t.expr(node.Index))
@@ -424,11 +478,25 @@ func (t *transpiler) expr(node *Node) string {
 		case "trim":
 			return fmt.Sprintf("strings.TrimSpace(%s)", obj)
 		case "charAt":
+			if len(node.Arguments) == 1 {
+				idx := t.expr(node.Arguments[0])
+				return fmt.Sprintf("string(%s[%s])", obj, idx)
+			}
 			return fmt.Sprintf("string(%s[%s])", obj, args)
 		case "indexOf":
 			return fmt.Sprintf("strings.Index(%s, %s)", obj, args)
-		case "substring", "substr":
-			return fmt.Sprintf("%s[%s:]", obj, args) // simplified
+		case "substring":
+			argList := t.exprListSlice(node.Arguments)
+			if len(argList) == 2 {
+				return fmt.Sprintf("%s[%s:%s]", obj, argList[0], argList[1])
+			}
+			return fmt.Sprintf("%s[%s:]", obj, args)
+		case "substr":
+			argList := t.exprListSlice(node.Arguments)
+			if len(argList) == 2 {
+				return fmt.Sprintf("%s[%s:%s+%s]", obj, argList[0], argList[0], argList[1])
+			}
+			return fmt.Sprintf("%s[%s:]", obj, args)
 		case "replace":
 			argList := t.exprListSlice(node.Arguments)
 			if len(argList) == 2 {
