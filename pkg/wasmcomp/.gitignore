@@ -1,2 +1,5 @@
 testdata/*.wasm
 testdata/*.abap
+testdata/fugr/
+testdata/multi/
+testdata/abaplint_fugr/
