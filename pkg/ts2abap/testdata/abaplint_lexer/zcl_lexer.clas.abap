@@ -28,7 +28,7 @@ CLASS zcl_lexer IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add.
-    DATA(lv_s) = condense( mo_buffer->get( ) ).
+    DATA(lv_s) = condense( replace( val = replace( val = mo_buffer->get( ) sub = cl_abap_char_utilities=>newline with = `` occ = 0 ) sub = cl_abap_char_utilities=>horizontal_tab with = `` occ = 0 ) ).
     IF strlen( lv_s ) > 0.
       DATA(lv_col) = mo_stream->get_col( ).
       DATA(lv_row) = mo_stream->get_row( ).
@@ -36,13 +36,13 @@ CLASS zcl_lexer IMPLEMENTATION.
       IF mo_stream->get_offset( ) - strlen( lv_s ) >= 0.
         DATA(lv_off) = mo_stream->get_offset( ) - strlen( lv_s ).
         DATA(lv_prev) = substring( val = mo_stream->get_raw( ) off = lv_off len = 1 ).
-        IF lv_prev = ' ' OR lv_prev = cl_abap_char_utilities=>newline OR lv_prev = cl_abap_char_utilities=>horizontal_tab OR lv_prev = ':'.
+        IF lv_prev = ` ` OR lv_prev = cl_abap_char_utilities=>newline OR lv_prev = cl_abap_char_utilities=>horizontal_tab OR lv_prev = ':'.
           lv_white_before = abap_true.
         ENDIF.
       ENDIF.
       DATA lv_white_after TYPE abap_bool.
       DATA(lv_next) = mo_stream->next_char( ).
-      IF lv_next = ' ' OR lv_next = cl_abap_char_utilities=>newline OR lv_next = cl_abap_char_utilities=>horizontal_tab
+      IF lv_next = ` ` OR lv_next = cl_abap_char_utilities=>newline OR lv_next = cl_abap_char_utilities=>horizontal_tab
           OR lv_next = ':' OR lv_next = ',' OR lv_next = '.' OR lv_next = '' OR lv_next = '"'.
         lv_white_after = abap_true.
       ENDIF.
@@ -134,7 +134,7 @@ CLASS zcl_lexer IMPLEMENTATION.
       DATA(lv_ahead) = mo_stream->next_char( ).
       DATA(lv_aahead) = mo_stream->next_next_char( ).
       IF mv_m = c_normal.
-        IF lv_ahead = ' ' OR lv_ahead = ':' OR lv_ahead = '.' OR lv_ahead = ',' OR lv_ahead = '-' OR lv_ahead = '+'
+        IF lv_ahead = ` ` OR lv_ahead = ':' OR lv_ahead = '.' OR lv_ahead = ',' OR lv_ahead = '-' OR lv_ahead = '+'
             OR lv_ahead = '(' OR lv_ahead = ')' OR lv_ahead = '[' OR lv_ahead = ']'
             OR lv_ahead = cl_abap_char_utilities=>horizontal_tab OR lv_ahead = cl_abap_char_utilities=>newline.
           add( ).
@@ -152,12 +152,12 @@ CLASS zcl_lexer IMPLEMENTATION.
           add( ).
         ELSEIF lv_aahead = '->' OR lv_aahead = '=>'.
           add( ).
-        ELSEIF lv_current = '>' AND lv_ahead <> ' ' AND ( mo_stream->prev_char( ) = '-' OR mo_stream->prev_char( ) = '=' ).
+        ELSEIF lv_current = '>' AND lv_ahead <> ` ` AND ( mo_stream->prev_char( ) = '-' OR mo_stream->prev_char( ) = '=' ).
           add( ).
         ELSEIF strlen( lv_buf ) = 1 AND ( lv_buf = '.' OR lv_buf = ',' OR lv_buf = ':' OR lv_buf = '(' OR lv_buf = ')' OR lv_buf = '[' OR lv_buf = ']' OR lv_buf = '+' OR lv_buf = '@' OR ( lv_buf = '-' AND lv_ahead <> '>' ) ).
           add( ).
         ENDIF.
-      ELSEIF mv_m = c_pragma AND ( lv_ahead = ',' OR lv_ahead = ':' OR lv_ahead = '.' OR lv_ahead = ' ' OR lv_ahead = cl_abap_char_utilities=>newline ).
+      ELSEIF mv_m = c_pragma AND ( lv_ahead = ',' OR lv_ahead = ':' OR lv_ahead = '.' OR lv_ahead = ` ` OR lv_ahead = cl_abap_char_utilities=>newline ).
         add( ). mv_m = c_normal.
       ELSEIF mv_m = c_ping AND strlen( lv_buf ) > 1 AND lv_current = '`' AND lv_aahead <> '``' AND lv_ahead <> '`' AND mo_buffer->count_is_even( '`' ).
         add( ). IF lv_ahead = '"'. mv_m = c_comment. ELSE. mv_m = c_normal. ENDIF.
