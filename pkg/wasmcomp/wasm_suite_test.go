@@ -103,48 +103,42 @@ func buildSuiteWasm() []byte {
 		OpEnd,
 	})
 
-	// 4: is_prime(n) — iterative: if n<2 return 0, check divisors 2..sqrt(n)
-	// Uses a local variable for the loop counter
+	// 4: is_prime(n) — from wat2wasm verified bytecode
+	// if n<2 return 0; i=2; block { loop { if i*i>n br_if 1; if n%i==0 return 0; i++; br 0 } } return 1
 	primeBody := buildFuncBody([]ValType{ValI32}, []byte{
-		// if n < 2 return 0
-		OpLocalGet, 0x00,
-		OpI32Const, 0x02,
-		OpI32LtS,
-		OpIf, 0x7F,
-		OpI32Const, 0x00,
-		OpElse,
-		// i = 2
-		OpI32Const, 0x02,
-		OpLocalSet, 0x01,
-		// loop
-		OpBlock, 0x7F, // outer block (result i32) — will hold result
-		OpLoop, 0x40,  // inner loop (void)
-		// if i*i > n → break (prime)
-		OpLocalGet, 0x01,
-		OpLocalGet, 0x01,
-		OpI32Mul,
-		OpLocalGet, 0x00,
-		OpI32GtS,
-		OpBrIf, 0x01, // break outer → prime
-		// if n % i == 0 → not prime
-		OpLocalGet, 0x00,
-		OpLocalGet, 0x01,
-		OpI32RemS,
-		OpI32Eqz,
-		OpIf, 0x40,
-		OpI32Const, 0x00,
-		OpBr, 0x03, // break to outer outer
-		OpEnd,
-		// i++
-		OpLocalGet, 0x01,
-		OpI32Const, 0x01,
-		OpI32Add,
-		OpLocalSet, 0x01,
-		OpBr, 0x00, // loop
-		OpEnd,       // end loop
-		OpI32Const, 0x01, // prime!
-		OpEnd,       // end block
-		OpEnd,       // end if n<2
+		0x20, 0x00, // local.get 0 (n)
+		0x41, 0x02, // i32.const 2
+		0x48,       // i32.lt_s
+		0x04, 0x40, // if (void)
+		0x41, 0x00, // i32.const 0
+		0x0f,       // return
+		0x0b,       // end if
+		0x41, 0x02, // i32.const 2
+		0x21, 0x01, // local.set 1 (i=2)
+		0x02, 0x40, // block (void)
+		0x03, 0x40, // loop (void)
+		0x20, 0x01, // local.get 1 (i)
+		0x20, 0x01, // local.get 1 (i)
+		0x6c,       // i32.mul (i*i)
+		0x20, 0x00, // local.get 0 (n)
+		0x4a,       // i32.gt_s
+		0x0d, 0x01, // br_if 1 (break block → prime)
+		0x20, 0x00, // local.get 0 (n)
+		0x20, 0x01, // local.get 1 (i)
+		0x6f,       // i32.rem_s (n%i)
+		0x45,       // i32.eqz
+		0x04, 0x40, // if (void)
+		0x41, 0x00, // i32.const 0
+		0x0f,       // return
+		0x0b,       // end if
+		0x20, 0x01, // local.get 1 (i)
+		0x41, 0x01, // i32.const 1
+		0x6a,       // i32.add (i+1)
+		0x21, 0x01, // local.set 1 (i=i+1)
+		0x0c, 0x00, // br 0 (continue loop)
+		0x0b,       // end loop
+		0x0b,       // end block
+		0x41, 0x01, // i32.const 1 (prime!)
 	})
 
 	w.addSection(10, buildCodeSection([][]byte{addBody, factBody, fibBody, gcdBody, primeBody}))
