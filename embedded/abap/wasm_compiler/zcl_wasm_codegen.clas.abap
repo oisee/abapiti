@@ -54,10 +54,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( |PROGRAM { iv_name }.| ).
     line( || ).
 
-    " Global data for memory and break propagation
+    " ── DATA declarations (TOP include) ──
     line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE i, gv_br TYPE i.| ).
+    line( |DATA: gv_wasm_initialized TYPE c.| ).
 
-    " Globals
     LOOP AT mo_mod->mt_globals INTO DATA(ls_g).
       DATA(lv_gi) = sy-tabix - 1.
       line( |DATA: gv_g{ lv_gi } TYPE { valtype_abap( ls_g-type ) }.| ).
@@ -65,7 +65,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     line( || ).
 
-    " Init memory (doubling strategy: build 64KB page, then concat pages)
+    " ── FORM WASM_INIT — called once before first use ──
+    line( |FORM WASM_INIT.| ).
+    mv_indent = mv_indent + 1.
+    line( |IF gv_wasm_initialized = 'X'. RETURN. ENDIF.| ).
+    line( |gv_wasm_initialized = 'X'.| ).
+
     IF mo_mod->ms_memory-min_pages > 0.
       DATA(lv_pages) = mo_mod->ms_memory-min_pages.
       line( |gv_mem_pages = { lv_pages }.| ).
@@ -75,19 +80,20 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |DO { lv_pages } TIMES. CONCATENATE gv_mem lv_pg INTO gv_mem IN BYTE MODE. ENDDO.| ).
     ENDIF.
 
-    " Init globals
     LOOP AT mo_mod->mt_globals INTO ls_g.
       DATA(lv_gi2) = sy-tabix - 1.
       IF ls_g-init_i32 <> 0.
         line( |gv_g{ lv_gi2 } = { ls_g-init_i32 }.| ).
       ENDIF.
     ENDLOOP.
-
-    " Init data segments (split long hex into 80-byte chunks for 255 char limit)
+    IF lines( mo_mod->mt_data ) > 0.
+      line( |DATA lv_seg TYPE xstring.| ).
+    ENDIF.
     LOOP AT mo_mod->mt_data INTO DATA(ls_d).
       DATA(lv_dlen) = xstrlen( ls_d-data ).
       IF lv_dlen > 0 AND lv_dlen <= 80.
-        line( |gv_mem+{ ls_d-offset }({ lv_dlen }) = '{ ls_d-data }'.| ).
+        line( |lv_seg = '{ ls_d-data }'.| ).
+        line( |REPLACE SECTION OFFSET { ls_d-offset } LENGTH { lv_dlen } OF gv_mem WITH lv_seg IN BYTE MODE.| ).
       ELSEIF lv_dlen > 80.
         DATA(lv_doff) = 0.
         WHILE lv_doff < lv_dlen.
@@ -95,36 +101,46 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           IF lv_doff + lv_dchunk > lv_dlen. lv_dchunk = lv_dlen - lv_doff. ENDIF.
           DATA(lv_chunk_x) = ls_d-data+lv_doff(lv_dchunk).
           DATA(lv_moff) = ls_d-offset + lv_doff.
-          line( |gv_mem+{ lv_moff }({ lv_dchunk }) = '{ lv_chunk_x }'.| ).
+          line( |lv_seg = '{ lv_chunk_x }'.| ).
+          line( |REPLACE SECTION OFFSET { lv_moff } LENGTH { lv_dchunk } OF gv_mem WITH lv_seg IN BYTE MODE.| ).
           lv_doff = lv_doff + lv_dchunk.
         ENDWHILE.
       ENDIF.
     ENDLOOP.
 
+    mv_indent = mv_indent - 1.
+    line( |ENDFORM.| ).
     line( || ).
 
     " Memory helper FORMs (only if module uses memory)
     IF mo_mod->ms_memory-min_pages > 0 OR lines( mo_mod->mt_data ) > 0.
       line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
-      line( |  DATA lv_x4 TYPE x LENGTH 4.| ).
-      line( |  lv_x4 = gv_mem+iv_addr(4).| ).
-      line( |  DATA(lv_r) = lv_x4+3(1) && lv_x4+2(1) && lv_x4+1(1) && lv_x4+0(1).| ).
+      line( |  DATA lv_b TYPE xstring.| ).
+      line( |  lv_b = gv_mem+iv_addr(4).| ).
+      line( |  DATA lv_r TYPE xstring.| ).
+      line( |  CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE.| ).
       line( |  rv = lv_r.| ).
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
-      line( |  DATA lv_x4 TYPE x LENGTH 4. lv_x4 = iv_val.| ).
-      line( |  DATA(lv_r) = lv_x4+3(1) && lv_x4+2(1) && lv_x4+1(1) && lv_x4+0(1).| ).
+      line( |  DATA lv_hex TYPE c LENGTH 8.| ).
+      line( |  lv_hex = iv_val.| ).
+      line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
+      line( |  DATA lv_r TYPE xstring.| ).
+      line( |  CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE.| ).
       line( |  REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
-      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = gv_mem+iv_addr(1). rv = lv_x1.| ).
+      line( |  DATA lv_b TYPE xstring.| ).
+      line( |  lv_b = gv_mem+iv_addr(1). rv = lv_b.| ).
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
-      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = iv_val.| ).
-      line( |  REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_x1 IN BYTE MODE.| ).
+      line( |  DATA lv_hex TYPE c LENGTH 2.| ).
+      line( |  lv_hex = iv_val.| ).
+      line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
+      line( |  REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_b IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
     ENDIF.
@@ -384,32 +400,36 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           lv_b = pop( ). lv_a = pop( ). lv_r = push( ).
           line( |{ lv_r } = { lv_a } / ipow( base = 2 exp = { lv_b } MOD 32 ).| ).
 
-        " --- Memory ---
+        " --- Memory (pre-calculate addr+offset for PERFORM) ---
         WHEN 40. " i32.load
           lv_a = pop( ). lv_r = push( ).
           IF ls_i-offset > 0.
-            line( |PERFORM mem_ld_i32 USING { lv_a } + { ls_i-offset } CHANGING { lv_r }.| ).
+            line( |{ lv_r } = { lv_a } + { ls_i-offset }.| ).
+            line( |PERFORM mem_ld_i32 USING { lv_r } CHANGING { lv_r }.| ).
           ELSE.
             line( |PERFORM mem_ld_i32 USING { lv_a } CHANGING { lv_r }.| ).
           ENDIF.
         WHEN 54. " i32.store
           lv_b = pop( ). lv_a = pop( ).
           IF ls_i-offset > 0.
-            line( |PERFORM mem_st_i32 USING { lv_a } + { ls_i-offset } { lv_b }.| ).
+            line( |{ lv_a } = { lv_a } + { ls_i-offset }.| ).
+            line( |PERFORM mem_st_i32 USING { lv_a } { lv_b }.| ).
           ELSE.
             line( |PERFORM mem_st_i32 USING { lv_a } { lv_b }.| ).
           ENDIF.
         WHEN 44. " i32.load8_u
           lv_a = pop( ). lv_r = push( ).
           IF ls_i-offset > 0.
-            line( |PERFORM mem_ld_i32_8u USING { lv_a } + { ls_i-offset } CHANGING { lv_r }.| ).
+            line( |{ lv_r } = { lv_a } + { ls_i-offset }.| ).
+            line( |PERFORM mem_ld_i32_8u USING { lv_r } CHANGING { lv_r }.| ).
           ELSE.
             line( |PERFORM mem_ld_i32_8u USING { lv_a } CHANGING { lv_r }.| ).
           ENDIF.
         WHEN 58. " i32.store8
           lv_b = pop( ). lv_a = pop( ).
           IF ls_i-offset > 0.
-            line( |PERFORM mem_st_i32_8 USING { lv_a } + { ls_i-offset } { lv_b }.| ).
+            line( |{ lv_a } = { lv_a } + { ls_i-offset }.| ).
+            line( |PERFORM mem_st_i32_8 USING { lv_a } { lv_b }.| ).
           ELSE.
             line( |PERFORM mem_st_i32_8 USING { lv_a } { lv_b }.| ).
           ENDIF.
@@ -579,7 +599,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         IF lv_line CP 'ENDFORM*'.
           IF lv_cur_lines + lv_form_lines > iv_max_lines AND lv_cur IS NOT INITIAL.
             " Save current include
-            DATA(lv_inc_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' }|.
+            DATA(lv_inc_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' ALIGN = RIGHT }|.
             APPEND VALUE ty_include( name = lv_inc_name source = lv_cur ) TO rt.
             lv_inc_num = lv_inc_num + 1.
             CLEAR lv_cur.
@@ -595,7 +615,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Flush last include
     IF lv_cur IS NOT INITIAL.
-      DATA(lv_last_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' }|.
+      DATA(lv_last_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' ALIGN = RIGHT }|.
       APPEND VALUE ty_include( name = lv_last_name source = lv_cur ) TO rt.
     ENDIF.
 
@@ -667,6 +687,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |{ lv_msig }.| ).
     ENDLOOP.
 
+    IF lv_static = abap_true.
+      line( |METHODS constructor.| ).
+    ENDIF.
+
     IF lv_static = abap_false.
       mv_indent = mv_indent - 1.
       line( |PRIVATE SECTION.| ).
@@ -683,7 +707,16 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( |CLASS { lv_cls } IMPLEMENTATION.| ).
     mv_indent = mv_indent + 1.
 
-    " Constructor (dynamic mode only)
+    " Constructor
+    IF lv_static = abap_true.
+      " Static: just call WASM_INIT
+      line( |METHOD constructor.| ).
+      mv_indent = mv_indent + 1.
+      line( |PERFORM WASM_INIT IN PROGRAM { lv_prog }.| ).
+      mv_indent = mv_indent - 1.
+      line( |ENDMETHOD.| ).
+      line( || ).
+    ENDIF.
     IF lv_static = abap_false.
       line( |METHOD constructor.| ).
       mv_indent = mv_indent + 1.

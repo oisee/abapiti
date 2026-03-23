@@ -253,7 +253,12 @@ START-OF-SELECTION.
           ENDIF.
         ENDLOOP.
         IF lv_ok = abap_false. CONTINUE. ENDIF.
-        INSERT REPORT lv_iname FROM lt_isrc.
+        " Main program = type 'S' (subroutine pool), includes = type 'I'
+        IF lv_inc_idx = 1.
+          INSERT REPORT lv_iname FROM lt_isrc PROGRAM TYPE 'S'.
+        ELSE.
+          INSERT REPORT lv_iname FROM lt_isrc PROGRAM TYPE 'I'.
+        ENDIF.
         IF sy-subrc = 0.
           WRITE: / 'INSERT OK:', lv_iname, '(', lines( lt_isrc ), 'lines )'.
         ELSE.
