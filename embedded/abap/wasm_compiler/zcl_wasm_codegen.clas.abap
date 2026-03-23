@@ -1,9 +1,20 @@
 CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
+    TYPES: BEGIN OF ty_include,
+             name   TYPE string,
+             source TYPE string,
+           END OF ty_include,
+           ty_includes TYPE STANDARD TABLE OF ty_include WITH DEFAULT KEY.
+
     METHODS compile
       IMPORTING io_module  TYPE REF TO zcl_wasm_module
                 iv_name    TYPE string DEFAULT 'ZWASM_OUT'
       RETURNING VALUE(rv)  TYPE string.
+    METHODS split_to_includes
+      IMPORTING iv_source    TYPE string
+                iv_name      TYPE string
+                iv_max_lines TYPE i DEFAULT 5000
+      RETURNING VALUE(rt)    TYPE ty_includes.
     METHODS compile_class
       IMPORTING io_module    TYPE REF TO zcl_wasm_module
                 iv_classname TYPE string DEFAULT 'ZCL_WASM_OUT'
@@ -18,6 +29,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_out TYPE string.
     DATA mv_indent TYPE i.
     DATA mv_stack_depth TYPE i.
+    DATA mv_max_stack TYPE i.
     DATA mv_num_params TYPE i.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     METHODS line IMPORTING iv TYPE string.
@@ -125,6 +137,9 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
   METHOD push.
     rv = |lv_s{ mv_stack_depth }|.
     mv_stack_depth = mv_stack_depth + 1.
+    IF mv_stack_depth > mv_max_stack.
+      mv_max_stack = mv_stack_depth.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -188,7 +203,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       lv_sig = lv_sig && | USING|.
       LOOP AT ls_type-params INTO DATA(ls_p).
         DATA(lv_pi) = sy-tabix - 1.
-        lv_sig = lv_sig && | p{ lv_pi } TYPE { valtype_abap( ls_p-type ) }|.
+        lv_sig = lv_sig && | VALUE(p{ lv_pi }) TYPE { valtype_abap( ls_p-type ) }|.
       ENDLOOP.
     ENDIF.
 
@@ -200,34 +215,52 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( |{ lv_sig }.| ).
     mv_indent = mv_indent + 1.
 
-    " Declare local variables (beyond params)
+    " Reset compiler state
+    mv_stack_depth = 0.
+    mv_max_stack = 0.
+    CLEAR mt_block_kinds.
+
+    " Emit instructions into temp buffer
+    DATA(lv_saved) = mv_out.
+    CLEAR mv_out.
+    emit_instructions( is_func-code ).
+    IF lv_has_result = abap_true AND mv_stack_depth > 0.
+      line( |rv = { peek( ) }.| ).
+    ENDIF.
+    DATA(lv_body) = mv_out.
+    mv_out = lv_saved.
+
+    " Now emit DATA declarations for only what's needed
     LOOP AT is_func-locals INTO DATA(ls_l).
       DATA(lv_li) = sy-tabix - 1 + mv_num_params.
       line( |DATA: lv_l{ lv_li } TYPE { valtype_abap( ls_l-type ) }.| ).
     ENDLOOP.
 
-    " Declare stack variables (32 slots, split to stay under 255 chars)
-    DO 4 TIMES.
-      DATA(lv_base) = ( sy-index - 1 ) * 8.
-      DATA(lv_decl) = |DATA: lv_s{ lv_base } TYPE i|.
-      DO 7 TIMES.
-        DATA(lv_si) = lv_base + sy-index.
+    " Stack variables — only declare up to mv_max_stack
+    IF mv_max_stack > 0.
+      DATA(lv_decl) = |DATA: lv_s0 TYPE i|.
+      DATA(lv_si) = 1.
+      WHILE lv_si < mv_max_stack.
         lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
-      ENDDO.
-      line( |{ lv_decl }.| ).
-    ENDDO.
-
-    " Reset compiler state
-    mv_stack_depth = 0.
-    CLEAR mt_block_kinds.
-
-    " Emit instructions
-    emit_instructions( is_func-code ).
-
-    " Return value from stack top
-    IF lv_has_result = abap_true AND mv_stack_depth > 0.
-      line( |rv = { peek( ) }.| ).
+        " Split line if getting long
+        IF strlen( lv_decl ) > 200.
+          line( |{ lv_decl }.| ).
+          lv_si = lv_si + 1.
+          IF lv_si < mv_max_stack.
+            lv_decl = |DATA: lv_s{ lv_si } TYPE i|.
+          ELSE.
+            CLEAR lv_decl.
+          ENDIF.
+        ENDIF.
+        lv_si = lv_si + 1.
+      ENDWHILE.
+      IF lv_decl IS NOT INITIAL.
+        line( |{ lv_decl }.| ).
+      ENDIF.
     ENDIF.
+
+    " Append instruction body
+    mv_out = mv_out && lv_body.
 
     mv_indent = mv_indent - 1.
     line( |ENDFORM.| ).
@@ -462,13 +495,88 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     ENDIF.
 
     DATA(lv_call) = |PERFORM { lv_fname }|.
-    LOOP AT lt_args INTO DATA(lv_arg).
-      lv_call = lv_call && | USING { lv_arg }|.
-    ENDLOOP.
+    IF lines( lt_args ) > 0.
+      lv_call = lv_call && | USING|.
+      LOOP AT lt_args INTO DATA(lv_arg).
+        lv_call = lv_call && | { lv_arg }|.
+      ENDLOOP.
+    ENDIF.
     IF lv_has_result = abap_true.
       lv_call = lv_call && | CHANGING { lv_result }|.
     ENDIF.
     line( |{ lv_call }.| ).
+  ENDMETHOD.
+
+
+  METHOD split_to_includes.
+    DATA: lt_lines TYPE STANDARD TABLE OF string,
+          lv_top   TYPE string,
+          lv_cur   TYPE string,
+          lv_cur_lines TYPE i,
+          lv_inc_num   TYPE i VALUE 1.
+
+    DATA(lv_name) = iv_name.
+    TRANSLATE lv_name TO UPPER CASE.
+
+    SPLIT iv_source AT cl_abap_char_utilities=>newline INTO TABLE lt_lines.
+
+    " Phase 1: separate TOP (everything before first FORM) from FORMs
+    DATA(lv_in_top) = abap_true.
+    DATA: lv_form_buf TYPE string,
+          lv_form_lines TYPE i.
+
+    LOOP AT lt_lines INTO DATA(lv_line).
+      IF lv_in_top = abap_true.
+        " Skip PROGRAM statement (main wrapper will have its own)
+        IF lv_line CP 'PROGRAM *'.
+          CONTINUE.
+        ENDIF.
+        " First FORM = end of TOP
+        IF lv_line CP 'FORM *'.
+          lv_in_top = abap_false.
+          lv_form_buf = lv_line && cl_abap_char_utilities=>newline.
+          lv_form_lines = 1.
+          CONTINUE.
+        ENDIF.
+        lv_top = lv_top && lv_line && cl_abap_char_utilities=>newline.
+      ELSE.
+        lv_form_buf = lv_form_buf && lv_line && cl_abap_char_utilities=>newline.
+        lv_form_lines = lv_form_lines + 1.
+
+        " At ENDFORM boundary, check if current include is full
+        IF lv_line CP 'ENDFORM*'.
+          IF lv_cur_lines + lv_form_lines > iv_max_lines AND lv_cur IS NOT INITIAL.
+            " Save current include
+            DATA(lv_inc_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 2 PAD = '0' }|.
+            APPEND VALUE ty_include( name = lv_inc_name source = lv_cur ) TO rt.
+            lv_inc_num = lv_inc_num + 1.
+            CLEAR lv_cur.
+            lv_cur_lines = 0.
+          ENDIF.
+          " Add form to current include
+          lv_cur = lv_cur && lv_form_buf.
+          lv_cur_lines = lv_cur_lines + lv_form_lines.
+          CLEAR: lv_form_buf, lv_form_lines.
+        ENDIF.
+      ENDIF.
+    ENDLOOP.
+
+    " Flush last include
+    IF lv_cur IS NOT INITIAL.
+      DATA(lv_last_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 2 PAD = '0' }|.
+      APPEND VALUE ty_include( name = lv_last_name source = lv_cur ) TO rt.
+    ENDIF.
+
+    " Build TOP include (globals go here)
+    DATA(lv_top_name) = |{ lv_name }_TOP|.
+    INSERT VALUE ty_include( name = lv_top_name source = lv_top ) INTO rt INDEX 1.
+
+    " Build main program with INCLUDEs
+    DATA(lv_main) = |PROGRAM { lv_name }.| && cl_abap_char_utilities=>newline.
+    LOOP AT rt INTO DATA(ls_inc).
+      lv_main = lv_main && |INCLUDE { ls_inc-name }.| && cl_abap_char_utilities=>newline.
+    ENDLOOP.
+    INSERT VALUE ty_include( name = lv_name source = lv_main ) INTO rt INDEX 1.
   ENDMETHOD.
 
 

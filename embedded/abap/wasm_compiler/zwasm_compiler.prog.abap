@@ -21,6 +21,8 @@ SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE sc_exe.
   PARAMETERS: p_temp  RADIOBUTTON GROUP gen DEFAULT 'X',
               p_perm  RADIOBUTTON GROUP gen.
   PARAMETERS: p_prog  TYPE c LENGTH 30 DEFAULT 'ZWASM_GEN'.
+  PARAMETERS: p_split AS CHECKBOX DEFAULT ' '.
+  PARAMETERS: p_maxln TYPE i DEFAULT 5000.
   SELECTION-SCREEN SKIP.
   PARAMETERS: p_exec  AS CHECKBOX DEFAULT 'X'.
   PARAMETERS: p_func  TYPE c LENGTH 30 LOWER CASE DEFAULT 'add'.
@@ -41,6 +43,8 @@ INITIALIZATION.
   %_p_temp_%_app_%-text = 'Temporary (GENERATE POOL)'.
   %_p_perm_%_app_%-text = 'Persistent program (INSERT REPORT)'.
   %_p_prog_%_app_%-text = 'Program name'.
+  %_p_split_%_app_%-text = 'Split to INCLUDEs'.
+  %_p_maxln_%_app_%-text = 'Max lines per include'.
   %_p_class_%_app_%-text = 'Generate CLASS wrapper'.
   %_p_clsnm_%_app_%-text = 'Class name'.
 
@@ -223,38 +227,50 @@ START-OF-SELECTION.
     WRITE: / '── Persistent Program ──'.
     DATA(lv_repname) = CONV syrepid( lv_progname ).
 
-    " Check if program already exists
-    SELECT SINGLE name FROM trdir INTO @DATA(lv_exists)
-      WHERE name = @lv_repname.
-    IF sy-subrc <> 0.
-      " Create new program
-      INSERT REPORT lv_repname FROM lt_code.
-      WRITE: / 'Created program:', lv_repname.
-    ELSE.
-      INSERT REPORT lv_repname FROM lt_code.
-      WRITE: / 'Updated program:', lv_repname.
-    ENDIF.
-
-    IF sy-subrc <> 0.
-      WRITE: / 'INSERT REPORT failed:', sy-subrc. RETURN.
-    ENDIF.
-
-    " Compile / activate
     DATA lv_gen_msg TYPE string.
-    GENERATE REPORT lv_repname MESSAGE lv_gen_msg.
-    IF sy-subrc <> 0.
-      WRITE: / 'Activation failed:', sy-subrc, lv_gen_msg. RETURN.
-    ENDIF.
-    WRITE: / 'Activated:', lv_repname.
-    WRITE: / 'Call via: PERFORM <func> IN PROGRAM', lv_repname.
 
+    IF p_split = abap_true.
+      " Split into INCLUDEs
+      DATA(lt_includes) = NEW zcl_wasm_codegen( )->split_to_includes(
+        iv_source    = lv_abap
+        iv_name      = lv_progname
+        iv_max_lines = p_maxln ).
+
+      LOOP AT lt_includes INTO DATA(ls_inc).
+        DATA(lv_iname) = CONV syrepid( ls_inc-name ).
+        DATA: lt_isrc TYPE STANDARD TABLE OF string.
+        SPLIT ls_inc-source AT cl_abap_char_utilities=>newline INTO TABLE lt_isrc.
+        INSERT REPORT lv_iname FROM lt_isrc.
+        IF sy-subrc = 0.
+          GENERATE REPORT lv_iname MESSAGE lv_gen_msg.
+          IF sy-subrc = 0.
+            WRITE: / 'OK:', lv_iname, '(', lines( lt_isrc ), 'lines )'.
+          ELSE.
+            WRITE: / 'Activation failed:', lv_iname, lv_gen_msg.
+          ENDIF.
+        ELSE.
+          WRITE: / 'INSERT failed:', lv_iname.
+        ENDIF.
+      ENDLOOP.
+    ELSE.
+      " Single program
+      INSERT REPORT lv_repname FROM lt_code.
+      GENERATE REPORT lv_repname MESSAGE lv_gen_msg.
+      IF sy-subrc <> 0.
+        WRITE: / 'Failed:', sy-subrc, lv_gen_msg. RETURN.
+      ENDIF.
+      WRITE: / 'Saved + activated:', lv_repname.
+    ENDIF.
+
+    WRITE: / 'Call via: PERFORM <func> IN PROGRAM', lv_repname.
     lv_target_prog = lv_repname.
 
     " Also save wrapper program if class checkbox is set
-    IF p_class = abap_true.
+    IF p_class = abap_true AND lv_cls_src IS NOT INITIAL.
       DATA(lv_wrap_name) = CONV syrepid( lv_progname && '_WRAP' ).
       DATA: lt_wrap_code TYPE STANDARD TABLE OF string.
       SPLIT lv_cls_src AT cl_abap_char_utilities=>newline INTO TABLE lt_wrap_code.
+
       INSERT REPORT lv_wrap_name FROM lt_wrap_code.
       IF sy-subrc = 0.
         GENERATE REPORT lv_wrap_name MESSAGE lv_gen_msg.
