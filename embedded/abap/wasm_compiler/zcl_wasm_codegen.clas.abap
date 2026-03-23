@@ -4,6 +4,12 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
       IMPORTING io_module  TYPE REF TO zcl_wasm_module
                 iv_name    TYPE string DEFAULT 'ZWASM_OUT'
       RETURNING VALUE(rv)  TYPE string.
+    METHODS compile_class
+      IMPORTING io_module    TYPE REF TO zcl_wasm_module
+                iv_classname TYPE string DEFAULT 'ZCL_WASM_OUT'
+                iv_wasm_hex  TYPE string OPTIONAL
+                iv_program   TYPE string OPTIONAL
+      RETURNING VALUE(rv)    TYPE string.
   PRIVATE SECTION.
     CONSTANTS: c_block TYPE i VALUE 1,
                c_loop  TYPE i VALUE 2,
@@ -74,25 +80,30 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     line( || ).
 
-    " Memory helper FORMs
-    line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
-    line( |  DATA lv_b TYPE x LENGTH 4. lv_b = gv_mem+iv_addr(4).| ).
-    line( |  DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1). rv = lv_r.| ).
-    line( |ENDFORM.| ).
-    line( || ).
-    line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
-    line( |  DATA lv_b TYPE x LENGTH 4. lv_b = iv_val.| ).
-    line( |  DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1). gv_mem+iv_addr(4) = lv_r.| ).
-    line( |ENDFORM.| ).
-    line( || ).
-    line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
-    line( |  DATA lv_b TYPE x LENGTH 1. lv_b = gv_mem+iv_addr(1). rv = lv_b.| ).
-    line( |ENDFORM.| ).
-    line( || ).
-    line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
-    line( |  DATA lv_b TYPE x LENGTH 1. lv_b = iv_val. gv_mem+iv_addr(1) = lv_b.| ).
-    line( |ENDFORM.| ).
-    line( || ).
+    " Memory helper FORMs (only if module uses memory)
+    IF mo_mod->ms_memory-min_pages > 0 OR lines( mo_mod->mt_data ) > 0.
+      line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |  DATA lv_x4 TYPE x LENGTH 4.| ).
+      line( |  lv_x4 = gv_mem+iv_addr(4).| ).
+      line( |  DATA(lv_r) = lv_x4+3(1) && lv_x4+2(1) && lv_x4+1(1) && lv_x4+0(1).| ).
+      line( |  rv = lv_r.| ).
+      line( |ENDFORM.| ).
+      line( || ).
+      line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |  DATA lv_x4 TYPE x LENGTH 4. lv_x4 = iv_val.| ).
+      line( |  DATA(lv_r) = lv_x4+3(1) && lv_x4+2(1) && lv_x4+1(1) && lv_x4+0(1).| ).
+      line( |  gv_mem+iv_addr(4) = lv_r.| ).
+      line( |ENDFORM.| ).
+      line( || ).
+      line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = gv_mem+iv_addr(1). rv = lv_x1.| ).
+      line( |ENDFORM.| ).
+      line( || ).
+      line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = iv_val. gv_mem+iv_addr(1) = lv_x1.| ).
+      line( |ENDFORM.| ).
+      line( || ).
+    ENDIF.
 
     " Emit functions
     LOOP AT mo_mod->mt_functions INTO DATA(ls_func).
@@ -134,10 +145,11 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       READ TABLE mo_mod->mt_functions INDEX lv_fi + 1 INTO DATA(ls_f).
       IF sy-subrc = 0 AND ls_f-export_name IS NOT INITIAL.
         rv = ls_f-export_name.
+        TRANSLATE rv TO UPPER CASE.
         RETURN.
       ENDIF.
     ENDIF.
-    rv = |f{ iv_idx }|.
+    rv = |F{ iv_idx }|.
   ENDMETHOD.
 
 
@@ -163,6 +175,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     " Determine function name
     DATA(lv_name) = is_func-export_name.
     IF lv_name IS INITIAL. lv_name = |f{ is_func-index }|. ENDIF.
+    TRANSLATE lv_name TO UPPER CASE.
 
     " Get function type
     READ TABLE mo_mod->mt_types INDEX is_func-type_index + 1 INTO DATA(ls_type).
@@ -171,10 +184,13 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA(lv_sig) = |FORM { lv_name }|.
 
     mv_num_params = lines( ls_type-params ).
-    LOOP AT ls_type-params INTO DATA(ls_p).
-      DATA(lv_pi) = sy-tabix - 1.
-      lv_sig = lv_sig && | USING p{ lv_pi } TYPE { valtype_abap( ls_p-type ) }|.
-    ENDLOOP.
+    IF mv_num_params > 0.
+      lv_sig = lv_sig && | USING|.
+      LOOP AT ls_type-params INTO DATA(ls_p).
+        DATA(lv_pi) = sy-tabix - 1.
+        lv_sig = lv_sig && | p{ lv_pi } TYPE { valtype_abap( ls_p-type ) }|.
+      ENDLOOP.
+    ENDIF.
 
     DATA(lv_has_result) = xsdbool( lines( ls_type-results ) > 0 ).
     IF lv_has_result = abap_true.
@@ -190,13 +206,16 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |DATA: lv_l{ lv_li } TYPE { valtype_abap( ls_l-type ) }.| ).
     ENDLOOP.
 
-    " Declare stack variables (generous: 32 slots)
-    DATA(lv_decl) = |DATA: gv_br TYPE i|.
-    DO 32 TIMES.
-      DATA(lv_si) = sy-index - 1.
-      lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
+    " Declare stack variables (32 slots, split to stay under 255 chars)
+    DO 4 TIMES.
+      DATA(lv_base) = ( sy-index - 1 ) * 8.
+      DATA(lv_decl) = |DATA: lv_s{ lv_base } TYPE i|.
+      DO 7 TIMES.
+        DATA(lv_si) = lv_base + sy-index.
+        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
+      ENDDO.
+      line( |{ lv_decl }.| ).
     ENDDO.
-    line( |{ lv_decl }.| ).
 
     " Reset compiler state
     mv_stack_depth = 0.
@@ -450,6 +469,165 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       lv_call = lv_call && | CHANGING { lv_result }|.
     ENDIF.
     line( |{ lv_call }.| ).
+  ENDMETHOD.
+
+
+  METHOD compile_class.
+    mo_mod = io_module.
+    CLEAR: mv_out, mv_indent.
+
+    DATA(lv_cls) = iv_classname.
+    TRANSLATE lv_cls TO UPPER CASE.
+
+    " Static mode: iv_program provided → PROGRAM with local class, PERFORM IN PROGRAM
+    " Dynamic mode: iv_wasm_hex provided → constructor with GENERATE POOL
+    DATA(lv_static) = xsdbool( iv_program IS NOT INITIAL ).
+    DATA(lv_prog) = iv_program.
+    TRANSLATE lv_prog TO UPPER CASE.
+
+    " Emit PROGRAM header for static wrapper
+    IF lv_static = abap_true.
+      line( |PROGRAM { lv_prog }_WRAP.| ).
+      line( || ).
+    ENDIF.
+
+    " ── CLASS DEFINITION ──
+    DATA(lv_visibility) = ||.
+    IF lv_static = abap_false.
+      lv_visibility = | PUBLIC|.
+    ENDIF.
+    line( |CLASS { lv_cls } DEFINITION{ lv_visibility } FINAL CREATE PUBLIC.| ).
+    mv_indent = mv_indent + 1.
+    line( |PUBLIC SECTION.| ).
+    mv_indent = mv_indent + 1.
+
+    IF lv_static = abap_false.
+      line( |METHODS constructor.| ).
+    ENDIF.
+
+    " One method per exported function
+    LOOP AT mo_mod->mt_exports INTO DATA(ls_exp) WHERE kind = 0.
+      DATA(lv_fi) = ls_exp-index - mo_mod->mv_num_imported_funcs.
+      IF lv_fi < 0 OR lv_fi >= lines( mo_mod->mt_functions ). CONTINUE. ENDIF.
+      READ TABLE mo_mod->mt_functions INDEX lv_fi + 1 INTO DATA(ls_f).
+      READ TABLE mo_mod->mt_types INDEX ls_f-type_index + 1 INTO DATA(ls_t).
+      DATA(lv_mname) = ls_exp-name.
+      TRANSLATE lv_mname TO UPPER CASE.
+      DATA(lv_msig) = |METHODS { lv_mname }|.
+      IF lines( ls_t-params ) > 0.
+        lv_msig = lv_msig && | IMPORTING|.
+        LOOP AT ls_t-params INTO DATA(ls_p).
+          DATA(lv_pi) = sy-tabix - 1.
+          lv_msig = lv_msig && | p{ lv_pi } TYPE { valtype_abap( ls_p-type ) }|.
+        ENDLOOP.
+      ENDIF.
+      IF lines( ls_t-results ) > 0.
+        lv_msig = lv_msig && | RETURNING VALUE(rv) TYPE { valtype_abap( ls_t-results[ 1 ]-type ) }|.
+      ENDIF.
+      line( |{ lv_msig }.| ).
+    ENDLOOP.
+
+    IF lv_static = abap_false.
+      mv_indent = mv_indent - 1.
+      line( |PRIVATE SECTION.| ).
+      mv_indent = mv_indent + 1.
+      line( |DATA mv_prog TYPE string.| ).
+    ENDIF.
+
+    mv_indent = mv_indent - 1.
+    mv_indent = mv_indent - 1.
+    line( |ENDCLASS.| ).
+    line( || ).
+
+    " ── CLASS IMPLEMENTATION ──
+    line( |CLASS { lv_cls } IMPLEMENTATION.| ).
+    mv_indent = mv_indent + 1.
+
+    " Constructor (dynamic mode only)
+    IF lv_static = abap_false.
+      line( |METHOD constructor.| ).
+      mv_indent = mv_indent + 1.
+      line( |DATA lv_wasm TYPE xstring.| ).
+
+      " Split hex into chunks of 200 chars
+      DATA(lv_hex) = iv_wasm_hex.
+      TRANSLATE lv_hex TO UPPER CASE.
+      DATA(lv_hexlen) = strlen( lv_hex ).
+      IF lv_hexlen <= 200.
+        line( |lv_wasm = '{ lv_hex }'.| ).
+      ELSE.
+        DATA(lv_off) = 0.
+        DATA(lv_first) = abap_true.
+        WHILE lv_off < lv_hexlen.
+          DATA(lv_chunk) = 200.
+          IF lv_off + lv_chunk > lv_hexlen.
+            lv_chunk = lv_hexlen - lv_off.
+          ENDIF.
+          DATA(lv_part) = lv_hex+lv_off(lv_chunk).
+          IF lv_first = abap_true.
+            line( |lv_wasm = '{ lv_part }' &&| ).
+            lv_first = abap_false.
+          ELSEIF lv_off + lv_chunk >= lv_hexlen.
+            line( |  '{ lv_part }'.| ).
+          ELSE.
+            line( |  '{ lv_part }' &&| ).
+          ENDIF.
+          lv_off = lv_off + lv_chunk.
+        ENDWHILE.
+      ENDIF.
+
+      line( |DATA(lo_mod) = NEW zcl_wasm_module( ).| ).
+      line( |lo_mod->parse( lv_wasm ).| ).
+      line( |DATA(lv_src) = NEW zcl_wasm_codegen( )->compile( lo_mod ).| ).
+      line( |DATA lt_code TYPE STANDARD TABLE OF string.| ).
+      line( |SPLIT lv_src AT cl_abap_char_utilities=>newline INTO TABLE lt_code.| ).
+      line( |GENERATE SUBROUTINE POOL lt_code NAME mv_prog.| ).
+      mv_indent = mv_indent - 1.
+      line( |ENDMETHOD.| ).
+      line( || ).
+    ENDIF.
+
+    " One method per export: delegate to PERFORM
+    LOOP AT mo_mod->mt_exports INTO ls_exp WHERE kind = 0.
+      lv_fi = ls_exp-index - mo_mod->mv_num_imported_funcs.
+      IF lv_fi < 0 OR lv_fi >= lines( mo_mod->mt_functions ). CONTINUE. ENDIF.
+      READ TABLE mo_mod->mt_functions INDEX lv_fi + 1 INTO ls_f.
+      READ TABLE mo_mod->mt_types INDEX ls_f-type_index + 1 INTO ls_t.
+      lv_mname = ls_exp-name.
+      TRANSLATE lv_mname TO UPPER CASE.
+
+      line( |METHOD { lv_mname }.| ).
+      mv_indent = mv_indent + 1.
+
+      " Static: PERFORM IN PROGRAM ZWASM_GEN (hardcoded)
+      " Dynamic: PERFORM IN PROGRAM (mv_prog) (variable)
+      DATA(lv_perf) = ||.
+      IF lv_static = abap_true.
+        lv_perf = |PERFORM { lv_mname } IN PROGRAM { lv_prog }|.
+      ELSE.
+        lv_perf = |PERFORM { lv_mname } IN PROGRAM (mv_prog)|.
+      ENDIF.
+      IF lines( ls_t-params ) > 0.
+        lv_perf = lv_perf && | USING|.
+        LOOP AT ls_t-params INTO ls_p.
+          lv_pi = sy-tabix - 1.
+          lv_perf = lv_perf && | p{ lv_pi }|.
+        ENDLOOP.
+      ENDIF.
+      IF lines( ls_t-results ) > 0.
+        lv_perf = lv_perf && | CHANGING rv|.
+      ENDIF.
+      line( |{ lv_perf }.| ).
+
+      mv_indent = mv_indent - 1.
+      line( |ENDMETHOD.| ).
+      line( || ).
+    ENDLOOP.
+
+    mv_indent = mv_indent - 1.
+    line( |ENDCLASS.| ).
+
+    rv = mv_out.
   ENDMETHOD.
 
 ENDCLASS.

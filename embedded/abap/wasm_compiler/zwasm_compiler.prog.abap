@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Report ZWASM_COMPILER
 *& Interactive WASM-to-ABAP compiler
-*& Load .wasm binary → parse → compile → execute
+*& Load .wasm binary → parse → compile → execute / save
 *&---------------------------------------------------------------------*
 REPORT zwasm_compiler.
 
@@ -18,130 +18,109 @@ SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE sc_src.
 SELECTION-SCREEN END OF BLOCK b1.
 
 SELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE sc_exe.
-  PARAMETERS: p_exec AS CHECKBOX DEFAULT 'X'.
-  PARAMETERS: p_func TYPE c LENGTH 30 LOWER CASE DEFAULT 'add'.
-  PARAMETERS: p_arg0 TYPE i DEFAULT 2.
-  PARAMETERS: p_arg1 TYPE i DEFAULT 3.
+  PARAMETERS: p_temp  RADIOBUTTON GROUP gen DEFAULT 'X',
+              p_perm  RADIOBUTTON GROUP gen.
+  PARAMETERS: p_prog  TYPE c LENGTH 30 DEFAULT 'ZWASM_GEN'.
+  SELECTION-SCREEN SKIP.
+  PARAMETERS: p_exec  AS CHECKBOX DEFAULT 'X'.
+  PARAMETERS: p_func  TYPE c LENGTH 30 LOWER CASE DEFAULT 'add'.
+  PARAMETERS: p_arg0  TYPE i DEFAULT 2.
+  PARAMETERS: p_arg1  TYPE i DEFAULT 3.
 SELECTION-SCREEN END OF BLOCK b2.
 
 SELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE sc_out.
-  PARAMETERS: p_show AS CHECKBOX DEFAULT 'X'.
+  PARAMETERS: p_show  AS CHECKBOX DEFAULT 'X'.
+  PARAMETERS: p_class AS CHECKBOX DEFAULT ' '.
+  PARAMETERS: p_clsnm TYPE c LENGTH 30 DEFAULT 'ZCL_WASM_OUT'.
 SELECTION-SCREEN END OF BLOCK b3.
 
-*----------------------------------------------------------------------*
-* Texts
-*----------------------------------------------------------------------*
 INITIALIZATION.
   sc_src = 'WASM Source'.
-  sc_exe = 'Execution'.
+  sc_exe = 'Generation & Execution'.
   sc_out = 'Output'.
+  %_p_temp_%_app_%-text = 'Temporary (GENERATE POOL)'.
+  %_p_perm_%_app_%-text = 'Persistent program (INSERT REPORT)'.
+  %_p_prog_%_app_%-text = 'Program name'.
+  %_p_class_%_app_%-text = 'Generate CLASS wrapper'.
+  %_p_clsnm_%_app_%-text = 'Class name'.
 
 *----------------------------------------------------------------------*
-* File dialog for p_fname
+* File dialog
 *----------------------------------------------------------------------*
 AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_fname.
   DATA: lt_filetable TYPE filetable,
         lv_rc        TYPE i.
-
   cl_gui_frontend_services=>file_open_dialog(
     EXPORTING
       window_title  = 'Select WASM binary'
-      file_filter   = 'WASM files (*.wasm)|*.wasm|All files (*.*)|*.*'
+      file_filter   = 'WASM files (*.wasm)|*.wasm|All (*.*)|*.*'
     CHANGING
       file_table    = lt_filetable
       rc            = lv_rc
     EXCEPTIONS OTHERS = 1 ).
-
   IF lv_rc > 0.
     READ TABLE lt_filetable INDEX 1 INTO p_fname.
   ENDIF.
 
 *----------------------------------------------------------------------*
-* Main Processing
+* Main
 *----------------------------------------------------------------------*
 START-OF-SELECTION.
 
   DATA: lv_wasm TYPE xstring.
 
-  " ── Step 1: Load WASM binary ──
+  " ── Load WASM ──
   IF p_file = abap_true.
-    " Upload from local file
-    IF p_fname IS INITIAL.
-      WRITE: / 'ERROR: No file selected.'.
-      RETURN.
-    ENDIF.
-    DATA: lt_data TYPE STANDARD TABLE OF x255,
-          lv_flen TYPE i.
+    IF p_fname IS INITIAL. WRITE: / 'ERROR: No file.'. RETURN. ENDIF.
+    DATA: lt_data TYPE STANDARD TABLE OF x255, lv_flen TYPE i.
     cl_gui_frontend_services=>gui_upload(
-      EXPORTING filename   = p_fname
-                filetype   = 'BIN'
+      EXPORTING filename = p_fname filetype = 'BIN'
       IMPORTING filelength = lv_flen
-      CHANGING  data_tab   = lt_data
-      EXCEPTIONS OTHERS    = 1 ).
-    IF sy-subrc <> 0.
-      WRITE: / 'ERROR: Upload failed:', sy-subrc.
-      RETURN.
-    ENDIF.
+      CHANGING  data_tab = lt_data
+      EXCEPTIONS OTHERS = 1 ).
+    IF sy-subrc <> 0. WRITE: / 'Upload failed:', sy-subrc. RETURN. ENDIF.
     CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
       EXPORTING input_length = lv_flen
-      IMPORTING buffer       = lv_wasm
-      TABLES    binary_tab   = lt_data.
+      IMPORTING buffer = lv_wasm
+      TABLES binary_tab = lt_data.
 
   ELSEIF p_smw0 = abap_true.
-    " Load from SMW0
-    IF p_smw0n IS INITIAL.
-      WRITE: / 'ERROR: No SMW0 object name.'.
-      RETURN.
-    ENDIF.
-    DATA: lt_mime   TYPE STANDARD TABLE OF w3mime,
-          lv_size  TYPE i.
+    IF p_smw0n IS INITIAL. WRITE: / 'ERROR: No SMW0 name.'. RETURN. ENDIF.
+    DATA: lt_mime TYPE STANDARD TABLE OF w3mime, lv_size TYPE i.
     CALL FUNCTION 'SAP_READ_BINARY_RESOURCE'
-      EXPORTING key  = p_smw0n
+      EXPORTING key = p_smw0n
       IMPORTING size = lv_size
-      TABLES    data = lt_mime
+      TABLES data = lt_mime
       EXCEPTIONS OTHERS = 1.
-    IF sy-subrc <> 0.
-      WRITE: / 'ERROR: SMW0 read failed. Object:', p_smw0n.
-      RETURN.
-    ENDIF.
+    IF sy-subrc <> 0. WRITE: / 'SMW0 read failed:', p_smw0n. RETURN. ENDIF.
     CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'
       EXPORTING input_length = lv_size
-      IMPORTING buffer       = lv_wasm
-      TABLES    binary_tab   = lt_mime.
+      IMPORTING buffer = lv_wasm
+      TABLES binary_tab = lt_mime.
 
   ELSEIF p_hex = abap_true.
-    " Hex string input
-    IF p_hexin IS INITIAL.
-      WRITE: / 'ERROR: No hex string provided.'.
-      RETURN.
-    ENDIF.
+    IF p_hexin IS INITIAL. WRITE: / 'ERROR: No hex.'. RETURN. ENDIF.
     lv_wasm = p_hexin.
   ENDIF.
 
-  IF xstrlen( lv_wasm ) < 8.
-    WRITE: / 'ERROR: WASM binary too small:', xstrlen( lv_wasm ), 'bytes'.
-    RETURN.
-  ENDIF.
+  IF xstrlen( lv_wasm ) < 8. WRITE: / 'ERROR: Too small:', xstrlen( lv_wasm ). RETURN. ENDIF.
 
   WRITE: / '── WASM Binary ──'.
   WRITE: / 'Size:', xstrlen( lv_wasm ), 'bytes'.
   ULINE.
 
-  " ── Step 2: Parse ──
+  " ── Parse ──
   DATA(lo_mod) = NEW zcl_wasm_module( ).
   TRY.
       lo_mod->parse( lv_wasm ).
     CATCH cx_root INTO DATA(lx_parse).
-      WRITE: / 'PARSE ERROR:', lx_parse->get_text( ).
-      RETURN.
+      WRITE: / 'PARSE ERROR:', lx_parse->get_text( ). RETURN.
   ENDTRY.
 
-  DATA(lv_summary) = lo_mod->summary( ).
   WRITE: / '── Module Summary ──'.
-  WRITE: / lv_summary.
+  WRITE: / lo_mod->summary( ).
   ULINE.
 
-  " Show exports
   WRITE: / '── Exports ──'.
   LOOP AT lo_mod->mt_exports INTO DATA(ls_exp).
     DATA(lv_ekind) = ||.
@@ -155,60 +134,160 @@ START-OF-SELECTION.
   ENDLOOP.
   ULINE.
 
-  " ── Step 3: Compile ──
+  " ── Compile ──
+  DATA(lv_progname) = CONV string( p_prog ).
+  CONDENSE lv_progname.
+  TRANSLATE lv_progname TO UPPER CASE.
+
   DATA(lv_abap) = NEW zcl_wasm_codegen( )->compile(
     io_module = lo_mod
-    iv_name   = 'ZWASM_GEN' ).
+    iv_name   = lv_progname ).
 
-  DATA: lt_src_lines TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
-  SPLIT lv_abap AT cl_abap_char_utilities=>newline INTO TABLE lt_src_lines.
+  DATA: lt_code TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
+  SPLIT lv_abap AT cl_abap_char_utilities=>newline INTO TABLE lt_code.
 
   WRITE: / '── Compiled ABAP ──'.
-  WRITE: / 'Lines:', lines( lt_src_lines ).
+  WRITE: / 'Lines:', lines( lt_code ).
 
-  " Show generated source
   IF p_show = abap_true.
     ULINE.
     WRITE: / '── Generated Source ──'.
     DATA(lv_lineno) = 0.
-    LOOP AT lt_src_lines INTO DATA(lv_line).
+    LOOP AT lt_code INTO DATA(lv_line).
       lv_lineno = lv_lineno + 1.
       WRITE: / lv_lineno, lv_line.
     ENDLOOP.
     ULINE.
   ENDIF.
 
-  " ── Step 4: Execute ──
-  IF p_exec = abap_true.
+  " ── Class wrapper ──
+  IF p_class = abap_true.
+    DATA(lv_wasm_hex) = CONV string( lv_wasm ).
+    DATA(lv_clsname) = CONV string( p_clsnm ).
+    CONDENSE lv_clsname.
+    TRANSLATE lv_clsname TO UPPER CASE.
+
+    DATA(lv_cls_src) = ||.
+    IF p_perm = abap_true.
+      " Static: class points to persistent program
+      lv_cls_src = NEW zcl_wasm_codegen( )->compile_class(
+        io_module    = lo_mod
+        iv_classname = lv_clsname
+        iv_program   = lv_progname ).
+    ELSE.
+      " Dynamic: self-contained with embedded WASM
+      lv_cls_src = NEW zcl_wasm_codegen( )->compile_class(
+        io_module    = lo_mod
+        iv_classname = lv_clsname
+        iv_wasm_hex  = lv_wasm_hex ).
+    ENDIF.
+
+    ULINE.
+    WRITE: / '── CLASS Wrapper ──'.
+    WRITE: / 'Class:', lv_clsname.
+    DATA: lt_cls_lines TYPE STANDARD TABLE OF string.
+    SPLIT lv_cls_src AT cl_abap_char_utilities=>newline INTO TABLE lt_cls_lines.
+    WRITE: / 'Lines:', lines( lt_cls_lines ).
+    ULINE.
+    DATA(lv_cln) = 0.
+    LOOP AT lt_cls_lines INTO DATA(lv_cl).
+      lv_cln = lv_cln + 1.
+      WRITE: / lv_cln, lv_cl.
+    ENDLOOP.
+    ULINE.
+    WRITE: / 'Usage:'.
+    WRITE: / '  DATA(lo) = NEW', lv_clsname, '( ).'.
+    LOOP AT lo_mod->mt_exports INTO DATA(ls_ex2) WHERE kind = 0.
+      DATA(lv_ename) = ls_ex2-name.
+      TRANSLATE lv_ename TO UPPER CASE.
+      WRITE: / '  lo->', lv_ename, '( ... )'.
+    ENDLOOP.
+    ULINE.
+  ENDIF.
+
+  " ── Generate / Save ──
+  DATA lv_target_prog TYPE string.
+
+  IF p_temp = abap_true.
+    " Temporary subroutine pool
+    WRITE: / '── Temporary Generation ──'.
+    DATA lv_msg TYPE string.
+    GENERATE SUBROUTINE POOL lt_code NAME lv_target_prog MESSAGE lv_msg.
+    IF sy-subrc <> 0.
+      WRITE: / 'GENERATE failed:', sy-subrc, lv_msg. RETURN.
+    ENDIF.
+    WRITE: / 'Generated temporary program:', lv_target_prog.
+
+  ELSE.
+    " Persistent program via INSERT REPORT
+    WRITE: / '── Persistent Program ──'.
+    DATA(lv_repname) = CONV syrepid( lv_progname ).
+
+    " Check if program already exists
+    SELECT SINGLE name FROM trdir INTO @DATA(lv_exists)
+      WHERE name = @lv_repname.
+    IF sy-subrc <> 0.
+      " Create new program
+      INSERT REPORT lv_repname FROM lt_code.
+      WRITE: / 'Created program:', lv_repname.
+    ELSE.
+      INSERT REPORT lv_repname FROM lt_code.
+      WRITE: / 'Updated program:', lv_repname.
+    ENDIF.
+
+    IF sy-subrc <> 0.
+      WRITE: / 'INSERT REPORT failed:', sy-subrc. RETURN.
+    ENDIF.
+
+    " Compile / activate
+    DATA lv_gen_msg TYPE string.
+    GENERATE REPORT lv_repname MESSAGE lv_gen_msg.
+    IF sy-subrc <> 0.
+      WRITE: / 'Activation failed:', sy-subrc, lv_gen_msg. RETURN.
+    ENDIF.
+    WRITE: / 'Activated:', lv_repname.
+    WRITE: / 'Call via: PERFORM <func> IN PROGRAM', lv_repname.
+
+    lv_target_prog = lv_repname.
+
+    " Also save wrapper program if class checkbox is set
+    IF p_class = abap_true.
+      DATA(lv_wrap_name) = CONV syrepid( lv_progname && '_WRAP' ).
+      DATA: lt_wrap_code TYPE STANDARD TABLE OF string.
+      SPLIT lv_cls_src AT cl_abap_char_utilities=>newline INTO TABLE lt_wrap_code.
+      INSERT REPORT lv_wrap_name FROM lt_wrap_code.
+      IF sy-subrc = 0.
+        GENERATE REPORT lv_wrap_name MESSAGE lv_gen_msg.
+        IF sy-subrc = 0.
+          WRITE: / 'Wrapper program created:', lv_wrap_name.
+        ELSE.
+          WRITE: / 'Wrapper activation failed:', sy-subrc, lv_gen_msg.
+        ENDIF.
+      ELSE.
+        WRITE: / 'INSERT REPORT wrapper failed:', sy-subrc.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  " ── Execute ──
+  IF p_exec = abap_true AND lv_target_prog IS NOT INITIAL.
     WRITE: / '── Execution ──'.
 
-    " Generate subroutine pool
-    DATA lv_prog TYPE string.
-    DATA lv_msg TYPE string.
-    DATA lt_abap_code TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
-    SPLIT lv_abap AT cl_abap_char_utilities=>newline INTO TABLE lt_abap_code.
-    GENERATE SUBROUTINE POOL lt_abap_code NAME lv_prog MESSAGE lv_msg.
-    IF sy-subrc <> 0.
-      WRITE: / 'GENERATE failed:', sy-subrc.
-      WRITE: / 'Message:', lv_msg.
-      RETURN.
-    ENDIF.
-    WRITE: / 'Generated program:', lv_prog.
-
-    " Call the function
     DATA: lv_result TYPE i.
-    WRITE: / 'Calling:', p_func, 'with args:', p_arg0, p_arg1.
+    DATA(lv_func) = CONV string( p_func ).
+    CONDENSE lv_func.
+    TRANSLATE lv_func TO UPPER CASE.
+    WRITE: / 'Calling:', lv_func, 'with args:', p_arg0, p_arg1.
 
     TRY.
-        PERFORM (p_func) IN PROGRAM (lv_prog)
+        PERFORM (lv_func) IN PROGRAM (lv_target_prog)
           USING p_arg0 p_arg1
           CHANGING lv_result.
       CATCH cx_root INTO DATA(lx_exec).
-        WRITE: / 'EXECUTION ERROR:', lx_exec->get_text( ).
-        RETURN.
+        WRITE: / 'EXECUTION ERROR:', lx_exec->get_text( ). RETURN.
     ENDTRY.
 
-    WRITE: / '────────────────────'.
+    WRITE: / '════════════════════'.
     WRITE: / 'RESULT:', lv_result.
-    WRITE: / '────────────────────'.
+    WRITE: / '════════════════════'.
   ENDIF.
