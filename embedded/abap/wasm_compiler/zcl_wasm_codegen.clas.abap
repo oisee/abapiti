@@ -65,13 +65,14 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     line( || ).
 
-    " Init memory
+    " Init memory (doubling strategy: build 64KB page, then concat pages)
     IF mo_mod->ms_memory-min_pages > 0.
       DATA(lv_pages) = mo_mod->ms_memory-min_pages.
-      DATA(lv_bytes) = lv_pages * 65536.
       line( |gv_mem_pages = { lv_pages }.| ).
-      line( |DATA(lv_z) = CONV xstring( '00' ).| ).
-      line( |DO { lv_bytes - 1 } TIMES. CONCATENATE gv_mem lv_z INTO gv_mem IN BYTE MODE. ENDDO.| ).
+      line( |DATA lv_pg TYPE xstring.| ).
+      line( |lv_pg = '00'.| ).
+      line( |DO 16 TIMES. CONCATENATE lv_pg lv_pg INTO lv_pg IN BYTE MODE. ENDDO.| ).
+      line( |DO { lv_pages } TIMES. CONCATENATE gv_mem lv_pg INTO gv_mem IN BYTE MODE. ENDDO.| ).
     ENDIF.
 
     " Init globals
@@ -82,11 +83,21 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    " Init data segments
+    " Init data segments (split long hex into 80-byte chunks for 255 char limit)
     LOOP AT mo_mod->mt_data INTO DATA(ls_d).
       DATA(lv_dlen) = xstrlen( ls_d-data ).
-      IF lv_dlen > 0.
+      IF lv_dlen > 0 AND lv_dlen <= 80.
         line( |gv_mem+{ ls_d-offset }({ lv_dlen }) = '{ ls_d-data }'.| ).
+      ELSEIF lv_dlen > 80.
+        DATA(lv_doff) = 0.
+        WHILE lv_doff < lv_dlen.
+          DATA(lv_dchunk) = 80.
+          IF lv_doff + lv_dchunk > lv_dlen. lv_dchunk = lv_dlen - lv_doff. ENDIF.
+          DATA(lv_chunk_x) = ls_d-data+lv_doff(lv_dchunk).
+          DATA(lv_moff) = ls_d-offset + lv_doff.
+          line( |gv_mem+{ lv_moff }({ lv_dchunk }) = '{ lv_chunk_x }'.| ).
+          lv_doff = lv_doff + lv_dchunk.
+        ENDWHILE.
       ENDIF.
     ENDLOOP.
 
@@ -104,7 +115,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
       line( |  DATA lv_x4 TYPE x LENGTH 4. lv_x4 = iv_val.| ).
       line( |  DATA(lv_r) = lv_x4+3(1) && lv_x4+2(1) && lv_x4+1(1) && lv_x4+0(1).| ).
-      line( |  gv_mem+iv_addr(4) = lv_r.| ).
+      line( |  REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
@@ -112,7 +123,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
-      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = iv_val. gv_mem+iv_addr(1) = lv_x1.| ).
+      line( |  DATA lv_x1 TYPE x LENGTH 1. lv_x1 = iv_val.| ).
+      line( |  REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_x1 IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
     ENDIF.
@@ -127,10 +139,30 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
 
   METHOD line.
-    DO mv_indent TIMES.
-      mv_out = mv_out && `  `.
-    ENDDO.
-    mv_out = mv_out && iv && cl_abap_char_utilities=>newline.
+    DATA(lv_prefix) = ||.
+    DO mv_indent TIMES. lv_prefix = lv_prefix && `  `. ENDDO.
+    DATA(lv_full) = lv_prefix && iv.
+    " Enforce 255 char limit — split long lines at spaces
+    IF strlen( lv_full ) <= 255.
+      mv_out = mv_out && lv_full && cl_abap_char_utilities=>newline.
+    ELSE.
+      DATA(lv_cont_prefix) = lv_prefix && `  `.
+      DATA(lv_rest) = lv_full.
+      WHILE strlen( lv_rest ) > 255.
+        " Find last space before pos 250
+        DATA(lv_cut) = 250.
+        WHILE lv_cut > 40 AND lv_rest+lv_cut(1) <> ` `.
+          lv_cut = lv_cut - 1.
+        ENDWHILE.
+        IF lv_cut <= 40. lv_cut = 250. ENDIF.
+        mv_out = mv_out && lv_rest(lv_cut) && cl_abap_char_utilities=>newline.
+        lv_rest = lv_cont_prefix && lv_rest+lv_cut.
+        " strip leading space from continuation
+        SHIFT lv_rest LEFT DELETING LEADING ` `.
+        lv_rest = lv_cont_prefix && lv_rest.
+      ENDWHILE.
+      mv_out = mv_out && lv_rest && cl_abap_char_utilities=>newline.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -547,7 +579,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         IF lv_line CP 'ENDFORM*'.
           IF lv_cur_lines + lv_form_lines > iv_max_lines AND lv_cur IS NOT INITIAL.
             " Save current include
-            DATA(lv_inc_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 2 PAD = '0' }|.
+            DATA(lv_inc_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' }|.
             APPEND VALUE ty_include( name = lv_inc_name source = lv_cur ) TO rt.
             lv_inc_num = lv_inc_num + 1.
             CLEAR lv_cur.
@@ -563,7 +595,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Flush last include
     IF lv_cur IS NOT INITIAL.
-      DATA(lv_last_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 2 PAD = '0' }|.
+      DATA(lv_last_name) = |{ lv_name }_F{ lv_inc_num WIDTH = 3 PAD = '0' }|.
       APPEND VALUE ty_include( name = lv_last_name source = lv_cur ) TO rt.
     ENDIF.
 

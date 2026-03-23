@@ -236,24 +236,57 @@ START-OF-SELECTION.
         iv_name      = lv_progname
         iv_max_lines = p_maxln ).
 
+      " Pass 1: INSERT all includes (includes first, main last)
+      DATA(lv_main_idx) = 0.
+      DATA(lv_inc_idx) = 0.
       LOOP AT lt_includes INTO DATA(ls_inc).
+        lv_inc_idx = sy-tabix.
         DATA(lv_iname) = CONV syrepid( ls_inc-name ).
         DATA: lt_isrc TYPE STANDARD TABLE OF string.
         SPLIT ls_inc-source AT cl_abap_char_utilities=>newline INTO TABLE lt_isrc.
+        " Check for long lines
+        DATA(lv_ok) = abap_true.
+        LOOP AT lt_isrc INTO DATA(lv_ichk).
+          IF strlen( lv_ichk ) > 255.
+            WRITE: / 'LONG LINE in', lv_iname, 'line', sy-tabix, 'len=', strlen( lv_ichk ).
+            lv_ok = abap_false.
+          ENDIF.
+        ENDLOOP.
+        IF lv_ok = abap_false. CONTINUE. ENDIF.
         INSERT REPORT lv_iname FROM lt_isrc.
         IF sy-subrc = 0.
-          GENERATE REPORT lv_iname MESSAGE lv_gen_msg.
-          IF sy-subrc = 0.
-            WRITE: / 'OK:', lv_iname, '(', lines( lt_isrc ), 'lines )'.
-          ELSE.
-            WRITE: / 'Activation failed:', lv_iname, lv_gen_msg.
-          ENDIF.
+          WRITE: / 'INSERT OK:', lv_iname, '(', lines( lt_isrc ), 'lines )'.
         ELSE.
           WRITE: / 'INSERT failed:', lv_iname.
         ENDIF.
+        IF lv_inc_idx = 1. lv_main_idx = 1. ENDIF.
       ENDLOOP.
+      " Pass 2: GENERATE only the main program (compiles all includes)
+      IF lv_main_idx > 0.
+        READ TABLE lt_includes INDEX 1 INTO ls_inc.
+        DATA(lv_mname) = CONV syrepid( ls_inc-name ).
+        GENERATE REPORT lv_mname MESSAGE lv_gen_msg.
+        IF sy-subrc = 0.
+          WRITE: / 'Activated:', lv_mname.
+        ELSE.
+          WRITE: / 'Activation failed:', lv_mname, lv_gen_msg.
+        ENDIF.
+      ENDIF.
     ELSE.
-      " Single program
+      " Single program — check for long lines first
+      DATA: lv_long_cnt TYPE i.
+      LOOP AT lt_code INTO DATA(lv_chk).
+        IF strlen( lv_chk ) > 255.
+          lv_long_cnt = lv_long_cnt + 1.
+          IF lv_long_cnt <= 10.
+            WRITE: / 'LINE', sy-tabix, 'len=', strlen( lv_chk ), lv_chk(80), '...'.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+      IF lv_long_cnt > 0.
+        WRITE: / 'Total lines > 255:', lv_long_cnt, '— fix codegen or use Split'.
+        RETURN.
+      ENDIF.
       INSERT REPORT lv_repname FROM lt_code.
       GENERATE REPORT lv_repname MESSAGE lv_gen_msg.
       IF sy-subrc <> 0.

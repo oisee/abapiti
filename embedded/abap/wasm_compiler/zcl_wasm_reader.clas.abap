@@ -29,13 +29,14 @@ CLASS zcl_wasm_reader IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_u32.
-    " Unsigned LEB128
+    " Unsigned LEB128 (int8 arithmetic to avoid i overflow)
     DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8.
     lv_result = 0. lv_shift = 0.
     DO.
       lv_b = read_byte( ).
-      DATA(lv_masked) = lv_b MOD 128.
-      lv_result = lv_result + lv_masked * ipow( base = 2 exp = lv_shift ).
+      DATA(lv_masked) = CONV int8( lv_b MOD 128 ).
+      DATA(lv_pw) = CONV int8( ipow( base = 2 exp = lv_shift ) ).
+      lv_result = lv_result + lv_masked * lv_pw.
       IF lv_b < 128. EXIT. ENDIF.
       lv_shift = lv_shift + 7.
     ENDDO.
@@ -43,13 +44,14 @@ CLASS zcl_wasm_reader IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_i32.
-    " Signed LEB128
+    " Signed LEB128 (int8 arithmetic to avoid i overflow)
     DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8.
     lv_result = 0. lv_shift = 0.
     DO.
       lv_b = read_byte( ).
-      DATA(lv_masked2) = lv_b MOD 128.
-      lv_result = lv_result + lv_masked2 * ipow( base = 2 exp = lv_shift ).
+      DATA(lv_masked2) = CONV int8( lv_b MOD 128 ).
+      DATA(lv_pw2) = CONV int8( ipow( base = 2 exp = lv_shift ) ).
+      lv_result = lv_result + lv_masked2 * lv_pw2.
       lv_shift = lv_shift + 7.
       IF lv_b < 128.
         IF lv_shift < 32 AND lv_b >= 64.
@@ -62,17 +64,19 @@ CLASS zcl_wasm_reader IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_i64.
-    " Signed LEB128 for i64
-    DATA: lv_b TYPE i, lv_shift TYPE i.
+    " Signed LEB128 for i64 (int8 arithmetic, no ipow)
+    DATA: lv_b TYPE i, lv_shift TYPE i, lv_pw TYPE int8.
     rv = 0. lv_shift = 0.
     DO.
       lv_b = read_byte( ).
       DATA(lv_masked) = CONV int8( lv_b MOD 128 ).
-      rv = rv + lv_masked * ipow( base = 2 exp = lv_shift ).
+      lv_pw = 1. DO lv_shift TIMES. lv_pw = lv_pw * 2. ENDDO.
+      rv = rv + lv_masked * lv_pw.
       lv_shift = lv_shift + 7.
       IF lv_b < 128.
         IF lv_shift < 64 AND lv_b >= 64.
-          rv = rv - ipow( base = 2 exp = lv_shift ).
+          lv_pw = 1. DO lv_shift TIMES. lv_pw = lv_pw * 2. ENDDO.
+          rv = rv - lv_pw.
         ENDIF.
         EXIT.
       ENDIF.
