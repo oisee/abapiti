@@ -29,36 +29,39 @@ CLASS zcl_wasm_reader IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_u32.
-    " Unsigned LEB128 (int8 arithmetic to avoid i overflow)
-    DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8.
+    " Unsigned LEB128 (int8 arithmetic, manual doubling — no ipow overflow)
+    DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8, lv_pw TYPE int8.
     lv_result = 0. lv_shift = 0.
     DO.
       lv_b = read_byte( ).
       DATA(lv_masked) = CONV int8( lv_b MOD 128 ).
-      DATA(lv_pw) = CONV int8( ipow( base = 2 exp = lv_shift ) ).
+      lv_pw = 1. DO lv_shift TIMES. lv_pw = lv_pw * 2. ENDDO.
       lv_result = lv_result + lv_masked * lv_pw.
       IF lv_b < 128. EXIT. ENDIF.
       lv_shift = lv_shift + 7.
+      IF lv_shift > 35. EXIT. ENDIF. " safety: max 5 bytes for u32
     ENDDO.
     rv = CONV #( lv_result ).
   ENDMETHOD.
 
   METHOD read_i32.
-    " Signed LEB128 (int8 arithmetic to avoid i overflow)
-    DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8.
+    " Signed LEB128 (int8 arithmetic, manual doubling — no ipow overflow)
+    DATA: lv_b TYPE i, lv_shift TYPE i, lv_result TYPE int8, lv_pw TYPE int8.
     lv_result = 0. lv_shift = 0.
     DO.
       lv_b = read_byte( ).
       DATA(lv_masked2) = CONV int8( lv_b MOD 128 ).
-      DATA(lv_pw2) = CONV int8( ipow( base = 2 exp = lv_shift ) ).
-      lv_result = lv_result + lv_masked2 * lv_pw2.
+      lv_pw = 1. DO lv_shift TIMES. lv_pw = lv_pw * 2. ENDDO.
+      lv_result = lv_result + lv_masked2 * lv_pw.
       lv_shift = lv_shift + 7.
       IF lv_b < 128.
         IF lv_shift < 32 AND lv_b >= 64.
-          lv_result = lv_result - ipow( base = 2 exp = lv_shift ).
+          lv_pw = 1. DO lv_shift TIMES. lv_pw = lv_pw * 2. ENDDO.
+          lv_result = lv_result - lv_pw.
         ENDIF.
         EXIT.
       ENDIF.
+      IF lv_shift > 35. EXIT. ENDIF. " safety: max 5 bytes for i32
     ENDDO.
     rv = CONV #( lv_result ).
   ENDMETHOD.

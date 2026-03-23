@@ -33,6 +33,8 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_num_params TYPE i.
     DATA mv_has_result TYPE abap_bool.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
+    DATA mv_pack_buf TYPE string.
+    DATA mv_pack_indent TYPE i VALUE -1.
     METHODS line IMPORTING iv TYPE string.
     METHODS push RETURNING VALUE(rv) TYPE string.
     METHODS pop RETURNING VALUE(rv) TYPE string.
@@ -40,6 +42,8 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     METHODS emit_function IMPORTING is_func TYPE zcl_wasm_module=>ty_function.
     METHODS emit_instructions IMPORTING it_code TYPE zcl_wasm_module=>ty_instructions.
     METHODS emit_call IMPORTING iv_func_idx TYPE i.
+    METHODS emit_raw_line IMPORTING iv TYPE string.
+    METHODS flush.
     METHODS func_name IMPORTING iv_idx TYPE i RETURNING VALUE(rv) TYPE string.
     METHODS local_name IMPORTING iv_idx TYPE i RETURNING VALUE(rv) TYPE string.
     METHODS valtype_abap IMPORTING iv_type TYPE i RETURNING VALUE(rv) TYPE string.
@@ -49,7 +53,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
   METHOD compile.
     mo_mod = io_module.
-    CLEAR: mv_out, mv_indent.
+    CLEAR: mv_out, mv_indent, mv_pack_buf.
+    mv_pack_indent = -1.
 
     " Program header
     line( |PROGRAM { iv_name }.| ).
@@ -57,7 +62,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " ── DATA declarations (TOP include) ──
     line( |TYPES: ty_x4 TYPE x LENGTH 4.| ).
-    line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE int8, gv_br TYPE int8.| ).
+    line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE i, gv_br TYPE i.| ).
     line( |DATA: gv_wasm_initialized TYPE c.| ).
     line( |DATA: gv_xa TYPE ty_x4, gv_xb TYPE ty_x4, gv_xr TYPE ty_x4.| ).
 
@@ -148,27 +153,122 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( || ).
     ENDIF.
 
+    " Emit stub FORMs for imported functions (WASI etc.)
+    LOOP AT mo_mod->mt_imports INTO DATA(ls_imp) WHERE kind = 0.
+      READ TABLE mo_mod->mt_types INDEX ls_imp-type_index + 1 INTO DATA(ls_itype).
+      IF sy-subrc <> 0. CONTINUE. ENDIF.
+      DATA(lv_isig) = |FORM F{ ls_imp-func_index }|.
+      IF lines( ls_itype-params ) > 0.
+        lv_isig = lv_isig && | USING|.
+        LOOP AT ls_itype-params INTO DATA(ls_ip).
+          DATA(lv_ipi) = sy-tabix - 1.
+          lv_isig = lv_isig && | VALUE(p{ lv_ipi }) TYPE { valtype_abap( ls_ip-type ) }|.
+        ENDLOOP.
+      ENDIF.
+      IF lines( ls_itype-results ) > 0.
+        lv_isig = lv_isig && | CHANGING rv TYPE { valtype_abap( ls_itype-results[ 1 ]-type ) }|.
+      ENDIF.
+      line( |{ lv_isig }.| ).
+      mv_indent = mv_indent + 1.
+      IF lines( ls_itype-results ) > 0.
+        line( |rv = 0.| ).
+      ENDIF.
+      mv_indent = mv_indent - 1.
+      line( |ENDFORM.| ).
+      line( || ).
+    ENDLOOP.
+
     " Emit functions
     LOOP AT mo_mod->mt_functions INTO DATA(ls_func).
       emit_function( ls_func ).
     ENDLOOP.
 
+    flush( ).
     rv = mv_out.
   ENDMETHOD.
 
 
   METHOD line.
+    " Empty line → flush + blank
+    IF iv IS INITIAL.
+      flush( ). emit_raw_line( iv ). RETURN.
+    ENDIF.
+    " Indent mismatch → auto-flush
+    IF mv_pack_buf IS NOT INITIAL AND mv_indent <> mv_pack_indent.
+      flush( ).
+    ENDIF.
+    " Check if non-packable (block boundaries, declarations)
+    DATA(lv_np) = abap_false.
+    DATA(lv_c1) = iv(1).
+    DATA(lv_len) = strlen( iv ).
+    CASE lv_c1.
+      WHEN 'D'. " DO, DATA
+        IF lv_len >= 3 AND ( iv(3) = 'DO ' OR iv(3) = 'DO.' ).
+          lv_np = abap_true.
+        ELSEIF lv_len >= 4 AND iv(4) = 'DATA'.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'E'. " ENDDO, ENDFORM, ELSE, ENDIF, ENDCLASS, ENDMETHOD
+        IF iv = 'ENDDO.' OR iv = 'ENDFORM.' OR iv = 'ELSE.' OR iv = 'ENDIF.'
+          OR iv = 'ENDCLASS.' OR iv = 'ENDMETHOD.' OR iv = 'ENDWHILE.'.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'F'. " FORM
+        IF lv_len >= 5 AND iv(5) = 'FORM '.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'I'. " IF (block), INCLUDE
+        IF lv_len >= 3 AND iv(3) = 'IF ' AND iv NS 'ENDIF'.
+          lv_np = abap_true.
+        ELSEIF lv_len >= 8 AND iv(8) = 'INCLUDE '.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'P'. " PROGRAM, PUBLIC, PRIVATE
+        IF lv_len >= 7 AND ( iv(7) = 'PROGRAM' OR iv(7) = 'PUBLIC ' OR iv(7) = 'PRIVATE' ).
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'C'. " CLASS
+        IF lv_len >= 6 AND iv(6) = 'CLASS '.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'M'. " METHOD, METHODS
+        IF lv_len >= 7 AND ( iv(7) = 'METHOD ' OR iv(7) = 'METHODS' ).
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'T'. " TYPES
+        IF lv_len >= 5 AND iv(5) = 'TYPES'.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'W'. " WHILE
+        IF lv_len >= 6 AND iv(6) = 'WHILE '.
+          lv_np = abap_true.
+        ENDIF.
+    ENDCASE.
+    IF lv_np = abap_true.
+      flush( ). emit_raw_line( iv ). RETURN.
+    ENDIF.
+    " Pack: accumulate statements on one line up to 240 chars
+    IF mv_pack_buf IS INITIAL.
+      mv_pack_buf = iv. mv_pack_indent = mv_indent.
+    ELSEIF strlen( mv_pack_buf ) + 1 + strlen( iv ) <= 240.
+      mv_pack_buf = mv_pack_buf && ` ` && iv.
+    ELSE.
+      flush( ).
+      mv_pack_buf = iv. mv_pack_indent = mv_indent.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD emit_raw_line.
     DATA(lv_prefix) = ||.
     DO mv_indent TIMES. lv_prefix = lv_prefix && `  `. ENDDO.
     DATA(lv_full) = lv_prefix && iv.
-    " Enforce 255 char limit — split long lines at spaces
     IF strlen( lv_full ) <= 255.
       mv_out = mv_out && lv_full && cl_abap_char_utilities=>newline.
     ELSE.
       DATA(lv_cont_prefix) = lv_prefix && `  `.
       DATA(lv_rest) = lv_full.
       WHILE strlen( lv_rest ) > 255.
-        " Find last space before pos 250
         DATA(lv_cut) = 250.
         WHILE lv_cut > 40 AND lv_rest+lv_cut(1) <> ` `.
           lv_cut = lv_cut - 1.
@@ -176,11 +276,22 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         IF lv_cut <= 40. lv_cut = 250. ENDIF.
         mv_out = mv_out && lv_rest(lv_cut) && cl_abap_char_utilities=>newline.
         lv_rest = lv_cont_prefix && lv_rest+lv_cut.
-        " strip leading space from continuation
         SHIFT lv_rest LEFT DELETING LEADING ` `.
         lv_rest = lv_cont_prefix && lv_rest.
       ENDWHILE.
       mv_out = mv_out && lv_rest && cl_abap_char_utilities=>newline.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD flush.
+    IF mv_pack_buf IS NOT INITIAL.
+      DATA(lv_saved_indent) = mv_indent.
+      mv_indent = mv_pack_indent.
+      emit_raw_line( mv_pack_buf ).
+      mv_indent = lv_saved_indent.
+      CLEAR mv_pack_buf.
+      mv_pack_indent = -1.
     ENDIF.
   ENDMETHOD.
 
@@ -229,11 +340,11 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
 
   METHOD valtype_abap.
-    " Use int8 for all integer types to avoid type mismatches in PERFORM
+    " i32 → TYPE i, i64 → TYPE int8
     CASE iv_type.
-      WHEN 127. rv = 'int8'. " 0x7F = i32
+      WHEN 127. rv = 'i'. " 0x7F = i32
       WHEN 126. rv = 'int8'. " 0x7E = i64
-      WHEN OTHERS. rv = 'int8'.
+      WHEN OTHERS. rv = 'i'.
     ENDCASE.
   ENDMETHOD.
 
@@ -255,7 +366,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       lv_sig = lv_sig && | USING|.
       LOOP AT ls_type-params INTO DATA(ls_p).
         DATA(lv_pi) = sy-tabix - 1.
-        lv_sig = lv_sig && | VALUE(p{ lv_pi }) TYPE { valtype_abap( ls_p-type ) }|.
+        lv_sig = lv_sig && | p{ lv_pi } TYPE { valtype_abap( ls_p-type ) }|.
       ENDLOOP.
     ENDIF.
 
@@ -277,9 +388,20 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA(lv_saved) = mv_out.
     CLEAR mv_out.
     emit_instructions( is_func-code ).
+    " Close any unclosed blocks (from parse failures)
+    WHILE lines( mt_block_kinds ) > 0.
+      DATA(lv_bk) = mt_block_kinds[ lines( mt_block_kinds ) ].
+      DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
+      mv_indent = mv_indent - 1.
+      CASE lv_bk.
+        WHEN c_block OR c_loop. line( |ENDDO.| ).
+        WHEN c_if. line( |ENDIF.| ).
+      ENDCASE.
+    ENDWHILE.
     IF lv_has_result = abap_true AND mv_stack_depth > 0.
       line( |rv = { peek( ) }.| ).
     ENDIF.
+    flush( ).
     DATA(lv_body) = mv_out.
     mv_out = lv_saved.
 
@@ -291,10 +413,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Stack variables — only declare up to mv_max_stack
     IF mv_max_stack > 0.
-      DATA(lv_decl) = |DATA: lv_s0 TYPE int8|.
+      DATA(lv_decl) = |DATA: lv_s0 TYPE i|.
       DATA(lv_si) = 1.
       WHILE lv_si < mv_max_stack.
-        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE int8|.
+        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
         " Split line if getting long
         IF strlen( lv_decl ) > 200.
           line( |{ lv_decl }.| ).
@@ -529,10 +651,19 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
   METHOD emit_call.
     DATA(lv_fname) = func_name( iv_func_idx ).
 
-    " Get function type
+    " Get function type — handle both imported and local functions
     DATA(lv_fi) = iv_func_idx - mo_mod->mv_num_imported_funcs.
-    READ TABLE mo_mod->mt_functions INDEX lv_fi + 1 INTO DATA(ls_f).
-    READ TABLE mo_mod->mt_types INDEX ls_f-type_index + 1 INTO DATA(ls_type).
+    DATA ls_type TYPE zcl_wasm_module=>ty_functype.
+    IF lv_fi < 0.
+      " Imported function — look up type from imports
+      READ TABLE mo_mod->mt_imports WITH KEY func_index = iv_func_idx INTO DATA(ls_imp).
+      IF sy-subrc = 0.
+        READ TABLE mo_mod->mt_types INDEX ls_imp-type_index + 1 INTO ls_type.
+      ENDIF.
+    ELSE.
+      READ TABLE mo_mod->mt_functions INDEX lv_fi + 1 INTO DATA(ls_f).
+      READ TABLE mo_mod->mt_types INDEX ls_f-type_index + 1 INTO ls_type.
+    ENDIF.
 
     " Pop arguments in reverse
     DATA(lv_np) = lines( ls_type-params ).
@@ -636,7 +767,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
   METHOD compile_class.
     mo_mod = io_module.
-    CLEAR: mv_out, mv_indent.
+    CLEAR: mv_out, mv_indent, mv_pack_buf.
+    mv_pack_indent = -1.
 
     DATA(lv_cls) = iv_classname.
     TRANSLATE lv_cls TO UPPER CASE.
@@ -802,6 +934,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     mv_indent = mv_indent - 1.
     line( |ENDCLASS.| ).
 
+    flush( ).
     rv = mv_out.
   ENDMETHOD.
 
