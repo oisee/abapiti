@@ -55,8 +55,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( || ).
 
     " ── DATA declarations (TOP include) ──
+    line( |TYPES: ty_x4 TYPE x LENGTH 4.| ).
     line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE i, gv_br TYPE i.| ).
     line( |DATA: gv_wasm_initialized TYPE c.| ).
+    line( |DATA: gv_xa TYPE ty_x4, gv_xb TYPE ty_x4, gv_xr TYPE ty_x4.| ).
 
     LOOP AT mo_mod->mt_globals INTO DATA(ls_g).
       DATA(lv_gi) = sy-tabix - 1.
@@ -381,18 +383,15 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           line( |IF { lv_a } >= { lv_b }. { lv_r } = 1. ELSE. { lv_r } = 0. ENDIF.| ).
 
         " --- Bitwise (via ipow) ---
-        WHEN 113. " i32.and — simplified via BIT-AND DATA statement trick
+        WHEN 113. " i32.and
           lv_b = pop( ). lv_a = pop( ). lv_r = push( ).
-          line( |DATA(lv_xa) = CONV x4( { lv_a } ). DATA(lv_xb) = CONV x4( { lv_b } ).| ).
-          line( |DATA(lv_xr) = lv_xa BIT-AND lv_xb. { lv_r } = lv_xr.| ).
+          line( |gv_xa = { lv_a }. gv_xb = { lv_b }. gv_xr = gv_xa BIT-AND gv_xb. { lv_r } = gv_xr.| ).
         WHEN 114. " i32.or
           lv_b = pop( ). lv_a = pop( ). lv_r = push( ).
-          line( |DATA(lv_xa) = CONV x4( { lv_a } ). DATA(lv_xb) = CONV x4( { lv_b } ).| ).
-          line( |DATA(lv_xr) = lv_xa BIT-OR lv_xb. { lv_r } = lv_xr.| ).
+          line( |gv_xa = { lv_a }. gv_xb = { lv_b }. gv_xr = gv_xa BIT-OR gv_xb. { lv_r } = gv_xr.| ).
         WHEN 115. " i32.xor
           lv_b = pop( ). lv_a = pop( ). lv_r = push( ).
-          line( |DATA(lv_xa) = CONV x4( { lv_a } ). DATA(lv_xb) = CONV x4( { lv_b } ).| ).
-          line( |DATA(lv_xr) = lv_xa BIT-XOR lv_xb. { lv_r } = lv_xr.| ).
+          line( |gv_xa = { lv_a }. gv_xb = { lv_b }. gv_xr = gv_xa BIT-XOR gv_xb. { lv_r } = gv_xr.| ).
         WHEN 116. " i32.shl
           lv_b = pop( ). lv_a = pop( ). lv_r = push( ).
           line( |{ lv_r } = { lv_a } * ipow( base = 2 exp = { lv_b } MOD 32 ).| ).
