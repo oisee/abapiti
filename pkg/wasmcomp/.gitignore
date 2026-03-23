@@ -1,4 +1,6 @@
-testdata/*.wasm
+# Large compiled outputs (QuickJS 1.2MB, abaplint 27MB)
+testdata/quickjs_eval.wasm
+testdata/abaplint.wasm
 testdata/*.abap
 testdata/fugr/
 testdata/multi/
