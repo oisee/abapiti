@@ -31,6 +31,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_stack_depth TYPE i.
     DATA mv_max_stack TYPE i.
     DATA mv_num_params TYPE i.
+    DATA mv_has_result TYPE abap_bool.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     METHODS line IMPORTING iv TYPE string.
     METHODS push RETURNING VALUE(rv) TYPE string.
@@ -56,7 +57,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " ── DATA declarations (TOP include) ──
     line( |TYPES: ty_x4 TYPE x LENGTH 4.| ).
-    line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE i, gv_br TYPE i.| ).
+    line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE int8, gv_br TYPE int8.| ).
     line( |DATA: gv_wasm_initialized TYPE c.| ).
     line( |DATA: gv_xa TYPE ty_x4, gv_xb TYPE ty_x4, gv_xr TYPE ty_x4.| ).
 
@@ -116,7 +117,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Memory helper FORMs (only if module uses memory)
     IF mo_mod->ms_memory-min_pages > 0 OR lines( mo_mod->mt_data ) > 0.
-      line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |FORM mem_ld_i32 USING iv_addr TYPE int8 CHANGING rv TYPE int8.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(4).| ).
       line( |  DATA lv_r TYPE xstring.| ).
@@ -124,7 +125,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |  rv = lv_r.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |FORM mem_st_i32 USING iv_addr TYPE int8 iv_val TYPE int8.| ).
       line( |  DATA lv_hex TYPE c LENGTH 8.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -133,12 +134,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |  REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |FORM mem_ld_i32_8u USING iv_addr TYPE int8 CHANGING rv TYPE int8.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(1). rv = lv_b.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |FORM mem_st_i32_8 USING iv_addr TYPE int8 iv_val TYPE int8.| ).
       line( |  DATA lv_hex TYPE c LENGTH 2.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -228,10 +229,11 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
 
   METHOD valtype_abap.
+    " Use int8 for all integer types to avoid type mismatches in PERFORM
     CASE iv_type.
-      WHEN 127. rv = 'i'.    " 0x7F = i32
+      WHEN 127. rv = 'int8'. " 0x7F = i32
       WHEN 126. rv = 'int8'. " 0x7E = i64
-      WHEN OTHERS. rv = 'i'.
+      WHEN OTHERS. rv = 'int8'.
     ENDCASE.
   ENDMETHOD.
 
@@ -257,7 +259,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       ENDLOOP.
     ENDIF.
 
-    DATA(lv_has_result) = xsdbool( lines( ls_type-results ) > 0 ).
+    mv_has_result = xsdbool( lines( ls_type-results ) > 0 ).
+    DATA(lv_has_result) = mv_has_result.
     IF lv_has_result = abap_true.
       lv_sig = lv_sig && | CHANGING rv TYPE { valtype_abap( ls_type-results[ 1 ]-type ) }|.
     ENDIF.
@@ -288,16 +291,16 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Stack variables — only declare up to mv_max_stack
     IF mv_max_stack > 0.
-      DATA(lv_decl) = |DATA: lv_s0 TYPE i|.
+      DATA(lv_decl) = |DATA: lv_s0 TYPE int8|.
       DATA(lv_si) = 1.
       WHILE lv_si < mv_max_stack.
-        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
+        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE int8|.
         " Split line if getting long
         IF strlen( lv_decl ) > 200.
           line( |{ lv_decl }.| ).
           lv_si = lv_si + 1.
           IF lv_si < mv_max_stack.
-            lv_decl = |DATA: lv_s{ lv_si } TYPE i|.
+            lv_decl = |DATA: lv_s{ lv_si } TYPE int8|.
           ELSE.
             CLEAR lv_decl.
           ENDIF.
@@ -495,7 +498,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           ENDIF.
 
         WHEN 15. " return
-          IF mv_stack_depth > 0.
+          IF mv_has_result = abap_true AND mv_stack_depth > 0.
             line( |rv = { pop( ) }. RETURN.| ).
           ELSE.
             line( |RETURN.| ).
@@ -514,7 +517,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
         " --- Nop / Unreachable ---
         WHEN 0. " unreachable
-          line( |RAISE EXCEPTION TYPE cx_sy_program_error. " unreachable| ).
+          line( |MESSAGE 'WASM unreachable' TYPE 'X'. " trap| ).
         WHEN 1. " nop
           " nothing
 
