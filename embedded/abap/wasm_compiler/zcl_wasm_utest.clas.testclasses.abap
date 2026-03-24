@@ -119,7 +119,7 @@ CLASS lcl_test IMPLEMENTATION.
     ENDLOOP.
     cl_abap_unit_assert=>assert_equals( act = lv_long exp = 0 msg = |{ lv_long } lines > 255 chars| ).
 
-    " Should have > 50K lines (packing reduces ~244K to ~70K)
+    " Should have > 50K lines (packing reduces ~244K to ~100K)
     cl_abap_unit_assert=>assert_true( act = xsdbool( lines( lt_code ) > 50000 ) msg = |Only { lines( lt_code ) } lines| ).
 
     " Check FORM WASM_INIT exists
@@ -138,14 +138,21 @@ CLASS lcl_test IMPLEMENTATION.
       lv_total_instr = lv_total_instr + lines( ls_f-code ).
     ENDLOOP.
 
+    cl_abap_unit_assert=>assert_true( act = xsdbool( lo_mod->ms_memory-min_pages > 0 ) msg = |mem_pages={ lo_mod->ms_memory-min_pages }| ).
+
     DATA(lv_abap) = NEW zcl_wasm_codegen( )->compile( lo_mod ).
+    cl_abap_unit_assert=>assert_true( act = xsdbool( lv_abap CS 'CONCATENATE gv_mem' ) msg = 'no mem alloc in WASM_INIT' ).
     DATA: lt_code TYPE STANDARD TABLE OF string.
     SPLIT lv_abap AT cl_abap_char_utilities=>newline INTO TABLE lt_code.
 
-    DATA: lv_prog TYPE string, lv_msg TYPE string.
-    GENERATE SUBROUTINE POOL lt_code NAME lv_prog MESSAGE lv_msg.
+    DATA: lv_prog TYPE string, lv_msg TYPE string, lv_word TYPE string, lv_line TYPE i.
+    GENERATE SUBROUTINE POOL lt_code NAME lv_prog MESSAGE lv_msg WORD lv_word LINE lv_line.
     IF sy-subrc <> 0.
-      cl_abap_unit_assert=>fail( msg = |GENERATE: rc={ sy-subrc } { lv_msg } lines={ lines( lt_code ) } instrs={ lv_total_instr }| ).
+      DATA(lv_ctx) = ||.
+      DATA(lv_from) = lv_line - 25. IF lv_from < 1. lv_from = 1. ENDIF.
+      DATA(lv_to) = lv_line + 3. IF lv_to > lines( lt_code ). lv_to = lines( lt_code ). ENDIF.
+      DO lv_to - lv_from + 1 TIMES. DATA(lv_li) = lv_from + sy-index - 1. lv_ctx = lv_ctx && |{ lv_li }:{ lt_code[ lv_li ] }\n|. ENDDO.
+      cl_abap_unit_assert=>fail( msg = |GENERATE: rc={ sy-subrc } { lv_msg } line={ lv_line }\n{ lv_ctx }| ).
       RETURN.
     ENDIF.
 
@@ -157,11 +164,22 @@ CLASS lcl_test IMPLEMENTATION.
         RETURN.
     ENDTRY.
 
-    " _START (will likely fail — WASI imports missing)
+    " Check memory was allocated
+    DATA lv_mem_sz TYPE i.
+    PERFORM ('GET_MEM_SIZE') IN PROGRAM (lv_prog) CHANGING lv_mem_sz.
+    cl_abap_unit_assert=>assert_true( act = xsdbool( lv_mem_sz > 0 ) msg = |gv_mem size={ lv_mem_sz } after WASM_INIT| ).
+
+    " _START
     TRY.
         PERFORM ('_START') IN PROGRAM (lv_prog).
       CATCH cx_root INTO DATA(lx_start).
-        cl_abap_unit_assert=>fail( msg = |_START: { lx_start->get_text( ) }| ).
+        DATA(lv_trace) = ||.
+        DATA(lx_prev) = lx_start.
+        WHILE lx_prev IS BOUND.
+          lv_trace = lv_trace && lx_prev->get_text( ) && |\n|.
+          lx_prev = lx_prev->previous.
+        ENDWHILE.
+        cl_abap_unit_assert=>fail( msg = |_START: { lv_trace }| ).
     ENDTRY.
   ENDMETHOD.
 ENDCLASS.
