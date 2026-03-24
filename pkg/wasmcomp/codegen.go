@@ -23,12 +23,18 @@ const (
 	blockTRY                  // try → TRY ... ENDTRY
 )
 
+// blockEntry tracks the kind and the stack depth when the block was entered.
+type blockEntry struct {
+	kind       blockKind
+	savedDepth int // stack depth after popping condition (for if) or at block start
+}
+
 type compiler struct {
 	mod        *Module
 	className  string
 	sb         strings.Builder
 	indent     int
-	blockStack []blockKind // tracks what to close on OpEnd
+	blockStack []blockEntry // tracks what to close on OpEnd + stack depth
 
 	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
 	useFUGR       bool
@@ -518,26 +524,30 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpBlock:
 			c.line("DO 1 TIMES. \" block")
 			c.indent++
-			c.blockStack = append(c.blockStack, blockDO)
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockDO, savedDepth: stack.depth})
 		case OpLoop:
 			c.line("DO. \" loop")
 			c.indent++
-			c.blockStack = append(c.blockStack, blockDO)
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockDO, savedDepth: stack.depth})
 		case OpIf:
 			cond := stack.pop()
 			c.line("IF %s <> 0.", cond)
 			c.indent++
-			c.blockStack = append(c.blockStack, blockIF)
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: stack.depth})
 		case OpElse:
 			c.indent--
 			c.line("ELSE.")
 			c.indent++
+			// Reset stack depth to what it was at the start of the if block
+			if len(c.blockStack) > 0 {
+				stack.depth = c.blockStack[len(c.blockStack)-1].savedDepth
+			}
 		case OpEnd:
 			if len(c.blockStack) > 0 {
-				kind := c.blockStack[len(c.blockStack)-1]
+				entry := c.blockStack[len(c.blockStack)-1]
 				c.blockStack = c.blockStack[:len(c.blockStack)-1]
 				c.indent--
-				switch kind {
+				switch entry.kind {
 				case blockIF:
 					c.line("ENDIF.")
 				case blockDO:
@@ -595,7 +605,7 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpTry:
 			c.line("TRY. \" wasm try")
 			c.indent++
-			c.blockStack = append(c.blockStack, blockTRY)
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockTRY, savedDepth: stack.depth})
 		case OpCatch, OpCatchAll:
 			c.indent--
 			c.line("CATCH cx_root. \" wasm catch")
