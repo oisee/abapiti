@@ -128,6 +128,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     " Memory helper FORMs (only if module uses memory)
     IF mo_mod->ms_memory-min_pages > 0 OR lines( mo_mod->mt_data ) > 0.
       line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |  IF iv_addr < 0 OR iv_addr + 4 > xstrlen( gv_mem ). rv = 0. RETURN. ENDIF.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(4).| ).
       line( |  DATA lv_r TYPE xstring.| ).
@@ -136,6 +137,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |  IF iv_addr < 0 OR iv_addr + 4 > xstrlen( gv_mem ). RETURN. ENDIF.| ).
       line( |  DATA lv_hex TYPE c LENGTH 8.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -145,11 +147,13 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
+      line( |  IF iv_addr < 0 OR iv_addr + 1 > xstrlen( gv_mem ). rv = 0. RETURN. ENDIF.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(1). rv = lv_b.| ).
       line( |ENDFORM.| ).
       line( || ).
       line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
+      line( |  IF iv_addr < 0 OR iv_addr + 1 > xstrlen( gv_mem ). RETURN. ENDIF.| ).
       line( |  DATA lv_hex TYPE c LENGTH 2.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -157,6 +161,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |ENDFORM.| ).
       line( || ).
     ENDIF.
+
+    " Debug helper — returns memory size
+    line( |FORM GET_MEM_SIZE CHANGING rv TYPE i.| ).
+    line( |  rv = xstrlen( gv_mem ).| ).
+    line( |ENDFORM.| ).
+    line( || ).
 
     " Emit stub FORMs for imported functions (WASI etc.)
     LOOP AT mo_mod->mt_imports INTO DATA(ls_imp) WHERE kind = 0.

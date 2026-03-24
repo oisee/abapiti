@@ -181,7 +181,7 @@ CLASS zcl_wasm_module IMPLEMENTATION.
       CASE ls_imp-kind.
         WHEN 0. ls_imp-type_index = mo_reader->read_u32( ). ls_imp-func_index = mv_num_imported_funcs. mv_num_imported_funcs = mv_num_imported_funcs + 1.
         WHEN 1. mo_reader->read_byte( ). mo_reader->read_u32( ). DATA(lv_has_max) = mo_reader->read_byte( ). IF lv_has_max = 1. mo_reader->read_u32( ). ENDIF.
-        WHEN 2. DATA(lv_hm2) = mo_reader->read_byte( ). mo_reader->read_u32( ). IF lv_hm2 = 1. mo_reader->read_u32( ). ENDIF.
+        WHEN 2. DATA(lv_hm2) = mo_reader->read_byte( ). ms_memory-min_pages = mo_reader->read_u32( ). IF lv_hm2 = 1. ms_memory-max_pages = mo_reader->read_u32( ). ENDIF.
         WHEN 3. mo_reader->read_byte( ). mo_reader->read_byte( ).
       ENDCASE.
       APPEND ls_imp TO mt_imports.
