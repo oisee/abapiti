@@ -112,10 +112,13 @@ GENERATE rc=4 at line 229,175: "No open IF statement exists" (ELSE).
 
 1. **Dump function at line 229K** — find which function, extract its ABAP, manually count IF/ELSE/ENDIF
 2. **ROOT CAUSE FOUND: cross-nesting** — WASM allows `block; if; end_block; else; end_if` but ABAP rejects `DO. IF. ENDDO. ELSE. ENDIF.` as invalid nesting. Blocks can't use DO/ENDDO when they span IF/ELSE boundaries.
-3. **Fix options:**
-   - Remove DO 1 TIMES for blocks entirely (original a4h-105 approach), use only gv_br flag + EXIT from enclosing loops
-   - Restructure block emission to check if block crosses IF/ELSE boundary before using DO
-   - Use Go codegen FUGR backend (already handles this correctly via different architecture)
+3. **Fix: FORM-per-block architecture** (next session)
+   - Each WASM `block` → `PERFORM block_N.` with body in separate FORM
+   - `br 0` → `RETURN.` (exits block FORM), `br N` → `gv_br = N. RETURN.`
+   - No cross-nesting possible (FORM is isolated scope)
+   - Requires global variables (move DATA to PROGRAM level)
+   - Dead code elimination (93K→~80K lines) works correctly and should be kept
+   - Tried and rejected: blocks without DO (loses nesting depth), dead-end-no-emit (unclosed DO)
 
 ---
 
