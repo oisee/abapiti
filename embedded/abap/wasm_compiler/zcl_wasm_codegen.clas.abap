@@ -165,11 +165,11 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         lv_isig = lv_isig && | USING|.
         LOOP AT ls_itype-params INTO DATA(ls_ip).
           DATA(lv_ipi) = sy-tabix - 1.
-          lv_isig = lv_isig && | VALUE(p{ lv_ipi }) TYPE { valtype_abap( ls_ip-type ) }|.
+          lv_isig = lv_isig && | p{ lv_ipi } TYPE i|.
         ENDLOOP.
       ENDIF.
       IF lines( ls_itype-results ) > 0.
-        lv_isig = lv_isig && | CHANGING rv TYPE { valtype_abap( ls_itype-results[ 1 ]-type ) }|.
+        lv_isig = lv_isig && | CHANGING rv TYPE i|.
       ENDIF.
       line( |{ lv_isig }.| ).
       mv_indent = mv_indent + 1.
@@ -304,7 +304,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
 
   METHOD push.
-    rv = |lv_s{ mv_stack_depth }|.
+    rv = |s{ mv_func_idx }_{ mv_stack_depth }|.
     mv_stack_depth = mv_stack_depth + 1.
     IF mv_stack_depth > mv_max_stack.
       mv_max_stack = mv_stack_depth.
@@ -314,12 +314,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
   METHOD pop.
     mv_stack_depth = mv_stack_depth - 1.
-    rv = |lv_s{ mv_stack_depth }|.
+    rv = |s{ mv_func_idx }_{ mv_stack_depth }|.
   ENDMETHOD.
 
 
   METHOD peek.
-    rv = |lv_s{ mv_stack_depth - 1 }|.
+    rv = |s{ mv_func_idx }_{ mv_stack_depth - 1 }|.
   ENDMETHOD.
 
 
@@ -347,12 +347,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
 
   METHOD valtype_abap.
-    " i32 → TYPE i, i64 → TYPE int8
-    CASE iv_type.
-      WHEN 127. rv = 'i'. " 0x7F = i32
-      WHEN 126. rv = 'int8'. " 0x7E = i64
-      WHEN OTHERS. rv = 'i'.
-    ENDCASE.
+    " All types → TYPE i for GENERATE SUBROUTINE POOL compatibility
+    rv = 'i'.
   ENDMETHOD.
 
 
@@ -404,10 +400,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       IF lv_has_result = abap_true.
         line( |rv = 0.| ).
       ENDIF.
-    ELSE.
-      IF lv_has_result = abap_true AND mv_stack_depth > 0.
-        line( |rv = { peek( ) }.| ).
-      ENDIF.
+    ELSEIF lv_has_result = abap_true AND mv_stack_depth > 0.
+      line( |rv = { peek( ) }.| ).
     ENDIF.
     flush( ).
     DATA(lv_body) = mv_out.
@@ -421,16 +415,16 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Stack variables — only declare up to mv_max_stack
     IF mv_max_stack > 0.
-      DATA(lv_decl) = |DATA: lv_s0 TYPE i|.
+      DATA(lv_decl) = |DATA: s{ mv_func_idx }_0 TYPE i|.
       DATA(lv_si) = 1.
       WHILE lv_si < mv_max_stack.
-        lv_decl = lv_decl && |, lv_s{ lv_si } TYPE i|.
+        lv_decl = lv_decl && |, s{ mv_func_idx }_{ lv_si } TYPE i|.
         " Split line if getting long
         IF strlen( lv_decl ) > 200.
           line( |{ lv_decl }.| ).
           lv_si = lv_si + 1.
           IF lv_si < mv_max_stack.
-            lv_decl = |DATA: lv_s{ lv_si } TYPE i|.
+            lv_decl = |DATA: s{ mv_func_idx }_{ lv_si } TYPE i|.
           ELSE.
             CLEAR lv_decl.
           ENDIF.
@@ -567,12 +561,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           ENDIF.
 
         " --- Control flow ---
-        WHEN 2. " block
-          line( |DO 1 TIMES. " block| ).
-          mv_indent = mv_indent + 1.
+        WHEN 2. " block — no DO wrapper, br uses EXIT from enclosing loop
           APPEND c_block TO mt_block_kinds.
         WHEN 3. " loop
-          line( |DO. " loop| ).
+          line( |DO.| ).
           mv_indent = mv_indent + 1.
           APPEND c_loop TO mt_block_kinds.
         WHEN 4. " if
@@ -588,30 +580,32 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           IF lines( mt_block_kinds ) > 0.
             DATA(lv_kind) = mt_block_kinds[ lines( mt_block_kinds ) ].
             DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
-            mv_indent = mv_indent - 1.
             CASE lv_kind.
               WHEN c_block.
-                line( |ENDDO.| ).
-                line( |IF gv_br > 0. gv_br = gv_br - 1. EXIT. ENDIF.| ).
+                " No ENDDO — blocks don't use DO wrapper
+                " Only emit gv_br check if inside a loop (EXIT needs enclosing DO)
+                IF line_exists( mt_block_kinds[ table_line = c_loop ] ).
+                  line( |IF gv_br > 0. gv_br = gv_br - 1. EXIT. ENDIF.| ).
+                ENDIF.
               WHEN c_loop.
-                line( |ENDDO.| ).
-                line( |IF gv_br > 0. gv_br = gv_br - 1. EXIT. ENDIF.| ).
+                mv_indent = mv_indent - 1.
+                line( |ENDDO. IF gv_br > 0. gv_br = gv_br - 1. EXIT. ENDIF.| ).
               WHEN c_if.
+                mv_indent = mv_indent - 1.
                 line( |ENDIF.| ).
             ENDCASE.
           ENDIF.
 
         WHEN 12. " br
           IF ls_i-label_idx = 0.
-            " Check if targeting a loop → CONTINUE, else → EXIT
             IF lines( mt_block_kinds ) > 0 AND
                mt_block_kinds[ lines( mt_block_kinds ) ] = c_loop.
-              line( |CONTINUE. " br 0 (loop)| ).
+              line( |CONTINUE.| ).
             ELSE.
-              line( |EXIT. " br 0| ).
+              line( |EXIT.| ).
             ENDIF.
           ELSE.
-            line( |gv_br = { ls_i-label_idx }. EXIT. " br { ls_i-label_idx }| ).
+            line( |gv_br = { ls_i-label_idx }. EXIT.| ).
           ENDIF.
 
         WHEN 13. " br_if
@@ -619,12 +613,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           IF ls_i-label_idx = 0.
             IF lines( mt_block_kinds ) > 0 AND
                mt_block_kinds[ lines( mt_block_kinds ) ] = c_loop.
-              line( |IF { lv_c } <> 0. CONTINUE. ENDIF. " br_if 0 (loop)| ).
+              line( |IF { lv_c } <> 0. CONTINUE. ENDIF.| ).
             ELSE.
-              line( |IF { lv_c } <> 0. EXIT. ENDIF. " br_if 0| ).
+              line( |IF { lv_c } <> 0. EXIT. ENDIF.| ).
             ENDIF.
           ELSE.
-            line( |IF { lv_c } <> 0. gv_br = { ls_i-label_idx }. EXIT. ENDIF. " br_if { ls_i-label_idx }| ).
+            line( |IF { lv_c } <> 0. gv_br = { ls_i-label_idx }. EXIT. ENDIF.| ).
           ENDIF.
 
         WHEN 15. " return
@@ -647,7 +641,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
         " --- Nop / Unreachable ---
         WHEN 0. " unreachable
-          line( |MESSAGE 'WASM unreachable' TYPE 'X'. " trap| ).
+          line( |RETURN.| ).
         WHEN 1. " nop
           " nothing
 
@@ -684,7 +678,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA(lv_save_depth) = mv_stack_depth.
     DATA(lv_si) = 0.
     WHILE lv_si < lv_save_depth.
-      line( |APPEND lv_s{ lv_si } TO gt_stk.| ).
+      line( |APPEND s{ mv_func_idx }_{ lv_si } TO gt_stk.| ).
       lv_si = lv_si + 1.
     ENDWHILE.
     lv_si = mv_num_params.
@@ -721,7 +715,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     ENDWHILE.
     lv_si = lv_save_depth - 1.
     WHILE lv_si >= 0.
-      line( |lv_s{ lv_si } = gt_stk[ lines( gt_stk ) ].| ).
+      line( |s{ mv_func_idx }_{ lv_si } = gt_stk[ lines( gt_stk ) ].| ).
       line( |DELETE gt_stk INDEX lines( gt_stk ).| ).
       lv_si = lv_si - 1.
     ENDWHILE.
