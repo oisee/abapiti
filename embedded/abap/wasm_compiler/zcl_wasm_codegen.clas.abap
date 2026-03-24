@@ -35,6 +35,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_func_idx TYPE i.
     DATA mv_has_result TYPE abap_bool.
     DATA mv_unreachable TYPE abap_bool.
+    DATA mv_dead_depth TYPE i.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     DATA mv_pack_buf TYPE string.
     DATA mv_pack_indent TYPE i VALUE -1.
@@ -319,12 +320,15 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
   METHOD pop.
     mv_stack_depth = mv_stack_depth - 1.
+    IF mv_stack_depth < 0. mv_stack_depth = 0. ENDIF.
     rv = |s{ mv_func_idx }_{ mv_stack_depth }|.
   ENDMETHOD.
 
 
   METHOD peek.
-    rv = |s{ mv_func_idx }_{ mv_stack_depth - 1 }|.
+    DATA(lv_idx) = mv_stack_depth - 1.
+    IF lv_idx < 0. lv_idx = 0. ENDIF.
+    rv = |s{ mv_func_idx }_{ lv_idx }|.
   ENDMETHOD.
 
 
@@ -393,14 +397,15 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     mv_stack_depth = 0.
     mv_max_stack = 0.
     mv_unreachable = abap_false.
+    mv_dead_depth = 0.
     CLEAR mt_block_kinds.
 
     " Emit instructions into temp buffer
     DATA(lv_saved) = mv_out.
     CLEAR mv_out.
     emit_instructions( is_func-code ).
-    " If blocks remain unclosed, this function was partially parsed — discard body
-    IF lines( mt_block_kinds ) > 0.
+    " If blocks remain unclosed or indent is wrong, discard body
+    IF lines( mt_block_kinds ) > 0 OR mv_indent <> 1.
       CLEAR: mv_out, mt_block_kinds.
       mv_indent = 1.
       IF lv_has_result = abap_true AND mv_unreachable = abap_false.
@@ -455,14 +460,20 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA: lv_a TYPE string, lv_b TYPE string, lv_r TYPE string, lv_c TYPE string.
 
     LOOP AT it_code INTO DATA(ls_i).
-      " Skip dead code after return/unreachable/br (reset on block boundaries)
+      " Skip dead code after return/unreachable/br
       IF mv_unreachable = abap_true.
         CASE ls_i-op.
-          WHEN 2 OR 3 OR 4 OR 5. mv_unreachable = abap_false.
-          WHEN 11. " end — only reset if closing a real block
-            IF lines( mt_block_kinds ) > 0. mv_unreachable = abap_false. ENDIF.
-          WHEN OTHERS. CONTINUE.
+          WHEN 2 OR 3 OR 4. " block/loop/if in dead code — track nesting
+            mv_dead_depth = mv_dead_depth + 1.
+          WHEN 11. " end in dead code
+            IF mv_dead_depth > 0.
+              mv_dead_depth = mv_dead_depth - 1.
+            ELSE.
+              " Closing a LIVE block — resume live code
+              mv_unreachable = abap_false.
+            ENDIF.
         ENDCASE.
+        IF mv_unreachable = abap_true. CONTINUE. ENDIF.
       ENDIF.
 
       CASE ls_i-op.
