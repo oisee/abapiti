@@ -151,10 +151,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DO mv_gmax_params TIMES.
       line( |    CLASS-DATA p{ sy-index - 1 } TYPE i.| ).
     ENDDO.
-    " Locals — declare from 0 to max(params+locals) since local indices
-    " start at numParams which varies per function
+    " Locals — declare l0 to l{max_local_index}
+    " mv_gmax_locals is max(numParams + numLocals) across all functions
     DATA(lv_li) = 0.
-    WHILE lv_li < mv_gmax_params + mv_gmax_locals.
+    WHILE lv_li < mv_gmax_locals.
       line( |    CLASS-DATA l{ lv_li } TYPE i.| ).
       lv_li = lv_li + 1.
     ENDWHILE.
@@ -273,7 +273,13 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       DATA(lv_np) = lines( ls_t-params ).
       DATA(lv_nl) = lines( ls_f-locals ).
       IF lv_np > mv_gmax_params. mv_gmax_params = lv_np. ENDIF.
-      IF lv_nl > mv_gmax_locals. mv_gmax_locals = lv_nl. ENDIF.
+      " Track max local INDEX (numParams + numLocals) not just count
+      DATA(lv_max_lidx) = lv_np + lv_nl.
+      IF lv_max_lidx > mv_gmax_locals. mv_gmax_locals = lv_max_lidx. ENDIF.
+      " Also scan instructions for actual local_idx values (parser may exceed declared locals)
+      LOOP AT ls_f-code INTO DATA(ls_si) WHERE op = 32 OR op = 33 OR op = 34.
+        IF ls_si-local_idx + 1 > mv_gmax_locals. mv_gmax_locals = ls_si-local_idx + 1. ENDIF.
+      ENDLOOP.
       " Estimate max stack depth
       DATA(lv_ms) = 8. " minimum
       DATA(lv_d) = 0.
@@ -522,8 +528,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       IF mv_unreachable = abap_true.
         CASE ls_i-op.
           WHEN 2 OR 3 OR 4. mv_dead_depth = mv_dead_depth + 1.
-          WHEN 5. " else
-            IF mv_dead_depth = 0. mv_unreachable = abap_false. ENDIF.
+          WHEN 5. " else — only resume if there's a matching if in mt_block_kinds
+            IF mv_dead_depth = 0 AND lines( mt_block_kinds ) > 0. mv_unreachable = abap_false. ENDIF.
           WHEN 11. " end
             IF mv_dead_depth > 0. mv_dead_depth = mv_dead_depth - 1. lv_idx = lv_idx + 1. CONTINUE. ENDIF.
             IF lines( mt_block_kinds ) > 0.
@@ -712,10 +718,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           mv_indent = mv_indent + 1.
           APPEND c_if TO mt_block_kinds.
 
-        WHEN 5. " else
-          mv_indent = mv_indent - 1.
-          line( |ELSE.| ).
-          mv_indent = mv_indent + 1.
+        WHEN 5. " else — only emit if there's a matching if in mt_block_kinds
+          IF lines( mt_block_kinds ) > 0.
+            mv_indent = mv_indent - 1.
+            line( |ELSE.| ).
+            mv_indent = mv_indent + 1.
+          ENDIF.
 
         WHEN 11. " end (only for ifs now — blocks/loops are extracted)
           IF lines( mt_block_kinds ) > 0.

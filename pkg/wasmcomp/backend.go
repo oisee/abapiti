@@ -189,8 +189,10 @@ func computeMaxVars(mod *Module) (maxParams, maxLocals, maxStack int) {
 		if len(f.Type.Params) > maxParams {
 			maxParams = len(f.Type.Params)
 		}
-		if len(f.Locals) > maxLocals {
-			maxLocals = len(f.Locals)
+		// Track max local INDEX (numParams + numLocals) not just count
+		maxLocalIdx := len(f.Type.Params) + len(f.Locals)
+		if maxLocalIdx > maxLocals {
+			maxLocals = maxLocalIdx
 		}
 		ms := estimateMaxStack(f.Code)
 		if ms > maxStack {
@@ -579,8 +581,8 @@ func emitClassInclude(mod *Module, blockMethods []*blockMethodDef) string {
 	for i := 0; i < maxParams; i++ {
 		sb.WriteString(fmt.Sprintf("    CLASS-DATA p%d TYPE i.\n", i))
 	}
-	// Locals — from 0 to max(params+locals) since local index starts at numParams per function
-	for i := 0; i < maxParams+maxLocals; i++ {
+	// Locals — l0 to l{maxLocals-1} where maxLocals = max(numParams+numLocals) across functions
+	for i := 0; i < maxLocals; i++ {
 		sb.WriteString(fmt.Sprintf("    CLASS-DATA l%d TYPE i.\n", i))
 	}
 	// Stack vars
