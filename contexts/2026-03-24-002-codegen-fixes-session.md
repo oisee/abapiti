@@ -82,11 +82,37 @@ Added `execute_test.go` with `github.com/tetratelabs/wazero`:
 
 ---
 
+## QuickJS GENERATE Deep Debugging (continued)
+
+### Additional fixes applied to ABAP codegen on a4h-105:
+5. **br_table** (opcode 14) — 555 occurrences unhandled. Added: pop index + branch default label
+6. **call_indirect** (opcode 17) — 1,784 occurrences unhandled! Added: pop index + args, push result stub
+7. **gv_br propagation** — changed `IF gv_br > 0. ... EXIT. ENDIF.` to `CASE gv_br. WHEN 0. WHEN OTHERS. ... EXIT. ENDCASE.` to avoid ELSE conflict
+8. **Line split** — statement-aware: split only at `.` boundaries, not mid-statement
+9. **Body discard** — flush packer before checking block stack corruption
+
+### GENERATE Error Progress
+| Attempt | Lines | Error | Root Cause |
+|---------|-------|-------|------------|
+| 1 | 340K | ELSE without IF | Dead code elimination |
+| 4 | 293K | ENDDO without DO | Packer leak in discarded function |
+| 5 | 293K | ELSE without IF | gv_br IF/ENDIF conflicts with WASM ELSE |
+| 8 | 282K | ELSE without IF | br_table + call_indirect stack corruption |
+| 9 | 282K | ELSE without IF (same) | **Unknown — needs manual ABAP inspection** |
+
+### Remaining Blocker
+GENERATE rc=4 at line 229,175: "No open IF statement exists" (ELSE).
+- Not caused by: line packing, 255-char split, gv_br IF, br_table, call_indirect, dead code
+- Tested with packing disabled (1.56M lines) — same error
+- Tested with no line split — same error
+- All self-closing IFs verified balanced
+- Need: dump ABAP for the function at line 229K and manually inspect IF/ELSE/ENDIF nesting
+
 ## Next Steps
 
-1. **Trace ENDDO mismatch** — find which function produces the bad code
-2. **Fix or skip** — either fix the codegen bug or emit `rv = 0. RETURN.` for problematic functions
-3. **Test _start** — once GENERATE succeeds, call QuickJS _start on SAP
+1. **Dump function at line 229K** — find which function, extract its ABAP, manually count IF/ELSE/ENDIF
+2. **Check for more unhandled opcodes** — scan all QuickJS opcodes vs codegen WHEN clauses
+3. **Alternative: use Go codegen** — the Go codegen handles 100% of opcodes correctly, could deploy FUGR output to SAP
 
 ---
 
