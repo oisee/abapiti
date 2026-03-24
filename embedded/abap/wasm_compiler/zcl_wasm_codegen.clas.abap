@@ -34,6 +34,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_num_locals TYPE i.
     DATA mv_func_idx TYPE i.
     DATA mv_has_result TYPE abap_bool.
+    DATA mv_unreachable TYPE abap_bool.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     DATA mv_pack_buf TYPE string.
     DATA mv_pack_indent TYPE i VALUE -1.
@@ -232,8 +233,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         IF lv_len >= 7 AND ( iv(7) = 'PROGRAM' OR iv(7) = 'PUBLIC ' OR iv(7) = 'PRIVATE' ).
           lv_np = abap_true.
         ENDIF.
-      WHEN 'C'. " CLASS
+      WHEN 'C'. " CLASS, CONTINUE
         IF lv_len >= 6 AND iv(6) = 'CLASS '.
+          lv_np = abap_true.
+        ENDIF.
+      WHEN 'R'. " RETURN
+        IF iv = 'RETURN.' OR ( lv_len > 8 AND iv CS 'RETURN.' ).
           lv_np = abap_true.
         ENDIF.
       WHEN 'M'. " METHOD, METHODS
@@ -387,6 +392,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     " Reset compiler state
     mv_stack_depth = 0.
     mv_max_stack = 0.
+    mv_unreachable = abap_false.
     CLEAR mt_block_kinds.
 
     " Emit instructions into temp buffer
@@ -397,10 +403,10 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     IF lines( mt_block_kinds ) > 0.
       CLEAR: mv_out, mt_block_kinds.
       mv_indent = 1.
-      IF lv_has_result = abap_true.
+      IF lv_has_result = abap_true AND mv_unreachable = abap_false.
         line( |rv = 0.| ).
       ENDIF.
-    ELSEIF lv_has_result = abap_true AND mv_stack_depth > 0.
+    ELSEIF lv_has_result = abap_true AND mv_stack_depth > 0 AND mv_unreachable = abap_false.
       line( |rv = { peek( ) }.| ).
     ENDIF.
     flush( ).
@@ -449,6 +455,16 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA: lv_a TYPE string, lv_b TYPE string, lv_r TYPE string, lv_c TYPE string.
 
     LOOP AT it_code INTO DATA(ls_i).
+      " Skip dead code after return/unreachable/br (reset on block boundaries)
+      IF mv_unreachable = abap_true.
+        CASE ls_i-op.
+          WHEN 2 OR 3 OR 4 OR 5. mv_unreachable = abap_false.
+          WHEN 11. " end — only reset if closing a real block
+            IF lines( mt_block_kinds ) > 0. mv_unreachable = abap_false. ENDIF.
+          WHEN OTHERS. CONTINUE.
+        ENDCASE.
+      ENDIF.
+
       CASE ls_i-op.
 
         " --- Constants ---
@@ -607,6 +623,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           ELSE.
             line( |gv_br = { ls_i-label_idx }. EXIT.| ).
           ENDIF.
+          mv_unreachable = abap_true.
 
         WHEN 13. " br_if
           lv_c = pop( ).
@@ -627,6 +644,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           ELSE.
             line( |RETURN.| ).
           ENDIF.
+          mv_unreachable = abap_true.
 
         " --- Call ---
         WHEN 16. " call
@@ -642,6 +660,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         " --- Nop / Unreachable ---
         WHEN 0. " unreachable
           line( |RETURN.| ).
+          mv_unreachable = abap_true.
         WHEN 1. " nop
           " nothing
 
