@@ -205,6 +205,21 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           line( |PERFORM mem_st_i32 USING p3 lv_ww. rv = 0.| ).
         WHEN 'fd_read'.
           line( |PERFORM mem_st_i32 USING p3 0. rv = 0.| ).
+        WHEN 'fd_close' OR 'fd_seek' OR 'fd_fdstat_get'.
+          line( |rv = 0.| ).
+        WHEN 'environ_sizes_get'.
+          " environ_sizes_get(count_ptr, total_size_ptr) → errno
+          line( |PERFORM mem_st_i32 USING p0 0. PERFORM mem_st_i32 USING p1 0. rv = 0.| ).
+        WHEN 'environ_get'.
+          line( |rv = 0.| ).
+        WHEN 'args_sizes_get'.
+          " args_sizes_get(argc_ptr, argv_buf_size_ptr) → errno
+          line( |PERFORM mem_st_i32 USING p0 0. PERFORM mem_st_i32 USING p1 0. rv = 0.| ).
+        WHEN 'args_get'.
+          line( |rv = 0.| ).
+        WHEN 'clock_time_get'.
+          " clock_time_get(clock_id, precision, time_ptr) → errno
+          line( |PERFORM mem_st_i32 USING p2 0. rv = 0.| ).
         WHEN 'proc_exit'.
           line( |RETURN.| ).
         WHEN OTHERS.
