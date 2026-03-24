@@ -386,7 +386,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       lv_sig = lv_sig && | CHANGING rv TYPE { valtype_abap( ls_type-results[ 1 ]-type ) }|.
     ENDIF.
 
-    line( |{ lv_sig }.| ).
+    emit_raw_line( |{ lv_sig }.| ).
     mv_indent = mv_indent + 1.
 
     " Reset compiler state
