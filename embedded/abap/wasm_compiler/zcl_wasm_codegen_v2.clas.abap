@@ -172,14 +172,15 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( |ENDCLASS.| ).
     line( || ).
 
-    " CLASS g IMPLEMENTATION
-    line( |CLASS g IMPLEMENTATION.| ).
+    " CLASS g IMPLEMENTATION — flush packer + use emit_raw_line to avoid reordering
+    flush( ).
+    emit_raw_line( |CLASS g IMPLEMENTATION.| ).
     LOOP AT mt_block_methods INTO ls_bm.
-      line( |  METHOD { ls_bm-name }.| ).
+      emit_raw_line( |  METHOD { ls_bm-name }.| ).
       mv_out = mv_out && ls_bm-body.
-      line( |  ENDMETHOD.| ).
+      emit_raw_line( |  ENDMETHOD.| ).
     ENDLOOP.
-    line( |ENDCLASS.| ).
+    emit_raw_line( |ENDCLASS.| ).
     line( || ).
 
     " ── FORM WASM_INIT ──
