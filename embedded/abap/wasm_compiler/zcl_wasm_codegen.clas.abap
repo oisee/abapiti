@@ -32,6 +32,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_max_stack TYPE i.
     DATA mv_num_params TYPE i.
     DATA mv_num_locals TYPE i.
+    DATA mv_func_idx TYPE i.
     DATA mv_has_result TYPE abap_bool.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     DATA mv_pack_buf TYPE string.
@@ -124,7 +125,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     " Memory helper FORMs (only if module uses memory)
     IF mo_mod->ms_memory-min_pages > 0 OR lines( mo_mod->mt_data ) > 0.
-      line( |FORM mem_ld_i32 USING iv_addr TYPE int8 CHANGING rv TYPE int8.| ).
+      line( |FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(4).| ).
       line( |  DATA lv_r TYPE xstring.| ).
@@ -132,7 +133,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |  rv = lv_r.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_st_i32 USING iv_addr TYPE int8 iv_val TYPE int8.| ).
+      line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
       line( |  DATA lv_hex TYPE c LENGTH 8.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -141,12 +142,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( |  REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_ld_i32_8u USING iv_addr TYPE int8 CHANGING rv TYPE int8.| ).
+      line( |FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.| ).
       line( |  DATA lv_b TYPE xstring.| ).
       line( |  lv_b = gv_mem+iv_addr(1). rv = lv_b.| ).
       line( |ENDFORM.| ).
       line( || ).
-      line( |FORM mem_st_i32_8 USING iv_addr TYPE int8 iv_val TYPE int8.| ).
+      line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
       line( |  DATA lv_hex TYPE c LENGTH 2.| ).
       line( |  lv_hex = iv_val.| ).
       line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
@@ -204,10 +205,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA(lv_c1) = iv(1).
     DATA(lv_len) = strlen( iv ).
     CASE lv_c1.
-      WHEN 'D'. " DO, DATA
+      WHEN 'D'. " DO, DATA, DELETE
         IF lv_len >= 3 AND ( iv(3) = 'DO ' OR iv(3) = 'DO.' ).
           lv_np = abap_true.
         ELSEIF lv_len >= 4 AND iv(4) = 'DATA'.
+          lv_np = abap_true.
+        ELSEIF lv_len >= 7 AND iv(7) = 'DELETE '.
           lv_np = abap_true.
         ENDIF.
       WHEN 'E'. " ENDDO, ENDFORM, ELSE, ENDIF, ENDCLASS, ENDMETHOD
@@ -249,10 +252,12 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     IF lv_np = abap_true.
       flush( ). emit_raw_line( iv ). RETURN.
     ENDIF.
-    " Pack: accumulate statements on one line up to 240 chars
+    " Pack: accumulate statements on one line (max 250 minus indent prefix)
+    DATA(lv_max) = 250 - mv_indent * 2.
+    IF lv_max < 80. lv_max = 80. ENDIF.
     IF mv_pack_buf IS INITIAL.
       mv_pack_buf = iv. mv_pack_indent = mv_indent.
-    ELSEIF strlen( mv_pack_buf ) + 1 + strlen( iv ) <= 240.
+    ELSEIF strlen( mv_pack_buf ) + 1 + strlen( iv ) <= lv_max.
       mv_pack_buf = mv_pack_buf && ` ` && iv.
     ELSE.
       flush( ).
@@ -336,7 +341,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     IF iv_idx < mv_num_params.
       rv = |p{ iv_idx }|.
     ELSE.
-      rv = |lv_l{ iv_idx }|.
+      rv = |l{ mv_func_idx }_{ iv_idx }|.
     ENDIF.
   ENDMETHOD.
 
@@ -365,6 +370,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
     mv_num_params = lines( ls_type-params ).
     mv_num_locals = lines( is_func-locals ).
+    mv_func_idx = is_func-index.
     IF mv_num_params > 0.
       lv_sig = lv_sig && | USING|.
       LOOP AT ls_type-params INTO DATA(ls_p).
@@ -411,7 +417,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     " Now emit DATA declarations for only what's needed
     LOOP AT is_func-locals INTO DATA(ls_l).
       DATA(lv_li) = sy-tabix - 1 + mv_num_params.
-      line( |DATA: lv_l{ lv_li } TYPE { valtype_abap( ls_l-type ) }.| ).
+      line( |DATA: { local_name( lv_li ) } TYPE { valtype_abap( ls_l-type ) }.| ).
     ENDLOOP.
 
     " Stack variables — only declare up to mv_max_stack
@@ -425,7 +431,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           line( |{ lv_decl }.| ).
           lv_si = lv_si + 1.
           IF lv_si < mv_max_stack.
-            lv_decl = |DATA: lv_s{ lv_si } TYPE int8|.
+            lv_decl = |DATA: lv_s{ lv_si } TYPE i|.
           ELSE.
             CLEAR lv_decl.
           ENDIF.
@@ -710,12 +716,14 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     " Restore locals and stack vars after call (reverse order)
     lv_si = mv_num_params + mv_num_locals - 1.
     WHILE lv_si >= mv_num_params.
-      line( |{ local_name( lv_si ) } = gt_stk[ lines( gt_stk ) ]. DELETE gt_stk INDEX lines( gt_stk ).| ).
+      line( |{ local_name( lv_si ) } = gt_stk[ lines( gt_stk ) ].| ).
+      line( |DELETE gt_stk INDEX lines( gt_stk ).| ).
       lv_si = lv_si - 1.
     ENDWHILE.
     lv_si = lv_save_depth - 1.
     WHILE lv_si >= 0.
-      line( |lv_s{ lv_si } = gt_stk[ lines( gt_stk ) ]. DELETE gt_stk INDEX lines( gt_stk ).| ).
+      line( |lv_s{ lv_si } = gt_stk[ lines( gt_stk ) ].| ).
+      line( |DELETE gt_stk INDEX lines( gt_stk ).| ).
       lv_si = lv_si - 1.
     ENDWHILE.
   ENDMETHOD.
