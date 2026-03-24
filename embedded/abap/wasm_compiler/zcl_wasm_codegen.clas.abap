@@ -138,11 +138,9 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( || ).
       line( |FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.| ).
       line( |  IF iv_addr < 0 OR iv_addr + 4 > xstrlen( gv_mem ). RETURN. ENDIF.| ).
-      line( |  DATA lv_hex TYPE c LENGTH 8.| ).
-      line( |  lv_hex = iv_val.| ).
-      line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
+      line( |  DATA lv_x TYPE x LENGTH 4. lv_x = iv_val.| ).
       line( |  DATA lv_r TYPE xstring.| ).
-      line( |  CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE.| ).
+      line( |  CONCATENATE lv_x+3(1) lv_x+2(1) lv_x+1(1) lv_x+0(1) INTO lv_r IN BYTE MODE.| ).
       line( |  REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
@@ -154,9 +152,8 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       line( || ).
       line( |FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.| ).
       line( |  IF iv_addr < 0 OR iv_addr + 1 > xstrlen( gv_mem ). RETURN. ENDIF.| ).
-      line( |  DATA lv_hex TYPE c LENGTH 2.| ).
-      line( |  lv_hex = iv_val.| ).
-      line( |  DATA lv_b TYPE xstring. lv_b = lv_hex.| ).
+      line( |  DATA lv_x TYPE x LENGTH 1. lv_x = iv_val.| ).
+      line( |  DATA lv_b TYPE xstring. lv_b = lv_x.| ).
       line( |  REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_b IN BYTE MODE.| ).
       line( |ENDFORM.| ).
       line( || ).
