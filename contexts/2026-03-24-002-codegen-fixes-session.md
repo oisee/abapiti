@@ -111,8 +111,11 @@ GENERATE rc=4 at line 229,175: "No open IF statement exists" (ELSE).
 ## Next Steps
 
 1. **Dump function at line 229K** — find which function, extract its ABAP, manually count IF/ELSE/ENDIF
-2. **Check for more unhandled opcodes** — scan all QuickJS opcodes vs codegen WHEN clauses
-3. **Alternative: use Go codegen** — the Go codegen handles 100% of opcodes correctly, could deploy FUGR output to SAP
+2. **ROOT CAUSE FOUND: cross-nesting** — WASM allows `block; if; end_block; else; end_if` but ABAP rejects `DO. IF. ENDDO. ELSE. ENDIF.` as invalid nesting. Blocks can't use DO/ENDDO when they span IF/ELSE boundaries.
+3. **Fix options:**
+   - Remove DO 1 TIMES for blocks entirely (original a4h-105 approach), use only gv_br flag + EXIT from enclosing loops
+   - Restructure block emission to check if block crosses IF/ELSE boundary before using DO
+   - Use Go codegen FUGR backend (already handles this correctly via different architecture)
 
 ---
 
