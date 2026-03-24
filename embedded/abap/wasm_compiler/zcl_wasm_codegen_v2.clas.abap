@@ -499,10 +499,19 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     emit_instructions( is_func-code ).
     flush( ).
 
+    " Close any unclosed ifs (parser may exclude if's end from function body)
+    WHILE lines( mt_block_kinds ) > 0.
+      DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
+      mv_indent = mv_indent - 1.
+      line( |ENDIF.| ).
+      mv_indent = mv_indent - 1.
+      line( |ENDDO.| ).
+    ENDWHILE.
+
     " Return propagation from block methods
     IF mv_has_result = abap_true.
       line( |IF g=>br > 0. rv = g=>rv. RETURN. ENDIF.| ).
-      IF mv_stack_depth > 0 AND mv_unreachable = abap_false.
+      IF mv_stack_depth > 0.
         line( |rv = { peek( ) }.| ).
       ENDIF.
     ELSE.
@@ -524,32 +533,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     WHILE lv_idx <= lines( it_code ).
       READ TABLE it_code INDEX lv_idx INTO DATA(ls_i).
 
-      " Dead code after return/unreachable
-      IF mv_unreachable = abap_true.
-        CASE ls_i-op.
-          WHEN 2 OR 3 OR 4. mv_dead_depth = mv_dead_depth + 1.
-          WHEN 5. " else — only resume if there's a matching if in mt_block_kinds
-            IF mv_dead_depth = 0 AND lines( mt_block_kinds ) > 0. mv_unreachable = abap_false. ENDIF.
-          WHEN 11. " end
-            IF mv_dead_depth > 0. mv_dead_depth = mv_dead_depth - 1. lv_idx = lv_idx + 1. CONTINUE. ENDIF.
-            IF lines( mt_block_kinds ) > 0.
-              DATA(lv_dk) = mt_block_kinds[ lines( mt_block_kinds ) ].
-              DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
-              CASE lv_dk.
-                WHEN c_if.
-                  mv_indent = mv_indent - 1.
-                  line( |ENDIF.| ).
-                  mv_indent = mv_indent - 1.
-                  line( |ENDDO.| ).
-                  emit_br_propagation( ).
-                  mv_unreachable = abap_false.
-              ENDCASE.
-            ENDIF.
-            lv_idx = lv_idx + 1. CONTINUE.
-        ENDCASE.
-        IF mv_unreachable = abap_true. lv_idx = lv_idx + 1. CONTINUE. ENDIF.
-      ENDIF.
-
+      " No dead code elimination — br/return wrapped in IF 1=1 so GENERATE accepts code after them
       CASE ls_i-op.
         " --- Constants ---
         WHEN 65. line( |{ push( ) } = { ls_i-i32_value }.| ).
@@ -641,6 +625,14 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           mv_unreachable = abap_false.
           emit_instructions( lt_body ).
           flush( ).
+          " Close any unclosed ifs (parser may exclude if's end from block body)
+          WHILE lines( mt_block_kinds ) > 0.
+            DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
+            mv_indent = mv_indent - 1.
+            line( |ENDIF.| ).
+            mv_indent = mv_indent - 1.
+            line( |ENDDO.| ).
+          ENDWHILE.
           APPEND VALUE ty_block_method( name = lv_bname body = mv_out ) TO mt_block_methods.
           " Restore ALL state
           mv_out = lv_saved_out. mt_block_kinds = lv_saved_bk.
@@ -688,6 +680,14 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           mv_unreachable = abap_false.
           emit_instructions( lt_body ).
           flush( ).
+          " Close any unclosed ifs
+          WHILE lines( mt_block_kinds ) > 0.
+            DELETE mt_block_kinds INDEX lines( mt_block_kinds ).
+            mv_indent = mv_indent - 1.
+            line( |ENDIF.| ).
+            mv_indent = mv_indent - 1.
+            line( |ENDDO.| ).
+          ENDWHILE.
           APPEND VALUE ty_block_method( name = lv_bname body = mv_out ) TO mt_block_methods.
           mv_out = lv_saved_out. mt_block_kinds = lv_saved_bk.
           mv_in_block_method = lv_saved_ibm. mv_prefix = lv_saved_pfx.
@@ -740,8 +740,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
 
         WHEN 12. " br — 1-based
           DATA(lv_esc) = exit_or_return( ).
-          line( |{ lv_br } = { ls_i-label_idx + 1 }. { lv_esc }| ).
-          mv_unreachable = abap_true.
+          line( |IF 1 = 1. { lv_br } = { ls_i-label_idx + 1 }. { lv_esc } ENDIF.| ).
 
         WHEN 13. " br_if — 1-based
           lv_c = pop( ).
@@ -751,15 +750,14 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
         WHEN 14. " br_table — simplified: use default label
           lv_c = pop( ).
           lv_esc = exit_or_return( ).
-          line( |{ lv_br } = { ls_i-label_idx + 1 }. { lv_esc }| ).
+          line( |IF 1 = 1. { lv_br } = { ls_i-label_idx + 1 }. { lv_esc } ENDIF.| ).
 
-        WHEN 15. " return
+        WHEN 15. " return — wrap in IF 1=1 so GENERATE accepts code after
           IF mv_has_result = abap_true AND mv_stack_depth > 0.
-            line( |{ lv_rv } = { pop( ) }. { lv_br } = 999. RETURN.| ).
+            line( |IF 1 = 1. { lv_rv } = { pop( ) }. { lv_br } = 999. RETURN. ENDIF.| ).
           ELSE.
-            line( |{ lv_br } = 999. RETURN.| ).
+            line( |IF 1 = 1. { lv_br } = 999. RETURN. ENDIF.| ).
           ENDIF.
-          mv_unreachable = abap_true.
 
         WHEN 17. " call_indirect — stub
           pop( ).
@@ -778,7 +776,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
           line( |IF { lv_c } <> 0. { lv_r } = { lv_a }. ELSE. { lv_r } = { lv_b }. ENDIF.| ).
 
         " --- Nop / Unreachable ---
-        WHEN 0. line( |{ lv_br } = 999. RETURN.| ). mv_unreachable = abap_true.
+        WHEN 0. line( |IF 1 = 1. { lv_br } = 999. RETURN. ENDIF.| ).
         WHEN 1. " nop
       ENDCASE.
 
