@@ -264,8 +264,10 @@ CLASS zcl_wasm_module IMPLEMENTATION.
           ENDDO.
           " Instructions
           <func>-code = parse_instructions( lv_body_end ).
-        CATCH cx_root.
-          " Skip this function, continue with next
+        CATCH cx_root INTO DATA(lx_parse).
+          IF mv_parse_error IS INITIAL.
+            mv_parse_error = |func { lv_idx }: { lx_parse->get_text( ) } at pos { mo_reader->get_pos( ) }|.
+          ENDIF.
       ENDTRY.
       mo_reader->set_pos( lv_body_end ).
     ENDDO.
@@ -301,8 +303,8 @@ CLASS zcl_wasm_module IMPLEMENTATION.
           DATA(lv_bt_cnt) = mo_reader->read_u32( ).
           DO lv_bt_cnt TIMES. mo_reader->read_u32( ). ENDDO.
           ls_i-label_idx = mo_reader->read_u32( ). " default
-        WHEN 16. ls_i-func_idx = mo_reader->read_u32( ). " call
-        WHEN 17. ls_i-type_idx = mo_reader->read_u32( ). mo_reader->read_u32( ). " call_indirect
+        WHEN 16 OR 18. ls_i-func_idx = mo_reader->read_u32( ). " call / return_call
+        WHEN 17 OR 19. ls_i-type_idx = mo_reader->read_u32( ). mo_reader->read_u32( ). " call_indirect / return_call_indirect
         WHEN 28. " select_t
           DATA(lv_st_cnt) = mo_reader->read_u32( ).
           DO lv_st_cnt TIMES. mo_reader->read_byte( ). ENDDO.
@@ -328,11 +330,23 @@ CLASS zcl_wasm_module IMPLEMENTATION.
             WHEN 14. mo_reader->read_u32( ). mo_reader->read_u32( ). " table.copy
             WHEN 15 OR 16 OR 17. mo_reader->read_u32( ). " table.grow/size/fill
           ENDCASE.
+        WHEN 208. mo_reader->read_byte( ). " ref.null (type)
+        WHEN 210. mo_reader->read_u32( ). " ref.func (func_idx)
         WHEN 253. " 0xFD SIMD prefix — skip
           DATA(lv_simd_op) = mo_reader->read_u32( ).
           IF lv_simd_op <= 11. mo_reader->read_u32( ). mo_reader->read_u32( ). ENDIF.
           IF lv_simd_op = 12. mo_reader->read_bytes( 16 ). ENDIF. " v128.const
           IF lv_simd_op = 13. mo_reader->read_bytes( 16 ). ENDIF. " shuffle
+        WHEN OTHERS.
+          " Opcodes 0-1, 5, 11, 15, 26-27, 69-192, 209: no operands — safe to skip
+          " If an unknown opcode WITH operands appears, parsing will desync
+          IF ls_i-op > 192 AND ls_i-op < 208.
+            " Unknown prefix range — abort this function
+            IF mv_parse_error IS INITIAL.
+              mv_parse_error = |unknown opcode { ls_i-op } at pos { mo_reader->get_pos( ) }|.
+            ENDIF.
+            RETURN.
+          ENDIF.
       ENDCASE.
       APPEND ls_i TO rt.
     ENDWHILE.
