@@ -31,6 +31,7 @@ CLASS zcl_wasm_codegen DEFINITION PUBLIC FINAL CREATE PUBLIC.
     DATA mv_stack_depth TYPE i.
     DATA mv_max_stack TYPE i.
     DATA mv_num_params TYPE i.
+    DATA mv_num_locals TYPE i.
     DATA mv_has_result TYPE abap_bool.
     DATA mt_block_kinds TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     DATA mv_pack_buf TYPE string.
@@ -65,6 +66,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     line( |DATA: gv_mem TYPE xstring, gv_mem_pages TYPE i, gv_br TYPE i.| ).
     line( |DATA: gv_wasm_initialized TYPE c.| ).
     line( |DATA: gv_xa TYPE ty_x4, gv_xb TYPE ty_x4, gv_xr TYPE ty_x4.| ).
+    line( |DATA: gt_stk TYPE STANDARD TABLE OF i WITH DEFAULT KEY.| ).
 
     LOOP AT mo_mod->mt_globals INTO DATA(ls_g).
       DATA(lv_gi) = sy-tabix - 1.
@@ -362,6 +364,7 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
     DATA(lv_sig) = |FORM { lv_name }|.
 
     mv_num_params = lines( ls_type-params ).
+    mv_num_locals = lines( is_func-locals ).
     IF mv_num_params > 0.
       lv_sig = lv_sig && | USING|.
       LOOP AT ls_type-params INTO DATA(ls_p).
@@ -672,6 +675,19 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       INSERT pop( ) INTO lt_args INDEX 1.
     ENDDO.
 
+    " Save stack vars and locals before call (GENERATE shares DATA across recursive calls)
+    DATA(lv_save_depth) = mv_stack_depth.
+    DATA(lv_si) = 0.
+    WHILE lv_si < lv_save_depth.
+      line( |APPEND lv_s{ lv_si } TO gt_stk.| ).
+      lv_si = lv_si + 1.
+    ENDWHILE.
+    lv_si = mv_num_params.
+    WHILE lv_si < mv_num_params + mv_num_locals.
+      line( |APPEND { local_name( lv_si ) } TO gt_stk.| ).
+      lv_si = lv_si + 1.
+    ENDWHILE.
+
     " Build PERFORM call
     DATA(lv_has_result) = xsdbool( lines( ls_type-results ) > 0 ).
     DATA(lv_result) = ||.
@@ -690,6 +706,18 @@ CLASS zcl_wasm_codegen IMPLEMENTATION.
       lv_call = lv_call && | CHANGING { lv_result }|.
     ENDIF.
     line( |{ lv_call }.| ).
+
+    " Restore locals and stack vars after call (reverse order)
+    lv_si = mv_num_params + mv_num_locals - 1.
+    WHILE lv_si >= mv_num_params.
+      line( |{ local_name( lv_si ) } = gt_stk[ lines( gt_stk ) ]. DELETE gt_stk INDEX lines( gt_stk ).| ).
+      lv_si = lv_si - 1.
+    ENDWHILE.
+    lv_si = lv_save_depth - 1.
+    WHILE lv_si >= 0.
+      line( |lv_s{ lv_si } = gt_stk[ lines( gt_stk ) ]. DELETE gt_stk INDEX lines( gt_stk ).| ).
+      lv_si = lv_si - 1.
+    ENDWHILE.
   ENDMETHOD.
 
 

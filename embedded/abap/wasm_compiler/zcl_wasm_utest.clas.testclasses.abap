@@ -73,14 +73,11 @@ CLASS lcl_test IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD test_execute_factorial.
-    " Known limitation: GENERATE SUBROUTINE POOL shares DATA across recursive
-    " FORM calls, so factorial returns 1 instead of 3628800. Works correctly
-    " with INSERT REPORT / function group deployment (Go backend).
     DATA(lv_w) = CONV xstring( '0061736D0100000001060160017F017F03020100070D0109666163746F7269616C00000A19011700200041014C047F4101052000200041016B10006C0B0B' ).
     DATA(lv_prog) = compile_and_gen( lv_w ).
     DATA lv_r TYPE i.
     PERFORM ('FACTORIAL') IN PROGRAM (lv_prog) USING 10 CHANGING lv_r.
-    cl_abap_unit_assert=>assert_equals( act = lv_r exp = 1 msg = |factorial(10)={ lv_r } (shared DATA in GENERATE)| ).
+    cl_abap_unit_assert=>assert_equals( act = lv_r exp = 3628800 msg = |factorial(10)={ lv_r }| ).
   ENDMETHOD.
 
   METHOD test_parse_quickjs.
