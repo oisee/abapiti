@@ -102,9 +102,17 @@ type Instruction struct {
 	// For call
 	CallTarget string
 	// For select
-	SelectCond string
-	SelectTrue string
+	SelectCond  string
+	SelectTrue  string
 	SelectFalse string
+	// For getelementptr
+	GEPBase     string   // base pointer
+	GEPType     string   // struct type name
+	GEPIndices  []string // index values
+	// For load/store
+	LoadAddr    string
+	StoreVal    string
+	StoreAddr   string
 }
 
 type PhiPair struct {
@@ -374,6 +382,25 @@ func parseInstruction(line string) *Instruction {
 		return inst
 	}
 
+	// store instruction (no result)
+	if strings.HasPrefix(line, "store ") {
+		inst.Op = "store"
+		// store i32 %1, ptr %0, align 4
+		parts := strings.SplitN(line, ",", 3)
+		if len(parts) >= 2 {
+			valParts := strings.Fields(strings.TrimPrefix(parts[0], "store "))
+			if len(valParts) >= 2 {
+				inst.Type = parseType(valParts[0])
+				inst.StoreVal = valParts[len(valParts)-1]
+			}
+			addrParts := strings.Fields(strings.TrimSpace(parts[1]))
+			if len(addrParts) >= 2 {
+				inst.StoreAddr = addrParts[len(addrParts)-1]
+			}
+		}
+		return inst
+	}
+
 	// Assignment: %result = op ...
 	if strings.HasPrefix(line, "%") && strings.Contains(line, " = ") {
 		eqIdx := strings.Index(line, " = ")
@@ -430,6 +457,53 @@ func parseInstruction(line string) *Instruction {
 			return inst
 		}
 
+		// getelementptr instruction
+		if strings.HasPrefix(rest, "getelementptr ") {
+			inst.Op = "getelementptr"
+			inst.Type = Type{Kind: PtrType}
+			// getelementptr inbounds %struct.Point, ptr %0, i64 0, i32 1
+			// getelementptr inbounds i32, ptr %0, i64 %9
+			cleaned := strings.Replace(rest, "inbounds ", "", 1)
+			cleaned = strings.Replace(cleaned, "nuw ", "", 1)
+			parts := strings.SplitN(cleaned, ",", -1)
+			if len(parts) >= 2 {
+				// First part: "getelementptr TYPE"
+				typePart := strings.TrimPrefix(parts[0], "getelementptr ")
+				typePart = strings.TrimSpace(typePart)
+				inst.GEPType = typePart
+				// Second part: "ptr %base"
+				basePart := strings.TrimSpace(parts[1])
+				baseFields := strings.Fields(basePart)
+				if len(baseFields) >= 2 {
+					inst.GEPBase = baseFields[len(baseFields)-1]
+				}
+				// Remaining parts: indices
+				for _, p := range parts[2:] {
+					f := strings.Fields(strings.TrimSpace(p))
+					if len(f) >= 2 {
+						inst.GEPIndices = append(inst.GEPIndices, f[len(f)-1])
+					}
+				}
+			}
+			return inst
+		}
+
+		// load instruction
+		if strings.HasPrefix(rest, "load ") {
+			inst.Op = "load"
+			// load i32, ptr %0, align 4
+			parts := strings.SplitN(rest, ",", 3)
+			if len(parts) >= 2 {
+				typePart := strings.TrimPrefix(parts[0], "load ")
+				inst.Type = parseType(strings.TrimSpace(typePart))
+				addrParts := strings.Fields(strings.TrimSpace(parts[1]))
+				if len(addrParts) >= 2 {
+					inst.LoadAddr = addrParts[len(addrParts)-1]
+				}
+			}
+			return inst
+		}
+
 		// call instruction
 		if strings.Contains(rest, "call ") {
 			inst.Op = "call"
@@ -446,6 +520,24 @@ func parseInstruction(line string) *Instruction {
 							inst.Args = append(inst.Args, parts[len(parts)-1])
 						}
 					}
+				}
+			}
+			return inst
+		}
+
+		// Conversion ops: zext, sext, trunc
+		if strings.HasPrefix(rest, "zext ") || strings.HasPrefix(rest, "sext ") || strings.HasPrefix(rest, "trunc ") {
+			fields := strings.Fields(rest)
+			inst.Op = fields[0]
+			// zext i32 %5 to i64 → just pass through value
+			if len(fields) >= 3 {
+				inst.Args = []string{fields[2]}
+			}
+			// Get target type (after "to")
+			for j, f := range fields {
+				if f == "to" && j+1 < len(fields) {
+					inst.Type = parseType(fields[j+1])
+					break
 				}
 			}
 			return inst
@@ -860,6 +952,64 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			c.line("%s( %s ).", target, argStr)
 		}
 
+	// GEP — struct field access or array index
+	case "getelementptr":
+		if strings.HasPrefix(inst.GEPType, "%struct.") {
+			// Struct field access: GEP %struct.Point, ptr %base, i64 0, i32 FIELD_IDX
+			if len(inst.GEPIndices) >= 2 {
+				structName := strings.TrimPrefix(inst.GEPType, "%")
+				fieldIdx := inst.GEPIndices[1] // field index
+				fieldName := c.structFieldName(structName, fieldIdx)
+				// dst = base pointer offset to field
+				c.line("\" GEP: %s = &%s->%s (field %s)", dst, c.val(inst.GEPBase), fieldName, fieldIdx)
+				c.line("%s = %s + %s. \" offset to field %s", dst, c.val(inst.GEPBase), c.structFieldOffset(structName, fieldIdx), fieldName)
+			}
+		} else {
+			// Array element: GEP i32, ptr %base, i64 %idx → base + idx * sizeof
+			if len(inst.GEPIndices) >= 1 {
+				elemSize := c.typeSize(inst.GEPType)
+				idx := c.val(inst.GEPIndices[0])
+				if elemSize == 1 {
+					c.line("%s = %s + %s.", dst, c.val(inst.GEPBase), idx)
+				} else {
+					c.line("%s = %s + %s * %d.", dst, c.val(inst.GEPBase), idx, elemSize)
+				}
+			}
+		}
+
+	// Load — memory read
+	case "load":
+		addr := c.val(inst.LoadAddr)
+		size := c.typeSizeOf(inst.Type)
+		switch size {
+		case 1:
+			c.line("PERFORM mem_ld_i32_8u USING %s CHANGING %s.", addr, dst)
+		case 4:
+			c.line("PERFORM mem_ld_i32 USING %s CHANGING %s.", addr, dst)
+		default:
+			c.line("PERFORM mem_ld_i32 USING %s CHANGING %s.", addr, dst)
+		}
+
+	// Store — memory write
+	case "store":
+		addr := c.val(inst.StoreAddr)
+		val := c.val(inst.StoreVal)
+		size := c.typeSizeOf(inst.Type)
+		switch size {
+		case 1:
+			c.line("PERFORM mem_st_i32_8 USING %s %s.", addr, val)
+		case 4:
+			c.line("PERFORM mem_st_i32 USING %s %s.", addr, val)
+		default:
+			c.line("PERFORM mem_st_i32 USING %s %s.", addr, val)
+		}
+
+	// Extensions / conversions
+	case "zext", "sext", "trunc":
+		if len(inst.Args) > 0 {
+			c.line("%s = %s. \" %s", dst, c.val(inst.Args[0]), inst.Op)
+		}
+
 	default:
 		if inst.Op != "" {
 			c.line("\" TODO: %s", inst.Op)
@@ -931,6 +1081,67 @@ func (c *abapCompiler) line(format string, args ...any) {
 	c.sb.WriteString(prefix)
 	c.sb.WriteString(fmt.Sprintf(format, args...))
 	c.sb.WriteByte('\n')
+}
+
+func (c *abapCompiler) structFieldName(structName, fieldIdx string) string {
+	if _, ok := c.mod.Types[structName]; !ok {
+		return "field_" + fieldIdx
+	}
+	idx := 0
+	fmt.Sscanf(fieldIdx, "%d", &idx)
+	names := []string{"x", "y", "z"}
+	if idx < len(names) {
+		return names[idx]
+	}
+	return fmt.Sprintf("f%d", idx)
+}
+
+func (c *abapCompiler) structFieldOffset(structName, fieldIdx string) string {
+	st, ok := c.mod.Types[structName]
+	if !ok {
+		return fieldIdx + " * 4"
+	}
+	idx := 0
+	fmt.Sscanf(fieldIdx, "%d", &idx)
+	// Calculate byte offset based on field types
+	offset := 0
+	for i := 0; i < idx && i < len(st.Fields); i++ {
+		offset += c.typeSizeOf(st.Fields[i])
+	}
+	return fmt.Sprintf("%d", offset)
+}
+
+func (c *abapCompiler) typeSize(typeName string) int {
+	typeName = strings.TrimSpace(typeName)
+	switch typeName {
+	case "i8":
+		return 1
+	case "i16":
+		return 2
+	case "i32":
+		return 4
+	case "i64":
+		return 8
+	case "float":
+		return 4
+	case "double":
+		return 8
+	default:
+		return 4
+	}
+}
+
+func (c *abapCompiler) typeSizeOf(t Type) int {
+	switch t.Kind {
+	case IntType:
+		return (t.BitWidth + 7) / 8
+	case FloatType:
+		return 4
+	case DoubleType:
+		return 8
+	default:
+		return 4
+	}
 }
 
 func sanitizeName(name string) string {
