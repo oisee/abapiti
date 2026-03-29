@@ -701,6 +701,10 @@ func stripKeywords(s string, kws []string) string {
 	for _, kw := range kws {
 		s = strings.ReplaceAll(s, " "+kw+" ", " ")
 		s = strings.ReplaceAll(s, " "+kw+",", ",")
+		// Also strip at beginning of string
+		if strings.HasPrefix(s, kw+" ") {
+			s = s[len(kw)+1:]
+		}
 	}
 	return strings.TrimSpace(s)
 }
@@ -1092,12 +1096,39 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			return
 		}
 		if inst.CallTarget == "__indirect" {
-			// Indirect call through function pointer — stub
+			// Indirect call through function pointer
+			// Function pointers are integer IDs → dispatch via CASE
 			fptr := c.val(inst.GEPBase)
-			c.line("\" indirect call via %s (function pointer)", fptr)
-			if inst.Result != "" && inst.Type.Kind != VoidType {
-				c.line("%s = 0. \" TODO: indirect call dispatch", dst)
+			nArgs := len(inst.Args)
+			hasResult := inst.Result != "" && inst.Type.Kind != VoidType
+			c.line("\" indirect call via %s (%d args)", fptr, nArgs)
+			c.line("CASE %s.", fptr)
+			c.indent++
+			for idx, cfn := range c.mod.Functions {
+				if cfn.IsExternal || strings.HasPrefix(cfn.Name, "llvm.") {
+					continue
+				}
+				// Match by param count
+				if len(cfn.Params) != nArgs {
+					continue
+				}
+				cname := sanitizeName(cfn.Name)
+				var callArgs []string
+				for i, arg := range inst.Args {
+					callArgs = append(callArgs, fmt.Sprintf("%s = %s", paramName(i, cfn.Name), c.val(arg)))
+				}
+				argStr := strings.Join(callArgs, " ")
+				if hasResult {
+					c.line("WHEN %d. %s = %s( %s ).", idx, dst, cname, argStr)
+				} else {
+					c.line("WHEN %d. %s( %s ).", idx, cname, argStr)
+				}
 			}
+			if hasResult {
+				c.line("WHEN OTHERS. %s = 0.", dst)
+			}
+			c.indent--
+			c.line("ENDCASE.")
 			return
 		}
 		if inst.CallTarget == "__unknown" {
@@ -1323,8 +1354,14 @@ func (c *abapCompiler) val(v string) string {
 	if v == "null" || v == "zeroinitializer" || v == "undef" || v == "poison" {
 		return "0"
 	}
-	// LLVM global reference (@name) → 0 (stub)
+	// LLVM global reference (@name) → function index for dispatch
 	if strings.HasPrefix(v, "@") {
+		fname := strings.TrimPrefix(v, "@")
+		for idx, fn := range c.mod.Functions {
+			if fn.Name == fname {
+				return fmt.Sprintf("%d", idx)
+			}
+		}
 		return "0"
 	}
 	// Strip LLVM attributes from values
