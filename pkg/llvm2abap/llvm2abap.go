@@ -537,15 +537,15 @@ func parseInstruction(line string) *Instruction {
 			return inst
 		}
 
-		// call instruction (including tail call)
+		// call instruction (including tail call, indirect call)
 		if strings.Contains(rest, "call ") {
 			inst.Op = "call"
+			// Try direct call: call TYPE @name(args)
 			re := regexp.MustCompile(`call\s+\S+\s+@([\w.]+)\(([^)]*)\)`)
 			m := re.FindStringSubmatch(rest)
 			if m != nil {
 				inst.CallTarget = m[1]
 				inst.Type = parseType(strings.Fields(rest)[1])
-				// Parse call args
 				if m[2] != "" {
 					for _, arg := range strings.Split(m[2], ",") {
 						parts := strings.Fields(strings.TrimSpace(arg))
@@ -554,7 +554,28 @@ func parseInstruction(line string) *Instruction {
 						}
 					}
 				}
+				return inst
 			}
+			// Try indirect call: call TYPE %ptr(args)
+			re2 := regexp.MustCompile(`call\s+(\S+)\s+(%\w+)\(([^)]*)\)`)
+			m2 := re2.FindStringSubmatch(rest)
+			if m2 != nil {
+				inst.CallTarget = "__indirect"
+				inst.Type = parseType(m2[1])
+				inst.GEPBase = m2[2] // reuse for function pointer
+				if m2[3] != "" {
+					for _, arg := range strings.Split(m2[3], ",") {
+						parts := strings.Fields(strings.TrimSpace(arg))
+						if len(parts) >= 2 {
+							inst.Args = append(inst.Args, parts[len(parts)-1])
+						}
+					}
+				}
+				return inst
+			}
+			// Fallback: mark as unknown call
+			inst.CallTarget = "__unknown"
+			inst.Type = Type{Kind: IntType, BitWidth: 32}
 			return inst
 		}
 
@@ -1062,8 +1083,22 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 	case "call":
 		target := sanitizeName(inst.CallTarget)
 		if strings.HasPrefix(inst.CallTarget, "llvm.") {
-			// LLVM intrinsic
 			c.emitIntrinsic(inst, fn)
+			return
+		}
+		if inst.CallTarget == "__indirect" {
+			// Indirect call through function pointer — stub
+			fptr := c.val(inst.GEPBase)
+			c.line("\" indirect call via %s (function pointer)", fptr)
+			if inst.Result != "" && inst.Type.Kind != VoidType {
+				c.line("%s = 0. \" TODO: indirect call dispatch", dst)
+			}
+			return
+		}
+		if inst.CallTarget == "__unknown" {
+			if inst.Result != "" && inst.Type.Kind != VoidType {
+				c.line("%s = 0. \" unknown call", dst)
+			}
 			return
 		}
 		var argParts []string
