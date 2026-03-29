@@ -537,10 +537,10 @@ func parseInstruction(line string) *Instruction {
 			return inst
 		}
 
-		// call instruction
+		// call instruction (including tail call)
 		if strings.Contains(rest, "call ") {
 			inst.Op = "call"
-			re := regexp.MustCompile(`call\s+\S+\s+@(\w+)\(([^)]*)\)`)
+			re := regexp.MustCompile(`call\s+\S+\s+@([\w.]+)\(([^)]*)\)`)
 			m := re.FindStringSubmatch(rest)
 			if m != nil {
 				inst.CallTarget = m[1]

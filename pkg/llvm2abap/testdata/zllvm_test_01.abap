@@ -138,26 +138,26 @@ CLASS lcl IMPLEMENTATION.
   
   METHOD abs_val.
     DATA: lv_2 TYPE i.
-    (  ).
+    lv_2 = abs( a ).
     rv = lv_2. RETURN.
   ENDMETHOD.
   
   METHOD max.
     DATA: lv_3 TYPE i.
-    (  ).
+    IF a > b. lv_3 = a. ELSE. lv_3 = b. ENDIF.
     rv = lv_3. RETURN.
   ENDMETHOD.
   
   METHOD min.
     DATA: lv_3 TYPE i.
-    (  ).
+    IF a < b. lv_3 = a. ELSE. lv_3 = b. ENDIF.
     rv = lv_3. RETURN.
   ENDMETHOD.
   
   METHOD clamp.
     DATA: lv_4 TYPE i, lv_5 TYPE i, lv_6 TYPE i.
     IF a < b. lv_4 = 1. ELSE. lv_4 = 0. ENDIF.
-    (  ).
+    IF a < c. lv_5 = a. ELSE. lv_5 = c. ENDIF.
     IF lv_4 <> 0. lv_6 = b. ELSE. lv_6 = lv_5. ENDIF.
     rv = lv_6. RETURN.
   ENDMETHOD.
