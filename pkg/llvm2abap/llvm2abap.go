@@ -732,6 +732,8 @@ type phiAssign struct {
 func (c *abapCompiler) emit() string {
 	c.line("REPORT %s.", c.className)
 	c.line("")
+	c.line("TYPES x4 TYPE x LENGTH 4.")
+	c.line("")
 	c.line("CLASS %s DEFINITION FINAL CREATE PUBLIC.", c.className)
 	c.indent++
 	c.line("PUBLIC SECTION.")
@@ -1312,6 +1314,10 @@ func (c *abapCompiler) val(v string) string {
 		return "1"
 	}
 	if v == "false" {
+		return "0"
+	}
+	// Null pointer
+	if v == "null" {
 		return "0"
 	}
 	// SSA register
