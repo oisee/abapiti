@@ -8,7 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"archive/zip"
+
 	"github.com/oisee/vibing-steampunk/pkg/abaplint"
+	"github.com/oisee/vibing-steampunk/pkg/llvm2abap"
 	"github.com/oisee/vibing-steampunk/pkg/ts2abap"
 	"github.com/oisee/vibing-steampunk/pkg/wasmcomp"
 	"github.com/spf13/cobra"
@@ -74,10 +77,28 @@ Examples:
 	RunE: runParse,
 }
 
+// --- compile llvm command ---
+
+var compileLLVMCmd = &cobra.Command{
+	Use:   "llvm <file.ll|file.c>",
+	Short: "Compile LLVM IR or C source to typed ABAP",
+	Long: `Compile LLVM IR (.ll) or C source (.c) to typed ABAP CLASS-METHODS.
+For .c files, clang is invoked automatically.
+
+Examples:
+  vsp compile llvm mycode.c
+  vsp compile llvm mycode.c --class zcl_mycode -o mycode.abap
+  vsp compile llvm mycode.c --class zcl_mycode --zip -o mycode.zip
+  vsp compile llvm quickjs.c --class zcl_quickjs --zip`,
+	Args: cobra.ExactArgs(1),
+	RunE: runCompileLLVM,
+}
+
 func init() {
 	// Compile subcommands
 	compileCmd.AddCommand(compileWasmCmd)
 	compileCmd.AddCommand(compileTsCmd)
+	compileCmd.AddCommand(compileLLVMCmd)
 
 	// Compile wasm flags
 	compileWasmCmd.Flags().String("class", "", "ABAP class name (default: derived from filename)")
@@ -88,6 +109,14 @@ func init() {
 	compileTsCmd.Flags().String("prefix", "zcl_", "ABAP class name prefix")
 	compileTsCmd.Flags().StringP("output", "o", "", "Output directory (default: stdout)")
 	compileTsCmd.Flags().String("deploy", "", "Deploy directly to SAP package")
+
+	// Compile llvm flags
+	compileLLVMCmd.Flags().String("class", "zcl_compiled", "ABAP class name")
+	compileLLVMCmd.Flags().StringP("output", "o", "", "Output file (default: stdout)")
+	compileLLVMCmd.Flags().Bool("zip", false, "Output as abapGit ZIP")
+	compileLLVMCmd.Flags().String("package", "$TMP", "SAP package (for --zip)")
+	compileLLVMCmd.Flags().String("desc", "Compiled via vsp compile llvm", "Description")
+	compileLLVMCmd.Flags().String("opt", "O1", "Clang optimization level (O0/O1/O2)")
 
 	// Parse flags
 	parseCmd.Flags().String("file", "", "Parse local file")
@@ -329,5 +358,124 @@ func deployFile(cmd *cobra.Command, file, pkg string) error {
 	// Use the existing deploy logic
 	fmt.Fprintf(os.Stderr, "Deploy: %s → %s\n", file, pkg)
 	fmt.Fprintf(os.Stderr, "  Use: vsp deploy %s %s\n", file, pkg)
+	return nil
+}
+
+// --- compile llvm implementation ---
+
+func runCompileLLVM(cmd *cobra.Command, args []string) error {
+	inputFile := args[0]
+	ext := strings.ToLower(filepath.Ext(inputFile))
+	className, _ := cmd.Flags().GetString("class")
+	output, _ := cmd.Flags().GetString("output")
+	asZip, _ := cmd.Flags().GetBool("zip")
+	pkg, _ := cmd.Flags().GetString("package")
+	desc, _ := cmd.Flags().GetString("desc")
+	optLevel, _ := cmd.Flags().GetString("opt")
+
+	var llSource string
+
+	switch ext {
+	case ".c", ".h":
+		tmpLL := inputFile + ".ll"
+		clangCmd := exec.Command("clang", "-S", "-emit-llvm", "-"+optLevel, inputFile, "-o", tmpLL)
+		clangCmd.Stderr = os.Stderr
+		if err := clangCmd.Run(); err != nil {
+			return fmt.Errorf("clang failed: %w (is clang installed?)", err)
+		}
+		defer os.Remove(tmpLL)
+		data, err := os.ReadFile(tmpLL)
+		if err != nil {
+			return err
+		}
+		llSource = string(data)
+		fmt.Fprintf(os.Stderr, "clang: %s → %d lines LLVM IR\n", inputFile, strings.Count(llSource, "\n"))
+
+	case ".ll":
+		data, err := os.ReadFile(inputFile)
+		if err != nil {
+			return err
+		}
+		llSource = string(data)
+
+	default:
+		return fmt.Errorf("unsupported: %s (use .c or .ll)", ext)
+	}
+
+	mod, err := llvm2abap.Parse(llSource)
+	if err != nil {
+		return fmt.Errorf("parse: %w", err)
+	}
+
+	nonExt := 0
+	for _, fn := range mod.Functions {
+		if !fn.IsExternal && !strings.HasPrefix(fn.Name, "llvm.") {
+			nonExt++
+		}
+	}
+	fmt.Fprintf(os.Stderr, "parsed: %d functions, %d structs\n", nonExt, len(mod.Types))
+
+	abap := llvm2abap.Compile(mod, className)
+	lines := strings.Count(abap, "\n")
+	fmt.Fprintf(os.Stderr, "compiled: %d lines ABAP\n", lines)
+
+	if asZip {
+		outFile := output
+		if outFile == "" {
+			outFile = strings.TrimSuffix(filepath.Base(inputFile), ext) + ".zip"
+		}
+		return writeLLVMZip(outFile, strings.ToUpper(className), abap, desc, pkg)
+	}
+
+	if output == "" {
+		fmt.Print(abap)
+	} else {
+		if err := os.WriteFile(output, []byte(abap), 0644); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "written: %s\n", output)
+	}
+	return nil
+}
+
+func writeLLVMZip(outFile, objName, source, desc, pkg string) error {
+	f, err := os.Create(outFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := zip.NewWriter(f)
+
+	zf, _ := w.Create(".abapgit.xml")
+	zf.Write([]byte(`<?xml version="1.0" encoding="utf-8"?>
+<asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+ <asx:values><DATA>
+  <MASTER_LANGUAGE>E</MASTER_LANGUAGE>
+  <STARTING_FOLDER>/src/</STARTING_FOLDER>
+  <FOLDER_LOGIC>PREFIX</FOLDER_LOGIC>
+ </DATA></asx:values>
+</asx:abap>
+`))
+
+	lower := strings.ToLower(objName)
+	zf, _ = w.Create("src/" + lower + ".prog.abap")
+	zf.Write([]byte(source))
+
+	descLen := len(desc)
+	if descLen > 70 { descLen = 70 }
+	zf, _ = w.Create("src/" + lower + ".prog.xml")
+	fmt.Fprintf(zf, `<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_PROG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <PROGDIR><NAME>%s</NAME><SUBC>1</SUBC><FIXPT>X</FIXPT><UCCHECK>X</UCCHECK></PROGDIR>
+   <TPOOL><item><ID>R</ID><ENTRY>%s</ENTRY><LENGTH>%d</LENGTH></item></TPOOL>
+  </asx:values>
+ </asx:abap>
+</abapGit>
+`, objName, desc, descLen)
+
+	w.Close()
+	fmt.Fprintf(os.Stderr, "zip: %s (%s)\n", outFile, objName)
 	return nil
 }
