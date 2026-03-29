@@ -1023,10 +1023,11 @@ func (c *abapCompiler) emitPhiAssigns(targetBlock string) {
 	}
 }
 
+const maxBlocksPerCase = 12
+
 func (c *abapCompiler) emitWithDispatcher(fn *Function) {
 	c.buildPhiMap(fn)
 
-	// Determine first block label
 	firstLabel := "entry"
 	if len(fn.Blocks) > 0 {
 		firstLabel = fn.Blocks[0].Label
@@ -1035,19 +1036,57 @@ func (c *abapCompiler) emitWithDispatcher(fn *Function) {
 	c.line("DATA lv_block TYPE string VALUE '%s'.", firstLabel)
 	c.line("DO.")
 	c.indent++
-	c.line("CASE lv_block.")
-	c.indent++
 
-	for _, block := range fn.Blocks {
-		c.line("WHEN '%s'.", block.Label)
+	if len(fn.Blocks) <= maxBlocksPerCase {
+		// Small enough — single CASE
+		c.line("CASE lv_block.")
 		c.indent++
-		c.currentBlock = block.Label
-		c.emitBlock(block, fn)
+		for _, block := range fn.Blocks {
+			c.line("WHEN '%s'.", block.Label)
+			c.indent++
+			c.currentBlock = block.Label
+			c.emitBlock(block, fn)
+			c.indent--
+		}
 		c.indent--
+		c.line("ENDCASE.")
+	} else {
+		// Large method — split into chained IF/ELSEIF blocks
+		// Each chunk handles maxBlocksPerCase WHEN clauses
+		for i := 0; i < len(fn.Blocks); i += maxBlocksPerCase {
+			end := i + maxBlocksPerCase
+			if end > len(fn.Blocks) {
+				end = len(fn.Blocks)
+			}
+			chunk := fn.Blocks[i:end]
+
+			// Build condition: IF lv_block = 'x' OR lv_block = 'y' OR ...
+			var conds []string
+			for _, b := range chunk {
+				conds = append(conds, fmt.Sprintf("lv_block = '%s'", b.Label))
+			}
+			if i == 0 {
+				c.line("IF %s.", strings.Join(conds, " OR "))
+			} else {
+				c.line("ELSEIF %s.", strings.Join(conds, " OR "))
+			}
+			c.indent++
+			c.line("CASE lv_block.")
+			c.indent++
+			for _, block := range chunk {
+				c.line("WHEN '%s'.", block.Label)
+				c.indent++
+				c.currentBlock = block.Label
+				c.emitBlock(block, fn)
+				c.indent--
+			}
+			c.indent--
+			c.line("ENDCASE.")
+			c.indent--
+		}
+		c.line("ENDIF.")
 	}
 
-	c.indent--
-	c.line("ENDCASE.")
 	c.indent--
 	c.line("ENDDO.")
 }
