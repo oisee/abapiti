@@ -106,9 +106,11 @@ type Instruction struct {
 	SelectTrue  string
 	SelectFalse string
 	// For getelementptr
-	GEPBase     string   // base pointer
+	GEPBase     string   // base pointer (also: indirect call function pointer)
 	GEPType     string   // struct type name
 	GEPIndices  []string // index values
+	// For indirect call type matching
+	CallParamTypes []Type
 	// For load/store
 	LoadAddr    string
 	StoreVal    string
@@ -562,11 +564,14 @@ func parseInstruction(line string) *Instruction {
 			if m2 != nil {
 				inst.CallTarget = "__indirect"
 				inst.Type = parseType(m2[1])
-				inst.GEPBase = m2[2] // reuse for function pointer
+				inst.GEPBase = m2[2]
 				if m2[3] != "" {
 					for _, arg := range strings.Split(m2[3], ",") {
 						parts := strings.Fields(strings.TrimSpace(arg))
 						if len(parts) >= 2 {
+							// First word (stripped of attrs) is the type
+							ptype := parts[0]
+							inst.CallParamTypes = append(inst.CallParamTypes, parseType(ptype))
 							inst.Args = append(inst.Args, parts[len(parts)-1])
 						}
 					}
@@ -741,28 +746,6 @@ func (c *abapCompiler) emit() string {
 	c.line("TYPES x4 TYPE x LENGTH 4.")
 	c.line("DATA gv_mem TYPE xstring.")
 	c.line("")
-	c.line("\" Memory runtime (WASM-style linear memory)")
-	c.line("FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.")
-	c.line("  DATA lv_b TYPE x LENGTH 4.")
-	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
-	c.line("    lv_b = gv_mem+iv_addr(4).")
-	c.line("    DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).")
-	c.line("    rv = lv_r.")
-	c.line("  ELSE. rv = 0. ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.")
-	c.line("  DATA lv_x TYPE x LENGTH 4. lv_x = iv_val.")
-	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
-	c.line("    DATA(lv_r) = lv_x+3(1) && lv_x+2(1) && lv_x+1(1) && lv_x+0(1).")
-	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.")
-	c.line("  ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.")
-	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
-	c.line("    DATA lv_b TYPE x LENGTH 1. lv_b = gv_mem+iv_addr(1). rv = lv_b.")
-	c.line("  ELSE. rv = 0. ENDIF.")
-	c.line("ENDFORM.")
-	c.line("")
 	c.line("CLASS %s DEFINITION FINAL CREATE PUBLIC.", c.className)
 	c.indent++
 	c.line("PUBLIC SECTION.")
@@ -793,6 +776,51 @@ func (c *abapCompiler) emit() string {
 
 	c.indent--
 	c.line("ENDCLASS.")
+	c.line("")
+
+	// Memory runtime + C library stubs (after class, as FORMs)
+	c.line("\" Memory runtime")
+	c.line("FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("  DATA lv_b TYPE x LENGTH 4. DATA lv_r TYPE xstring.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
+	c.line("    lv_b = gv_mem+iv_addr(4).")
+	c.line("    CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE. rv = lv_r.")
+	c.line("  ELSE. rv = 0. ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("  DATA lv_x TYPE x LENGTH 4. DATA lv_r TYPE xstring. lv_x = iv_val.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
+	c.line("    CONCATENATE lv_x+3(1) lv_x+2(1) lv_x+1(1) lv_x+0(1) INTO lv_r IN BYTE MODE.")
+	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.")
+	c.line("  ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("  DATA lv_b TYPE x LENGTH 1.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
+	c.line("    lv_b = gv_mem+iv_addr(1). rv = lv_b.")
+	c.line("  ELSE. rv = 0. ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("  DATA lv_x TYPE x LENGTH 1. DATA lv_bx TYPE xstring. lv_x = iv_val.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
+	c.line("    lv_bx = lv_x.")
+	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_bx IN BYTE MODE.")
+	c.line("  ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_st_i32_16 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("  DATA lv_x TYPE x LENGTH 2. DATA lv_r16 TYPE xstring. lv_x = iv_val.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 2 <= xstrlen( gv_mem ).")
+	c.line("    CONCATENATE lv_x+1(1) lv_x+0(1) INTO lv_r16 IN BYTE MODE.")
+	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 2 OF gv_mem WITH lv_r16 IN BYTE MODE.")
+	c.line("  ENDIF.")
+	c.line("ENDFORM.")
+	c.line("\" C library stubs")
+	c.line("FORM strlen USING iv_ptr TYPE i CHANGING rv TYPE int8. rv = 0. ENDFORM.")
+	c.line("FORM memset USING iv_dst TYPE i iv_val TYPE i iv_n TYPE int8. ENDFORM.")
+	c.line("FORM memcpy USING iv_dst TYPE i iv_src TYPE i iv_n TYPE int8. ENDFORM.")
+	c.line("FORM snprintf USING p0 TYPE i p1 TYPE int8 p2 TYPE i CHANGING rv TYPE i. rv = 0. ENDFORM.")
+	c.line("FORM printf USING p0 TYPE i CHANGING rv TYPE i. rv = 0. ENDFORM.")
+	c.line("FORM abort. ENDFORM.")
 
 	return c.sb.String()
 }
@@ -911,6 +939,22 @@ func (c *abapCompiler) collectVars(fn *Function) []varDecl {
 	// Add phi temp vars if needed
 	for i := 0; i < maxPhi; i++ {
 		result = append(result, varDecl{name: fmt.Sprintf("lv_phi%d", i), typ: "i"})
+	}
+
+	// Add bitwise temp vars if any and/or/xor ops present
+	hasBitwise := false
+	for _, b := range fn.Blocks {
+		for _, inst := range b.Insts {
+			if inst.Op == "and" || inst.Op == "or" || inst.Op == "xor" {
+				hasBitwise = true
+				break
+			}
+		}
+		if hasBitwise { break }
+	}
+	if hasBitwise {
+		result = append(result, varDecl{name: "lv_xa", typ: "x4"})
+		result = append(result, varDecl{name: "lv_xb", typ: "x4"})
 	}
 
 	return result
@@ -1035,16 +1079,13 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 	// Bitwise
 	case "and":
 		a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
-		c.line("DATA lx_a_%s TYPE x4. DATA lx_b_%s TYPE x4. lx_a_%s = %s. lx_b_%s = %s. lx_a_%s = lx_a_%s BIT-AND lx_b_%s. %s = lx_a_%s.",
-			dst, dst, dst, a, dst, b, dst, dst, dst, dst, dst)
+		c.line("lv_xa = %s. lv_xb = %s. lv_xa = lv_xa BIT-AND lv_xb. %s = lv_xa.", a, b, dst)
 	case "or":
 		a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
-		c.line("DATA lx_a_%s TYPE x4. DATA lx_b_%s TYPE x4. lx_a_%s = %s. lx_b_%s = %s. lx_a_%s = lx_a_%s BIT-OR lx_b_%s. %s = lx_a_%s.",
-			dst, dst, dst, a, dst, b, dst, dst, dst, dst, dst)
+		c.line("lv_xa = %s. lv_xb = %s. lv_xa = lv_xa BIT-OR lv_xb. %s = lv_xa.", a, b, dst)
 	case "xor":
 		a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
-		c.line("DATA lx_a_%s TYPE x4. DATA lx_b_%s TYPE x4. lx_a_%s = %s. lx_b_%s = %s. lx_a_%s = lx_a_%s BIT-XOR lx_b_%s. %s = lx_a_%s.",
-			dst, dst, dst, a, dst, b, dst, dst, dst, dst, dst)
+		c.line("lv_xa = %s. lv_xb = %s. lv_xa = lv_xa BIT-XOR lv_xb. %s = lv_xa.", a, b, dst)
 	case "shl":
 		c.line("TRY. %s = %s * ipow( base = 2 exp = %s ). CATCH cx_root. %s = 0. ENDTRY.",
 			dst, c.val(inst.Args[0]), c.val(inst.Args[1]), dst)
@@ -1133,9 +1174,30 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 				if cfn.IsExternal || strings.HasPrefix(cfn.Name, "llvm.") {
 					continue
 				}
-				// Match by param count
+				// Match by param count + return type compatibility
 				if len(cfn.Params) != nArgs {
 					continue
+				}
+				cfnHasResult := cfn.ReturnType.Kind != VoidType
+				if hasResult && !cfnHasResult {
+					continue
+				}
+				// Match param types from call signature
+				if len(inst.CallParamTypes) > 0 {
+					typeMatch := true
+					for pi := 0; pi < nArgs && pi < len(cfn.Params) && pi < len(inst.CallParamTypes); pi++ {
+						callT := inst.CallParamTypes[pi].ABAPType()
+						paramT := cfn.Params[pi].Type.ABAPType()
+						if callT == "" { callT = "i" }
+						if paramT == "" { paramT = "i" }
+						if callT != paramT {
+							typeMatch = false
+							break
+						}
+					}
+					if !typeMatch {
+						continue
+					}
 				}
 				cname := sanitizeName(cfn.Name)
 				var callArgs []string
@@ -1143,7 +1205,7 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 					callArgs = append(callArgs, fmt.Sprintf("%s = %s", paramName(i, cfn.Name), c.val(arg)))
 				}
 				argStr := strings.Join(callArgs, " ")
-				if hasResult {
+				if hasResult && cfnHasResult {
 					c.line("WHEN %d. %s = %s( %s ).", idx, dst, cname, argStr)
 				} else {
 					c.line("WHEN %d. %s( %s ).", idx, cname, argStr)
@@ -1162,8 +1224,23 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			}
 			return
 		}
-		var argParts []string
 		calledFn := c.findFunction(inst.CallTarget)
+		// External or unknown functions → PERFORM (libc stubs)
+		if calledFn == nil || calledFn.IsExternal {
+			var perfArgs []string
+			for _, arg := range inst.Args {
+				perfArgs = append(perfArgs, c.val(arg))
+			}
+			if inst.Result != "" && inst.Type.Kind != VoidType {
+				c.line("PERFORM %s USING %s CHANGING %s.", target, strings.Join(perfArgs, " "), dst)
+			} else if len(perfArgs) > 0 {
+				c.line("PERFORM %s USING %s.", target, strings.Join(perfArgs, " "))
+			} else {
+				c.line("PERFORM %s.", target)
+			}
+			return
+		}
+		var argParts []string
 		for i, arg := range inst.Args {
 			name := paramName(i, inst.CallTarget)
 			if calledFn != nil && i < len(calledFn.Params) {
@@ -1405,6 +1482,12 @@ func (c *abapCompiler) val(v string) string {
 	// SSA register
 	if strings.HasPrefix(v, "%") {
 		return c.ssaName(v)
+	}
+	// LLVM type names leaked as values → 0
+	for _, tn := range []string{"i1", "i8", "i16", "i32", "i33", "i64", "i128", "float", "double", "ptr", "void"} {
+		if v == tn {
+			return "0"
+		}
 	}
 	return v
 }
