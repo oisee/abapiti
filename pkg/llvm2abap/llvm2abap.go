@@ -266,8 +266,13 @@ func (m *Module) parseFunction(lines []string, start int) (*Function, int) {
 		}
 
 		// First instruction without a label → implicit entry block
+		// LLVM names the entry block as %N where N = number of params
 		if currentBlock == nil {
-			currentBlock = &BasicBlock{Label: "entry"}
+			entryLabel := fmt.Sprintf("%d", len(fn.Params))
+			if entryLabel == "0" {
+				entryLabel = "entry"
+			}
+			currentBlock = &BasicBlock{Label: entryLabel}
 		}
 
 		inst := parseInstruction(line)
@@ -501,6 +506,15 @@ type abapCompiler struct {
 	indent    int
 	// Track which SSA values are function params (for naming)
 	paramMap map[string]string // %0 → "a", %1 → "b"
+	// Phi resolution: phiMap[targetBlock][sourceBlock] = [{dst, val}, ...]
+	phiMap map[string]map[string][]phiAssign
+	// Current block label (for phi resolution at branches)
+	currentBlock string
+}
+
+type phiAssign struct {
+	dst string // lv_4
+	val string // lv_8 or "2"
 }
 
 func (c *abapCompiler) emit() string {
@@ -599,8 +613,14 @@ func (c *abapCompiler) collectVars(fn *Function) []varDecl {
 	seen := make(map[string]bool)
 	var result []varDecl
 
+	// Count max parallel phi assignments for temp vars
+	maxPhi := 0
 	for _, b := range fn.Blocks {
+		phiCount := 0
 		for _, inst := range b.Insts {
+			if inst.Op == "phi" {
+				phiCount++
+			}
 			if inst.Result != "" {
 				name := c.ssaName(inst.Result)
 				if !seen[name] && !c.isParam(inst.Result) {
@@ -609,7 +629,16 @@ func (c *abapCompiler) collectVars(fn *Function) []varDecl {
 				}
 			}
 		}
+		if phiCount > maxPhi {
+			maxPhi = phiCount
+		}
 	}
+
+	// Add phi temp vars if needed
+	for i := 0; i < maxPhi; i++ {
+		result = append(result, varDecl{name: fmt.Sprintf("lv_phi%d", i), typ: "i"})
+	}
+
 	return result
 }
 
@@ -619,10 +648,82 @@ func (c *abapCompiler) emitBlock(block *BasicBlock, fn *Function) {
 	}
 }
 
+func (c *abapCompiler) buildPhiMap(fn *Function) {
+	c.phiMap = make(map[string]map[string][]phiAssign)
+	for _, block := range fn.Blocks {
+		for _, inst := range block.Insts {
+			if inst.Op != "phi" {
+				continue
+			}
+			dst := c.ssaName(inst.Result)
+			for _, pair := range inst.PhiPairs {
+				target := block.Label
+				source := pair.Label
+				if c.phiMap[target] == nil {
+					c.phiMap[target] = make(map[string][]phiAssign)
+				}
+				c.phiMap[target][source] = append(c.phiMap[target][source], phiAssign{
+					dst: dst,
+					val: c.val(pair.Value),
+				})
+			}
+		}
+	}
+}
+
+func (c *abapCompiler) emitPhiAssigns(targetBlock string) {
+	if c.phiMap == nil {
+		return
+	}
+	assigns, ok := c.phiMap[targetBlock][c.currentBlock]
+	if !ok {
+		return
+	}
+	// Emit phi assignments before the block transition
+	// For parallel phi (multiple assignments), use temp-then-assign pattern
+	// to avoid read-after-write conflicts (e.g., swap a,b)
+	if len(assigns) > 1 {
+		// Check if any value references another phi destination (conflict)
+		dstSet := make(map[string]bool)
+		for _, a := range assigns {
+			dstSet[a.dst] = true
+		}
+		hasConflict := false
+		for _, a := range assigns {
+			if dstSet[a.val] {
+				hasConflict = true
+				break
+			}
+		}
+		if hasConflict {
+			// Save all values first, then assign
+			for i, a := range assigns {
+				c.line("lv_phi%d = %s.", i, a.val)
+			}
+			for i, a := range assigns {
+				c.line("%s = lv_phi%d.", a.dst, i)
+			}
+		} else {
+			// No conflict — direct assignment
+			for _, a := range assigns {
+				c.line("%s = %s.", a.dst, a.val)
+			}
+		}
+	} else if len(assigns) == 1 {
+		c.line("%s = %s.", assigns[0].dst, assigns[0].val)
+	}
+}
+
 func (c *abapCompiler) emitWithDispatcher(fn *Function) {
-	// Emit phi variable assignments at block transitions
-	// Use CASE-based dispatcher for multi-block functions
-	c.line("DATA lv_block TYPE string VALUE '%s'.", fn.Blocks[0].Label)
+	c.buildPhiMap(fn)
+
+	// Determine first block label
+	firstLabel := "entry"
+	if len(fn.Blocks) > 0 {
+		firstLabel = fn.Blocks[0].Label
+	}
+
+	c.line("DATA lv_block TYPE string VALUE '%s'.", firstLabel)
 	c.line("DO.")
 	c.indent++
 	c.line("CASE lv_block.")
@@ -631,6 +732,7 @@ func (c *abapCompiler) emitWithDispatcher(fn *Function) {
 	for _, block := range fn.Blocks {
 		c.line("WHEN '%s'.", block.Label)
 		c.indent++
+		c.currentBlock = block.Label
 		c.emitBlock(block, fn)
 		c.indent--
 	}
@@ -701,19 +803,28 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 		c.line("IF %s <> 0. %s = %s. ELSE. %s = %s. ENDIF.",
 			c.val(inst.SelectCond), dst, c.val(inst.SelectTrue), dst, c.val(inst.SelectFalse))
 
-	// Phi — resolved at branch source (emit assignment to phi var)
+	// Phi — skip (resolved at branch source)
 	case "phi":
-		// PHI nodes handled in dispatcher: assignment before branch
-		c.line("\" phi: %s (resolved at branch source)", dst)
+		// handled by emitPhiAssigns at branch sites
 
-	// Branch
+	// Branch — emit phi assignments before target transition
 	case "br":
 		if inst.Cond != "" {
-			// Conditional branch
-			c.line("IF %s <> 0. lv_block = '%s'. ELSE. lv_block = '%s'. ENDIF.",
-				c.val(inst.Cond), inst.TrueLabel, inst.FalseLabel)
+			// Conditional branch — phi assigns in each branch
+			c.line("IF %s <> 0.", c.val(inst.Cond))
+			c.indent++
+			c.emitPhiAssigns(inst.TrueLabel)
+			c.line("lv_block = '%s'.", inst.TrueLabel)
+			c.indent--
+			c.line("ELSE.")
+			c.indent++
+			c.emitPhiAssigns(inst.FalseLabel)
+			c.line("lv_block = '%s'.", inst.FalseLabel)
+			c.indent--
+			c.line("ENDIF.")
 		} else if inst.TrueLabel != "" {
 			// Unconditional branch
+			c.emitPhiAssigns(inst.TrueLabel)
 			c.line("lv_block = '%s'.", inst.TrueLabel)
 		}
 
