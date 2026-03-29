@@ -779,7 +779,24 @@ func (c *abapCompiler) emitMethod(fn *Function) {
 		for _, v := range vars {
 			decls = append(decls, fmt.Sprintf("%s TYPE %s", v.name, v.typ))
 		}
-		c.line("DATA: %s.", strings.Join(decls, ", "))
+		// Split DATA declarations to stay under 240 chars per line
+		current := "DATA:"
+		for i, d := range decls {
+			sep := ","
+			if i == len(decls)-1 {
+				sep = "."
+			}
+			entry := " " + d + sep
+			if len(current)+len(entry) > 235 {
+				c.line("%s", current)
+				current = "     " + d + sep // continuation indent
+			} else {
+				current += entry
+			}
+		}
+		if current != "" {
+			c.line("%s", current)
+		}
 	}
 
 	// Simple functions (single block, no phi, no complex CFG)
@@ -1198,8 +1215,21 @@ func (c *abapCompiler) emitIntrinsic(inst *Instruction, fn *Function) {
 	case strings.Contains(inst.CallTarget, "smin"):
 		a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
 		c.line("IF %s < %s. %s = %s. ELSE. %s = %s. ENDIF.", a, b, dst, a, dst, b)
+	case strings.Contains(inst.CallTarget, "floor"):
+		c.line("%s = floor( %s ).", dst, c.val(inst.Args[0]))
+	case strings.Contains(inst.CallTarget, "round"):
+		c.line("%s = round( val = %s dec = 0 ).", dst, c.val(inst.Args[0]))
+	case strings.Contains(inst.CallTarget, "fmuladd"):
+		// fmuladd(a, b, c) = a*b + c
+		c.line("%s = %s * %s + %s.", dst, c.val(inst.Args[0]), c.val(inst.Args[1]), c.val(inst.Args[2]))
+	case strings.Contains(inst.CallTarget, "usub.sat"):
+		// saturating unsigned subtract: max(a-b, 0)
+		a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
+		c.line("%s = %s - %s. IF %s < 0. %s = 0. ENDIF.", dst, a, b, dst, dst)
+	case strings.Contains(inst.CallTarget, "frameaddress"):
+		c.line("%s = 0. \" frameaddress stub", dst)
 	default:
-		c.line("\" TODO: intrinsic %s", inst.CallTarget)
+		c.line("%s = 0. \" intrinsic %s (stub)", dst, inst.CallTarget)
 	}
 }
 
