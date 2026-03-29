@@ -576,8 +576,56 @@ func parseInstruction(line string) *Instruction {
 			return inst
 		}
 
-		// Conversion ops: zext, sext, trunc
-		if strings.HasPrefix(rest, "zext ") || strings.HasPrefix(rest, "sext ") || strings.HasPrefix(rest, "trunc ") {
+		// extractvalue: %x = extractvalue {i32, i32} %val, 0
+		if strings.HasPrefix(rest, "extractvalue ") || strings.HasPrefix(rest, "insertvalue ") {
+			inst.Op = strings.Fields(rest)[0]
+			// Find the last operand before any index
+			re := regexp.MustCompile(`(%\w+)\s*,\s*\d+`)
+			m := re.FindStringSubmatch(rest)
+			if m != nil {
+				inst.Args = []string{m[1]}
+			}
+			inst.Type = Type{Kind: IntType, BitWidth: 32} // default
+			return inst
+		}
+
+		// fcmp instruction
+		if strings.HasPrefix(rest, "fcmp ") {
+			inst.Op = "fcmp"
+			parts := strings.Fields(rest)
+			if len(parts) >= 5 {
+				inst.Predicate = parts[1]
+				inst.Type = Type{Kind: IntType, BitWidth: 1}
+				inst.Args = []string{
+					strings.TrimSuffix(parts[3], ","),
+					parts[4],
+				}
+			}
+			return inst
+		}
+
+		// fneg instruction
+		if strings.HasPrefix(rest, "fneg ") {
+			inst.Op = "fneg"
+			parts := strings.Fields(rest)
+			if len(parts) >= 3 {
+				inst.Type = parseType(parts[1])
+				inst.Args = []string{parts[2]}
+			}
+			return inst
+		}
+
+		// Conversion ops: zext, sext, trunc, bitcast, ptrtoint, inttoptr, sitofp, etc.
+		convOps := []string{"zext ", "sext ", "trunc ", "bitcast ", "ptrtoint ", "inttoptr ",
+			"sitofp ", "uitofp ", "fptosi ", "fptoui ", "fptrunc ", "fpext "}
+		isConv := false
+		for _, op := range convOps {
+			if strings.HasPrefix(rest, op) {
+				isConv = true
+				break
+			}
+		}
+		if isConv {
 			fields := strings.Fields(rest)
 			inst.Op = fields[0]
 			// zext i32 %5 to i64 → just pass through value
@@ -1059,10 +1107,54 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			c.line("PERFORM mem_st_i32 USING %s %s.", addr, val)
 		}
 
-	// Extensions / conversions
-	case "zext", "sext", "trunc":
+	// Extensions / conversions / casts
+	case "zext", "sext", "trunc", "bitcast", "ptrtoint", "inttoptr",
+		"sitofp", "uitofp", "fptosi", "fptoui", "fptrunc", "fpext":
 		if len(inst.Args) > 0 {
 			c.line("%s = %s. \" %s", dst, c.val(inst.Args[0]), inst.Op)
+		}
+
+	// Float comparisons
+	case "fcmp":
+		if len(inst.Args) >= 2 {
+			a, b := c.val(inst.Args[0]), c.val(inst.Args[1])
+			switch inst.Predicate {
+			case "oeq", "ueq":
+				c.line("IF %s = %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "one", "une":
+				c.line("IF %s <> %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "olt", "ult":
+				c.line("IF %s < %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "ogt", "ugt":
+				c.line("IF %s > %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "ole", "ule":
+				c.line("IF %s <= %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "oge", "uge":
+				c.line("IF %s >= %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, dst, dst)
+			case "ord":
+				c.line("%s = 1. \" fcmp ord (not NaN)", dst)
+			case "uno":
+				c.line("%s = 0. \" fcmp uno (is NaN)", dst)
+			default:
+				c.line("IF %s = %s. %s = 1. ELSE. %s = 0. ENDIF. \" fcmp %s", a, b, dst, dst, inst.Predicate)
+			}
+		}
+
+	// Float negation
+	case "fneg":
+		if len(inst.Args) > 0 {
+			c.line("%s = 0 - %s.", dst, c.val(inst.Args[0]))
+		}
+
+	// Aggregate operations
+	case "extractvalue":
+		// extractvalue {type, type} %val, INDEX → access aggregate element
+		if len(inst.Args) > 0 {
+			c.line("%s = %s. \" extractvalue", dst, c.val(inst.Args[0]))
+		}
+	case "insertvalue":
+		if len(inst.Args) > 0 {
+			c.line("%s = %s. \" insertvalue", dst, c.val(inst.Args[0]))
 		}
 
 	// Alloca — local stack allocation → DATA variable (already declared)
