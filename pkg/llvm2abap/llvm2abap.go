@@ -709,7 +709,9 @@ type phiAssign struct {
 }
 
 func (c *abapCompiler) emit() string {
-	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", c.className)
+	c.line("REPORT %s.", c.className)
+	c.line("")
+	c.line("CLASS %s DEFINITION FINAL CREATE PUBLIC.", c.className)
 	c.indent++
 	c.line("PUBLIC SECTION.")
 	c.indent++
@@ -750,13 +752,21 @@ func (c *abapCompiler) emitMethodDecl(fn *Function) {
 		var params []string
 		for i, p := range fn.Params {
 			name := paramName(i, fn.Name)
-			params = append(params, fmt.Sprintf("%s TYPE %s", name, p.Type.ABAPType()))
+			typ := p.Type.ABAPType()
+			if typ == "" {
+				typ = "i"
+			}
+			params = append(params, fmt.Sprintf("%s TYPE %s", name, typ))
 		}
 		parts = append(parts, "IMPORTING "+strings.Join(params, " "))
 	}
 
 	if fn.ReturnType.Kind != VoidType {
-		parts = append(parts, fmt.Sprintf("RETURNING VALUE(rv) TYPE %s", fn.ReturnType.ABAPType()))
+		retTyp := fn.ReturnType.ABAPType()
+		if retTyp == "" {
+			retTyp = "i"
+		}
+		parts = append(parts, fmt.Sprintf("RETURNING VALUE(rv) TYPE %s", retTyp))
 	}
 
 	c.line("%s.", strings.Join(parts, " "))
