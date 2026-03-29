@@ -97,7 +97,17 @@ pkg/llvm2abap/output/zllvm_test_01.zip   — 34 functions + 17 unit tests
 pkg/llvm2abap/output/quickjs_llvm.zip    — QuickJS 537 functions, 124K lines
 ```
 
-## 8. The Full Chain: abaplint on QuickJS-from-LLVM
+## 8. QuickJS on SAP — JavaScript engine compiled to ABAP
+
+See **[QUICKJS_ON_SAP.md](QUICKJS_ON_SAP.md)** for the full guide.
+
+```bash
+# Compile QuickJS C → ABAP (one command!)
+vsp compile llvm quickjs.c --class zcl_quickjs --zip -o quickjs.zip
+# → 537 CLASS-METHODS, 124K lines, 0 TODOs, ready for abapGit import
+```
+
+## 9. The Full Chain: abaplint on QuickJS-from-LLVM
 
 ```bash
 # Step 1: Build QuickJS from C via LLVM IR
