@@ -647,6 +647,8 @@ func parseInstruction(line string) *Instruction {
 			}
 		}
 		if isConv {
+			// Strip extra keywords like nneg
+			rest = strings.ReplaceAll(rest, " nneg ", " ")
 			fields := strings.Fields(rest)
 			inst.Op = fields[0]
 			// zext i32 %5 to i64 → just pass through value
@@ -737,6 +739,29 @@ func (c *abapCompiler) emit() string {
 	c.line("REPORT %s.", c.className)
 	c.line("")
 	c.line("TYPES x4 TYPE x LENGTH 4.")
+	c.line("DATA gv_mem TYPE xstring.")
+	c.line("")
+	c.line("\" Memory runtime (WASM-style linear memory)")
+	c.line("FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("  DATA lv_b TYPE x LENGTH 4.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
+	c.line("    lv_b = gv_mem+iv_addr(4).")
+	c.line("    DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).")
+	c.line("    rv = lv_r.")
+	c.line("  ELSE. rv = 0. ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("  DATA lv_x TYPE x LENGTH 4. lv_x = iv_val.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
+	c.line("    DATA(lv_r) = lv_x+3(1) && lv_x+2(1) && lv_x+1(1) && lv_x+0(1).")
+	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.")
+	c.line("  ENDIF.")
+	c.line("ENDFORM.")
+	c.line("FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
+	c.line("    DATA lv_b TYPE x LENGTH 1. lv_b = gv_mem+iv_addr(1). rv = lv_b.")
+	c.line("  ELSE. rv = 0. ENDIF.")
+	c.line("ENDFORM.")
 	c.line("")
 	c.line("CLASS %s DEFINITION FINAL CREATE PUBLIC.", c.className)
 	c.indent++
