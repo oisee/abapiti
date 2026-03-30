@@ -809,6 +809,21 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
     CLASS-METHODS mem_st_i32 IMPORTING iv_addr TYPE i iv_val TYPE i.
     CLASS-METHODS mem_ld_i32_8u IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.
+    " C library stubs
+    CLASS-METHODS strlen IMPORTING a TYPE i RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS malloc IMPORTING a TYPE int8 RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS realloc IMPORTING a TYPE i b TYPE int8 RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS free IMPORTING a TYPE i.
+    CLASS-METHODS malloc_usable_size IMPORTING a TYPE i RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS memset IMPORTING a TYPE i b TYPE i c TYPE int8.
+    CLASS-METHODS memcpy IMPORTING a TYPE i b TYPE i c TYPE int8.
+    CLASS-METHODS memmove IMPORTING a TYPE i b TYPE i c TYPE int8.
+    CLASS-METHODS snprintf IMPORTING a TYPE i b TYPE int8 c TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS printf IMPORTING a TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS fprintf IMPORTING a TYPE i b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS fflush IMPORTING a TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS c_abort.
+    CLASS-METHODS c_exit IMPORTING a TYPE i.
 ENDCLASS.
 CLASS %s_mem IMPLEMENTATION.
   METHOD mem_ld_i32.
@@ -838,6 +853,20 @@ CLASS %s_mem IMPLEMENTATION.
       REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_bx IN BYTE MODE.
     ENDIF.
   ENDMETHOD.
+  METHOD strlen. rv = 0. ENDMETHOD.
+  METHOD malloc. rv = 0. ENDMETHOD.
+  METHOD realloc. rv = 0. ENDMETHOD.
+  METHOD free. ENDMETHOD.
+  METHOD malloc_usable_size. rv = 0. ENDMETHOD.
+  METHOD memset. ENDMETHOD.
+  METHOD memcpy. ENDMETHOD.
+  METHOD memmove. ENDMETHOD.
+  METHOD snprintf. rv = 0. ENDMETHOD.
+  METHOD printf. rv = 0. ENDMETHOD.
+  METHOD fprintf. rv = 0. ENDMETHOD.
+  METHOD fflush. rv = 0. ENDMETHOD.
+  METHOD c_abort. ENDMETHOD.
+  METHOD c_exit. ENDMETHOD.
 ENDCLASS.
 `, baseName, baseName)
 
@@ -1423,6 +1452,12 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 					}
 				}
 				cname := sanitizeName(cfn.Name)
+				// Add class prefix for cross-class calls
+				if c.funcToClass != nil {
+					if targetClass, ok := c.funcToClass[cfn.Name]; ok && targetClass != c.className {
+						cname = targetClass + "=>" + cname
+					}
+				}
 				var callArgs []string
 				for i, arg := range inst.Args {
 					callArgs = append(callArgs, fmt.Sprintf("%s = %s", paramName(i, cfn.Name), c.val(arg)))
@@ -1448,18 +1483,34 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			return
 		}
 		calledFn := c.findFunction(inst.CallTarget)
-		// External or unknown functions → PERFORM (libc stubs)
+		// External or unknown functions → mem class method call
 		if calledFn == nil || calledFn.IsExternal {
-			var perfArgs []string
-			for _, arg := range inst.Args {
-				perfArgs = append(perfArgs, c.val(arg))
+			memPfx := c.memPrefix()
+			// Map C names that conflict with ABAP keywords
+			extName := target
+			switch extName {
+			case "abort":
+				extName = "c_abort"
+			case "exit":
+				extName = "c_exit"
 			}
+			var argParts []string
+			for i, arg := range inst.Args {
+				argParts = append(argParts, fmt.Sprintf("%s = CONV #( %s )", paramName(i, inst.CallTarget), c.val(arg)))
+			}
+			argStr := strings.Join(argParts, " ")
 			if inst.Result != "" && inst.Type.Kind != VoidType {
-				c.line("PERFORM %s USING %s CHANGING %s.", target, strings.Join(perfArgs, " "), dst)
-			} else if len(perfArgs) > 0 {
-				c.line("PERFORM %s USING %s.", target, strings.Join(perfArgs, " "))
+				if len(argParts) > 0 {
+					c.line("%s = %s%s( %s ).", dst, memPfx, extName, argStr)
+				} else {
+					c.line("%s = %s%s( ).", dst, memPfx, extName)
+				}
 			} else {
-				c.line("PERFORM %s.", target)
+				if len(argParts) > 0 {
+					c.line("%s%s( %s ).", memPfx, extName, argStr)
+				} else {
+					c.line("%s%s( ).", memPfx, extName)
+				}
 			}
 			return
 		}
@@ -1530,9 +1581,9 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 		memClass := c.memPrefix()
 		switch size {
 		case 1:
-			c.line("%smem_st_i32_8( iv_addr = %s iv_val = %s ).", memClass, addr, val)
+			c.line("%smem_st_i32_8( iv_addr = CONV i( %s ) iv_val = CONV i( %s ) ).", memClass, addr, val)
 		default:
-			c.line("%smem_st_i32( iv_addr = %s iv_val = %s ).", memClass, addr, val)
+			c.line("%smem_st_i32( iv_addr = CONV i( %s ) iv_val = CONV i( %s ) ).", memClass, addr, val)
 		}
 
 	// Extensions / conversions / casts
