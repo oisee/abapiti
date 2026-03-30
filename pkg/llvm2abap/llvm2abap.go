@@ -800,6 +800,61 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
 		})
 	}
 
+	// Auto-detect external/missing functions and stub them in _mem class
+	// "defined" = has blocks (real implementation). External = declared only.
+	definedFuncs := make(map[string]bool)
+	for _, fn := range mod.Functions {
+		if !fn.IsExternal {
+			definedFuncs[fn.Name] = true
+		}
+	}
+	// Hardcoded stubs already in mem class
+	hardcoded := map[string]bool{
+		"strlen": true, "malloc": true, "realloc": true, "free": true,
+		"malloc_usable_size": true, "memset": true, "memcpy": true, "memmove": true,
+		"snprintf": true, "printf": true, "fprintf": true, "fflush": true,
+		"abort": true, "exit": true, "gettimeofday": true, "strchr": true,
+		"strncmp": true, "strcmp": true, "memcmp": true, "strtod": true,
+		"strtol": true, "atoi": true, "qsort": true,
+	}
+	var missingStubDecls, missingStubImpls []string
+	seenMissing := make(map[string]bool)
+	for _, fn := range mod.Functions {
+		for _, b := range fn.Blocks {
+			for _, inst := range b.Insts {
+				if inst.Op == "call" && inst.CallTarget != "" &&
+					inst.CallTarget != "__indirect" && inst.CallTarget != "__unknown" &&
+					!strings.HasPrefix(inst.CallTarget, "llvm.") &&
+					!definedFuncs[inst.CallTarget] && !hardcoded[inst.CallTarget] &&
+					!seenMissing[inst.CallTarget] {
+					seenMissing[inst.CallTarget] = true
+					name := sanitizeName(inst.CallTarget)
+					if name == "abort" { name = "c_abort" }
+					if name == "exit" { name = "c_exit" }
+					nArgs := len(inst.Args)
+					hasRet := inst.Type.Kind != VoidType
+					var params []string
+					for i := 0; i < nArgs; i++ {
+						params = append(params, fmt.Sprintf("%s TYPE i", paramName(i, inst.CallTarget)))
+					}
+					sig := "CLASS-METHODS " + name
+					if len(params) > 0 {
+						sig += " IMPORTING " + strings.Join(params, " ")
+					}
+					if hasRet {
+						sig += " RETURNING VALUE(rv) TYPE i"
+					}
+					missingStubDecls = append(missingStubDecls, "    "+sig+".")
+					if hasRet {
+						missingStubImpls = append(missingStubImpls, fmt.Sprintf("  METHOD %s. rv = 0. ENDMETHOD.", name))
+					} else {
+						missingStubImpls = append(missingStubImpls, fmt.Sprintf("  METHOD %s. ENDMETHOD.", name))
+					}
+				}
+			}
+		}
+	}
+
 	// Add memory runtime class
 	memClass := fmt.Sprintf(`CLASS %s_mem DEFINITION PUBLIC.
   PUBLIC SECTION.
@@ -833,6 +888,7 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
     CLASS-METHODS strtol IMPORTING a TYPE i b TYPE i c TYPE i RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS atoi IMPORTING a TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS qsort IMPORTING a TYPE i b TYPE int8 c TYPE int8 d TYPE i.
+%s
 ENDCLASS.
 CLASS %s_mem IMPLEMENTATION.
   METHOD mem_ld_i32.
@@ -885,8 +941,9 @@ CLASS %s_mem IMPLEMENTATION.
   METHOD strtol. rv = 0. ENDMETHOD.
   METHOD atoi. rv = 0. ENDMETHOD.
   METHOD qsort. ENDMETHOD.
+%s
 ENDCLASS.
-`, baseName, baseName)
+`, baseName, strings.Join(missingStubDecls, "\n"), baseName, strings.Join(missingStubImpls, "\n"))
 
 	files = append(files, MultiClassFile{
 		FileName:  baseName + "_mem",
@@ -1478,7 +1535,7 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 				}
 				var callArgs []string
 				for i, arg := range inst.Args {
-					callArgs = append(callArgs, fmt.Sprintf("%s = %s", paramName(i, cfn.Name), c.val(arg)))
+					callArgs = append(callArgs, fmt.Sprintf("%s = CONV #( %s )", paramName(i, cfn.Name), c.val(arg)))
 				}
 				argStr := strings.Join(callArgs, " ")
 				if hasResult && cfnHasResult {
@@ -1538,7 +1595,7 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			if calledFn != nil && i < len(calledFn.Params) {
 				name = paramName(i, inst.CallTarget)
 			}
-			argParts = append(argParts, fmt.Sprintf("%s = %s", name, c.val(arg)))
+			argParts = append(argParts, fmt.Sprintf("%s = CONV #( %s )", name, c.val(arg)))
 		}
 		argStr := strings.Join(argParts, " ")
 		// Cross-class call prefix
@@ -1740,14 +1797,22 @@ func (c *abapCompiler) val(v string) string {
 	v = strings.TrimSpace(v)
 	// Numeric literal
 	if len(v) > 0 && (v[0] >= '0' && v[0] <= '9' || v[0] == '-') {
-		// Convert scientific notation to decimal (ABAP doesn't accept 1.0e+05)
+		// Hex integer constants (0x7FF0000000000000 etc.)
+		if strings.HasPrefix(v, "0x") || strings.HasPrefix(v, "0X") {
+			var n uint64
+			if _, err := fmt.Sscanf(v, "0x%x", &n); err == nil {
+				return fmt.Sprintf("%d", int64(n))
+			}
+			return "0"
+		}
+		// Convert scientific notation to decimal
 		if strings.ContainsAny(v, "eE") && strings.Contains(v, ".") {
 			var f float64
 			if _, err := fmt.Sscanf(v, "%e", &f); err == nil {
 				if f == 0 {
 					return "0"
 				}
-				return fmt.Sprintf("'%g'", f) // ABAP string literal for float
+				return fmt.Sprintf("'%g'", f)
 			}
 		}
 		return v
