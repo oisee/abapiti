@@ -95,6 +95,7 @@ const (
 	NodeNew          // new Ctor(args)
 	NodeClass        // class Name { ... }
 	NodeBreak        // break
+	NodeContinue     // continue
 )
 
 // Node is an AST node.
@@ -148,9 +149,10 @@ type Env struct {
 	vars      map[string]Value
 	parent    *Env
 	output    *strings.Builder // for console.log
-	returning bool             // set by return statement
-	retVal    Value
-	breaking  bool             // set by break statement
+	returning  bool
+	retVal     Value
+	breaking   bool
+	continuing bool
 }
 
 func NewEnv(parent *Env) *Env {
@@ -307,8 +309,9 @@ func evalNode(n *Node, env *Env) Value {
 			if !cond.IsTrue() || env.returning || env.breaking { break }
 			for _, s := range n.Body {
 				evalNode(s, env)
-				if env.returning || env.breaking { break }
+				if env.returning || env.breaking || env.continuing { break }
 			}
+			if env.continuing { env.continuing = false; continue }
 		}
 		if env.breaking { env.breaking = false }
 
@@ -322,8 +325,9 @@ func evalNode(n *Node, env *Env) Value {
 			if !cond.IsTrue() { break }
 			for _, s := range n.Body {
 				evalNode(s, forEnv)
-				if forEnv.returning || forEnv.breaking { break }
+				if forEnv.returning || forEnv.breaking || forEnv.continuing { break }
 			}
+			if forEnv.continuing { forEnv.continuing = false }
 			if forEnv.returning || forEnv.breaking { break }
 			if n.Update != nil { evalNode(n.Update, forEnv) }
 		}
@@ -382,6 +386,10 @@ func evalNode(n *Node, env *Env) Value {
 
 	case NodeBreak:
 		env.breaking = true
+		return Undefined
+
+	case NodeContinue:
+		env.continuing = true
 		return Undefined
 
 	case NodeObject:
@@ -542,6 +550,8 @@ func evalMethodCall(obj Value, method string, args []Value, env *Env, objNode *N
 				start := int(args[0].ToNumber())
 				end := int(args[1].ToNumber())
 				if start < 0 { start = 0 }
+				if start > len(obj.Str) { start = len(obj.Str) }
+				if end < 0 { end = 0 }
 				if end > len(obj.Str) { end = len(obj.Str) }
 				if start > end { start, end = end, start }
 				return StringVal(obj.Str[start:end])
@@ -564,6 +574,17 @@ func evalBinOp(op string, l, r Value) Value {
 	if op == "+" && (l.Type == 2 || r.Type == 2) {
 		return StringVal(l.ToString() + r.ToString())
 	}
+	// Equality — compare by type+value, not just numeric
+	switch op {
+	case "==", "===":
+		if l.Type != r.Type { return BoolVal(false) }
+		if l.Type == 2 { return BoolVal(l.Str == r.Str) }
+		return BoolVal(l.ToNumber() == r.ToNumber())
+	case "!=", "!==":
+		if l.Type != r.Type { return BoolVal(true) }
+		if l.Type == 2 { return BoolVal(l.Str != r.Str) }
+		return BoolVal(l.ToNumber() != r.ToNumber())
+	}
 	a, b := l.ToNumber(), r.ToNumber()
 	switch op {
 	case "+": return NumberVal(a + b)
@@ -571,8 +592,6 @@ func evalBinOp(op string, l, r Value) Value {
 	case "*": return NumberVal(a * b)
 	case "/": if b != 0 { return NumberVal(a / b) }; return NumberVal(0)
 	case "%": if b != 0 { return NumberVal(float64(int64(a) % int64(b))) }; return NumberVal(0)
-	case "==", "===": return BoolVal(a == b)
-	case "!=", "!==": return BoolVal(a != b)
 	case "<": return BoolVal(a < b)
 	case ">": return BoolVal(a > b)
 	case "<=": return BoolVal(a <= b)
@@ -613,9 +632,25 @@ func tokenize(src string) []Token {
 		}
 		// String
 		if ch == '\'' || ch == '"' {
+			var sb strings.Builder
 			j := i + 1
-			for j < len(src) && src[j] != ch { j++ }
-			tokens = append(tokens, Token{1, src[i+1 : j]})
+			for j < len(src) && src[j] != ch {
+				if src[j] == '\\' && j+1 < len(src) {
+					j++
+					switch src[j] {
+					case 'n': sb.WriteByte('\n')
+					case 't': sb.WriteByte('\t')
+					case '\\': sb.WriteByte('\\')
+					case '\'': sb.WriteByte('\'')
+					case '"': sb.WriteByte('"')
+					default: sb.WriteByte(src[j])
+					}
+				} else {
+					sb.WriteByte(src[j])
+				}
+				j++
+			}
+			tokens = append(tokens, Token{1, sb.String()})
 			i = j + 1; continue
 		}
 		// Identifier / keyword (no longer include '.' in identifiers)
@@ -699,6 +734,10 @@ func (p *Parser) parseStatement() *Node {
 		p.next()
 		if p.peek().Val == ";" { p.next() }
 		return &Node{Kind: NodeBreak}
+	case "continue":
+		p.next()
+		if p.peek().Val == ";" { p.next() }
+		return &Node{Kind: NodeContinue}
 	case "switch":
 		return p.parseSwitch()
 	case "class":
