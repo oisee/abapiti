@@ -51,6 +51,53 @@ func TestBasic(t *testing.T) {
 			}
 			console.log(fib(10))
 		`, "55\n"},
+		// Objects
+		{"object-literal", `let o = {x: 1, y: 2}; console.log(o.x + o.y)`, "3\n"},
+		{"object-assign", `let o = {}; o.name = "hello"; console.log(o.name)`, "hello\n"},
+		{"object-bracket", `let o = {a: 42}; console.log(o["a"])`, "42\n"},
+
+		// Arrays
+		{"array-literal", `let a = [10, 20, 30]; console.log(a[1])`, "20\n"},
+		{"array-push", `let a = []; a.push(1); a.push(2); console.log(a.length)`, "2\n"},
+		{"array-length", `let a = [1,2,3]; console.log(a.length)`, "3\n"},
+
+		// String methods
+		{"string-length", `console.log("hello".length)`, "5\n"},
+		{"string-charAt", `console.log("hello".charAt(1))`, "e\n"},
+		{"string-indexOf", `console.log("hello".indexOf("ll"))`, "2\n"},
+		{"string-substring", `console.log("hello".substring(1, 3))`, "el\n"},
+		{"string-charCodeAt", `console.log("A".charCodeAt(0))`, "65\n"},
+
+		// For loop
+		{"for-loop", `let s = 0; for (let i = 1; i <= 10; i = i + 1) { s = s + i; } console.log(s)`, "55\n"},
+
+		// Switch
+		{"switch", `let x = 2; let r = ""; switch(x) { case 1: r = "one"; break; case 2: r = "two"; break; } console.log(r)`, "two\n"},
+
+		// typeof
+		{"typeof-num", `console.log(typeof 42)`, "number\n"},
+		{"typeof-str", `console.log(typeof "hi")`, "string\n"},
+
+		// Closures
+		{"closure", `
+			function make() { let x = 10; function get() { return x; } return get; }
+			let f = make();
+			console.log(f())
+		`, "10\n"},
+
+		// Class (minimal)
+		{"class", `
+			class Counter {
+				constructor(n) { this.n = n; }
+				inc() { this.n = this.n + 1; }
+				get() { return this.n; }
+			}
+			let c = new Counter(0);
+			c.inc();
+			c.inc();
+			c.inc();
+			console.log(c.get())
+		`, "3\n"},
 	}
 
 	for _, tc := range tests {
