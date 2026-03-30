@@ -824,6 +824,15 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
     CLASS-METHODS fflush IMPORTING a TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS c_abort.
     CLASS-METHODS c_exit IMPORTING a TYPE i.
+    CLASS-METHODS gettimeofday IMPORTING a TYPE i b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS strchr IMPORTING a TYPE i b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS strncmp IMPORTING a TYPE i b TYPE i c TYPE int8 RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS strcmp IMPORTING a TYPE i b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS memcmp IMPORTING a TYPE i b TYPE i c TYPE int8 RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS strtod IMPORTING a TYPE i b TYPE i RETURNING VALUE(rv) TYPE f.
+    CLASS-METHODS strtol IMPORTING a TYPE i b TYPE i c TYPE i RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS atoi IMPORTING a TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS qsort IMPORTING a TYPE i b TYPE int8 c TYPE int8 d TYPE i.
 ENDCLASS.
 CLASS %s_mem IMPLEMENTATION.
   METHOD mem_ld_i32.
@@ -867,6 +876,15 @@ CLASS %s_mem IMPLEMENTATION.
   METHOD fflush. rv = 0. ENDMETHOD.
   METHOD c_abort. ENDMETHOD.
   METHOD c_exit. ENDMETHOD.
+  METHOD gettimeofday. rv = 0. ENDMETHOD.
+  METHOD strchr. rv = 0. ENDMETHOD.
+  METHOD strncmp. rv = 0. ENDMETHOD.
+  METHOD strcmp. rv = 0. ENDMETHOD.
+  METHOD memcmp. rv = 0. ENDMETHOD.
+  METHOD strtod. rv = 0. ENDMETHOD.
+  METHOD strtol. rv = 0. ENDMETHOD.
+  METHOD atoi. rv = 0. ENDMETHOD.
+  METHOD qsort. ENDMETHOD.
 ENDCLASS.
 `, baseName, baseName)
 
@@ -1751,6 +1769,21 @@ func (c *abapCompiler) val(v string) string {
 		for idx, fn := range c.mod.Functions {
 			if fn.Name == fname {
 				return fmt.Sprintf("%d", idx)
+			}
+		}
+		return "0"
+	}
+	// Strip LLVM attributes with parentheses: byval(%struct.X), dereferenceable(N)
+	if strings.HasPrefix(v, "byval(") || strings.HasPrefix(v, "sret(") ||
+		strings.HasPrefix(v, "align(") || strings.HasPrefix(v, "dereferenceable(") {
+		return "0"
+	}
+	if strings.Contains(v, "(") && !strings.HasPrefix(v, "%") && !strings.HasPrefix(v, "-") {
+		// Other attr with parens — check if a %var follows
+		parts := strings.Fields(v)
+		for _, p := range parts {
+			if strings.HasPrefix(p, "%") && !strings.Contains(p, "(") {
+				return c.ssaName(p)
 			}
 		}
 		return "0"
