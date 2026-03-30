@@ -716,10 +716,139 @@ func stripKeywords(s string, kws []string) string {
 	return strings.TrimSpace(s)
 }
 
-// Compile converts a parsed LLVM IR Module to ABAP source.
+// Compile converts a parsed LLVM IR Module to a single ABAP source.
 func Compile(mod *Module, className string) string {
 	c := &abapCompiler{mod: mod, className: className}
 	return c.emit()
+}
+
+// MultiClassFile represents one file in a multi-class compilation.
+type MultiClassFile struct {
+	FileName  string // e.g., "zcl_qjs_p01"
+	ClassName string // e.g., "ZCL_QJS_P01"
+	Source    string // ABAP source
+	IsClass  bool   // true=.clas.abap, false=.prog.abap
+}
+
+// CompileMultiClass splits a large module into multiple classes,
+// each under maxFuncsPerClass functions. Returns a list of files.
+func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []MultiClassFile {
+	if maxFuncsPerClass <= 0 {
+		maxFuncsPerClass = 30
+	}
+
+	// Collect non-external functions
+	var funcs []*Function
+	for _, fn := range mod.Functions {
+		if !fn.IsExternal && !strings.HasPrefix(fn.Name, "llvm.") {
+			funcs = append(funcs, fn)
+		}
+	}
+
+	// Build function→class mapping
+	numParts := (len(funcs) + maxFuncsPerClass - 1) / maxFuncsPerClass
+	funcToClass := make(map[string]string) // function name → class name
+
+	for p := 0; p < numParts; p++ {
+		start := p * maxFuncsPerClass
+		end := start + maxFuncsPerClass
+		if end > len(funcs) {
+			end = len(funcs)
+		}
+		partName := fmt.Sprintf("%s_p%02d", baseName, p+1)
+		for _, fn := range funcs[start:end] {
+			funcToClass[fn.Name] = partName
+		}
+	}
+
+	var files []MultiClassFile
+
+	// Generate each class part
+	for p := 0; p < numParts; p++ {
+		start := p * maxFuncsPerClass
+		end := start + maxFuncsPerClass
+		if end > len(funcs) {
+			end = len(funcs)
+		}
+
+		partName := fmt.Sprintf("%s_p%02d", baseName, p+1)
+		partFuncs := funcs[start:end]
+
+		// Create a sub-module with only these functions
+		subMod := &Module{
+			Types:     mod.Types,
+			Functions: mod.Functions, // keep all for dispatch/reference
+			Globals:   mod.Globals,
+		}
+
+		c := &abapCompiler{
+			mod:         subMod,
+			className:   partName,
+			funcToClass: funcToClass,
+			partFuncs:   make(map[string]bool),
+		}
+		for _, fn := range partFuncs {
+			c.partFuncs[fn.Name] = true
+		}
+
+		source := c.emitClassFile()
+		files = append(files, MultiClassFile{
+			FileName:  partName,
+			ClassName: strings.ToUpper(partName),
+			Source:    source,
+			IsClass:  true,
+		})
+	}
+
+	// Add memory runtime class
+	memClass := fmt.Sprintf(`CLASS %s_mem DEFINITION PUBLIC.
+  PUBLIC SECTION.
+    TYPES x4 TYPE x LENGTH 4.
+    CLASS-DATA gv_mem TYPE xstring.
+    CLASS-METHODS mem_ld_i32 IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS mem_st_i32 IMPORTING iv_addr TYPE i iv_val TYPE i.
+    CLASS-METHODS mem_ld_i32_8u IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.
+ENDCLASS.
+CLASS %s_mem IMPLEMENTATION.
+  METHOD mem_ld_i32.
+    DATA lv_b TYPE x LENGTH 4. DATA lv_r TYPE xstring.
+    IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).
+      lv_b = gv_mem+iv_addr(4).
+      CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE. rv = lv_r.
+    ENDIF.
+  ENDMETHOD.
+  METHOD mem_st_i32.
+    DATA lv_x TYPE x LENGTH 4. DATA lv_r TYPE xstring. lv_x = iv_val.
+    IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).
+      CONCATENATE lv_x+3(1) lv_x+2(1) lv_x+1(1) lv_x+0(1) INTO lv_r IN BYTE MODE.
+      REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.
+    ENDIF.
+  ENDMETHOD.
+  METHOD mem_ld_i32_8u.
+    DATA lv_b TYPE x LENGTH 1.
+    IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).
+      lv_b = gv_mem+iv_addr(1). rv = lv_b.
+    ENDIF.
+  ENDMETHOD.
+  METHOD mem_st_i32_8.
+    DATA lv_x TYPE x LENGTH 1. DATA lv_bx TYPE xstring. lv_x = iv_val.
+    IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).
+      lv_bx = lv_x.
+      REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_bx IN BYTE MODE.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
+`, baseName, baseName)
+
+	files = append(files, MultiClassFile{
+		FileName:  baseName + "_mem",
+		ClassName: strings.ToUpper(baseName + "_MEM"),
+		Source:    memClass,
+		IsClass:  true,
+	})
+
+	return files
 }
 
 type abapCompiler struct {
@@ -733,11 +862,75 @@ type abapCompiler struct {
 	phiMap map[string]map[string][]phiAssign
 	// Current block label (for phi resolution at branches)
 	currentBlock string
+	// Multi-class support
+	funcToClass map[string]string // function name → class name (for cross-class calls)
+	partFuncs   map[string]bool   // functions to emit in THIS class (nil = emit all)
 }
 
 type phiAssign struct {
 	dst string // lv_4
 	val string // lv_8 or "2"
+}
+
+func (c *abapCompiler) memPrefix() string {
+	if c.funcToClass != nil {
+		// Multi-class mode — use shared memory class
+		base := c.className
+		// Strip _pNN suffix to get base name
+		if idx := strings.LastIndex(base, "_p"); idx > 0 {
+			base = base[:idx]
+		}
+		return base + "_mem=>"
+	}
+	return "" // single-class mode — use PERFORM (handled in emit())
+}
+
+func (c *abapCompiler) shouldEmitFunc(fn *Function) bool {
+	if c.partFuncs == nil {
+		return true // emit all
+	}
+	return c.partFuncs[fn.Name]
+}
+
+func (c *abapCompiler) emitClassFile() string {
+	c.line("CLASS %s DEFINITION PUBLIC.", c.className)
+	c.indent++
+	c.line("PUBLIC SECTION.")
+	c.indent++
+	c.line("TYPES x4 TYPE x LENGTH 4.")
+
+	for _, fn := range c.mod.Functions {
+		if fn.IsExternal || strings.HasPrefix(fn.Name, "llvm.") {
+			continue
+		}
+		if !c.shouldEmitFunc(fn) {
+			continue
+		}
+		c.emitMethodDecl(fn)
+	}
+
+	c.indent--
+	c.indent--
+	c.line("ENDCLASS.")
+	c.line("")
+
+	c.line("CLASS %s IMPLEMENTATION.", c.className)
+	c.indent++
+
+	for _, fn := range c.mod.Functions {
+		if fn.IsExternal || strings.HasPrefix(fn.Name, "llvm.") {
+			continue
+		}
+		if !c.shouldEmitFunc(fn) {
+			continue
+		}
+		c.emitMethod(fn)
+	}
+
+	c.indent--
+	c.line("ENDCLASS.")
+
+	return c.sb.String()
 }
 
 func (c *abapCompiler) emit() string {
@@ -1279,10 +1472,17 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 			argParts = append(argParts, fmt.Sprintf("%s = %s", name, c.val(arg)))
 		}
 		argStr := strings.Join(argParts, " ")
+		// Cross-class call prefix
+		callTarget := target
+		if c.funcToClass != nil {
+			if targetClass, ok := c.funcToClass[inst.CallTarget]; ok && targetClass != c.className {
+				callTarget = targetClass + "=>" + target
+			}
+		}
 		if inst.Result != "" && inst.Type.Kind != VoidType {
-			c.line("%s = %s( %s ).", dst, target, argStr)
+			c.line("%s = %s( %s ).", dst, callTarget, argStr)
 		} else {
-			c.line("%s( %s ).", target, argStr)
+			c.line("%s( %s ).", callTarget, argStr)
 		}
 
 	// GEP — struct field access or array index
@@ -1314,13 +1514,12 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 	case "load":
 		addr := c.val(inst.LoadAddr)
 		size := c.typeSizeOf(inst.Type)
+		memClass := c.memPrefix()
 		switch size {
 		case 1:
-			c.line("PERFORM mem_ld_i32_8u USING %s CHANGING %s.", addr, dst)
-		case 4:
-			c.line("PERFORM mem_ld_i32 USING %s CHANGING %s.", addr, dst)
+			c.line("%s = %smem_ld_i32_8u( iv_addr = %s ).", dst, memClass, addr)
 		default:
-			c.line("PERFORM mem_ld_i32 USING %s CHANGING %s.", addr, dst)
+			c.line("%s = %smem_ld_i32( iv_addr = %s ).", dst, memClass, addr)
 		}
 
 	// Store — memory write
@@ -1328,13 +1527,12 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 		addr := c.val(inst.StoreAddr)
 		val := c.val(inst.StoreVal)
 		size := c.typeSizeOf(inst.Type)
+		memClass := c.memPrefix()
 		switch size {
 		case 1:
-			c.line("PERFORM mem_st_i32_8 USING %s %s.", addr, val)
-		case 4:
-			c.line("PERFORM mem_st_i32 USING %s %s.", addr, val)
+			c.line("%smem_st_i32_8( iv_addr = %s iv_val = %s ).", memClass, addr, val)
 		default:
-			c.line("PERFORM mem_st_i32 USING %s %s.", addr, val)
+			c.line("%smem_st_i32( iv_addr = %s iv_val = %s ).", memClass, addr, val)
 		}
 
 	// Extensions / conversions / casts
@@ -1473,6 +1671,16 @@ func (c *abapCompiler) val(v string) string {
 	v = strings.TrimSpace(v)
 	// Numeric literal
 	if len(v) > 0 && (v[0] >= '0' && v[0] <= '9' || v[0] == '-') {
+		// Convert scientific notation to decimal (ABAP doesn't accept 1.0e+05)
+		if strings.ContainsAny(v, "eE") && strings.Contains(v, ".") {
+			var f float64
+			if _, err := fmt.Sscanf(v, "%e", &f); err == nil {
+				if f == 0 {
+					return "0"
+				}
+				return fmt.Sprintf("'%g'", f) // ABAP string literal for float
+			}
+		}
 		return v
 	}
 	// Boolean
@@ -1518,6 +1726,12 @@ func (c *abapCompiler) val(v string) string {
 		if v == tn {
 			return "0"
 		}
+	}
+	// Filter LLVM syntax chars that leak into ABAP
+	v = strings.TrimRight(v, "}")
+	v = strings.TrimLeft(v, "{")
+	if v == "" || v == "," {
+		return "0"
 	}
 	return v
 }

@@ -118,6 +118,7 @@ func init() {
 	compileLLVMCmd.Flags().String("desc", "Compiled via vsp compile llvm", "Description")
 	compileLLVMCmd.Flags().String("opt", "O1", "Clang optimization level (O0/O1/O2)")
 	compileLLVMCmd.Flags().String("cflags", "", "Extra clang flags (e.g. \"-DCONFIG_VERSION=\\\"v1\\\" -D_GNU_SOURCE\")")
+	compileLLVMCmd.Flags().Int("split", 0, "Split into multiple classes with N functions each (for transpiler)")
 
 	// Parse flags
 	parseCmd.Flags().String("file", "", "Parse local file")
@@ -420,6 +421,53 @@ func runCompileLLVM(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "parsed: %d functions, %d structs\n", nonExt, len(mod.Types))
+
+	splitN, _ := cmd.Flags().GetInt("split")
+
+	if splitN > 0 {
+		// Multi-class split mode
+		files := llvm2abap.CompileMultiClass(mod, className, splitN)
+		outDir := output
+		if outDir == "" {
+			outDir = "."
+		}
+		os.MkdirAll(outDir, 0755)
+
+		totalLines := 0
+		for _, f := range files {
+			lines := strings.Count(f.Source, "\n")
+			totalLines += lines
+
+			abapFile := filepath.Join(outDir, f.FileName+".clas.abap")
+			os.WriteFile(abapFile, []byte(f.Source), 0644)
+
+			// Write .clas.xml metadata
+			xmlFile := filepath.Join(outDir, f.FileName+".clas.xml")
+			xml := fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>%s</CLSNAME>
+    <VERSION>1</VERSION>
+    <LANGU>E</LANGU>
+    <DESCRIPT>%s</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
+`, f.ClassName, desc)
+			os.WriteFile(xmlFile, []byte(xml), 0644)
+
+			fmt.Fprintf(os.Stderr, "  %s: %d lines\n", f.FileName, lines)
+		}
+		fmt.Fprintf(os.Stderr, "compiled: %d files, %d total lines ABAP\n", len(files), totalLines)
+		return nil
+	}
 
 	abap := llvm2abap.Compile(mod, className)
 	lines := strings.Count(abap, "\n")
