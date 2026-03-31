@@ -558,8 +558,16 @@ func evalNode(n *Node, env *Env) Value {
 			errObj.Obj["name"] = StringVal(n.Str)
 			return errObj
 		}
-		// Look up class/constructor
-		cls := env.Get(n.Str)
+		// Resolve constructor: evaluate the expression (handles a.b.c)
+		cls := evalNode(n.Left, env)
+		// Function-as-constructor: new Func(args)
+		if cls.Type == 4 && cls.Fn != nil {
+			instance := ObjectVal()
+			var args []Value
+			for _, a := range n.Args { args = append(args, evalNode(a, env)) }
+			callFunction(cls.Fn, args, env, &instance)
+			return instance
+		}
 		if cls.Type == 6 && cls.Obj != nil {
 			// Class prototype - create instance
 			instance := ObjectVal()
@@ -1294,7 +1302,16 @@ func (p *Parser) parseUnary() *Node {
 	}
 	if p.peek().Val == "new" {
 		p.next()
+		// Parse constructor expression: could be Name, a.b.c, etc.
+		// Collect dotted name chain
 		name := p.next().Val
+		var ctorExpr *Node
+		ctorExpr = &Node{Kind: NodeIdent, Str: name}
+		for p.peek().Val == "." {
+			p.next() // consume .
+			prop := p.next().Val
+			ctorExpr = &Node{Kind: NodeMemberAccess, Object: ctorExpr, Property: prop}
+		}
 		p.expect("(")
 		var args []*Node
 		for p.peek().Val != ")" && p.peek().Kind != 5 {
@@ -1302,7 +1319,8 @@ func (p *Parser) parseUnary() *Node {
 			if p.peek().Val == "," { p.next() }
 		}
 		p.expect(")")
-		return &Node{Kind: NodeNew, Str: name, Args: args}
+		// Store ctor expression in Left, keep Str for simple case
+		return &Node{Kind: NodeNew, Str: name, Left: ctorExpr, Args: args}
 	}
 	return p.parsePostfix()
 }

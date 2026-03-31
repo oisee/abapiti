@@ -168,3 +168,35 @@ func TestSpread(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenAbapCoreShim(t *testing.T) {
+	code := `
+var abap = {};
+abap.types = {};
+abap.statements = {};
+abap.IntegerFactory = { get: function(n) { return {value: n}; } };
+abap.types.Integer = function(opts) {
+  this.qualifiedName = opts ? opts.qualifiedName : "I";
+  this.value = 0;
+  this.set = function(v) {
+    if (typeof v === "number") { this.value = v; }
+    else if (v !== undefined && v !== null && v.value !== undefined) { this.value = v.value; }
+  };
+  this.get = function() { return this.value; };
+};
+abap.Console = function() { this.buffer = ""; this.add = function(s) { this.buffer = this.buffer + s; }; this.get = function() { return this.buffer; }; };
+abap.statements.write = function(source) {
+  if (abap.console === undefined) { abap.console = new abap.Console(); }
+  let val = typeof source === "object" && source.get ? "" + source.get() : "" + source;
+  abap.console.add(val);
+};
+let lv_x = new abap.types.Integer({qualifiedName: "I"});
+lv_x.set(abap.IntegerFactory.get(42));
+abap.statements.write(lv_x);
+console.log(abap.console.get());
+`
+	out, err := Eval(code)
+	if err != nil { t.Fatalf("error: %v", err) }
+	got := strings.TrimSpace(out)
+	if got != "42" { t.Errorf("got %q, want 42", got) }
+}
