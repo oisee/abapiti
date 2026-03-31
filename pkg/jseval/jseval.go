@@ -234,6 +234,16 @@ func callFunction(fn *Function, args []Value, env *Env, thisVal *Value) Value {
 		callEnv.Define("this", *thisVal)
 	}
 	for i, param := range fn.Params {
+		if strings.HasPrefix(param, "...") {
+			// Rest parameter: collect remaining args into array
+			restName := param[3:]
+			rest := make([]Value, 0)
+			for j := i; j < len(args); j++ {
+				rest = append(rest, args[j])
+			}
+			callEnv.Define(restName, ArrayVal(rest))
+			break
+		}
 		if i < len(args) {
 			callEnv.Define(param, args[i])
 		}
@@ -502,7 +512,14 @@ func evalNode(n *Node, env *Env) Value {
 	case NodeArray:
 		var elems []Value
 		for _, a := range n.Args {
-			elems = append(elems, evalNode(a, env))
+			if a.Kind == NodeSpread {
+				spread := evalNode(a.Left, env)
+				if spread.Type == 7 && spread.Arr != nil {
+					elems = append(elems, *spread.Arr...)
+				}
+			} else {
+				elems = append(elems, evalNode(a, env))
+			}
 		}
 		return ArrayVal(elems)
 
@@ -835,6 +852,11 @@ func tokenize(src string) []Token {
 			tokens = append(tokens, Token{2, src[i:j]})
 			i = j; continue
 		}
+		// Spread/rest: ...
+		if i+2 < len(src) && src[i] == '.' && src[i+1] == '.' && src[i+2] == '.' {
+			tokens = append(tokens, Token{3, "..."})
+			i += 3; continue
+		}
 		// Operators (multi-char)
 		if i+1 < len(src) {
 			two := src[i : i+2]
@@ -1095,7 +1117,7 @@ func (p *Parser) parseClass() *Node {
 		p.expect("(")
 		var params []string
 		for p.peek().Val != ")" && p.peek().Kind != 5 {
-			params = append(params, p.next().Val)
+			if p.peek().Val == "..." { p.next(); params = append(params, "..." + p.next().Val) } else { params = append(params, p.next().Val) }
 			if p.peek().Val == "," { p.next() }
 		}
 		p.expect(")")
@@ -1120,7 +1142,7 @@ func (p *Parser) parseFunc() *Node {
 	p.expect("(")
 	var params []string
 	for p.peek().Val != ")" && p.peek().Kind != 5 {
-		params = append(params, p.next().Val)
+		if p.peek().Val == "..." { p.next(); params = append(params, "..." + p.next().Val) } else { params = append(params, p.next().Val) }
 		if p.peek().Val == "," { p.next() }
 	}
 	p.expect(")")
@@ -1361,7 +1383,7 @@ func (p *Parser) parsePrimary() *Node {
 		p.expect("(")
 		var params []string
 		for p.peek().Val != ")" && p.peek().Kind != 5 {
-			params = append(params, p.next().Val)
+			if p.peek().Val == "..." { p.next(); params = append(params, "..." + p.next().Val) } else { params = append(params, p.next().Val) }
 			if p.peek().Val == "," { p.next() }
 		}
 		p.expect(")")
@@ -1447,7 +1469,12 @@ func (p *Parser) parseArrayLiteral() *Node {
 	p.expect("[")
 	var elems []*Node
 	for p.peek().Val != "]" && p.peek().Kind != 5 {
-		elems = append(elems, p.parseExpr())
+		if p.peek().Val == "..." {
+			p.next() // consume ...
+			elems = append(elems, &Node{Kind: NodeSpread, Left: p.parseAssign()})
+		} else {
+			elems = append(elems, p.parseExpr())
+		}
 		if p.peek().Val == "," { p.next() }
 	}
 	p.expect("]")

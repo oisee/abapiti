@@ -145,3 +145,26 @@ console.log(Util.double(21));`, "42"},
 		})
 	}
 }
+
+func TestSpread(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		{"rest-params", `function f(...args) { console.log(args.length); } f(1,2,3)`, "3"},
+		{"rest-sum", `function sum(...args) { let s = 0; for (const x of args) { s = s + x; } return s; } console.log(sum(1,2,3,4))`, "10"},
+		{"rest-mixed", `function f(a, b, ...rest) { console.log(a + "," + b + "," + rest.length); } f(1,2,3,4,5)`, "1,2,3"},
+		{"spread-array", `let a = [1,2]; let b = [0, ...a, 3]; console.log(b.length)`, "4"},
+		{"spread-concat", `let a = [1,2]; let b = [3,4]; let c = [...a, ...b]; console.log(c.length)`, "4"},
+		{"spread-copy", `let a = [1,2,3]; let b = [...a]; console.log(b.length)`, "3"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := Eval(tc.code)
+			if err != nil { t.Fatalf("error: %v", err) }
+			got := strings.TrimSpace(out)
+			if got != tc.want { t.Errorf("got %q, want %q", got, tc.want) }
+		})
+	}
+}
