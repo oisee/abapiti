@@ -565,7 +565,11 @@ func evalNode(n *Node, env *Env) Value {
 			instance := ObjectVal()
 			var args []Value
 			for _, a := range n.Args { args = append(args, evalNode(a, env)) }
-			callFunction(cls.Fn, args, env, &instance)
+			result := callFunction(cls.Fn, args, env, &instance)
+			// JS: if constructor returns an object, use it instead of this
+			if result.Type == 6 {
+				return result
+			}
 			return instance
 		}
 		if cls.Type == 6 && cls.Obj != nil {
