@@ -100,6 +100,8 @@ const (
 	NodeTernary      // cond ? then : else
 	NodeThrow        // throw expr
 	NodeTryCatch     // try { ... } catch(e) { ... }
+	NodeForOf        // for (let x of arr) { ... }
+	NodeTemplateLit  // `text ${expr} text`
 )
 
 // Node is an AST node.
@@ -386,6 +388,36 @@ func evalNode(n *Node, env *Env) Value {
 			env.retVal = forEnv.retVal
 		}
 		if forEnv.breaking { /* consumed */ }
+
+	case NodeForOf:
+		iter := evalNode(n.Right, env)
+		forEnv := NewEnv(env)
+		forEnv.output = env.output
+		if iter.Type == 7 && iter.Arr != nil { // array
+			for _, elem := range *iter.Arr {
+				forEnv.Define(n.Str, elem)
+				for _, s := range n.Body {
+					evalNode(s, forEnv)
+					if forEnv.returning || forEnv.breaking || forEnv.continuing { break }
+				}
+				if forEnv.continuing { forEnv.continuing = false; continue }
+				if forEnv.returning || forEnv.breaking { break }
+			}
+		} else if iter.Type == 6 && iter.Obj != nil { // object — for...in
+			for k := range iter.Obj {
+				forEnv.Define(n.Str, StringVal(k))
+				for _, s := range n.Body {
+					evalNode(s, forEnv)
+					if forEnv.returning || forEnv.breaking || forEnv.continuing { break }
+				}
+				if forEnv.continuing { forEnv.continuing = false; continue }
+				if forEnv.returning || forEnv.breaking { break }
+			}
+		}
+		if forEnv.returning {
+			env.returning = true
+			env.retVal = forEnv.retVal
+		}
 
 	case NodeBlock:
 		var last Value
@@ -711,6 +743,61 @@ func tokenize(src string) []Token {
 			tokens = append(tokens, Token{1, sb.String()})
 			i = j + 1; continue
 		}
+		// Template literal: `text${expr}text`
+		if ch == '`' {
+			i++ // skip opening `
+			// Desugar to: ("" + "text" + (expr) + "text")
+			tokens = append(tokens, Token{3, "("})
+			tokens = append(tokens, Token{1, ""}) // start with empty string for type coercion
+			for i < len(src) && src[i] != '`' {
+				if i+1 < len(src) && src[i] == '$' && src[i+1] == '{' {
+					// End current text part, start expression
+					i += 2 // skip ${
+					tokens = append(tokens, Token{3, "+"})
+					tokens = append(tokens, Token{3, "("})
+					// Tokenize the expression inside ${}
+					depth := 1
+					exprStart := i
+					for i < len(src) && depth > 0 {
+						if src[i] == '{' { depth++ }
+						if src[i] == '}' { depth-- }
+						if depth > 0 { i++ }
+					}
+					// Recursively tokenize the inner expression
+					innerTokens := tokenize(src[exprStart:i])
+					// Remove EOF token from inner
+					if len(innerTokens) > 0 && innerTokens[len(innerTokens)-1].Kind == 5 {
+						innerTokens = innerTokens[:len(innerTokens)-1]
+					}
+					tokens = append(tokens, innerTokens...)
+					tokens = append(tokens, Token{3, ")"})
+					i++ // skip closing }
+				} else {
+					// Regular text — collect until ` or ${
+					var tb strings.Builder
+					for i < len(src) && src[i] != '`' && !(i+1 < len(src) && src[i] == '$' && src[i+1] == '{') {
+						if src[i] == '\\' && i+1 < len(src) {
+							i++
+							switch src[i] {
+							case 'n': tb.WriteByte('\n')
+							case 't': tb.WriteByte('\t')
+							case '\\': tb.WriteByte('\\')
+							case '`': tb.WriteByte('`')
+							default: tb.WriteByte(src[i])
+							}
+						} else {
+							tb.WriteByte(src[i])
+						}
+						i++
+					}
+					tokens = append(tokens, Token{3, "+"})
+					tokens = append(tokens, Token{1, tb.String()})
+				}
+			}
+			if i < len(src) { i++ } // skip closing `
+			tokens = append(tokens, Token{3, ")"})
+			continue
+		}
 		// Identifier / keyword (no longer include '.' in identifiers)
 		if ch == '_' || unicode.IsLetter(rune(ch)) {
 			j := i
@@ -862,23 +949,36 @@ func (p *Parser) parseWhile() *Node {
 func (p *Parser) parseFor() *Node {
 	p.next() // skip for
 	p.expect("(")
-	// Init
+	// Check for for...of / for...in: for (let/const/var x of/in expr)
+	if p.peek().Val == "let" || p.peek().Val == "var" || p.peek().Val == "const" {
+		saved := p.pos
+		p.next() // skip let/var/const
+		varName := p.next().Val
+		if p.peek().Val == "of" || p.peek().Val == "in" {
+			p.next() // skip of/in
+			iter := p.parseExpr()
+			p.expect(")")
+			body := p.parseBody()
+			return &Node{Kind: NodeForOf, Str: varName, Right: iter, Body: body}
+		}
+		// Not for-of, restore and parse as regular for
+		p.pos = saved
+	}
+	// Regular for(init; cond; update)
 	var init *Node
 	if p.peek().Val == "let" || p.peek().Val == "var" || p.peek().Val == "const" {
-		init = p.parseVar() // parseVar consumes trailing ;
+		init = p.parseVar()
 	} else if p.peek().Val != ";" {
 		init = p.parseExpr()
 		if p.peek().Val == ";" { p.next() }
 	} else {
 		p.next() // skip ;
 	}
-	// Condition
 	var cond *Node
 	if p.peek().Val != ";" {
 		cond = p.parseExpr()
 	}
 	if p.peek().Val == ";" { p.next() }
-	// Update
 	var update *Node
 	if p.peek().Val != ")" {
 		update = p.parseExpr()

@@ -39,3 +39,31 @@ func TestNewFeatures(t *testing.T) {
 		})
 	}
 }
+
+func TestForOfAndTemplates(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		// for...of
+		{"for-of-array", `let a = [1,2,3]; let s = 0; for (const x of a) { s = s + x; } console.log(s)`, "6"},
+		{"for-of-string-arr", `let a = ["a","b","c"]; let s = ""; for (let x of a) { s = s + x; } console.log(s)`, "abc"},
+		{"for-of-break", `let a = [1,2,3,4,5]; let s = 0; for (const x of a) { if (x === 4) break; s = s + x; } console.log(s)`, "6"},
+		// for...in
+		{"for-in-obj", `let o = {a: 1, b: 2}; let keys = ""; for (const k in o) { keys = keys + k; } console.log(keys.length)`, "2"},
+		// Template literals
+		{"template-simple", "console.log(`hello`)", "hello"},
+		{"template-expr", "let x = 42; console.log(`val=${x}`)", "val=42"},
+		{"template-multi", "let a = 1; let b = 2; console.log(`${a}+${b}=${a+b}`)", "1+2=3"},
+		{"template-nested", "console.log(`x=${true ? `yes` : `no`}`)", "x=yes"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := Eval(tc.code)
+			if err != nil { t.Fatalf("error: %v", err) }
+			got := strings.TrimSpace(out)
+			if got != tc.want { t.Errorf("got %q, want %q", got, tc.want) }
+		})
+	}
+}
