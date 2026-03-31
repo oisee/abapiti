@@ -97,6 +97,9 @@ const (
 	NodeBreak        // break
 	NodeContinue     // continue
 	NodeBool         // true/false literal
+	NodeTernary      // cond ? then : else
+	NodeThrow        // throw expr
+	NodeTryCatch     // try { ... } catch(e) { ... }
 )
 
 // Node is an AST node.
@@ -123,6 +126,9 @@ type Node struct {
 	Cases    []SwitchCase
 	// Class
 	Methods  []ClassMethod
+	// Try/catch
+	Catch    []*Node  // catch body
+	CatchVar string   // catch variable name
 }
 
 type SwitchCase struct {
@@ -263,6 +269,46 @@ func evalNode(n *Node, env *Env) Value {
 	case NodeBool:
 		return BoolVal(n.Num != 0)
 
+	case NodeTernary:
+		if evalNode(n.Cond, env).IsTrue() {
+			return evalNode(n.Left, env)
+		}
+		return evalNode(n.Right, env)
+
+	case NodeThrow:
+		val := evalNode(n.Left, env)
+		panic(val)
+
+	case NodeTryCatch:
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if n.Catch != nil {
+						catchEnv := NewEnv(env)
+						if n.CatchVar != "" {
+							if v, ok := r.(Value); ok {
+								catchEnv.Define(n.CatchVar, v)
+							} else {
+								catchEnv.Define(n.CatchVar, StringVal(fmt.Sprintf("%v", r)))
+							}
+						}
+						for _, s := range n.Catch {
+							evalNode(s, catchEnv)
+							if catchEnv.returning || catchEnv.breaking { break }
+						}
+						if catchEnv.returning {
+							env.returning = true
+							env.retVal = catchEnv.retVal
+						}
+					}
+				}
+			}()
+			for _, s := range n.Body {
+				evalNode(s, env)
+				if env.returning || env.breaking { break }
+			}
+		}()
+
 	case NodeUnaryOp:
 		val := evalNode(n.Left, env)
 		switch n.Op {
@@ -376,11 +422,19 @@ func evalNode(n *Node, env *Env) Value {
 		for _, a := range n.Args {
 			args = append(args, evalNode(a, env))
 		}
+		// Direct function call: expr(args) — for arrow/closure results
+		if method == "__call__" && obj.Type == 4 && obj.Fn != nil {
+			return callFunction(obj.Fn, args, env, nil)
+		}
 		return evalMethodCall(obj, method, args, env, n.Object)
 
 	case NodeFuncDecl:
 		fn := &Function{Name: n.Str, Params: n.Params, Body: n.Body, Closure: env}
-		env.Define(n.Str, Value{Type: 4, Fn: fn})
+		fnVal := Value{Type: 4, Fn: fn}
+		if n.Str != "" {
+			env.Define(n.Str, fnVal)
+		}
+		return fnVal
 
 	case NodeReturn:
 		val := evalNode(n.Left, env)
@@ -667,7 +721,7 @@ func tokenize(src string) []Token {
 		// Operators (multi-char)
 		if i+1 < len(src) {
 			two := src[i : i+2]
-			if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" {
+			if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" || two == "=>" {
 				if i+2 < len(src) && src[i+2] == '=' {
 					tokens = append(tokens, Token{3, src[i : i+3]})
 					i += 3; continue
@@ -677,7 +731,7 @@ func tokenize(src string) []Token {
 			}
 		}
 		// Single char op/punc
-		if strings.ContainsRune("+-*/%=<>!(),{};:.[]", rune(ch)) {
+		if strings.ContainsRune("+-*/%=<>!(),{};:.[]?", rune(ch)) {
 			tokens = append(tokens, Token{3, string(ch)})
 			i++; continue
 		}
@@ -742,6 +796,13 @@ func (p *Parser) parseStatement() *Node {
 		p.next()
 		if p.peek().Val == ";" { p.next() }
 		return &Node{Kind: NodeContinue}
+	case "throw":
+		p.next()
+		expr := p.parseExpr()
+		if p.peek().Val == ";" { p.next() }
+		return &Node{Kind: NodeThrow, Left: expr}
+	case "try":
+		return p.parseTryCatch()
 	case "switch":
 		return p.parseSwitch()
 	case "class":
@@ -825,6 +886,28 @@ func (p *Parser) parseFor() *Node {
 	p.expect(")")
 	body := p.parseBody()
 	return &Node{Kind: NodeFor, Init: init, Cond: cond, Update: update, Body: body}
+}
+
+func (p *Parser) parseTryCatch() *Node {
+	p.next() // consume "try"
+	body := p.parseBlock()
+	var catchBody []*Node
+	var catchVar string
+	if p.peek().Val == "catch" {
+		p.next() // consume "catch"
+		if p.peek().Val == "(" {
+			p.next() // consume "("
+			catchVar = p.next().Val
+			p.expect(")")
+		}
+		catchBody = p.parseBlock()
+	}
+	// skip optional "finally" block
+	if p.peek().Val == "finally" {
+		p.next()
+		p.parseBlock() // parse but ignore for now
+	}
+	return &Node{Kind: NodeTryCatch, Body: body, Catch: catchBody, CatchVar: catchVar}
 }
 
 func (p *Parser) parseSwitch() *Node {
@@ -950,6 +1033,26 @@ func (p *Parser) parseAssign() *Node {
 			return &Node{Kind: NodeMemberAssign, Object: left.Object, Property: left.Property, PropExpr: left.PropExpr, Right: right}
 		}
 	}
+	// Arrow function: ident => ...
+	if left != nil && left.Kind == NodeIdent && p.peek().Val == "=>" {
+		p.next() // consume =>
+		var body []*Node
+		if p.peek().Val == "{" {
+			body = p.parseBlock()
+		} else {
+			expr := p.parseAssign()
+			body = []*Node{{Kind: NodeReturn, Left: expr}}
+		}
+		return &Node{Kind: NodeFuncDecl, Str: "", Params: []string{left.Str}, Body: body}
+	}
+	// Ternary: cond ? then : else
+	if p.peek().Kind == 3 && p.peek().Val == "?" {
+		p.next() // consume ?
+		then := p.parseAssign()
+		p.expect(":") // consume :
+		els := p.parseAssign()
+		return &Node{Kind: NodeTernary, Cond: left, Left: then, Right: els}
+	}
 	return left
 }
 
@@ -1063,16 +1166,28 @@ func (p *Parser) parsePostfix() *Node {
 			idx := p.parseExpr()
 			p.expect("]")
 			left = &Node{Kind: NodeMemberAccess, Object: left, PropExpr: idx}
-		} else if p.peek().Val == "(" && left != nil && left.Kind == NodeIdent {
-			// function call: name(args)
-			p.next()
-			var args []*Node
-			for p.peek().Val != ")" && p.peek().Kind != 5 {
-				args = append(args, p.parseExpr())
-				if p.peek().Val == "," { p.next() }
+		} else if p.peek().Val == "(" && left != nil {
+			if left.Kind == NodeIdent {
+				// named function call: name(args)
+				p.next()
+				var args []*Node
+				for p.peek().Val != ")" && p.peek().Kind != 5 {
+					args = append(args, p.parseExpr())
+					if p.peek().Val == "," { p.next() }
+				}
+				p.expect(")")
+				left = &Node{Kind: NodeCall, Str: left.Str, Args: args}
+			} else {
+				// expression call: expr(args) — for arrow results, IIFE, etc.
+				p.next()
+				var args []*Node
+				for p.peek().Val != ")" && p.peek().Kind != 5 {
+					args = append(args, p.parseExpr())
+					if p.peek().Val == "," { p.next() }
+				}
+				p.expect(")")
+				left = &Node{Kind: NodeMethodCall, Object: left, Property: "__call__", Args: args}
 			}
-			p.expect(")")
-			left = &Node{Kind: NodeCall, Str: left.Str, Args: args}
 		} else {
 			break
 		}
@@ -1094,7 +1209,36 @@ func (p *Parser) parsePrimary() *Node {
 		return &Node{Kind: NodeString, Str: t.Val}
 
 	case t.Val == "(":
-		p.next()
+		// Try arrow function: (params) => ...
+		saved := p.pos
+		p.next() // consume (
+		var arrowParams []string
+		isArrow := true
+		for p.peek().Val != ")" && p.peek().Kind != 5 {
+			if p.peek().Kind != 2 { // not an identifier — not arrow params
+				isArrow = false
+				break
+			}
+			arrowParams = append(arrowParams, p.next().Val)
+			if p.peek().Val == "," { p.next() }
+		}
+		if isArrow && p.peek().Val == ")" {
+			p.next() // consume )
+			if p.peek().Val == "=>" {
+				p.next() // consume =>
+				var body []*Node
+				if p.peek().Val == "{" {
+					body = p.parseBlock()
+				} else {
+					expr := p.parseAssign()
+					body = []*Node{{Kind: NodeReturn, Left: expr}}
+				}
+				return &Node{Kind: NodeFuncDecl, Str: "", Params: arrowParams, Body: body}
+			}
+		}
+		// Not arrow — restore and parse as grouping
+		p.pos = saved
+		p.next() // consume (
 		expr := p.parseExpr()
 		p.expect(")")
 		return expr
