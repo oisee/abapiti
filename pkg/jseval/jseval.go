@@ -96,6 +96,7 @@ const (
 	NodeClass        // class Name { ... }
 	NodeBreak        // break
 	NodeContinue     // continue
+	NodeBool         // true/false literal
 )
 
 // Node is an AST node.
@@ -258,6 +259,9 @@ func evalNode(n *Node, env *Env) Value {
 		left := evalNode(n.Left, env)
 		right := evalNode(n.Right, env)
 		return evalBinOp(n.Op, left, right)
+
+	case NodeBool:
+		return BoolVal(n.Num != 0)
 
 	case NodeUnaryOp:
 		val := evalNode(n.Left, env)
@@ -1103,10 +1107,10 @@ func (p *Parser) parsePrimary() *Node {
 
 	case t.Val == "true":
 		p.next()
-		return &Node{Kind: NodeNumber, Num: 1}
+		return &Node{Kind: NodeBool, Num: 1}
 	case t.Val == "false":
 		p.next()
-		return &Node{Kind: NodeNumber, Num: 0}
+		return &Node{Kind: NodeBool, Num: 0}
 
 	case t.Kind == 2: // identifier
 		p.next()
