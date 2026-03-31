@@ -1308,6 +1308,23 @@ func (p *Parser) parsePrimary() *Node {
 		p.next()
 		return &Node{Kind: NodeString, Str: t.Val}
 
+	case t.Val == "function":
+		// Anonymous function expression: function(params) { body }
+		p.next() // consume "function"
+		name := ""
+		if p.peek().Kind == 2 && p.peek().Val != "(" {
+			name = p.next().Val // optional name
+		}
+		p.expect("(")
+		var params []string
+		for p.peek().Val != ")" && p.peek().Kind != 5 {
+			params = append(params, p.next().Val)
+			if p.peek().Val == "," { p.next() }
+		}
+		p.expect(")")
+		body := p.parseBlock()
+		return &Node{Kind: NodeFuncDecl, Str: name, Params: params, Body: body}
+
 	case t.Val == "(":
 		// Try arrow function: (params) => ...
 		saved := p.pos

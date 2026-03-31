@@ -67,3 +67,37 @@ func TestForOfAndTemplates(t *testing.T) {
 		})
 	}
 }
+
+func TestAdvancedFeatures(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		// Function expression
+		{"func-expr", `let f = function(x) { return x * 2; }; console.log(f(21))`, "42"},
+		{"named-func-expr", `let f = function double(x) { return x * 2; }; console.log(f(21))`, "42"},
+		// Static method on class
+		{"static-assign", `class Foo {} Foo.bar = function(x) { return x * 2; }; console.log(Foo.bar(21))`, "42"},
+		// Mini runtime pattern
+		{"mini-runtime", `
+class Integer {
+  constructor(opts) { this.value = 0; }
+  set(v) { if (v !== undefined && v.value !== undefined) { this.value = v.value; } }
+  get() { return this.value; }
+}
+class Factory {}
+Factory.get = function(n) { return {value: n}; };
+let x = new Integer({});
+x.set(Factory.get(42));
+console.log(x.get());`, "42"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := Eval(tc.code)
+			if err != nil { t.Fatalf("error: %v", err) }
+			got := strings.TrimSpace(out)
+			if got != tc.want { t.Errorf("got %q, want %q", got, tc.want) }
+		})
+	}
+}
