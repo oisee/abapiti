@@ -101,3 +101,47 @@ console.log(x.get());`, "42"},
 		})
 	}
 }
+
+func TestOpenAbapFeatures(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		// Nullish coalescing
+		{"nullish-value", `let x = 42; console.log(x ?? 0)`, "42"},
+		{"nullish-undef", `let x; console.log(x ?? "default")`, "default"},
+		// Optional chaining
+		{"optchain-ok", `let o = {a: {b: 1}}; console.log(o.a.b)`, "1"},
+		{"optchain-null", `let o = {}; let r = o.missing; console.log(r)`, "undefined"},
+		// new Error
+		{"new-error", `let e = new Error("boom"); console.log(e.message)`, "boom"},
+		{"new-typeerror", `let e = new TypeError("bad"); console.log(e.name + ":" + e.message)`, "TypeError:bad"},
+		{"throw-error", `try { throw new Error("x"); } catch(e) { console.log(e.message); }`, "x"},
+		// class extends
+		{"extends", `
+class Animal { constructor(n) { this.name = n; } speak() { return this.name; } }
+class Dog extends Animal { constructor(n) { this.name = n; this.type = "dog"; } }
+let d = new Dog("Rex");
+console.log(d.speak() + " " + d.type);`, "Rex dog"},
+		// static methods
+		{"static-method", `
+class Util {
+  static double(x) { return x * 2; }
+}
+console.log(Util.double(21));`, "42"},
+		// || returns value (not just bool)
+		{"or-value", `console.log(0 || "fallback")`, "fallback"},
+		{"or-truthy", `console.log(42 || "no")`, "42"},
+		// function expression in object
+		{"func-in-obj", `let o = {f: function(x) { return x + 1; }}; console.log(o.f(9))`, "10"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := Eval(tc.code)
+			if err != nil { t.Fatalf("error: %v", err) }
+			got := strings.TrimSpace(out)
+			if got != tc.want { t.Errorf("got %q, want %q", got, tc.want) }
+		})
+	}
+}

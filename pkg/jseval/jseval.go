@@ -7,6 +7,7 @@ package jseval
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -102,6 +103,7 @@ const (
 	NodeTryCatch     // try { ... } catch(e) { ... }
 	NodeForOf        // for (let x of arr) { ... }
 	NodeTemplateLit  // `text ${expr} text`
+	NodeSpread       // ...expr
 )
 
 // Node is an AST node.
@@ -139,10 +141,11 @@ type SwitchCase struct {
 }
 
 type ClassMethod struct {
-	Name   string
-	Params []string
-	Body   []*Node
-	IsCtor bool
+	Name     string
+	Params   []string
+	Body     []*Node
+	IsCtor   bool
+	IsStatic bool
 }
 
 // Function represents a JS function.
@@ -204,6 +207,11 @@ func Eval(source string) (string, error) {
 	env := NewEnv(nil)
 	// Built-in: console.log
 	env.Define("console", Value{Type: 1}) // placeholder
+	// Built-in: Error class
+	env.Define("undefined", Undefined)
+	env.Define("null", Null)
+	env.Define("Infinity", NumberVal(math.Inf(1)))
+	env.Define("NaN", NumberVal(math.NaN()))
 
 	for _, stmt := range stmts {
 		result := evalNode(stmt, env)
@@ -500,6 +508,7 @@ func evalNode(n *Node, env *Env) Value {
 
 	case NodeMemberAccess:
 		obj := evalNode(n.Object, env)
+		if obj.Type == 0 || obj.Type == 5 { return Undefined } // null/undefined?.prop
 		prop := n.Property
 		if n.PropExpr != nil {
 			prop = evalNode(n.PropExpr, env).ToString()
@@ -521,6 +530,17 @@ func evalNode(n *Node, env *Env) Value {
 		return StringVal("undefined")
 
 	case NodeNew:
+		// Built-in: new Error(msg)
+		if n.Str == "Error" || n.Str == "TypeError" || n.Str == "RangeError" {
+			var args []Value
+			for _, a := range n.Args { args = append(args, evalNode(a, env)) }
+			errObj := ObjectVal()
+			msg := ""
+			if len(args) > 0 { msg = args[0].ToString() }
+			errObj.Obj["message"] = StringVal(msg)
+			errObj.Obj["name"] = StringVal(n.Str)
+			return errObj
+		}
 		// Look up class/constructor
 		cls := env.Get(n.Str)
 		if cls.Type == 6 && cls.Obj != nil {
@@ -545,6 +565,15 @@ func evalNode(n *Node, env *Env) Value {
 
 	case NodeClass:
 		cls := ObjectVal()
+		// Inherit from parent class
+		if n.Property != "" {
+			parent := env.Get(n.Property)
+			if parent.Type == 6 {
+				for k, v := range parent.Obj {
+					cls.Obj[k] = v
+				}
+			}
+		}
 		for _, m := range n.Methods {
 			fn := &Function{Name: m.Name, Params: m.Params, Body: m.Body, Closure: env}
 			cls.Obj[m.Name] = Value{Type: 4, Fn: fn}
@@ -687,7 +716,8 @@ func evalBinOp(op string, l, r Value) Value {
 	case "<=": return BoolVal(a <= b)
 	case ">=": return BoolVal(a >= b)
 	case "&&": return BoolVal(l.IsTrue() && r.IsTrue())
-	case "||": return BoolVal(l.IsTrue() || r.IsTrue())
+	case "||": if l.IsTrue() { return l }; return r
+	case "??": if l.Type != 0 && l.Type != 5 { return l }; return r
 	}
 	return Undefined
 }
@@ -808,7 +838,7 @@ func tokenize(src string) []Token {
 		// Operators (multi-char)
 		if i+1 < len(src) {
 			two := src[i : i+2]
-			if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" || two == "=>" {
+			if two == "==" || two == "!=" || two == "<=" || two == ">=" || two == "&&" || two == "||" || two == "=>" || two == "?." || two == "??" {
 				if i+2 < len(src) && src[i+2] == '=' {
 					tokens = append(tokens, Token{3, src[i : i+3]})
 					i += 3; continue
@@ -1048,9 +1078,19 @@ func (p *Parser) parseSwitch() *Node {
 func (p *Parser) parseClass() *Node {
 	p.next() // skip class
 	name := p.next().Val
+	parentClass := ""
+	if p.peek().Val == "extends" {
+		p.next() // skip extends
+		parentClass = p.next().Val
+	}
 	p.expect("{")
 	var methods []ClassMethod
 	for p.peek().Val != "}" && p.peek().Kind != 5 {
+		isStatic := false
+		if p.peek().Val == "static" {
+			isStatic = true
+			p.next()
+		}
 		mName := p.next().Val
 		p.expect("(")
 		var params []string
@@ -1065,10 +1105,13 @@ func (p *Parser) parseClass() *Node {
 			Params: params,
 			Body:   body,
 			IsCtor: mName == "constructor",
+			IsStatic: isStatic,
 		})
 	}
 	p.expect("}")
-	return &Node{Kind: NodeClass, Str: name, Methods: methods}
+	n := &Node{Kind: NodeClass, Str: name, Methods: methods}
+	n.Property = parentClass // reuse Property field for extends
+	return n
 }
 
 func (p *Parser) parseFunc() *Node {
@@ -1158,7 +1201,7 @@ func (p *Parser) parseAssign() *Node {
 
 func (p *Parser) parseOr() *Node {
 	left := p.parseAnd()
-	for p.peek().Kind == 3 && p.peek().Val == "||" {
+	for p.peek().Kind == 3 && (p.peek().Val == "||" || p.peek().Val == "??") {
 		op := p.next().Val
 		right := p.parseAnd()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -1245,7 +1288,7 @@ func (p *Parser) parseUnary() *Node {
 func (p *Parser) parsePostfix() *Node {
 	left := p.parsePrimary()
 	for {
-		if p.peek().Val == "." {
+		if p.peek().Val == "." || p.peek().Val == "?." {
 			p.next() // consume .
 			prop := p.next().Val
 			// Check if method call: obj.method(...)
