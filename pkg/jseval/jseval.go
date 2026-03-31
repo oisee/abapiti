@@ -951,7 +951,7 @@ func (p *Parser) parseAssign() *Node {
 
 func (p *Parser) parseOr() *Node {
 	left := p.parseAnd()
-	for p.peek().Val == "||" {
+	for p.peek().Kind == 3 && p.peek().Val == "||" {
 		op := p.next().Val
 		right := p.parseAnd()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -961,7 +961,7 @@ func (p *Parser) parseOr() *Node {
 
 func (p *Parser) parseAnd() *Node {
 	left := p.parseEquality()
-	for p.peek().Val == "&&" {
+	for p.peek().Kind == 3 && p.peek().Val == "&&" {
 		op := p.next().Val
 		right := p.parseEquality()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -971,7 +971,7 @@ func (p *Parser) parseAnd() *Node {
 
 func (p *Parser) parseEquality() *Node {
 	left := p.parseComparison()
-	for p.peek().Val == "==" || p.peek().Val == "!=" || p.peek().Val == "===" || p.peek().Val == "!==" {
+	for p.peek().Kind == 3 && (p.peek().Val == "==" || p.peek().Val == "!=" || p.peek().Val == "===" || p.peek().Val == "!==") {
 		op := p.next().Val
 		right := p.parseComparison()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -981,7 +981,7 @@ func (p *Parser) parseEquality() *Node {
 
 func (p *Parser) parseComparison() *Node {
 	left := p.parseAddSub()
-	for p.peek().Val == "<" || p.peek().Val == ">" || p.peek().Val == "<=" || p.peek().Val == ">=" {
+	for p.peek().Kind == 3 && (p.peek().Val == "<" || p.peek().Val == ">" || p.peek().Val == "<=" || p.peek().Val == ">=") {
 		op := p.next().Val
 		right := p.parseAddSub()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -991,7 +991,7 @@ func (p *Parser) parseComparison() *Node {
 
 func (p *Parser) parseAddSub() *Node {
 	left := p.parseMulDiv()
-	for p.peek().Val == "+" || p.peek().Val == "-" {
+	for p.peek().Kind == 3 && (p.peek().Val == "+" || p.peek().Val == "-") {
 		op := p.next().Val
 		right := p.parseMulDiv()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -1001,7 +1001,7 @@ func (p *Parser) parseAddSub() *Node {
 
 func (p *Parser) parseMulDiv() *Node {
 	left := p.parseUnary()
-	for p.peek().Val == "*" || p.peek().Val == "/" || p.peek().Val == "%" {
+	for p.peek().Kind == 3 && (p.peek().Val == "*" || p.peek().Val == "/" || p.peek().Val == "%") {
 		op := p.next().Val
 		right := p.parseUnary()
 		left = &Node{Kind: NodeBinOp, Op: op, Left: left, Right: right}
@@ -1010,7 +1010,7 @@ func (p *Parser) parseMulDiv() *Node {
 }
 
 func (p *Parser) parseUnary() *Node {
-	if p.peek().Val == "-" || p.peek().Val == "!" {
+	if p.peek().Kind == 3 && (p.peek().Val == "-" || p.peek().Val == "!") {
 		op := p.next().Val
 		operand := p.parseUnary()
 		return &Node{Kind: NodeUnaryOp, Op: op, Left: operand}
