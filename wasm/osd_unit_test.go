@@ -266,6 +266,7 @@ func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay 
 // sets ABAPITI_TEST_OUT, deploys the files and runs the tests.
 func TestOSD_EmitUnitClasses(t *testing.T) {
 	dir := testOutDir(t)
+	emitWASIUnitClasses(t, dir)
 	for _, m := range osdModules {
 		var bin []byte
 		var err error

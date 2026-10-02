@@ -63,6 +63,7 @@ type compiler struct {
 	usedRuntime      map[string]bool
 	usedDispatch     map[int]bool
 	copyParams       bool
+	sharedMain       bool
 }
 
 // blockMethodDef holds a block/loop body extracted for emission as a CLASS-METHOD.
@@ -102,6 +103,7 @@ func (c *compiler) emitDefinition() {
 
 	// Constructor
 	c.line("METHODS constructor.")
+	c.emitWASIDeclarations()
 
 	// Exported functions as public methods
 	for _, f := range c.mod.Functions {
@@ -185,6 +187,7 @@ func (c *compiler) emitImplementation() {
 	c.emitConstructor()
 
 	// Memory helpers
+	c.emitWASIImplementation()
 	c.emitMemoryHelpers()
 	c.emitRuntimeHelpers()
 
@@ -209,6 +212,7 @@ func (c *compiler) emitConstructor() {
 	c.indent++
 
 	// Initialize memory
+	c.emitWASIInit()
 	if c.mod.Memory != nil {
 		pages := c.mod.Memory.Min
 		c.line("mv_mem_pages = %d.", pages)
@@ -1293,97 +1297,49 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 
 func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 	if imp.Type == nil {
-		c.line("\" IMPORT: %s.%s (no type info)", imp.Module, imp.Name)
 		return
 	}
-
-	// Pop arguments
 	args := make([]string, len(imp.Type.Params))
 	for i := len(args) - 1; i >= 0; i-- {
 		args[i] = stack.pop()
 	}
-
-	mem := c.memVar()
-
-	switch imp.Name {
-	case "fd_write":
-		// fd_write(fd, iovs_ptr, iovs_len, nwritten_ptr) -> errno
-		result := stack.push()
-		c.line("\" WASI fd_write: fd=%s iovs=%s iovs_len=%s nwritten=%s", args[0], args[1], args[2], args[3])
-		c.line("DATA lv_wasi_written TYPE i.")
-		c.line("DATA lv_wasi_iov_ptr TYPE i.")
-		c.line("DATA lv_wasi_iov_len TYPE i.")
-		c.line("DATA lv_wasi_str_ptr TYPE i.")
-		c.line("DATA lv_wasi_str_len TYPE i.")
-		c.line("lv_wasi_written = 0.")
-		c.line("DO %s TIMES.", args[2])
-		c.indent++
-		c.line("lv_wasi_iov_ptr = %s + ( sy-index - 1 ) * 8.", args[1])
-		c.line("PERFORM mem_ld_i32 USING lv_wasi_iov_ptr CHANGING lv_wasi_str_ptr.")
-		c.line("PERFORM mem_ld_i32 USING lv_wasi_iov_ptr + 4 CHANGING lv_wasi_str_len.")
-		c.line("IF lv_wasi_str_len > 0.")
-		c.indent++
-		c.line("DATA(lv_wasi_bytes) = %s+lv_wasi_str_ptr(lv_wasi_str_len).", mem)
-		c.line("\" Output bytes (could be WRITE or collect in buffer)")
-		c.indent--
-		c.line("ENDIF.")
-		c.line("lv_wasi_written = lv_wasi_written + lv_wasi_str_len.")
-		c.indent--
-		c.line("ENDDO.")
-		c.line("PERFORM mem_st_i32 USING %s lv_wasi_written.", args[3])
-		c.line("%s = 0. \" errno = success", result)
-
-	case "fd_read":
-		result := stack.push()
-		c.line("\" WASI fd_read: stub (return 0 bytes read)")
-		c.line("PERFORM mem_st_i32 USING %s 0.", args[3])
-		c.line("%s = 0.", result)
-
-	case "fd_close":
-		result := stack.push()
-		c.line("%s = 0. \" WASI fd_close: stub", result)
-
-	case "fd_seek":
-		result := stack.push()
-		c.line("%s = 8. \" WASI fd_seek: EBADF", result)
-
-	case "fd_fdstat_get":
-		result := stack.push()
-		c.line("\" WASI fd_fdstat_get: return filetype=regular")
-		c.line("PERFORM mem_st_i32_8 USING %s 4.", args[1]) // filetype = regular file
-		c.line("%s = 0.", result)
-
-	case "clock_time_get":
-		result := stack.push()
-		c.line("\" WASI clock_time_get: return current time in nanoseconds")
-		c.line("GET TIME STAMP FIELD DATA(lv_wasi_ts).")
-		c.line("DATA(lv_wasi_ns) = CONV int8( lv_wasi_ts * 1000000000 ).")
-		c.line("zcl_wasm_rt=>mem_st_i64( EXPORTING iv_val = lv_wasi_ns iv_addr = %s CHANGING cv_mem = %s ).", args[2], mem)
-		c.line("%s = 0.", result)
-
-	case "environ_sizes_get":
-		result := stack.push()
-		c.line("\" WASI environ_sizes_get: 0 env vars")
-		c.line("PERFORM mem_st_i32 USING %s 0.", args[0])
-		c.line("PERFORM mem_st_i32 USING %s 0.", args[1])
-		c.line("%s = 0.", result)
-
-	case "environ_get":
-		result := stack.push()
-		c.line("%s = 0. \" WASI environ_get: stub", result)
-
-	case "proc_exit":
-		c.line("\" WASI proc_exit: %s", args[0])
-		c.line("RETURN. \" exit")
-
-	default:
-		// Pop all args, push result if needed
+	if c.useFUGR || imp.Module != "wasi_snapshot_preview1" {
 		if len(imp.Type.Results) > 0 {
-			result := stack.push()
-			c.line("%s = 0. \" WASI %s.%s: unimplemented stub", result, imp.Module, imp.Name)
-		} else {
-			c.line("\" WASI %s.%s: unimplemented stub", imp.Module, imp.Name)
+			c.line("%s = 52.", stack.push())
 		}
+		if imp.Name == "proc_exit" {
+			c.line(wasmTrap)
+		}
+		return
+	}
+	// Unknown imports can have arbitrary i64 arguments; return ENOSYS without
+	// converting them through the supported preview1 dispatcher signature.
+	switch imp.Name {
+	case "fd_write", "fd_read", "fd_close", "fd_seek", "fd_fdstat_get",
+		"fd_prestat_get", "fd_prestat_dir_name", "args_sizes_get", "args_get",
+		"environ_sizes_get", "environ_get", "clock_time_get", "clock_res_get",
+		"random_get", "proc_exit", "sched_yield":
+	default:
+		if len(imp.Type.Results) > 0 {
+			c.line("%s = 52.", stack.push())
+		}
+		return
+	}
+	prefix := ""
+	if c.sharedMain {
+		prefix = "mo_main->"
+	}
+	params := []string{fmt.Sprintf("iv_name = '%s'", strings.ReplaceAll(imp.Name, "'", "''"))}
+	for i, arg := range args {
+		if i < 4 {
+			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
+		}
+	}
+	call := fmt.Sprintf("%swasi_call( %s )", prefix, strings.Join(params, " "))
+	if len(imp.Type.Results) > 0 {
+		c.line("%s = %s.", stack.push(), call)
+	} else {
+		c.line("%s.", call)
 	}
 }
 
@@ -1812,6 +1768,9 @@ func (c *compiler) instructionResultType(f *Function, inst Instruction) ValType 
 
 func (c *compiler) line(format string, args ...any) {
 	stmt := fmt.Sprintf(format, args...)
+	if c.sharedMain {
+		stmt = sharedStateRE.ReplaceAllString(stmt, "mo_main->$0")
+	}
 	if c.usedRuntime != nil {
 		stmt = runtimeCallRE.ReplaceAllStringFunc(stmt, func(call string) string {
 			name := strings.TrimPrefix(call, "zcl_wasm_rt=>")
@@ -1833,6 +1792,9 @@ func (c *compiler) line(format string, args ...any) {
 	c.sb.WriteString(stmt)
 	c.sb.WriteByte('\n')
 }
+
+// Chunk methods share memory and its helpers with the main state class.
+var sharedStateRE = regexp.MustCompile(`\b(?:mv_mem(?:_pages)?|mv_g[0-9]+|mem_(?:ld_i32(?:_8u|_8s|_16u)?|st_i32(?:_8|_16)?|grow|zero_pages))\b`)
 
 var runtimeCallRE = regexp.MustCompile(`zcl_wasm_rt=>[a-z0-9_]+`)
 
