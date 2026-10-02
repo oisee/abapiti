@@ -1,6 +1,6 @@
 * Items 1 and 2: REPLACE SECTION / FIND ... IN BYTE MODE on an xstring.
 * ABAP 7.02, ASCII. Expected values follow the kernel documentation;
-* lines marked [A4H?] still need the A4H oracle.
+* not yet measured on A4H.
 CLASS ltcl_bytes DEFINITION FINAL FOR TESTING
   DURATION SHORT RISK LEVEL HARMLESS.
   PRIVATE SECTION.
