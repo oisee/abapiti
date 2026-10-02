@@ -49,7 +49,8 @@ echo "osgo-unit: $n classes" >&2
 status=0
 (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false npm run -s osgo:unit -- "$classes" --json) > "$work/osgo.json" 2> "$work/osgo.err" || status=$?
 # The runner's exit code is not enough on its own: it must be one the runner
-# documents (0 green, 1 failure, 2 not compiled or error) and agree with the
+# documents (2 when anything did not compile or errored, else 1 on a failure,
+# else 0; tools/osgo-unit.mjs in open-steamgate) and agree with the
 # report; the JSON must carry a rows array that matches the totals, at least
 # one row must pass, and every row that did not pass must be a NOT_COMPILED
 # whose diagnostic is exactly a line of osgo-known-gaps.txt. Anything else (a
@@ -75,19 +76,19 @@ node -e '
   for (const r of d.rows) count[r && r.status] = (count[r && r.status] || 0) + 1;
   for (const [k, s] of Object.entries(keys)) if ((count[s] || 0) !== (k === "skipped" ? skipped : n(k))) fail(`${s} rows do not match totals.${k}`);
   if (Object.keys(count).some((s) => !Object.values(keys).includes(s))) fail("a row has an unknown status");
-  const want = failed > 0 ? 1 : nc + err > 0 ? 2 : 0;
-  if (runner !== want && !(runner === 2 && want === 1)) fail(`the runner exited ${runner}, the report says ${want}`);
+  const want = nc + err > 0 ? 2 : failed > 0 ? 1 : 0;
+  if (runner !== want) fail(`the runner exited ${runner}, the report says ${want}`);
   console.log(`osgo-unit: ${ok} passed, ${failed} failed, ${nc} not compiled, ${err} errors, ${skipped} skipped, ${tests} tests`);
   const used = new Set();
   let bad = 0, known = 0;
   for (const r of d.rows) {
     if (r.status === "SUCCESS") continue;
-    const msg = String(r.message || "").split("\n")[0];
-    const m = /^NOT_COMPILED in \S+ \([^)]*\): (.*)$/.exec(msg);
+    const msg = String(r.message || "");
+    const m = /^NOT_COMPILED in \S+ \([^)\n]*\): ([^\n]*)$/.exec(msg);
     const g = r.status === "NOT_COMPILED" && m && gaps.includes(m[1]) ? m[1] : undefined;
     if (g) { known++; used.add(g); continue; }
     bad++;
-    console.log(`  ${r.class} ${r.method} ${r.status} ${msg.slice(0, 160)}`);
+    console.log(`  ${r.class} ${r.method} ${r.status} ${msg.split("\n")[0].slice(0, 160)}`);
   }
   if (known) console.log(`osgo-unit: ${known} not compiled because of known osgo gaps: ${[...used].join("; ")}`);
   for (const g of gaps) if (!used.has(g)) console.log(`osgo-unit: known gap "${g}" matched nothing; remove it from osgo-known-gaps.txt if open-steamgate compiles it now`);
