@@ -103,6 +103,7 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{-5, 33}},
 		{"sar64_hi", []int32{1, 32}},
 	}},
+	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
 	// Last: compileCFixture skips the whole test when clang is missing (as on
 	// the OSD runner), so no module after it would be generated there.
 	{"corpus", "zcl_abapiti_corpus", []osdCase{
@@ -236,6 +237,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = compileCFixture(t, "../llvm/testdata/corpus.c")
 		case "callind":
 			bin = buildCallIndirectModule()
+		case "i64wrap":
+			bin = buildI64WrapModule(i64WrapCases)
 		case "helpers":
 			bin = buildHelperModule()
 		default:

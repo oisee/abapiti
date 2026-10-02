@@ -1,6 +1,7 @@
 package wasm
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -197,6 +198,130 @@ ENDCASE.`
 		body = strings.Join(declarations, "\n") + "\n" + body
 	}
 	return body
+}
+
+// i64AddSubBody splits each signed operand with floor DIV and non-negative
+// MOD. The low sum/difference is within +/-2^33, the high sum within +/-2^32.
+// Normalizing the high half before recombination keeps even INT64_MIN safe.
+func i64AddSubBody(op string) string {
+	return `DATA lv_al TYPE int8.
+DATA lv_bl TYPE int8.
+DATA lv_ah TYPE int8.
+DATA lv_bh TYPE int8.
+DATA lv_lo TYPE int8.
+DATA lv_hi TYPE int8.
+lv_al = iv_a MOD 4294967296.
+lv_bl = iv_b MOD 4294967296.
+lv_ah = iv_a DIV 4294967296.
+lv_bh = iv_b DIV 4294967296.
+lv_lo = lv_al ` + op + ` lv_bl.
+lv_hi = lv_ah ` + op + ` lv_bh.
+lv_hi = lv_hi + lv_lo DIV 4294967296.
+lv_lo = lv_lo MOD 4294967296.
+lv_hi = lv_hi MOD 4294967296.
+IF lv_hi >= 2147483648.
+lv_hi = lv_hi - 4294967296.
+ENDIF.
+rv = lv_hi * 4294967296 + lv_lo.`
+}
+
+// i64MulBody performs base-2^16 convolution, discarding limbs above bit 63.
+// The largest sum is four products of 65535 plus a carry, below 2^34.
+// Extracting via DIV also handles negative inputs without negating INT64_MIN.
+func i64MulBody() string {
+	var lines []string
+	for _, name := range []string{"a", "b", "a0", "a1", "a2", "a3", "b0", "b1", "b2", "b3", "t", "r0", "r1", "r2", "r3", "lo", "hi"} {
+		lines = append(lines, "DATA lv_"+name+" TYPE int8.")
+	}
+	for _, operand := range []string{"a", "b"} {
+		lines = append(lines, "lv_"+operand+" = iv_"+operand+".")
+		for limb := 0; limb < 4; limb++ {
+			lines = append(lines, fmt.Sprintf("lv_%s%d = lv_%s MOD 65536.", operand, limb, operand))
+			if limb < 3 {
+				lines = append(lines, "lv_"+operand+" = lv_"+operand+" DIV 65536.")
+			}
+		}
+	}
+	for limb := 0; limb < 4; limb++ {
+		if limb == 0 {
+			lines = append(lines, "lv_t = lv_a0 * lv_b0.")
+		} else {
+			lines = append(lines, "lv_t = lv_t DIV 65536.")
+			for a := 0; a <= limb; a++ {
+				lines = append(lines, fmt.Sprintf("lv_t = lv_t + lv_a%d * lv_b%d.", a, limb-a))
+			}
+		}
+		lines = append(lines, fmt.Sprintf("lv_r%d = lv_t MOD 65536.", limb))
+	}
+	lines = append(lines,
+		"IF lv_r3 >= 32768.",
+		"lv_r3 = lv_r3 - 65536.",
+		"ENDIF.",
+		"lv_lo = lv_r1 * 65536 + lv_r0.",
+		"lv_hi = lv_r3 * 65536 + lv_r2.",
+		"rv = lv_hi * 4294967296 + lv_lo.")
+	return strings.Join(lines, "\n")
+}
+
+func i64HelperBody(name string) string {
+	switch name {
+	case "i64_add":
+		return i64AddSubBody("+")
+	case "i64_sub":
+		return i64AddSubBody("-")
+	default:
+		return i64MulBody()
+	}
+}
+
+var i64HelperOps = []struct {
+	name string
+	op   byte
+}{
+	{"i64_add", OpI64Add},
+	{"i64_sub", OpI64Sub},
+	{"i64_mul", OpI64Mul},
+}
+
+func emitI64RuntimeMethods() string {
+	var sb strings.Builder
+	for _, h := range i64HelperOps {
+		fmt.Fprintf(&sb, "  METHOD %s.\n", h.name)
+		for _, line := range strings.Split(i64HelperBody(h.name), "\n") {
+			sb.WriteString("    " + line + "\n")
+		}
+		sb.WriteString("  ENDMETHOD.\n")
+	}
+	return sb.String()
+}
+
+func emitFUGRI64Helpers(mod *Module) string {
+	used := make(map[byte]bool)
+	for _, f := range mod.Functions {
+		for _, inst := range f.Code {
+			used[inst.Op] = true
+		}
+	}
+	var sb strings.Builder
+	for _, h := range i64HelperOps {
+		if !used[h.op] {
+			continue
+		}
+		fmt.Fprintf(&sb, "FORM %s USING iv_a TYPE int8 iv_b TYPE int8 CHANGING rv TYPE int8.\n", h.name)
+		for _, line := range strings.Split(i64HelperBody(h.name), "\n") {
+			sb.WriteString("  " + line + "\n")
+		}
+		sb.WriteString("ENDFORM.\n\n")
+	}
+	return sb.String()
+}
+
+func (c *compiler) emitI64Call(name, result, a, b string) {
+	if c.useFUGR {
+		c.line("PERFORM %s USING %s %s CHANGING %s.", name, a, b, result)
+	} else {
+		c.line("%s = zcl_wasm_rt=>%s( iv_a = %s iv_b = %s ).", result, name, a, b)
+	}
 }
 
 // shiftRightSignedBody is i32/i64.shr_s: floor(x / 2^k). ABAP DIV by a

@@ -633,19 +633,19 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpSIMDPrefix:
 			c.line(wasmTrap)
 
-		// i64 arithmetic (same patterns as i32 — ABAP INT8 handles it)
+		// i64 arithmetic wraps modulo 2^64 through bounded integer helpers.
 		case OpI64Add:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s + %s.", r, a, b)
+			c.emitI64Call("i64_add", r, a, b)
 		case OpI64Sub:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s - %s.", r, a, b)
+			c.emitI64Call("i64_sub", r, a, b)
 		case OpI64Mul:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s * %s.", r, a, b)
+			c.emitI64Call("i64_mul", r, a, b)
 		case OpI64DivS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()

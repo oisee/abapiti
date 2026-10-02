@@ -386,6 +386,9 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 func emitRuntimeClass() string {
 	return `CLASS zcl_wasm_rt DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
+    CLASS-METHODS i64_add IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS i64_sub IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS i64_mul IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS i32_add IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS i32_sub IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS i32_mul IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
@@ -461,7 +464,7 @@ func emitRuntimeClass() string {
 ENDCLASS.
 
 CLASS zcl_wasm_rt IMPLEMENTATION.
-  METHOD i32_add.
+` + emitI64RuntimeMethods() + `  METHOD i32_add.
     DATA lv_p TYPE int8.
     lv_p = iv_a.
     lv_p = lv_p + iv_b.
