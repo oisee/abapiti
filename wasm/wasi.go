@@ -27,8 +27,10 @@ DATA mv_exited TYPE abap_bool.
 DATA mv_closed0 TYPE abap_bool.
 DATA mv_closed1 TYPE abap_bool.
 DATA mv_closed2 TYPE abap_bool.
-DATA mv_clock_override_ns TYPE int8 VALUE -1.
-DATA mv_clock_override_text TYPE c LENGTH 22.
+DATA mv_clock_override_ts TYPE int8 VALUE -1.
+DATA mv_runtime_override_us TYPE int8 VALUE -1.
+DATA mv_clock_last_us TYPE int8.
+DATA mv_clock_wrap_us TYPE int8.
 DATA mv_random TYPE int8.
 DATA mt_args TYPE string_table.
 DATA mt_env TYPE string_table.
@@ -60,10 +62,13 @@ func (c *compiler) emitWASIImplementation() {
 	if !c.hasWASI() {
 		return
 	}
-	// Timestamp formatting extracts components without packed subtraction or
-	// multiplication: those operations lose fractional bits on double-backed
-	// hosts. All arithmetic after component conversion uses int8 operands.
-	// The deterministic clock seams also exercise both words on every target.
+	// Realtime has one-second resolution: timestamp's 14 integral digits are
+	// exact even on double-backed hosts. Copy to int8 before DIV/MOD, then use
+	// Gregorian civil-day arithmetic and int8 epoch seconds/nanoseconds.
+	// Monotonic extends the unsigned 32-bit microsecond counter across rollovers.
+	// Wazero advertises the same nonseekable character-device rights for each
+	// of stdin/stdout/stderr: file rights minus SEEK/TELL, inheriting rights zero.
+	// Its character-device stdio wrappers also advertise the APPEND flag.
 	// This reproducible LCG is deliberately not cryptographic randomness.
 	body := `METHOD get_stdout.
 rv = mv_stdout.
@@ -122,18 +127,19 @@ DATA lv_stat TYPE x LENGTH 24.
 DATA lv_strings TYPE string_table.
 DATA lv_string TYPE string.
 DATA lo_utf8 TYPE REF TO cl_abap_conv_out_ce.
-DATA lv_ts TYPE timestampl.
-DATA lv_text TYPE c LENGTH 30.
-DATA lv_fraction_text TYPE n LENGTH 7.
-DATA lv_date TYPE d.
-DATA lv_epoch TYPE d VALUE '19700101'.
-DATA lv_days TYPE i.
+DATA lv_ts TYPE timestamp.
+DATA lv_stamp TYPE int8.
+DATA lv_year TYPE int8.
+DATA lv_month TYPE int8.
+DATA lv_day TYPE int8.
+DATA lv_era TYPE int8.
+DATA lv_yoe TYPE int8.
+DATA lv_days TYPE int8.
 DATA lv_hours TYPE int8.
 DATA lv_minutes TYPE int8.
 DATA lv_seconds TYPE int8.
 DATA lv_ns TYPE int8.
-DATA lv_fraction TYPE int8.
-DATA lv_component TYPE i.
+DATA lv_us TYPE int8.
 DATA lv_runtime TYPE i.
 rv = 0.
 CASE iv_name.
@@ -203,9 +209,9 @@ IF wasi_range( iv_ptr = lv_arg1 iv_len = 24 ) = abap_false. rv = 21. RETURN. END
 lv_addr = lv_arg1.
 REPLACE SECTION OFFSET lv_addr LENGTH 24 OF mv_mem WITH lv_stat IN BYTE MODE.
 mem_st_i32_8( iv_addr = lv_addr iv_val = 2 ).
-mem_st_i32_16( iv_addr = lv_addr + 2 iv_val = 0 ).
-zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr + 8 iv_val = -1 CHANGING cv_mem = mv_mem ).
-zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr + 16 iv_val = -1 CHANGING cv_mem = mv_mem ).
+mem_st_i32_16( iv_addr = lv_addr + 2 iv_val = 1 ).
+zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr + 8 iv_val = 148898267 CHANGING cv_mem = mv_mem ).
+zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr + 16 iv_val = 0 CHANGING cv_mem = mv_mem ).
 WHEN 'fd_prestat_get' OR 'fd_prestat_dir_name'.
 rv = 8.
 WHEN 'args_sizes_get' OR 'environ_sizes_get' OR 'args_get' OR 'environ_get'.
@@ -252,32 +258,38 @@ WHEN 'clock_time_get'.
 IF wasi_range( iv_ptr = p2 iv_len = 8 ) = abap_false. rv = 21. RETURN. ENDIF.
 IF p0 = 0.
 GET TIME STAMP FIELD lv_ts.
-IF mv_clock_override_text IS INITIAL.
-WRITE lv_ts TO lv_text NO-GROUPING DECIMALS 7.
-CONDENSE lv_text NO-GAPS.
+lv_stamp = lv_ts.
+IF mv_clock_override_ts >= 0. lv_stamp = mv_clock_override_ts. ENDIF.
+lv_year = lv_stamp DIV 10000000000.
+lv_month = lv_stamp DIV 100000000 MOD 100.
+lv_day = lv_stamp DIV 1000000 MOD 100.
+lv_hours = lv_stamp DIV 10000 MOD 100.
+lv_minutes = lv_stamp DIV 100 MOD 100.
+lv_seconds = lv_stamp MOD 100.
+IF lv_month <= 2.
+lv_year = lv_year - 1.
+lv_month = lv_month + 9.
 ELSE.
-lv_text = mv_clock_override_text.
+lv_month = lv_month - 3.
 ENDIF.
-lv_date = lv_text+0(8).
-lv_days = lv_date - lv_epoch.
-lv_component = lv_text+8(2).
-lv_hours = lv_component.
-lv_component = lv_text+10(2).
-lv_minutes = lv_component.
-lv_component = lv_text+12(2).
-lv_seconds = lv_component.
-lv_fraction_text = lv_text+15(7).
-lv_component = lv_fraction_text.
-lv_fraction = lv_component.
-lv_ns = lv_days.
-lv_ns = ( lv_ns * 86400 + lv_hours * 3600 + lv_minutes * 60 + lv_seconds ) * 1000000000.
-lv_ns = lv_ns + lv_fraction * 100.
-IF mv_clock_override_ns >= 0. lv_ns = mv_clock_override_ns. ENDIF.
+lv_era = lv_year DIV 400.
+lv_yoe = lv_year MOD 400.
+lv_days = lv_era * 146097 + lv_yoe * 365 + lv_yoe DIV 4 - lv_yoe DIV 100.
+lv_days = lv_days + ( 153 * lv_month + 2 ) DIV 5 + lv_day - 1 - 719468.
+lv_seconds = lv_days * 86400 + lv_hours * 3600 + lv_minutes * 60 + lv_seconds.
+lv_ns = lv_seconds * 1000000000.
 ELSEIF p0 = 1.
 GET RUN TIME FIELD lv_runtime.
-lv_ns = lv_runtime.
-IF lv_ns < 0. lv_ns = lv_ns + 4294967296. ENDIF.
-lv_ns = lv_ns * 1000.
+lv_us = lv_runtime.
+IF mv_runtime_override_us >= 0. lv_us = mv_runtime_override_us. ENDIF.
+IF lv_us < 0. lv_us = lv_us + 4294967296. ENDIF.
+lv_us = lv_us + mv_clock_wrap_us.
+IF lv_us < mv_clock_last_us.
+mv_clock_wrap_us = mv_clock_wrap_us + 4294967296.
+lv_us = lv_us + 4294967296.
+ENDIF.
+mv_clock_last_us = lv_us.
+lv_ns = lv_us * 1000.
 ELSE.
 rv = 28. RETURN.
 ENDIF.
@@ -286,7 +298,9 @@ WHEN 'clock_res_get'.
 IF wasi_range( iv_ptr = lv_arg1 iv_len = 8 ) = abap_false. rv = 21. RETURN. ENDIF.
 IF p0 <> 0 AND p0 <> 1. rv = 28. RETURN. ENDIF.
 lv_addr = lv_arg1.
-zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr iv_val = 1000 CHANGING cv_mem = mv_mem ).
+lv_ns = 1000.
+IF p0 = 0. lv_ns = 1000000000. ENDIF.
+zcl_wasm_rt=>mem_st_i64( EXPORTING iv_addr = lv_addr iv_val = lv_ns CHANGING cv_mem = mv_mem ).
 WHEN 'random_get'.
 lv_span = lv_arg1.
 IF wasi_range( iv_ptr = p0 iv_len = lv_span ) = abap_false. rv = 21. RETURN. ENDIF.

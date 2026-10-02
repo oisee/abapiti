@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -175,9 +176,35 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	// Fixed bytes test the ABAP deterministic generator independently of wazero's
 	// random source. These are the first eight high bytes of the documented LCG.
 	random := []byte{0x3c, 0x5e, 0x81, 0xb4, 0x0c, 0x5e, 0xc6, 0x8e}
-	wm, err := rt.InstantiateWithConfig(ctx, bin, wazero.NewModuleConfig().WithArgs(class).WithStdout(&stdout).WithStderr(&stderr).WithStdin(strings.NewReader("abc\x00xyz")).WithRandSource(bytes.NewReader(random)).WithWalltime(func() (int64, int32) { return 1700000000, 123456700 }, sys.ClockResolution(1000)).WithNanotime(func() int64 { return 123456789 }, sys.ClockResolution(1000)))
+	wallSeconds := int64(1700000000)
+	monotonicNS := int64(123456789)
+	wm, err := rt.InstantiateWithConfig(ctx, bin, wazero.NewModuleConfig().WithArgs(class).WithStdout(&stdout).WithStderr(&stderr).WithStdin(strings.NewReader("abc\x00xyz")).WithRandSource(bytes.NewReader(random)).WithWalltime(func() (int64, int32) { return wallSeconds, 0 }, sys.ClockResolution(1000)).WithNanotime(func() int64 { return monotonicNS }, sys.ClockResolution(1000)))
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Buffer-backed wazero streams report block devices. Use actual character
+	// devices for the fdstat oracle to match the generated stream abstraction.
+	devnull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer devnull.Close()
+	statModule, err := rt.InstantiateWithConfig(ctx, bin, wazero.NewModuleConfig().WithName("stat_oracle").WithStdin(devnull).WithStdout(devnull).WithStderr(devnull))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer statModule.Close(ctx)
+	var fdstats [3][24]byte
+	for fd := range fdstats {
+		result, err := statModule.ExportedFunction("stat").Call(ctx, uint64(fd))
+		if err != nil || len(result) != 1 || result[0] != 0 {
+			t.Fatalf("reference fdstat %d: %v, %v", fd, result, err)
+		}
+		stat, ok := statModule.Memory().Read(544, 24)
+		if !ok {
+			t.Fatal("reference fdstat memory")
+		}
+		copy(fdstats[fd][:], stat)
 	}
 	var sb strings.Builder
 	sb.WriteString("CLASS ltcl_wasm DEFINITION FINAL FOR TESTING\n  DURATION SHORT RISK LEVEL HARMLESS.\n  PRIVATE SECTION.\n    METHODS c1 FOR TESTING.\nENDCLASS.\nCLASS ltcl_wasm IMPLEMENTATION.\n  METHOD c1.\n")
@@ -258,27 +285,48 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	peek(70)
 	run("read")
 	peek(124)
-	// Exercise the actual integer component assembly with seven fractional digits,
-	// then the nanosecond seam (including sub-timestampl precision). Both words
-	// must agree with wazero, including the low bits lost by double arithmetic.
-	invoke("realtime")
-	ns, ok := wm.Memory().ReadUint64Le(512)
-	if !ok || ns != 1700000000123456700 {
-		t.Fatalf("reference realtime: %d", ns)
+	// Whole-second packed timestamps exercise the integer calendar path; wazero
+	// independently supplies epoch nanoseconds for both words, including leap days.
+	for _, instant := range []string{
+		"1970-01-01T00:00:00Z", "2000-02-29T23:59:59Z",
+		"2023-11-14T22:13:20Z", "2026-10-02T12:34:56Z",
+		"2100-03-01T00:00:00Z",
+	} {
+		fixed, err := time.Parse(time.RFC3339, instant)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wallSeconds = fixed.Unix()
+		fmt.Fprintf(&sb, "    lo->mv_clock_override_ts = %s.\n", fixed.Format("20060102150405"))
+		run("realtime")
+		peek(512)
+		peek(516)
 	}
-	sb.WriteString("    lo->mv_clock_override_text = '20231114221320.1234567'.\n")
+	sb.WriteString("    lo->mv_clock_override_ts = -1.\n")
 	assertI("lo->realtime( )", 0)
-	peek(512)
-	peek(516)
-	sb.WriteString("    lo->mv_clock_override_ns = 1700000000123456789.\n")
-	assertI("lo->realtime( )", 0)
-	assertI("lo->peek( p0 = 512 )", int32(uint32(1700000000123456789&0xffffffff)))
-	assertI("lo->peek( p0 = 516 )", int32(1700000000123456789>>32))
-	sb.WriteString("    CLEAR lo->mv_clock_override_text.\n    lo->mv_clock_override_ns = -1.\n")
-	assertI("lo->realtime( )", 0)
+	// Cover the signed boundary, repeated samples, wrap to zero, and a second
+	// wrap. The seam substitutes only the raw counter, preserving state logic.
+	for _, sample := range []struct{ raw, extended int64 }{
+		{2147483647, 2147483647}, {2147483648, 2147483648},
+		{4294967295, 4294967295}, {0, 4294967296},
+		{0, 4294967296}, {1, 4294967297},
+		{4294967295, 8589934591}, {0, 8589934592},
+	} {
+		fmt.Fprintf(&sb, "    lo->mv_runtime_override_us = %d.\n", sample.raw)
+		monotonicNS = sample.extended * 1000
+		run("monotonic")
+		peek(512)
+		peek(516)
+	}
+	sb.WriteString("    lo->mv_runtime_override_us = -1.\n")
 	assertI("lo->monotonic( )", 0)
 	run("badclock")
-	run("resolution")
+	// Wazero rejects one-second resolution, so verify our coarser realtime
+	// contract directly; the monotonic resolution still uses the oracle.
+	assertI("lo->resolution( )", 0)
+	assertI("lo->peek( p0 = 520 )", 1000000000)
+	assertI("lo->peek( p0 = 524 )", 0)
+	run("raw_res", 1, 520)
 	peek(520)
 	peek(524)
 	run("random")
@@ -286,10 +334,11 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	peek(404)
 	for _, fd := range []uint64{0, 1, 2} {
 		run("stat", fd)
-		assertI("lo->peek( p0 = 544 )", 2)
-		assertI("lo->peek( p0 = 548 )", 0)
-		for _, addr := range []int{552, 556, 560, 564} {
-			assertI(fmt.Sprintf("lo->peek( p0 = %d )", addr), -1)
+		// Six words compare the entire 24-byte layout with wazero for each fd,
+		// including padding, flags, base rights and zero inheriting rights.
+		for offset := 0; offset < 24; offset += 4 {
+			want := binary.LittleEndian.Uint32(fdstats[fd][offset:])
+			assertI(fmt.Sprintf("lo->peek( p0 = %d )", 544+offset), int32(want))
 		}
 		assertI(fmt.Sprintf("lo->seek( p0 = %d )", fd), 70)
 	}

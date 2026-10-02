@@ -15,7 +15,8 @@ empty. `set_args(it)` and `set_env(it)` accept `string_table`; the WASI getters
 encode UTF-8 strings with trailing NULs and wasm32 little-endian pointers.
 
 Descriptors 0, 1 and 2 represent character devices. Seeking returns ESPIPE;
-fdstat uses the 24-byte preview1 layout with zero flags and all rights bits set.
+fdstat uses the 24-byte preview1 layout with wazero-compatible APPEND flags and
+nonseekable character-device base rights for each stream; inheriting rights are zero.
 Closing descriptors 0..2 disables subsequent operations on them; unknown or
 already closed descriptors return EBADF (8). Pointer and iovec ranges are checked
 as unsigned wasm32 values with int8 sums and return EFAULT (21) on invalid
@@ -23,16 +24,19 @@ memory ranges. There are no preopened directories. Unsupported imports, includin
 `poll_oneoff`, return ENOSYS (52). The FUGR and hybrid backends retain syntactically
 valid ENOSYS stubs rather than implementing stream state.
 
-Realtime formats the UTC timestamp into date/time and seven fractional digits,
-converts each component separately, and assembles epoch nanoseconds entirely in
-`int8`. No arithmetic uses the combined packed timestamp. Clock precision is
-limited by the host's timestamp source; formatting cannot recover precision
-already lost there. Tests can supply `mv_clock_override_text` (22 characters,
-`YYYYMMDDhhmmss.fffffff`) to exercise component assembly or
-`mv_clock_override_ns` (default -1) for an exact realtime nanosecond value.
-Monotonic time uses
-`GET RUN TIME` microseconds multiplied by 1000; its underlying 32-bit counter
-wraps. Both clock resolutions are 1000 ns. `random_get` is a deterministic LCG
+Realtime uses a whole-second UTC `timestamp` (14 integral digits, exact even
+on double-backed hosts), copied to `int8` before splitting with DIV/MOD.
+Gregorian civil-day arithmetic produces seconds since 1970-01-01, multiplied
+by 1000000000 in `int8`; fractional nanoseconds are zero. Realtime resolution
+is 1000000000 ns. Tests can supply `mv_clock_override_ts` (default -1,
+`YYYYMMDDhhmmss`) to exercise the same integer assembly path.
+Monotonic time extends the unsigned `GET RUN TIME` microsecond counter with
+persistent `int8` last-value and rollover state, then multiplies by 1000.
+Its resolution is 1000 ns. `mv_runtime_override_us` (default -1) substitutes
+raw counter samples for deterministic signed-boundary and rollover tests.
+The counter cannot reveal multiple complete wraps between samples, so elapsed
+time can be undercounted after gaps of about 72 minutes; returned values still
+never decrease. `random_get` is a deterministic LCG
 (seed 1, multiplier 1664525, increment 1013904223, modulus 2^32, high byte per
 step). It is not cryptographic randomness.
 
@@ -60,8 +64,11 @@ with two iovecs, stderr, invalid descriptors, stdin scatter/EOF, argument and
 environment pointers and UTF-8/NUL layout, clocks, deterministic random bytes,
 fdstat rights, preopen errors, ENOSYS and nested exit. Wazero's preview1 host
 provides independent stdout/stderr, stdin, default argument/environment memory,
-clock resolution and errno results. Configured layouts and LCG vectors are
-independent fixed expectations; fixed realtime instants check both 32-bit words.
+monotonic clock resolution and errno results. Configured layouts and LCG vectors are
+independent fixed expectations; fixed realtime instants check both 32-bit words,
+including leap-day and century boundaries. Counter samples cover two monotonic
+rollovers. All 24 fdstat bytes are compared with wazero for each descriptor
+using character-device streams (buffer-backed wazero streams report block devices).
 Invalid iovec tables, unsigned buffer lengths, output pointers, and descriptor
 closure are compared with wazero. Exit followed by an ordinary trap verifies
 that stale exit state is cleared.
