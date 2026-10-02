@@ -179,8 +179,9 @@ func emitFUGRTop(mod *Module, upper string) string {
 	}
 
 	// Function table
-	for i := range mod.Elements {
-		sb.WriteString(fmt.Sprintf("DATA gt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.\n", i))
+	_, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		sb.WriteString(fmt.Sprintf("DATA gt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.\n", t))
 	}
 
 	sb.WriteString("\n")
@@ -365,9 +366,10 @@ func emitFUGRInit(mod *Module, upper string) string {
 	sb.WriteString("\n")
 
 	// Element segments
-	for i, elem := range mod.Elements {
-		for _, funcIdx := range elem.FuncIndices {
-			sb.WriteString(fmt.Sprintf("  APPEND %d TO gt_tab%d.\n", funcIdx, i))
+	tables, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		for _, funcIdx := range tables[t] {
+			sb.WriteString(fmt.Sprintf("  APPEND %d TO gt_tab%d.\n", funcIdx, t))
 		}
 	}
 

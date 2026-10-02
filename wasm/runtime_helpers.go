@@ -87,6 +87,8 @@ lv_shift = iv_shift MOD 32.
 lv_val = lv_val DIV ipow( base = 2 exp = lv_shift ).
 IF lv_val >= 2147483648. lv_val = lv_val - 4294967296. ENDIF.
 rv = lv_val.`
+	case "shr_s32", "shr_s64":
+		return shiftRightSignedBody(name == "shr_s64")
 	case "wrap_i64":
 		return `DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
 lv_p = iv_val MOD 4294967296.
@@ -116,20 +118,17 @@ DATA lv_b4 TYPE x LENGTH 4.
 DATA lv_be2 TYPE x LENGTH 2.
 DATA lv_be4 TYPE x LENGTH 4.
 CASE iv_op.
-WHEN 48.
-WHEN 49.
+WHEN 48 OR 49.
   lv_b1 = iv_mem+iv_addr(1).
   rv = lv_b1.
   IF iv_op = 48 AND rv > 127. rv = rv - 256. ENDIF.
-WHEN 50.
-WHEN 51.
+WHEN 50 OR 51.
   lv_b2 = iv_mem+iv_addr(2).
   lv_be2+0(1) = lv_b2+1(1).
   lv_be2+1(1) = lv_b2+0(1).
   rv = lv_be2.
   IF iv_op = 50 AND rv > 32767. rv = rv - 65536. ENDIF.
-WHEN 52.
-WHEN 53.
+WHEN 52 OR 53.
   lv_b4 = iv_mem+iv_addr(4).
   lv_be4+0(1) = lv_b4+3(1).
   lv_be4+1(1) = lv_b4+2(1).
@@ -198,6 +197,28 @@ ENDCASE.`
 		body = strings.Join(declarations, "\n") + "\n" + body
 	}
 	return body
+}
+
+// shiftRightSignedBody is i32/i64.shr_s: floor(x / 2^k). ABAP DIV by a
+// positive divisor rounds towards minus infinity (MOD is never negative), so
+// -5 DIV 2 = -3 as the arithmetic shift requires. The divisor 2^31 (2^63)
+// does not fit i (int8), so the division runs in packed decimals.
+func shiftRightSignedBody(is64 bool) string {
+	bits := "32"
+	if is64 {
+		bits = "64"
+	}
+	return `DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+DATA lv_d TYPE p LENGTH 16 DECIMALS 0.
+DATA lv_shift TYPE i.
+lv_shift = iv_shift MOD ` + bits + `.
+lv_d = 1.
+DO lv_shift TIMES.
+lv_d = lv_d * 2.
+ENDDO.
+lv_p = iv_val.
+lv_p = lv_p DIV lv_d.
+rv = lv_p.`
 }
 
 func shift64Body(left bool) string {
@@ -303,9 +324,12 @@ func (c *compiler) emitRuntimeHelpers() {
 	}
 }
 
-// ABAP comments start at a double quote outside single-quoted literals.
+// ABAP comments are a * in column 1 or start at a double quote outside
+// single-quoted literals.
 func stripABAPComment(line string) string {
-	if strings.HasPrefix(strings.TrimSpace(line), "*") {
+	// A full-line comment has * in column 1 only; an indented * is code,
+	// e.g. a wrapped continuation line starting with a multiplication.
+	if strings.HasPrefix(line, "*") {
 		return ""
 	}
 	quoted := false

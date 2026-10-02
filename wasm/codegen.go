@@ -114,9 +114,9 @@ func (c *compiler) emitDefinition() {
 	}
 
 	// Function table
-	for i, elem := range c.mod.Elements {
-		_ = elem
-		c.line("DATA mt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.", i)
+	_, tableIndices := elementTables(c.mod)
+	for _, t := range tableIndices {
+		c.line("DATA mt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.", t)
 	}
 
 	// Memory helper methods
@@ -221,9 +221,10 @@ func (c *compiler) emitConstructor() {
 	c.emitDataSegments("mv_mem")
 
 	// Initialize element segments (function tables)
-	for i, elem := range c.mod.Elements {
-		for _, funcIdx := range elem.FuncIndices {
-			c.line("APPEND %d TO mt_tab%d.", funcIdx, i)
+	tables, tableIndices := elementTables(c.mod)
+	for _, t := range tableIndices {
+		for _, funcIdx := range tables[t] {
+			c.line("APPEND %d TO mt_tab%d.", funcIdx, t)
 		}
 	}
 
@@ -1279,7 +1280,8 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 		c.usedDispatch[typeIndex] = true
 	}
 	if typeIndex >= len(c.mod.Types) {
-		c.line("\" ERROR: invalid type index %d for call_indirect", typeIndex)
+		// An invalid module; trap rather than emit nothing and run on.
+		c.line("%s \" call_indirect: invalid type index %d", callIndirectTrap, typeIndex)
 		return
 	}
 	ft := &c.mod.Types[typeIndex]
@@ -1293,8 +1295,18 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 		args[i] = stack.pop()
 	}
 
-	// Read function index from table
+	// Read function index from table. An index outside the table traps, as
+	// in WASM; a null slot or a function of another type traps in dispatch.
+	tables, _ := elementTables(c.mod)
+	if _, ok := tables[tableIndex]; !ok {
+		c.line("%s \" call_indirect: table %d has no elements", callIndirectTrap, tableIndex)
+		if len(ft.Results) > 0 {
+			stack.push()
+		}
+		return
+	}
 	if c.copyParams {
+		c.line("IF %s < 0 OR %s >= lines( mt_tab%d ). %s ENDIF.", tableIdx, tableIdx, tableIndex, callIndirectTrap)
 		c.line("lv_ci_index = %s + 1.", tableIdx)
 		c.line("READ TABLE mt_tab%d INDEX lv_ci_index INTO lv_ci_func.", tableIndex)
 	} else {

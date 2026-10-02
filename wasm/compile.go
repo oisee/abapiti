@@ -269,8 +269,9 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	}
 
 	// Function table
-	for i := range mod.Elements {
-		c.line("DATA mt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.", i)
+	_, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		c.line("DATA mt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.", t)
 	}
 
 	// WASI
@@ -316,9 +317,10 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.emitDataSegments("mv_mem")
 
 	// Element segments
-	for i, elem := range mod.Elements {
-		for _, funcIdx := range elem.FuncIndices {
-			c.line("APPEND %d TO mt_tab%d.", funcIdx, i)
+	tables, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		for _, funcIdx := range tables[t] {
+			c.line("APPEND %d TO mt_tab%d.", funcIdx, t)
 		}
 	}
 

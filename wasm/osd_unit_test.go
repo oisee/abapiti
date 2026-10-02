@@ -17,9 +17,16 @@ import (
 // osdCase is one call of an exported WASM function. The expected value is not
 // written here: it is computed by running the same .wasm in wazero, so the
 // generated ABAP Unit test checks the ABAP against an independent engine.
+// When wazero traps, the ABAP call must raise an exception.
 type osdCase struct {
 	fn   string
 	args []int32
+}
+
+// osdResult is wazero's outcome of one case: a value, or a trap.
+type osdResult struct {
+	value int32
+	trap  bool
 }
 
 // osdModules are the M1 modules deployed to open-steamgate. Wrapping inputs
@@ -57,6 +64,47 @@ var osdModules = []struct {
 	{"memzero", "zcl_abapiti_memzero", []osdCase{
 		{"size", nil},
 	}},
+	// call_indirect through a table whose segment starts at 1 (as clang
+	// emits): slot 0 is null, slot 4 has another type, slot 5 an identical
+	// type under another index, 6 is out of range.
+	{"callind", "zcl_abapiti_callind", []osdCase{
+		{"call", []int32{1, 10}},
+		{"call", []int32{2, 10}},
+		{"call", []int32{3, 10}},
+		{"call", []int32{5, 10}},
+		{"call", []int32{0, 10}},
+		{"call", []int32{4, 10}},
+		{"call", []int32{6, 10}},
+		{"call", []int32{-1, 10}},
+		{"call", []int32{2, 7}},
+	}},
+	// Sign-extending i64 loads and arithmetic right shifts.
+	{"helpers", "zcl_abapiti_helpers", []osdCase{
+		{"l8s", []int32{0}},
+		{"l8s", []int32{1}},
+		{"l8u", []int32{0}},
+		{"l16s", []int32{2}},
+		{"l16s", []int32{4}},
+		{"l16u", []int32{2}},
+		{"l32s", []int32{6}},
+		{"l32s_hi", []int32{6}},
+		{"l32s_hi", []int32{10}},
+		{"l32u_hi", []int32{6}},
+		{"sar32", []int32{-5, 1}},
+		{"sar32", []int32{-5, 31}},
+		{"sar32", []int32{5, 31}},
+		{"sar32", []int32{-2147483648, 31}},
+		{"sar32", []int32{-8, 33}},
+		{"sar32", []int32{100, 2}},
+		{"sar64", []int32{-5, 63}},
+		{"sar64", []int32{-5, 1}},
+		{"sar64", []int32{7, 63}},
+		{"sar64_hi", []int32{-5, 63}},
+		{"sar64_hi", []int32{-5, 33}},
+		{"sar64_hi", []int32{1, 32}},
+	}},
+	// Last: compileCFixture skips the whole test when clang is missing (as on
+	// the OSD runner), so no module after it would be generated there.
 	{"corpus", "zcl_abapiti_corpus", []osdCase{
 		{"factorial", []int32{5}},
 		{"fibonacci", []int32{10}},
@@ -69,8 +117,9 @@ var osdModules = []struct {
 	}},
 }
 
-// wazeroResults runs each case through wazero and returns the i32 results.
-func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []int32 {
+// wazeroResults runs each case through wazero and returns the i32 results
+// or traps. The instance is kept across a trap, as the ABAP object is.
+func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
 	t.Helper()
 	ctx := context.Background()
 	rt := wazero.NewRuntime(ctx)
@@ -79,7 +128,7 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []int32 {
 	if err != nil {
 		t.Fatalf("wazero instantiate: %v", err)
 	}
-	out := make([]int32, len(cases))
+	out := make([]osdResult, len(cases))
 	for i, c := range cases {
 		fn := mod.ExportedFunction(c.fn)
 		if fn == nil {
@@ -91,16 +140,21 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []int32 {
 		}
 		res, err := fn.Call(ctx, args...)
 		if err != nil {
-			t.Fatalf("wazero %s%v: %v", c.fn, c.args, err)
+			if !strings.Contains(err.Error(), "wasm error:") {
+				t.Fatalf("wazero %s%v: %v", c.fn, c.args, err)
+			}
+			out[i] = osdResult{trap: true}
+			continue
 		}
-		out[i] = api.DecodeI32(res[0])
+		out[i] = osdResult{value: api.DecodeI32(res[0])}
 	}
 	return out
 }
 
 // osdTestClass renders the ABAP Unit local test class (ABAP 7.02) for a
-// generated class: one test method per case.
-func osdTestClass(class string, cases []osdCase, want []int32) string {
+// generated class: one test method per case. A trapping case asserts that
+// the call raises; replayed trapping calls are caught.
+func osdTestClass(class string, cases []osdCase, want []osdResult) string {
 	var sb strings.Builder
 	sb.WriteString("CLASS ltcl_wasm DEFINITION FINAL FOR TESTING\n")
 	sb.WriteString("  DURATION SHORT RISK LEVEL HARMLESS.\n")
@@ -122,18 +176,31 @@ func osdTestClass(class string, cases []osdCase, want []int32) string {
 		fmt.Fprintf(&sb, "    DATA lo TYPE REF TO %s.\n", class)
 		sb.WriteString("    DATA lv_act TYPE i.\n")
 		sb.WriteString("    DATA lv_exp TYPE i.\n")
+		sb.WriteString("    DATA lv_trapped TYPE abap_bool.\n")
 		sb.WriteString("    CREATE OBJECT lo.\n")
 		// Replay preceding calls because each ABAP Unit method has a fresh instance.
-		for _, prior := range cases[:i] {
+		for j, prior := range cases[:i] {
 			priorParams := make([]string, len(prior.args))
 			for k, a := range prior.args {
 				priorParams[k] = fmt.Sprintf("p%d = %d", k, a)
 			}
-			fmt.Fprintf(&sb, "    lv_act = lo->%s( %s ).\n", prior.fn, strings.Join(priorParams, " "))
+			call := fmt.Sprintf("lv_act = lo->%s( %s ).", prior.fn, strings.Join(priorParams, " "))
+			if want[j].trap {
+				fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n    ENDTRY.\n", call)
+			} else {
+				fmt.Fprintf(&sb, "    %s\n", call)
+			}
 		}
-		fmt.Fprintf(&sb, "    lv_act = lo->%s( %s ).\n", c.fn, strings.Join(params, " "))
-		fmt.Fprintf(&sb, "    lv_exp = %d.\n", want[i])
-		fmt.Fprintf(&sb, "    cl_abap_unit_assert=>assert_equals( act = lv_act exp = lv_exp msg = '%s' ).\n", label)
+		call := fmt.Sprintf("lv_act = lo->%s( %s ).", c.fn, strings.Join(params, " "))
+		if want[i].trap {
+			sb.WriteString("    lv_trapped = abap_false.\n")
+			fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n        lv_trapped = abap_true.\n    ENDTRY.\n", call)
+			fmt.Fprintf(&sb, "    cl_abap_unit_assert=>assert_true( act = lv_trapped msg = '%s must trap' ).\n", label)
+		} else {
+			fmt.Fprintf(&sb, "    %s\n", call)
+			fmt.Fprintf(&sb, "    lv_exp = %d.\n", want[i].value)
+			fmt.Fprintf(&sb, "    cl_abap_unit_assert=>assert_equals( act = lv_act exp = lv_exp msg = '%s' ).\n", label)
+		}
 		sb.WriteString("  ENDMETHOD.\n")
 	}
 	sb.WriteString("ENDCLASS.\n")
@@ -155,6 +222,10 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = buildMemoryModule(0, false)
 		case "corpus":
 			bin = compileCFixture(t, "../llvm/testdata/corpus.c")
+		case "callind":
+			bin = buildCallIndirectModule()
+		case "helpers":
+			bin = buildHelperModule()
 		default:
 			bin, err = os.ReadFile(filepath.Join("testdata", m.file))
 			if err != nil {
@@ -185,32 +256,46 @@ var (
 	reTestMethod = regexp.MustCompile(`(?m)^    METHODS c\d+ FOR TESTING\.$`)
 	reExpected   = regexp.MustCompile(`(?m)^    lv_exp = (-?\d+)\.$`)
 	reAssert     = regexp.MustCompile(`(?m)^    cl_abap_unit_assert=>assert_equals\( act = lv_act exp = lv_exp `)
+	reTrapAssert = regexp.MustCompile(`(?m)^    cl_abap_unit_assert=>assert_true\( act = lv_trapped msg = '[^']*must trap' \)\.$`)
 )
 
 // checkTestClass reads the generated test class back and fails unless it has
-// one test method, one expected literal and one assertion per case, and the
-// literals are the wazero results in order. It keeps the generated tests from
-// becoming vacuous (an expected value copied from the actual one, or no
-// methods at all), which OSD alone would report as green.
-func checkTestClass(t *testing.T, class, src string, want []int32) {
+// one test method per case, one expected literal and one assertion per value
+// case, one trap assertion per trapping case, and the literals are the wazero
+// results in order. It keeps the generated tests from becoming vacuous (an
+// expected value copied from the actual one, or no methods at all), which OSD
+// alone would report as green.
+func checkTestClass(t *testing.T, class, src string, want []osdResult) {
 	t.Helper()
 	if len(want) == 0 {
 		t.Fatalf("%s: no cases", class)
 	}
+	var values []int32
+	traps := 0
+	for _, w := range want {
+		if w.trap {
+			traps++
+		} else {
+			values = append(values, w.value)
+		}
+	}
 	if n := len(reTestMethod.FindAllString(src, -1)); n != len(want) {
 		t.Fatalf("%s: %d test methods, want %d", class, n, len(want))
 	}
-	if n := len(reAssert.FindAllString(src, -1)); n != len(want) {
-		t.Fatalf("%s: %d assertions, want %d", class, n, len(want))
+	if n := len(reAssert.FindAllString(src, -1)); n != len(values) {
+		t.Fatalf("%s: %d assertions, want %d", class, n, len(values))
+	}
+	if n := len(reTrapAssert.FindAllString(src, -1)); n != traps {
+		t.Fatalf("%s: %d trap assertions, want %d", class, n, traps)
 	}
 	got := reExpected.FindAllStringSubmatch(src, -1)
-	if len(got) != len(want) {
-		t.Fatalf("%s: %d expected literals, want %d", class, len(got), len(want))
+	if len(got) != len(values) {
+		t.Fatalf("%s: %d expected literals, want %d", class, len(got), len(values))
 	}
 	for i, g := range got {
 		v, err := strconv.ParseInt(g[1], 10, 32)
-		if err != nil || int32(v) != want[i] {
-			t.Fatalf("%s: case %d expects %s, wazero says %d", class, i+1, g[1], want[i])
+		if err != nil || int32(v) != values[i] {
+			t.Fatalf("%s: value case %d expects %s, wazero says %d", class, i+1, g[1], values[i])
 		}
 	}
 }
