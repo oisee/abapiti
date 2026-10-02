@@ -1,7 +1,9 @@
 package wasm
 
 import (
+	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -196,5 +198,41 @@ func TestWrapLongLines(t *testing.T) {
 	}
 	if !strings.HasSuffix(lines[len(lines)-2], `" a comment`) {
 		t.Fatalf("comment not kept at the end of the statement: %q", lines[len(lines)-2])
+	}
+}
+
+func buildFloatConstWasm(f64 float64, f32 float32) []byte {
+	code := []byte{OpF64Const}
+	code = binary.LittleEndian.AppendUint64(code, math.Float64bits(f64))
+	code = append(code, OpDrop, OpF32Const)
+	code = binary.LittleEndian.AppendUint32(code, math.Float32bits(f32))
+	code = append(code, OpDrop)
+	return buildSingleFuncWasm("floats", FuncType{}, nil, code)
+}
+
+// TestFloatConstLiterals pins float constants to the generator's fixed-point
+// "%f" form; only magnitudes too large for one line use exponent notation.
+func TestFloatConstLiterals(t *testing.T) {
+	for _, tc := range []struct {
+		f64    float64
+		f32    float32
+		want64 string
+		want32 string
+	}{
+		{1.5, 0.25, "'1.500000'", "'0.250000'"},
+		{-2, 3, "'-2.000000'", "'3.000000'"},
+		{1e300, math.MaxFloat32, "'1e+300'", "'340282346638528859811704183484516925440.000000'"},
+	} {
+		mod, err := Parse(buildFloatConstWasm(tc.f64, tc.f32))
+		if err != nil {
+			t.Fatal(err)
+		}
+		src := Compile(mod, "zcl_floats")
+		for _, want := range []string{tc.want64, tc.want32} {
+			if !strings.Contains(src, " = "+want+".") {
+				t.Errorf("missing literal %s", want)
+			}
+		}
+		checkLineLimit(t, map[string]string{"zcl_floats.clas.abap": src})
 	}
 }

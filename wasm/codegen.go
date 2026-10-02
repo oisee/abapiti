@@ -267,10 +267,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %d.", v, inst.I64Value)
 		case OpF32Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, strconv.FormatFloat(float64(inst.F32Value), 'e', -1, 32))
+			c.line("%s = '%s'.", v, floatLiteral(float64(inst.F32Value), 32))
 		case OpF64Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, strconv.FormatFloat(inst.F64Value, 'e', -1, 64))
+			c.line("%s = '%s'.", v, floatLiteral(inst.F64Value, 64))
 
 		// Local/Global access
 		case OpLocalGet:
@@ -1630,6 +1630,20 @@ func (c *compiler) flushPacker() {
 	if c.packer != nil {
 		c.packer.flush()
 	}
+}
+
+// maxFloatLiteral is the longest fixed-point float literal kept as is; longer
+// ones (magnitudes near 1e200 and above) could not fit an ABAP line.
+const maxFloatLiteral = 200
+
+// floatLiteral formats a float constant in fixed-point notation ("%f"), as the
+// generator always has. Only values whose fixed-point form would exceed
+// maxFloatLiteral, which produced over-long lines before, use exponent notation.
+func floatLiteral(v float64, bits int) string {
+	if s := fmt.Sprintf("%f", v); len(s) <= maxFloatLiteral {
+		return s
+	}
+	return strconv.FormatFloat(v, 'e', -1, bits)
 }
 
 func sanitizeABAP(name string) string {
