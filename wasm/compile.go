@@ -318,6 +318,8 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 		c.line("METHOD %s.", sanitizeABAP(f.ExportName))
 		c.indent++
 
+		c.emitWASIReset()
+
 		// Find the actual target (might be deduplicated)
 		targetIdx := i
 		if canonIdx, ok := redirects[i]; ok {

@@ -99,7 +99,11 @@ func buildWASIModule() []byte {
 	add("resolution", 4, call(12, 0, 520))
 	add("yield", 4, call(13))
 	add("poll", 4, call(14, 0, 0, 0, 0))
-	add("close", 4, call(15, 1))
+	add("close", 5, []byte{OpLocalGet, 0, OpCall, 15})
+	add("trap", 4, []byte{OpUnreachable, OpI32Const, 0})
+	add("raw_write", 0, []byte{OpLocalGet, 0, OpLocalGet, 1, OpLocalGet, 2, OpLocalGet, 3, OpCall, 0})
+	add("raw_read", 0, []byte{OpLocalGet, 0, OpLocalGet, 1, OpLocalGet, 2, OpLocalGet, 3, OpCall, 1})
+	add("poke", 1, []byte{OpLocalGet, 0, OpLocalGet, 1, OpI32Store, 2, 0, OpI32Const, 0})
 	add("prestat_name", 4, call(16, 3, 0, 0))
 	add("peek", 5, []byte{OpLocalGet, 0, OpI32Load, 2, 0})
 	advise := iconst(1)
@@ -110,6 +114,22 @@ func buildWASIModule() []byte {
 	advise = append(advise, iconst(0)...)
 	advise = append(advise, OpCall, 17)
 	add("unsupported", 4, advise)
+	for _, spec := range []struct {
+		name   string
+		typ    int
+		imp    byte
+		params int
+	}{
+		{"raw_stat", 1, 9, 2}, {"raw_random", 1, 7, 2},
+		{"raw_sizes", 1, 2, 2}, {"raw_args", 1, 3, 2},
+		{"raw_time", 2, 6, 3}, {"raw_res", 1, 12, 2},
+	} {
+		var code []byte
+		for i := 0; i < spec.params; i++ {
+			code = append(code, OpLocalGet, byte(i))
+		}
+		add(spec.name, spec.typ, append(code, OpCall, spec.imp))
+	}
 	w.addSection(3, buildFuncSection(funcs))
 	w.addSection(5, []byte{1, 0, 1})
 	exports = append(exports, Export{Name: "memory", Kind: 2, Index: 0})
@@ -155,7 +175,7 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	// Fixed bytes test the ABAP deterministic generator independently of wazero's
 	// random source. These are the first eight high bytes of the documented LCG.
 	random := []byte{0x3c, 0x5e, 0x81, 0xb4, 0x0c, 0x5e, 0xc6, 0x8e}
-	wm, err := rt.InstantiateWithConfig(ctx, bin, wazero.NewModuleConfig().WithArgs(class).WithStdout(&stdout).WithStderr(&stderr).WithStdin(strings.NewReader("abc\x00xyz")).WithRandSource(bytes.NewReader(random)).WithWalltime(func() (int64, int32) { return 1700000000, 123456789 }, sys.ClockResolution(1000)).WithNanotime(func() int64 { return 123456789 }, sys.ClockResolution(1000)))
+	wm, err := rt.InstantiateWithConfig(ctx, bin, wazero.NewModuleConfig().WithArgs(class).WithStdout(&stdout).WithStderr(&stderr).WithStdin(strings.NewReader("abc\x00xyz")).WithRandSource(bytes.NewReader(random)).WithWalltime(func() (int64, int32) { return 1700000000, 123456700 }, sys.ClockResolution(1000)).WithNanotime(func() int64 { return 123456789 }, sys.ClockResolution(1000)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,11 +197,11 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 		fmt.Fprintf(&sb, "    lv_act = %s.\n    cl_abap_unit_assert=>assert_equals( act = lv_act exp = %d ).\n", expr, want)
 	}
 	run := func(name string, args ...uint64) {
-		param := ""
-		if len(args) > 0 {
-			param = fmt.Sprintf("p0 = %d", args[0])
+		params := make([]string, len(args))
+		for i, arg := range args {
+			params[i] = fmt.Sprintf("p%d = %d", i, int32(arg))
 		}
-		assertI(fmt.Sprintf("lo->%s( %s )", name, param), int32(invoke(name, args...)))
+		assertI(fmt.Sprintf("lo->%s( %s )", name, strings.Join(params, " ")), int32(invoke(name, args...)))
 	}
 	peek := func(addr uint32) {
 		v, ok := wm.Memory().ReadUint32Le(addr)
@@ -238,14 +258,24 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	peek(70)
 	run("read")
 	peek(124)
-	// Time is checked against epoch bounds rather than compared to a generation-time clock.
+	// Exercise the actual integer component assembly with seven fractional digits,
+	// then the nanosecond seam (including sub-timestampl precision). Both words
+	// must agree with wazero, including the low bits lost by double arithmetic.
 	invoke("realtime")
 	ns, ok := wm.Memory().ReadUint64Le(512)
-	if !ok || ns != 1700000000123456789 {
+	if !ok || ns != 1700000000123456700 {
 		t.Fatalf("reference realtime: %d", ns)
 	}
+	sb.WriteString("    lo->mv_clock_override_text = '20231114221320.1234567'.\n")
 	assertI("lo->realtime( )", 0)
-	sb.WriteString("    lv_act = lo->peek( p0 = 516 ).\n    lv_trapped = abap_false.\n    IF lv_act > 367368936 AND lv_act < 955187321.\n      lv_trapped = abap_true.\n    ENDIF.\n    cl_abap_unit_assert=>assert_true( act = lv_trapped ).\n    lv_trapped = abap_false.\n")
+	peek(512)
+	peek(516)
+	sb.WriteString("    lo->mv_clock_override_ns = 1700000000123456789.\n")
+	assertI("lo->realtime( )", 0)
+	assertI("lo->peek( p0 = 512 )", int32(uint32(1700000000123456789&0xffffffff)))
+	assertI("lo->peek( p0 = 516 )", int32(1700000000123456789>>32))
+	sb.WriteString("    CLEAR lo->mv_clock_override_text.\n    lo->mv_clock_override_ns = -1.\n")
+	assertI("lo->realtime( )", 0)
 	assertI("lo->monotonic( )", 0)
 	run("badclock")
 	run("resolution")
@@ -267,7 +297,54 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	run("prestat")
 	run("prestat_name")
 	run("yield")
-	run("close")
+	// Invalid unsigned iovecs, buffers and result pointers return EFAULT rather
+	// than trapping. Run every case through both read and write on wazero.
+	for _, name := range []string{"raw_write", "raw_read"} {
+		fd := uint64(1)
+		if name == "raw_read" {
+			fd = 0
+		}
+		for _, args := range [][]uint64{
+			{fd, 65532, 1, 120}, {fd, 0xffffffff, 1, 120},
+			{fd, 0, 0xffffffff, 120}, {fd, 0, 1, 65533},
+			{fd, 0, 1, 0xffffffff}, {fd, 65536, 0, 120},
+		} {
+			run(name, args...)
+		}
+		for _, iov := range [][2]uint64{{65535, 2}, {0xffffffff, 1}, {64, 0xffffffff}, {65536, 0}} {
+			run("poke", 0, iov[0])
+			run("poke", 4, iov[1])
+			run(name, fd, 0, 1, 120)
+		}
+	}
+	for _, tc := range []struct {
+		name string
+		args []uint64
+	}{
+		{"raw_stat", []uint64{1, 65513}}, {"raw_stat", []uint64{1, 0xffffffff}},
+		{"raw_random", []uint64{65535, 2}}, {"raw_random", []uint64{0, 0xffffffff}},
+		{"raw_sizes", []uint64{65533, 132}}, {"raw_sizes", []uint64{128, 0xffffffff}},
+		{"raw_args", []uint64{65533, 256}}, {"raw_args", []uint64{144, 65535}},
+		{"raw_time", []uint64{0, 0, 65529}}, {"raw_res", []uint64{0, 0xffffffff}},
+	} {
+		run(tc.name, tc.args...)
+	}
+	run("poke", 0, 64)
+	run("poke", 4, 6)
+	for _, fd := range []uint64{99, 0xffffffff} {
+		run("close", fd)
+	}
+	for _, fd := range []uint64{1, 0, 2} {
+		run("close", fd)
+		run("close", fd)
+		run("stat", fd)
+		run("seek", fd)
+		if fd == 0 {
+			run("read")
+		} else {
+			run("write", fd)
+		}
+	}
 	assertI("lo->poll( )", 52)
 	assertI("lo->unsupported( )", 52)
 	assertI("lo->seek( p0 = 3 )", 8)
@@ -279,6 +356,11 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	}
 	sb.WriteString("    TRY.\n        lv_act = lo->exit_nested( ).\n      CATCH cx_sy_dyn_call_illegal_method.\n        lv_trapped = abap_true.\n    ENDTRY.\n    cl_abap_unit_assert=>assert_true( act = lv_trapped ).\n")
 	assertI("lo->get_exit_code( )", 23)
+	sb.WriteString("    cl_abap_unit_assert=>assert_true( act = lo->mv_exited ).\n    lv_trapped = abap_false.\n    TRY.\n        lv_act = lo->trap( ).\n      CATCH cx_sy_dyn_call_illegal_method.\n        lv_trapped = abap_true.\n    ENDTRY.\n    cl_abap_unit_assert=>assert_true( act = lv_trapped ).\n")
+	assertI("lo->get_exit_code( )", -1)
+	sb.WriteString("    cl_abap_unit_assert=>assert_false( act = lo->mv_exited ).\n")
+	assertI("lo->yield( )", 0)
+	assertI("lo->get_exit_code( )", -1)
 	sb.WriteString("  ENDMETHOD.\nENDCLASS.\n")
 	for name, src := range map[string]string{class + ".clas.abap": Compile(mod, class), class + ".clas.testclasses.abap": sb.String()} {
 		if err = os.WriteFile(filepath.Join(dir, name), []byte(src), 0644); err != nil {
@@ -295,12 +377,15 @@ func TestWASIGeneration(t *testing.T) {
 	multi := CompileMultiClass(mod, "zcl_wasi", 80)
 	for name, src := range map[string]string{"class": Compile(mod, "zcl_wasi"), "state": multi.MainClass} {
 		assertNoABAPComments(t, name, src)
+		if parameterWrite.MatchString(src) {
+			t.Errorf("%s writes to IMPORTING parameter", name)
+		}
 		for _, bad := range []string{"PERFORM ", "DATA(", "CONV ", "NEW ", "zcl_wasm_rt=>", "zcl_wasm_wasi", "iv_name = 'fd_advise'"} {
 			if strings.Contains(src, bad) {
 				t.Errorf("%s contains %s", name, bad)
 			}
 		}
-		for _, required := range []string{"METHOD get_stdout.", "METHOD set_stdin.", "METHOD set_args.", "METHOD set_env.", "METHOD mem_st_i64.", "mv_exit_code = p0.", wasmTrap, "rv = 52."} {
+		for _, required := range []string{"METHOD get_stdout.", "METHOD set_stdin.", "METHOD set_args.", "METHOD set_env.", "METHOD mem_st_i64.", "mv_exit_code = p0.", wasmTrap, "rv = 52.", "mv_exited = abap_true.", "mv_exited = abap_false."} {
 			if !strings.Contains(src, required) {
 				t.Errorf("%s missing %s", name, required)
 			}
@@ -311,7 +396,16 @@ func TestWASIGeneration(t *testing.T) {
 			}
 		}
 	}
-	for _, src := range multi.ChunkClasses {
+	for name, src := range multi.ChunkClasses {
+		assertNoABAPComments(t, name, src)
+		if strings.Contains(src, "mv_exit_code = -1.") || strings.Contains(src, "mv_exited = abap_false.") {
+			t.Error("chunk resets exit state during internal calls")
+		}
+		for _, line := range strings.Split(src, "\n") {
+			if len(line) > 255 {
+				t.Errorf("%s line length %d", name, len(line))
+			}
+		}
 		for _, required := range []string{"mo_main->wasi_call(", "mo_main->mem_ld_i32(", "s1_i64 TYPE int8"} {
 			if !strings.Contains(src, required) {
 				t.Errorf("chunk missing %s", required)

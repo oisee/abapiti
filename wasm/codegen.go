@@ -144,9 +144,9 @@ func (c *compiler) emitDefinition() {
 	c.emitRuntimeDeclarations()
 	c.emitDispatchDeclarations()
 
-	// Internal functions (non-exported only — exported are already in PUBLIC SECTION)
+	// Internal functions, including bodies behind WASI export facades.
 	for i, f := range c.mod.Functions {
-		if f.Type != nil && f.ExportName == "" {
+		if f.Type != nil && (f.ExportName == "" || c.wasiExportWrappers()) {
 			name := fmt.Sprintf("f%d", i)
 			c.emitMethodSignature(name, f.Type, false)
 		}
@@ -195,10 +195,13 @@ func (c *compiler) emitImplementation() {
 	for i, f := range c.mod.Functions {
 		if f.Type != nil {
 			name := fmt.Sprintf("f%d", i)
-			if f.ExportName != "" {
+			if f.ExportName != "" && !c.wasiExportWrappers() {
 				name = sanitizeABAP(f.ExportName)
 			}
 			c.emitFunction(name, &f)
+			if c.wasiExportWrappers() && f.ExportName != "" {
+				c.emitWASIExportWrapper(i, &f)
+			}
 		}
 	}
 	c.emitDispatchMethods()
@@ -1195,7 +1198,7 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 	}
 
 	name := fmt.Sprintf("f%d", localIdx)
-	if target.ExportName != "" {
+	if target.ExportName != "" && !c.wasiExportWrappers() {
 		name = sanitizeABAP(target.ExportName)
 	}
 
