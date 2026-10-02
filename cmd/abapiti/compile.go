@@ -31,13 +31,15 @@ var compileWasmCmd = &cobra.Command{
 	Long: `Compile a .wasm binary to native ABAP source code.
 Fully offline — no SAP connection required.
 
-The output is an ABAP class with one method per exported function.
+Small modules produce one ABAP class. Large modules produce a shared state class,
+independent function chunks, and a facade. Activate state, chunks, then facade.
 Deploy with vsp: vsp deploy <output.clas.abap> '$TMP'
 
 Examples:
   abapiti compile wasm program.wasm
   abapiti compile wasm program.wasm --class ZCL_MY_WASM
   abapiti compile wasm program.wasm --output ./src/
+  abapiti compile wasm program.wasm --split --class-lines 20000 -o ./src/
   abapiti program.wasm                  # shortcut for "compile wasm"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCompileWasm,
@@ -159,27 +161,48 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "WASM: %d bytes, %d functions, %d instructions\n",
 		len(data), len(mod.Functions), countInstructions(mod))
 
-	abapSrc, err := wasm.Compile(mod, className)
-	if err != nil {
-		return fmt.Errorf("failed to compile WASM: %w", err)
+	budget, _ := cmd.Flags().GetInt("class-lines")
+	if budget <= 0 {
+		return fmt.Errorf("--class-lines must be positive")
 	}
-
-	lines := strings.Count(abapSrc, "\n")
-	fmt.Fprintf(os.Stderr, "ABAP: %d lines, class %s\n", lines, className)
-
+	force, _ := cmd.Flags().GetBool("split")
+	abapSrc, err := wasm.Compile(mod, className)
+	if err != nil { return err }
+	files := classFiles(className, abapSrc)
+	if force || strings.Count(abapSrc, "\n") > budget || len(mod.Functions) > 500 {
+		if len(className) > 30 {
+			return fmt.Errorf("ABAP class name exceeds 30 characters")
+		}
+		result := wasm.CompileMultiClass(mod, className, budget)
+		files = result.Files(className)
+		fmt.Fprintf(os.Stderr, "ABAP split: %d classes, max-lines=%d cross-chunk-calls=%d indirect-calls=%d; activate state %s, chunks, facade %s\n", len(files), result.Stats.MaxClassLines, result.Stats.CrossChunkCalls, result.Stats.IndirectCalls, result.StateName, className)
+		if outputDir == "" {
+			outputDir = "."
+		}
+	}
+	if err := reportGenerated(cmd, files); err != nil {
+		return err
+	}
 	if outputDir != "" {
-		outFile := filepath.Join(outputDir, strings.ToLower(className)+".clas.abap")
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(outFile, []byte(abapSrc), 0644); err != nil {
-			return err
+		names := make([]string, 0, len(files))
+		for name := range files {
+			names = append(names, name)
 		}
-		fmt.Fprintf(os.Stderr, "Written to %s\n", outFile)
-		return reportAndHint(cmd, classFiles(className, abapSrc), fmt.Sprintf("Deploy with vsp: vsp deploy %s '$TMP'", outFile))
+		sort.Strings(names)
+		for _, name := range names {
+			outFile := filepath.Join(outputDir, name)
+			if err := os.WriteFile(outFile, []byte(files[name]), 0644); err != nil {
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "Written to %s\n", outFile)
+		}
+		return nil
 	}
 	fmt.Print(abapSrc)
-	return reportGenerated(cmd, classFiles(className, abapSrc))
+	return nil
 }
 
 func classFiles(className, src string) map[string]string {

@@ -296,6 +296,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin, _ = runtimeFixture()
 		case "i32wrap":
 			bin = buildI32WrapModule()
+		case "directsplit":
+			bin = buildDirectSplitModule()
 		case "branches":
 			bin = buildBranchLoopWasm()
 		case "suite":
@@ -354,6 +356,32 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		} {
 			if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 				t.Fatal(err)
+			}
+		}
+		if m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
+			splitName := strings.Replace(m.class, "zcl_abapiti_", "zcl_split_", 1)
+			budget := 200
+			if m.file == "callind" {
+				budget = 80
+			}
+			if m.file == "directsplit" {
+				budget = 40
+			}
+			split := CompileMultiClass(mod, splitName, budget)
+			files := split.Files(splitName)
+			splitTests := osdTestClass(splitName, m.cases, want)
+			checkTestClass(t, splitName, splitTests, want)
+			files[splitName+".clas.testclasses.abap"] = splitTests
+			for name, body := range files {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if m.file == "directsplit" && split.Stats.CrossChunkCalls == 0 {
+				t.Fatal("direct fixture needs a cross-chunk call")
+			}
+			if m.file == "callind" && split.Stats.ChunkCount < 2 {
+				t.Fatal("indirect fixture must span chunks")
 			}
 		}
 		t.Logf("%s: %d cases, expected %v", m.class, len(m.cases), want)

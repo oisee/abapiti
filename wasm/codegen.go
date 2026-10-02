@@ -39,6 +39,12 @@ type blockEntry struct {
 
 type compiler struct {
 	names       []string
+	splitState      string
+	chunkAssign     []int
+	chunkIndex      int
+	crossChunkCalls int
+	indirectCalls   int
+
 	mod         *Module
 	className   string
 	sb          strings.Builder
@@ -159,7 +165,11 @@ func (c *compiler) emitDefinition() {
 }
 
 func (c *compiler) emitMethodSignature(name string, ft *FuncType, isPublic bool) {
-	parts := []string{"METHODS " + sanitizeABAP(name)}
+	kind := "METHODS "
+	if c.splitState != "" {
+		kind = "CLASS-METHODS "
+	}
+	parts := []string{kind + sanitizeABAP(name)}
 
 	// Parameters
 	if len(ft.Params) > 0 {
@@ -251,6 +261,17 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	c.line("METHOD %s.", sanitizeABAP(name))
 	c.indent++
 
+	if c.splitState != "" {
+		c.line("DATA lv_cls TYPE string.")
+		c.line("DATA lv_meth TYPE string.")
+		c.line("DATA ls_ci TYPE %s=>ty_func.", c.splitState)
+		c.line("DATA lv_ci_lookup TYPE i.")
+		if c.mod.NumImportedFuncs > 0 {
+			for _, decl := range []string{"lv_wptr TYPE i", "lv_wlen TYPE i", "lv_wiov TYPE i", "lv_wn TYPE i", "lv_wbytes TYPE xstring"} {
+				c.line("DATA %s.", decl)
+			}
+		}
+	}
 	// Emit chained DATA declaration
 	c.line("%s", emitChainedDATA(f, c.copyParams))
 	if c.copyParams {
@@ -1197,6 +1218,19 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 
 	name := c.bodyName(localIdx)
 
+	if c.splitState != "" {
+		name = fmt.Sprintf("f%d", localIdx)
+		if c.chunkAssign[localIdx] != c.chunkIndex {
+			c.line("READ TABLE %s=>mt_funcs INDEX %d INTO ls_ci.", c.splitState, funcIndex+1)
+			result := ""
+			if len(target.Type.Results) > 0 {
+				result = stack.push()
+			}
+			c.emitDynamicCall(args, result)
+			c.crossChunkCalls++
+			return
+		}
+	}
 	if c.useFUGR {
 		// PERFORM-based call
 		if len(target.Type.Results) > 0 {
@@ -1278,6 +1312,25 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 		c.line("DATA(lv_ci_func) = mt_tab%d[ %s + 1 ].", tableIndex, tableIdx)
 	}
 
+	if c.splitState != "" {
+		sig := typeIndex
+		for i := range c.mod.Types {
+			if sameFuncType(ft, &c.mod.Types[i]) {
+				sig = i
+				break
+			}
+		}
+		c.line("lv_ci_lookup = lv_ci_func + 1.")
+		c.line("READ TABLE %s=>mt_funcs INDEX lv_ci_lookup INTO ls_ci.", c.splitState)
+		c.line("IF sy-subrc <> 0 OR ls_ci-sig <> %d. %s ENDIF.", sig, callIndirectTrap)
+		result := ""
+		if len(ft.Results) > 0 {
+			result = stack.push()
+		}
+		c.emitDynamicCall(args, result)
+		c.indirectCalls++
+		return
+	}
 	// Generate dispatch
 	var paramParts []string
 	for i, a := range args {
@@ -1777,6 +1830,9 @@ func (c *compiler) line(format string, args ...any) {
 			c.usedRuntime[name] = true
 			return name
 		})
+	}
+	if c.splitState != "" {
+		stmt = c.splitStatement(stmt)
 	}
 	stmt = stripABAPComment(stmt)
 	if strings.TrimSpace(stmt) == "" {
