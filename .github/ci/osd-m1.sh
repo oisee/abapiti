@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# M1: compile add.wasm and factorial.wasm to ABAP, deploy each class and its
+# generated ABAP Unit test class to a running OSD with vsp, and run the tests.
+# The expected values in the test classes come from wazero, not from abapiti.
+#
+#   SAP_URL=http://localhost:3030 .github/ci/osd-m1.sh <workdir>
+#
+# vsp runs from an empty directory with every inherited SAP_*/VSP_* variable
+# removed, so it can only reach $SAP_URL as the OSD user DEVELOPER. The vsp
+# binary is the pinned release (vsp.version), checked against the committed
+# vsp.sha256 and the release's checksums.txt. Package $ZOSD_TEST_SRC: OSD
+# 0.6.1511 has no $TMP.
+set -euo pipefail
+
+work=${1:?usage: osd-m1.sh <workdir>}
+url=${SAP_URL:?SAP_URL must point at the OSD}
+here=$(cd "$(dirname "$0")" && pwd)
+root=$(cd "$here/../.." && pwd)
+pkg='$ZOSD_TEST_SRC'
+classes=(zcl_abapiti_add zcl_abapiti_factorial)
+
+mkdir -p "$work"/{vsp,gen,empty,log}
+work=$(cd "$work" && pwd)
+
+# The pinned vsp.
+tag=$(tr -d '[:space:]' < "$here/vsp.version")
+asset=vsp-linux-amd64
+pinned=$(awk -v k="$tag/$asset" '$2 == k { print $1 }' "$here/vsp.sha256")
+[ -n "$pinned" ] || { echo "osd-m1: no committed sha256 for $tag/$asset" >&2; exit 4; }
+if [ -n "${VSP_DL_DIR:-}" ]; then
+  cp "$VSP_DL_DIR/$asset" "$VSP_DL_DIR/checksums.txt" "$work/vsp/"
+else
+  gh release download "$tag" -R oisee/vibing-steampunk -p "$asset" -p checksums.txt -D "$work/vsp" --clobber
+fi
+actual=$(sha256sum "$work/vsp/$asset" | cut -d' ' -f1)
+release=$(awk -v a="$asset" '$2 == a { print $1 }' "$work/vsp/checksums.txt")
+if [ "$actual" != "$pinned" ] || [ "$actual" != "$release" ]; then
+  echo "osd-m1: $asset sha256 $actual does not match the pin ($pinned) and checksums.txt ($release); refusing" >&2
+  exit 4
+fi
+chmod +x "$work/vsp/$asset"
+
+vsp() {
+  (cd "$work/empty" &&
+    env $(env | grep -oE '^(SAP|VSP)_[A-Z0-9_]+' | sed 's/^/-u /') \
+      SAP_URL="$url" SAP_USER=DEVELOPER SAP_PASSWORD=osd SAP_CLIENT=001 \
+      "$work/vsp/$asset" "$@")
+}
+echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
+
+# Generate the classes and their test classes.
+(cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
+  > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
+gen="$work/gen/TestOSD_EmitUnitClasses"
+
+# Deploy and test. Any failure stops the run: on OSD 0.6.1511 a failed
+# activation poisons every later one.
+fail=0
+for c in "${classes[@]}"; do
+  for f in "$c.clas.abap" "$c.clas.testclasses.abap"; do
+    if ! vsp deploy "$gen/$f" "$pkg" --call-timeout 900 > "$work/log/deploy-$f.log" 2>&1; then
+      echo "osd-m1: deploy of $f failed" >&2
+      cat "$work/log/deploy-$f.log" >&2
+      exit 1
+    fi
+  done
+  if vsp test CLAS "${c^^}" > "$work/log/test-$c.log" 2>&1; then
+    echo "osd-m1: $c: $(grep -E '^Total:' "$work/log/test-$c.log")" >&2
+  else
+    echo "osd-m1: $c FAILED" >&2
+    cat "$work/log/test-$c.log" >&2
+    fail=1
+  fi
+done
+exit $fail

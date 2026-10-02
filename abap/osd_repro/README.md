@@ -12,4 +12,8 @@ expectation here, A4H wins and the expectation is fixed.
 | `zcl_abapiti_repro_ovfl` | 3 | `TYPE i` overflow raises |
 | `zcl_abapiti_repro_mem` | 1, 4 | the exact memory helpers from `wasm/memhelpers.go` |
 
-Lines marked `UNMEASURED:` are guesses until the A4H oracle answers; measured ones become `EXPECT = A4H`.
+All 26 expectations were measured green on A4H on 2026-10-02 (`EXPECT = A4H`).
+
+On OSD vscode-v0.6.1511 and on main (JS runtime): 18 of 26 pass. Failing:
+`FIND ... IN BYTE MODE` (f1, f2, f4) and every `TYPE i` overflow case except
+the boundaries. On osgo `REPLACE SECTION ... IN BYTE MODE` does not compile yet.

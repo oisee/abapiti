@@ -1,6 +1,6 @@
 * Items 1 and 2: REPLACE SECTION / FIND ... IN BYTE MODE on an xstring.
 * ABAP 7.02, ASCII. Expected values follow the kernel documentation;
-* not yet measured on A4H.
+* EXPECT = A4H: all expectations measured green on A4H (2026-10-02).
 CLASS ltcl_bytes DEFINITION FINAL FOR TESTING
   DURATION SHORT RISK LEVEL HARMLESS.
   PRIVATE SECTION.
@@ -74,7 +74,7 @@ CLASS ltcl_bytes IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD r6_replace_out_of_range.
-* UNMEASURED: Section past the end: kernel raises CX_SY_RANGE_OUT_OF_BOUNDS
+* EXPECT = A4H: Section past the end: kernel raises CX_SY_RANGE_OUT_OF_BOUNDS
 * and leaves lv_mem unchanged (WASM traps on an out-of-bounds store).
     DATA lv_mem TYPE xstring.
     DATA lv_new TYPE x LENGTH 4.
