@@ -477,10 +477,22 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     IF iv_n <= 0. RETURN. ENDIF.
     DATA lv_byte TYPE x LENGTH 1.
     lv_byte = iv_val.
-    DO iv_n TIMES.
-      DATA(lv_off) = iv_dst + sy-index - 1.
-      REPLACE SECTION OFFSET lv_off LENGTH 1 OF cv_mem WITH lv_byte IN BYTE MODE.
-    ENDDO.
+    DATA lv_fill TYPE xstring.
+    DATA lv_len TYPE i.
+    DATA lv_remaining TYPE i.
+    lv_fill = lv_byte.
+    lv_len = 1.
+    WHILE lv_len < iv_n.
+      lv_remaining = iv_n - lv_len.
+      IF lv_remaining >= lv_len.
+        CONCATENATE lv_fill lv_fill INTO lv_fill IN BYTE MODE.
+        lv_len = lv_len + lv_len.
+      ELSE.
+        CONCATENATE lv_fill lv_fill+0(lv_remaining) INTO lv_fill IN BYTE MODE.
+        lv_len = iv_n.
+      ENDIF.
+    ENDWHILE.
+    REPLACE SECTION OFFSET iv_dst LENGTH iv_n OF cv_mem WITH lv_fill IN BYTE MODE.
   ENDMETHOD.
 
   " === Unsigned 32-bit via INT8 promotion ===

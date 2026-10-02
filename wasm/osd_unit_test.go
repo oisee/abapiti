@@ -316,6 +316,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		}
 		src := mustCompile(t, mod, m.class)
 		if m.file == "runtime_helpers" {
+			want = runtimeFixtureResults(t, bin, m.cases)
 			src = runtimeFixtureClass(mod, m.class)
 		}
 		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod))

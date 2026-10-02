@@ -138,6 +138,49 @@ func runtimeFixture() ([]byte, []osdCase) {
 	add64("storef64_bits", cat(i32(64), f64(-13.25), []byte{OpF64Store, 0, 0}, i32(64), []byte{OpI64Load, 0, 0}))
 	add("roundtripf32", cat(i32(64), f32(1.5), []byte{OpF32Store, 0, 0}, i32(64), []byte{OpF32Load, 0, 0}, f32(4), []byte{OpF32Mul, OpI32TruncF32S}))
 	add("roundtripf64", cat(i32(64), f64(1.5), []byte{OpF64Store, 0, 0}, i32(64), []byte{OpF64Load, 0, 0}, f64(4), []byte{OpF64Mul, OpI32TruncF64S}))
+	for _, zero := range []struct {
+		name  string
+		value float64
+	}{{"zero", 0}, {"negative_zero", math.Copysign(0, -1)}} {
+		add("storef32_"+zero.name, cat(i32(64), f32(13.25), []byte{OpF32Store, 0, 0}, i32(64), f32(float32(zero.value)), []byte{OpF32Store, 0, 0}, i32(64), []byte{OpI32Load, 0, 0}))
+		add64("storef64_"+zero.name, cat(i32(64), f64(13.25), []byte{OpF64Store, 0, 0}, i32(64), f64(zero.value), []byte{OpF64Store, 0, 0}, i32(64), []byte{OpI64Load, 0, 0}))
+	}
+	add("reinterpret32_negative_zero", cat(i32(math.MinInt32), []byte{OpF32ReinterpretI32, OpI32ReinterpretF32}))
+	add64("reinterpret64_negative_zero", cat(i64(math.MinInt64), []byte{OpF64ReinterpretI64, OpI64ReinterpretF64}))
+	for j, bits := range []uint32{0x7f800000, 0xff800000, 0x7fc00000, 0xffc00000, 0x7f800001, 0xff800001} {
+		// Truncation also traps in wazero, giving an independent trap oracle
+		// while ABAP must trap earlier, at the load/reinterpret operation.
+		add(fmt.Sprintf("reinterpret32_nonfinite%d", j), cat(i32(int64(int32(bits))), []byte{OpF32ReinterpretI32, OpI32TruncF32S}))
+		add(fmt.Sprintf("loadf32_nonfinite%d", j), cat(i32(64), i32(int64(int32(bits))), []byte{OpI32Store, 0, 0}, i32(64), []byte{OpF32Load, 0, 0, OpI32TruncF32S}))
+	}
+	for j, bits := range []uint64{0x7ff0000000000000, 0xfff0000000000000, 0x7ff8000000000000, 0xfff8000000000000, 0x7ff0000000000001, 0xfff0000000000001} {
+		add(fmt.Sprintf("reinterpret64_nonfinite%d", j), cat(i64(int64(bits)), []byte{OpF64ReinterpretI64, OpI32TruncF64S}))
+		add(fmt.Sprintf("loadf64_nonfinite%d", j), cat(i32(64), i64(int64(bits)), []byte{OpI64Store, 0, 0}, i32(64), []byte{OpF64Load, 0, 0, OpI32TruncF64S}))
+	}
+	for _, n := range []int64{0, 1, 3, 7, 9, 257, 65536} {
+		// Sentinels check both fill boundaries, including the empty range.
+		start := int64(0)
+		if n < 65536 {
+			start = 64
+		}
+		code := cat(i32(start), i32(0x55), []byte{OpI32Store8, 0, 0}, i32(start+n-1), i32(0x55), []byte{OpI32Store8, 0, 0})
+		if n == 0 {
+			code = cat(i32(start), i32(0x55), []byte{OpI32Store8, 0, 0})
+		}
+		if start > 0 {
+			code = cat(code, i32(start-1), i32(0x55), []byte{OpI32Store8, 0, 0}, i32(start+n), i32(0x55), []byte{OpI32Store8, 0, 0})
+		}
+		code = cat(code, i32(start), i32(0x1ab), i32(n), []byte{0xfc, 11, 0})
+		add(fmt.Sprintf("fill%d_first", n), cat(code, i32(start), []byte{OpI32Load8U, 0, 0}))
+		if n > 0 {
+			add(fmt.Sprintf("fill%d_last", n), cat(code, i32(start+n-1), []byte{OpI32Load8U, 0, 0}))
+			add(fmt.Sprintf("fill%d_middle", n), cat(code, i32(start+n/2), []byte{OpI32Load8U, 0, 0}))
+		}
+		if start > 0 {
+			add(fmt.Sprintf("fill%d_before", n), cat(code, i32(start-1), []byte{OpI32Load8U, 0, 0}))
+			add(fmt.Sprintf("fill%d_after", n), cat(code, i32(start+n), []byte{OpI32Load8U, 0, 0}))
+		}
+	}
 	w := newWasmBuilder()
 	w.addSection(1, buildTypeSection([]FuncType{{Results: []ValType{ValI32}}}))
 	w.addSection(3, buildFuncSection(make([]int, len(bodies))))
@@ -167,8 +210,8 @@ func TestRuntimeFixtureCoversEveryHelper(t *testing.T) {
 		}
 	}
 	for i, result := range wazeroResults(t, bin, cases) {
-		if result.trap {
-			t.Errorf("%s unexpectedly traps", cases[i].fn)
+		if wantTrap := strings.Contains(cases[i].fn, "_nonfinite"); result.trap != wantTrap {
+			t.Errorf("%s trap = %v, want %v", cases[i].fn, result.trap, wantTrap)
 		}
 	}
 	checkLineLimit(t, map[string]string{"fixture": src})
@@ -203,4 +246,34 @@ func runtimeFixtureClass(mod *Module, class string) string {
 	end := start + strings.Index(src[start:], "ENDMETHOD.")
 	src = src[:end] + init + src[end:]
 	return wrapLongLines(src)
+}
+
+// ABAP has no portable 7.02/JS sign-bit access for TYPE f zero. Keep the
+// independent IEEE expectations, then explicitly apply only this known gap.
+func runtimeFixtureResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
+	t.Helper()
+	want := wazeroResults(t, bin, cases)
+	for i, c := range cases {
+		if strings.Contains(c.fn, "negative_zero") {
+			ieee := int32(math.MinInt32)
+			if strings.HasSuffix(c.fn, "_lo") {
+				ieee = 0
+			}
+			if want[i].trap || want[i].value != ieee {
+				t.Fatalf("%s: wazero negative zero = %+v, want %d", c.fn, want[i], ieee)
+			}
+			want[i].value = 0
+		}
+	}
+	return want
+}
+
+func TestRuntimeFixtureKnownNegativeZeroGap(t *testing.T) {
+	bin, cases := runtimeFixture()
+	want := runtimeFixtureResults(t, bin, cases)
+	for i, c := range cases {
+		if strings.Contains(c.fn, "negative_zero") && (want[i].trap || want[i].value != 0) {
+			t.Errorf("%s: ABAP zero normalization = %+v", c.fn, want[i])
+		}
+	}
 }

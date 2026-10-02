@@ -120,3 +120,36 @@ func TestGeneratedCodeKernelValid(t *testing.T) {
 		}
 	})
 }
+
+func TestFloatRuntimeZeroStoresAndNonfiniteTraps(t *testing.T) {
+	_, bodies := runtimeTemplates()
+	for _, width := range []string{"32", "64"} {
+		store := bodies["mem_st_f"+width]
+		if strings.Contains(store, "RETURN.") || !strings.Contains(store, "IF lv_mag = 0.\nlv_value = 0.\nELSE.") {
+			t.Errorf("f%s store must write zero without returning: %s", width, store)
+		}
+		for _, name := range []string{"mem_ld_f" + width, "reinterpret_i" + width + "_f" + width} {
+			body := bodies[name]
+			exponent := "255"
+			if width == "64" {
+				exponent = "2047"
+			}
+			guard := "IF lv_exp = " + exponent + ". " + wasmTrap + " ENDIF."
+			guardAt := strings.Index(body, guard)
+			fractionAt := strings.Index(body, "lv_frac = lv_bits MOD")
+			if guardAt < 0 || fractionAt < guardAt {
+				t.Errorf("%s must trap before decoding nonfinite fields: %s", name, body)
+			}
+		}
+	}
+}
+
+func TestMemoryFillBuildsRangeBeforeReplacing(t *testing.T) {
+	_, bodies := runtimeTemplates()
+	body := bodies["mem_fill"]
+	if strings.Count(body, "REPLACE SECTION") != 1 || strings.Contains(body, "DO iv_n TIMES") ||
+		!strings.Contains(body, "CONCATENATE lv_fill lv_fill INTO lv_fill IN BYTE MODE.") ||
+		!strings.Contains(body, "REPLACE SECTION OFFSET iv_dst LENGTH iv_n OF cv_mem WITH lv_fill IN BYTE MODE.") {
+		t.Fatalf("memory.fill must build the range by doubling and replace once: %s", body)
+	}
+}

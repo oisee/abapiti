@@ -38,3 +38,25 @@ where the decision or the evidence lives. Remove a line when it is fixed.
 | Packed is a double; packed to text; decimals of a calculated packed | JS | dell, parked (inbox 002, 012, 013, open-steamgate #500) |
 | `int8 = i * i` computed in a double | JS | dell (inbox 005); abapiti loads one factor into int8 first |
 | Code the kernel rejects but OSG runs (`BIT-AND` on integers, offset writes into an xstring) | osgo, JS | stoker: a `kernel-reject` warning plus `--kernel-strict`; abapiti CI should turn it on |
+
+
+## Floating-point negative zero
+
+The ABAP float encoder normalizes `-0.0` to `+0.0`. This affects
+`f32.store`, `f64.store`, `i32.reinterpret_f32`, and `i64.reinterpret_f64`,
+including zero decoded by loads or integer-to-float reinterpretation.
+ABAP numeric comparisons cannot distinguish the signs of zero. No portable
+sign-bit inspection compatible with both ABAP 7.02 and the abaplint JS runtime
+is implemented. Division by zero, text formatting, newer math APIs, and
+kernel-dependent raw memory casts are not used as sign probes.
+
+The runtime fixture pins the normalization with explicit ABAP expectations
+for negative-zero stores and reinterpretations, while checking wazero's IEEE
+sign-bit expectations independently. Positive-zero stores must overwrite
+previous nonzero bytes in both runtimes.
+
+ABAP `TYPE f` cannot represent NaN or infinity in this project. Float loads
+and integer-to-float reinterpretations trap on any all-ones exponent using
+the same exception as other WASM traps. Fixtures include both signs of
+infinity, quiet NaN, and signaling NaN; subsequent integer truncation makes
+their reference executions trap in wazero as well.

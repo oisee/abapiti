@@ -265,7 +265,9 @@ lv_mag = abs( iv_val ).
 lv_sign = 0.
 IF iv_val < 0. lv_sign = 1. ENDIF.
 lv_exp = 0.
-IF lv_mag = 0. rv = 0. RETURN. ENDIF.
+IF lv_mag = 0.
+rv = 0.
+ELSE.
 WHILE lv_mag >= 2.
 lv_mag = lv_mag / 2.
 lv_exp = lv_exp + 1.
@@ -298,11 +300,13 @@ ENDIF.
 		return body + `lv_hi = lv_exp * 1048576 + lv_frac DIV 4294967296.
 IF lv_sign = 1. lv_hi = lv_hi - 2147483648. ENDIF.
 lv_lo = lv_frac MOD 4294967296.
-rv = lv_hi * 4294967296 + lv_lo.`
+rv = lv_hi * 4294967296 + lv_lo.
+ENDIF.`
 	}
 	return body + `lv_hi = lv_exp * 8388608 + lv_frac.
 IF lv_sign = 1. lv_hi = lv_hi - 2147483648. ENDIF.
-rv = lv_hi.`
+rv = lv_hi.
+ENDIF.`
 }
 
 func floatDecodeBody(is64 bool) string {
