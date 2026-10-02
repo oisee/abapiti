@@ -44,3 +44,38 @@ console run and its tests live in their own test class.
 The console run now also measures W0 (allocation) and W5 (one i32 per 4 KiB
 over the whole memory) at sizes up to 8192 pages (512 MiB); `run_one( )`
 measures one model at one size.
+
+A4H scaling, `run_one( )` per size, each in its own session, microseconds
+(osg-research, 2026-10-02, commit 3eb3796). All checksums correct, no memory
+dumps up to 8192 pages:
+
+| model | pages | W0 | W1 | W2 | W3 | W5 |
+|---|---|---|---|---|---|---|
+| A | 1 | 35 | 19761 | 6252 | 3174 | 30 |
+| A | 16 | 636 | 17121 | 6292 | 3275 | 410 |
+| A | 256 | 8669 | 17093 | 4926 | 1431 | 2859 |
+| A | 1024 | 37204 | 7760 | 2847 | 1432 | 11511 |
+| A | 8192 | 359255 | 7631 | 2836 | 1433 | 92198 |
+| B | 1 | 12 | 30962 | 12159 | 5119 | 45 |
+| B | 16 | 118 | 30118 | 10901 | 5076 | 633 |
+| B | 256 | 1573 | 29591 | 8776 | 2920 | 5870 |
+| B | 1024 | 7006 | 28757 | 5869 | 2953 | 24799 |
+| B | 8192 | 48486 | 13973 | 5825 | 2931 | 201832 |
+
+A's W1-W3 do not grow with the memory size: the kernel replaces a
+same-length section in place. W0 and W5 grow linearly. W1 drops at large
+sizes for both models for a reason not yet understood; single W1 figures at
+small sizes are not precise.
+
+OSD 0.6.1511 (JS), same console run (units as OSD reports them):
+
+| model | pages | W1 | W2 | W3 |
+|---|---|---|---|---|
+| A | 1 | 5467 | 1386 | 691 |
+| A | 4 | 23000 | 4898 | 2845 |
+| A | 16 | 83873 | 16668 | 6467 |
+| B | 1 | 106 | 43 | 19 |
+| B | 1024 | 49 | 8 | (negative) |
+
+On OSD A grows linearly with the size (every write copies the memory).
+Some OSD differences come out negative: its `GET RUN TIME` is unreliable.
