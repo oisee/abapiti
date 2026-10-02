@@ -42,6 +42,7 @@ ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oise
 ## How it's verified
 
 Today: Go unit tests (`go test ./...`), including a native run of the WASM inputs in wazero as the reference; for **add** and **factorial**, the pipeline below runs in CI ([`osd-m1.yml`](.github/workflows/osd-m1.yml)); manual runs on SAP systems are recorded in [`docs/history/`](docs/history/).
+CI (`.github/workflows/ci.yml`, the same checks as vsp's) runs on every pull request and push to main: build, vet, the tests with `-race` and a shuffled order, a clean tree after them, a lint gate on new code, and a leak scan; complexity metrics, a full lint and a "does the new test fail without the fix" check are advisory. One bot comment per pull request (`ci-report.yml`) sums them up, with deltas against main.
 
 The target pipeline, per test case:
 
