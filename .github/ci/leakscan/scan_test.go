@@ -929,3 +929,38 @@ func TestRunControlBytesInAddedLine(t *testing.T) {
 		})
 	}
 }
+
+// Every path a commit touches is published in its diff, not only the ones it
+// adds or renames: a mode-only change, or a plain edit of a file whose name
+// holds a listed name, names that file too.
+func TestRunIdentifierInTouchedPath(t *testing.T) {
+	env := map[string]string{envList: "host: " + hiddenHost}
+	for name, change := range map[string]func(root string, g func(...string) string){
+		"mode only": func(root string, g func(...string) string) {
+			g("update-index", "--chmod=+x", hiddenHost+".txt")
+		},
+		"content modified": func(root string, g func(...string) string) {
+			writeFile(t, filepath.Join(root, hiddenHost+".txt"), "still clean\nand more\n")
+			g("add", ".")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			root, g := newRepo(t)
+			writeFile(t, filepath.Join(root, hiddenHost+".txt"), "clean\n")
+			g("add", ".")
+			g("commit", "-qm", "base two")
+			g("checkout", "-qb", "topic")
+			change(root, g)
+			g("commit", "-qm", "touch it")
+			for _, mode := range [][]string{{"-range", "main..topic"}, {"-diff", "main"}} {
+				code, out, errs := runScan(t, env, append([]string{"-root", root}, mode...)...)
+				if code != exitHits || !strings.Contains(out, "(paths)") || !strings.Contains(out, "identifier/host") {
+					t.Errorf("%v: exit %d, want a path hit\n%s%s", mode, code, out, errs)
+				}
+				if strings.Contains(out+errs, "sapbox") {
+					t.Errorf("%v: the output prints the name\n%s%s", mode, out, errs)
+				}
+			}
+		})
+	}
+}

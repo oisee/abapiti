@@ -482,8 +482,9 @@ func rangeSources(root, rng string) ([]source, error) {
 			}
 			srcs = append(srcs, source{name: name, data: recoded})
 		}
-		// Every path the commit adds, and both names of a rename or copy: a
-		// name is published as much as the bytes behind it.
+		// Every path the commit's diff names (added, deleted, modified, a
+		// mode-only change, both names of a rename or copy): a name is
+		// published as much as the bytes behind it.
 		raw, err := git(root, "show", "--format=", "--no-show-signature",
 			"--raw", "-z", "--no-abbrev", "-M", "-C", "--diff-merges=first-parent", c.full, "--")
 		if err != nil {
@@ -493,7 +494,7 @@ func rangeSources(root, rng string) ([]source, error) {
 		if err != nil {
 			return nil, fmt.Errorf("commit %s: %v", c.short, err)
 		}
-		if paths := addedPaths(entries); len(paths) > 0 {
+		if paths := touchedPaths(entries); len(paths) > 0 {
 			srcs = append(srcs, pathsSource("commit "+c.short, paths))
 		}
 		patch, err := git(root, "-c", "core.quotePath=false", "show", "--format=", "--no-show-signature",
@@ -574,16 +575,15 @@ func parseRaw(out []byte) ([]rawEntry, error) {
 	return entries, nil
 }
 
-// addedPaths is the paths of added files and both names of renames and
-// copies.
-func addedPaths(entries []rawEntry) []string {
+// touchedPaths is every path a commit's diff names, whatever its status:
+// added, deleted, modified, a mode or type change, and both names of a rename
+// or copy. The diff publishes every one of them, a mode-only change included.
+func touchedPaths(entries []rawEntry) []string {
 	var paths []string
 	for _, e := range entries {
-		switch e.status {
-		case 'A':
+		paths = append(paths, e.src)
+		if e.dst != e.src {
 			paths = append(paths, e.dst)
-		case 'R', 'C':
-			paths = append(paths, e.src, e.dst)
 		}
 	}
 	return paths
