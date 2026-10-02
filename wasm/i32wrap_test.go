@@ -41,7 +41,7 @@ func TestI32WrapGeneratedBackends(t *testing.T) {
 					checkI32Sources(t, "hybrid class", map[string]string{"g": result.Files["LZ_I32WRAP_INTGI.abap"]}, fixture.ops, false)
 				}
 			}
-			multi := CompileMultiClass(mod, "z_i32wrap", 80)
+			multi := mustCompileMultiClass(t, mod, "z_i32wrap", 80)
 			checkI32Sources(t, "multi", multi.ChunkClasses, fixture.ops, false)
 			for _, src := range []string{multi.StateClass, multi.MainClass} {
 				for _, op := range []string{"i32_add", "i32_sub", "i32_mul"} {

@@ -113,7 +113,7 @@ func TestBranchLoopCodegen(t *testing.T) {
 			}
 		})
 	}
-	result := CompileMultiClass(mod, "zcl_loop", 2)
+	result := mustCompileMultiClass(t, mod, "zcl_loop", 2)
 	var multi string
 	for _, file := range result.ChunkClasses {
 		multi += file

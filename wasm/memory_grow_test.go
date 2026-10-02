@@ -75,7 +75,7 @@ func TestMemoryGrowGeneration(t *testing.T) {
 				}
 				results[backend.String()] = src.String()
 			}
-			results["multi"] = CompileMultiClass(mod, "zcl_test_mem", 10).StateClass
+			results["multi"] = mustCompileMultiClass(t, mod, "zcl_test_mem", 10).StateClass
 			for name, src := range results {
 				t.Run(name, func(t *testing.T) {
 					for _, needle := range []string{"iv_pages < 0", "rv = -1.", "iv_pages > " + tc.limit + " -", "mem_zero_pages", "DO 8 TIMES.", "DO iv_pages TIMES."} {

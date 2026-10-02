@@ -150,7 +150,7 @@ func TestAllBackendOutputHasNoComments(t *testing.T) {
 					assertNoABAPComments(t, file, src)
 				}
 			}
-			multi := CompileMultiClass(mod, "zcl_comment_test", 80)
+			multi := mustCompileMultiClass(t, mod, "zcl_comment_test", 80)
 			assertNoABAPComments(t, "main", multi.MainClass)
 			assertNoABAPComments(t, "state", multi.StateClass)
 			for file, src := range multi.ChunkClasses {

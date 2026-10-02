@@ -133,7 +133,7 @@ func TestI64WrapGeneratedBackends(t *testing.T) {
 					t.Errorf("missing %s signature", name)
 				}
 			}
-			multi := CompileMultiClass(mod, "z_i64wrap", 80)
+			multi := mustCompileMultiClass(t, mod, "z_i64wrap", 80)
 			called := false
 			for _, src := range multi.ChunkClasses {
 				checkI64Source(t, src)

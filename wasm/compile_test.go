@@ -16,7 +16,7 @@ func TestCompileMultiClassQuickJS(t *testing.T) {
 		t.Fatalf("Parse failed: %v", err)
 	}
 
-	result := CompileMultiClass(mod, "zcl_qjs", DefaultClassLines)
+	result := mustCompileMultiClass(t, mod, "zcl_qjs", DefaultClassLines)
 
 	t.Logf("Stats:")
 	t.Logf("  Total functions:    %d", result.Stats.TotalFunctions)
@@ -38,10 +38,8 @@ func TestCompileMultiClassQuickJS(t *testing.T) {
 	// Write all files for inspection
 	outDir := testOutDir(t)
 
-	os.WriteFile(outDir+"/zcl_qjs.clas.abap", []byte(result.MainClass), 0644)
-	os.WriteFile(outDir+"/zcl_qjs_st.clas.abap", []byte(result.StateClass), 0644)
-	for name, src := range result.ChunkClasses {
-		os.WriteFile(outDir+"/"+name+".clas.abap", []byte(src), 0644)
+	for name, src := range result.Files("zcl_qjs") {
+		os.WriteFile(outDir+"/"+name, []byte(src), 0644)
 	}
 
 	t.Logf("\nWritten to %s/", outDir)

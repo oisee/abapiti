@@ -32,7 +32,7 @@ func TestNoUnknownTrapClass(t *testing.T) {
 				outs[name] = src
 			}
 		}
-		mc := CompileMultiClass(mod, "zcl_trap", 0)
+		mc := mustCompileMultiClass(t, mod, "zcl_trap", 0)
 		outs["multi-main"] = mc.MainClass
 		outs["multi-runtime"] = mc.RuntimeClass
 		for name, src := range mc.ChunkClasses {

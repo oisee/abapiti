@@ -37,6 +37,7 @@ type blockEntry struct {
 
 type compiler struct {
 	splitState      string
+	splitInterface  string
 	chunkAssign     []int
 	chunkIndex      int
 	crossChunkCalls int
@@ -161,7 +162,7 @@ func (c *compiler) emitDefinition() {
 
 func (c *compiler) emitMethodSignature(name string, ft *FuncType, isPublic bool) {
 	kind := "METHODS "
-	if c.splitState != "" {
+	if c.splitState != "" && c.splitInterface == "" {
 		kind = "CLASS-METHODS "
 	}
 	parts := []string{kind + sanitizeABAP(name)}
@@ -251,20 +252,13 @@ func (c *compiler) emitConstructor() {
 // --- Function Code Generation ---
 
 func (c *compiler) emitFunction(name string, f *Function) {
-	c.line("METHOD %s.", sanitizeABAP(name))
+	methodName := sanitizeABAP(name)
+	if iface, method, ok := strings.Cut(name, "~"); ok {
+		methodName = sanitizeABAP(iface) + "~" + sanitizeABAP(method)
+	}
+	c.line("METHOD %s.", methodName)
 	c.indent++
 
-	if c.splitState != "" {
-		c.line("DATA lv_cls TYPE string.")
-		c.line("DATA lv_meth TYPE string.")
-		c.line("DATA ls_ci TYPE %s=>ty_func.", c.splitState)
-		c.line("DATA lv_ci_lookup TYPE i.")
-		if c.mod.NumImportedFuncs > 0 {
-			for _, decl := range []string{"lv_wptr TYPE i", "lv_wlen TYPE i", "lv_wiov TYPE i", "lv_wn TYPE i", "lv_wbytes TYPE xstring"} {
-				c.line("DATA %s.", decl)
-			}
-		}
-	}
 	// Emit chained DATA declaration
 	c.line("%s", emitChainedDATA(f, c.copyParams))
 	if c.copyParams {
@@ -272,6 +266,10 @@ func (c *compiler) emitFunction(name string, f *Function) {
 			if inst.Op == OpCallIndirect {
 				c.line("DATA lv_ci_func TYPE i.")
 				c.line("DATA lv_ci_index TYPE i.")
+				if c.splitState != "" {
+					c.line("DATA ls_ci TYPE %s=>ty_func.", c.splitState)
+					c.line("DATA lv_ci_lookup TYPE i.")
+				}
 				break
 			}
 		}
@@ -1202,18 +1200,13 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 	}
 
 	if c.splitState != "" {
-		name = fmt.Sprintf("f%d", localIdx)
+		name = c.splitInterface + "~" + fmt.Sprintf("f%d", localIdx)
 		if c.chunkAssign[localIdx] != c.chunkIndex {
-			c.line("READ TABLE %s=>mt_funcs INDEX %d INTO ls_ci.", c.splitState, funcIndex+1)
-			result := ""
-			if len(target.Type.Results) > 0 {
-				result = stack.push()
-			}
-			c.emitDynamicCall(args, result)
+			name = fmt.Sprintf("%s=>go_c%02d->f%d", c.splitState, c.chunkAssign[localIdx]+1, localIdx)
 			c.crossChunkCalls++
-			return
 		}
 	}
+
 	if c.useFUGR {
 		// PERFORM-based call
 		if len(target.Type.Results) > 0 {
@@ -1310,7 +1303,7 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 		if len(ft.Results) > 0 {
 			result = stack.push()
 		}
-		c.emitDynamicCall(args, result)
+		c.emitStaticSplitCall(fmt.Sprintf("%s=>dispatch_s%d", c.splitState, sig), append([]string{"ls_ci-fid"}, args...), result, true)
 		c.indirectCalls++
 		return
 	}
@@ -1346,7 +1339,15 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 		if len(imp.Type.Results) > 0 {
 			result = stack.push()
 		}
-		c.emitSplitWASI(imp, args, result)
+		var params []string
+		for i, a := range args {
+			params = append(params, fmt.Sprintf("p%d = %s", i, a))
+		}
+		prefix := ""
+		if result != "" {
+			prefix = result + " = "
+		}
+		c.line("%s%s=>imp%d( %s ).", prefix, c.splitState, imp.FuncIndex, strings.Join(params, " "))
 		return
 	}
 	mem := c.memVar()

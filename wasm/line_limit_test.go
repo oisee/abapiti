@@ -80,11 +80,8 @@ func forEachBackend(t *testing.T, check func(t *testing.T, files map[string]stri
 				})
 			}
 			t.Run("multi-class", func(t *testing.T) {
-				result := CompileMultiClass(m.mod, "zcl_line_limit", 80)
-				files := map[string]string{"main.clas.abap": result.MainClass, "runtime.clas.abap": result.RuntimeClass}
-				for name, src := range result.ChunkClasses {
-					files[name+".clas.abap"] = src
-				}
+				result := mustCompileMultiClass(t, m.mod, "zcl_line_limit", 80)
+				files := result.Files("zcl_line_limit")
 				check(t, files)
 			})
 		})

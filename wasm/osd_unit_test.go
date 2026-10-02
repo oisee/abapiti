@@ -12,6 +12,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
 // osdCase is one call of an exported WASM function. The expected value is not
@@ -120,6 +121,7 @@ var osdModules = []struct {
 		{"mul", []int32{-7, 3}},
 		{"mul", []int32{-7, 0}},
 	}},
+	{"importsplit", "zcl_abapiti_importsplit", []osdCase{{"call", []int32{1, 0, 4}}, {"sizes", []int32{0, 4}}, {"direct", []int32{0, 4}}, {"call", []int32{0, 0, 4}}, {"call", []int32{2, 0, 4}}}},
 	{"directsplit", "zcl_abapiti_directsplit", []osdCase{{"call", []int32{10}}, {"call", []int32{-5}}, {"call", []int32{2147483647}}}},
 	// Last: compileCFixture skips the whole test when clang is missing (as on
 	// the OSD runner), so no module after it would be generated there.
@@ -150,6 +152,7 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
 	ctx := context.Background()
 	rt := wazero.NewRuntime(ctx)
 	defer rt.Close(ctx)
+	wasi_snapshot_preview1.MustInstantiate(ctx, rt)
 	mod, err := rt.Instantiate(ctx, bin)
 	if err != nil {
 		t.Fatalf("wazero instantiate: %v", err)
@@ -157,6 +160,12 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
 	out := make([]osdResult, len(cases))
 	for i, c := range cases {
 		fn := mod.ExportedFunction(c.fn)
+		// Wazero invokes a re-exported host function without the guest memory.
+		// The import fixture's direct WASM trampoline calls the identical import
+		// with guest context; use it as the oracle for the facade re-export.
+		if c.fn == "sizes" {
+			fn = mod.ExportedFunction("direct")
+		}
 		if fn == nil {
 			t.Fatalf("%s not exported", c.fn)
 		}
@@ -238,12 +247,19 @@ func osdTestClass(class string, cases []osdCase, want []osdResult) string {
 // sets ABAPITI_TEST_OUT, deploys the files and runs the tests.
 func TestOSD_EmitUnitClasses(t *testing.T) {
 	dir := testOutDir(t)
+	// Both CI backends consume these same forced-split fixtures.
+	splitDir := filepath.Join(dir, "split")
+	if err := os.MkdirAll(splitDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 	for _, m := range osdModules {
 		var bin []byte
 		var err error
 		switch m.file {
 		case "i32wrap":
 			bin = buildI32WrapModule()
+		case "importsplit":
+			bin = buildSplitImportModule()
 		case "directsplit":
 			bin = buildDirectSplitModule()
 		case "branches":
@@ -273,18 +289,20 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			t.Fatalf("parse %s: %v", m.file, err)
 		}
 		want := wazeroResults(t, bin, m.cases)
-		src := Compile(mod, m.class)
-		tests := osdTestClass(m.class, m.cases, want)
-		checkTestClass(t, m.class, tests, want)
-		for name, body := range map[string]string{
-			m.class + ".clas.abap":             src,
-			m.class + ".clas.testclasses.abap": tests,
-		} {
-			if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
-				t.Fatal(err)
+		if m.file != "importsplit" {
+			src := Compile(mod, m.class)
+			tests := osdTestClass(m.class, m.cases, want)
+			checkTestClass(t, m.class, tests, want)
+			for name, body := range map[string]string{
+				m.class + ".clas.abap":             src,
+				m.class + ".clas.testclasses.abap": tests,
+			} {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
-		if m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
+		if m.file == "importsplit" || m.file == "i32wrap" || m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
 			splitName := strings.Replace(m.class, "zcl_abapiti_", "zcl_split_", 1)
 			budget := 200
 			if m.file == "callind" {
@@ -293,13 +311,13 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			if m.file == "directsplit" {
 				budget = 40
 			}
-			split := CompileMultiClass(mod, splitName, budget)
+			split := mustCompileMultiClass(t, mod, splitName, budget)
 			files := split.Files(splitName)
 			splitTests := osdTestClass(splitName, m.cases, want)
 			checkTestClass(t, splitName, splitTests, want)
 			files[splitName+".clas.testclasses.abap"] = splitTests
 			for name, body := range files {
-				if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0644); err != nil {
+				if err := os.WriteFile(filepath.Join(splitDir, name), []byte(body), 0644); err != nil {
 					t.Fatal(err)
 				}
 			}
