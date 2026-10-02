@@ -292,7 +292,7 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			// nothing
 
 		case OpUnreachable:
-			c.line("RAISE EXCEPTION TYPE cx_sy_program_error. \" unreachable")
+			c.line(wasmTrap)
 
 		// Constants
 		case OpI32Const:
@@ -653,16 +653,16 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("CATCH cx_root. \" wasm catch")
 			c.indent++
 		case OpThrow:
-			c.line("RAISE EXCEPTION TYPE cx_sy_program_error. \" wasm throw")
+			c.line(wasmTrap)
 		case OpRethrow:
-			c.line("RAISE EXCEPTION TYPE cx_sy_program_error. \" wasm rethrow")
+			c.line(wasmTrap)
 		case OpDelegate:
 			c.indent--
 			c.line("ENDTRY. \" delegate")
 
 		// SIMD — stub as trap (QuickJS shouldn't hit these in normal execution)
 		case OpSIMDPrefix:
-			c.line("RAISE EXCEPTION TYPE cx_sy_program_error. \" SIMD not supported")
+			c.line(wasmTrap)
 
 		// i64 arithmetic (same patterns as i32 — ABAP INT8 handles it)
 		case OpI64Add:

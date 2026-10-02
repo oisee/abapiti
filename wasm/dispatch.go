@@ -11,6 +11,11 @@ import (
 // says what happened: a dynamic call to a method that cannot be called.
 const callIndirectTrap = "RAISE EXCEPTION TYPE cx_sy_dyn_call_illegal_method."
 
+// wasmTrap is raised for every other WASM trap (unreachable, throw, rethrow,
+// unsupported SIMD). It is the same class as callIndirectTrap: the one trap
+// class known to exist and be raisable both on SAP and on open-steamgate.
+const wasmTrap = callIndirectTrap
+
 // nullFuncRef marks a table slot no element segment initialises. No function
 // has this index, so dispatching it reaches WHEN OTHERS and traps.
 const nullFuncRef = -1
