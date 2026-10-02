@@ -8,8 +8,9 @@ import (
 	"testing"
 )
 
-// buildSpecialFloatModule includes direct constants and constant bit patterns
-// reinterpreted as floats. Each exported function returns signed trunc_sat.
+// buildSpecialFloatModule includes direct constants, constant reinterpret pairs,
+// and runtime reinterpret inputs (nop, local, and computed bit patterns).
+// Each exported function returns signed trunc_sat.
 func buildSpecialFloatModule() ([]byte, []osdCase) {
 	w := newWasmBuilder()
 	w.addSection(1, buildTypeSection([]FuncType{{Results: []ValType{ValI32}}}))
@@ -18,13 +19,23 @@ func buildSpecialFloatModule() ([]byte, []osdCase) {
 	var bodies [][]byte
 	var cases []osdCase
 	for _, bits := range []int{32, 64} {
-		for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
-			for _, reinterpret := range []bool{false, true} {
+		for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(math.NaN(), -1)} {
+			for mode := 0; mode < 5; mode++ {
+				var locals []ValType
 				var code []byte
 				if bits == 32 {
 					pattern := math.Float32bits(float32(value))
-					if reinterpret {
+					if mode != 0 {
 						code = append([]byte{OpI32Const}, leb128s(int32(pattern))...)
+						switch mode {
+						case 2:
+							code = append(code, OpNop)
+						case 3:
+							locals = []ValType{ValI32}
+							code = append(code, OpLocalSet, 0, OpLocalGet, 0)
+						case 4:
+							code = append(code, OpI32Const, 0, OpI32Xor)
+						}
 						code = append(code, OpF32ReinterpretI32)
 					} else {
 						code = binary.LittleEndian.AppendUint32([]byte{OpF32Const}, pattern)
@@ -32,7 +43,7 @@ func buildSpecialFloatModule() ([]byte, []osdCase) {
 					code = append(code, OpMiscPrefix, 0)
 				} else {
 					pattern := math.Float64bits(value)
-					if reinterpret {
+					if mode != 0 {
 						code = []byte{OpI64Const}
 						v := int64(pattern)
 						for {
@@ -44,6 +55,15 @@ func buildSpecialFloatModule() ([]byte, []osdCase) {
 							}
 							code = append(code, b|0x80)
 						}
+						switch mode {
+						case 2:
+							code = append(code, OpNop)
+						case 3:
+							locals = []ValType{ValI64}
+							code = append(code, OpLocalSet, 0, OpLocalGet, 0)
+						case 4:
+							code = append(code, OpI64Const, 0, OpI64Xor)
+						}
 						code = append(code, OpF64ReinterpretI64)
 					} else {
 						code = binary.LittleEndian.AppendUint64([]byte{OpF64Const}, pattern)
@@ -53,7 +73,7 @@ func buildSpecialFloatModule() ([]byte, []osdCase) {
 				name := fmt.Sprintf("special%d", len(bodies))
 				exports = append(exports, Export{Name: name, Index: len(bodies)})
 				types = append(types, 0)
-				bodies = append(bodies, buildFuncBody(nil, code))
+				bodies = append(bodies, buildFuncBody(locals, code))
 				cases = append(cases, osdCase{fn: name})
 			}
 		}
@@ -75,6 +95,7 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	redirects := DeduplicateFunctions(mod)
 	check := func(t *testing.T, files map[string]string) {
 		t.Helper()
 		src := ""
@@ -82,14 +103,18 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 			src += file + "\n"
 		}
 		flat := strings.Join(strings.Fields(src), " ")
-		for _, tc := range cases {
+		for i, tc := range cases {
+			name := tc.fn
+			if canonical, ok := redirects[i]; ok {
+				name = cases[canonical].fn
+			}
 			// Prefer the implementation FORM over the hybrid class wrapper.
 			// The leading space avoids matching a PERFORM call.
-			start := strings.Index(flat, " FORM "+tc.fn+" ")
+			start := strings.Index(flat, " FORM "+name+" ")
 			if start >= 0 {
 				start++
 			} else {
-				start = strings.Index(flat, "METHOD "+tc.fn+".")
+				start = strings.Index(flat, "METHOD "+name+".")
 			}
 			if start < 0 {
 				t.Fatalf("missing function %s", tc.fn)
@@ -102,7 +127,12 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 			body = body[:end]
 			trap := strings.Index(body, wasmTrap)
 			conversion := strings.Index(body, " <> ")
-			if trap < 0 || conversion < trap || strings.Contains(body, "reinterpret_") ||
+			runtimeInput := i%5 >= 2
+			if runtimeInput {
+				if !strings.Contains(body, "reinterpret_") || trap >= 0 {
+					t.Fatalf("%s must use the runtime reinterpret check: %s", tc.fn, body)
+				}
+			} else if trap < 0 || conversion < trap || strings.Contains(body, "reinterpret_") ||
 				strings.Contains(body, "'NaN'") || strings.Contains(body, "'Inf'") || strings.Contains(body, "'+Inf'") || strings.Contains(body, "'-Inf'") {
 				t.Fatalf("%s must trap before trunc_sat: %s", tc.fn, body)
 			}
@@ -124,7 +154,7 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 	// in wazero, whereas every ABAP case must trap while constructing the float.
 	results := wazeroResults(t, bin, cases)
 	for i, got := range results {
-		want := []int32{0, 0, math.MaxInt32, math.MaxInt32, math.MinInt32, math.MinInt32}[i%6]
+		want := []int32{0, math.MaxInt32, math.MinInt32, 0}[(i/5)%4]
 		if got.trap || got.value != want {
 			t.Fatalf("%s: WASM got %v, want %d", cases[i].fn, got, want)
 		}
@@ -178,5 +208,41 @@ func TestSpecialFloatTrapStaysOnPath(t *testing.T) {
 		if branch < 0 || trap < branch || otherwise < trap || strings.Count(body, wasmTrap) != 1 {
 			t.Fatalf("constant must trap only inside its branch, even when dropped: %s", body)
 		}
+	}
+}
+
+func TestRuntimeReinterpretExponentCheck(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		input  ValType
+		output ValType
+		op     byte
+		mask   string
+	}{
+		{"reinterpret_i32_f32", ValI32, ValF32, OpF32ReinterpretI32, "7F800000"},
+		{"reinterpret_i64_f64", ValI64, ValF64, OpF64ReinterpretI64, "7FF0000000000000"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bin := buildSingleFuncWasm("reinterpret", FuncType{Params: []ValType{tc.input}, Results: []ValType{tc.output}}, nil,
+				[]byte{OpLocalGet, 0, tc.op})
+			mod, err := Parse(bin)
+			if err != nil {
+				t.Fatal(err)
+			}
+			multi := mustCompileMultiClass(t, mod, "zcl_reinterpret", 80)
+			for _, src := range []string{compileClass(t, bin, "zcl_reinterpret"), multi.RuntimeClass} {
+				flat := strings.Join(strings.Fields(src), " ")
+				start := strings.Index(flat, "METHOD "+tc.name+".")
+				if start < 0 {
+					t.Fatal("missing runtime helper")
+				}
+				body := flat[start:]
+				body = body[:strings.Index(body, "ENDMETHOD.")]
+				guard := "lv_bits = iv_val. lv_bits = lv_bits BIT-AND lv_mask. IF lv_bits = lv_mask. " + wasmTrap + " ENDIF. rv = iv_val."
+				if !strings.Contains(body, "VALUE '"+tc.mask+"'.") || !strings.Contains(body, guard) || parameterWrite.MatchString(body) {
+					t.Fatalf("helper must mask exponent and trap before numeric assignment: %s", body)
+				}
+			}
+		})
 	}
 }

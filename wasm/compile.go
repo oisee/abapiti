@@ -642,9 +642,27 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     IF iv_sign < 0. rv = - rv. ENDIF.
   ENDMETHOD.
   METHOD reinterpret_f32_i32. rv = iv_val. ENDMETHOD.
-  METHOD reinterpret_i32_f32. rv = iv_val. ENDMETHOD.
+  METHOD reinterpret_i32_f32.
+    DATA lv_bits TYPE x LENGTH 4.
+    DATA lv_mask TYPE x LENGTH 4 VALUE '7F800000'.
+    lv_bits = iv_val.
+    lv_bits = lv_bits BIT-AND lv_mask.
+    IF lv_bits = lv_mask.
+      ` + wasmTrap + `
+    ENDIF.
+    rv = iv_val.
+  ENDMETHOD.
   METHOD reinterpret_f64_i64. rv = iv_val. ENDMETHOD.
-  METHOD reinterpret_i64_f64. rv = iv_val. ENDMETHOD.
+  METHOD reinterpret_i64_f64.
+    DATA lv_bits TYPE x LENGTH 8.
+    DATA lv_mask TYPE x LENGTH 8 VALUE '7FF0000000000000'.
+    lv_bits = iv_val.
+    lv_bits = lv_bits BIT-AND lv_mask.
+    IF lv_bits = lv_mask.
+      ` + wasmTrap + `
+    ENDIF.
+    rv = iv_val.
+  ENDMETHOD.
 
   " === Memory i64/f32/f64 ===
   METHOD mem_ld_i64.

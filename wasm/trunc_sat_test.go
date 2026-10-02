@@ -20,10 +20,30 @@ var truncSatInputs = []float64{
 	math.MaxFloat32, -math.MaxFloat32,
 }
 
+// Generate neighbours in the source precision so narrowing cannot collapse
+// an f32 neighbour onto the boundary. Include both signs and both directions.
+func truncSatBoundaryInputs(f32 bool) []float64 {
+	var inputs []float64
+	for _, exponent := range []int{31, 32, 63, 64} {
+		for _, sign := range []float64{1, -1} {
+			bound := sign * math.Ldexp(1, exponent)
+			if f32 {
+				inputs = append(inputs,
+					float64(math.Nextafter32(float32(bound), float32(math.Inf(-1)))),
+					bound,
+					float64(math.Nextafter32(float32(bound), float32(math.Inf(1)))))
+			} else {
+				inputs = append(inputs, math.Nextafter(bound, math.Inf(-1)), bound, math.Nextafter(bound, math.Inf(1)))
+			}
+		}
+	}
+	return inputs
+}
+
 func buildTruncSatModule(special bool) ([]byte, []osdCase, []int32) {
-	inputs := append([]float64(nil), truncSatInputs...)
+	baseInputs := append([]float64(nil), truncSatInputs...)
 	if special {
-		inputs = append(inputs, math.NaN(), math.Inf(1), math.Inf(-1))
+		baseInputs = append(baseInputs, math.NaN(), math.Inf(1), math.Inf(-1))
 	}
 	w := newWasmBuilder()
 	w.addSection(1, buildTypeSection([]FuncType{{Results: []ValType{ValI32}}}))
@@ -33,6 +53,7 @@ func buildTruncSatModule(special bool) ([]byte, []osdCase, []int32) {
 	var cases []osdCase
 	var expected []int32
 	for op := byte(0); op < 8; op++ {
+		inputs := append(append([]float64(nil), baseInputs...), truncSatBoundaryInputs(op&2 == 0)...)
 		for i, input := range inputs {
 			value := input
 			var code []byte
