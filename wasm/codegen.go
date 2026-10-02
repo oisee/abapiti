@@ -12,7 +12,7 @@ func Compile(mod *Module, className string) string {
 		mod:       mod,
 		className: className,
 	}
-	return c.emit()
+	return wrapLongLines(c.emit())
 }
 
 // blockKind tracks what ABAP construct a WASM block maps to.

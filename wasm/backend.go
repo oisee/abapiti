@@ -81,6 +81,10 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 		emitHybrid(mod, name, funcsPerInclude, redirects, result)
 	}
 
+	for fname, src := range result.Files {
+		result.Files[fname] = wrapLongLines(src)
+	}
+
 	// Compute stats
 	for fname, src := range result.Files {
 		lines := strings.Count(src, "\n")

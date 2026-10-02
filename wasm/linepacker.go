@@ -36,6 +36,11 @@ func (lp *linePacker) add(stmt string) {
 		return
 	}
 
+	// Nothing may follow an end-of-line comment: it would become comment text.
+	if commentStart(stmt) >= 0 {
+		defer lp.flush()
+	}
+
 	indentLen := len(sourceIndent(lp.indent))
 	stmtLen := len(stmt)
 
@@ -112,4 +117,142 @@ func mustOwnLine(stmt string) bool {
 		}
 	}
 	return false
+}
+
+// commentStart returns the byte offset where a comment begins in an ABAP source
+// line (a `*` in column 1 or a `"` outside a literal), or -1 if there is none.
+func commentStart(line string) int {
+	if strings.HasPrefix(line, "*") {
+		return 0
+	}
+	var quote byte // the open literal's delimiter, 0 outside literals
+	for i := 0; i < len(line); i++ {
+		ch := line[i]
+		switch {
+		case quote == '|' && ch == '\\':
+			i++ // escaped character in a string template
+		case quote != 0:
+			// A doubled delimiter is an escaped one and keeps the literal open.
+			if ch == quote {
+				quote = 0
+			}
+		case ch == '\'' || ch == '`' || ch == '|':
+			quote = ch
+		case ch == '"':
+			return i
+		}
+	}
+	return -1
+}
+
+// abapLineLimit is the longest source line ADT accepts.
+const abapLineLimit = 255
+
+// wrapLongLines splits every line over abapLineLimit at token boundaries.
+// ABAP lets a newline stand between any two tokens, so long statements such
+// as parameter lists of METHODS, FORM, calls and PERFORM continue on indented
+// lines. Literals are never split and a trailing comment stays last.
+func wrapLongLines(src string) string {
+	if !hasLongLine(src) {
+		return src
+	}
+	lines := strings.SplitAfter(src, "\n")
+	var sb strings.Builder
+	sb.Grow(len(src) + len(src)/64)
+	for _, line := range lines {
+		body := strings.TrimSuffix(line, "\n")
+		if len(body) <= abapLineLimit {
+			sb.WriteString(line)
+			continue
+		}
+		wrapLine(&sb, body)
+		if strings.HasSuffix(line, "\n") {
+			sb.WriteByte('\n')
+		}
+	}
+	return sb.String()
+}
+
+func hasLongLine(src string) bool {
+	for len(src) > 0 {
+		n := strings.IndexByte(src, '\n')
+		if n < 0 {
+			n = len(src)
+		}
+		if n > abapLineLimit {
+			return true
+		}
+		src = src[min(n+1, len(src)):]
+	}
+	return false
+}
+
+// wrapLine writes one over-long line as several, without its final newline.
+// Byte length bounds the UTF-16 length ABAP counts, so a fit here is a fit there.
+func wrapLine(sb *strings.Builder, line string) {
+	comment := commentStart(line)
+	if comment == 0 {
+		sb.WriteString(line) // full-line comment: nothing to wrap
+		return
+	}
+	indent := line[:len(line)-len(strings.TrimLeft(line, " "))]
+	cont := indent + "    "
+	// Break candidates: spaces outside literals, up to the comment start.
+	end := len(line)
+	if comment > 0 {
+		end = comment
+	}
+	var breaks []int
+	var quote byte
+	for i := len(indent); i < end; i++ {
+		ch := line[i]
+		switch {
+		case quote == '|' && ch == '\\':
+			i++
+		case quote != 0:
+			if ch == quote {
+				quote = 0
+			}
+		case ch == '\'' || ch == '`' || ch == '|':
+			quote = ch
+		case ch == ' ':
+			breaks = append(breaks, i)
+		}
+	}
+	start, prefix := len(indent), indent
+	for len(prefix)+len(line)-start > maxLineLen {
+		// The furthest break that keeps this segment within the target width.
+		best := -1
+		for _, b := range breaks {
+			if b <= start {
+				continue
+			}
+			if len(prefix)+b-start > maxLineLen {
+				break
+			}
+			best = b
+		}
+		if best < 0 {
+			// No break fits: take the next one, the segment stays long.
+			for _, b := range breaks {
+				if b > start {
+					best = b
+					break
+				}
+			}
+			if best < 0 {
+				break
+			}
+		}
+		sb.WriteString(prefix)
+		sb.WriteString(strings.TrimRight(line[start:best], " "))
+		sb.WriteByte('\n')
+		start = best
+		for start < len(line) && line[start] == ' ' {
+			start++
+		}
+		prefix = cont
+	}
+	sb.WriteString(prefix)
+	sb.WriteString(line[start:])
 }
