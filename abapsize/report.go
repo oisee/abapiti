@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"unicode/utf8"
+	"unicode/utf16"
 )
 
 const MaxLineLength = 255
@@ -57,15 +57,15 @@ func Report(files map[string]string) ReportResult {
 		f.Lines = len(lines)
 		routine := 0
 		for i, line := range lines {
-			length := utf8.RuneCountInString(strings.TrimSuffix(line, "\r"))
+			length := LineLength(strings.TrimSuffix(line, "\r"))
 			if length > f.MaxLineLength {
 				f.MaxLineLength = length
 			}
 			if length > MaxLineLength {
 				r.LongLines = append(r.LongLines, LineError{name, i + 1, length})
 			}
-			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "METHOD ") || strings.HasPrefix(trimmed, "FORM ") {
+			starts, ends := routineBounds(line)
+			if starts {
 				f.Routines++
 				routine = 1
 			} else if routine > 0 {
@@ -74,7 +74,7 @@ func Report(files map[string]string) ReportResult {
 			if routine > f.LongestRoutine {
 				f.LongestRoutine = routine
 			}
-			if trimmed == "ENDMETHOD." || trimmed == "ENDFORM." {
+			if ends {
 				routine = 0
 			}
 		}
@@ -82,6 +82,39 @@ func Report(files map[string]string) ReportResult {
 	}
 	return r
 }
+
+// routineBounds reports whether a line opens a METHOD/FORM and whether it
+// closes one, ignoring case and comments; both can hold for a one-line routine.
+func routineBounds(line string) (starts, ends bool) {
+	if strings.HasPrefix(line, "*") {
+		return false, false
+	}
+	if i := strings.IndexByte(line, '"'); i >= 0 {
+		line = line[:i] // approximate: generated code has no '"' inside literals here
+	}
+	fields := strings.Fields(strings.ToUpper(line))
+	if len(fields) == 0 {
+		return false, false
+	}
+	starts = fields[0] == "METHOD" || fields[0] == "FORM"
+	for _, f := range fields {
+		if f == "ENDMETHOD." || f == "ENDFORM." {
+			ends = true
+		}
+	}
+	return starts, ends
+}
+
+// LineLength is a line's length as ABAP counts it: UTF-16 code units, so a
+// character outside the BMP (such as an emoji) counts twice.
+func LineLength(line string) int {
+	n := 0
+	for _, r := range line {
+		n += utf16.RuneLen(r)
+	}
+	return n
+}
+
 func (r ReportResult) Errors() []string {
 	out := make([]string, 0, len(r.LongLines))
 	for _, e := range r.LongLines {
