@@ -17,7 +17,8 @@ import (
 // osdCase is one call of an exported WASM function. The expected value is not
 // written here: it is computed by running the same .wasm in wazero, so the
 // generated ABAP Unit test checks the ABAP against an independent engine.
-// When wazero traps, the ABAP call must raise an exception.
+// When wazero traps, the ABAP call must raise an exception. Non-finite float
+// constants have explicit ABAP trap expectations because TYPE f cannot hold them.
 type osdCase struct {
 	fn   string
 	args []int32
@@ -104,6 +105,7 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{1, 32}},
 	}},
 	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases()},
+	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases()},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
 	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
 		{"add", []int32{2147483647, 1}},
@@ -256,6 +258,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = compileCFixture(t, "../llvm/testdata/corpus.c")
 		case "callind":
 			bin = buildCallIndirectModule()
+		case "floattrap":
+			bin, _ = buildSpecialFloatModule()
 		case "truncsat":
 			bin, _, _ = buildTruncSatModule(false)
 		case "i64wrap":
@@ -273,6 +277,13 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			t.Fatalf("parse %s: %v", m.file, err)
 		}
 		want := wazeroResults(t, bin, m.cases)
+		if m.file == "floattrap" {
+			// WASM supports NaN/Inf (NaN trunc_sat returns zero), but ABAP
+			// traps at their construction, before the conversion can run.
+			for i := range want {
+				want[i] = osdResult{trap: true}
+			}
+		}
 		src := mustCompile(t, mod, m.class)
 		tests := osdTestClass(m.class, m.cases, want)
 		checkTestClass(t, m.class, tests, want)

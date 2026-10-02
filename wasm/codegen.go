@@ -2,6 +2,7 @@ package wasm
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -310,10 +311,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %d.", v, inst.I64Value)
 		case OpF32Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, floatLiteral(float64(inst.F32Value), 32))
+			c.emitFloatConst(v, float64(inst.F32Value), 32)
 		case OpF64Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, floatLiteral(inst.F64Value, 64))
+			c.emitFloatConst(v, inst.F64Value, 64)
 
 		// Local/Global access
 		case OpLocalGet:
@@ -839,7 +840,9 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			r := stack.push()
 			c.line("IF %s >= %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, r, r)
 
-		// f32 arithmetic
+		// f32 arithmetic uses ABAP TYPE f (double precision), like all f32 producers.
+		// Results are not rounded to IEEE f32; this pre-existing model limitation
+		// can affect trunc_sat near boundaries (2147483520 + 64 is one example).
 		case OpF32Add:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
@@ -1034,7 +1037,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpF32ReinterpretI32:
 			a := stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>reinterpret_i32_f32( %s ).", r, a)
+			if i > 0 && code[i-1].Op == OpI32Const && nonFiniteFloat(float64(math.Float32frombits(uint32(code[i-1].I32Value)))) {
+				c.line(wasmTrap)
+			} else {
+				c.line("%s = zcl_wasm_rt=>reinterpret_i32_f32( %s ).", r, a)
+			}
 		case OpI64ReinterpretF64:
 			a := stack.pop()
 			r := stack.push()
@@ -1042,7 +1049,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpF64ReinterpretI64:
 			a := stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>reinterpret_i64_f64( %s ).", r, a)
+			if i > 0 && code[i-1].Op == OpI64Const && nonFiniteFloat(math.Float64frombits(uint64(code[i-1].I64Value))) {
+				c.line(wasmTrap)
+			} else {
+				c.line("%s = zcl_wasm_rt=>reinterpret_i64_f64( %s ).", r, a)
+			}
 
 		// Sign extension
 		case OpI32Extend8S:
@@ -1835,6 +1846,20 @@ func (c *compiler) flushPacker() {
 // maxFloatLiteral is the longest fixed-point float literal kept as is; longer
 // ones (magnitudes near 1e200 and above) could not fit an ABAP line.
 const maxFloatLiteral = 200
+
+// ABAP TYPE f cannot represent NaN or infinity. Trap when the constant is
+// pushed, so only execution of that path raises the usual WASM exception.
+func (c *compiler) emitFloatConst(slot string, value float64, bits int) {
+	if nonFiniteFloat(value) {
+		c.line(wasmTrap)
+		return
+	}
+	c.line("%s = '%s'.", slot, floatLiteral(value, bits))
+}
+
+func nonFiniteFloat(value float64) bool {
+	return math.IsNaN(value) || math.IsInf(value, 0)
+}
 
 // floatLiteral preserves the fixed-point spelling when it round-trips.
 // Longer literals use exponent notation to fit the ABAP line limit.

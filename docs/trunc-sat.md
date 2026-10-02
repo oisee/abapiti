@@ -6,18 +6,21 @@ Unsigned results use signed integer bit patterns: the upper half of the range su
 stack slot before assignment to `i` or `int8`. Saturated i64 endpoints are
 assigned from integer literals so that the maximum does not round to 2^63.
 
-Generated conversions test `value <> value` first and return zero for NaN if
-the host float representation supports it. Comparisons would clamp positive
-and negative infinity to the appropriate endpoint. However, the existing
-constant emitter writes `NaN`, `+Inf`, and `-Inf` as quoted numeric strings;
-these are not portable ABAP float literals and can fail during assignment,
-before the conversion executes. The existing `f64.reinterpret_i64` and
-`f32.reinterpret_i32` helpers perform numeric assignments rather than IEEE bit
-reinterpretation, so they cannot construct these special values either.
-This change does not claim portable ABAP NaN/Inf construction. Those cases
-remain Go-only, using hand-assembled WASM executed by wazero. Finite edge cases
-for every opcode, including both halves of each i64 result, are emitted by
-`TestOSD_EmitUnitClasses` for osgo and OSD, with expected values from wazero.
+ABAP `TYPE f` cannot represent NaN or infinity. Non-finite f32/f64 constants
+emit the standard WASM trap at the point where the float is pushed, so only
+execution of that path traps. Direct integer constant/reinterpret pairs with
+NaN or infinity bit patterns also emit that trap. Other reinterpret inputs
+still use the existing helpers, which perform numeric assignments rather than
+IEEE bit reinterpretation. An OSD fixture explicitly expects construction to
+trap, including a function returning `trunc_sat(NaN)`; this differs from WASM,
+where that conversion returns zero.
+
+The pre-existing f32 model computes in double precision without rounding each
+producer to f32. For example, `2147483520 + 64` followed by signed i32 trunc_sat
+returns 2147483584 in generated ABAP, versus 2147483647 in WASM. A Go test pins
+this known gap; f32 precision is outside this change's scope. Finite edge cases
+for every opcode, including both halves of each i64 result, remain emitted by
+`TestOSD_EmitUnitClasses` for all targets, with expected values from wazero.
 
 `Compile`, `CompileWith`, and `CompileMultiClass` now return an error alongside
 their output. Unsupported instructions, including SIMD and atomic prefixes,
