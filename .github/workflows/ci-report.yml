@@ -46,10 +46,13 @@ jobs:
       # old commit must not overwrite a newer report. The base is the last
       # green push run on the pull request's base branch.
       #
-      # The report is always about the CI run on the commit. When OSD M1 is
-      # what finished, the CI run on the same commit is looked up; if it has
-      # not finished yet, its own completion writes the report (and picks up
-      # the OSD row then), so nothing is written now.
+      # The report is always about the newest CI run on the commit, at its
+      # newest attempt. A run that is not the newest (a re-run of CI or OSD M1
+      # on the same commit started since) writes nothing: the newer one's own
+      # completion writes the report, so a late, older run cannot overwrite a
+      # newer report. When OSD M1 is what finished, the CI run is looked up; if
+      # it has not finished yet, its own completion writes the report (and
+      # picks up the OSD row then), so nothing is written now.
       - name: Find the pull request and the base run
         id: find
         uses: actions/github-script@v7
@@ -57,18 +60,27 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const trigger = context.payload.workflow_run;
-            let run = trigger;
-            if (trigger.name !== 'CI') {
-              const ci = await github.rest.actions.listWorkflowRuns({
-                owner, repo, workflow_id: 'ci.yml', head_sha: trigger.head_sha, event: 'pull_request', per_page: 1,
-              }).then((r) => r.data.workflow_runs[0]).catch(() => undefined);
-              if (!ci || ci.status !== 'completed') {
-                core.info(`CI on ${trigger.head_sha} has not finished; its completion writes the report`);
-                return;
-              }
-              run = ci;
+            // The newest run of a workflow on a commit; its run_attempt is its
+            // newest attempt. undefined when there is none, or on an API error.
+            const newest = (workflow_id) => github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id, head_sha: trigger.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => runs.reduce((a, r) => (!a || r.id > a.id ? r : a), undefined))
+              .catch((e) => { core.warning(`listing ${workflow_id} runs: ${e.message}`); return undefined; });
+            const same = (a, b) => a && b && a.id === b.id && a.run_attempt === b.run_attempt;
+
+            const own = await newest(trigger.name === 'CI' ? 'ci.yml' : 'osd-m1.yml');
+            if (!same(own, trigger)) {
+              core.info(`${trigger.name} run ${trigger.id} attempt ${trigger.run_attempt} is not the newest on ${trigger.head_sha}`
+                + ` (newest: ${own ? `${own.id} attempt ${own.run_attempt}` : 'unknown'}); its report is left to the newer run`);
+              return;
+            }
+            const run = trigger.name === 'CI' ? trigger : await newest('ci.yml');
+            if (!run || run.status !== 'completed') {
+              core.info(`CI on ${trigger.head_sha} has not finished; its completion writes the report`);
+              return;
             }
             core.setOutput('ci_run', String(run.id));
+            core.setOutput('ci_attempt', String(run.run_attempt));
             let pr = run.pull_requests?.[0];
             if (pr) {
               pr = (await github.rest.pulls.get({ owner, repo, pull_number: pr.number })).data;
@@ -83,17 +95,6 @@ jobs:
             }
             core.setOutput('pr', String(pr.number));
             core.setOutput('base_ref', pr.base.ref);
-            // The pull request's own artifacts are only downloaded when they are
-            // small: a fork controls them, and a zip bomb would fill the disk.
-            // Real sizes: test-summary about 1 KB, metrics about 15 KB, zipped.
-            const caps = { 'test-summary': 256 * 1024, metrics: 1024 * 1024 };
-            const arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: run.id })
-              .catch(() => []);
-            for (const [name, cap] of Object.entries(caps)) {
-              const a = arts.find((x) => x.name === name && !x.expired);
-              if (a && a.size_in_bytes <= cap) core.setOutput(`head_${name.replace('-', '_')}`, 'ok');
-              else if (a) core.warning(`${name}: ${a.size_in_bytes} bytes zipped, over the ${cap}-byte cap; not downloaded`);
-            }
             const base = await github.rest.actions.listWorkflowRuns({
               owner, repo, workflow_id: 'ci.yml', branch: pr.base.ref, event: 'push', status: 'success', per_page: 1,
             }).then((r) => r.data.workflow_runs[0]).catch(() => undefined);
@@ -102,45 +103,65 @@ jobs:
               core.setOutput('base_sha', base.head_sha);
             }
 
-      - name: Download this run's test summary
-        if: steps.find.outputs.head_test_summary == 'ok'
+      # The pull request's artifacts are written by its own workflow, so a fork
+      # controls them, and a small zip can unpack into gigabytes. Neither
+      # download-artifact nor a plain unzip is used: each artifact must be
+      # small zipped (GitHub's own count), hold exactly the one expected file
+      # name, and that file is read with `unzip -p` into a capped buffer, so no
+      # more than the cap is ever unpacked, whatever the zip's headers claim.
+      # Real sizes: test-summary about 1 KB, metrics about 15 KB, unzipped. The
+      # base's artifacts (from pushes to the base branch) go through the same.
+      - name: Download the artifacts, size-capped
+        if: steps.find.outputs.pr != ''
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/github-script@v7
+        env:
+          CI_RUN: ${{ steps.find.outputs.ci_run }}
+          BASE_RUN: ${{ steps.find.outputs.base_run }}
         with:
-          name: test-summary
-          path: head
-          run-id: ${{ steps.find.outputs.ci_run }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download the base's test summary
-        if: steps.find.outputs.base_run != ''
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: test-summary
-          path: base
-          run-id: ${{ steps.find.outputs.base_run }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download this run's metrics
-        if: steps.find.outputs.head_metrics == 'ok'
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: metrics
-          path: head-metrics
-          run-id: ${{ steps.find.outputs.ci_run }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download the base's metrics
-        if: steps.find.outputs.base_run != ''
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: metrics
-          path: base-metrics
-          run-id: ${{ steps.find.outputs.base_run }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const { execFileSync } = require('child_process');
+            const { owner, repo } = context.repo;
+            const wanted = [
+              // name, file in the zip, zipped cap, unzipped cap
+              ['test-summary', 'test-summary.json', 256 * 1024, 1024 * 1024],
+              ['metrics', 'metrics.json', 1024 * 1024, 5 * 1024 * 1024],
+            ];
+            const fetchOne = async (runId, name, file, zipCap, cap, dir) => {
+              const arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: runId, name });
+              const a = arts.find((x) => x.name === name && !x.expired);
+              if (!a) return core.info(`${name} of run ${runId}: none`);
+              if (!(a.size_in_bytes <= zipCap)) return core.warning(`${name} of run ${runId}: ${a.size_in_bytes} bytes zipped, over the ${zipCap}-byte cap; not read`);
+              const zip = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
+              const buf = Buffer.from(zip.data);
+              if (buf.length > zipCap) return core.warning(`${name} of run ${runId}: ${buf.length} bytes downloaded, over the cap; not read`);
+              const zipFile = `${dir}.zip`;
+              fs.writeFileSync(zipFile, buf);
+              try {
+                const entries = execFileSync('unzip', ['-Z1', zipFile], { maxBuffer: 64 * 1024 }).toString('utf8').split('\n').filter(Boolean);
+                if (entries.length !== 1 || entries[0] !== file) {
+                  return core.warning(`${name} of run ${runId}: want only ${file} in the zip, found ${entries.length} entries; not read`);
+                }
+                // maxBuffer stops unzip (and throws) once the cap is passed.
+                const data = execFileSync('unzip', ['-p', zipFile, file], { maxBuffer: cap });
+                fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(`${dir}/${file}`, data);
+                core.info(`${name} of run ${runId}: ${data.length} bytes`);
+              } catch (e) {
+                core.warning(`${name} of run ${runId}: not read (${e.code || e.message}); over the ${cap}-byte cap or not a zip`);
+              } finally {
+                fs.rmSync(zipFile, { force: true });
+              }
+            };
+            for (const [name, file, zipCap, cap] of wanted) {
+              const suffix = name === 'metrics' ? '-metrics' : '';
+              for (const [runId, side] of [[process.env.CI_RUN, 'head'], [process.env.BASE_RUN, 'base']]) {
+                if (!runId) continue;
+                try { await fetchOne(Number(runId), name, file, zipCap, cap, side + suffix); }
+                catch (e) { core.warning(`${name} of run ${runId}: ${e.message}`); }
+              }
+            }
 
       # Size and complexity, base → head, and the trend over the last green
       # runs on the base branch. Advisory: whatever happens here, the report
@@ -158,7 +179,7 @@ jobs:
             const fs = require('fs');
             const { execFileSync } = require('child_process');
             const { owner, repo } = context.repo;
-            const MAX_BYTES = 8 * 1024 * 1024; // unzipped metrics.json
+            const MAX_BYTES = 5 * 1024 * 1024; // unzipped metrics.json, as in the download step
             const MAX_ZIP = 1024 * 1024;       // zipped artifact
             const TREND_RUNS = 10;
 
@@ -438,7 +459,9 @@ jobs:
         env:
           PR: ${{ steps.find.outputs.pr }}
           BASE_SHA: ${{ steps.find.outputs.base_sha }}
+          BASE_REF: ${{ steps.find.outputs.base_ref }}
           CI_RUN: ${{ steps.find.outputs.ci_run }}
+          CI_ATTEMPT: ${{ steps.find.outputs.ci_attempt }}
         with:
           script: |
             const fs = require('fs');
@@ -447,6 +470,10 @@ jobs:
             // The CI run on the commit, whichever workflow's completion this is.
             const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.CI_RUN) })).data;
             const prNumber = Number(process.env.PR);
+            if (String(run.run_attempt) !== process.env.CI_ATTEMPT) {
+              core.info(`CI run ${run.id} has a newer attempt (${run.run_attempt}); its completion writes the report`);
+              return;
+            }
 
             // Escaped for markdown, and defused: a zero-width space after `@`
             // stops a fork from pinging users or teams through the bot, and one
@@ -543,7 +570,7 @@ jobs:
               const bp = base ? sum(base, 'pass') : null, bt = base ? sum(base, 'seconds') : null;
               const baseRef = process.env.BASE_SHA ? `\`${process.env.BASE_SHA.slice(0, 8)}\`` : 'base';
               testLines.push(base
-                ? `**Tests:** ${bp} → **${hp}** passed${hp - bp ? ` (${hp - bp > 0 ? '+' : ''}${hp - bp})` : ''}, ${hf} failed, ${hs} skipped · package time ${total(bt)} s → ${total(ht)} s, compared with ${baseRef} on main`
+                ? `**Tests:** ${bp} → **${hp}** passed${hp - bp ? ` (${hp - bp > 0 ? '+' : ''}${hp - bp})` : ''}, ${hf} failed, ${hs} skipped · package time ${total(bt)} s → ${total(ht)} s, compared with ${baseRef} on ${clean(process.env.BASE_REF, 40)}`
                 : `**Tests:** ${hp} passed, ${hf} failed, ${hs} skipped · package time ${total(ht)} s (no base run to compare with yet)`);
               const names = [...new Set([...head.keys(), ...(base ? base.keys() : [])])];
               const table = names.map((n) => {
@@ -575,6 +602,18 @@ jobs:
               try { complexity = fs.readFileSync('complexity.md', 'utf8').slice(0, 30000); } catch { /* advisory */ }
               lines.push('| Check | Result | Detail | Time |', '| --- | --- | --- | --- |', ...rows, '', ...testLines);
               if (complexity) lines.push(complexity);
+            }
+
+            // Last check before writing, and before asking for a review: a CI
+            // run on this commit may have started or re-run while this report
+            // was put together. Its own completion writes the newer report, so
+            // this older one must not land.
+            const now = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'ci.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => runs.reduce((a, r) => (!a || r.id > a.id ? r : a), undefined));
+            if (!now || now.id !== run.id || String(now.run_attempt) !== process.env.CI_ATTEMPT) {
+              core.info(`a newer CI run or attempt exists on ${run.head_sha}; this report is not written`);
+              return;
             }
 
             // --- Copilot review, once per commit, only on a green run ----------
