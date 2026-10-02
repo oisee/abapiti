@@ -28,8 +28,11 @@ const (
 
 // blockEntry tracks the kind and the stack depth when the block was entered.
 type blockEntry struct {
-	kind       blockKind
-	savedDepth int // stack depth after popping condition (for if) or at block start
+	kind        blockKind
+	resultTypes []ValType
+	results     int // number of values produced on fallthrough
+	params      int // loop label arity (block type parameters)
+	savedDepth  int // stack depth after popping condition (for if) or at block start
 }
 
 type compiler struct {
@@ -66,6 +69,8 @@ type blockMethodDef struct {
 	code        []Instruction
 	parentFunc  *Function
 	startDepth  int // virtual stack depth at block entry
+	results     int
+	params      int
 	isLoop      bool
 	outerLabels []blockEntry
 	body        string // generated ABAP method body (filled during emission)
@@ -485,8 +490,9 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			if inst.Op == OpLoop {
 				kind = blockLOOP
 			}
+			bt := c.blockType(inst.BlockType)
 			if c.useBlockMethods {
-				savedDepth := stack.depth
+				savedDepth := max(0, stack.depth-len(bt.Params))
 				endIdx := findMatchingEnd(code, i)
 				blockName := fmt.Sprintf("f%d_b%d", c.currentFuncIndex, c.blockCounter)
 				c.blockCounter++
@@ -494,14 +500,12 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 				labels = append(labels, c.blockStack...)
 				c.blockMethods = append(c.blockMethods, &blockMethodDef{
 					name: blockName, code: append([]Instruction(nil), code[i+1:endIdx]...), parentFunc: f,
-					startDepth: savedDepth, isLoop: inst.Op == OpLoop, outerLabels: labels,
+					startDepth: savedDepth, results: len(bt.Results), params: len(bt.Params), isLoop: inst.Op == OpLoop, outerLabels: labels,
 				})
 				c.line("%s%s( ).", c.classPrefix(), blockName)
 				c.emitBrPropagate()
 				stack.depth = savedDepth
-				if inst.BlockType >= 0 && inst.BlockType != 0x40 {
-					stack.depth++
-				}
+				stack.depth += len(bt.Results)
 				i = endIdx
 			} else {
 				if kind == blockLOOP {
@@ -510,26 +514,34 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 					c.line("DO 1 TIMES.")
 				}
 				c.indent++
-				c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: stack.depth})
+				c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: max(0, stack.depth-len(bt.Params)), results: len(bt.Results), params: len(bt.Params), resultTypes: bt.Results})
 			}
 		case OpIf:
+			bt := c.blockType(inst.BlockType)
 			cond := stack.pop()
 			c.line("DO 1 TIMES.")
 			c.indent++
 			c.line("IF %s <> 0.", cond)
 			c.indent++
-			c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: stack.depth})
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: max(0, stack.depth-len(bt.Params)), results: len(bt.Results), params: len(bt.Params), resultTypes: bt.Results})
 		case OpElse:
 			c.indent--
 			c.line("ELSE.")
 			c.indent++
 			// Reset stack depth to what it was at the start of the if block
 			if len(c.blockStack) > 0 {
-				stack.depth = c.blockStack[len(c.blockStack)-1].savedDepth
+				stack.depth = c.blockStack[len(c.blockStack)-1].savedDepth + c.blockStack[len(c.blockStack)-1].params
 			}
 		case OpEnd:
 			if len(c.blockStack) > 0 {
 				entry := c.blockStack[len(c.blockStack)-1]
+				c.copyLabelValues(entry.savedDepth, entry.results, stack)
+				stack.depth = entry.savedDepth
+				for _, typ := range entry.resultTypes {
+					stack.next = typ
+					stack.push()
+				}
+				stack.depth = entry.savedDepth + entry.results
 				c.blockStack = c.blockStack[:len(c.blockStack)-1]
 				if entry.kind == blockLOOP {
 					c.line("EXIT.") // WASM loop fallthrough leaves the loop.
@@ -548,12 +560,12 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 				c.emitBrPropagation()
 			}
 		case OpBr:
-			c.emitBranch(inst.LabelIndex)
+			c.emitBranch(inst.LabelIndex, stack)
 		case OpBrIf:
 			cond := stack.pop()
 			c.line("IF %s <> 0.", cond)
 			c.indent++
-			c.emitBranch(inst.LabelIndex)
+			c.emitBranch(inst.LabelIndex, stack)
 			c.indent--
 			c.line("ENDIF.")
 		case OpReturn:
@@ -601,9 +613,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		// Try/catch — map to TRY/CATCH in ABAP
 		case OpTry:
+			bt := c.blockType(inst.BlockType)
 			c.line("TRY. \" wasm try")
 			c.indent++
-			c.blockStack = append(c.blockStack, blockEntry{kind: blockTRY, savedDepth: stack.depth})
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockTRY, savedDepth: max(0, stack.depth-len(bt.Params)), results: len(bt.Results), params: len(bt.Params), resultTypes: bt.Results})
 		case OpCatch, OpCatchAll:
 			c.indent--
 			c.line("CATCH cx_root. \" wasm catch")
@@ -1116,10 +1129,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.indent++
 			for i, label := range inst.Labels {
 				c.line("WHEN %d.", i)
-				c.emitBranch(label)
+				c.emitBranch(label, stack)
 			}
 			c.line("WHEN OTHERS.")
-			c.emitBranch(inst.DefaultLabel)
+			c.emitBranch(inst.DefaultLabel, stack)
 			c.indent--
 			c.line("ENDCASE.")
 
@@ -1522,12 +1535,62 @@ func (c *compiler) exitOrReturn() string {
 	return "RETURN."
 }
 
+// blockType interprets the signed LEB encoding used by the parser. A
+// non-negative block type refers to a function type in the module.
+func (c *compiler) blockType(encoded int) FuncType {
+	switch encoded {
+	case -64:
+		return FuncType{}
+	case -1, -2, -3, -4:
+		return FuncType{Results: []ValType{ValType(encoded & 0x7f)}}
+	default:
+		if encoded >= 0 && encoded < len(c.mod.Types) {
+			return c.mod.Types[encoded]
+		}
+		return FuncType{}
+	}
+}
+
+// Copy carried values before leaving a label. Doing this at the branch site
+// also preserves values across every intervening branch propagation boundary.
+func (c *compiler) copyLabelValues(depth, count int, stack *virtualStack) {
+	// Unreachable tails have a polymorphic WASM stack and may have no value
+	// in the linear virtual stack; their assignments will never execute.
+	if stack.depth < count {
+		return
+	}
+	for i := 0; i < count; i++ {
+		srcIndex := stack.depth - count + i
+		src := stack.name(srcIndex)
+		dst := fmt.Sprintf("%ss%d", stack.prefix, depth+i)
+		if stack.typed && srcIndex < len(stack.types) {
+			switch stack.types[srcIndex] {
+			case ValI64:
+				dst += "_i64"
+			case ValF32, ValF64:
+				dst += "_f"
+			}
+		}
+		if dst != src {
+			c.line("%s = %s.", dst, src)
+		}
+	}
+}
+
 // emitBranch encodes exits as positive depths and loop continuations as negative
 // depths. Each closed label consumes one level; zero means ordinary execution.
-func (c *compiler) emitBranch(depth int) {
+func (c *compiler) emitBranch(depth int, stack *virtualStack) {
 	labels := append([]blockEntry(nil), c.outerLabels...)
 	labels = append(labels, c.blockStack...)
-	loop := int(depth) < len(labels) && labels[len(labels)-1-int(depth)].kind == blockLOOP
+	loop := depth < len(labels) && labels[len(labels)-1-depth].kind == blockLOOP
+	if depth < len(labels) {
+		target := labels[len(labels)-1-depth]
+		arity := target.results
+		if loop {
+			arity = target.params
+		}
+		c.copyLabelValues(target.savedDepth, arity, stack)
+	}
 	if loop && depth == 0 {
 		c.line("CONTINUE.")
 		return
@@ -1586,7 +1649,7 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 	c.packer = newLinePacker(&c.sb, c.indent)
 
 	// Inside CLASS-METHOD: no prefix (variables are class members)
-	stack := &virtualStack{depth: bm.startDepth, prefix: ""}
+	stack := &virtualStack{depth: bm.startDepth + bm.params, prefix: ""}
 	kind := blockDO
 	if bm.isLoop {
 		kind = blockLOOP
@@ -1595,7 +1658,7 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 		c.line("DO 1 TIMES.")
 	}
 	c.indent++
-	c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: bm.startDepth})
+	c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: bm.startDepth, results: bm.results, params: bm.params})
 	code := append(append([]Instruction(nil), bm.code...), Instruction{Op: OpEnd})
 	c.emitInstructions(bm.parentFunc, code, stack, 0)
 

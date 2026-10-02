@@ -260,7 +260,7 @@ type Instruction struct {
 	DefaultLabel int   // for br_table
 	Align      int     // for memory ops
 	Offset     int     // for memory ops
-	BlockType  int     // for block/loop/if: -1=void, >=0=type index, or valtype
+	BlockType  int     // for block/loop/if: -64=void, -1..-4=value type, >=0=type index
 
 	// Misc opcode (for 0xFC prefix)
 	MiscOp byte
