@@ -227,7 +227,8 @@ func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, uppe
 		}
 		emitFORM(c, f, i, mod, redirects)
 		// Generate block method bodies (stored in blockMethodDef.body)
-		for _, bm := range c.blockMethods {
+		for j := 0; j < len(c.blockMethods); j++ {
+			bm := c.blockMethods[j]
 			if bm.body == "" {
 				c.generateBlockBody(bm, redirects)
 			}

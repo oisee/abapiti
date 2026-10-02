@@ -17,18 +17,19 @@ type WASMTestCase struct {
 }
 
 // buildSuiteWasm builds a WASM module with 5 test functions:
-//   add(a,b)       = a+b
-//   factorial(n)   = n!
-//   fibonacci(n)   = fib(n)
-//   gcd(a,b)       = GCD(a,b)
-//   isPrime(n)     = 1 if prime, 0 otherwise
+//
+//	add(a,b)       = a+b
+//	factorial(n)   = n!
+//	fibonacci(n)   = fib(n)
+//	gcd(a,b)       = GCD(a,b)
+//	isPrime(n)     = 1 if prime, 0 otherwise
 func buildSuiteWasm() []byte {
 	w := newWasmBuilder()
 
 	// Types: (i32,i32)->i32 and (i32)->i32
 	w.addSection(1, buildTypeSection([]FuncType{
 		{Params: []ValType{ValI32, ValI32}, Results: []ValType{ValI32}}, // type 0
-		{Params: []ValType{ValI32}, Results: []ValType{ValI32}},        // type 1
+		{Params: []ValType{ValI32}, Results: []ValType{ValI32}},         // type 1
 	}))
 
 	// Functions: 5 funcs
@@ -96,11 +97,11 @@ func buildSuiteWasm() []byte {
 		OpIf, 0x7F,
 		OpLocalGet, 0x00, // return a
 		OpElse,
-		OpLocalGet, 0x01,         // b
-		OpLocalGet, 0x00,         // a
-		OpLocalGet, 0x01,         // b
-		OpI32RemS,                // a % b
-		OpCall, 0x03,             // gcd(b, a%b)
+		OpLocalGet, 0x01, // b
+		OpLocalGet, 0x00, // a
+		OpLocalGet, 0x01, // b
+		OpI32RemS,    // a % b
+		OpCall, 0x03, // gcd(b, a%b)
 		OpEnd,
 	})
 
@@ -173,6 +174,10 @@ var suiteTestCases = []WASMTestCase{
 	{"gcd(0,5)", "gcd", []int32{0, 5}, 5},
 
 	// is_prime
+	{"is_prime(9)", "is_prime", []int32{9}, 0},
+	{"is_prime(15)", "is_prime", []int32{15}, 0},
+	{"is_prime(25)", "is_prime", []int32{25}, 0},
+	{"is_prime(49)", "is_prime", []int32{49}, 0},
 	{"is_prime(2)", "is_prime", []int32{2}, 1},
 	{"is_prime(7)", "is_prime", []int32{7}, 1},
 	{"is_prime(10)", "is_prime", []int32{10}, 0},
