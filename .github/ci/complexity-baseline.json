@@ -1,11 +1,11 @@
 {
  "_comment": "Size ratchet for .github/ci/metrics (advisory). files: lines of every non-test file over 1000 lines; packages: non-test lines. The PR report warns when a file not listed here passes 1000 lines, or a listed file or package grows past its number here or past its size on main, whichever is smaller (so a shrink tightens the ratchet without an edit here). A PR with a reason to grow something raises its number here, so the reason is in the diff.",
- "commit": "0812b36442aa6ae44409d01be519a56e3f9de475",
+ "commit": "35522c922d2e4166b2bdcc409cf9fb913354f9d1",
  "date": "2026-10-02",
  "files": {
   "jseval/jseval.go": 1782,
   "llvm/llvm2abap.go": 1973,
-  "wasm/codegen.go": 1784
+  "wasm/codegen.go": 1694
  },
  "packages": {
   "cmd/abapgit-pack": 166,
@@ -14,6 +14,6 @@
   "llvm": 1973,
   "ts": 587,
   "ts2go": 608,
-  "wasm": 4260
+  "wasm": 4362
  }
 }
