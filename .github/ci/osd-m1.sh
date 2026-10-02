@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# M1: compile add.wasm and factorial.wasm to ABAP, deploy each class and its
-# generated ABAP Unit test class to a running OSD with vsp, and run the tests.
+# Compile the OSD modules listed in wasm/osd_unit_test.go to ABAP, deploy each
+# class and its generated ABAP Unit test class to a running OSD with vsp, and
+# run the tests. Every generated class is deployed; none is listed here.
 # The expected values in the test classes come from wazero, not from abapiti.
 #
 #   SAP_URL=http://localhost:3030 .github/ci/osd-m1.sh <workdir>
@@ -17,7 +18,6 @@ url=${SAP_URL:?SAP_URL must point at the OSD}
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 pkg='$ZOSD_TEST_SRC'
-classes=(zcl_abapiti_add zcl_abapiti_factorial)
 
 mkdir -p "$work"/{vsp,gen,empty,log}
 work=$(cd "$work" && pwd)
@@ -56,6 +56,15 @@ echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
 (cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
   > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
 gen="$work/gen/TestOSD_EmitUnitClasses"
+classes=()
+for f in "$gen"/*.clas.abap; do
+  [ -e "$f" ] || continue
+  b=$(basename "$f" .clas.abap)
+  [ -f "$gen/$b.clas.testclasses.abap" ] || { echo "osd-m1: $b has no test class" >&2; exit 1; }
+  classes+=("$b")
+done
+[ "${#classes[@]}" -gt 0 ] || { echo "osd-m1: the generator wrote no classes" >&2; exit 1; }
+echo "osd-m1: ${#classes[@]} classes: ${classes[*]}" >&2
 
 # Deploy and test. Any failure stops the run: on OSD 0.6.1511 a failed
 # activation poisons every later one.
