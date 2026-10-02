@@ -2,6 +2,7 @@ package wasm
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -266,10 +267,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %d.", v, inst.I64Value)
 		case OpF32Const:
 			v := stack.push()
-			c.line("%s = '%f'.", v, inst.F32Value)
+			c.line("%s = '%s'.", v, strconv.FormatFloat(float64(inst.F32Value), 'e', -1, 32))
 		case OpF64Const:
 			v := stack.push()
-			c.line("%s = '%f'.", v, inst.F64Value)
+			c.line("%s = '%s'.", v, strconv.FormatFloat(inst.F64Value, 'e', -1, 64))
 
 		// Local/Global access
 		case OpLocalGet:
@@ -1618,7 +1619,7 @@ func (c *compiler) line(format string, args ...any) {
 		c.packer.add(stmt)
 		return
 	}
-	prefix := strings.Repeat("  ", c.indent)
+	prefix := sourceIndent(c.indent)
 	c.sb.WriteString(prefix)
 	c.sb.WriteString(stmt)
 	c.sb.WriteByte('\n')

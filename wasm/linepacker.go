@@ -6,12 +6,21 @@ import "strings"
 // Technical limit is 255; we use 240 to leave margin for indentation.
 const maxLineLen = 240
 
+// ABAP nesting is independent of whitespace; cap indentation so deep WASM blocks
+// cannot consume the source-line budget.
+func sourceIndent(depth int) string {
+	if depth > 8 {
+		depth = 8
+	}
+	return strings.Repeat("  ", depth)
+}
+
 // linePacker collects statements and packs multiple onto one line.
 type linePacker struct {
-	sb        *strings.Builder
-	indent    int
-	pending   []string // statements waiting to be flushed
-	curLen    int      // current packed line length (including indent)
+	sb      *strings.Builder
+	indent  int
+	pending []string // statements waiting to be flushed
+	curLen  int      // current packed line length (including indent)
 }
 
 func newLinePacker(sb *strings.Builder, indent int) *linePacker {
@@ -27,7 +36,7 @@ func (lp *linePacker) add(stmt string) {
 		return
 	}
 
-	indentLen := lp.indent * 2
+	indentLen := len(sourceIndent(lp.indent))
 	stmtLen := len(stmt)
 
 	if len(lp.pending) == 0 {
@@ -65,7 +74,7 @@ func (lp *linePacker) flush() {
 	if len(lp.pending) == 0 {
 		return
 	}
-	prefix := strings.Repeat("  ", lp.indent)
+	prefix := sourceIndent(lp.indent)
 	lp.sb.WriteString(prefix)
 	lp.sb.WriteString(strings.Join(lp.pending, " "))
 	lp.sb.WriteByte('\n')
@@ -74,7 +83,7 @@ func (lp *linePacker) flush() {
 }
 
 func (lp *linePacker) writeLine(stmt string) {
-	prefix := strings.Repeat("  ", lp.indent)
+	prefix := sourceIndent(lp.indent)
 	lp.sb.WriteString(prefix)
 	lp.sb.WriteString(stmt)
 	lp.sb.WriteByte('\n')

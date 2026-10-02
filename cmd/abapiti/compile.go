@@ -2,12 +2,15 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/oisee/abapiti/abapsize"
 	"github.com/oisee/abapiti/llvm"
 	"github.com/oisee/abapiti/ts"
 	"github.com/oisee/abapiti/wasm"
@@ -79,6 +82,32 @@ Examples:
 	RunE: runCompileLLVM,
 }
 
+var errLongLines = errors.New("generated ABAP has lines over 255 characters")
+
+func reportGenerated(cmd *cobra.Command, files map[string]string) error {
+	report := abapsize.Report(files)
+	names := make([]string, 0, len(report.Files))
+	for name := range report.Files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		f := report.Files[name]
+		fmt.Fprintf(os.Stderr, "size %s: lines=%d max-line=%d longest-METHOD/FORM=%d routines=%d bytes=%d\n", name, f.Lines, f.MaxLineLength, f.LongestRoutine, f.Routines, f.Bytes)
+	}
+	for _, warning := range report.Warnings(abapsize.DefaultThresholds) {
+		fmt.Fprintln(os.Stderr, "warning:", warning)
+	}
+	allow, _ := cmd.Flags().GetBool("allow-long-lines")
+	if !allow && len(report.LongLines) > 0 {
+		for _, issue := range report.Errors() {
+			fmt.Fprintln(os.Stderr, issue)
+		}
+		return errLongLines
+	}
+	return nil
+}
+
 func init() {
 	// Compile subcommands
 	compileCmd.AddCommand(compileWasmCmd)
@@ -87,6 +116,8 @@ func init() {
 
 	// Compile wasm flags
 	addWasmFlags(compileWasmCmd)
+	compileTsCmd.Flags().Bool("allow-long-lines", false, "Allow output lines over 255 characters")
+	compileLLVMCmd.Flags().Bool("allow-long-lines", false, "Allow output lines over 255 characters")
 
 	// Compile ts flags
 	compileTsCmd.Flags().String("prefix", "zcl_", "ABAP class name prefix")
@@ -146,7 +177,7 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Print(abapSrc)
 	}
-	return nil
+	return reportGenerated(cmd, map[string]string{strings.ToLower(className) + ".clas.abap": abapSrc})
 }
 
 func runCompileTs(cmd *cobra.Command, args []string) error {
@@ -196,7 +227,7 @@ func runCompileTs(cmd *cobra.Command, args []string) error {
 			fmt.Printf("* === %s ===\n%s\n", name, src)
 		}
 	}
-	return nil
+	return reportGenerated(cmd, result.Classes)
 }
 
 // --- helpers ---
@@ -299,15 +330,21 @@ func runCompileLLVM(cmd *cobra.Command, args []string) error {
 		if outDir == "" {
 			outDir = "."
 		}
-		os.MkdirAll(outDir, 0755)
+		if err := os.MkdirAll(outDir, 0755); err != nil {
+			return err
+		}
 
 		totalLines := 0
+		sources := make(map[string]string)
 		for _, f := range files {
 			lines := strings.Count(f.Source, "\n")
 			totalLines += lines
 
 			abapFile := filepath.Join(outDir, f.FileName+".clas.abap")
-			os.WriteFile(abapFile, []byte(f.Source), 0644)
+			sources[f.FileName+".clas.abap"] = f.Source
+			if err := os.WriteFile(abapFile, []byte(f.Source), 0644); err != nil {
+				return err
+			}
 
 			// Write .clas.xml metadata
 			xmlFile := filepath.Join(outDir, f.FileName+".clas.xml")
@@ -329,12 +366,14 @@ func runCompileLLVM(cmd *cobra.Command, args []string) error {
  </asx:abap>
 </abapGit>
 `, f.ClassName, desc)
-			os.WriteFile(xmlFile, []byte(xml), 0644)
+			if err := os.WriteFile(xmlFile, []byte(xml), 0644); err != nil {
+				return err
+			}
 
 			fmt.Fprintf(os.Stderr, "  %s: %d lines\n", f.FileName, lines)
 		}
 		fmt.Fprintf(os.Stderr, "compiled: %d files, %d total lines ABAP\n", len(files), totalLines)
-		return nil
+		return reportGenerated(cmd, sources)
 	}
 
 	abap := llvm.Compile(mod, className)
@@ -346,7 +385,10 @@ func runCompileLLVM(cmd *cobra.Command, args []string) error {
 		if outFile == "" {
 			outFile = strings.TrimSuffix(filepath.Base(inputFile), ext) + ".zip"
 		}
-		return writeLLVMZip(outFile, strings.ToUpper(className), abap, desc, pkg)
+		if err := writeLLVMZip(outFile, strings.ToUpper(className), abap, desc, pkg); err != nil {
+			return err
+		}
+		return reportGenerated(cmd, map[string]string{strings.ToLower(className) + ".clas.abap": abap})
 	}
 
 	if output == "" {
@@ -357,7 +399,7 @@ func runCompileLLVM(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(os.Stderr, "written: %s\n", output)
 	}
-	return nil
+	return reportGenerated(cmd, map[string]string{strings.ToLower(className) + ".clas.abap": abap})
 }
 
 func writeLLVMZip(outFile, objName, source, desc, pkg string) error {
