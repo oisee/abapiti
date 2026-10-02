@@ -65,8 +65,8 @@ func TestBranchLoopCodegen(t *testing.T) {
 	bin := buildBranchLoopWasm()
 	want := []int32{15, 55, 0, 15, 5, 10, 15, 55, 15, 1, 5, 5}
 	for i, got := range wazeroResults(t, bin, branchLoopCases) {
-		if got != want[i] {
-			t.Fatalf("fixture %s: got %d want %d", branchLoopCases[i].fn, got, want[i])
+		if got.trap || got.value != want[i] {
+			t.Fatalf("fixture %s: got %+v want %d", branchLoopCases[i].fn, got, want[i])
 		}
 	}
 	mod, err := Parse(bin)
