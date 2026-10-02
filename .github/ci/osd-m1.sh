@@ -56,6 +56,8 @@ echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
 (cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
   > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
 gen="$work/gen/TestOSD_EmitUnitClasses"
+# Flatten the same fixture sets consumed by osgo.
+cp "$gen"/split/*.abap "$gen/"
 classes=()
 for f in "$gen"/*.clas.abap; do
   [ -e "$f" ] || continue
@@ -68,7 +70,14 @@ done
 [ "${#classes[@]}" -gt 0 ] || { echo "osd-m1: the generator wrote no classes" >&2; exit 1; }
 echo "osd-m1: ${#classes[@]} classes: ${classes[*]}" >&2
 
-# State classes activate first, then independent chunks, then facades.
+# Interfaces activate first, then state, independent chunks and facades.
+for f in "$gen"/*.intf.abap; do
+  [ -e "$f" ] || continue
+  if ! vsp deploy "$f" "$pkg" --call-timeout 900 > "$work/log/deploy-$(basename "$f").log" 2>&1; then
+    cat "$work/log/deploy-$(basename "$f").log" >&2
+    exit 1
+  fi
+done
 ordered=()
 for c in "${classes[@]}"; do if [[ "$c" == *_st ]]; then ordered+=("$c"); fi; done
 for c in "${classes[@]}"; do if [[ "$c" =~ _c[0-9]+$ ]]; then ordered+=("$c"); fi; done

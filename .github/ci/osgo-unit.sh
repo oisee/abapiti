@@ -42,6 +42,9 @@ rm -rf "$gen"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1) > "$work/generate.log" 2>&1 ||
   { cat "$work/generate.log" >&2; exit 4; }
 classes="$gen/TestOSD_EmitUnitClasses"
+# Run the same split fixtures as OSD, including their interfaces.
+cp "$classes"/split/*.abap "$classes/"
+rm -r "$classes/split"
 n=$(find "$classes" -name '*.clas.abap' ! -name '*.testclasses.abap' | wc -l)
 [ "$n" -gt 0 ] || { echo "osgo-unit: the generator wrote no classes" >&2; exit 4; }
 echo "osgo-unit: $n classes" >&2
@@ -52,7 +55,8 @@ status=0
 # documents (2 when anything did not compile or errored, else 1 on a failure,
 # else 0; tools/osgo-unit.mjs in open-steamgate) and agree with the
 # report; the JSON must carry a rows array that matches the totals, at least
-# one row must pass, and every row that did not pass must be a NOT_COMPILED
+# one row must pass, every emitted split test must pass, and other rows that
+# did not pass must be a NOT_COMPILED
 # whose diagnostic is exactly a line of osgo-known-gaps.txt. Anything else (a
 # failure, an error, a skip, an unknown NOT_COMPILED) is exit 1; a report that
 # cannot be trusted is exit 4.
@@ -79,13 +83,24 @@ node -e '
   const want = nc + err > 0 ? 2 : failed > 0 ? 1 : 0;
   if (runner !== want) fail(`the runner exited ${runner}, the report says ${want}`);
   console.log(`osgo-unit: ${ok} passed, ${failed} failed, ${nc} not compiled, ${err} errors, ${skipped} skipped, ${tests} tests`);
+  const splitFiles = fs.readdirSync(process.argv[4]).filter((f) => /^zcl_split_.*\.clas\.testclasses\.abap$/i.test(f));
+  if (!splitFiles.length) fail("no forced-split test fixtures were emitted");
+  for (const f of splitFiles) {
+    const cls = f.replace(/\.clas\.testclasses\.abap$/, "").toLowerCase();
+    const src = fs.readFileSync(process.argv[4] + "/" + f, "utf8");
+    const expected = (src.match(/^\s*METHODS c[0-9]+ FOR TESTING\.$/gm) || []).length;
+    const rows = d.rows.filter((r) => String(r.class || "").toLowerCase() === cls);
+    if (!expected || rows.length !== expected) fail(`${cls}: expected ${expected} split tests, got ${rows.length}`);
+    if (rows.some((r) => r.status !== "SUCCESS")) { console.log(`osgo-unit: ${cls}: a forced-split test did not pass`); process.exit(5); }
+  }
   const used = new Set();
   let bad = 0, known = 0;
   for (const r of d.rows) {
     if (r.status === "SUCCESS") continue;
     const msg = String(r.message || "");
     const m = /^NOT_COMPILED in \S+ \([^)\n]*\): ([^\n]*)$/.exec(msg);
-    const g = r.status === "NOT_COMPILED" && m && gaps.includes(m[1]) ? m[1] : undefined;
+    const split = /^zcl_split_/i.test(String(r.class || ""));
+    const g = !split && r.status === "NOT_COMPILED" && m && gaps.includes(m[1]) ? m[1] : undefined;
     if (g) { known++; used.add(g); continue; }
     bad++;
     console.log(`  ${r.class} ${r.method} ${r.status} ${msg.split("\n")[0].slice(0, 160)}`);
@@ -94,7 +109,7 @@ node -e '
   for (const g of gaps) if (!used.has(g)) console.log(`osgo-unit: known gap "${g}" matched nothing; remove it from osgo-known-gaps.txt if open-steamgate compiles it now`);
   if (ok < 1) { console.log("osgo-unit: no test passed"); process.exit(5); }
   if (bad > 0) process.exit(5);
-' "$work/osgo.json" "$gaps" "$status" >&2 || verdict=$?
+' "$work/osgo.json" "$gaps" "$status" "$classes" >&2 || verdict=$?
 case $verdict in
   0) exit 0 ;;
   5) exit 1 ;;
