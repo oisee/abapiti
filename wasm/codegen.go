@@ -2,6 +2,7 @@ package wasm
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -11,7 +12,7 @@ func Compile(mod *Module, className string) string {
 		mod:       mod,
 		className: className,
 	}
-	return c.emit()
+	return wrapLongLines(c.emit())
 }
 
 // blockKind tracks what ABAP construct a WASM block maps to.
@@ -266,10 +267,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %d.", v, inst.I64Value)
 		case OpF32Const:
 			v := stack.push()
-			c.line("%s = '%f'.", v, inst.F32Value)
+			c.line("%s = '%s'.", v, floatLiteral(float64(inst.F32Value), 32))
 		case OpF64Const:
 			v := stack.push()
-			c.line("%s = '%f'.", v, inst.F64Value)
+			c.line("%s = '%s'.", v, floatLiteral(inst.F64Value, 64))
 
 		// Local/Global access
 		case OpLocalGet:
@@ -1618,7 +1619,7 @@ func (c *compiler) line(format string, args ...any) {
 		c.packer.add(stmt)
 		return
 	}
-	prefix := strings.Repeat("  ", c.indent)
+	prefix := sourceIndent(c.indent)
 	c.sb.WriteString(prefix)
 	c.sb.WriteString(stmt)
 	c.sb.WriteByte('\n')
@@ -1629,6 +1630,20 @@ func (c *compiler) flushPacker() {
 	if c.packer != nil {
 		c.packer.flush()
 	}
+}
+
+// maxFloatLiteral is the longest fixed-point float literal kept as is; longer
+// ones (magnitudes near 1e200 and above) could not fit an ABAP line.
+const maxFloatLiteral = 200
+
+// floatLiteral formats a float constant in fixed-point notation ("%f"), as the
+// generator always has. Only values whose fixed-point form would exceed
+// maxFloatLiteral, which produced over-long lines before, use exponent notation.
+func floatLiteral(v float64, bits int) string {
+	if s := fmt.Sprintf("%f", v); len(s) <= maxFloatLiteral {
+		return s
+	}
+	return strconv.FormatFloat(v, 'e', -1, bits)
 }
 
 func sanitizeABAP(name string) string {

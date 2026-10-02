@@ -247,18 +247,16 @@ func (c *compiler) emitI32Call(name, result, a, b string) {
 	}
 }
 
-// segmentChunk is the most bytes one data-segment statement writes: 127 bytes
-// is 254 hex characters, inside ABAP's 255-character literal limit.
-const segmentChunk = 127
-
 // emitDataSegments writes the data segments into memory with REPLACE SECTION
 // (no offset writes on an xstring), through a typed xstring so the literal is
 // read as hex, in chunks that keep each literal under 255 characters.
 func (c *compiler) emitDataSegments(mem string) {
 	declared := false
 	for _, seg := range c.mod.Data {
-		for off := 0; off < len(seg.Data); off += segmentChunk {
-			end := min(off+segmentChunk, len(seg.Data))
+		// Keep the complete assignment, including its actual indentation, within 255.
+		chunk := (255 - len(sourceIndent(c.indent)) - len("lv_seg = ''.")) / 2
+		for off := 0; off < len(seg.Data); off += chunk {
+			end := min(off+chunk, len(seg.Data))
 			if !declared {
 				c.line("DATA lv_seg TYPE xstring.")
 				declared = true

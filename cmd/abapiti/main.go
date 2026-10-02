@@ -7,6 +7,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,6 +51,7 @@ func init() {
 
 // addWasmFlags registers the flags shared by "compile wasm" and the root shortcut.
 func addWasmFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("allow-long-lines", false, "Allow output lines over 255 characters")
 	cmd.Flags().String("class", "", "ABAP class name (default: derived from filename)")
 	cmd.Flags().StringP("output", "o", "", "Output directory (default: stdout)")
 }
@@ -57,6 +59,13 @@ func addWasmFlags(cmd *cobra.Command) {
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "abapiti:", err)
-		os.Exit(1)
+		os.Exit(exitCode(err))
 	}
+}
+
+func exitCode(err error) int {
+	if errors.Is(err, errLongLines) {
+		return 3
+	}
+	return 1
 }
