@@ -1,0 +1,66 @@
+name: OSD M1
+
+# M1: WASM -> ABAP verified on open-steamgate. Compiles add.wasm and
+# factorial.wasm, deploys each class with a generated ABAP Unit test class
+# (expected values from wazero) to a pinned OSD, and runs the tests.
+# OSD activates through the abaplint transpiler, so green here is not proof of
+# kernel behaviour (TYPE i overflow, for one).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  osd-m1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OSD_WARM: "0"
+      STG_PORT: "3030"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Work directories
+        run: |
+          echo "WORK=$RUNNER_TEMP/osd-m1" >> "$GITHUB_ENV"
+          echo "OSD_DIR=$RUNNER_TEMP/osd" >> "$GITHUB_ENV"
+
+      - name: Start OSD (pinned)
+        run: .github/ci/osd-up.sh "$OSD_DIR"
+
+      - name: Deploy and test add, factorial
+        run: .github/ci/osd-m1.sh "$WORK"
+
+      - name: Stop OSD
+        if: always()
+        run: |
+          if [ -n "${OSD_PID:-}" ]; then kill "$OSD_PID" 2>/dev/null || true; fi
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/artifacts"
+          mkdir -p "$out/gen" "$out/log"
+          if [ -d "$WORK/gen" ]; then cp -r "$WORK/gen/." "$out/gen/"; fi
+          for f in "$WORK"/log/*.log "$OSD_DIR/osd.log" "$OSD_DIR/build.json"; do
+            [ -f "$f" ] || continue
+            .github/ci/osd-redact.sh < "$f" > "$out/log/$(basename "$f")"
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: osd-m1
+          path: ${{ runner.temp }}/artifacts
+          if-no-files-found: warn

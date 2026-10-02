@@ -187,11 +187,11 @@ func (c *compiler) emitConstructor() {
 			pages = 1
 		}
 		c.line("mv_mem_pages = %d.", pages)
-		// Initialize memory to zeros
-		c.line("DATA(lv_page) = CONV xstring( '00' ).")
-		c.line("DO %d TIMES.", pages*65536-1)
+		// Zero-filled memory, 256 bytes at a time
+		c.line("DATA lv_chunk TYPE x LENGTH 256.")
+		c.line("DO %d TIMES.", pages*256)
 		c.indent++
-		c.line("CONCATENATE mv_mem lv_page INTO mv_mem IN BYTE MODE.")
+		c.line("CONCATENATE mv_mem lv_chunk INTO mv_mem IN BYTE MODE.")
 		c.indent--
 		c.line("ENDDO.")
 	}
@@ -207,12 +207,7 @@ func (c *compiler) emitConstructor() {
 	}
 
 	// Initialize data segments
-	for _, seg := range c.mod.Data {
-		if len(seg.Data) > 0 {
-			hex := bytesToHex(seg.Data)
-			c.line("mv_mem+%d(%d) = '%s'.", seg.Offset, len(seg.Data), hex)
-		}
-	}
+	c.emitDataSegments("mv_mem")
 
 	// Initialize element segments (function tables)
 	for i, elem := range c.mod.Elements {
@@ -221,94 +216,6 @@ func (c *compiler) emitConstructor() {
 		}
 	}
 
-	c.indent--
-	c.line("ENDMETHOD.")
-}
-
-func (c *compiler) emitMemoryHelpers() {
-	// i32 load (little-endian)
-	c.line("METHOD mem_ld_i32.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 4.")
-	c.line("lv_b = mv_mem+iv_addr(4).")
-	c.line("\" Little-endian to big-endian")
-	c.line("DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).")
-	c.line("rv = lv_r.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 store (little-endian)
-	c.line("METHOD mem_st_i32.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 4.")
-	c.line("lv_b = iv_val.")
-	c.line("\" Big-endian to little-endian")
-	c.line("DATA(lv_r) = lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).")
-	c.line("mv_mem+iv_addr(4) = lv_r.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 load 8-bit unsigned
-	c.line("METHOD mem_ld_i32_8u.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 1.")
-	c.line("lv_b = mv_mem+iv_addr(1).")
-	c.line("rv = lv_b.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 load 8-bit signed
-	c.line("METHOD mem_ld_i32_8s.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 1.")
-	c.line("lv_b = mv_mem+iv_addr(1).")
-	c.line("rv = lv_b.")
-	c.line("IF rv > 127. rv = rv - 256. ENDIF.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 load 16-bit unsigned
-	c.line("METHOD mem_ld_i32_16u.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 2.")
-	c.line("lv_b = mv_mem+iv_addr(2).")
-	c.line("DATA(lv_r) = lv_b+1(1) && lv_b+0(1).")
-	c.line("rv = lv_r.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 store 8-bit
-	c.line("METHOD mem_st_i32_8.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 1.")
-	c.line("lv_b = iv_val.")
-	c.line("mv_mem+iv_addr(1) = lv_b.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// i32 store 16-bit
-	c.line("METHOD mem_st_i32_16.")
-	c.indent++
-	c.line("DATA lv_b TYPE x LENGTH 2.")
-	c.line("lv_b = iv_val.")
-	c.line("DATA(lv_r) = lv_b+1(1) && lv_b+0(1).")
-	c.line("mv_mem+iv_addr(2) = lv_r.")
-	c.indent--
-	c.line("ENDMETHOD.")
-
-	// memory.grow
-	c.line("METHOD mem_grow.")
-	c.indent++
-	c.line("rv = mv_mem_pages.")
-	c.line("DATA(lv_new_bytes) = iv_pages * 65536.")
-	c.line("DATA lv_zeros TYPE xstring.")
-	c.line("DO lv_new_bytes TIMES.")
-	c.indent++
-	c.line("CONCATENATE lv_zeros '00' INTO lv_zeros IN BYTE MODE.")
-	c.indent--
-	c.line("ENDDO.")
-	c.line("CONCATENATE mv_mem lv_zeros INTO mv_mem IN BYTE MODE.")
-	c.line("mv_mem_pages = mv_mem_pages + iv_pages.")
 	c.indent--
 	c.line("ENDMETHOD.")
 }

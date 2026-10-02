@@ -41,7 +41,7 @@ ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oise
 
 ## How it's verified
 
-Today: Go unit tests (`go test ./...`), including a native run of the WASM inputs in wazero as the reference, plus manual runs on SAP systems recorded in [`docs/history/`](docs/history/).
+Today: Go unit tests (`go test ./...`), including a native run of the WASM inputs in wazero as the reference; for **add** and **factorial**, the pipeline below runs in CI ([`osd-m1.yml`](.github/workflows/osd-m1.yml)); manual runs on SAP systems are recorded in [`docs/history/`](docs/history/).
 
 The target pipeline, per test case:
 
@@ -49,11 +49,11 @@ The target pipeline, per test case:
 2. Deploy both with `vsp` to the [open-steamgate](https://github.com/oisee/open-steamgate) emulator (OSD), activate, and run the ABAP Unit tests.
 3. Compare the ABAP results with the native ones; any difference fails the build.
 
-OSD activates code through the abaplint transpiler, so a green OSD run proves the generated ABAP passes abaplint and behaves correctly under that runtime. It does not prove kernel behaviour (`TYPE i` overflow, `xstring` offset writes); that stays a manual check on a real system.
+OSD activates code through the abaplint transpiler, so a green OSD run proves the generated ABAP passes abaplint and behaves correctly under that runtime. It does not prove kernel behaviour (`TYPE i` overflow, for one); that stays a check on a real system. The kernel behaviour the generated code relies on is pinned by the ABAP Unit repros in [`abap/osd_repro/`](abap/osd_repro/), measured on a real system.
 
 ## Roadmap
 
-- **M1:** `abapiti compile wasm` output for **add** and **factorial**, plus the generated ABAP Unit class, deploys, activates and runs green on a pinned OSD in CI. First check whether the memory helpers activate on OSD at all.
+- **M1:** `abapiti compile wasm` output for **add** and **factorial**, plus the generated ABAP Unit class, deploys, activates and runs green on a pinned OSD in CI ([`osd-m1.yml`](.github/workflows/osd-m1.yml)). Linear-memory writes go through `REPLACE SECTION ... IN BYTE MODE`, since an offset write on an `xstring` is a syntax error. Not yet: i32 wrap-around (`factorial(13)`), which a kernel reports as `CX_SY_ARITHMETIC_OVERFLOW`.
 - **M2:** the whole 12-function WASM suite and the 34-function LLVM corpus under the same harness.
 - **M3:** the TypeScript-transpiled lexer vs the `@abaplint/core` lexer on the same inputs.
 - **M4:** jseval (Go) and ZCL_JSEVAL (ABAP) conformance.

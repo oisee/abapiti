@@ -1,0 +1,5 @@
+# Expected sha256 of the pinned vsp release asset: "<sha256>  <tag>/<asset>".
+# Checked by osd-m1.sh in addition to the release's checksums.txt. Update
+# together with vsp.version:
+#   gh release download <tag> -R oisee/vibing-steampunk -p checksums.txt
+f0d44f596ca86e49f3f7c89f49aa5b13ae263c10c0f6034fadce7468cda0be4d  v2.59.1/vsp-linux-amd64

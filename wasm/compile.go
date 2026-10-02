@@ -310,18 +310,8 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 		}
 	}
 
-	// Data segments — batch init for efficiency
-	for _, seg := range mod.Data {
-		if len(seg.Data) > 0 {
-			hex := bytesToHex(seg.Data)
-			// Split very long hex strings
-			if len(hex) > 200 {
-				c.line("zcl_wasm_rt=>mem_init( EXPORTING iv_off = %d iv_hex = '%s' CHANGING cv_mem = mv_mem ).", seg.Offset, hex)
-			} else {
-				c.line("mv_mem+%d(%d) = '%s'.", seg.Offset, len(seg.Data), hex)
-			}
-		}
-	}
+	// Data segments (REPLACE SECTION, chunked; see memhelpers.go)
+	c.emitDataSegments("mv_mem")
 
 	// Element segments
 	for i, elem := range mod.Elements {
