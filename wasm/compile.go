@@ -252,6 +252,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.line("METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
 	c.emitI32HelperDeclarations("METHODS")
 
 	c.indent--
@@ -294,12 +295,8 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	// Memory init
 	if mod.Memory != nil {
 		pages := mod.Memory.Min
-		if pages == 0 {
-			pages = 1
-		}
-		totalBytes := pages * 65536
 		c.line("mv_mem_pages = %d.", pages)
-		c.line("mv_mem = zcl_wasm_rt=>alloc_mem( %d ).", totalBytes)
+		c.line("mv_mem = mem_zero_pages( %d ).", pages)
 	}
 
 	// Globals

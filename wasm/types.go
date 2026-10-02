@@ -96,27 +96,28 @@ type DataSegment struct {
 
 // ElementSegment represents a WASM element segment for table initialization.
 type ElementSegment struct {
-	TableIndex int
-	Offset     int // simplified — only i32.const offset for now
+	TableIndex  int
+	Offset      int // simplified — only i32.const offset for now
 	FuncIndices []int
 }
 
 // Memory represents a WASM linear memory declaration.
 type Memory struct {
-	Min int // minimum pages
-	Max int // maximum pages (0 = no limit)
+	Min    int // minimum pages
+	Max    int // maximum pages when HasMax is true
+	HasMax bool
 }
 
 // Module represents a parsed WASM module.
 type Module struct {
-	Types    []FuncType
-	Imports  []Import
-	Functions []Function
-	Globals  []Global
-	Exports  []Export
-	Memory   *Memory
-	Data     []DataSegment
-	Elements []ElementSegment
-	StartFunc int // -1 if no start function
+	Types            []FuncType
+	Imports          []Import
+	Functions        []Function
+	Globals          []Global
+	Exports          []Export
+	Memory           *Memory
+	Data             []DataSegment
+	Elements         []ElementSegment
+	StartFunc        int // -1 if no start function
 	NumImportedFuncs int
 }

@@ -78,21 +78,54 @@ var memHelperDefs = []memHelper{
 		"REPLACE SECTION OFFSET iv_addr LENGTH 2 OF {mem} WITH lv_le IN BYTE MODE.",
 	}},
 	{"mem_grow", true, []string{
-		"DATA lv_zeros TYPE xstring.",
-		"DATA lv_chunk TYPE x LENGTH 256.",
+		"IF iv_pages < 0.",
+		"  rv = -1.",
+		"  RETURN.",
+		"ENDIF.",
+		"IF iv_pages > {limit} - {pages}.",
+		"  rv = -1.",
+		"  RETURN.",
+		"ENDIF.",
 		"rv = {pages}.",
-		"DO iv_pages * 256 TIMES.",
-		"  CONCATENATE lv_zeros lv_chunk INTO lv_zeros IN BYTE MODE.",
-		"ENDDO.",
+		"IF iv_pages = 0. RETURN. ENDIF.",
+		"{zero_call}",
 		"CONCATENATE {mem} lv_zeros INTO {mem} IN BYTE MODE.",
 		"{pages} = {pages} + iv_pages.",
 	}},
 }
 
+// zeroPagesBody builds one zero page in eight doublings, then appends pages.
+// The page loop avoids making an oversized temporary for large memories.
+func zeroPagesBody() []string {
+	return []string{
+		"DATA lv_chunk TYPE x LENGTH 256.",
+		"DATA lv_page TYPE xstring.",
+		"IF iv_pages = 0. RETURN. ENDIF.",
+		"lv_page = lv_chunk.",
+		"DO 8 TIMES.",
+		"  CONCATENATE lv_page lv_page INTO lv_page IN BYTE MODE.",
+		"ENDDO.",
+		"DO iv_pages TIMES.",
+		"  CONCATENATE rv_mem lv_page INTO rv_mem IN BYTE MODE.",
+		"ENDDO.",
+	}
+}
+
+func memoryLimit(m *Memory) int {
+	if m != nil && m.HasMax {
+		return m.Max
+	}
+	return 65536
+}
+
 // memHelperBody returns a helper body with the memory variables filled in.
-func memHelperBody(h memHelper, mem, pages string) []string {
+func memHelperBody(h memHelper, mem, pages string, limit int, fugr bool) []string {
 	out := make([]string, len(h.body))
-	r := strings.NewReplacer("{mem}", mem, "{pages}", pages)
+	zeroCall := "DATA lv_zeros TYPE xstring. lv_zeros = mem_zero_pages( iv_pages )."
+	if fugr {
+		zeroCall = "DATA lv_zeros TYPE xstring. PERFORM mem_zero_pages USING iv_pages CHANGING lv_zeros."
+	}
+	r := strings.NewReplacer("{mem}", mem, "{pages}", pages, "{limit}", fmt.Sprint(limit), "{zero_call}", zeroCall)
 	for i, l := range h.body {
 		out[i] = r.Replace(l)
 	}
@@ -113,10 +146,17 @@ func memHelperParams(h memHelper) string {
 
 // emitMemoryHelpers emits the helpers as METHODs of the generated class.
 func (c *compiler) emitMemoryHelpers() {
+	c.line("METHOD mem_zero_pages.")
+	c.indent++
+	for _, l := range zeroPagesBody() {
+		c.line("%s", l)
+	}
+	c.indent--
+	c.line("ENDMETHOD.")
 	for _, h := range memHelperDefs {
 		c.line("METHOD %s.", h.name)
 		c.indent++
-		for _, l := range memHelperBody(h, "mv_mem", "mv_mem_pages") {
+		for _, l := range memHelperBody(h, "mv_mem", "mv_mem_pages", memoryLimit(c.mod.Memory), false) {
 			c.line("%s", l)
 		}
 		c.indent--
@@ -126,11 +166,16 @@ func (c *compiler) emitMemoryHelpers() {
 
 // emitFUGRMemoryHelpers returns the helpers as FORMs on the function group's
 // global memory.
-func emitFUGRMemoryHelpers() string {
+func emitFUGRMemoryHelpers(mod *Module) string {
 	var sb strings.Builder
+	sb.WriteString("FORM mem_zero_pages USING iv_pages TYPE i CHANGING rv_mem TYPE xstring.\n")
+	for _, l := range zeroPagesBody() {
+		sb.WriteString("  " + l + "\n")
+	}
+	sb.WriteString("ENDFORM.\n\n")
 	for _, h := range memHelperDefs {
 		fmt.Fprintf(&sb, "FORM %s %s.\n", h.name, memHelperParams(h))
-		for _, l := range memHelperBody(h, "gv_mem", "gv_mem_pages") {
+		for _, l := range memHelperBody(h, "gv_mem", "gv_mem_pages", memoryLimit(mod.Memory), true) {
 			sb.WriteString("  " + l + "\n")
 		}
 		sb.WriteString("ENDFORM.\n\n")

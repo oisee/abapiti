@@ -163,6 +163,7 @@ func parseMemorySection(r *reader, end int) *Memory {
 	}
 	mem := &Memory{}
 	hasMax := r.readByte()
+	mem.HasMax = hasMax == 1
 	mem.Min = int(r.readU32())
 	if hasMax == 1 {
 		mem.Max = int(r.readU32())
@@ -392,12 +393,12 @@ func parseInstructions(r *reader, end int) []Instruction {
 				// trunc_sat opcodes (0x00-0x07) have no additional immediates
 				// memory.init (0x08), data.drop (0x09), table.* (0x0C-0x11) have immediates
 				if inst.MiscOp == 0x08 { // memory.init
-					_ = r.readU32() // data index
+					_ = r.readU32()  // data index
 					_ = r.readByte() // memory index
 				} else if inst.MiscOp == 0x09 { // data.drop
 					_ = r.readU32() // data index
 				} else if inst.MiscOp >= 0x0C && inst.MiscOp <= 0x11 { // table ops
-					_ = r.readU32() // table/elem index
+					_ = r.readU32()          // table/elem index
 					if inst.MiscOp == 0x0E { // table.copy
 						_ = r.readU32() // second table index
 					}
@@ -422,12 +423,12 @@ func parseInstructions(r *reader, end int) []Instruction {
 				_ = r.readBytes(16)
 			}
 			// extract_lane / replace_lane have 1 byte lane index
-			if (simdOp >= 21 && simdOp <= 34) {
+			if simdOp >= 21 && simdOp <= 34 {
 				_ = r.readByte()
 			}
 
-		// Everything else: no immediates
-		// (end, else, nop, unreachable, drop, select, all arithmetic/comparison/conversion)
+			// Everything else: no immediates
+			// (end, else, nop, unreachable, drop, select, all arithmetic/comparison/conversion)
 		}
 
 		instructions = append(instructions, inst)
