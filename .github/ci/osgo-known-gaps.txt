@@ -1,6 +1,7 @@
 # Statements osgo (open-steamgate's Go runtime) does not compile yet, as
-# "<message substring>" per line. A NOT_COMPILED row whose message contains
-# one of these does not fail the osgo job; every other non-passing row does
+# the exact diagnostic osgo prints after "NOT_COMPILED in X=>M (file:line): ",
+# one per line. A NOT_COMPILED row with exactly that diagnostic
+# does not fail the osgo job; every other non-passing row does
 # (a wrong value, an error, an unknown NOT_COMPILED). Remove a line as soon as
 # open-steamgate compiles it (the job prints which lines matched nothing).
 # The runtime behaviour itself is pinned on A4H; see the inbox/issue noted.
