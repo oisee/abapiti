@@ -87,8 +87,8 @@ func TestParseAndCompile(t *testing.T) {
 		"METHOD add.",
 		"METHOD factorial.",
 		"ENDCLASS.",
-		"i32_add( iv_a = s0 iv_b = s1 )", // add: a + b
-		"factorial(",                     // recursive call
+		"lv_w = s0 + s1.", // add: a + b
+		"factorial(",      // recursive call
 	}
 	for _, check := range checks {
 		if !strings.Contains(abap, check) {

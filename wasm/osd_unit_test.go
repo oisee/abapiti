@@ -30,7 +30,7 @@ type osdResult struct {
 }
 
 // osdModules are the M1 modules deployed to open-steamgate. Wrapping inputs
-// exercise the generated packed-decimal i32 arithmetic on the ABAP runtime.
+// exercise the generated int8 i32 arithmetic on the ABAP runtime.
 var osdModules = []struct {
 	file  string
 	class string
@@ -104,6 +104,22 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{1, 32}},
 	}},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
+	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
+		{"add", []int32{2147483647, 1}},
+		{"add", []int32{-2147483648, -1}},
+		{"add", []int32{2147483647, 2147483647}},
+		{"add", []int32{-2147483648, -2147483648}},
+		{"sub", []int32{-2147483648, 1}},
+		{"sub", []int32{2147483647, -1}},
+		{"sub", []int32{2147483647, -2147483648}},
+		{"sub", []int32{-2147483648, 2147483647}},
+		{"mul", []int32{2147483647, 2147483647}},
+		{"mul", []int32{-2147483648, -2147483648}},
+		{"mul", []int32{-2147483648, -1}},
+		{"mul", []int32{-2147483648, 2147483647}},
+		{"mul", []int32{-7, 3}},
+		{"mul", []int32{-7, 0}},
+	}},
 	// Last: compileCFixture skips the whole test when clang is missing (as on
 	// the OSD runner), so no module after it would be generated there.
 	{"corpus", "zcl_abapiti_corpus", []osdCase{
@@ -225,6 +241,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		var bin []byte
 		var err error
 		switch m.file {
+		case "i32wrap":
+			bin = buildI32WrapModule()
 		case "branches":
 			bin = buildBranchLoopWasm()
 		case "suite":

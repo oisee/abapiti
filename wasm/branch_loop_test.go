@@ -143,7 +143,7 @@ func TestExtractedBranchSemantics(t *testing.T) {
 	for i := range indices {
 		indices[i] = i
 	}
-	forms, methods := emitFUGRInclude(mod, indices, nil, "ZLOOP")
+	forms, methods := emitFUGRInclude(mod, indices, nil, "ZLOOP", false)
 	for _, bm := range methods {
 		body := strings.Join(strings.Fields(bm.body), " ")
 		if bm.isLoop && !strings.HasPrefix(body, "DO.") {

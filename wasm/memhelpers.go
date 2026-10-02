@@ -196,12 +196,6 @@ var i32HelperDefs = []struct {
 	{"i32_mul", "*"},
 }
 
-func (c *compiler) emitI32HelperDeclarations(kind string) {
-	for _, h := range i32HelperDefs {
-		c.line("%s %s IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.", kind, h.name)
-	}
-}
-
 func i32HelperBody(op string) []string {
 	return []string{
 		"DATA lv_p TYPE int8.",
@@ -212,18 +206,6 @@ func i32HelperBody(op string) []string {
 		"  lv_p = lv_p - 4294967296.",
 		"ENDIF.",
 		"rv = lv_p.",
-	}
-}
-
-func (c *compiler) emitI32Helpers() {
-	for _, h := range i32HelperDefs {
-		c.line("METHOD %s.", h.name)
-		c.indent++
-		for _, l := range i32HelperBody(h.op) {
-			c.line("%s", l)
-		}
-		c.indent--
-		c.line("ENDMETHOD.")
 	}
 }
 
@@ -239,14 +221,43 @@ func emitFUGRI32Helpers() string {
 	return sb.String()
 }
 
-func (c *compiler) emitI32Call(name, result, a, b string) {
-	if c.useFUGR {
-		c.line("PERFORM %s USING %s %s CHANGING %s.", name, a, b, result)
-	} else if c.useRuntimeI32 {
-		c.line("%s = zcl_wasm_rt=>%s( iv_a = %s iv_b = %s ).", result, name, a, b)
-	} else {
-		c.line("%s = %s( iv_a = %s iv_b = %s ).", result, name, a, b)
+func usesI32Arithmetic(code []Instruction) bool {
+	for _, inst := range code {
+		switch inst.Op {
+		case OpI32Add, OpI32Sub, OpI32Mul:
+			return true
+		}
 	}
+	return false
+}
+
+func (c *compiler) emitI32Arithmetic(name, op, result, a, b string) {
+	if c.useFUGR && !(c.inBlockMethod && c.inlineI32Blocks) {
+		c.line("PERFORM %s USING %s %s CHANGING %s.", name, a, b, result)
+		return
+	}
+
+	// Keep the wrap sequence on separate lines even when the method packs code.
+	c.flushPacker()
+	savedPackLines := c.packLines
+	c.packLines = false
+	c.line("lv_w = %s %s %s.", a, op, b)
+	if op == "*" {
+		c.line("lv_w = lv_w MOD 4294967296.")
+	}
+	c.line("IF lv_w > 2147483647.")
+	c.indent++
+	c.line("lv_w = lv_w - 4294967296.")
+	c.indent--
+	if op != "*" {
+		c.line("ELSEIF lv_w < -2147483648.")
+		c.indent++
+		c.line("lv_w = lv_w + 4294967296.")
+		c.indent--
+	}
+	c.line("ENDIF.")
+	c.line("%s = lv_w.", result)
+	c.packLines = savedPackLines
 }
 
 // emitDataSegments writes the data segments into memory with REPLACE SECTION

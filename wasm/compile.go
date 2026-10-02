@@ -130,7 +130,7 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *Compile
 // --- Chunk Class ---
 
 func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerChunk int, chunkAssign []int, redirects map[int]int) string {
-	c := &compiler{mod: mod, className: chunkName, useRuntimeI32: true}
+	c := &compiler{mod: mod, className: chunkName}
 
 	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", chunkName)
 	c.indent++
@@ -195,17 +195,7 @@ func (c *compiler) emitFunctionWithMainRef(name string, f *Function, baseName st
 	c.line("METHOD %s.", sanitizeABAP(name))
 	c.indent++
 
-	// Locals
-	for i := 0; i < len(f.Locals); i++ {
-		localIdx := len(f.Type.Params) + i
-		c.line("DATA l%d TYPE %s.", localIdx, f.Locals[i].ABAPType())
-	}
-
-	maxStack := estimateMaxStack(f.Code)
-	for i := 0; i < maxStack; i++ {
-		c.line("DATA s%d TYPE i.", i)
-	}
-	c.line("DATA lv_br TYPE i.")
+	c.line("%s", emitChainedDATA(f, c.copyParams))
 
 	stack := &virtualStack{}
 	c.blockStack = nil
@@ -257,7 +247,6 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
-	c.emitI32HelperDeclarations("METHODS")
 
 	c.indent--
 	c.line("PRIVATE SECTION.")
@@ -329,7 +318,6 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 
 	// Memory helpers
 	c.emitMemoryHelpers()
-	c.emitI32Helpers()
 
 	// Exported functions — delegate to chunk classes
 	for i, f := range mod.Functions {
@@ -389,9 +377,6 @@ func emitRuntimeClass() string {
     CLASS-METHODS i64_add IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS i64_sub IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS i64_mul IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
-    CLASS-METHODS i32_add IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
-    CLASS-METHODS i32_sub IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
-    CLASS-METHODS i32_mul IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     " Memory allocation
     CLASS-METHODS alloc_mem IMPORTING iv_size TYPE i RETURNING VALUE(rv_mem) TYPE xstring.
     CLASS-METHODS mem_init IMPORTING iv_off TYPE i iv_hex TYPE string CHANGING cv_mem TYPE xstring.
@@ -464,37 +449,7 @@ func emitRuntimeClass() string {
 ENDCLASS.
 
 CLASS zcl_wasm_rt IMPLEMENTATION.
-` + emitI64RuntimeMethods() + `  METHOD i32_add.
-    DATA lv_p TYPE int8.
-    lv_p = iv_a.
-    lv_p = lv_p + iv_b.
-    lv_p = lv_p MOD 4294967296.
-    IF lv_p >= 2147483648.
-      lv_p = lv_p - 4294967296.
-    ENDIF.
-    rv = lv_p.
-  ENDMETHOD.
-  METHOD i32_sub.
-    DATA lv_p TYPE int8.
-    lv_p = iv_a.
-    lv_p = lv_p - iv_b.
-    lv_p = lv_p MOD 4294967296.
-    IF lv_p >= 2147483648.
-      lv_p = lv_p - 4294967296.
-    ENDIF.
-    rv = lv_p.
-  ENDMETHOD.
-  METHOD i32_mul.
-    DATA lv_p TYPE int8.
-    lv_p = iv_a.
-    lv_p = lv_p * iv_b.
-    lv_p = lv_p MOD 4294967296.
-    IF lv_p >= 2147483648.
-      lv_p = lv_p - 4294967296.
-    ENDIF.
-    rv = lv_p.
-  ENDMETHOD.
-  METHOD alloc_mem.
+` + emitI64RuntimeMethods() + `  METHOD alloc_mem.
     " Allocate iv_size bytes of zeroed memory
     DATA lv_hex TYPE string.
     DATA lv_chunk TYPE x LENGTH 256.
