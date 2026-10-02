@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -483,6 +484,94 @@ func TestRunPushRangeCommitMessage(t *testing.T) {
 	}
 	if strings.Contains(out, "sapbox") {
 		t.Errorf("output prints the value:\n%s", out)
+	}
+}
+
+// A commit message or an added line can hold any byte but NUL, so no byte can
+// frame one commit's output from the next: an earlier version split `git log`
+// on 0x01..0x03, and a message starting with 0x01 hid what followed it.
+func TestRunControlBytesInHistory(t *testing.T) {
+	for _, c := range []byte{0x01, 0x02, 0x03, 0x1c, 0x1d, 0x1e, 0x1f, 0x7f} {
+		t.Run(fmt.Sprintf("0x%02x", c), func(t *testing.T) {
+			env := map[string]string{envList: "user: JDOEPRIVATE"}
+			sep := string([]byte{c})
+
+			// In a commit message: at the start, mid-line, and on lines of their own.
+			for i, msg := range []string{
+				sep + "JDOEPRIVATE logged on",
+				"subject" + sep + "\n\nbody " + sep + "JDOEPRIVATE" + sep + " end",
+				"subject\n\n" + sep + "\n" + sep + sep + "\nJDOEPRIVATE\n" + sep,
+			} {
+				root, g := newRepo(t)
+				base := g("rev-parse", "HEAD")
+				writeFile(t, filepath.Join(root, "a.txt"), "clean\n")
+				msgFile := filepath.Join(t.TempDir(), "msg")
+				writeFile(t, msgFile, msg)
+				g("add", ".")
+				g("commit", "-q", "--cleanup=verbatim", "-F", msgFile)
+				code, out, errs := runScan(t, env, "-root", root, "-range", base+"..HEAD")
+				if code != exitHits || !strings.Contains(out, "(message)") {
+					t.Errorf("message %d: exit %d, want a hit in the message\n%s%s", i, code, out, errs)
+				}
+			}
+
+			// In an added line of a patch, in a commit that follows a clean one,
+			// so a split inside the patch would misattribute or drop the line.
+			root, g := newRepo(t)
+			base := g("rev-parse", "HEAD")
+			writeFile(t, filepath.Join(root, "first.txt"), "nothing here\n")
+			g("add", ".")
+			g("commit", "-qm", "first")
+			writeFile(t, filepath.Join(root, "capture.txt"), "a\n"+sep+"\nuser="+sep+"JDOEPRIVATE\n"+sep+"b\n")
+			g("add", ".")
+			g("commit", "-qm", "second")
+			g("rm", "-q", "capture.txt")
+			g("commit", "-qm", "remove it")
+			code, out, errs := runScan(t, env, "-root", root, "-range", base+"..HEAD")
+			if code != exitHits || !strings.Contains(out, "capture.txt:3: identifier/user") {
+				t.Errorf("patch: exit %d, want capture.txt:3\n%s%s", code, out, errs)
+			}
+		})
+	}
+}
+
+// A merge is read as its first-parent diff, so what only the merge commit
+// itself added (an "evil merge") is still read, now that each commit is read
+// on its own.
+func TestRunMergeReadAsFirstParentDiff(t *testing.T) {
+	root, g := newRepo(t)
+	env := map[string]string{envList: "user: JDOEPRIVATE"}
+	base := g("rev-parse", "HEAD")
+	g("checkout", "-qb", "side")
+	writeFile(t, filepath.Join(root, "side.txt"), "side\n")
+	g("add", ".")
+	g("commit", "-qm", "side")
+	g("checkout", "-q", "main")
+	writeFile(t, filepath.Join(root, "main.txt"), "main\n")
+	g("add", ".")
+	g("commit", "-qm", "main")
+	g("merge", "-q", "--no-ff", "--no-commit", "side")
+	writeFile(t, filepath.Join(root, "main.txt"), "main\nuser JDOEPRIVATE\n")
+	g("add", ".")
+	g("commit", "-qm", "merge side")
+	g("rm", "-q", "main.txt")
+	g("commit", "-qm", "drop it")
+	code, out, errs := runScan(t, env, "-root", root, "-range", base+"..HEAD")
+	if code != exitHits || !strings.Contains(out, "main.txt:2: identifier/user") {
+		t.Fatalf("exit %d, want main.txt:2 from the merge\n%s%s", code, out, errs)
+	}
+}
+
+// Git refuses a NUL in a commit message, which is what lets a NUL-free
+// message be read whole.
+func TestGitRefusesNULInMessage(t *testing.T) {
+	root, g := newRepo(t)
+	msgFile := filepath.Join(t.TempDir(), "msg")
+	writeFile(t, msgFile, "a\x00JDOEPRIVATE")
+	tree := g("rev-parse", "HEAD^{tree}")
+	cmd := exec.Command("git", "-C", root, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit-tree", tree, "-F", msgFile)
+	if out, err := cmd.CombinedOutput(); err == nil {
+		t.Fatalf("git commit-tree accepted a NUL in the message: %s", out)
 	}
 }
 
