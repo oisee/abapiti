@@ -214,7 +214,7 @@ func emitFUGRRuntime(mod *Module) string {
 	return `" WASM Runtime helpers — included in function group
 " Memory load/store (little-endian)
 
-` + emitFUGRMemoryHelpers(mod) + emitFUGRI32Helpers()
+` + emitFUGRMemoryHelpers(mod) + emitFUGRI32Helpers() + emitFUGRI64Helpers(mod)
 }
 
 func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, upper string) (string, []*blockMethodDef) {
