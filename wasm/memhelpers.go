@@ -138,6 +138,70 @@ func emitFUGRMemoryHelpers() string {
 	return sb.String()
 }
 
+// i32 arithmetic must finish in packed decimal before narrowing to TYPE i.
+// Every intermediate fits in 16 packed bytes, including signed i32 multiplication.
+var i32HelperDefs = []struct {
+	name string
+	op   string
+}{
+	{"i32_add", "+"},
+	{"i32_sub", "-"},
+	{"i32_mul", "*"},
+}
+
+func (c *compiler) emitI32HelperDeclarations(kind string) {
+	for _, h := range i32HelperDefs {
+		c.line("%s %s IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.", kind, h.name)
+	}
+}
+
+func i32HelperBody(op string) []string {
+	return []string{
+		"DATA lv_p TYPE p LENGTH 16 DECIMALS 0.",
+		"lv_p = iv_a.",
+		fmt.Sprintf("lv_p = lv_p %s iv_b.", op),
+		"lv_p = lv_p MOD 4294967296.",
+		"IF lv_p >= 2147483648.",
+		"  lv_p = lv_p - 4294967296.",
+		"ENDIF.",
+		"rv = lv_p.",
+	}
+}
+
+func (c *compiler) emitI32Helpers() {
+	for _, h := range i32HelperDefs {
+		c.line("METHOD %s.", h.name)
+		c.indent++
+		for _, l := range i32HelperBody(h.op) {
+			c.line("%s", l)
+		}
+		c.indent--
+		c.line("ENDMETHOD.")
+	}
+}
+
+func emitFUGRI32Helpers() string {
+	var sb strings.Builder
+	for _, h := range i32HelperDefs {
+		fmt.Fprintf(&sb, "FORM %s USING iv_a TYPE i iv_b TYPE i CHANGING rv TYPE i.\n", h.name)
+		for _, l := range i32HelperBody(h.op) {
+			sb.WriteString("  " + l + "\n")
+		}
+		sb.WriteString("ENDFORM.\n\n")
+	}
+	return sb.String()
+}
+
+func (c *compiler) emitI32Call(name, result, a, b string) {
+	if c.useFUGR {
+		c.line("PERFORM %s USING %s %s CHANGING %s.", name, a, b, result)
+	} else if c.useRuntimeI32 {
+		c.line("%s = zcl_wasm_rt=>%s( iv_a = %s iv_b = %s ).", result, name, a, b)
+	} else {
+		c.line("%s = %s( iv_a = %s iv_b = %s ).", result, name, a, b)
+	}
+}
+
 // segmentChunk is the most bytes one data-segment statement writes: 127 bytes
 // is 254 hex characters, inside ABAP's 255-character literal limit.
 const segmentChunk = 127

@@ -7,20 +7,20 @@ import (
 
 // CompileResult holds the output of multi-class compilation.
 type CompileResult struct {
-	MainClass   string            // main class source (memory, globals, exports, WASI)
+	MainClass    string            // main class source (memory, globals, exports, WASI)
 	ChunkClasses map[string]string // chunk class name → source
-	RuntimeClass string           // zcl_wasm_rt source
-	Stats       CompileStats
+	RuntimeClass string            // zcl_wasm_rt source
+	Stats        CompileStats
 }
 
 // CompileStats contains compilation statistics.
 type CompileStats struct {
-	TotalFunctions    int
+	TotalFunctions     int
 	DuplicateFunctions int
-	SavedInstructions int
-	ChunkCount        int
-	TotalLines        int
-	FuncsPerChunk     int
+	SavedInstructions  int
+	ChunkCount         int
+	TotalLines         int
+	FuncsPerChunk      int
 }
 
 // CompileMultiClass compiles a WASM module into multiple ABAP classes.
@@ -96,11 +96,11 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *Compile
 	result := &CompileResult{
 		ChunkClasses: make(map[string]string),
 		Stats: CompileStats{
-			TotalFunctions:    len(mod.Functions),
+			TotalFunctions:     len(mod.Functions),
 			DuplicateFunctions: dupes,
-			SavedInstructions: savedInstrs,
-			ChunkCount:        numChunks,
-			FuncsPerChunk:     funcsPerChunk,
+			SavedInstructions:  savedInstrs,
+			ChunkCount:         numChunks,
+			FuncsPerChunk:      funcsPerChunk,
 		},
 	}
 
@@ -126,7 +126,7 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *Compile
 // --- Chunk Class ---
 
 func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerChunk int, chunkAssign []int, redirects map[int]int) string {
-	c := &compiler{mod: mod, className: chunkName}
+	c := &compiler{mod: mod, className: chunkName, useRuntimeI32: true}
 
 	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", chunkName)
 	c.indent++
@@ -252,6 +252,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.line("METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.emitI32HelperDeclarations("METHODS")
 
 	c.indent--
 	c.line("PRIVATE SECTION.")
@@ -325,6 +326,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 
 	// Memory helpers
 	c.emitMemoryHelpers()
+	c.emitI32Helpers()
 
 	// Exported functions — delegate to chunk classes
 	for i, f := range mod.Functions {
@@ -381,6 +383,9 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 func emitRuntimeClass() string {
 	return `CLASS zcl_wasm_rt DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
+    CLASS-METHODS i32_add IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS i32_sub IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS i32_mul IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     " Memory allocation
     CLASS-METHODS alloc_mem IMPORTING iv_size TYPE i RETURNING VALUE(rv_mem) TYPE xstring.
     CLASS-METHODS mem_init IMPORTING iv_off TYPE i iv_hex TYPE string CHANGING cv_mem TYPE xstring.
@@ -453,6 +458,36 @@ func emitRuntimeClass() string {
 ENDCLASS.
 
 CLASS zcl_wasm_rt IMPLEMENTATION.
+  METHOD i32_add.
+    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    lv_p = iv_a.
+    lv_p = lv_p + iv_b.
+    lv_p = lv_p MOD 4294967296.
+    IF lv_p >= 2147483648.
+      lv_p = lv_p - 4294967296.
+    ENDIF.
+    rv = lv_p.
+  ENDMETHOD.
+  METHOD i32_sub.
+    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    lv_p = iv_a.
+    lv_p = lv_p - iv_b.
+    lv_p = lv_p MOD 4294967296.
+    IF lv_p >= 2147483648.
+      lv_p = lv_p - 4294967296.
+    ENDIF.
+    rv = lv_p.
+  ENDMETHOD.
+  METHOD i32_mul.
+    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    lv_p = iv_a.
+    lv_p = lv_p * iv_b.
+    lv_p = lv_p MOD 4294967296.
+    IF lv_p >= 2147483648.
+      lv_p = lv_p - 4294967296.
+    ENDIF.
+    rv = lv_p.
+  ENDMETHOD.
   METHOD alloc_mem.
     " Allocate iv_size bytes of zeroed memory
     DATA lv_hex TYPE string.

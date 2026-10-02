@@ -28,24 +28,24 @@ func buildTestWasm() []byte {
 	addBody := buildFuncBody(nil, []byte{
 		OpLocalGet, 0x00, // local.get 0
 		OpLocalGet, 0x01, // local.get 1
-		OpI32Add,         // i32.add
+		OpI32Add, // i32.add
 	})
 
 	// factorial(n) = if n<=1 then 1 else n*factorial(n-1)
 	factBody := buildFuncBody(nil, []byte{
 		OpLocalGet, 0x00, // local.get 0
 		OpI32Const, 0x01, // i32.const 1
-		OpI32LeS,         // i32.le_s
-		OpIf, 0x7F,       // if (result i32)
+		OpI32LeS,   // i32.le_s
+		OpIf, 0x7F, // if (result i32)
 		OpI32Const, 0x01, // i32.const 1
 		OpElse,           // else
 		OpLocalGet, 0x00, // local.get 0
 		OpLocalGet, 0x00, // local.get 0
 		OpI32Const, 0x01, // i32.const 1
-		OpI32Sub,         // i32.sub
-		OpCall, 0x01,     // call 1 (factorial)
-		OpI32Mul,         // i32.mul
-		OpEnd,            // end if
+		OpI32Sub,     // i32.sub
+		OpCall, 0x01, // call 1 (factorial)
+		OpI32Mul, // i32.mul
+		OpEnd,    // end if
 	})
 
 	w.addSection(10, buildCodeSection([][]byte{addBody, factBody}))
@@ -87,8 +87,8 @@ func TestParseAndCompile(t *testing.T) {
 		"METHOD add.",
 		"METHOD factorial.",
 		"ENDCLASS.",
-		"s0 + s1", // add: a + b
-		"factorial(",    // recursive call
+		"i32_add( iv_a = s0 iv_b = s1 )", // add: a + b
+		"factorial(",                     // recursive call
 	}
 	for _, check := range checks {
 		if !strings.Contains(abap, check) {

@@ -22,9 +22,8 @@ type osdCase struct {
 	args []int32
 }
 
-// osdModules are the M1 modules deployed to open-steamgate. Inputs whose i32
-// result wraps (add(max,1), factorial(13)) are left out: the generated ABAP
-// does not wrap yet, and a kernel raises CX_SY_ARITHMETIC_OVERFLOW there.
+// osdModules are the M1 modules deployed to open-steamgate. Wrapping inputs
+// exercise the generated packed-decimal i32 arithmetic on the ABAP runtime.
 var osdModules = []struct {
 	file  string
 	class string
@@ -36,6 +35,8 @@ var osdModules = []struct {
 		{"add", []int32{-1, 1}},
 		{"add", []int32{-5, -7}},
 		{"add", []int32{2147483647, 0}},
+		{"add", []int32{2147483647, 1}},
+		{"add", []int32{-2147483648, -1}},
 	}},
 	{"factorial.wasm", "zcl_abapiti_factorial", []osdCase{
 		{"factorial", []int32{0}},
@@ -43,6 +44,8 @@ var osdModules = []struct {
 		{"factorial", []int32{5}},
 		{"factorial", []int32{10}},
 		{"factorial", []int32{12}},
+		{"factorial", []int32{13}},
+		{"factorial", []int32{20}},
 	}},
 }
 

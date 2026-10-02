@@ -38,6 +38,7 @@ type compiler struct {
 
 	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
 	useFUGR       bool
+	useRuntimeI32 bool // chunk classes call the shared runtime class
 	fugrRedirects map[int]int
 
 	// Line packing: multiple statements per line
@@ -57,7 +58,7 @@ type blockMethodDef struct {
 	name       string
 	code       []Instruction
 	parentFunc *Function
-	startDepth int  // virtual stack depth at block entry
+	startDepth int // virtual stack depth at block entry
 	isLoop     bool
 	body       string // generated ABAP method body (filled during emission)
 }
@@ -115,6 +116,7 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.emitI32HelperDeclarations("METHODS")
 
 	// Internal functions (non-exported only — exported are already in PUBLIC SECTION)
 	for i, f := range c.mod.Functions {
@@ -160,6 +162,7 @@ func (c *compiler) emitImplementation() {
 
 	// Memory helpers
 	c.emitMemoryHelpers()
+	c.emitI32Helpers()
 
 	// Functions
 	for i, f := range c.mod.Functions {
@@ -297,15 +300,15 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpI32Add:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s + %s.", r, a, b)
+			c.emitI32Call("i32_add", r, a, b)
 		case OpI32Sub:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s - %s.", r, a, b)
+			c.emitI32Call("i32_sub", r, a, b)
 		case OpI32Mul:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s * %s.", r, a, b)
+			c.emitI32Call("i32_mul", r, a, b)
 		case OpI32DivS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
