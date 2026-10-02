@@ -1,8 +1,11 @@
 name: OSD M1
 
-# M1: WASM -> ABAP verified on open-steamgate. Compiles add.wasm and
-# factorial.wasm, deploys each class with a generated ABAP Unit test class
-# (expected values from wazero) to a pinned OSD, and runs the tests.
+# Generated ABAP verified on open-steamgate, in two runtimes. Every OSD module
+# from wasm/osd_unit_test.go is compiled with a generated ABAP Unit test class
+# (expected values from wazero) and run:
+#   osgo: open-steamgate's Go runtime, straight from the files (osgo:unit),
+#         open-steamgate checked out at .github/ci/osgo.ref; the primary target;
+#   osd-m1: the pinned OSD binary (JS runtime), deployed through ADT with vsp.
 # OSD activates through the abaplint transpiler, so green here is not proof of
 # kernel behaviour (TYPE i overflow, for one).
 
@@ -16,6 +19,54 @@ permissions:
   contents: read
 
 jobs:
+  osgo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pin
+        id: pin
+        run: echo "ref=$(tr -d '[:space:]' < .github/ci/osgo.ref)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Go 1.26 builds and npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/.npm
+          key: osgo-${{ runner.os }}-${{ steps.pin.outputs.ref }}
+
+      - name: Run the generated classes on osgo
+        run: .github/ci/osgo-unit.sh "$RUNNER_TEMP/osgo"
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/osgo-artifacts"
+          mkdir -p "$out"
+          for f in osgo.json osgo.err generate.log setup.log; do
+            [ -f "$RUNNER_TEMP/osgo/$f" ] && cp "$RUNNER_TEMP/osgo/$f" "$out/"
+          done
+          if [ -d "$RUNNER_TEMP/osgo/gen" ]; then cp -r "$RUNNER_TEMP/osgo/gen" "$out/gen"; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: osgo
+          path: ${{ runner.temp }}/osgo-artifacts
+          if-no-files-found: warn
+
   osd-m1:
     runs-on: ubuntu-latest
     timeout-minutes: 45
