@@ -46,8 +46,9 @@ jobs:
       # old commit must not overwrite a newer report. The base is the last
       # green push run on the pull request's base branch.
       #
-      # The report is always about the newest CI run on the commit, at its
-      # newest attempt. A run that is not the newest (a re-run of CI or OSD M1
+      # The report is always about the newest CI run of this pull request on
+      # the commit (same head repository and branch: two forks can push the
+      # same SHA), at its newest attempt. A run that is not the newest (a re-run of CI or OSD M1
       # on the same commit started since) writes nothing: the newer one's own
       # completion writes the report, so a late, older run cannot overwrite a
       # newer report. When OSD M1 is what finished, the CI run is looked up; if
@@ -60,11 +61,22 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const trigger = context.payload.workflow_run;
-            // The newest run of a workflow on a commit; its run_attempt is its
-            // newest attempt. undefined when there is none, or on an API error.
+            // Runs of one pull request: a commit SHA alone is not enough, since
+            // two forks can open pull requests with the same commit. Same head
+            // repository and branch, and the same PR number when both runs
+            // know theirs (fork runs carry no pull_requests).
+            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
+              && r.head_branch === ref.head_branch
+              && (!r.pull_requests?.length || !ref.pull_requests?.length
+                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
+            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
+              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
+            // The newest run of a workflow on this pull request's commit; its
+            // run_attempt is its newest attempt. undefined when there is none,
+            // or on an API error.
             const newest = (workflow_id) => github.paginate(github.rest.actions.listWorkflowRuns,
               { owner, repo, workflow_id, head_sha: trigger.head_sha, event: 'pull_request', per_page: 100 })
-              .then((runs) => runs.reduce((a, r) => (!a || r.id > a.id ? r : a), undefined))
+              .then((runs) => newestOf(runs, trigger))
               .catch((e) => { core.warning(`listing ${workflow_id} runs: ${e.message}`); return undefined; });
             const same = (a, b) => a && b && a.id === b.id && a.run_attempt === b.run_attempt;
 
@@ -467,6 +479,16 @@ jobs:
             const fs = require('fs');
             const marker = '<!-- abapiti-ci-report -->';
             const { owner, repo } = context.repo;
+            // Runs of one pull request: a commit SHA alone is not enough, since
+            // two forks can open pull requests with the same commit. Same head
+            // repository and branch, and the same PR number when both runs
+            // know theirs (fork runs carry no pull_requests).
+            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
+              && r.head_branch === ref.head_branch
+              && (!r.pull_requests?.length || !ref.pull_requests?.length
+                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
+            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
+              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
             // The CI run on the commit, whichever workflow's completion this is.
             const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.CI_RUN) })).data;
             const prNumber = Number(process.env.PR);
@@ -516,9 +538,9 @@ jobs:
             // No row when it has not run on this commit (or does not exist on
             // this branch yet). It is not part of CI's verdict above; its own
             // check on the pull request is what gates, if anything does.
-            const osd = await github.rest.actions.listWorkflowRuns({
-              owner, repo, workflow_id: 'osd-m1.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 1,
-            }).then((r) => r.data.workflow_runs[0]).catch(() => undefined);
+            const osd = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'osd-m1.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => newestOf(runs, run)).catch(() => undefined);
             if (osd) {
               const result = osd.status === 'completed' ? icon(osd.conclusion) : '🟡 ' + clean(String(osd.status).replace(/_/g, ' '), 20);
               const osdJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt,
@@ -610,9 +632,9 @@ jobs:
             // this older one must not land.
             const now = await github.paginate(github.rest.actions.listWorkflowRuns,
               { owner, repo, workflow_id: 'ci.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
-              .then((runs) => runs.reduce((a, r) => (!a || r.id > a.id ? r : a), undefined));
+              .then((runs) => newestOf(runs, run));
             if (!now || now.id !== run.id || String(now.run_attempt) !== process.env.CI_ATTEMPT) {
-              core.info(`a newer CI run or attempt exists on ${run.head_sha}; this report is not written`);
+              core.info(`a newer CI run or attempt exists for this pull request on ${run.head_sha}; this report is not written`);
               return;
             }
 
