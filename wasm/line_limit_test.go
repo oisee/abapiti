@@ -81,7 +81,7 @@ func forEachBackend(t *testing.T, check func(t *testing.T, files map[string]stri
 			}
 			t.Run("multi-class", func(t *testing.T) {
 				result := mustCompileMultiClass(t, m.mod, "zcl_line_limit", 80)
-				files := result.Files("zcl_line_limit")
+				files := mustSplitFiles(t, result, "zcl_line_limit")
 				check(t, files)
 			})
 		})

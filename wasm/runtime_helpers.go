@@ -11,6 +11,7 @@ import (
 // signatures and bodies in one source prevents the single class from drifting
 // away from the multi-class backend.
 var runtimeDeclarationRE = regexp.MustCompile(`(?m)^\s*CLASS-METHODS ([a-z0-9_]+) (.+)\.$`)
+var runtimeMemoryOperandRE = regexp.MustCompile(`\b(?:iv_mem|cv_mem)\b`)
 var runtimeMethodRE = regexp.MustCompile(`(?s)\bMETHOD ([a-z0-9_]+)\.(.*?)\bENDMETHOD\.`)
 var inlineDataRE = regexp.MustCompile(`DATA\(([a-z][a-z0-9_]*)\)\s*=`)
 var simpleConvRE = regexp.MustCompile(`CONV\s+(?:int8|i|f|xstring)\(\s*([^()]*)\s*\)`)
@@ -31,6 +32,26 @@ func runtimeTemplates() (map[string]string, map[string]string) {
 
 func legacyRuntimeBody(name, body string) string {
 	switch name {
+	case "mem_init":
+		return `DATA lv_bytes TYPE xstring.
+DATA lv_len TYPE i.
+lv_bytes = iv_hex.
+lv_len = xstrlen( lv_bytes ).
+REPLACE SECTION OFFSET iv_off LENGTH lv_len OF cv_mem WITH lv_bytes IN BYTE MODE.`
+	case "mem_copy":
+		return `DATA lv_src_data TYPE xstring.
+IF iv_n <= 0. RETURN. ENDIF.
+lv_src_data = cv_mem+iv_src(iv_n).
+REPLACE SECTION OFFSET iv_dst LENGTH iv_n OF cv_mem WITH lv_src_data IN BYTE MODE.`
+	case "mem_fill":
+		return `DATA lv_byte TYPE x LENGTH 1.
+DATA lv_off TYPE i.
+IF iv_n <= 0. RETURN. ENDIF.
+lv_byte = iv_val.
+DO iv_n TIMES.
+lv_off = iv_dst + sy-index - 1.
+REPLACE SECTION OFFSET lv_off LENGTH 1 OF cv_mem WITH lv_byte IN BYTE MODE.
+ENDDO.`
 	case "div_u32", "rem_u32":
 		op := "DIV"
 		if name == "rem_u32" {
@@ -193,6 +214,7 @@ ENDCASE.`
 		body = simpleConvRE.ReplaceAllString(body, "$1")
 	}
 	body = strings.ReplaceAll(body, "CONV i( lv_val DIV ipow( base = 2 exp = lv_shift ) )", "lv_val DIV ipow( base = 2 exp = lv_shift )")
+	body = strings.ReplaceAll(body, "cv_mem+iv_addr(8) = lv_r.", "REPLACE SECTION OFFSET iv_addr LENGTH 8 OF cv_mem WITH lv_r IN BYTE MODE.")
 	body = xsdboolRE.ReplaceAllString(body, "IF $1. rv = abap_true. ELSE. rv = abap_false. ENDIF.")
 	if len(declarations) > 0 {
 		body = strings.Join(declarations, "\n") + "\n" + body
@@ -424,6 +446,10 @@ func (c *compiler) emitRuntimeDeclarations() {
 	declarations, _ := runtimeTemplates()
 	for _, name := range c.runtimeNames() {
 		if declaration, ok := declarations[name]; ok {
+			if c.ownsMemory && strings.HasPrefix(name, "mem_") {
+				declaration = strings.ReplaceAll(declaration, "iv_mem TYPE xstring ", "")
+				declaration = strings.ReplaceAll(declaration, " CHANGING cv_mem TYPE xstring", "")
+			}
 			c.line("%s", declaration)
 		}
 	}
@@ -435,6 +461,9 @@ func (c *compiler) emitRuntimeHelpers() {
 		body, ok := bodies[name]
 		if !ok {
 			continue
+		}
+		if c.ownsMemory && strings.HasPrefix(name, "mem_") {
+			body = runtimeMemoryOperandRE.ReplaceAllString(body, "mv_mem")
 		}
 		c.line("METHOD %s.", name)
 		c.indent++

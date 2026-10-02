@@ -26,15 +26,55 @@ type CompileStats struct {
 	CrossChunkCalls, IndirectCalls, MaxClassLines         int
 }
 
-func (r *CompileResult) Files(base string) map[string]string {
-	files := map[string]string{strings.ToLower(base) + ".clas.abap": r.MainClass, r.StateName + ".clas.abap": r.StateClass}
+// Files rejects duplicate ABAP object names before assembling output files.
+func (r *CompileResult) Files(base string) (map[string]string, error) {
+	files := map[string]string{}
+	objects := map[string]bool{}
+	add := func(name, extension, src string) error {
+		name = strings.ToLower(sanitizeABAP(name))
+		if objects[name] {
+			return fmt.Errorf("duplicate generated ABAP object name %q", name)
+		}
+		objects[name] = true
+		files[name+extension] = src
+		return nil
+	}
+	if err := add(base, ".clas.abap", r.MainClass); err != nil {
+		return nil, err
+	}
+	if err := add(r.StateName, ".clas.abap", r.StateClass); err != nil {
+		return nil, err
+	}
 	for name, src := range r.ChunkClasses {
-		files[name+".clas.abap"] = src
+		if err := add(name, ".clas.abap", src); err != nil {
+			return nil, err
+		}
 	}
 	for name, src := range r.Interfaces {
-		files[name+".intf.abap"] = src
+		if err := add(name, ".intf.abap", src); err != nil {
+			return nil, err
+		}
 	}
-	return files
+	return files, nil
+}
+
+// splitStem reserves suffix space and avoids collisions with the facade.
+func splitStem(base string, chunks int) string {
+	digits := len(fmt.Sprint(chunks))
+	if digits < 2 {
+		digits = 2
+	}
+	stem := base[:min(len(base), 28-digits)]
+	for {
+		collision := stem+"_st" == base
+		for g := 0; g < chunks && !collision; g++ {
+			collision = fmt.Sprintf("%s_c%02d", stem, g+1) == base || chunkInterface(stem, g) == base
+		}
+		if !collision {
+			return stem
+		}
+		stem = stem[:len(stem)-1]
+	}
 }
 
 // CompileMultiClass uses generated line counts and call graph adjacency to pack
@@ -59,10 +99,10 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		classLines = DefaultClassLines
 	}
 	base = strings.ToLower(sanitizeABAP(base))
-	stem := base
-	if len(stem) > 26 {
-		stem = stem[:26]
+	if len(base) > 30 {
+		return nil, fmt.Errorf("ABAP facade name exceeds 30 characters: %q", base)
 	}
+	stem := splitStem(base, 1)
 	state := stem + "_st"
 	used := map[string]bool{}
 	costs := make([]int, len(mod.Functions))
@@ -75,11 +115,8 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		costs[i] = strings.Count(wrapLongLines(c.sb.String()), "\n")
 	}
 	groups := clusterFunctions(mod, costs, classLines)
-	// Reserve additional suffix digits only when there are over 99 chunks.
-	if digits := len(fmt.Sprint(len(groups))); digits > 2 && len(stem) > 28-digits {
-		stem = stem[:28-digits]
-		state = stem + "_st"
-	}
+	stem = splitStem(base, len(groups))
+	state = stem + "_st"
 	assign := make([]int, len(mod.Functions))
 	for g, funcs := range groups {
 		for _, i := range funcs {
@@ -113,13 +150,16 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	// Reuse the single-class declarations and helpers with no WASM functions.
 	empty := *mod
 	empty.Functions = nil
-	c := &compiler{mod: &empty, className: state, copyParams: true, usedRuntime: used}
+	c := &compiler{mod: &empty, className: state, copyParams: true, usedRuntime: used, ownsMemory: true}
 	c.emitDefinition()
 	def := c.sb.String()
 	c.sb.Reset()
 	def = strings.ReplaceAll(def, "METHODS constructor.", "METHODS init.")
 	def = strings.ReplaceAll(def, "  PRIVATE SECTION.\n", "")
 	def = strings.ReplaceAll(def, "    DATA ", "    CLASS-DATA ")
+	privateMemory := "  PRIVATE SECTION.\n    CLASS-DATA mv_mem TYPE xstring.\n    CLASS-DATA mv_mem_pages TYPE i.\n"
+	def = strings.ReplaceAll(def, "    CLASS-DATA mv_mem TYPE xstring.\n", "")
+	def = strings.ReplaceAll(def, "    CLASS-DATA mv_mem_pages TYPE i.\n", "")
 	def = strings.ReplaceAll(def, "METHODS ", "CLASS-METHODS ")
 	tableDef := `    TYPES: BEGIN OF ty_func,
              chunk TYPE i,
@@ -140,7 +180,7 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		imports.emitMethodSignature(fmt.Sprintf("imp%d", i), imp.Type, true)
 	}
 	dispatchDef, dispatchImpl := splitDispatch(mod, state, assign)
-	def = strings.Replace(def, "ENDCLASS.", tableDef+imports.sb.String()+dispatchDef+"ENDCLASS.", 1)
+	def = strings.Replace(def, "ENDCLASS.", tableDef+imports.sb.String()+dispatchDef+privateMemory+"ENDCLASS.", 1)
 	c.line("CLASS %s IMPLEMENTATION.", state)
 	c.emitConstructor()
 	init := c.sb.String()
@@ -247,7 +287,11 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	}
 	c.line("ENDCLASS.")
 	r.MainClass = wrapLongLines(c.sb.String())
-	for _, src := range r.Files(base) {
+	files, err := r.Files(base)
+	if err != nil {
+		return nil, err
+	}
+	for _, src := range files {
 		n := strings.Count(src, "\n")
 		r.Stats.TotalLines += n
 		if n > r.Stats.MaxClassLines {
@@ -369,10 +413,14 @@ func clusterFunctions(mod *Module, costs []int, budget int) [][]int {
 	return groups
 }
 
-var sharedTokenRE = regexp.MustCompile(`\b(?:mv_mem_pages|mv_mem|mv_g[0-9]+|mt_tab[0-9]+)\b`)
+var sharedTokenRE = regexp.MustCompile(`\b(?:mv_g[0-9]+|mt_tab[0-9]+)\b`)
 var helperCallRE = regexp.MustCompile(`\b([a-z][a-z0-9_]*)\(`)
 
 func (c *compiler) splitStatement(stmt string) string {
+	// Runtime memory methods own the state buffer; callers pass only operands.
+	stmt = strings.ReplaceAll(stmt, "iv_mem = mv_mem ", "")
+	stmt = strings.ReplaceAll(stmt, " CHANGING cv_mem = mv_mem", "")
+	stmt = strings.ReplaceAll(stmt, "( EXPORTING ", "( ")
 	stmt = sharedTokenRE.ReplaceAllString(stmt, c.splitState+"=>$0")
 	stmt = strings.ReplaceAll(stmt, c.splitState+"=>"+c.splitState+"=>", c.splitState+"=>")
 	return helperCallRE.ReplaceAllStringFunc(stmt, func(call string) string {

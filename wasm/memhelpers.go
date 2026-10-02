@@ -146,6 +146,11 @@ func memHelperParams(h memHelper) string {
 
 // emitMemoryHelpers emits the helpers as METHODs of the generated class.
 func (c *compiler) emitMemoryHelpers() {
+	if c.ownsMemory {
+		c.line("METHOD mem_size.")
+		c.line("rv = mv_mem_pages.")
+		c.line("ENDMETHOD.")
+	}
 	c.line("METHOD mem_zero_pages.")
 	c.indent++
 	for _, l := range zeroPagesBody() {

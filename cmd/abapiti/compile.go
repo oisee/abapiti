@@ -176,7 +176,10 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		files = result.Files(className)
+		files, err = result.Files(className)
+		if err != nil {
+			return err
+		}
 		fmt.Fprintf(os.Stderr, "ABAP split: %d classes, %d interfaces, max-lines=%d cross-chunk-interface-calls=%d indirect-calls=%d dynamic-call-sites=0; activate interfaces, state %s, chunks, facade %s\n", len(result.ChunkClasses)+2, len(result.Interfaces), result.Stats.MaxClassLines, result.Stats.CrossChunkCalls, result.Stats.IndirectCalls, result.StateName, className)
 		if outputDir == "" {
 			outputDir = "."

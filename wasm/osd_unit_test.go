@@ -312,7 +312,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 				budget = 40
 			}
 			split := mustCompileMultiClass(t, mod, splitName, budget)
-			files := split.Files(splitName)
+			files := mustSplitFiles(t, split, splitName)
 			splitTests := osdTestClass(splitName, m.cases, want)
 			checkTestClass(t, splitName, splitTests, want)
 			files[splitName+".clas.testclasses.abap"] = splitTests

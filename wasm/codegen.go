@@ -36,6 +36,7 @@ type blockEntry struct {
 }
 
 type compiler struct {
+	ownsMemory      bool
 	splitState      string
 	splitInterface  string
 	chunkAssign     []int
@@ -144,6 +145,9 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
+	if c.ownsMemory {
+		c.line("METHODS mem_size RETURNING VALUE(rv) TYPE i.")
+	}
 	c.emitRuntimeDeclarations()
 	c.emitDispatchDeclarations()
 
@@ -491,7 +495,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		case OpMemorySize:
 			r := stack.push()
-			c.line("%s = %s.", r, c.memPagesVar())
+			if c.splitState != "" {
+				c.line("%s = mem_size( ).", r)
+			} else {
+				c.line("%s = %s.", r, c.memPagesVar())
+			}
 		case OpMemoryGrow:
 			pages := stack.pop()
 			r := stack.push()

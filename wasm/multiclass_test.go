@@ -29,6 +29,7 @@ func TestSplitIndependentClasses(t *testing.T) {
 				budget = DefaultClassLines
 			}
 			r := mustCompileMultiClass(t, mod, "zcl_split_test", budget)
+			assertSplitMemoryPrivate(t, r)
 			seen := map[string]bool{}
 			stateMethods := map[string]bool{}
 			for _, m := range classMethodImplementation.FindAllStringSubmatch(r.StateClass, -1) {
@@ -104,7 +105,7 @@ func TestSplitIndependentClasses(t *testing.T) {
 					t.Errorf("export %s unreachable", f.ExportName)
 				}
 			}
-			for file, src := range r.Files("zcl_split_test") {
+			for file, src := range mustSplitFiles(t, r, "zcl_split_test") {
 				for _, bad := range []string{"DATA(", "NEW ", "|", "CONV ", "VALUE #", "zcl_wasm_rt", "PERFORM ", "CALL METHOD ("} {
 					if strings.Contains(src, bad) {
 						t.Errorf("%s contains %s", file, bad)
@@ -171,15 +172,36 @@ func TestSplitClassNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	base := "zcl_abcdefghijklmnopqrstuv"
-	r := mustCompileMultiClass(t, mod, base, 40)
-	if r.StateName != base+"_st" {
-		t.Fatalf("state name %s", r.StateName)
-	}
-	for name := range r.ChunkClasses {
-		if len(name) > 30 {
-			t.Fatalf("class name too long: %s", name)
+	for _, base := range []string{
+		"zcl_abcdefghijklmnopqrstuv", "zcl_abcdefghijklmnopqrstuv_st",
+		"zcl_abcdefghijklmnopqrstuv_c01", "zif_abcdefghijklmnopqrstuv_c01",
+		"abcdefghijklmnopqrstuvwxy_i01", "zcl_abcdefghijklmnopqrstuvwxyz",
+	} {
+		r := mustCompileMultiClass(t, mod, base, 1)
+		seen := map[string]bool{base: true}
+		names := []string{r.StateName}
+		for name := range r.ChunkClasses {
+			names = append(names, name)
 		}
+		for name := range r.Interfaces {
+			names = append(names, name)
+		}
+		for _, name := range names {
+			if len(name) > 30 || seen[name] {
+				t.Fatalf("invalid or duplicate generated name %s for facade %s", name, base)
+			}
+			seen[name] = true
+		}
+		files := mustSplitFiles(t, r, base)
+		if len(files) != len(names)+1 || files[base+".clas.abap"] != r.MainClass {
+			t.Fatal("generated files lost an object")
+		}
+	}
+	// More than 99 chunks need extra suffix space.
+	base := "zcl_abcdefghijklmnopqrstu_c100"
+	stem := splitStem(base, 100)
+	if len(stem+"_c100") > 30 || stem+"_c100" == base {
+		t.Fatal("invalid stem for 100 chunks")
 	}
 }
 
@@ -317,6 +339,144 @@ func TestSplitTypedInterfaceCalls(t *testing.T) {
 				t.Fatalf("long interface name %s", name)
 			}
 		}
-		checkLineLimit(t, r.Files("zcl_abcdefghijklmnopqrstuvwxyz"))
+		checkLineLimit(t, mustSplitFiles(t, r, "zcl_abcdefghijklmnopqrstuvwxyz"))
+	}
+}
+
+func mustSplitFiles(t *testing.T, r *CompileResult, base string) map[string]string {
+	t.Helper()
+	files, err := r.Files(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files
+}
+
+func TestSplitFilesRejectDuplicateNames(t *testing.T) {
+	for _, r := range []*CompileResult{
+		{StateName: "ZCL_FACADE"},
+		{StateName: "zcl_state", ChunkClasses: map[string]string{"ZCL_FACADE": "chunk"}},
+		{StateName: "zcl_state", Interfaces: map[string]string{"ZCL_STATE": "interface"}},
+		{StateName: "zcl_state", ChunkClasses: map[string]string{"zcl_chunk": "a", "ZCL_CHUNK": "b"}},
+	} {
+		files, err := r.Files("zcl_facade")
+		if files != nil || err == nil || !strings.Contains(err.Error(), "duplicate generated ABAP object name") {
+			t.Fatalf("expected duplicate error, got %v, %v", files, err)
+		}
+	}
+}
+
+func assertSplitMemoryPrivate(t *testing.T, r *CompileResult) {
+	t.Helper()
+	sources := map[string]string{"facade": r.MainClass, r.StateName: r.StateClass}
+	for name, src := range r.ChunkClasses {
+		sources[name] = src
+	}
+	for name, src := range sources {
+		if strings.Contains(strings.ToUpper(src), "FRIENDS") {
+			t.Errorf("%s declares FRIENDS", name)
+		}
+		if name != r.StateName && strings.Contains(strings.ToLower(src), "mv_mem") {
+			t.Errorf("%s mentions private memory", name)
+		}
+	}
+	definition := strings.Split(r.StateClass, "ENDCLASS.")[0]
+	section := ""
+	found := map[string]bool{}
+	for _, stmt := range strings.Split(definition, ".") {
+		stmt = strings.TrimSpace(stmt)
+		if strings.HasSuffix(stmt, "SECTION") {
+			section = stmt
+		}
+		if strings.Contains(stmt, "mv_mem") {
+			if section != "PRIVATE SECTION" || !strings.HasPrefix(stmt, "CLASS-DATA ") {
+				t.Errorf("memory outside private CLASS-DATA: %s", stmt)
+			}
+			found[strings.Fields(stmt)[1]] = true
+		}
+	}
+	if !found["mv_mem"] || !found["mv_mem_pages"] {
+		t.Fatal("private memory declarations missing")
+	}
+}
+
+func TestSplitMemoryEncapsulation(t *testing.T) {
+	mod := &Module{Memory: &Memory{Min: 1}, Data: []DataSegment{{Offset: 4, Data: []byte{1, 2, 3, 4}}}}
+	var code []Instruction
+	helpers := []string{"mem_size", "mem_grow", "mem_copy", "mem_fill"}
+	for _, load := range []struct {
+		op     byte
+		helper string
+	}{
+		{OpI32Load, "mem_ld_i32"}, {OpI32Load8S, "mem_ld_i32_8s"}, {OpI32Load8U, "mem_ld_i32_8u"},
+		{OpI32Load16S, "mem_ld_i32_16s"}, {OpI32Load16U, "mem_ld_i32_16u"},
+		{OpI64Load, "mem_ld_i64"}, {OpI64Load8S, "mem_ld_i64_ext"}, {OpI64Load8U, "mem_ld_i64_ext"},
+		{OpI64Load16S, "mem_ld_i64_ext"}, {OpI64Load16U, "mem_ld_i64_ext"},
+		{OpI64Load32S, "mem_ld_i64_ext"}, {OpI64Load32U, "mem_ld_i64_ext"},
+		{OpF32Load, "mem_ld_f32"}, {OpF64Load, "mem_ld_f64"},
+	} {
+		for _, offset := range []int{0, 8} {
+			code = append(code, Instruction{Op: OpI32Const}, Instruction{Op: load.op, Offset: offset}, Instruction{Op: OpDrop})
+		}
+		helpers = append(helpers, load.helper)
+	}
+	for _, store := range []struct {
+		op, value byte
+		helper    string
+	}{
+		{OpI32Store, OpI32Const, "mem_st_i32"}, {OpI32Store8, OpI32Const, "mem_st_i32_8"}, {OpI32Store16, OpI32Const, "mem_st_i32_16"},
+		{OpI64Store, OpI64Const, "mem_st_i64"}, {OpI64Store8, OpI64Const, "mem_st_i64_trunc"},
+		{OpI64Store16, OpI64Const, "mem_st_i64_trunc"}, {OpI64Store32, OpI64Const, "mem_st_i64_trunc"},
+		{OpF32Store, OpF32Const, "mem_st_f32"}, {OpF64Store, OpF64Const, "mem_st_f64"},
+	} {
+		for _, offset := range []int{0, 8} {
+			code = append(code, Instruction{Op: OpI32Const}, Instruction{Op: store.value}, Instruction{Op: store.op, Offset: offset})
+		}
+		helpers = append(helpers, store.helper)
+	}
+	code = append(code, Instruction{Op: OpMemorySize}, Instruction{Op: OpDrop}, Instruction{Op: OpI32Const}, Instruction{Op: OpMemoryGrow}, Instruction{Op: OpDrop})
+	for _, op := range []byte{MiscMemoryCopy, MiscMemoryFill} {
+		code = append(code, Instruction{Op: OpI32Const}, Instruction{Op: OpI32Const}, Instruction{Op: OpI32Const}, Instruction{Op: OpMiscPrefix, MiscOp: op})
+	}
+	mod.Functions = []Function{{Type: &FuncType{}, ExportName: "memory_ops", Code: code}}
+	r := mustCompileMultiClass(t, mod, "zcl_memory_private", 1)
+	assertSplitMemoryPrivate(t, r)
+	chunk := r.ChunkClasses["zcl_memory_private_c01"]
+	public := strings.Split(r.StateClass, "PRIVATE SECTION.")[0]
+	for _, helper := range helpers {
+		if !strings.Contains(chunk, r.StateName+"=>"+helper+"(") || !strings.Contains(public, "CLASS-METHODS "+helper+" ") {
+			t.Errorf("missing public static memory method or call: %s", helper)
+		}
+	}
+	if strings.Contains(public, "iv_mem TYPE") || strings.Contains(public, "cv_mem TYPE") {
+		t.Error("state methods expose memory operands")
+	}
+	if !strings.Contains(r.StateClass, "REPLACE SECTION OFFSET 4 LENGTH 4 OF mv_mem WITH lv_seg IN BYTE MODE.") {
+		t.Error("data initialization missing from state")
+	}
+	if regexp.MustCompile(`mv_mem\+[^.]* =`).MatchString(r.StateClass) {
+		t.Error("state writes memory through an invalid xstring offset")
+	}
+}
+
+func TestSplitClassNamesHundredChunks(t *testing.T) {
+	ft := &FuncType{}
+	mod := &Module{Functions: make([]Function, 101)}
+	for i := range mod.Functions {
+		mod.Functions[i].Type = ft
+	}
+	base := "zcl_abcdefghijklmnopqrstu_c100"
+	r := mustCompileMultiClass(t, mod, base, 1)
+	if len(r.ChunkClasses) != 101 {
+		t.Fatal("fixture must generate 101 chunks")
+	}
+	files := mustSplitFiles(t, r, base)
+	if len(files) != 204 {
+		t.Fatalf("expected 204 objects, got %d", len(files))
+	}
+	for name := range files {
+		if len(strings.Split(name, ".")[0]) > 30 {
+			t.Errorf("long object name %s", name)
+		}
 	}
 }

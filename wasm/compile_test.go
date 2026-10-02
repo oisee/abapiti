@@ -38,7 +38,7 @@ func TestCompileMultiClassQuickJS(t *testing.T) {
 	// Write all files for inspection
 	outDir := testOutDir(t)
 
-	for name, src := range result.Files("zcl_qjs") {
+	for name, src := range mustSplitFiles(t, result, "zcl_qjs") {
 		os.WriteFile(outDir+"/"+name, []byte(src), 0644)
 	}
 
