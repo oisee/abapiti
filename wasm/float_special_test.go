@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -115,6 +116,12 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 				start++
 			} else {
 				start = strings.Index(flat, "METHOD "+name+".")
+			}
+			if start < 0 {
+				match := regexp.MustCompile(`METHOD [a-zA-Z0-9_]+~` + regexp.QuoteMeta(name) + `\.`).FindStringIndex(flat)
+				if match != nil {
+					start = match[0]
+				}
 			}
 			if start < 0 {
 				t.Fatalf("missing function %s", tc.fn)
@@ -230,7 +237,7 @@ func TestRuntimeReinterpretExponentCheck(t *testing.T) {
 				t.Fatal(err)
 			}
 			multi := mustCompileMultiClass(t, mod, "zcl_reinterpret", 80)
-			for _, src := range []string{compileClass(t, bin, "zcl_reinterpret"), multi.RuntimeClass} {
+			for _, src := range []string{compileClass(t, bin, "zcl_reinterpret"), multi.StateClass} {
 				flat := strings.Join(strings.Fields(src), " ")
 				start := strings.Index(flat, "METHOD "+tc.name+".")
 				if start < 0 {

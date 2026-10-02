@@ -26,20 +26,61 @@ type CompileStats struct {
 	CrossChunkCalls, IndirectCalls, MaxClassLines         int
 }
 
-func (r *CompileResult) Files(base string) map[string]string {
-	files := map[string]string{strings.ToLower(base) + ".clas.abap": r.MainClass, r.StateName + ".clas.abap": r.StateClass}
+// Files rejects duplicate ABAP object names before assembling output files.
+func (r *CompileResult) Files(base string) (map[string]string, error) {
+	files := map[string]string{}
+	objects := map[string]bool{}
+	add := func(name, extension, src string) error {
+		name = strings.ToLower(sanitizeABAP(name))
+		if objects[name] {
+			return fmt.Errorf("duplicate generated ABAP object name %q", name)
+		}
+		objects[name] = true
+		files[name+extension] = src
+		return nil
+	}
+	if err := add(base, ".clas.abap", r.MainClass); err != nil {
+		return nil, err
+	}
+	if err := add(r.StateName, ".clas.abap", r.StateClass); err != nil {
+		return nil, err
+	}
 	for name, src := range r.ChunkClasses {
-		files[name+".clas.abap"] = src
+		if err := add(name, ".clas.abap", src); err != nil {
+			return nil, err
+		}
 	}
 	for name, src := range r.Interfaces {
-		files[name+".intf.abap"] = src
+		if err := add(name, ".intf.abap", src); err != nil {
+			return nil, err
+		}
 	}
-	return files
+	return files, nil
+}
+
+// splitStem reserves suffix space and avoids collisions with the facade.
+func splitStem(base string, chunks int) string {
+	digits := len(fmt.Sprint(chunks))
+	if digits < 2 {
+		digits = 2
+	}
+	stem := base[:min(len(base), 28-digits)]
+	for {
+		collision := stem+"_st" == base
+		for g := 0; g < chunks && !collision; g++ {
+			collision = fmt.Sprintf("%s_c%02d", stem, g+1) == base || chunkInterface(stem, g) == base
+		}
+		if !collision {
+			return stem
+		}
+		stem = stem[:len(stem)-1]
+	}
 }
 
 // CompileMultiClass uses generated line counts and call graph adjacency to pack
 // functions. Oversized SCCs are divided because activation limits take priority.
-func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult, error) {
+func CompileMultiClass(mod *Module, base string, classLines int) (output *CompileResult, err error) {
+	defer catchCompileError(&err)
 	for i, f := range mod.Functions {
 		for _, op := range f.Code {
 			if op.Op == OpCallIndirect && op.TypeIndex >= 0 && op.TypeIndex < len(mod.Types) && len(mod.Types[op.TypeIndex].Results) > 1 {
@@ -59,27 +100,28 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		classLines = DefaultClassLines
 	}
 	base = strings.ToLower(sanitizeABAP(base))
-	stem := base
-	if len(stem) > 26 {
-		stem = stem[:26]
+	if len(base) > 30 {
+		return nil, fmt.Errorf("ABAP facade name exceeds 30 characters: %q", base)
 	}
+	stem := splitStem(base, 1)
 	state := stem + "_st"
 	used := map[string]bool{}
+	names := moduleFunctionNames(mod)
+	if (&compiler{mod: mod}).hasWASI() {
+		used["mem_st_i64"] = true
+	}
 	costs := make([]int, len(mod.Functions))
 	for i := range mod.Functions {
-		c := &compiler{mod: mod, copyParams: true, usedRuntime: used, splitState: state, chunkAssign: make([]int, len(mod.Functions)), chunkIndex: -1, splitInterface: chunkInterface(stem, 0)}
+		c := &compiler{mod: mod, names: names, copyParams: true, usedRuntime: used, splitState: state, chunkAssign: make([]int, len(mod.Functions)), chunkIndex: -1, splitInterface: chunkInterface(stem, 0)}
 		if mod.Functions[i].Type != nil {
-			c.emitMethodSignature(fmt.Sprintf("f%d", i), mod.Functions[i].Type, true)
-			c.emitFunction(fmt.Sprintf("%s~f%d", c.splitInterface, i), &mod.Functions[i])
+			c.emitMethodSignature(c.bodyName(i), mod.Functions[i].Type, true)
+			c.emitFunction(c.splitInterface+"~"+c.bodyName(i), &mod.Functions[i])
 		}
 		costs[i] = strings.Count(wrapLongLines(c.sb.String()), "\n")
 	}
 	groups := clusterFunctions(mod, costs, classLines)
-	// Reserve additional suffix digits only when there are over 99 chunks.
-	if digits := len(fmt.Sprint(len(groups))); digits > 2 && len(stem) > 28-digits {
-		stem = stem[:28-digits]
-		state = stem + "_st"
-	}
+	stem = splitStem(base, len(groups))
+	state = stem + "_st"
 	assign := make([]int, len(mod.Functions))
 	for g, funcs := range groups {
 		for _, i := range funcs {
@@ -89,10 +131,10 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	r := &CompileResult{StateName: state, ChunkClasses: map[string]string{}, Interfaces: map[string]string{}, Stats: CompileStats{TotalFunctions: len(mod.Functions), ChunkCount: len(groups), FuncsPerChunk: maxChunkMethods}}
 	for g, funcs := range groups {
 		name := fmt.Sprintf("%s_c%02d", stem, g+1)
-		c := &compiler{mod: mod, className: name, copyParams: true, usedRuntime: used, splitState: state, chunkAssign: assign, chunkIndex: g, splitInterface: chunkInterface(stem, g)}
+		c := &compiler{mod: mod, names: names, className: name, copyParams: true, usedRuntime: used, splitState: state, chunkAssign: assign, chunkIndex: g, splitInterface: chunkInterface(stem, g)}
 		c.line("INTERFACE %s PUBLIC.", c.splitInterface)
 		for _, i := range funcs {
-			c.emitMethodSignature(fmt.Sprintf("f%d", i), mod.Functions[i].Type, true)
+			c.emitMethodSignature(c.bodyName(i), mod.Functions[i].Type, true)
 		}
 		c.line("ENDINTERFACE.")
 		r.Interfaces[c.splitInterface] = wrapLongLines(c.sb.String())
@@ -103,7 +145,7 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		c.line("ENDCLASS.")
 		c.line("CLASS %s IMPLEMENTATION.", name)
 		for _, i := range funcs {
-			c.emitFunction(fmt.Sprintf("%s~f%d", c.splitInterface, i), &mod.Functions[i])
+			c.emitFunction(c.splitInterface+"~"+c.bodyName(i), &mod.Functions[i])
 		}
 		c.line("ENDCLASS.")
 		r.ChunkClasses[name] = wrapLongLines(c.sb.String())
@@ -113,15 +155,19 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	// Reuse the single-class declarations and helpers with no WASM functions.
 	empty := *mod
 	empty.Functions = nil
-	c := &compiler{mod: &empty, className: state, copyParams: true, usedRuntime: used}
+	c := &compiler{mod: &empty, className: state, copyParams: true, usedRuntime: used, ownsMemory: true}
 	c.emitDefinition()
 	def := c.sb.String()
 	c.sb.Reset()
 	def = strings.ReplaceAll(def, "METHODS constructor.", "METHODS init.")
 	def = strings.ReplaceAll(def, "  PRIVATE SECTION.\n", "")
 	def = strings.ReplaceAll(def, "    DATA ", "    CLASS-DATA ")
+	privateMemory := "  PRIVATE SECTION.\n    CLASS-DATA mv_mem TYPE xstring.\n    CLASS-DATA mv_mem_pages TYPE i.\n"
+	def = strings.ReplaceAll(def, "    CLASS-DATA mv_mem TYPE xstring.\n", "")
+	def = strings.ReplaceAll(def, "    CLASS-DATA mv_mem_pages TYPE i.\n", "")
 	def = strings.ReplaceAll(def, "METHODS ", "CLASS-METHODS ")
-	tableDef := `    TYPES: BEGIN OF ty_func,
+	tableDef := `    CLASS-METHODS wasi_reset.
+    TYPES: BEGIN OF ty_func,
              chunk TYPE i,
              fid TYPE i,
              sig TYPE i,
@@ -131,24 +177,23 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	for g := range groups {
 		tableDef += fmt.Sprintf("    CLASS-DATA go_c%02d TYPE REF TO %s.\n", g+1, chunkInterface(stem, g))
 	}
-	if mod.NumImportedFuncs > 0 {
-		tableDef += "    CLASS-DATA mv_wasi_output TYPE xstring.\n    CLASS-DATA mv_wasi_exit TYPE i.\n"
-	}
-	imports := &compiler{mod: mod, splitState: state, usedRuntime: used}
+
+	imports := &compiler{mod: mod, usedRuntime: used}
 	for i := 0; i < mod.NumImportedFuncs; i++ {
 		imp := imports.findImport(i)
 		imports.emitMethodSignature(fmt.Sprintf("imp%d", i), imp.Type, true)
 	}
 	dispatchDef, dispatchImpl := splitDispatch(mod, state, assign)
-	def = strings.Replace(def, "ENDCLASS.", tableDef+imports.sb.String()+dispatchDef+"ENDCLASS.", 1)
+	def = strings.Replace(def, "ENDCLASS.", tableDef+strings.ReplaceAll(imports.sb.String(), "METHODS ", "CLASS-METHODS ")+dispatchDef+privateMemory+"ENDCLASS.", 1)
 	c.line("CLASS %s IMPLEMENTATION.", state)
 	c.emitConstructor()
 	init := c.sb.String()
 	c.sb.Reset()
 	init = strings.Replace(init, "METHOD constructor.", "METHOD init.", 1)
 	clear := "    DATA ls_func TYPE ty_func.\n    DATA lv_name TYPE string.\n    CLEAR: mv_mem, mv_mem_pages, mt_funcs.\n"
-	if mod.NumImportedFuncs > 0 {
-		clear += "    CLEAR: mv_wasi_output, mv_wasi_exit.\n"
+
+	if c.hasWASI() {
+		clear += "    CLEAR: mv_stdout, mv_stderr, mv_stdin, mv_stdin_pos, mv_exited, mv_closed0, mv_closed1, mv_closed2, mv_clock_last_us, mv_clock_wrap_us, mt_args, mt_env.\n    mv_clock_override_ts = -1.\n    mv_runtime_override_us = -1.\n"
 	}
 	for i := range mod.Globals {
 		clear += fmt.Sprintf("    CLEAR mv_g%d.\n", i)
@@ -197,6 +242,10 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	}
 	c.sb.WriteString(imports.sb.String())
 	c.sb.WriteString(dispatchImpl)
+	c.emitWASIImplementation()
+	c.line("METHOD wasi_reset.")
+	c.emitWASIReset()
+	c.line("ENDMETHOD.")
 	c.emitMemoryHelpers()
 	c.emitRuntimeHelpers()
 	c.line("ENDCLASS.")
@@ -205,23 +254,30 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", base)
 	c.line("PUBLIC SECTION.")
 	c.line("METHODS constructor.")
-	if mod.NumImportedFuncs > 0 {
+	if c.hasWASI() {
 		c.line("METHODS wasi_output RETURNING VALUE(rv) TYPE xstring.")
 		c.line("METHODS wasi_exit RETURNING VALUE(rv) TYPE i.")
 	}
+	if c.hasWASI() {
+		c.sb.WriteString(splitWASIAccessors(state, false))
+	}
 	exports := splitExports(mod)
-	for _, exp := range exports {
-		c.emitMethodSignature(exp.Name, splitExportType(mod, exp.Index), true)
+	exportNames := splitExportNames(mod, exports)
+	for ei, exp := range exports {
+		c.emitMethodSignature(exportNames[ei], splitExportType(mod, exp.Index), true)
 	}
 	c.line("ENDCLASS.")
 	c.line("CLASS %s IMPLEMENTATION.", base)
 	c.line("METHOD constructor.")
 	c.line("%s=>init( ).", state)
 	c.line("ENDMETHOD.")
-	for _, exp := range exports {
+	for ei, exp := range exports {
 		i := exp.Index
 		ft := splitExportType(mod, i)
-		c.line("METHOD %s.", sanitizeABAP(exp.Name))
+		c.line("METHOD %s.", exportNames[ei])
+		if c.hasWASI() {
+			c.line("%s=>wasi_reset( ).", state)
+		}
 		var args []string
 		for j := range ft.Params {
 			args = append(args, fmt.Sprintf("p%d = p%d", j, j))
@@ -233,21 +289,28 @@ func CompileMultiClass(mod *Module, base string, classLines int) (*CompileResult
 		if i < 0 {
 			c.line("%s%s=>imp%d( %s ).", prefix, state, i+mod.NumImportedFuncs, strings.Join(args, " "))
 		} else {
-			c.line("%s%s=>go_c%02d->f%d( %s ).", prefix, state, assign[i]+1, i, strings.Join(args, " "))
+			c.line("%s%s=>go_c%02d->%s( %s ).", prefix, state, assign[i]+1, c.bodyName(i), strings.Join(args, " "))
 		}
 		c.line("ENDMETHOD.")
 	}
-	if mod.NumImportedFuncs > 0 {
+	if c.hasWASI() {
 		c.line("METHOD wasi_output.")
-		c.line("rv = %s=>mv_wasi_output.", state)
+		c.line("rv = %s=>get_stdout( ).", state)
 		c.line("ENDMETHOD.")
 		c.line("METHOD wasi_exit.")
-		c.line("rv = %s=>mv_wasi_exit.", state)
+		c.line("rv = %s=>get_exit_code( ).", state)
 		c.line("ENDMETHOD.")
+	}
+	if c.hasWASI() {
+		c.sb.WriteString(splitWASIAccessors(state, true))
 	}
 	c.line("ENDCLASS.")
 	r.MainClass = wrapLongLines(c.sb.String())
-	for _, src := range r.Files(base) {
+	files, err := r.Files(base)
+	if err != nil {
+		return nil, err
+	}
+	for _, src := range files {
 		n := strings.Count(src, "\n")
 		r.Stats.TotalLines += n
 		if n > r.Stats.MaxClassLines {
@@ -369,10 +432,14 @@ func clusterFunctions(mod *Module, costs []int, budget int) [][]int {
 	return groups
 }
 
-var sharedTokenRE = regexp.MustCompile(`\b(?:mv_mem_pages|mv_mem|mv_g[0-9]+|mt_tab[0-9]+)\b`)
+var sharedTokenRE = regexp.MustCompile(`\b(?:mv_g[0-9]+|mt_tab[0-9]+)\b`)
 var helperCallRE = regexp.MustCompile(`\b([a-z][a-z0-9_]*)\(`)
 
 func (c *compiler) splitStatement(stmt string) string {
+	// Runtime memory methods own the state buffer; callers pass only operands.
+	stmt = strings.ReplaceAll(stmt, "iv_mem = mv_mem ", "")
+	stmt = strings.ReplaceAll(stmt, " CHANGING cv_mem = mv_mem", "")
+	stmt = strings.ReplaceAll(stmt, "( EXPORTING ", "( ")
 	stmt = sharedTokenRE.ReplaceAllString(stmt, c.splitState+"=>$0")
 	stmt = strings.ReplaceAll(stmt, c.splitState+"=>"+c.splitState+"=>", c.splitState+"=>")
 	return helperCallRE.ReplaceAllStringFunc(stmt, func(call string) string {
@@ -459,7 +526,7 @@ func splitDispatch(mod *Module, state string, assign []int) (string, string) {
 			target := fmt.Sprintf("%s=>imp%d", state, fid)
 			if fid >= mod.NumImportedFuncs {
 				i := fid - mod.NumImportedFuncs
-				target = fmt.Sprintf("%s=>go_c%02d->f%d", state, assign[i]+1, i)
+				target = fmt.Sprintf("%s=>go_c%02d->%s", state, assign[i]+1, impl.bodyName(i))
 			}
 			impl.emitStaticSplitCall(target, args, result, false)
 		}
@@ -506,4 +573,57 @@ func structuralSignature(mod *Module, ft *FuncType) int {
 		}
 	}
 	return -1
+}
+
+// Allocate aliases and imported exports in the same namespace as function names.
+func splitExportNames(mod *Module, exports []Export) []string {
+	c := &compiler{mod: mod}
+	var a abapNameAllocator
+	for name := range internalNames {
+		a.reserve(name)
+	}
+	declarations, _ := runtimeTemplates()
+	for name := range declarations {
+		a.reserve(name)
+	}
+	for i := range mod.Functions {
+		a.reserve(c.functionName(i))
+		a.reserve(c.bodyName(i))
+	}
+	names := make([]string, len(exports))
+	for ei, exp := range exports {
+		if exp.Index >= 0 && exp.Name == mod.Functions[exp.Index].ExportName {
+			names[ei] = c.functionName(exp.Index)
+			continue
+		}
+		raw := sanitizeABAP(exp.Name)
+		if looksInternal(raw) {
+			raw = "e_" + raw
+		}
+		names[ei] = a.allocate(raw)
+	}
+	return names
+}
+
+func splitWASIAccessors(state string, implementation bool) string {
+	var b strings.Builder
+	for _, accessor := range []struct{ name, param, typ string }{
+		{"get_stdout", "", "xstring"}, {"get_stderr", "", "xstring"}, {"get_exit_code", "", "i"},
+		{"set_stdin", "iv", "xstring"}, {"set_args", "it", "string_table"}, {"set_env", "it", "string_table"},
+	} {
+		if implementation {
+			fmt.Fprintf(&b, "METHOD %s.\n", accessor.name)
+			if accessor.param == "" {
+				fmt.Fprintf(&b, "rv = %s=>%s( ).\n", state, accessor.name)
+			} else {
+				fmt.Fprintf(&b, "%s=>%s( %s = %s ).\n", state, accessor.name, accessor.param, accessor.param)
+			}
+			b.WriteString("ENDMETHOD.\n")
+		} else if accessor.param == "" {
+			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(rv) TYPE %s.\n", accessor.name, accessor.typ)
+		} else {
+			fmt.Fprintf(&b, "METHODS %s IMPORTING %s TYPE %s.\n", accessor.name, accessor.param, accessor.typ)
+		}
+	}
+	return b.String()
 }

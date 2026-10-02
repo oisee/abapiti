@@ -365,14 +365,17 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 				names[f.ExportName] = allocated[i]
 			}
 		}
-		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod) && !m.independent, names)
-		checkTestClass(t, m.class, tests, want)
-		for name, body := range map[string]string{
-			m.class + ".clas.abap":             src,
-			m.class + ".clas.testclasses.abap": tests,
-		} {
-			if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
-				t.Fatal(err)
+		// Imported re-exports are covered by the split facade.
+		if m.file != "importsplit" {
+			tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod) && !m.independent, names)
+			checkTestClass(t, m.class, tests, want)
+			for name, body := range map[string]string{
+				m.class + ".clas.abap":             src,
+				m.class + ".clas.testclasses.abap": tests,
+			} {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 		if m.file == "importsplit" || m.file == "i32wrap" || m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
@@ -385,8 +388,14 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 				budget = 40
 			}
 			split := mustCompileMultiClass(t, mod, splitName, budget)
-			files := split.Files(splitName)
-			splitTests := osdTestClass(splitName, m.cases, want)
+			files := mustSplitFiles(t, split, splitName)
+			splitNames := map[string]string{}
+			exports := splitExports(mod)
+			allocatedExports := splitExportNames(mod, exports)
+			for ei, exp := range exports {
+				splitNames[exp.Name] = allocatedExports[ei]
+			}
+			splitTests := osdTestClassReplay(splitName, m.cases, want, moduleHasState(mod) && !m.independent, splitNames)
 			checkTestClass(t, splitName, splitTests, want)
 			files[splitName+".clas.testclasses.abap"] = splitTests
 			for name, body := range files {

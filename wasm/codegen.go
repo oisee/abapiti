@@ -38,7 +38,8 @@ type blockEntry struct {
 }
 
 type compiler struct {
-	names       []string
+	names           []string
+	ownsMemory      bool
 	splitState      string
 	splitInterface  string
 	chunkAssign     []int
@@ -149,6 +150,9 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
+	if c.ownsMemory {
+		c.line("METHODS mem_size RETURNING VALUE(rv) TYPE i.")
+	}
 	c.emitRuntimeDeclarations()
 	c.emitDispatchDeclarations()
 
@@ -498,7 +502,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		case OpMemorySize:
 			r := stack.push()
-			c.line("%s = %s.", r, c.memPagesVar())
+			if c.splitState != "" {
+				c.line("%s = mem_size( ).", r)
+			} else {
+				c.line("%s = %s.", r, c.memPagesVar())
+			}
 		case OpMemoryGrow:
 			pages := stack.pop()
 			r := stack.push()
@@ -1217,9 +1225,9 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 	name := c.bodyName(localIdx)
 
 	if c.splitState != "" {
-		name = c.splitInterface + "~" + fmt.Sprintf("f%d", localIdx)
+		name = c.splitInterface + "~" + c.bodyName(localIdx)
 		if c.chunkAssign[localIdx] != c.chunkIndex {
-			name = fmt.Sprintf("%s=>go_c%02d->f%d", c.splitState, c.chunkAssign[localIdx]+1, localIdx)
+			name = fmt.Sprintf("%s=>go_c%02d->%s", c.splitState, c.chunkAssign[localIdx]+1, c.bodyName(localIdx))
 			c.crossChunkCalls++
 		}
 	}
@@ -1347,9 +1355,17 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 	for i := len(args) - 1; i >= 0; i-- {
 		args[i] = stack.pop()
 	}
+	result := ""
+	if len(imp.Type.Results) > 0 {
+		result = stack.push()
+	}
+	c.emitWASIArgs(imp, args, result)
+}
+
+func (c *compiler) emitWASIArgs(imp *Import, args []string, result string) {
 	if c.useFUGR || imp.Module != "wasi_snapshot_preview1" {
 		if len(imp.Type.Results) > 0 {
-			c.line("%s = 52.", stack.push())
+			c.line("%s = 52.", result)
 		}
 		if imp.Name == "proc_exit" {
 			c.line(wasmTrap)
@@ -1365,12 +1381,14 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 		"random_get", "proc_exit", "sched_yield":
 	default:
 		if len(imp.Type.Results) > 0 {
-			c.line("%s = 52.", stack.push())
+			c.line("%s = 52.", result)
 		}
 		return
 	}
 	prefix := ""
-	if c.sharedMain {
+	if c.splitState != "" {
+		prefix = c.splitState + "=>"
+	} else if c.sharedMain {
 		prefix = "mo_main->"
 	}
 	params := []string{fmt.Sprintf("iv_name = '%s'", strings.ReplaceAll(imp.Name, "'", "''"))}
@@ -1381,7 +1399,7 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 	}
 	call := fmt.Sprintf("%swasi_call( %s )", prefix, strings.Join(params, " "))
 	if len(imp.Type.Results) > 0 {
-		c.line("%s = %s.", stack.push(), call)
+		c.line("%s = %s.", result, call)
 	} else {
 		c.line("%s.", call)
 	}

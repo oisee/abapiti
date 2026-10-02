@@ -10,8 +10,11 @@ output; splitting also happens automatically above `--class-lines` (default
 The WASM CLI writes ABAP source files without XML metadata for either classes
 or interfaces. Its size report includes every emitted interface and class.
 
-The state holds static memory, globals, function tables, required arithmetic
-and memory helpers, and WASI output/exit state for imported modules. Its `init`
+The state holds memory and its page counter as private `CLASS-DATA`, without
+`FRIENDS`. Chunks access memory only through public static state methods for
+loads, stores, size, grow, copy, and fill. Data segments are initialized inside
+the state. Globals, function tables, required arithmetic helpers, and WASI
+output/exit state also live in the state. Its `init`
 resets memory, globals, data segments and tables. Constructing a facade calls
 `init`; multiple facade objects share this state, so constructing another
 facade resets the shared module. The facade preserves all export aliases,
@@ -24,7 +27,10 @@ calls use typed interface references such as `zcl_example_st=>go_c02->f123( )`.
 The state creates each instance once with `CREATE OBJECT ... TYPE (lv_name)`
 using an uppercase class-name string. State and chunks have no static reference
 to any other chunk class. Bases beginning with `zcl_` use `zif_..._cNN` interface
-names; other bases use `<base>_iNN`. All object names fit in 30 characters.
+names; other bases use `<base>_iNN`. The shared stem is shortened to reserve
+suffix space and avoid collisions with the facade. Generated names are distinct
+and fit in 30 characters. `CompileResult.Files` returns an error for duplicate
+object names instead of overwriting output; callers must handle its error.
 
 Indirect calls validate table bounds, null entries, and structural signatures.
 The function registry stores chunk number, function id, and signature id. A
@@ -43,10 +49,17 @@ budget it occupies its own chunk. Shared initialization/data, indirect dispatch,
 and facade exports are also indivisible. The size report lists actual lines,
 methods, and longest routines for every output, including budget excesses.
 
-WASI provides byte output via `wasi_output` and exit status via `wasi_exit` on
-the facade. Reading returns EOF, args/environment are empty, and unimplemented
-host operations return ENOSYS. SIMD retains the existing unsupported-op trap;
-splitting QuickJS does not make its SIMD instructions executable.
+Split helpers use the same kernel-valid bodies as single-class compilation,
+with direct access to private memory inside the state methods. Function bodies,
+interface methods, calls, dispatch targets, and facade exports use the shared
+unique naming allocator; export aliases use its remaining namespace.
+
+WASI preview1 buffers, arguments, environment, clocks, random state, and the
+dispatcher live in the state. The facade exposes `get_stdout`, `get_stderr`,
+`get_exit_code`, `set_stdin`, `set_args`, and `set_env`; `wasi_output` and
+`wasi_exit` remain compatibility aliases. Facade exports reset exit status once
+per host invocation; internal calls preserve it. Compile APIs return errors for
+unsupported opcodes, including SIMD, instead of emitting partial output.
 
 `TestOSD_EmitUnitClasses` emits single-class tests into its root folder and
 forced-split variants into `split/`, with expectations computed by wazero.

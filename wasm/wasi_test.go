@@ -427,7 +427,7 @@ func TestWASIGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, src := range map[string]string{"class": mustCompile(t, mod, "zcl_wasi"), "state": multi.MainClass} {
+	for name, src := range map[string]string{"class": mustCompile(t, mod, "zcl_wasi"), "state": multi.StateClass} {
 		assertNoABAPComments(t, name, src)
 		if parameterWrite.MatchString(src) {
 			t.Errorf("%s writes to IMPORTING parameter", name)
@@ -458,7 +458,7 @@ func TestWASIGeneration(t *testing.T) {
 				t.Errorf("%s line length %d", name, len(line))
 			}
 		}
-		for _, required := range []string{"mo_main->wasi_call(", "mo_main->mem_ld_i32(", "s1_i64 TYPE int8"} {
+		for _, required := range []string{multi.StateName + "=>wasi_call(", "s1_i64 TYPE int8"} {
 			if !strings.Contains(src, required) {
 				t.Errorf("chunk missing %s", required)
 			}
@@ -466,6 +466,22 @@ func TestWASIGeneration(t *testing.T) {
 		if parameterWrite.MatchString(src) {
 			t.Error("chunk writes to IMPORTING parameter")
 		}
+	}
+
+	chunks := ""
+	for _, src := range multi.ChunkClasses {
+		chunks += src
+	}
+	if !strings.Contains(chunks, multi.StateName+"=>mem_ld_i32(") {
+		t.Error("missing chunk memory access")
+	}
+	for _, api := range []string{"get_stdout", "get_stderr", "get_exit_code", "set_stdin", "set_args", "set_env"} {
+		if !strings.Contains(multi.MainClass, "METHOD "+api+".") || !strings.Contains(multi.MainClass, multi.StateName+"=>"+api+"(") {
+			t.Errorf("facade does not expose %s", api)
+		}
+	}
+	if strings.Count(multi.MainClass, multi.StateName+"=>wasi_reset( ).") != len(splitExports(mod)) {
+		t.Error("facade must reset exit status once per export")
 	}
 
 	for _, backend := range []BackendKind{BackendFUGR, BackendHybrid} {

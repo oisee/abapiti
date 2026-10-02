@@ -52,7 +52,7 @@ func sanitizeABAP(name string) string {
 // renamed with an e_ prefix, which no internal name uses.
 var internalNamePrefixes = []string{"mv_", "mt_", "mo_", "gv_", "gt_", "lv_", "ls_", "lt_", "wasi_", "mem_", "dispatch_"}
 
-var internalNames = map[string]bool{"constructor": true, "wasm_init": true, "get_exit_code": true, "get_stderr": true, "get_stdout": true, "set_args": true, "set_env": true, "set_stdin": true}
+var internalNames = map[string]bool{"init": true, "constructor": true, "wasm_init": true, "get_exit_code": true, "get_stderr": true, "get_stdout": true, "set_args": true, "set_env": true, "set_stdin": true}
 
 func looksInternal(name string) bool {
 	lower := strings.ToLower(name)

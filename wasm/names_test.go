@@ -151,20 +151,32 @@ func TestUniqueNamesAllBackends(t *testing.T) {
 		for _, size := range []int{3, 80} {
 			result := mustCompileMultiClass(t, mod, "zcl_collision", size)
 			checkNamedMethods(t, result.MainClass, exports, true)
-			for chunk, src := range result.ChunkClasses {
+			var all strings.Builder
+			for iface, declaration := range result.Interfaces {
+				class := strings.Replace(iface, "zif_", "zcl_", 1)
+				implementation := result.ChunkClasses[class]
+				if implementation == "" {
+					t.Fatalf("missing chunk for %s", iface)
+				}
+				plain := strings.ReplaceAll(implementation, iface+"~", "")
 				var expected []string
-				for i, name := range names {
-					if chunk == fmt.Sprintf("zcl_collision_c%02d", i/size) {
+				for _, name := range names {
+					if strings.Contains(declaration, "METHODS "+name+" ") || strings.Contains(declaration, "METHODS "+name+".") {
 						expected = append(expected, name)
 					}
 				}
-				checkNamedMethods(t, src, expected, true)
-				for _, name := range expected {
-					if mod.Functions[indexOf(names, name)].ExportName != "" && !strings.Contains(result.MainClass, "->"+name+"( )") {
-						t.Errorf("missing delegation to %s", name)
-					}
+				checkNamedMethods(t, declaration+"\n"+plain, expected, true)
+				all.WriteString(plain)
+			}
+			for _, name := range names {
+				if !strings.Contains(all.String(), "METHOD "+name+".") {
+					t.Errorf("missing body %s", name)
+				}
+				if mod.Functions[indexOf(names, name)].ExportName != "" && !strings.Contains(strings.Join(strings.Fields(result.MainClass), " "), "->"+name+"( )") {
+					t.Errorf("missing delegation to %s", name)
 				}
 			}
+
 		}
 	})
 	t.Run("interface", func(t *testing.T) {
@@ -203,6 +215,13 @@ func TestUniqueNamesIndirectDispatch(t *testing.T) {
 			t.Errorf("missing indirect target %s", name)
 		}
 	}
+	split := mustCompileMultiClass(t, mod, "zcl_dispatch_collision", 1)
+	for _, name := range names[:2] {
+		if !strings.Contains(split.StateClass, "->"+name+"(") {
+			t.Errorf("missing split indirect target %s", name)
+		}
+	}
+
 }
 
 func TestUniqueNamesDeduplicatedDelegates(t *testing.T) {
@@ -229,8 +248,8 @@ func TestUniqueNamesDeduplicatedDelegates(t *testing.T) {
 	for _, name := range names[:2] {
 		body := result.MainClass[strings.Index(result.MainClass, "METHOD "+name+"."):]
 		body = body[:strings.Index(body, "ENDMETHOD.")]
-		if !strings.Contains(body, "mo_c00->"+names[0]+"( )") {
-			t.Errorf("%s does not delegate to canonical method", name)
+		if !strings.Contains(strings.Join(strings.Fields(body), " "), "->"+name+"( )") {
+			t.Errorf("%s does not delegate to its allocated body", name)
 		}
 	}
 }
@@ -257,5 +276,23 @@ func TestFunctionNamesAvoidInternalNames(t *testing.T) {
 	}
 	if names[6] != "foo" {
 		t.Errorf("plain export renamed: %q", names[6])
+	}
+}
+
+func TestSplitAliasNamesUseUniqueAllocator(t *testing.T) {
+	mod := collidingNameModule(t)
+	for _, raw := range []string{"punct-name", "punct.name", "get_stdout", "init", "constructor", strings.Repeat("a", 50)} {
+		mod.Exports = append(mod.Exports, Export{Name: raw + "-alias", Kind: 0, Index: 0})
+	}
+	exports := splitExports(mod)
+	names := splitExportNames(mod, exports)
+	split := mustCompileMultiClass(t, mod, "zcl_alias_names", 80)
+	checkNamedMethods(t, split.MainClass, names, true)
+	seen := map[string]bool{}
+	for _, name := range names {
+		if len(name) > 30 || seen[strings.ToLower(name)] || looksInternal(name) {
+			t.Fatalf("invalid alias %s", name)
+		}
+		seen[strings.ToLower(name)] = true
 	}
 }

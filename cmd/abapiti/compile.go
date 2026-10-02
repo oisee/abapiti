@@ -161,13 +161,18 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "WASM: %d bytes, %d functions, %d instructions\n",
 		len(data), len(mod.Functions), countInstructions(mod))
 
-	budget, _ := cmd.Flags().GetInt("class-lines")
+	budget := wasm.DefaultClassLines
+	if cmd.Flags().Lookup("class-lines") != nil {
+		budget, _ = cmd.Flags().GetInt("class-lines")
+	}
 	if budget <= 0 {
 		return fmt.Errorf("--class-lines must be positive")
 	}
 	force, _ := cmd.Flags().GetBool("split")
 	abapSrc, err := wasm.Compile(mod, className)
-	if err != nil { return err }
+	if err != nil {
+		return fmt.Errorf("failed to compile WASM: %w", err)
+	}
 	files := classFiles(className, abapSrc)
 	if force || strings.Count(abapSrc, "\n") > budget || len(mod.Functions) > 500 {
 		if len(className) > 30 {
@@ -177,7 +182,10 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		files = result.Files(className)
+		files, err = result.Files(className)
+		if err != nil {
+			return err
+		}
 		fmt.Fprintf(os.Stderr, "ABAP split: %d classes, %d interfaces, max-lines=%d cross-chunk-interface-calls=%d indirect-calls=%d dynamic-call-sites=0; activate interfaces, state %s, chunks, facade %s\n", len(result.ChunkClasses)+2, len(result.Interfaces), result.Stats.MaxClassLines, result.Stats.CrossChunkCalls, result.Stats.IndirectCalls, result.StateName, className)
 		if outputDir == "" {
 			outputDir = "."
