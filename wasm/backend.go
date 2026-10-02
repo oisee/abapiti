@@ -36,9 +36,9 @@ func (b BackendKind) String() string {
 
 // BackendResult holds generated ABAP sources for any backend.
 type BackendResult struct {
-	Backend  BackendKind
-	Files    map[string]string // filename → source
-	Stats    BackendStats
+	Backend BackendKind
+	Files   map[string]string // filename → source
+	Stats   BackendStats
 }
 
 type BackendStats struct {
@@ -206,7 +206,7 @@ func emitFUGRRuntime() string {
 	return `" WASM Runtime helpers — included in function group
 " Memory load/store (little-endian)
 
-` + emitFUGRMemoryHelpers()
+` + emitFUGRMemoryHelpers() + emitFUGRI32Helpers()
 }
 
 func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, upper string) (string, []*blockMethodDef) {
