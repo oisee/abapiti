@@ -102,7 +102,7 @@ func checkI32Helper(t *testing.T, backend, src, op string) {
 		body = body[:n]
 	}
 	for _, line := range []string{
-		"DATA lv_p TYPE p LENGTH 16 DECIMALS 0.",
+		"DATA lv_p TYPE int8.",
 		"lv_p = iv_a.",
 		"lv_p = lv_p " + operator + " iv_b.",
 		"lv_p = lv_p MOD 4294967296.",

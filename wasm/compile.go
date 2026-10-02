@@ -462,7 +462,7 @@ ENDCLASS.
 
 CLASS zcl_wasm_rt IMPLEMENTATION.
   METHOD i32_add.
-    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    DATA lv_p TYPE int8.
     lv_p = iv_a.
     lv_p = lv_p + iv_b.
     lv_p = lv_p MOD 4294967296.
@@ -472,7 +472,7 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = lv_p.
   ENDMETHOD.
   METHOD i32_sub.
-    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    DATA lv_p TYPE int8.
     lv_p = iv_a.
     lv_p = lv_p - iv_b.
     lv_p = lv_p MOD 4294967296.
@@ -482,7 +482,7 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = lv_p.
   ENDMETHOD.
   METHOD i32_mul.
-    DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+    DATA lv_p TYPE int8.
     lv_p = iv_a.
     lv_p = lv_p * iv_b.
     lv_p = lv_p MOD 4294967296.

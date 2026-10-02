@@ -183,8 +183,10 @@ func emitFUGRMemoryHelpers(mod *Module) string {
 	return sb.String()
 }
 
-// i32 arithmetic must finish in packed decimal before narrowing to TYPE i.
-// Every intermediate fits in 16 packed bytes, including signed i32 multiplication.
+// i32 arithmetic is computed in int8 before narrowing to TYPE i: TYPE i would
+// raise CX_SY_ARITHMETIC_OVERFLOW on a kernel, and the largest intermediate,
+// a product of two i32 values, is at most 2^62, which fits in int8. int8 is
+// native 64-bit arithmetic, much cheaper than packed decimal.
 var i32HelperDefs = []struct {
 	name string
 	op   string
@@ -202,7 +204,7 @@ func (c *compiler) emitI32HelperDeclarations(kind string) {
 
 func i32HelperBody(op string) []string {
 	return []string{
-		"DATA lv_p TYPE p LENGTH 16 DECIMALS 0.",
+		"DATA lv_p TYPE int8.",
 		"lv_p = iv_a.",
 		fmt.Sprintf("lv_p = lv_p %s iv_b.", op),
 		"lv_p = lv_p MOD 4294967296.",
