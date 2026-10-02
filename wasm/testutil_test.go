@@ -164,3 +164,48 @@ func leb128s(v int32) []byte {
 // Suppress unused import warnings.
 var _ = binary.LittleEndian
 var _ = math.Float32frombits
+
+func mustCompile(t *testing.T, mod *Module, name string) string {
+	t.Helper()
+	src, err := Compile(mod, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
+func mustCompileWith(t *testing.T, mod *Module, name string, backend BackendKind, size int) *BackendResult {
+	t.Helper()
+	out, err := CompileWith(mod, name, backend, size)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func mustCompileMultiClass(t *testing.T, mod *Module, name string, size int) *CompileResult {
+	t.Helper()
+	out, err := CompileMultiClass(mod, name, size)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func expectQuickJSCompileError(t *testing.T, mod *Module) {
+	t.Helper()
+	src, err := Compile(mod, "zcl_qjs")
+	if src != "" || err == nil || !strings.Contains(err.Error(), "unsupported opcode 0xFD") || !strings.Contains(err.Error(), "function 13") {
+		t.Fatalf("QuickJS must fail compilation for SIMD in function 13: %v", err)
+	}
+	for _, backend := range []BackendKind{BackendClass, BackendFUGR, BackendHybrid} {
+		out, err := CompileWith(mod, "zqjs", backend, 80)
+		if out != nil || err == nil || !strings.Contains(err.Error(), "unsupported opcode 0xFD") {
+			t.Fatalf("QuickJS %s must fail for SIMD: %v", backend, err)
+		}
+	}
+	out, err := CompileMultiClass(mod, "zcl_qjs", 80)
+	if out != nil || err == nil || !strings.Contains(err.Error(), "unsupported opcode 0xFD") {
+		t.Fatalf("QuickJS multi-class must fail for SIMD: %v", err)
+	}
+}

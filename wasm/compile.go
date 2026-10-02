@@ -26,7 +26,8 @@ type CompileStats struct {
 // CompileMultiClass compiles a WASM module into multiple ABAP classes.
 // Functions are distributed across chunk classes (max funcsPerChunk each).
 // A main class holds memory, globals, exports, WASI shim, and delegates.
-func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *CompileResult {
+func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) (output *CompileResult, err error) {
+	defer catchCompileError(&err)
 	if funcsPerChunk <= 0 {
 		funcsPerChunk = 80
 	}
@@ -124,7 +125,7 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *Compile
 	}
 	result.Stats.TotalLines += strings.Count(result.RuntimeClass, "\n")
 
-	return result
+	return result, nil
 }
 
 // --- Chunk Class ---

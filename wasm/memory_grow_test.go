@@ -66,16 +66,16 @@ func TestMemoryGrowGeneration(t *testing.T) {
 			if tc.max && mod.Memory.Max != 2 {
 				t.Fatalf("Max = %d", mod.Memory.Max)
 			}
-			results := map[string]string{"class": Compile(mod, "zcl_test_mem")}
+			results := map[string]string{"class": mustCompile(t, mod, "zcl_test_mem")}
 			for _, backend := range []BackendKind{BackendFUGR, BackendHybrid} {
-				result := CompileWith(mod, "ztmem", backend, 10)
+				result := mustCompileWith(t, mod, "ztmem", backend, 10)
 				var src strings.Builder
 				for _, s := range result.Files {
 					src.WriteString(s)
 				}
 				results[backend.String()] = src.String()
 			}
-			results["multi"] = CompileMultiClass(mod, "zcl_test_mem", 10).MainClass
+			results["multi"] = mustCompileMultiClass(t, mod, "zcl_test_mem", 10).MainClass
 			for name, src := range results {
 				t.Run(name, func(t *testing.T) {
 					for _, needle := range []string{"iv_pages < 0", "rv = -1.", "iv_pages > " + tc.limit + " -", "mem_zero_pages", "DO 8 TIMES.", "DO iv_pages TIMES."} {
@@ -109,7 +109,7 @@ func TestExplicitZeroMemoryMax(t *testing.T) {
 	if !mod.Memory.HasMax || mod.Memory.Max != 0 {
 		t.Fatalf("memory limits = %+v", mod.Memory)
 	}
-	if src := Compile(mod, "zcl_zero_max"); !strings.Contains(src, "iv_pages > 0 - mv_mem_pages") {
+	if src := mustCompile(t, mod, "zcl_zero_max"); !strings.Contains(src, "iv_pages > 0 - mv_mem_pages") {
 		t.Fatal("explicit maximum of zero was treated as unbounded")
 	}
 }

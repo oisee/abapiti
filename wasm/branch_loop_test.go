@@ -83,7 +83,7 @@ func TestBranchLoopCodegen(t *testing.T) {
 	}
 	for _, backend := range []BackendKind{BackendClass, BackendFUGR, BackendHybrid} {
 		t.Run(backend.String(), func(t *testing.T) {
-			result := CompileWith(mod, "zcl_loop", backend, 80)
+			result := mustCompileWith(t, mod, "zcl_loop", backend, 80)
 			var src string
 			for _, file := range result.Files {
 				src += file + "\n"
@@ -113,7 +113,7 @@ func TestBranchLoopCodegen(t *testing.T) {
 			}
 		})
 	}
-	result := CompileMultiClass(mod, "zcl_loop", 2)
+	result := mustCompileMultiClass(t, mod, "zcl_loop", 2)
 	var multi string
 	for _, file := range result.ChunkClasses {
 		multi += file
@@ -181,7 +181,7 @@ func TestBranchValueSlots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src := strings.Join(strings.Fields(Compile(mod, "zcl_values")), " ")
+	src := strings.Join(strings.Fields(mustCompile(t, mod, "zcl_values")), " ")
 	for _, name := range []string{"value_if", "value_loop", "value_table"} {
 		start := strings.Index(src, "METHOD "+name+".")
 		body := src[start:]
@@ -237,7 +237,7 @@ func TestTypedBranchValueSlots(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		src := strings.Join(strings.Fields(Compile(mod, "zcl_typed")), " ")
+		src := strings.Join(strings.Fields(mustCompile(t, mod, "zcl_typed")), " ")
 		for _, want := range []string{"s0" + typ.suffix + " = s1" + typ.suffix + ".", "rv = s0" + typ.suffix + "."} {
 			if !strings.Contains(src, want) {
 				t.Errorf("type %x: missing %s", typ.block, want)

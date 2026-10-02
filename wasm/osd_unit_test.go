@@ -103,6 +103,7 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{-5, 33}},
 		{"sar64_hi", []int32{1, 32}},
 	}},
+	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases()},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
 	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
 		{"add", []int32{2147483647, 1}},
@@ -255,6 +256,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = compileCFixture(t, "../llvm/testdata/corpus.c")
 		case "callind":
 			bin = buildCallIndirectModule()
+		case "truncsat":
+			bin, _, _ = buildTruncSatModule(false)
 		case "i64wrap":
 			bin = buildI64WrapModule(i64WrapCases)
 		case "helpers":
@@ -270,7 +273,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			t.Fatalf("parse %s: %v", m.file, err)
 		}
 		want := wazeroResults(t, bin, m.cases)
-		src := Compile(mod, m.class)
+		src := mustCompile(t, mod, m.class)
 		tests := osdTestClass(m.class, m.cases, want)
 		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{

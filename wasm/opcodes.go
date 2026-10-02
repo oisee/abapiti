@@ -237,8 +237,8 @@ const (
 
 // Misc opcodes (after 0xFC prefix)
 const (
-	MiscMemoryCopy byte = 0x0A
-	MiscMemoryFill byte = 0x0B
+	MiscMemoryCopy uint32 = 0x0A
+	MiscMemoryFill uint32 = 0x0B
 )
 
 // Instruction represents a parsed WASM instruction with its immediates.
@@ -263,5 +263,5 @@ type Instruction struct {
 	BlockType  int     // for block/loop/if: -64=void, -1..-4=value type, >=0=type index
 
 	// Misc opcode (for 0xFC prefix)
-	MiscOp byte
+	MiscOp uint32
 }

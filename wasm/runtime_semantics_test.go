@@ -107,7 +107,7 @@ func compileClass(t *testing.T, bin []byte, class string) string {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	return Compile(mod, class)
+	return mustCompile(t, mod, class)
 }
 
 // The element segment offset decides which slot a function lands in. The
@@ -157,7 +157,7 @@ func TestCallIndirectInvalidTypeTraps(t *testing.T) {
 			call.Code[i].TypeIndex = 7
 		}
 	}
-	src := Compile(mod, "zcl_test_ci")
+	src := mustCompile(t, mod, "zcl_test_ci")
 	body := src[strings.Index(src, "METHOD call."):]
 	body = body[:strings.Index(body, "ENDMETHOD.")]
 	if !strings.Contains(body, callIndirectTrap) {
@@ -225,11 +225,8 @@ func TestRuntimeSemanticsWazero(t *testing.T) {
 	}
 }
 
-// shr_s32/shr_s64 divide by 2^k. In type i, 2^31 overflows (shift 31 dumps
-// with CX_SY_ARITHMETIC_OVERFLOW on SAP), as 2^63 does in int8. The abaplint
-// transpiler computes in JS numbers and does not overflow, so OSD cannot see
-// this: check that the divisor is packed and no ipow( ) is left.
-func TestShrSignedHelpersDivideInPacked(t *testing.T) {
+// Signed shifts must avoid constructing 2^63 and keep all operand bits in int8.
+func TestShrSignedHelpersUseBoundedInt8(t *testing.T) {
 	src := compileClass(t, buildHelperModule(), "zcl_test_helpers")
 	for _, name := range []string{"shr_s32", "shr_s64"} {
 		start := strings.Index(src, "METHOD "+name+".")
@@ -238,9 +235,9 @@ func TestShrSignedHelpersDivideInPacked(t *testing.T) {
 		}
 		body := src[start:]
 		body = body[:strings.Index(body, "ENDMETHOD.")]
-		if strings.Contains(body, "ipow(") || !strings.Contains(body, "DATA lv_d TYPE p LENGTH 16 DECIMALS 0.") ||
-			!strings.Contains(body, "lv_p = lv_p DIV lv_d.") {
-			t.Errorf("%s does not divide in packed decimals:\n%s", name, body)
+		if strings.Contains(body, "ipow(") || strings.Contains(body, "TYPE p") ||
+			strings.Contains(body, " * 2") || !strings.Contains(body, "TYPE int8") {
+			t.Errorf("%s must keep operands in int8 without building an overflowing divisor:\n%s", name, body)
 		}
 	}
 }

@@ -213,7 +213,7 @@ func TestWASMSuite_CompileGo(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	abap := Compile(mod, "zcl_wasm_suite")
+	abap := mustCompile(t, mod, "zcl_wasm_suite")
 	t.Logf("Go compiler → %d lines ABAP", strings.Count(abap, "\n"))
 
 	// Structural checks
@@ -238,7 +238,7 @@ func TestWASMSuite_GenerateABAPTest(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	abap := Compile(mod, "zcl_wasm_suite")
+	abap := mustCompile(t, mod, "zcl_wasm_suite")
 
 	// Generate test harness
 	var sb strings.Builder

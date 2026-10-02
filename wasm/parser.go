@@ -382,7 +382,7 @@ func parseInstructions(r *reader, end int) []Instruction {
 		// Multi-byte opcodes
 		case OpMiscPrefix:
 			miscOp := r.readU32()
-			inst.MiscOp = byte(miscOp)
+			inst.MiscOp = miscOp
 			switch inst.MiscOp {
 			case MiscMemoryCopy:
 				_ = r.readByte() // src memory
@@ -405,10 +405,19 @@ func parseInstructions(r *reader, end int) []Instruction {
 				}
 			}
 
+		case OpAtomicPrefix:
+			inst.MiscOp = r.readU32()
+			if inst.MiscOp == 3 {
+				_ = r.readByte()
+			} else {
+				_ = r.readU32()
+				_ = r.readU32()
+			}
+
 		// SIMD prefix (0xFD) — skip the opcode + any immediates
 		case OpSIMDPrefix:
 			simdOp := r.readU32()
-			inst.MiscOp = byte(simdOp)
+			inst.MiscOp = simdOp
 			// SIMD loads/stores (opcodes 0-11) have memarg (align + offset)
 			if simdOp <= 11 || (simdOp >= 84 && simdOp <= 91) || (simdOp >= 92 && simdOp <= 95) {
 				_ = r.readU32() // align

@@ -159,7 +159,10 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "WASM: %d bytes, %d functions, %d instructions\n",
 		len(data), len(mod.Functions), countInstructions(mod))
 
-	abapSrc := wasm.Compile(mod, className)
+	abapSrc, err := wasm.Compile(mod, className)
+	if err != nil {
+		return fmt.Errorf("failed to compile WASM: %w", err)
+	}
 
 	lines := strings.Count(abapSrc, "\n")
 	fmt.Fprintf(os.Stderr, "ABAP: %d lines, class %s\n", lines, className)
