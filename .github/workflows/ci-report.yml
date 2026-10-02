@@ -1,0 +1,670 @@
+name: CI report
+
+# Writes one comment per pull request with a row per CI job, rewritten on every
+# run rather than repeated, then asks Copilot for a review once the tests pass.
+# Ported from vibing-steampunk (vsp), so a PR here reads like a PR there. One
+# addition: the OSD M1 workflow (osd-m1.yml), when it has run on the same
+# commit, gets a row of its own, and its completion rewrites the comment too.
+#
+# This runs from the default branch, never from the pull request's branch, and
+# that is what makes a write token safe here: a pull request from a fork only
+# ever gets a read-only token for its `pull_request` run. So CI stays read-only
+# and this reads its results afterwards. It must never check out, build or
+# execute anything from the pull request. (workflow_run only fires for this
+# file as it is on the default branch: it reports nothing until it is merged.)
+#
+# What it does read from the run — job names, the test job's annotation, the
+# per-package test summary, the metrics file — comes from a workflow file the
+# pull request can edit, so it is parsed defensively and escaped before it goes
+# into the comment. The metrics of earlier main runs, for the trend, are read
+# the same way, and the only program run on any of it is `unzip -p`.
+on:
+  workflow_run:
+    workflows: [CI, OSD M1]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  actions: read
+  checks: read
+
+# CI and OSD M1 finish at different times on the same commit; one report at a
+# time per branch, so two runs cannot both find no comment and post two.
+concurrency:
+  group: ci-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Same-repo pull requests arrive in run.pull_requests; fork ones do not,
+      # so look them up by head branch. Either way, only report when the pull
+      # request still points at the commit this run tested — a late run for an
+      # old commit must not overwrite a newer report. The base is the last
+      # green push run on the pull request's base branch.
+      #
+      # The report is always about the newest CI run of this pull request on
+      # the commit (same head repository and branch: two forks can push the
+      # same SHA), at its newest attempt. A run that is not the newest (a re-run of CI or OSD M1
+      # on the same commit started since) writes nothing: the newer one's own
+      # completion writes the report, so a late, older run cannot overwrite a
+      # newer report. When OSD M1 is what finished, the CI run is looked up; if
+      # it has not finished yet, its own completion writes the report (and
+      # picks up the OSD row then), so nothing is written now.
+      - name: Find the pull request and the base run
+        id: find
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const trigger = context.payload.workflow_run;
+            // Runs of one pull request: a commit SHA alone is not enough, since
+            // two forks can open pull requests with the same commit. Same head
+            // repository and branch, and the same PR number when both runs
+            // know theirs (fork runs carry no pull_requests).
+            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
+              && r.head_branch === ref.head_branch
+              && (!r.pull_requests?.length || !ref.pull_requests?.length
+                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
+            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
+              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
+            // The newest run of a workflow on this pull request's commit; its
+            // run_attempt is its newest attempt. undefined when there is none,
+            // or on an API error.
+            const newest = (workflow_id) => github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id, head_sha: trigger.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => newestOf(runs, trigger))
+              .catch((e) => { core.warning(`listing ${workflow_id} runs: ${e.message}`); return undefined; });
+            const same = (a, b) => a && b && a.id === b.id && a.run_attempt === b.run_attempt;
+
+            const own = await newest(trigger.name === 'CI' ? 'ci.yml' : 'osd-m1.yml');
+            if (!same(own, trigger)) {
+              core.info(`${trigger.name} run ${trigger.id} attempt ${trigger.run_attempt} is not the newest on ${trigger.head_sha}`
+                + ` (newest: ${own ? `${own.id} attempt ${own.run_attempt}` : 'unknown'}); its report is left to the newer run`);
+              return;
+            }
+            const run = trigger.name === 'CI' ? trigger : await newest('ci.yml');
+            if (!run || run.status !== 'completed') {
+              core.info(`CI on ${trigger.head_sha} has not finished; its completion writes the report`);
+              return;
+            }
+            core.setOutput('ci_run', String(run.id));
+            core.setOutput('ci_attempt', String(run.run_attempt));
+            let pr = run.pull_requests?.[0];
+            if (pr) {
+              pr = (await github.rest.pulls.get({ owner, repo, pull_number: pr.number })).data;
+            } else {
+              const open = await github.paginate(github.rest.pulls.list,
+                { owner, repo, state: 'open', head: `${run.head_repository.owner.login}:${run.head_branch}` });
+              pr = open.find((p) => p.head.sha === run.head_sha);
+            }
+            if (!pr || pr.head.sha !== run.head_sha) {
+              core.info(`no open pull request at ${run.head_sha}; nothing to report`);
+              return;
+            }
+            core.setOutput('pr', String(pr.number));
+            core.setOutput('base_ref', pr.base.ref);
+            const base = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: 'ci.yml', branch: pr.base.ref, event: 'push', status: 'success', per_page: 1,
+            }).then((r) => r.data.workflow_runs[0]).catch(() => undefined);
+            if (base) {
+              core.setOutput('base_run', String(base.id));
+              core.setOutput('base_sha', base.head_sha);
+            }
+
+      # The pull request's artifacts are written by its own workflow, so a fork
+      # controls them, and a small zip can unpack into gigabytes. Neither
+      # download-artifact nor a plain unzip is used: each artifact must be
+      # small zipped (GitHub's own count), hold exactly the one expected file
+      # name, and that file is read with `unzip -p` into a capped buffer, so no
+      # more than the cap is ever unpacked, whatever the zip's headers claim.
+      # Real sizes: test-summary about 1 KB, metrics about 15 KB, unzipped. The
+      # base's artifacts (from pushes to the base branch) go through the same.
+      - name: Download the artifacts, size-capped
+        if: steps.find.outputs.pr != ''
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          CI_RUN: ${{ steps.find.outputs.ci_run }}
+          BASE_RUN: ${{ steps.find.outputs.base_run }}
+        with:
+          script: |
+            const fs = require('fs');
+            const { execFileSync } = require('child_process');
+            const { owner, repo } = context.repo;
+            const wanted = [
+              // name, file in the zip, zipped cap, unzipped cap
+              ['test-summary', 'test-summary.json', 256 * 1024, 1024 * 1024],
+              ['metrics', 'metrics.json', 1024 * 1024, 5 * 1024 * 1024],
+            ];
+            const fetchOne = async (runId, name, file, zipCap, cap, dir) => {
+              const arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: runId, name });
+              const a = arts.find((x) => x.name === name && !x.expired);
+              if (!a) return core.info(`${name} of run ${runId}: none`);
+              if (!(a.size_in_bytes <= zipCap)) return core.warning(`${name} of run ${runId}: ${a.size_in_bytes} bytes zipped, over the ${zipCap}-byte cap; not read`);
+              const zip = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
+              const buf = Buffer.from(zip.data);
+              if (buf.length > zipCap) return core.warning(`${name} of run ${runId}: ${buf.length} bytes downloaded, over the cap; not read`);
+              const zipFile = `${dir}.zip`;
+              fs.writeFileSync(zipFile, buf);
+              try {
+                const entries = execFileSync('unzip', ['-Z1', zipFile], { maxBuffer: 64 * 1024 }).toString('utf8').split('\n').filter(Boolean);
+                if (entries.length !== 1 || entries[0] !== file) {
+                  return core.warning(`${name} of run ${runId}: want only ${file} in the zip, found ${entries.length} entries; not read`);
+                }
+                // maxBuffer stops unzip (and throws) once the cap is passed.
+                const data = execFileSync('unzip', ['-p', zipFile, file], { maxBuffer: cap });
+                fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(`${dir}/${file}`, data);
+                core.info(`${name} of run ${runId}: ${data.length} bytes`);
+              } catch (e) {
+                core.warning(`${name} of run ${runId}: not read (${e.code || e.message}); over the ${cap}-byte cap or not a zip`);
+              } finally {
+                fs.rmSync(zipFile, { force: true });
+              }
+            };
+            for (const [name, file, zipCap, cap] of wanted) {
+              const suffix = name === 'metrics' ? '-metrics' : '';
+              for (const [runId, side] of [[process.env.CI_RUN, 'head'], [process.env.BASE_RUN, 'base']]) {
+                if (!runId) continue;
+                try { await fetchOne(Number(runId), name, file, zipCap, cap, side + suffix); }
+                catch (e) { core.warning(`${name} of run ${runId}: ${e.message}`); }
+              }
+            }
+
+      # Size and complexity, base → head, and the trend over the last green
+      # runs on the base branch. Advisory: whatever happens here, the report
+      # below is still written, without this section if need be.
+      - name: Write the complexity section
+        if: steps.find.outputs.pr != ''
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          BASE_REF: ${{ steps.find.outputs.base_ref }}
+        with:
+          script: |
+            // Advisory, observation only: nothing here can fail the run. The
+            // section is written to complexity.md and the next step appends it.
+            const fs = require('fs');
+            const { execFileSync } = require('child_process');
+            const { owner, repo } = context.repo;
+            const MAX_BYTES = 5 * 1024 * 1024; // unzipped metrics.json, as in the download step
+            const MAX_ZIP = 1024 * 1024;       // zipped artifact
+            const TREND_RUNS = 10;
+
+            // The head metrics come from the pull request's own workflow, so
+            // they are data: only finite non-negative numbers and short strings
+            // survive, and every string is escaped before it reaches markdown.
+            // Escaped for markdown, and defused: a zero-width space after `@`
+            // stops a fork from pinging users or teams through the bot, and one
+            // inside `://`, `www.` and `#<digit>` stops autolinks and issue
+            // cross-references.
+            const clean = (s, max = 120) => String(s ?? '')
+              .replace(/[\r\n]+/g, ' ').slice(0, max)
+              .replace(/[|<>`[\]*_\\]/g, (c) => '\\' + c)
+              .replace(/@/g, '@\u200B').replace(/:\/\//g, ':\u200B//')
+              .replace(/\bwww\./gi, (w) => w.slice(0, 3) + '\u200B.').replace(/#(?=\d)/g, '#\u200B');
+            // Inside a code span only a backtick, a newline or (in a table) a
+            // pipe can break out. Backslash escapes would show literally, so a
+            // pipe is escaped only in a table cell, where GFM needs it. Code
+            // spans neither mention nor autolink.
+            const code = (s, max = 100, cell = false) => {
+              const t = String(s ?? '').replace(/[\r\n`]+/g, ' ').slice(0, max);
+              return '`' + (cell ? t.replace(/\|/g, '\\|') : t) + '`';
+            };
+            const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 1e12) ? Math.round(v) : 0;
+            const str = (v) => (typeof v === 'string' && v.length > 0 && v.length <= 300) ? v : null;
+            const list = (v, n) => Array.isArray(v) ? v.slice(0, n) : [];
+            const COUNTS = ['files', 'lines', 'tokens', 'funcs', 'cognitive', 'over_cyclomatic', 'over_cognitive',
+              'over_func_lines', 'files_over_lines', 'files_over_tokens', 'files_over_tokens_warn'];
+            const counts = (c) => Object.fromEntries(COUNTS.map((k) => [k, num(c?.[k])]));
+            const parse = (text) => {
+              const raw = JSON.parse(text);
+              if (raw?.schema !== 1) return null;
+              const totals = { ...counts(raw.totals), test: counts(raw.totals?.test) };
+              const th = raw.thresholds || {};
+              const thresholds = { cyclomatic: num(th.cyclomatic) || 30, cognitive: num(th.cognitive) || 40,
+                func_lines: num(th.func_lines) || 150, file_lines: num(th.file_lines) || 1000,
+                file_tokens: num(th.file_tokens) || 25000, file_tokens_warn: num(th.file_tokens_warn) || 15000 };
+              const sized = (arr, keyName, n) => {
+                const out = new Map();
+                for (const x of list(arr, n)) {
+                  const k = str(x?.[keyName]);
+                  if (k && x.research !== true && x.test !== true) out.set(k, { lines: num(x.lines), tokens: num(x.tokens), cognitive: num(x.cognitive) });
+                }
+                return out;
+              };
+              const fn = (x) => ({ key: str(x?.key), file: str(x?.file) || '', line: num(x?.line),
+                cyclomatic: num(x?.cyclomatic), cognitive: num(x?.cognitive), lines: num(x?.lines) });
+              const over = new Map();
+              for (const x of list(raw.over_threshold, 5000)) {
+                const f = fn(x);
+                if (f.key && x.research !== true) over.set(f.key, f);
+              }
+              const items = (arr) => list(arr, 300).map((x) => ({ path: str(x?.path), lines: num(x?.lines), baseline: num(x?.baseline_lines) }))
+                .filter((x) => x.path);
+              const ratchet = raw.ratchet && typeof raw.ratchet === 'object'
+                ? { baseline: str(raw.ratchet.baseline) || '', files: items(raw.ratchet.files), packages: items(raw.ratchet.packages) }
+                : null;
+              return { totals, thresholds, ratchet, over,
+                commit: str(raw.commit) || '',
+                research: num(raw.research_totals?.tokens),
+                files: sized(raw.files, 'path', 20000),
+                packages: sized(raw.packages, 'pkg', 2000),
+                top: list(raw.top_cognitive, 10).map(fn).filter((f) => f.key) };
+            };
+            const load = (p) => {
+              try {
+                if (fs.statSync(p).size > MAX_BYTES) return null;
+                return parse(fs.readFileSync(p, 'utf8'));
+              } catch { return null; }
+            };
+
+            // The last green runs on the base branch, oldest first. Each one is
+            // a metrics artifact from a push to that branch.
+            const trend = async () => {
+              const out = [];
+              try {
+                const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: 'ci.yml',
+                  branch: process.env.BASE_REF, event: 'push', status: 'success', per_page: 2 * TREND_RUNS })).data.workflow_runs;
+                for (const r of runs) {
+                  if (out.length >= TREND_RUNS) break;
+                  try {
+                    const arts = (await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id: r.id, name: 'metrics' })).data.artifacts;
+                    const a = arts.find((x) => x.name === 'metrics' && !x.expired && x.size_in_bytes <= MAX_ZIP);
+                    if (!a) continue;
+                    const zip = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
+                    const file = `trend-${num(r.id)}.zip`;
+                    fs.writeFileSync(file, Buffer.from(zip.data));
+                    const m = parse(execFileSync('unzip', ['-p', file, 'metrics.json'], { maxBuffer: MAX_BYTES }).toString('utf8'));
+                    if (m) out.push(m.totals);
+                  } catch (e) { core.info(`trend: run ${r.id}: ${e.message}`); }
+                }
+              } catch (e) { core.info(`trend: ${e.message}`); }
+              return out.reverse();
+            };
+
+            const k = (v) => (v >= 1e6 ? (v / 1e6).toFixed(3) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'k' : String(v))
+              .replace(/\.0+([kM])$/, '$1');
+            const n = (v) => v.toLocaleString('en-US');
+            const signed = (d, fmt = String) => d > 0 ? '+' + fmt(d) : d < 0 ? '-' + fmt(-d) : '±0';
+            const spark = (vals) => {
+              const bars = '▁▂▃▄▅▆▇█';
+              const lo = Math.min(...vals), hi = Math.max(...vals);
+              return vals.map((v) => bars[hi === lo ? 3 : Math.round((v - lo) / (hi - lo) * 7)]).join('');
+            };
+
+            const head = load('head-metrics/metrics.json');
+            const base = load('base-metrics/metrics.json');
+            const out = ['', '#### Complexity (advisory)'];
+            if (!head) {
+              out.push('', '_No metrics from this run: the metrics job did not finish, or its output was unreadable._');
+              fs.writeFileSync('complexity.md', out.join('\n'));
+              return;
+            }
+            const th = head.thresholds;
+            const crosses = (f) => [
+              f.cyclomatic > th.cyclomatic && `cyclomatic ${f.cyclomatic}`,
+              f.cognitive > th.cognitive && `cognitive ${f.cognitive}`,
+              f.lines > th.func_lines && `${f.lines} lines`].filter(Boolean);
+            const kinds = (f) => [f.cyclomatic > th.cyclomatic && 'cyc', f.cognitive > th.cognitive && 'cog',
+              f.lines > th.func_lines && 'len'].filter(Boolean);
+            const where = (f) => `${clean(f.file, 80)}:${f.line}`;
+            const ht = head.totals;
+            const testLine = (t) => `${k(t.lines)} lines; over cyclomatic ${th.cyclomatic} / cognitive ${th.cognitive} / ${th.func_lines} lines: `
+              + `${t.over_cyclomatic} / ${t.over_cognitive} / ${t.over_func_lines}; files over ${n(th.file_lines)} lines: ${t.files_over_lines}`;
+
+            if (base) {
+              const bt = base.totals;
+              const d = (key) => ht[key] - bt[key];
+              // Files that crossed a size line in this PR (were under it, or new).
+              const crossedOver = (key, limit) => [...head.files].filter(([p, f]) => f[key] > limit && !((base.files.get(p)?.[key] ?? 0) > limit)).map(([p]) => p);
+              const c25 = crossedOver('tokens', th.file_tokens), c15 = crossedOver('tokens', th.file_tokens_warn),
+                c1000 = crossedOver('lines', th.file_lines);
+              out.push('', `**drift: ${signed(d('tokens'), k)} read tokens, ${signed(d('over_cognitive'))} functions over cognitive ${th.cognitive}, `
+                + `${signed(d('over_cyclomatic'))} over cyclomatic ${th.cyclomatic}, ${signed(d('over_func_lines'))} over ${th.func_lines} lines; `
+                + `${c25.length} files crossed ${k(th.file_tokens)} tokens (${c15.length} crossed ${k(th.file_tokens_warn)}), `
+                + `${c1000.length} crossed ${n(th.file_lines)} lines**`);
+              const row = (label, key, fmt = String) => `| ${label} | ${fmt(bt[key])} | ${fmt(ht[key])} | ${signed(d(key), fmt)} |`;
+              out.push('', `| Non-test Go, demos (fun/) excluded | base ${code(base.commit.slice(0, 8), 8, true)} | head | Δ |`,
+                '| --- | --- | --- | --- |',
+                row('Read tokens (bytes/4)', 'tokens', k),
+                row('Lines', 'lines', k),
+                row('Functions', 'funcs'),
+                row('Cognitive complexity, sum', 'cognitive', k),
+                row(`Functions over cognitive ${th.cognitive}`, 'over_cognitive'),
+                row(`Functions over cyclomatic ${th.cyclomatic}`, 'over_cyclomatic'),
+                row(`Functions over ${th.func_lines} lines`, 'over_func_lines'),
+                row(`Files over ${n(th.file_lines)} lines`, 'files_over_lines'),
+                row(`Files over ${k(th.file_tokens)} tokens`, 'files_over_tokens'),
+                row(`Files over ${k(th.file_tokens_warn)} tokens (warning)`, 'files_over_tokens_warn'));
+              for (const p of c25) out.push(`- crossed ${k(th.file_tokens)} tokens: ${code(p)}`);
+              for (const p of c15.filter((p) => !c25.includes(p))) out.push(`- crossed ${k(th.file_tokens_warn)} tokens (warning): ${code(p)}`);
+              out.push('', testLine(bt.test) === testLine(ht.test)
+                ? `Test code, numbers only, unchanged: ${testLine(ht.test)}.`
+                : `Test code, numbers only: ${testLine(bt.test)} → ${testLine(ht.test)}.`);
+
+              // Functions that crossed a threshold they were under at the base,
+              // and those that left one (a split gets the credit).
+              const newly = [], left = [];
+              for (const [key, f] of head.over) {
+                const was = new Set(base.over.has(key) ? kinds(base.over.get(key)) : []);
+                if (kinds(f).some((x) => !was.has(x))) newly.push(f);
+              }
+              for (const [key, f] of base.over) {
+                const now = new Set(head.over.has(key) ? kinds(head.over.get(key)) : []);
+                if (kinds(f).some((x) => !now.has(x))) left.push({ f, gone: !head.over.has(key) });
+              }
+              if (newly.length) {
+                out.push('', `Newly over a threshold (${newly.length}):`);
+                for (const f of newly.slice(0, 15)) out.push(`- ${code(f.key)} ${where(f)}: ${crosses(f).join(', ')}`);
+              }
+              if (left.length) {
+                out.push('', `Back under a threshold (${left.length}):`);
+                for (const { f, gone } of left.slice(0, 15)) {
+                  out.push(`- ${code(f.key)}: was ${crosses(f).join(', ')}; ${gone ? 'now under every threshold, or moved' : 'now ' + crosses(head.over.get(f.key)).join(', ')}`);
+                }
+              }
+
+              // Files and packages that moved the most, both ways.
+              const moves = (hm, bm) => {
+                const rows = [];
+                for (const name of new Set([...hm.keys(), ...bm.keys()])) {
+                  const z = { lines: 0, tokens: 0, cognitive: 0 };
+                  const h = hm.get(name) || z, b = bm.get(name) || z;
+                  const dt = h.tokens - b.tokens, dc = h.cognitive - b.cognitive;
+                  if (dt || dc) rows.push({ name, h, b, dt, dc, added: !bm.has(name), removed: !hm.has(name) });
+                }
+                return rows;
+              };
+              const table = (title, rows) => {
+                if (!rows.length) return;
+                out.push('', title, '', '| | Tokens | Δ tokens | Δ cognitive |', '| --- | --- | --- | --- |',
+                  ...rows.map((r) => `| ${code(r.name, 90, true)}${r.added ? ' (new)' : r.removed ? ' (removed)' : ''} | ${k(r.b.tokens)} → ${k(r.h.tokens)} | ${signed(r.dt, k)} | ${signed(r.dc)} |`));
+              };
+              const grew = (rows) => rows.filter((r) => r.dt > 0 || (r.dt === 0 && r.dc > 0))
+                .sort((a, b) => b.dt - a.dt || b.dc - a.dc).slice(0, 8);
+              const shrank = (rows) => rows.filter((r) => r.dt < 0 || (r.dt === 0 && r.dc < 0))
+                .sort((a, b) => a.dt - b.dt || a.dc - b.dc).slice(0, 8);
+              const fileMoves = moves(head.files, base.files), pkgMoves = moves(head.packages, base.packages);
+              if (fileMoves.length || pkgMoves.length) {
+                out.push('', `<details><summary>What moved: ${fileMoves.length} files, ${pkgMoves.length} packages</summary>`);
+                table('**Packages that grew**', grew(pkgMoves));
+                table('**Packages that shrank**', shrank(pkgMoves));
+                table('**Files that grew**', grew(fileMoves));
+                table('**Files that shrank**', shrank(fileMoves));
+                out.push('', '</details>');
+              } else {
+                out.push('', 'No non-test Go file changed size or complexity.');
+              }
+            } else {
+              out.push('', `_No metrics from the base run to compare with yet (the base predates the metrics job)._ Head: `
+                + `${k(ht.tokens)} read tokens in ${ht.files} files; ${ht.over_cognitive} functions over cognitive ${th.cognitive}, `
+                + `${ht.over_cyclomatic} over cyclomatic ${th.cyclomatic}, ${ht.over_func_lines} over ${th.func_lines} lines; `
+                + `${ht.files_over_lines} files over ${n(th.file_lines)} lines, ${ht.files_over_tokens} over ${k(th.file_tokens)} tokens `
+                + `(${ht.files_over_tokens_warn} over ${k(th.file_tokens_warn)}). Test code, numbers only: ${testLine(ht.test)}.`);
+            }
+
+            // Size ratchet, a warning only for now: no file newly over the line
+            // threshold, and no file or package past the committed baseline or
+            // past its size on main, whichever is smaller (a shrink tightens it
+            // without anyone editing the baseline). Files only when this PR
+            // changed them, so an old overrun is not pinned on whoever is next.
+            if (head.ratchet) {
+              const warn = [];
+              const touched = (bm, name, lines) => !base || (bm.get(name)?.lines ?? -1) !== lines;
+              for (const f of head.ratchet.files) {
+                const onMain = base?.files.get(f.path)?.lines;
+                const limit = Math.min(f.baseline || Infinity, onMain > th.file_lines ? onMain : Infinity);
+                if (!touched(base?.files, f.path, f.lines)) continue;
+                if (limit === Infinity) warn.push(`- new over ${n(th.file_lines)} lines: ${code(f.path)}, ${f.lines} lines`);
+                else if (f.lines > limit) warn.push(`- grew: ${code(f.path)}, ${limit} → ${f.lines} lines (${signed(f.lines - limit)})`);
+              }
+              for (const p of head.ratchet.packages) {
+                // The same rule as files: the smaller of the baseline and main.
+                const onMain = base?.packages.get(p.path)?.lines;
+                const limit = Math.min(p.baseline, onMain ?? Infinity);
+                if (p.lines > limit && touched(base?.packages, p.path, p.lines)) {
+                  warn.push(`- package grew: ${code(p.path)}, ${limit} → ${p.lines} lines (${signed(p.lines - limit)})`);
+                }
+              }
+              out.push('', warn.length
+                ? `**Size ratchet (warning only):** past the baseline of ${clean(head.ratchet.baseline, 40)}. If the growth is meant, raise the number in \`.github/ci/complexity-baseline.json\` in this PR, so the reason is in the diff.`
+                : `Size ratchet: nothing this PR changed is past the baseline of ${clean(head.ratchet.baseline, 40)}.`, ...warn.slice(0, 20));
+            }
+
+            const series = await trend();
+            if (series.length >= 2) {
+              const line = (label, key, fmt = String) => {
+                const vals = series.map((t) => t[key]);
+                return `| ${label} | ${spark([...vals, ht[key]])} | ${fmt(vals[0])} → ${fmt(vals[vals.length - 1])} | ${fmt(ht[key])} |`;
+              };
+              out.push('', `<details><summary>Trend: the last ${series.length} green runs on ${clean(process.env.BASE_REF, 40)}, then this PR</summary>`, '',
+                '| | Trend | Main, oldest → newest | This PR |', '| --- | --- | --- | --- |',
+                line('Read tokens', 'tokens', k),
+                line(`Over cognitive ${th.cognitive}`, 'over_cognitive'),
+                line(`Over cyclomatic ${th.cyclomatic}`, 'over_cyclomatic'),
+                line(`Over ${th.func_lines} lines`, 'over_func_lines'),
+                line(`Files over ${n(th.file_lines)} lines`, 'files_over_lines'),
+                line(`Files over ${k(th.file_tokens)} tokens`, 'files_over_tokens'),
+                '', '</details>');
+            }
+
+            if (head.top.length) {
+              out.push('', '<details><summary>Top 10 functions by cognitive complexity</summary>', '',
+                '| Function | Where | Cognitive | Cyclomatic | Lines |', '| --- | --- | --- | --- | --- |',
+                ...head.top.map((f) => `| ${code(f.key, 90, true)} | ${where(f)} | ${f.cognitive} | ${f.cyclomatic} | ${f.lines} |`),
+                '', '</details>');
+            }
+            if (head.research) out.push('', `_Demo packages (fun/), kept out of every number above: ${k(head.research)} read tokens._`);
+            out.push('', `_Thresholds, as in vsp's complexity map: cyclomatic > ${th.cyclomatic}, cognitive > ${th.cognitive}, `
+              + `function > ${th.func_lines} lines, file > ${n(th.file_lines)} lines, file > ${k(th.file_tokens)} tokens (warning at ${k(th.file_tokens_warn)}). `
+              + 'Observation only; nothing here fails a build._');
+            fs.writeFileSync('complexity.md', out.join('\n'));
+
+      - name: Write the report, then ask Copilot to review
+        if: steps.find.outputs.pr != ''
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ steps.find.outputs.pr }}
+          BASE_SHA: ${{ steps.find.outputs.base_sha }}
+          BASE_REF: ${{ steps.find.outputs.base_ref }}
+          CI_RUN: ${{ steps.find.outputs.ci_run }}
+          CI_ATTEMPT: ${{ steps.find.outputs.ci_attempt }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- abapiti-ci-report -->';
+            const { owner, repo } = context.repo;
+            // Runs of one pull request: a commit SHA alone is not enough, since
+            // two forks can open pull requests with the same commit. Same head
+            // repository and branch, and the same PR number when both runs
+            // know theirs (fork runs carry no pull_requests).
+            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
+              && r.head_branch === ref.head_branch
+              && (!r.pull_requests?.length || !ref.pull_requests?.length
+                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
+            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
+              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
+            // The CI run on the commit, whichever workflow's completion this is.
+            const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.CI_RUN) })).data;
+            const prNumber = Number(process.env.PR);
+            if (String(run.run_attempt) !== process.env.CI_ATTEMPT) {
+              core.info(`CI run ${run.id} has a newer attempt (${run.run_attempt}); its completion writes the report`);
+              return;
+            }
+
+            // Escaped for markdown, and defused: a zero-width space after `@`
+            // stops a fork from pinging users or teams through the bot, and one
+            // inside `://`, `www.` and `#<digit>` stops autolinks and issue
+            // cross-references.
+            const clean = (s, max = 120) => String(s ?? '')
+              .replace(/[\r\n]+/g, ' ').slice(0, max)
+              .replace(/[|<>`[\]*_\\]/g, (c) => '\\' + c)
+              .replace(/@/g, '@\u200B').replace(/:\/\//g, ':\u200B//')
+              .replace(/\bwww\./gi, (w) => w.slice(0, 3) + '\u200B.').replace(/#(?=\d)/g, '#\u200B');
+            const icon = (v) => ({
+              success: '🟢 pass', failure: '🔴 fail', cancelled: '⚫ cancelled',
+              skipped: '⚪ skipped', timed_out: '🔴 timed out',
+            })[v] || '⚪ ' + clean(v || 'not run', 30);
+            const took = (j) => (j.started_at && j.completed_at)
+              ? `${Math.round((new Date(j.completed_at) - new Date(j.started_at)) / 1000)} s` : '';
+
+            // --- one row per job --------------------------------------------
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt,
+              { owner, repo, run_id: run.id, attempt_number: run.run_attempt });
+            const rows = [];
+            for (const j of jobs) {
+              // Advisory jobs never gate; do not paint them red.
+              // "(advisory)" and "(advisory, full)" both count.
+              const result = /\(advisory\b/.test(j.name)
+                ? '⚪ advisory: ' + (j.conclusion || 'not run')
+                : icon(j.conclusion);
+              // A job id is its check run id; the test job leaves its counts
+              // there as an annotation titled ci-report.
+              let detail = '';
+              if (j.conclusion && j.conclusion !== 'skipped') {
+                const notes = await github.rest.checks.listAnnotations({ owner, repo, check_run_id: j.id })
+                  .then((r) => r.data).catch(() => []);
+                detail = notes.find((a) => a.title === 'ci-report')?.message || '';
+              }
+              rows.push(`| ${clean(j.name, 60)} | ${result} | ${clean(detail)} | ${took(j)} |`);
+            }
+
+            // --- OSD M1, a workflow of its own, on the same commit -------------
+            // No row when it has not run on this commit (or does not exist on
+            // this branch yet). It is not part of CI's verdict above; its own
+            // check on the pull request is what gates, if anything does.
+            const osd = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'osd-m1.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => newestOf(runs, run)).catch(() => undefined);
+            if (osd) {
+              const result = osd.status === 'completed' ? icon(osd.conclusion) : '🟡 ' + clean(String(osd.status).replace(/_/g, ' '), 20);
+              const osdJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt,
+                { owner, repo, run_id: osd.id, attempt_number: osd.run_attempt }).catch(() => []);
+              let detail = '';
+              for (const j of osdJobs) {
+                if (!j.conclusion || j.conclusion === 'skipped') continue;
+                const notes = await github.rest.checks.listAnnotations({ owner, repo, check_run_id: j.id })
+                  .then((r) => r.data).catch(() => []);
+                detail = notes.find((a) => a.title === 'ci-report')?.message || detail;
+              }
+              const osdTook = osd.status === 'completed' && osd.run_started_at
+                ? `${Math.round((new Date(osd.updated_at) - new Date(osd.run_started_at)) / 1000)} s` : '';
+              rows.push(`| [OSD M1](${osd.html_url}) | ${result} | ${clean(detail)} | ${osdTook} |`);
+            }
+
+            // --- tests per package, before → after --------------------------
+            // The head summary was written by the pull request's own workflow:
+            // keep only well-formed numbers and short package names.
+            const load = (dir) => {
+              try {
+                if (fs.statSync(`${dir}/test-summary.json`).size > 1024 * 1024) return null;
+                const raw = JSON.parse(fs.readFileSync(`${dir}/test-summary.json`, 'utf8'));
+                const out = new Map();
+                for (const p of (raw.packages || []).slice(0, 500)) {
+                  if (typeof p?.pkg !== 'string' || p.pkg.length > 200) continue;
+                  const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0) ? v : null;
+                  out.set(p.pkg, { pass: num(p.pass) ?? 0, fail: num(p.fail) ?? 0, skip: num(p.skip) ?? 0,
+                    seconds: num(p.seconds), cover: num(p.cover) });
+                }
+                return out;
+              } catch { return null; }
+            };
+            const head = load('head');
+            const base = load('base');
+            const short = (pkg) => pkg.replace(/^github\.com\/oisee\/abapiti\//, '');
+            const secs = (v) => v == null ? '—' : `${v.toFixed(1)} s`;
+            const total = (v) => v < 100 ? v.toFixed(1) : v.toFixed(0);
+            const sum = (m, k) => [...m.values()].reduce((a, p) => a + (p[k] || 0), 0);
+            const delta = (b, a, unit = '') => {
+              if (b == null || a == null) return '';
+              const d = a - b;
+              if (Math.abs(d) < (unit === ' s' ? 0.5 : 0.05)) return '';
+              return ` (${d > 0 ? '+' : ''}${unit === ' s' ? d.toFixed(1) : d.toFixed(1)}${unit})`;
+            };
+            const testLines = [];
+            if (head) {
+              const hp = sum(head, 'pass'), hf = sum(head, 'fail'), hs = sum(head, 'skip'), ht = sum(head, 'seconds');
+              const bp = base ? sum(base, 'pass') : null, bt = base ? sum(base, 'seconds') : null;
+              const baseRef = process.env.BASE_SHA ? `\`${process.env.BASE_SHA.slice(0, 8)}\`` : 'base';
+              testLines.push(base
+                ? `**Tests:** ${bp} → **${hp}** passed${hp - bp ? ` (${hp - bp > 0 ? '+' : ''}${hp - bp})` : ''}, ${hf} failed, ${hs} skipped · package time ${total(bt)} s → ${total(ht)} s, compared with ${baseRef} on ${clean(process.env.BASE_REF, 40)}`
+                : `**Tests:** ${hp} passed, ${hf} failed, ${hs} skipped · package time ${total(ht)} s (no base run to compare with yet)`);
+              const names = [...new Set([...head.keys(), ...(base ? base.keys() : [])])];
+              const table = names.map((n) => {
+                const h = head.get(n), b = base?.get(n);
+                const tests = (p) => p ? p.pass + p.fail : null;
+                const status = !h ? '➖ removed' : h.fail ? '🔴' : (!b ? '🆕' : '🟢');
+                const changed = !b || !h || tests(b) !== tests(h) || (h && h.fail)
+                  || Math.abs((h?.seconds ?? 0) - (b?.seconds ?? 0)) >= 0.5
+                  || Math.abs((h?.cover ?? 0) - (b?.cover ?? 0)) >= 0.05;
+                return { n, h, b, status, changed,
+                  row: `| ${clean(short(n), 60)} | ${status} | ${b ? tests(b) : '—'} → ${h ? tests(h) : '—'} | ${secs(b?.seconds)} → ${secs(h?.seconds)}${delta(b?.seconds, h?.seconds, ' s')} | ${b?.cover != null ? b.cover.toFixed(1) + '%' : '—'} → ${h?.cover != null ? h.cover.toFixed(1) + '%' : '—'}${delta(b?.cover, h?.cover, ' pp')} |` };
+              }).filter((r) => (r.h && (r.h.pass + r.h.fail + r.h.skip)) || (r.b && (r.b.pass + r.b.fail + r.b.skip)));
+              const head5 = ['| Package | | Tests | Time | Coverage |', '| --- | --- | --- | --- | --- |'];
+              const moved = table.filter((r) => r.changed);
+              testLines.push('', `<details><summary>Per package: ${moved.length} changed, ${table.length} with tests</summary>`, '',
+                ...head5, ...(moved.length ? moved : table).map((r) => r.row), '', '</details>');
+            }
+
+            const lines = [
+              marker,
+              `### CI: ${icon(run.conclusion)}`,
+              `Commit: \`${run.head_sha.slice(0, 8)}\` · [Full log](${run.html_url})`,
+              '',
+            ];
+            if (run.conclusion === 'action_required' || rows.length === 0) {
+              lines.push('CI has not run on this commit yet: workflows from a first-time contributor wait for a maintainer to approve them.');
+            } else {
+              let complexity = '';
+              try { complexity = fs.readFileSync('complexity.md', 'utf8').slice(0, 30000); } catch { /* advisory */ }
+              lines.push('| Check | Result | Detail | Time |', '| --- | --- | --- | --- |', ...rows, '', ...testLines);
+              if (complexity) lines.push(complexity);
+            }
+
+            // Last check before writing, and before asking for a review: a CI
+            // run on this commit may have started or re-run while this report
+            // was put together. Its own completion writes the newer report, so
+            // this older one must not land.
+            const now = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'ci.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
+              .then((runs) => newestOf(runs, run));
+            if (!now || now.id !== run.id || String(now.run_attempt) !== process.env.CI_ATTEMPT) {
+              core.info(`a newer CI run or attempt exists for this pull request on ${run.head_sha}; this report is not written`);
+              return;
+            }
+
+            // --- Copilot review, once per commit, only on a green run ----------
+            if (run.conclusion === 'success') {
+              const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number: prNumber });
+              const pending = await github.rest.pulls.listRequestedReviewers({ owner, repo, pull_number: prNumber })
+                .then((r) => r.data.users || []).catch(() => []);
+              const isCopilot = (login) => /copilot/i.test(login || '');
+              const done = reviews.some((r) => isCopilot(r.user?.login) && r.commit_id === run.head_sha)
+                || pending.some((u) => isCopilot(u.login));
+              if (done) {
+                lines.push('', '_Copilot review: already requested for this commit._');
+              } else {
+                let ok = false;
+                for (const reviewer of ['copilot-pull-request-reviewer[bot]', 'Copilot']) {
+                  try {
+                    await github.rest.pulls.requestReviewers({ owner, repo, pull_number: prNumber, reviewers: [reviewer] });
+                    ok = true; break;
+                  } catch (e) { core.info(`requesting ${reviewer}: ${e.message}`); }
+                }
+                lines.push('', ok ? '_Tests passed: Copilot review requested._'
+                  : '_Tests passed, but the Copilot review could not be requested automatically._');
+              }
+            }
+            const body = lines.join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { owner, repo, issue_number: prNumber });
+            const existing = comments.find((c) => c.user?.login === 'github-actions[bot]' && c.body?.includes(marker));
+            if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+            core.info(`${existing ? 'updated' : 'created'} report on #${prNumber}`);
