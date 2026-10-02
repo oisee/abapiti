@@ -12,4 +12,4 @@ expectation here, A4H wins and the expectation is fixed.
 | `zcl_abapiti_repro_ovfl` | 3 | `TYPE i` overflow raises |
 | `zcl_abapiti_repro_mem` | 1, 4 | the exact memory helpers from `wasm/memhelpers.go` |
 
-Lines marked `[A4H?]` still need the A4H oracle.
+Lines marked `UNMEASURED:` are guesses until the A4H oracle answers; measured ones become `EXPECT = A4H`.

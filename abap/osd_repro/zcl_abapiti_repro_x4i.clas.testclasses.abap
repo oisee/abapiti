@@ -1,6 +1,6 @@
 * Item 4: x <-> i conversion. Kernel: x LENGTH 4 -> i is big-endian
 * two's complement (signed); shorter x is padded with 00 on the left
-* (unsigned); i -> x keeps the rightmost bytes. [A4H?] marks lines that
+* (unsigned); i -> x keeps the rightmost bytes. UNMEASURED marks lines that
 * still need the A4H oracle.
 CLASS ltcl_x4i DEFINITION FINAL FOR TESTING
   DURATION SHORT RISK LEVEL HARMLESS.
@@ -61,7 +61,7 @@ CLASS ltcl_x4i IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD i_to_x2_x1_truncates.
-* [A4H?] i -> shorter x keeps the rightmost bytes, no exception.
+* UNMEASURED: i -> shorter x keeps the rightmost bytes, no exception.
 * The generated store8/store16 helpers rely on this (WASM wraps).
     DATA lv_x2 TYPE x LENGTH 2.
     DATA lv_x1 TYPE x LENGTH 1.
