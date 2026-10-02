@@ -106,7 +106,7 @@ func emitFUGR(mod *Module, fugrName string, funcsPerInclude int, redirects map[i
 	result.Files[prefix+"TOP.abap"] = emitFUGRTop(mod, upper)
 
 	// Runtime include
-	result.Files[prefix+"RT.abap"] = emitFUGRRuntime()
+	result.Files[prefix+"RT.abap"] = emitFUGRRuntime(mod)
 
 	// Function includes — group non-duplicate functions
 	slot := 0
@@ -202,11 +202,11 @@ func computeMaxVars(mod *Module) (maxParams, maxLocals, maxStack int) {
 	return
 }
 
-func emitFUGRRuntime() string {
+func emitFUGRRuntime(mod *Module) string {
 	return `" WASM Runtime helpers — included in function group
 " Memory load/store (little-endian)
 
-` + emitFUGRMemoryHelpers() + emitFUGRI32Helpers()
+` + emitFUGRMemoryHelpers(mod) + emitFUGRI32Helpers()
 }
 
 func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, upper string) (string, []*blockMethodDef) {
@@ -320,12 +320,8 @@ func emitFUGRInit(mod *Module, upper string) string {
 	// Memory
 	if mod.Memory != nil {
 		pages := mod.Memory.Min
-		if pages == 0 {
-			pages = 1
-		}
-		totalBytes := pages * 65536
 		sb.WriteString(fmt.Sprintf("  gv_mem_pages = %d.\n", pages))
-		sb.WriteString(fmt.Sprintf("  gv_mem = zcl_wasm_rt=>alloc_mem( %d ).\n\n", totalBytes))
+		sb.WriteString(fmt.Sprintf("  PERFORM mem_zero_pages USING %d CHANGING gv_mem.\n\n", pages))
 	}
 
 	// Globals

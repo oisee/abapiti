@@ -116,6 +116,7 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
 	c.emitI32HelperDeclarations("METHODS")
 
 	// Internal functions (non-exported only — exported are already in PUBLIC SECTION)
@@ -186,17 +187,8 @@ func (c *compiler) emitConstructor() {
 	// Initialize memory
 	if c.mod.Memory != nil {
 		pages := c.mod.Memory.Min
-		if pages == 0 {
-			pages = 1
-		}
 		c.line("mv_mem_pages = %d.", pages)
-		// Zero-filled memory, 256 bytes at a time
-		c.line("DATA lv_chunk TYPE x LENGTH 256.")
-		c.line("DO %d TIMES.", pages*256)
-		c.indent++
-		c.line("CONCATENATE mv_mem lv_chunk INTO mv_mem IN BYTE MODE.")
-		c.indent--
-		c.line("ENDDO.")
+		c.line("mv_mem = mem_zero_pages( %d ).", pages)
 	}
 
 	// Initialize globals

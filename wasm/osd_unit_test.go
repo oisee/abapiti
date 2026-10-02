@@ -47,6 +47,16 @@ var osdModules = []struct {
 		{"factorial", []int32{13}},
 		{"factorial", []int32{20}},
 	}},
+	{"memgrow", "zcl_abapiti_memgrow", []osdCase{
+		{"grow", []int32{1}},
+		{"grow", []int32{1}},
+		{"grow", []int32{-1}},
+		{"size", nil},
+		{"storeload", nil},
+	}},
+	{"memzero", "zcl_abapiti_memzero", []osdCase{
+		{"size", nil},
+	}},
 }
 
 // wazeroResults runs each case through wazero and returns the i32 results.
@@ -104,6 +114,14 @@ func osdTestClass(class string, cases []osdCase, want []int32) string {
 		sb.WriteString("    DATA lv_act TYPE i.\n")
 		sb.WriteString("    DATA lv_exp TYPE i.\n")
 		sb.WriteString("    CREATE OBJECT lo.\n")
+		// Replay preceding calls because each ABAP Unit method has a fresh instance.
+		for _, prior := range cases[:i] {
+			priorParams := make([]string, len(prior.args))
+			for k, a := range prior.args {
+				priorParams[k] = fmt.Sprintf("p%d = %d", k, a)
+			}
+			fmt.Fprintf(&sb, "    lv_act = lo->%s( %s ).\n", prior.fn, strings.Join(priorParams, " "))
+		}
 		fmt.Fprintf(&sb, "    lv_act = lo->%s( %s ).\n", c.fn, strings.Join(params, " "))
 		fmt.Fprintf(&sb, "    lv_exp = %d.\n", want[i])
 		fmt.Fprintf(&sb, "    cl_abap_unit_assert=>assert_equals( act = lv_act exp = lv_exp msg = '%s' ).\n", label)
@@ -119,9 +137,18 @@ func osdTestClass(class string, cases []osdCase, want []int32) string {
 func TestOSD_EmitUnitClasses(t *testing.T) {
 	dir := testOutDir(t)
 	for _, m := range osdModules {
-		bin, err := os.ReadFile(filepath.Join("testdata", m.file))
-		if err != nil {
-			t.Fatalf("read %s: %v", m.file, err)
+		var bin []byte
+		var err error
+		switch m.file {
+		case "memgrow":
+			bin = buildMemoryModule(1, true)
+		case "memzero":
+			bin = buildMemoryModule(0, false)
+		default:
+			bin, err = os.ReadFile(filepath.Join("testdata", m.file))
+			if err != nil {
+				t.Fatalf("read %s: %v", m.file, err)
+			}
 		}
 		mod, err := Parse(bin)
 		if err != nil {
