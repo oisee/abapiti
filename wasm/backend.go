@@ -80,6 +80,9 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 	case BackendHybrid:
 		emitHybrid(mod, name, funcsPerInclude, redirects, result)
 	}
+	for name, src := range result.Files {
+		result.Files[name] = stripABAPComments(src)
+	}
 
 	for fname, src := range result.Files {
 		result.Files[fname] = wrapLongLines(src)
@@ -270,7 +273,7 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 		c.line("g=>br = 0.")
 	} else {
 		// Chained DATA declaration (for non-block-FORM mode)
-		c.line("%s", emitChainedDATA(f))
+		c.line("%s", emitChainedDATA(f, false))
 	}
 
 	// Enable packing for code

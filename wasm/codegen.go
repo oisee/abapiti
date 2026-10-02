@@ -2,6 +2,7 @@ package wasm
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -52,6 +53,9 @@ type compiler struct {
 	blockCounter     int
 	currentFuncIndex int
 	inBlockMethod    bool // true when emitting a block CLASS-METHOD body (no g=> prefix)
+	usedRuntime      map[string]bool
+	usedDispatch     map[int]bool
+	copyParams       bool
 }
 
 // blockMethodDef holds a block/loop body extracted for emission as a CLASS-METHOD.
@@ -65,6 +69,13 @@ type blockMethodDef struct {
 }
 
 func (c *compiler) emit() string {
+	// Collect helper calls before writing the class definition.
+	c.usedRuntime = make(map[string]bool)
+	c.usedDispatch = make(map[int]bool)
+	c.copyParams = true
+	c.emitImplementation()
+	c.sb.Reset()
+	c.indent = 0
 	c.emitDefinition()
 	c.line("")
 	c.emitImplementation()
@@ -119,6 +130,8 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
 	c.emitI32HelperDeclarations("METHODS")
+	c.emitRuntimeDeclarations()
+	c.emitDispatchDeclarations()
 
 	// Internal functions (non-exported only — exported are already in PUBLIC SECTION)
 	for i, f := range c.mod.Functions {
@@ -165,6 +178,7 @@ func (c *compiler) emitImplementation() {
 	// Memory helpers
 	c.emitMemoryHelpers()
 	c.emitI32Helpers()
+	c.emitRuntimeHelpers()
 
 	// Functions
 	for i, f := range c.mod.Functions {
@@ -176,6 +190,7 @@ func (c *compiler) emitImplementation() {
 			c.emitFunction(name, &f)
 		}
 	}
+	c.emitDispatchMethods()
 
 	c.indent--
 	c.line("ENDCLASS.")
@@ -223,14 +238,28 @@ func (c *compiler) emitFunction(name string, f *Function) {
 	c.indent++
 
 	// Emit chained DATA declaration
-	c.line("%s", emitChainedDATA(f))
+	c.line("%s", emitChainedDATA(f, c.copyParams))
+	if c.copyParams {
+		for _, inst := range f.Code {
+			if inst.Op == OpCallIndirect {
+				c.line("DATA lv_ci_func TYPE i.")
+				c.line("DATA lv_ci_index TYPE i.")
+				break
+			}
+		}
+	}
+	if c.copyParams {
+		for i := range f.Type.Params {
+			c.line("l_p%d = p%d.", i, i)
+		}
+	}
 
 	// Enable line packing for code
 	c.packLines = true
 	c.packer = newLinePacker(&c.sb, c.indent)
 
 	// Emit instructions
-	stack := &virtualStack{}
+	stack := &virtualStack{typed: c.copyParams}
 	c.blockStack = nil // reset block stack for each function
 	c.emitInstructions(f, f.Code, stack, 0)
 
@@ -250,6 +279,12 @@ func (c *compiler) emitFunction(name string, f *Function) {
 func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virtualStack, blockDepth int) {
 	for i := 0; i < len(code); i++ {
 		inst := code[i]
+		if stack.typed {
+			stack.next = c.instructionResultType(f, inst)
+			if (inst.Op == OpSelect || inst.Op == OpSelectT) && stack.depth >= 3 && stack.depth-3 < len(stack.types) {
+				stack.next = stack.types[stack.depth-3]
+			}
+		}
 		switch inst.Op {
 
 		case OpNop:
@@ -1240,6 +1275,9 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 }
 
 func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stack *virtualStack) {
+	if c.usedDispatch != nil {
+		c.usedDispatch[typeIndex] = true
+	}
 	if typeIndex >= len(c.mod.Types) {
 		c.line("\" ERROR: invalid type index %d for call_indirect", typeIndex)
 		return
@@ -1256,7 +1294,12 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 	}
 
 	// Read function index from table
-	c.line("DATA(lv_ci_func) = mt_tab%d[ %s + 1 ]. \" call_indirect", tableIndex, tableIdx)
+	if c.copyParams {
+		c.line("lv_ci_index = %s + 1.", tableIdx)
+		c.line("READ TABLE mt_tab%d INDEX lv_ci_index INTO lv_ci_func.", tableIndex)
+	} else {
+		c.line("DATA(lv_ci_func) = mt_tab%d[ %s + 1 ].", tableIndex, tableIdx)
+	}
 
 	// Generate dispatch
 	var paramParts []string
@@ -1379,8 +1422,13 @@ func (c *compiler) findImport(funcIndex int) *Import {
 }
 
 // emitChainedDATA produces a single chained DATA: statement for all locals + stack vars.
-func emitChainedDATA(f *Function) string {
+func emitChainedDATA(f *Function, typed bool) string {
 	var parts []string
+	if typed {
+		for i, p := range f.Type.Params {
+			parts = append(parts, fmt.Sprintf("l_p%d TYPE %s", i, p.ABAPType()))
+		}
+	}
 
 	// Declared locals (after params)
 	for i := 0; i < len(f.Locals); i++ {
@@ -1392,6 +1440,9 @@ func emitChainedDATA(f *Function) string {
 	maxStack := estimateMaxStack(f.Code)
 	for i := 0; i < maxStack; i++ {
 		parts = append(parts, fmt.Sprintf("s%d TYPE i", i))
+		if typed {
+			parts = append(parts, fmt.Sprintf("s%d_i64 TYPE int8", i), fmt.Sprintf("s%d_f TYPE f", i))
+		}
 	}
 
 	// Branch depth flag
@@ -1450,6 +1501,9 @@ func (c *compiler) memPagesVar() string {
 func (c *compiler) localName(f *Function, index int) string {
 	prefix := c.classPrefix() // "g=>" from FORMs, "" from class methods
 	if index < len(f.Type.Params) {
+		if c.copyParams {
+			return fmt.Sprintf("l_p%d", index)
+		}
 		return fmt.Sprintf("%sp%d", prefix, index)
 	}
 	return fmt.Sprintf("%sl%d", prefix, index)
@@ -1587,10 +1641,19 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 type virtualStack struct {
 	depth  int
 	prefix string // "gv_" for block-FORM mode, "" for normal
+	typed  bool
+	next   ValType
+	types  []ValType
 }
 
 func (s *virtualStack) push() string {
-	name := fmt.Sprintf("%ss%d", s.prefix, s.depth)
+	if s.typed {
+		for len(s.types) <= s.depth {
+			s.types = append(s.types, ValI32)
+		}
+		s.types[s.depth] = s.next
+	}
+	name := s.name(s.depth)
 	s.depth++
 	return name
 }
@@ -1600,20 +1663,101 @@ func (s *virtualStack) pop() string {
 		return s.prefix + "s0"
 	}
 	s.depth--
-	return fmt.Sprintf("%ss%d", s.prefix, s.depth)
+	return s.name(s.depth)
 }
 
 func (s *virtualStack) peek() string {
 	if s.depth <= 0 {
 		return s.prefix + "s0"
 	}
-	return fmt.Sprintf("%ss%d", s.prefix, s.depth-1)
+	return s.name(s.depth - 1)
+}
+
+func (s *virtualStack) name(index int) string {
+	name := fmt.Sprintf("%ss%d", s.prefix, index)
+	if s.typed && index < len(s.types) {
+		switch s.types[index] {
+		case ValI64:
+			return name + "_i64"
+		case ValF32, ValF64:
+			return name + "_f"
+		}
+	}
+	return name
+}
+
+func (c *compiler) instructionResultType(f *Function, inst Instruction) ValType {
+	switch inst.Op {
+	case OpI64Const, OpI64Load, OpI64Load8S, OpI64Load8U,
+		OpI64Load16S, OpI64Load16U, OpI64Load32S, OpI64Load32U,
+		OpI64ExtendI32S, OpI64ExtendI32U, OpI64TruncF32S,
+		OpI64TruncF32U, OpI64TruncF64S, OpI64TruncF64U,
+		OpI64ReinterpretF64, OpI64Extend8S, OpI64Extend16S,
+		OpI64Extend32S:
+		return ValI64
+	case OpF32Const, OpF32Load, OpF32ConvertI32S, OpF32ConvertI32U,
+		OpF32ConvertI64S, OpF32ConvertI64U, OpF32DemoteF64,
+		OpF32ReinterpretI32:
+		return ValF32
+	case OpF64Const, OpF64Load, OpF64ConvertI32S, OpF64ConvertI32U,
+		OpF64ConvertI64S, OpF64ConvertI64U, OpF64PromoteF32,
+		OpF64ReinterpretI64:
+		return ValF64
+	case OpLocalGet, OpLocalTee:
+		if inst.LocalIndex < len(f.Type.Params) {
+			return f.Type.Params[inst.LocalIndex]
+		}
+		index := inst.LocalIndex - len(f.Type.Params)
+		if index < len(f.Locals) {
+			return f.Locals[index]
+		}
+	case OpGlobalGet:
+		if inst.GlobalIndex < len(c.mod.Globals) {
+			return c.mod.Globals[inst.GlobalIndex].Type
+		}
+	case OpCall:
+		if inst.FuncIndex < c.mod.NumImportedFuncs {
+			if imp := c.findImport(inst.FuncIndex); imp != nil && imp.Type != nil && len(imp.Type.Results) > 0 {
+				return imp.Type.Results[0]
+			}
+		} else {
+			index := inst.FuncIndex - c.mod.NumImportedFuncs
+			if index < len(c.mod.Functions) && c.mod.Functions[index].Type != nil && len(c.mod.Functions[index].Type.Results) > 0 {
+				return c.mod.Functions[index].Type.Results[0]
+			}
+		}
+	case OpCallIndirect:
+		if inst.TypeIndex < len(c.mod.Types) && len(c.mod.Types[inst.TypeIndex].Results) > 0 {
+			return c.mod.Types[inst.TypeIndex].Results[0]
+		}
+	}
+	if inst.Op >= OpI64Clz && inst.Op <= OpI64Rotr {
+		return ValI64
+	}
+	if inst.Op >= OpF32Abs && inst.Op <= OpF32Copysign {
+		return ValF32
+	}
+	if inst.Op >= OpF64Abs && inst.Op <= OpF64Copysign {
+		return ValF64
+	}
+	return ValI32
 }
 
 // --- Helpers ---
 
 func (c *compiler) line(format string, args ...any) {
 	stmt := fmt.Sprintf(format, args...)
+	if c.usedRuntime != nil {
+		stmt = runtimeCallRE.ReplaceAllStringFunc(stmt, func(call string) string {
+			name := strings.TrimPrefix(call, "zcl_wasm_rt=>")
+			c.usedRuntime[name] = true
+			return name
+		})
+	}
+	stmt = stripABAPComment(stmt)
+	if strings.TrimSpace(stmt) == "" {
+		return
+	}
 	if c.packLines && c.packer != nil {
 		c.packer.setIndent(c.indent)
 		c.packer.add(stmt)
@@ -1624,6 +1768,8 @@ func (c *compiler) line(format string, args ...any) {
 	c.sb.WriteString(stmt)
 	c.sb.WriteByte('\n')
 }
+
+var runtimeCallRE = regexp.MustCompile(`zcl_wasm_rt=>[a-z0-9_]+`)
 
 // flushPacker writes any pending packed statements.
 func (c *compiler) flushPacker() {

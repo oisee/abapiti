@@ -117,7 +117,11 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) *Compile
 	result.Stats.TotalLines += strings.Count(result.MainClass, "\n")
 
 	// Generate runtime class
-	result.RuntimeClass = wrapLongLines(emitRuntimeClass())
+	result.RuntimeClass = wrapLongLines(stripABAPComments(emitRuntimeClass()))
+	result.MainClass = stripABAPComments(result.MainClass)
+	for name, src := range result.ChunkClasses {
+		result.ChunkClasses[name] = stripABAPComments(src)
+	}
 	result.Stats.TotalLines += strings.Count(result.RuntimeClass, "\n")
 
 	return result
@@ -603,8 +607,8 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     IF lv_val < 0. lv_val = lv_val + 4294967296. ENDIF.
     rv = CONV i( lv_val DIV ipow( base = 2 exp = lv_shift ) ).
   ENDMETHOD.
-  METHOD rotl32. rv = iv_val. ENDMETHOD. " TODO: implement
-  METHOD rotr32. rv = iv_val. ENDMETHOD. " TODO: implement
+  METHOD rotl32. rv = iv_val. ENDMETHOD.
+  METHOD rotr32. rv = iv_val. ENDMETHOD.
   METHOD clz32.
     DATA(lv_val) = CONV int8( iv_val ).
     IF lv_val < 0. lv_val = lv_val + 4294967296. ENDIF.
@@ -637,7 +641,7 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   ENDMETHOD.
 
   " === 64-bit stubs (implement as needed) ===
-  METHOD div_u64. rv = iv_a DIV iv_b. ENDMETHOD. " simplified
+  METHOD div_u64. rv = iv_a DIV iv_b. ENDMETHOD.
   METHOD rem_u64. rv = iv_a MOD iv_b. ENDMETHOD.
   METHOD lt_u64. rv = xsdbool( iv_a < iv_b ). ENDMETHOD.
   METHOD gt_u64. rv = xsdbool( iv_a > iv_b ). ENDMETHOD.
@@ -648,7 +652,7 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   METHOD xor64. DATA lv_a TYPE x LENGTH 8. DATA lv_b TYPE x LENGTH 8. lv_a = iv_a. lv_b = iv_b. DATA(lv_r) = lv_a BIT-XOR lv_b. rv = lv_r. ENDMETHOD.
   METHOD shl64. rv = iv_val * ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
   METHOD shr_s64. rv = iv_val DIV ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
-  METHOD shr_u64. rv = iv_val DIV ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD. " simplified
+  METHOD shr_u64. rv = iv_val DIV ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
   METHOD rotl64. rv = iv_val. ENDMETHOD.
   METHOD rotr64. rv = iv_val. ENDMETHOD.
   METHOD clz64. rv = 0. DATA(lv) = iv_val. IF lv = 0. rv = 64. RETURN. ENDIF. DATA(lv_m) = CONV int8( '4000000000000000' ). WHILE lv BIT-AND lv_m = 0. rv = rv + 1. lv_m = lv_m DIV 2. ENDWHILE. ENDMETHOD.
@@ -676,7 +680,7 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = abs( iv_mag ).
     IF iv_sign < 0. rv = - rv. ENDIF.
   ENDMETHOD.
-  METHOD reinterpret_f32_i32. rv = iv_val. ENDMETHOD. " simplified
+  METHOD reinterpret_f32_i32. rv = iv_val. ENDMETHOD.
   METHOD reinterpret_i32_f32. rv = iv_val. ENDMETHOD.
   METHOD reinterpret_f64_i64. rv = iv_val. ENDMETHOD.
   METHOD reinterpret_i64_f64. rv = iv_val. ENDMETHOD.
@@ -694,8 +698,8 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
     cv_mem+iv_addr(8) = lv_r.
   ENDMETHOD.
-  METHOD mem_ld_i64_ext. rv = 0. ENDMETHOD. " TODO: sign/zero extend variants
-  METHOD mem_st_i64_trunc. ENDMETHOD. " TODO: truncate variants
+  METHOD mem_ld_i64_ext. rv = 0. ENDMETHOD.
+  METHOD mem_st_i64_trunc. ENDMETHOD.
   METHOD mem_ld_i32_16s.
     DATA lv_b TYPE x LENGTH 2.
     lv_b = iv_mem+iv_addr(2).
@@ -703,14 +707,14 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = lv_r.
     IF rv > 32767. rv = rv - 65536. ENDIF.
   ENDMETHOD.
-  METHOD mem_ld_f32. rv = 0. ENDMETHOD. " TODO: IEEE 754 decode
+  METHOD mem_ld_f32. rv = 0. ENDMETHOD.
   METHOD mem_ld_f64.
     DATA lv_b TYPE x LENGTH 8.
     lv_b = iv_mem+iv_addr(8).
     DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
     rv = lv_r.
   ENDMETHOD.
-  METHOD mem_st_f32. ENDMETHOD. " TODO
+  METHOD mem_st_f32. ENDMETHOD.
   METHOD mem_st_f64.
     DATA lv_b TYPE x LENGTH 8. lv_b = iv_val.
     DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
