@@ -324,8 +324,6 @@ CLASS zcl_abapiti_bench_mem IMPLEMENTATION.
     DATA lv_pg TYPE string.
 * The same operations on a growing memory: model A copies the whole
 * xstring on every write, so its cost should grow with the size.
-* A only up to 16 pages (1 MiB): every write copies the whole xstring.
-* B and C up to 8192 pages = 512 MiB.
 * Model C is left out: on a kernel ASSIGN ... CASTING TYPE i from an x
 * row dumps (ASSIGN_BASE_WRONG_ALIGNMENT, A4H 2026-10-02). A only up to
 * 16 pages here, because on OSD every write copies the whole xstring;
