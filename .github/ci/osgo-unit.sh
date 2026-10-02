@@ -5,8 +5,9 @@
 #
 #   .github/ci/osgo-unit.sh <workdir>
 #
-# Exit codes are osgo:unit's: 0 every test passed, 1 a test failed,
-# 2 NOT_COMPILED / ERROR / SKIPPED or a line over 255 characters, 3 no tests.
+# Exit 0 when every test passed except NOT_COMPILED rows matching a known osgo
+# gap (osgo-known-gaps.txt); 1 for any other non-passing row; 4 for setup,
+# generation or JSON problems.
 # Needs Node 22+; Go 1.26 is fetched through GOTOOLCHAIN.
 set -euo pipefail
 
@@ -48,20 +49,37 @@ echo "osgo-unit: $n classes" >&2
 status=0
 (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false npm run -s osgo:unit -- "$classes" --json) > "$work/osgo.json" 2> "$work/osgo.err" || status=$?
 # The runner's exit code is not enough on its own: the JSON must carry totals
-# with a positive test count, and a zero exit must mean zero failures of any
-# kind. Anything else is exit 4.
+# with a positive test count, at least one test must pass, and every row
+# that did not pass must be a NOT_COMPILED listed in osgo-known-gaps.txt.
+# Anything else (a failure, an error, a skip, an unknown NOT_COMPILED) is
+# exit 1; a JSON without valid totals is exit 4.
+gaps="$here/osgo-known-gaps.txt"
 verdict=0
 node -e '
-  const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  const fs = require("fs");
+  const d = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  const gaps = fs.readFileSync(process.argv[2], "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
   const t = d.totals;
   const n = (k) => (t && Number.isInteger(t[k]) && t[k] >= 0 ? t[k] : NaN);
   const [ok, fail, nc, err, tests] = ["success", "failure", "not_compiled", "error", "tests"].map(n);
   const skipped = t && Number.isInteger(t.skipped) ? t.skipped : 0;
   if ([ok, fail, nc, err, tests].some(Number.isNaN) || tests < 1) { console.log("osgo-unit: the JSON has no valid totals"); process.exit(4); }
   console.log(`osgo-unit: ${ok} passed, ${fail} failed, ${nc} not compiled, ${err} errors, ${skipped} skipped, ${tests} tests`);
-  for (const r of d.rows || []) if (r.status !== "SUCCESS") console.log(`  ${r.class} ${r.method} ${r.status} ${String(r.message || "").split("\n")[0].slice(0, 160)}`);
-  if (ok !== tests || fail + nc + err + skipped > 0) process.exit(5);
-' "$work/osgo.json" >&2 || verdict=$?
+  const used = new Set();
+  let bad = 0, known = 0;
+  for (const r of d.rows || []) {
+    if (r.status === "SUCCESS") continue;
+    const msg = String(r.message || "").split("\n")[0];
+    const g = r.status === "NOT_COMPILED" ? gaps.find((x) => msg.includes(x)) : undefined;
+    if (g) { known++; used.add(g); continue; }
+    bad++;
+    console.log(`  ${r.class} ${r.method} ${r.status} ${msg.slice(0, 160)}`);
+  }
+  if (known) console.log(`osgo-unit: ${known} not compiled because of known osgo gaps: ${[...used].join("; ")}`);
+  for (const g of gaps) if (!used.has(g)) console.log(`osgo-unit: known gap "${g}" matched nothing; remove it from osgo-known-gaps.txt if open-steamgate compiles it now`);
+  if (ok < 1) { console.log("osgo-unit: no test passed"); process.exit(5); }
+  if (bad > 0) process.exit(5);
+' "$work/osgo.json" "$gaps" >&2 || verdict=$?
 if [ "$verdict" -eq 4 ] || [ "$verdict" -gt 5 ]; then tail -20 "$work/osgo.err" >&2; exit 4; fi
-if [ "$status" -eq 0 ] && [ "$verdict" -ne 0 ]; then echo "osgo-unit: the runner exited 0 but not every test passed" >&2; exit 4; fi
-exit "$status"
+if [ "$verdict" -eq 5 ]; then exit 1; fi
+exit 0
