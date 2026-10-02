@@ -25,3 +25,22 @@ reported (they look like milliseconds there, not microseconds):
 
 B is 23-40x faster than A. C fails on OSD: a write through a field symbol
 assigned with `CASTING TYPE i` does not reach the bytes.
+
+A4H (release 758, x86-64), 3rd of 3 runs in one session, microseconds,
+1 page (measured by osg-research, 2026-10-02):
+
+| | A | B |
+|---|---|---|
+| W1 | 7878 | 14024 |
+| W2 | 2889 | 5877 |
+| W3 | 1445 | 2946 |
+
+On the kernel the picture is reversed: xstring + REPLACE SECTION is about
+2x faster than the table once warm, so the generated code stays on xstring.
+B's lead on OSD is a property of the JS runtime. Model C dumps on the kernel
+(ASSIGN_BASE_WRONG_ALIGNMENT, already at offset 0), so it is out of the
+console run and its tests live in their own test class.
+
+The console run now also measures W0 (allocation) and W5 (one i32 per 4 KiB
+over the whole memory) at sizes up to 8192 pages (512 MiB); `run_one( )`
+measures one model at one size.
