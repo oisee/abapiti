@@ -241,9 +241,14 @@ func (c *compiler) emitI32Arithmetic(name, op, result, a, b string) {
 	c.flushPacker()
 	savedPackLines := c.packLines
 	c.packLines = false
-	c.line("lv_w = %s %s %s.", a, op, b)
 	if op == "*" {
+		// An int8 operand makes every runtime multiply in int8; with two
+		// TYPE i operands the abaplint JS runtime multiplies in a double.
+		c.line("lv_w = %s.", a)
+		c.line("lv_w = lv_w * %s.", b)
 		c.line("lv_w = lv_w MOD 4294967296.")
+	} else {
+		c.line("lv_w = %s %s %s.", a, op, b)
 	}
 	c.line("IF lv_w > 2147483647.")
 	c.indent++

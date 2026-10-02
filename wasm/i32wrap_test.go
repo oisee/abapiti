@@ -103,7 +103,7 @@ func checkI32Sources(t *testing.T, backend string, files map[string]string, ops 
 			// The wrapper only delegates; arithmetic lives in extracted block methods.
 			for _, op := range ops {
 				operator := map[string]string{"i32_add": "+", "i32_sub": "-", "i32_mul": "*"}[op]
-				if regexp.MustCompile(`lv_w = s\d+ ` + regexp.QuoteMeta(operator) + ` s\d+\.`).MatchString(src) {
+				if regexp.MustCompile(`lv_w = (s\d+|lv_w) ` + regexp.QuoteMeta(operator) + ` s\d+\.`).MatchString(src) {
 					checkI32Inline(t, "hybrid class", src, op)
 				}
 			}
@@ -116,7 +116,7 @@ func checkI32Inline(t *testing.T, backend, src, op string) {
 	operator := map[string]string{"i32_add": "+", "i32_sub": "-", "i32_mul": "*"}[op]
 	wrap := `lv_w = s\d+ ` + regexp.QuoteMeta(operator) + ` s\d+\.\n\s*`
 	if op == "i32_mul" {
-		wrap += `lv_w = lv_w MOD 4294967296\.\n\s*`
+		wrap = `lv_w = s\d+\.\n\s*lv_w = lv_w \* s\d+\.\n\s*lv_w = lv_w MOD 4294967296\.\n\s*`
 	}
 	wrap += `IF lv_w > 2147483647\.\n\s*lv_w = lv_w - 4294967296\.\n\s*`
 	if op != "i32_mul" {
