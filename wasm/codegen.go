@@ -1933,8 +1933,8 @@ type compileError struct{ error }
 
 func catchCompileError(err *error) {
 	if failure := recover(); failure != nil {
-		if failure, ok := failure.(compileError); ok {
-			*err = failure.error
+		if ce, ok := failure.(compileError); ok {
+			*err = ce.error
 		} else {
 			panic(failure)
 		}
