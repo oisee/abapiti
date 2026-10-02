@@ -17,7 +17,13 @@ name: CI report
 # per-package test summary, the metrics file — comes from a workflow file the
 # pull request can edit, so it is parsed defensively and escaped before it goes
 # into the comment. The metrics of earlier main runs, for the trend, are read
-# the same way, and the only program run on any of it is `unzip -p`.
+# the same way, and the only program run on any of it is `unzip -p`, into
+# memory under a size cap, after the zip's central directory has been checked
+# against the same cap (see "Fetch the artifacts, size-capped").
+#
+# Nothing the pull request controls (branch name, titles, job names, archive
+# entry names, file contents) is written to this workflow's own log: the log
+# names runs and pull requests by number, and an error by its first line.
 on:
   workflow_run:
     workflows: [CI, OSD M1]
@@ -28,32 +34,54 @@ permissions:
   actions: read
   checks: read
 
-# CI and OSD M1 finish at different times on the same commit; one report at a
-# time per branch, so two runs cannot both find no comment and post two.
+# One report run at a time per pull request: head repository, head branch and
+# the PR number the run carries (a fork's run carries none, so a fork's
+# reports share one group per head branch). CI and OSD M1 runs of one pull
+# request share the group, so two runs cannot both find no comment and post
+# two. A later report waits rather than cancelling the one in progress.
+#
+# Each report run reports the LATEST completed CI run on the pull request's
+# current head, whichever run (CI or OSD M1, old or new) triggered it, so the
+# order in which reports run or are cancelled does not matter: GitHub keeps one
+# pending run per group and cancels an older pending one when a newer arrives,
+# and the run that is left starts later and reads a state at least as fresh as
+# the one it replaced. A late report from an old run therefore cannot be why
+# the latest run goes unreported: it either reports the latest run itself, or
+# finds it still running and leaves it to that run's own report, which queues
+# behind it. The PR number is in the key so that two pull requests from one
+# head branch (to different bases) cannot cancel each other's pending report.
 concurrency:
-  group: ci-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  group: ci-report-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}-${{ github.event.workflow_run.pull_requests[0].number }}
   cancel-in-progress: false
 
 jobs:
+  # Reads the latest CI run on the pull request's head and builds the report.
+  # It writes nothing: the write job below does.
   comment:
     if: github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      pr: ${{ steps.find.outputs.pr }}
+      run_id: ${{ steps.find.outputs.run_id }}
+      run_attempt: ${{ steps.report.outputs.run_attempt }}
+      body: ${{ steps.report.outputs.body }}
     steps:
       # Same-repo pull requests arrive in run.pull_requests; fork ones do not,
-      # so look them up by head branch. Either way, only report when the pull
-      # request still points at the commit this run tested — a late run for an
-      # old commit must not overwrite a newer report. The base is the last
-      # green push run on the pull request's base branch.
+      # so look them up by head repository and branch. The run reported is not
+      # necessarily the one that triggered this, and need not be a CI run (OSD
+      # M1 triggers this too): it is the latest CI run (highest run number, at
+      # its current attempt) of this pull request on its current head commit,
+      # and only once it has completed; a run still in progress gets its own
+      # report when it completes, and picks up the OSD row then.
       #
-      # The report is always about the newest CI run of this pull request on
-      # the commit (same head repository and branch: two forks can push the
-      # same SHA), at its newest attempt. A run that is not the newest (a re-run of CI or OSD M1
-      # on the same commit started since) writes nothing: the newer one's own
-      # completion writes the report, so a late, older run cannot overwrite a
-      # newer report. When OSD M1 is what finished, the CI run is looked up; if
-      # it has not finished yet, its own completion writes the report (and
-      # picks up the OSD row then), so nothing is written now.
+      # "Of this pull request" is samePR: a commit SHA alone is not enough,
+      # since two forks can open pull requests with the same commit, and two
+      # pull requests from one branch (to different bases) share commit,
+      # branch and repository. So: the same head repository (by id) and
+      # branch, and this PR's number among the run's pull requests when the
+      # run names any (a fork's run names none). The base is the last green
+      # push run on the pull request's base branch.
       - name: Find the pull request and the base run
         id: find
         uses: actions/github-script@v7
@@ -61,50 +89,37 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const trigger = context.payload.workflow_run;
-            // Runs of one pull request: a commit SHA alone is not enough, since
-            // two forks can open pull requests with the same commit. Same head
-            // repository and branch, and the same PR number when both runs
-            // know theirs (fork runs carry no pull_requests).
-            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
-              && r.head_branch === ref.head_branch
-              && (!r.pull_requests?.length || !ref.pull_requests?.length
-                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
-            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
-              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
-            // The newest run of a workflow on this pull request's commit; its
-            // run_attempt is its newest attempt. undefined when there is none,
-            // or on an API error.
-            const newest = (workflow_id) => github.paginate(github.rest.actions.listWorkflowRuns,
-              { owner, repo, workflow_id, head_sha: trigger.head_sha, event: 'pull_request', per_page: 100 })
-              .then((runs) => newestOf(runs, trigger))
-              .catch((e) => { core.warning(`listing ${workflow_id} runs: ${e.message}`); return undefined; });
-            const same = (a, b) => a && b && a.id === b.id && a.run_attempt === b.run_attempt;
-
-            const own = await newest(trigger.name === 'CI' ? 'ci.yml' : 'osd-m1.yml');
-            if (!same(own, trigger)) {
-              core.info(`${trigger.name} run ${trigger.id} attempt ${trigger.run_attempt} is not the newest on ${trigger.head_sha}`
-                + ` (newest: ${own ? `${own.id} attempt ${own.run_attempt}` : 'unknown'}); its report is left to the newer run`);
-              return;
-            }
-            const run = trigger.name === 'CI' ? trigger : await newest('ci.yml');
-            if (!run || run.status !== 'completed') {
-              core.info(`CI on ${trigger.head_sha} has not finished; its completion writes the report`);
-              return;
-            }
-            core.setOutput('ci_run', String(run.id));
-            core.setOutput('ci_attempt', String(run.run_attempt));
-            let pr = run.pull_requests?.[0];
+            let pr = trigger.pull_requests?.[0];
             if (pr) {
               pr = (await github.rest.pulls.get({ owner, repo, pull_number: pr.number })).data;
             } else {
               const open = await github.paginate(github.rest.pulls.list,
-                { owner, repo, state: 'open', head: `${run.head_repository.owner.login}:${run.head_branch}` });
-              pr = open.find((p) => p.head.sha === run.head_sha);
+                { owner, repo, state: 'open', head: `${trigger.head_repository.owner.login}:${trigger.head_branch}` });
+              pr = open.find((p) => p.head.repo?.id === trigger.head_repository.id && p.head.ref === trigger.head_branch);
             }
-            if (!pr || pr.head.sha !== run.head_sha) {
-              core.info(`no open pull request at ${run.head_sha}; nothing to report`);
+            if (!pr || pr.state !== 'open') {
+              core.info(`no open pull request for run ${trigger.id}; nothing to report`);
               return;
             }
+            const samePR = (r) => r.head_repository?.id === pr.head.repo?.id && r.head_branch === pr.head.ref
+              && (!r.pull_requests?.length || r.pull_requests.some((p) => p.number === pr.number));
+            const onHead = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'ci.yml', head_sha: pr.head.sha, event: 'pull_request', per_page: 100 });
+            const latest = onHead.filter(samePR)
+              .sort((a, b) => b.run_number - a.run_number || b.id - a.id)[0];
+            if (!latest) {
+              core.info(`no CI run on #${pr.number}'s head ${pr.head.sha} yet; its own report will follow`);
+              return;
+            }
+            if (latest.status !== 'completed') {
+              core.info(`the latest CI run on #${pr.number}'s head (run ${latest.id}, attempt ${latest.run_attempt}) is ${latest.status}; its own report will follow`);
+              return;
+            }
+            if (latest.id !== trigger.id || latest.run_attempt !== trigger.run_attempt) {
+              core.info(`triggered by run ${trigger.id} attempt ${trigger.run_attempt}; reporting the latest CI run, ${latest.id} attempt ${latest.run_attempt}`);
+            }
+            core.setOutput('run_id', String(latest.id));
+            core.setOutput('run_attempt', String(latest.run_attempt));
             core.setOutput('pr', String(pr.number));
             core.setOutput('base_ref', pr.base.ref);
             const base = await github.rest.actions.listWorkflowRuns({
@@ -117,61 +132,99 @@ jobs:
 
       # The pull request's artifacts are written by its own workflow, so a fork
       # controls them, and a small zip can unpack into gigabytes. Neither
-      # download-artifact nor a plain unzip is used: each artifact must be
-      # small zipped (GitHub's own count), hold exactly the one expected file
-      # name, and that file is read with `unzip -p` into a capped buffer, so no
-      # more than the cap is ever unpacked, whatever the zip's headers claim.
+      # download-artifact nor a plain unzip is used. Each artifact:
+      #  1. must be small zipped (GitHub's own count, then the bytes fetched);
+      #  2. has its central directory read here, in JavaScript, without running
+      #     anything on it: it must hold exactly one entry, the expected file
+      #     name, under the unzipped cap, and not be zip64;
+      #  3. is unpacked with `unzip -p` into memory under maxBuffer set to the
+      #     same cap (and a timeout), so past the cap the child is killed,
+      #     whatever the headers claimed, and only then written by this script.
       # Real sizes: test-summary about 1 KB, metrics about 15 KB, unzipped. The
       # base's artifacts (from pushes to the base branch) go through the same.
-      - name: Download the artifacts, size-capped
+      - name: Fetch the artifacts, size-capped
         if: steps.find.outputs.pr != ''
         continue-on-error: true
         uses: actions/github-script@v7
         env:
-          CI_RUN: ${{ steps.find.outputs.ci_run }}
+          HEAD_RUN: ${{ steps.find.outputs.run_id }}
           BASE_RUN: ${{ steps.find.outputs.base_run }}
         with:
           script: |
             const fs = require('fs');
+            const path = require('path');
             const { execFileSync } = require('child_process');
             const { owner, repo } = context.repo;
-            const wanted = [
-              // name, file in the zip, zipped cap, unzipped cap
-              ['test-summary', 'test-summary.json', 256 * 1024, 1024 * 1024],
-              ['metrics', 'metrics.json', 1024 * 1024, 5 * 1024 * 1024],
+            const KB = 1024, MB = 1024 * KB;
+            const kinds = [
+              { name: 'test-summary', file: 'test-summary.json', zip: 256 * KB, raw: 1 * MB, head: 'head', base: 'base' },
+              { name: 'metrics', file: 'metrics.json', zip: 1 * MB, raw: 5 * MB, head: 'head-metrics', base: 'base-metrics' },
             ];
-            const fetchOne = async (runId, name, file, zipCap, cap, dir) => {
-              const arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: runId, name });
-              const a = arts.find((x) => x.name === name && !x.expired);
-              if (!a) return core.info(`${name} of run ${runId}: none`);
-              if (!(a.size_in_bytes <= zipCap)) return core.warning(`${name} of run ${runId}: ${a.size_in_bytes} bytes zipped, over the ${zipCap}-byte cap; not read`);
-              const zip = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
-              const buf = Buffer.from(zip.data);
-              if (buf.length > zipCap) return core.warning(`${name} of run ${runId}: ${buf.length} bytes downloaded, over the cap; not read`);
-              const zipFile = `${dir}.zip`;
-              fs.writeFileSync(zipFile, buf);
-              try {
-                const entries = execFileSync('unzip', ['-Z1', zipFile], { maxBuffer: 64 * 1024 }).toString('utf8').split('\n').filter(Boolean);
-                if (entries.length !== 1 || entries[0] !== file) {
-                  return core.warning(`${name} of run ${runId}: want only ${file} in the zip, found ${entries.length} entries; not read`);
-                }
-                // maxBuffer stops unzip (and throws) once the cap is passed.
-                const data = execFileSync('unzip', ['-p', zipFile, file], { maxBuffer: cap });
-                fs.mkdirSync(dir, { recursive: true });
-                fs.writeFileSync(`${dir}/${file}`, data);
-                core.info(`${name} of run ${runId}: ${data.length} bytes`);
-              } catch (e) {
-                core.warning(`${name} of run ${runId}: not read (${e.code || e.message}); over the ${cap}-byte cap or not a zip`);
-              } finally {
-                fs.rmSync(zipFile, { force: true });
+            const runs = [];
+            for (const [id, side] of [[process.env.HEAD_RUN, 'head'], [process.env.BASE_RUN, 'base']]) {
+              if (/^\d+$/.test(id || '')) runs.push({ id: Number(id), side });
+            }
+
+            // The central directory, read without running anything on the zip.
+            // upload-artifact writes no archive comment, so the end record must
+            // be the last 22 bytes and the only one: a second record (say, in a
+            // comment) could make this check and unzip read different
+            // directories. Zip64 is refused outright.
+            const centralDirectory = (buf) => {
+              if (buf.length < 22) throw new Error('not a zip');
+              const eocd = buf.length - 22;
+              if (buf.readUInt32LE(eocd) !== 0x06054b50 || buf.readUInt16LE(eocd + 20) !== 0) throw new Error('not a zip, or an archive comment');
+              if (buf.subarray(0, eocd).includes(Buffer.from([0x50, 0x4b, 0x05, 0x06]))) throw new Error('more than one end of central directory');
+              const count = buf.readUInt16LE(eocd + 10);
+              if (count === 0xffff) throw new Error('zip64 archive refused');
+              let p = buf.readUInt32LE(eocd + 16);
+              const entries = [];
+              for (let n = 0; n < count; n++) {
+                if (p + 46 > buf.length || buf.readUInt32LE(p) !== 0x02014b50) throw new Error('malformed central directory');
+                const size = buf.readUInt32LE(p + 24);
+                const nameLen = buf.readUInt16LE(p + 28), extraLen = buf.readUInt16LE(p + 30), commentLen = buf.readUInt16LE(p + 32);
+                if (size === 0xffffffff) throw new Error('zip64 entry refused');
+                if (p + 46 + nameLen > buf.length) throw new Error('malformed central directory');
+                entries.push({ name: buf.toString('latin1', p + 46, p + 46 + nameLen), size });
+                p += 46 + nameLen + extraLen + commentLen;
               }
+              return entries;
             };
-            for (const [name, file, zipCap, cap] of wanted) {
-              const suffix = name === 'metrics' ? '-metrics' : '';
-              for (const [runId, side] of [[process.env.CI_RUN, 'head'], [process.env.BASE_RUN, 'base']]) {
-                if (!runId) continue;
-                try { await fetchOne(Number(runId), name, file, zipCap, cap, side + suffix); }
-                catch (e) { core.warning(`${name} of run ${runId}: ${e.message}`); }
+
+            for (const run of runs) {
+              let arts = [];
+              try {
+                arts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, { owner, repo, run_id: run.id });
+              } catch (e) { core.warning(`${run.side} run ${run.id}: artifacts not listed: ${String(e.message).split('\n')[0]}`); continue; }
+              for (const k of kinds) {
+                const label = `${run.side} run ${run.id} ${k.name}`;
+                const zipPath = path.join(process.env.RUNNER_TEMP || '.', `${run.side}-${k.name}.zip`);
+                try {
+                  const a = arts.find((x) => x.name === k.name && !x.expired);
+                  if (!a) { core.info(`${label}: no artifact`); continue; }
+                  if (!(a.size_in_bytes <= k.zip)) throw new Error(`${a.size_in_bytes} bytes zipped, over the ${k.zip}-byte cap`);
+                  const res = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
+                  const buf = Buffer.from(res.data);
+                  if (buf.length > k.zip) throw new Error(`${buf.length} bytes downloaded, over the ${k.zip}-byte cap`);
+                  const entries = centralDirectory(buf);
+                  // Exactly the one expected entry; its name is never printed.
+                  if (entries.length !== 1 || entries[0].name !== k.file) throw new Error(`want only ${k.file} in the archive, found ${entries.length} entries`);
+                  if (entries[0].size > k.raw) throw new Error(`unpacks to ${entries[0].size} bytes, over the ${k.raw}-byte cap`);
+                  fs.writeFileSync(zipPath, buf);
+                  // Bounded whatever the headers say: past maxBuffer the child
+                  // is killed and this throws. Nothing touches the disk but the
+                  // one file, written by this script.
+                  const data = execFileSync('unzip', ['-p', zipPath, k.file], { maxBuffer: k.raw, timeout: 60000, stdio: ['ignore', 'pipe', 'ignore'] });
+                  fs.mkdirSync(k[run.side], { recursive: true });
+                  fs.writeFileSync(path.join(k[run.side], k.file), data);
+                  core.info(`${label}: ${buf.length} bytes zipped, ${data.length} unpacked`);
+                } catch (e) {
+                  // e.code (ENOBUFS, ETIMEDOUT) or the first line only: unzip's
+                  // own output can quote archive entry names.
+                  core.warning(`${label}: not used: ${e.code || String(e.message).split('\n')[0]}`);
+                } finally {
+                  fs.rmSync(zipPath, { force: true });
+                }
               }
             }
 
@@ -191,7 +244,7 @@ jobs:
             const fs = require('fs');
             const { execFileSync } = require('child_process');
             const { owner, repo } = context.repo;
-            const MAX_BYTES = 5 * 1024 * 1024; // unzipped metrics.json, as in the download step
+            const MAX_BYTES = 5 * 1024 * 1024; // unzipped metrics.json, as in the fetch step
             const MAX_ZIP = 1024 * 1024;       // zipped artifact
             const TREND_RUNS = 10;
 
@@ -279,11 +332,14 @@ jobs:
                     const zip = await github.rest.actions.downloadArtifact({ owner, repo, artifact_id: a.id, archive_format: 'zip' });
                     const file = `trend-${num(r.id)}.zip`;
                     fs.writeFileSync(file, Buffer.from(zip.data));
-                    const m = parse(execFileSync('unzip', ['-p', file, 'metrics.json'], { maxBuffer: MAX_BYTES }).toString('utf8'));
-                    if (m) out.push(m.totals);
-                  } catch (e) { core.info(`trend: run ${r.id}: ${e.message}`); }
+                    try {
+                      const m = parse(execFileSync('unzip', ['-p', file, 'metrics.json'],
+                        { maxBuffer: MAX_BYTES, timeout: 60000, stdio: ['ignore', 'pipe', 'ignore'] }).toString('utf8'));
+                      if (m) out.push(m.totals);
+                    } finally { fs.rmSync(file, { force: true }); }
+                  } catch (e) { core.info(`trend: run ${r.id}: ${e.code || String(e.message).split('\n')[0]}`); }
                 }
-              } catch (e) { core.info(`trend: ${e.message}`); }
+              } catch (e) { core.info(`trend: ${String(e.message).split('\n')[0]}`); }
               return out.reverse();
             };
 
@@ -443,7 +499,7 @@ jobs:
                 return `| ${label} | ${spark([...vals, ht[key]])} | ${fmt(vals[0])} → ${fmt(vals[vals.length - 1])} | ${fmt(ht[key])} |`;
               };
               out.push('', `<details><summary>Trend: the last ${series.length} green runs on ${clean(process.env.BASE_REF, 40)}, then this PR</summary>`, '',
-                '| | Trend | Main, oldest → newest | This PR |', '| --- | --- | --- | --- |',
+                `| | Trend | ${clean(process.env.BASE_REF, 40)}, oldest → newest | This PR |`, '| --- | --- | --- | --- |',
                 line('Read tokens', 'tokens', k),
                 line(`Over cognitive ${th.cognitive}`, 'over_cognitive'),
                 line(`Over cyclomatic ${th.cyclomatic}`, 'over_cyclomatic'),
@@ -465,37 +521,34 @@ jobs:
               + 'Observation only; nothing here fails a build._');
             fs.writeFileSync('complexity.md', out.join('\n'));
 
-      - name: Write the report, then ask Copilot to review
+      - name: Build the report
+        id: report
         if: steps.find.outputs.pr != ''
         uses: actions/github-script@v7
         env:
           PR: ${{ steps.find.outputs.pr }}
+          HEAD_RUN: ${{ steps.find.outputs.run_id }}
+          HEAD_ATTEMPT: ${{ steps.find.outputs.run_attempt }}
           BASE_SHA: ${{ steps.find.outputs.base_sha }}
           BASE_REF: ${{ steps.find.outputs.base_ref }}
-          CI_RUN: ${{ steps.find.outputs.ci_run }}
-          CI_ATTEMPT: ${{ steps.find.outputs.ci_attempt }}
         with:
           script: |
             const fs = require('fs');
-            const marker = '<!-- abapiti-ci-report -->';
             const { owner, repo } = context.repo;
-            // Runs of one pull request: a commit SHA alone is not enough, since
-            // two forks can open pull requests with the same commit. Same head
-            // repository and branch, and the same PR number when both runs
-            // know theirs (fork runs carry no pull_requests).
-            const samePR = (r, ref) => r.head_repository?.full_name === ref.head_repository?.full_name
-              && r.head_branch === ref.head_branch
-              && (!r.pull_requests?.length || !ref.pull_requests?.length
-                || r.pull_requests.some((x) => ref.pull_requests.some((y) => x.number === y.number)));
-            const newestOf = (runs, ref) => runs.filter((r) => samePR(r, ref))
-              .reduce((a, r) => (!a || r.id > a.id ? r : a), undefined);
-            // The CI run on the commit, whichever workflow's completion this is.
-            const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.CI_RUN) })).data;
-            const prNumber = Number(process.env.PR);
-            if (String(run.run_attempt) !== process.env.CI_ATTEMPT) {
-              core.info(`CI run ${run.id} has a newer attempt (${run.run_attempt}); its completion writes the report`);
+            // The run being reported, as it is now. A re-run started since the
+            // find step is reported by its own completion, not half-done here.
+            const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.HEAD_RUN) })).data;
+            if (String(run.run_attempt) !== process.env.HEAD_ATTEMPT || run.status !== 'completed') {
+              core.info(`CI run ${run.id} moved on to attempt ${run.run_attempt} (${run.status}); its completion writes the report`);
               return;
             }
+            core.setOutput('run_attempt', String(run.run_attempt));
+            // Runs of this pull request, as in the find step (samePR).
+            const pr = (await github.rest.pulls.get({ owner, repo, pull_number: Number(process.env.PR) })).data;
+            const samePR = (r) => r.head_repository?.id === pr.head.repo?.id && r.head_branch === pr.head.ref
+              && (!r.pull_requests?.length || r.pull_requests.some((p) => p.number === pr.number));
+            const newestOf = (runs) => runs.filter(samePR)
+              .sort((a, b) => b.run_number - a.run_number || b.id - a.id)[0];
 
             // Escaped for markdown, and defused: a zero-width space after `@`
             // stops a fork from pinging users or teams through the bot, and one
@@ -540,7 +593,7 @@ jobs:
             // check on the pull request is what gates, if anything does.
             const osd = await github.paginate(github.rest.actions.listWorkflowRuns,
               { owner, repo, workflow_id: 'osd-m1.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
-              .then((runs) => newestOf(runs, run)).catch(() => undefined);
+              .then((runs) => newestOf(runs)).catch(() => undefined);
             if (osd) {
               const result = osd.status === 'completed' ? icon(osd.conclusion) : '🟡 ' + clean(String(osd.status).replace(/_/g, ' '), 20);
               const osdJobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt,
@@ -611,8 +664,8 @@ jobs:
                 ...head5, ...(moved.length ? moved : table).map((r) => r.row), '', '</details>');
             }
 
+            // The markers are added by the write job.
             const lines = [
-              marker,
               `### CI: ${icon(run.conclusion)}`,
               `Commit: \`${run.head_sha.slice(0, 8)}\` · [Full log](${run.html_url})`,
               '',
@@ -626,15 +679,78 @@ jobs:
               if (complexity) lines.push(complexity);
             }
 
-            // Last check before writing, and before asking for a review: a CI
-            // run on this commit may have started or re-run while this report
-            // was put together. Its own completion writes the newer report, so
-            // this older one must not land.
-            const now = await github.paginate(github.rest.actions.listWorkflowRuns,
-              { owner, repo, workflow_id: 'ci.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 })
-              .then((runs) => newestOf(runs, run));
-            if (!now || now.id !== run.id || String(now.run_attempt) !== process.env.CI_ATTEMPT) {
-              core.info(`a newer CI run or attempt exists for this pull request on ${run.head_sha}; this report is not written`);
+            // A job output holds up to 1 MB; a comment, 65536 characters.
+            core.setOutput('body', lines.join('\n').slice(0, 60000));
+
+  # Writes the report, still inside the workflow's concurrency group, so no
+  # other report of this pull request runs between the checks and the write.
+  # It stops when the state moved on while the report was built: the pull
+  # request is at another commit, the run has a newer attempt, or a later CI
+  # run of this pull request on the same commit exists (each of those
+  # completes into a report of its own, queued behind this one). It also stops
+  # if the comment already carries a report from a later run or attempt: the
+  # comment's first two lines hold the run number and attempt it was written
+  # from, and a report only replaces an older one (or its own, rewritten when
+  # OSD M1 completes). The Copilot request comes only after every check.
+  write:
+    needs: comment
+    if: needs.comment.outputs.pr != '' && needs.comment.outputs.body != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write the report, then ask Copilot to review
+        uses: actions/github-script@v7
+        env:
+          PR: ${{ needs.comment.outputs.pr }}
+          RUN_ID: ${{ needs.comment.outputs.run_id }}
+          RUN_ATTEMPT: ${{ needs.comment.outputs.run_attempt }}
+          BODY: ${{ needs.comment.outputs.body }}
+        with:
+          script: |
+            const marker = '<!-- abapiti-ci-report -->';
+            const { owner, repo } = context.repo;
+            const prNumber = Number(process.env.PR);
+            const built = Number(process.env.RUN_ATTEMPT);
+            // The run the body was built from, as it is now.
+            const run = (await github.rest.actions.getWorkflowRun({ owner, repo, run_id: Number(process.env.RUN_ID) })).data;
+            const lines = [];
+
+            // --- only the latest run and attempt of this pull request writes --
+            const pr = (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
+            if (pr.state !== 'open' || pr.head.sha !== run.head_sha) {
+              core.info(`#${prNumber} is at ${pr.head.sha} (${pr.state}); this report of ${run.head_sha} is stale, not written`);
+              return;
+            }
+            if (run.run_attempt !== built) {
+              core.info(`run ${run.id} has a newer attempt (${run.run_attempt}, the report was built from ${built}); its own report follows`);
+              return;
+            }
+            const samePR = (r) => r.head_repository?.id === pr.head.repo?.id && r.head_branch === pr.head.ref
+              && (!r.pull_requests?.length || r.pull_requests.some((p) => p.number === prNumber));
+            const sameCommit = await github.paginate(github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id: 'ci.yml', head_sha: run.head_sha, event: 'pull_request', per_page: 100 });
+            const newer = sameCommit.find((r) => r.id !== run.id && samePR(r)
+              && (r.run_number > run.run_number || (r.run_number === run.run_number && r.id > run.id)));
+            if (newer) {
+              core.info(`a later CI run of #${prNumber} on ${run.head_sha} exists (run ${newer.id}, attempt ${newer.run_attempt}, ${newer.status}); this report of run ${run.id} attempt ${run.run_attempt} is not written`);
+              return;
+            }
+
+            // --- and the comment does not already hold a later report --------
+            // The run marker is read only from the comment's first two lines,
+            // which this job writes; the rest of the body carries escaped PR
+            // content, so a marker further down cannot fake it.
+            const runMark = (b) => {
+              const m = /^<!-- abapiti-ci-report -->\n<!-- abapiti-ci-report-run: (\d+)\.(\d+) -->\n/.exec(b || '');
+              return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+            };
+            const later = ([n1, a1], [n2, a2]) => n1 > n2 || (n1 === n2 && a1 > a2);
+            const mine = [run.run_number, run.run_attempt];
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { owner, repo, issue_number: prNumber });
+            const existing = comments.find((c) => c.user?.login === 'github-actions[bot]' && c.body?.includes(marker));
+            if (existing && later(runMark(existing.body), mine)) {
+              core.info(`#${prNumber} already shows the report of run #${runMark(existing.body).join(' attempt ')}; this one of #${mine.join(' attempt ')} is older, not written`);
               return;
             }
 
@@ -654,17 +770,14 @@ jobs:
                   try {
                     await github.rest.pulls.requestReviewers({ owner, repo, pull_number: prNumber, reviewers: [reviewer] });
                     ok = true; break;
-                  } catch (e) { core.info(`requesting ${reviewer}: ${e.message}`); }
+                  } catch (e) { core.info(`requesting ${reviewer}: ${String(e.message).split('\n')[0]}`); }
                 }
                 lines.push('', ok ? '_Tests passed: Copilot review requested._'
                   : '_Tests passed, but the Copilot review could not be requested automatically._');
               }
             }
-            const body = lines.join('\n');
-
-            const comments = await github.paginate(github.rest.issues.listComments,
-              { owner, repo, issue_number: prNumber });
-            const existing = comments.find((c) => c.user?.login === 'github-actions[bot]' && c.body?.includes(marker));
+            const body = [marker, `<!-- abapiti-ci-report-run: ${run.run_number}.${run.run_attempt} -->`,
+              process.env.BODY, ...lines].join('\n');
             if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
             else await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
             core.info(`${existing ? 'updated' : 'created'} report on #${prNumber}`);
