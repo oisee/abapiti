@@ -173,11 +173,24 @@ func runCompileWasm(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		fmt.Fprintf(os.Stderr, "Written to %s\n", outFile)
-		fmt.Fprintf(os.Stderr, "Deploy with vsp: vsp deploy %s '$TMP'\n", outFile)
-	} else {
-		fmt.Print(abapSrc)
+		return reportAndHint(cmd, classFiles(className, abapSrc), fmt.Sprintf("Deploy with vsp: vsp deploy %s '$TMP'", outFile))
 	}
-	return reportGenerated(cmd, map[string]string{strings.ToLower(className) + ".clas.abap": abapSrc})
+	fmt.Print(abapSrc)
+	return reportGenerated(cmd, classFiles(className, abapSrc))
+}
+
+func classFiles(className, src string) map[string]string {
+	return map[string]string{strings.ToLower(className) + ".clas.abap": src}
+}
+
+// reportAndHint reports the generated sources and prints the deploy hint only
+// when they passed, so a rejected output never ends with "Deploy with vsp".
+func reportAndHint(cmd *cobra.Command, files map[string]string, hint string) error {
+	if err := reportGenerated(cmd, files); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, hint)
+	return nil
 }
 
 func runCompileTs(cmd *cobra.Command, args []string) error {

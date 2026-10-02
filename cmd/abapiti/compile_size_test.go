@@ -16,7 +16,7 @@ func TestLongLineExitCode(t *testing.T) {
 		if os.Getenv("ABAPITI_ALLOW_LONG_LINES") == "1" {
 			_ = cmd.Flags().Set("allow-long-lines", "true")
 		}
-		err := reportGenerated(cmd, map[string]string{"synthetic.abap": strings.Repeat("x", 256) + "\n"})
+		err := reportAndHint(cmd, map[string]string{"synthetic.abap": strings.Repeat("x", 256) + "\n"}, "Deploy with vsp: synthetic")
 		if err != nil {
 			os.Exit(exitCode(err))
 		}
@@ -47,6 +47,10 @@ func TestLongLineExitCode(t *testing.T) {
 		}
 		if !tc.allow && !strings.Contains(string(out), "synthetic.abap:1:256") {
 			t.Fatalf("missing line error: %s", out)
+		}
+		// The deploy hint belongs to accepted output only.
+		if hint := strings.Contains(string(out), "Deploy with vsp"); hint != tc.allow {
+			t.Fatalf("allow=%t: deploy hint printed=%t: %s", tc.allow, hint, out)
 		}
 	}
 }
