@@ -40,9 +40,13 @@ if [ "$actual" != "$pinned" ] || [ "$actual" != "$release" ]; then
 fi
 chmod +x "$work/vsp/$asset"
 
+# vsp gets an allow-listed environment: no inherited SAP_*/VSP_* (a
+# developer's shell may point at a real system), no GH_TOKEN, and its own HOME,
+# so no ~/.vsp.json or .env can redirect it.
+mkdir -p "$work/vsp-home"
 vsp() {
   (cd "$work/empty" &&
-    env $(env | grep -oE '^(SAP|VSP)_[A-Z0-9_]+' | sed 's/^/-u /') \
+    env -i PATH="$PATH" HOME="$work/vsp-home" TMPDIR="${TMPDIR:-/tmp}" \
       SAP_URL="$url" SAP_USER=DEVELOPER SAP_PASSWORD=osd SAP_CLIENT=001 \
       "$work/vsp/$asset" "$@")
 }
@@ -64,8 +68,12 @@ for c in "${classes[@]}"; do
       exit 1
     fi
   done
-  if vsp test CLAS "${c^^}" > "$work/log/test-$c.log" 2>&1; then
-    echo "osd-m1: $c: $(grep -E '^Total:' "$work/log/test-$c.log")" >&2
+  # The exit status alone is not enough: the run must report exactly as many
+  # passed tests as the generated test class has methods.
+  want=$(grep -cE '^    METHODS c[0-9]+ FOR TESTING\.$' "$gen/$c.clas.testclasses.abap" || true)
+  if [ "$want" -gt 0 ] && vsp test CLAS "${c^^}" > "$work/log/test-$c.log" 2>&1 &&
+    grep -qx "Total: $want passed, 0 failed" "$work/log/test-$c.log"; then
+    echo "osd-m1: $c: $want passed" >&2
   else
     echo "osd-m1: $c FAILED" >&2
     cat "$work/log/test-$c.log" >&2

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -125,6 +127,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		want := wazeroResults(t, bin, m.cases)
 		src := Compile(mod, m.class)
 		tests := osdTestClass(m.class, m.cases, want)
+		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{
 			m.class + ".clas.abap":             src,
 			m.class + ".clas.testclasses.abap": tests,
@@ -134,5 +137,39 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			}
 		}
 		t.Logf("%s: %d cases, expected %v", m.class, len(m.cases), want)
+	}
+}
+
+var (
+	reTestMethod = regexp.MustCompile(`(?m)^    METHODS c\d+ FOR TESTING\.$`)
+	reExpected   = regexp.MustCompile(`(?m)^    lv_exp = (-?\d+)\.$`)
+	reAssert     = regexp.MustCompile(`(?m)^    cl_abap_unit_assert=>assert_equals\( act = lv_act exp = lv_exp `)
+)
+
+// checkTestClass reads the generated test class back and fails unless it has
+// one test method, one expected literal and one assertion per case, and the
+// literals are the wazero results in order. It keeps the generated tests from
+// becoming vacuous (an expected value copied from the actual one, or no
+// methods at all), which OSD alone would report as green.
+func checkTestClass(t *testing.T, class, src string, want []int32) {
+	t.Helper()
+	if len(want) == 0 {
+		t.Fatalf("%s: no cases", class)
+	}
+	if n := len(reTestMethod.FindAllString(src, -1)); n != len(want) {
+		t.Fatalf("%s: %d test methods, want %d", class, n, len(want))
+	}
+	if n := len(reAssert.FindAllString(src, -1)); n != len(want) {
+		t.Fatalf("%s: %d assertions, want %d", class, n, len(want))
+	}
+	got := reExpected.FindAllStringSubmatch(src, -1)
+	if len(got) != len(want) {
+		t.Fatalf("%s: %d expected literals, want %d", class, len(got), len(want))
+	}
+	for i, g := range got {
+		v, err := strconv.ParseInt(g[1], 10, 32)
+		if err != nil || int32(v) != want[i] {
+			t.Fatalf("%s: case %d expects %s, wazero says %d", class, i+1, g[1], want[i])
+		}
 	}
 }
