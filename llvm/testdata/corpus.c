@@ -14,6 +14,8 @@ int or_(int a, int b) { return a | b; }
 int xor_(int a, int b) { return a ^ b; }
 int shl(int a, int b) { return a << b; }
 int shr(int a, int b) { return a >> b; }
+unsigned int shr_u(unsigned int a, int b) { return a >> b; }
+int unsigned_lt(unsigned int a, unsigned int b) { return a < b; }
 
 // Multi-expression
 int quadratic(int a, int b, int c, int x) {

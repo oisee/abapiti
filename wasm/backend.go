@@ -80,6 +80,9 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 	case BackendHybrid:
 		emitHybrid(mod, name, funcsPerInclude, redirects, result)
 	}
+	for name, src := range result.Files {
+		result.Files[name] = stripABAPComments(src)
+	}
 
 	for fname, src := range result.Files {
 		result.Files[fname] = wrapLongLines(src)
@@ -176,8 +179,9 @@ func emitFUGRTop(mod *Module, upper string) string {
 	}
 
 	// Function table
-	for i := range mod.Elements {
-		sb.WriteString(fmt.Sprintf("DATA gt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.\n", i))
+	_, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		sb.WriteString(fmt.Sprintf("DATA gt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.\n", t))
 	}
 
 	sb.WriteString("\n")
@@ -270,7 +274,7 @@ func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[
 		c.line("g=>br = 0.")
 	} else {
 		// Chained DATA declaration (for non-block-FORM mode)
-		c.line("%s", emitChainedDATA(f))
+		c.line("%s", emitChainedDATA(f, false))
 	}
 
 	// Enable packing for code
@@ -362,9 +366,10 @@ func emitFUGRInit(mod *Module, upper string) string {
 	sb.WriteString("\n")
 
 	// Element segments
-	for i, elem := range mod.Elements {
-		for _, funcIdx := range elem.FuncIndices {
-			sb.WriteString(fmt.Sprintf("  APPEND %d TO gt_tab%d.\n", funcIdx, i))
+	tables, tableIndices := elementTables(mod)
+	for _, t := range tableIndices {
+		for _, funcIdx := range tables[t] {
+			sb.WriteString(fmt.Sprintf("  APPEND %d TO gt_tab%d.\n", funcIdx, t))
 		}
 	}
 

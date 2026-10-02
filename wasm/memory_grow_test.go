@@ -118,12 +118,12 @@ func TestMemoryGrowWazero(t *testing.T) {
 	got := wazeroResults(t, buildMemoryModule(1, true), osdModules[2].cases)
 	want := []int32{1, -1, -1, 2, 123}
 	for i, v := range got {
-		if v != want[i] {
-			t.Errorf("case %d = %d, want %d", i, v, want[i])
+		if v.trap || v.value != want[i] {
+			t.Errorf("case %d = %+v, want %d", i, v, want[i])
 		}
 	}
 	zero := wazeroResults(t, buildMemoryModule(0, false), osdModules[3].cases)
-	if zero[0] != 0 {
-		t.Errorf("initial size = %d", zero[0])
+	if zero[0].trap || zero[0].value != 0 {
+		t.Errorf("initial size = %+v", zero[0])
 	}
 }
