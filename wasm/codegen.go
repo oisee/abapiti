@@ -44,9 +44,9 @@ type compiler struct {
 	blockStack  []blockEntry // tracks what to close on OpEnd + stack depth
 
 	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
-	useFUGR       bool
-	useRuntimeI32 bool // chunk classes call the shared runtime class
-	fugrRedirects map[int]int
+	useFUGR         bool
+	inlineI32Blocks bool // Hybrid block methods inline arithmetic; FUGR keeps PERFORM
+	fugrRedirects   map[int]int
 
 	// Line packing: multiple statements per line
 	packLines bool
@@ -137,7 +137,6 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
-	c.emitI32HelperDeclarations("METHODS")
 	c.emitRuntimeDeclarations()
 	c.emitDispatchDeclarations()
 
@@ -185,7 +184,6 @@ func (c *compiler) emitImplementation() {
 
 	// Memory helpers
 	c.emitMemoryHelpers()
-	c.emitI32Helpers()
 	c.emitRuntimeHelpers()
 
 	// Functions
@@ -337,15 +335,15 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpI32Add:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.emitI32Call("i32_add", r, a, b)
+			c.emitI32Arithmetic("i32_add", "+", r, a, b)
 		case OpI32Sub:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.emitI32Call("i32_sub", r, a, b)
+			c.emitI32Arithmetic("i32_sub", "-", r, a, b)
 		case OpI32Mul:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.emitI32Call("i32_mul", r, a, b)
+			c.emitI32Arithmetic("i32_mul", "*", r, a, b)
 		case OpI32DivS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
@@ -1407,6 +1405,10 @@ func emitChainedDATA(f *Function, typed bool) string {
 		}
 	}
 
+	if usesI32Arithmetic(f.Code) {
+		parts = append(parts, "lv_w TYPE int8")
+	}
+
 	// Branch depth flag
 	parts = append(parts, "lv_br TYPE i")
 
@@ -1644,6 +1646,10 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 	c.useFUGR = true
 	c.fugrRedirects = redirects
 	c.indent = 2 // METHOD body indent
+
+	if c.inlineI32Blocks && usesI32Arithmetic(bm.code) {
+		c.line("DATA lv_w TYPE int8.")
+	}
 
 	c.packLines = true
 	c.packer = newLinePacker(&c.sb, c.indent)

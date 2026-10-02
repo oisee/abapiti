@@ -126,7 +126,7 @@ func emitFUGR(mod *Module, fugrName string, funcsPerInclude int, redirects map[i
 			return
 		}
 		fname := fmt.Sprintf("%sF%02d.abap", prefix, includeIdx)
-		src, blockMethods := emitFUGRInclude(mod, currentFuncs, redirects, upper)
+		src, blockMethods := emitFUGRInclude(mod, currentFuncs, redirects, upper, result.Backend == BackendHybrid)
 		result.Files[fname] = src
 		allBlockMethods = append(allBlockMethods, blockMethods...)
 		includeIdx++
@@ -217,8 +217,8 @@ func emitFUGRRuntime(mod *Module) string {
 ` + emitFUGRMemoryHelpers(mod) + emitFUGRI32Helpers() + emitFUGRI64Helpers(mod)
 }
 
-func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, upper string) (string, []*blockMethodDef) {
-	c := &compiler{mod: mod, useBlockMethods: true}
+func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, upper string, inlineI32Blocks bool) (string, []*blockMethodDef) {
+	c := &compiler{mod: mod, useBlockMethods: true, inlineI32Blocks: inlineI32Blocks}
 
 	for _, i := range funcIndices {
 		f := &mod.Functions[i]
