@@ -47,10 +47,21 @@ echo "osgo-unit: $n classes" >&2
 
 status=0
 (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false npm run -s osgo:unit -- "$classes" --json) > "$work/osgo.json" 2> "$work/osgo.err" || status=$?
+# The runner's exit code is not enough on its own: the JSON must carry totals
+# with a positive test count, and a zero exit must mean zero failures of any
+# kind. Anything else is exit 4.
+verdict=0
 node -e '
   const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-  const t = d.totals || {};
-  console.log(`osgo-unit: ${t.success} passed, ${t.failure} failed, ${t.not_compiled} not compiled, ${t.error} errors, ${t.tests} tests`);
+  const t = d.totals;
+  const n = (k) => (t && Number.isInteger(t[k]) && t[k] >= 0 ? t[k] : NaN);
+  const [ok, fail, nc, err, tests] = ["success", "failure", "not_compiled", "error", "tests"].map(n);
+  const skipped = t && Number.isInteger(t.skipped) ? t.skipped : 0;
+  if ([ok, fail, nc, err, tests].some(Number.isNaN) || tests < 1) { console.log("osgo-unit: the JSON has no valid totals"); process.exit(4); }
+  console.log(`osgo-unit: ${ok} passed, ${fail} failed, ${nc} not compiled, ${err} errors, ${skipped} skipped, ${tests} tests`);
   for (const r of d.rows || []) if (r.status !== "SUCCESS") console.log(`  ${r.class} ${r.method} ${r.status} ${String(r.message || "").split("\n")[0].slice(0, 160)}`);
-' "$work/osgo.json" >&2 || { tail -20 "$work/osgo.err" >&2; [ "$status" -ne 0 ] || status=4; }
+  if (ok !== tests || fail + nc + err + skipped > 0) process.exit(5);
+' "$work/osgo.json" >&2 || verdict=$?
+if [ "$verdict" -eq 4 ] || [ "$verdict" -gt 5 ]; then tail -20 "$work/osgo.err" >&2; exit 4; fi
+if [ "$status" -eq 0 ] && [ "$verdict" -ne 0 ]; then echo "osgo-unit: the runner exited 0 but not every test passed" >&2; exit 4; fi
 exit "$status"
