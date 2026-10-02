@@ -51,10 +51,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -138,6 +141,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) in
 	if err != nil {
 		return fail("%v", err)
 	}
+	redactIDs = ids
 	rules, err := loadAllow(*root, *allowFile, *allowRev)
 	if err != nil {
 		return fail("allow-file: %v", err)
@@ -212,14 +216,14 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) in
 		if h.Commit != "" {
 			where = " [added in " + h.Commit + "]"
 		}
-		fmt.Fprintf(stdout, "%s:%d: %s (%s)%s\n", h.File, h.Line, h.Class, h.View, where)
+		fmt.Fprintf(stdout, "%s:%d: %s (%s)%s\n", showPath(h.File), h.Line, h.Class, h.View, where)
 	}
 
 	listNote := fmt.Sprintf("%d identifiers from %s", len(ids), idSource)
 	if len(ids) == 0 {
 		listNote = "NO identifier list: generic patterns only, host/user/SID names NOT checked"
 	}
-	fmt.Fprintf(stderr, "leakscan: %d sources read (files, patches, commit messages), %d hits, %d excused by the allow-file; %s\n",
+	fmt.Fprintf(stderr, "leakscan: %d sources read (files, patches, commit messages, path lists), %d hits, %d excused by the allow-file; %s\n",
 		len(sources), len(hits), excused, listNote)
 
 	if len(sources) == 0 && explicit {
@@ -301,34 +305,85 @@ func loadAllow(root, file, rev string) ([]allowRule, error) {
 	return parseAllow(f)
 }
 
+// redactIDs is the identifier list of the current run, for showPath and
+// safeText: nothing this prints may carry a value the scan looks for.
+var redactIDs []Identifier
+
+// showPath is how a path appears in output. A path can carry a listed name or
+// a secret as much as a file can, and this prints to public CI logs: a path
+// that holds a control byte, or that the scan itself would flag, is shown as
+// a hash of its bytes (`printf %s "$path" | sha256sum` finds it again).
+func showPath(p string) string {
+	if safeText(p) && !strings.ContainsFunc(p, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		return p
+	}
+	sum := sha256.Sum256([]byte(p))
+	return "<path sha256:" + hex.EncodeToString(sum[:])[:16] + ">"
+}
+
+// safeText reports whether text can be printed: the scan finds nothing in it.
+func safeText(s string) bool {
+	return len(scanBytes("", []byte(s), redactIDs)) == 0
+}
+
 func git(root string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
 	var errb bytes.Buffer
 	cmd.Stderr = &errb
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()))
+		// git's message can quote a path; it is printed only when the scan
+		// finds nothing in it.
+		msg := strings.TrimSpace(errb.String())
+		if !safeText(msg) {
+			msg = "(git's message withheld: it holds what the scan looks for)"
+		}
+		return nil, fmt.Errorf("git %s: %v: %s", strings.Join(args, " "), err, msg)
 	}
 	return out, nil
 }
 
-// treeFiles is every blob in rev's tree (submodules have no content here).
+// treeFiles is every blob in rev's tree (submodules have no content here),
+// and one more source: every path in the tree, since a name is published as
+// much as the bytes behind it.
 func treeFiles(root, rev string) ([]source, error) {
 	out, err := git(root, "ls-tree", "-r", "-z", "--full-tree", rev)
 	if err != nil {
 		return nil, err
 	}
-	var paths []string
+	var blobs []blobRef
+	var all []string
 	for _, rec := range strings.Split(string(out), "\x00") {
 		meta, path, ok := strings.Cut(rec, "\t")
 		if !ok {
 			continue
 		}
-		if f := strings.Fields(meta); len(f) >= 2 && f[1] == "blob" {
-			paths = append(paths, path)
+		all = append(all, path)
+		if f := strings.Fields(meta); len(f) >= 3 && f[1] == "blob" {
+			blobs = append(blobs, blobRef{path: path, id: f[2]})
 		}
 	}
-	return readBlobs(root, rev, paths)
+	srcs, err := readBlobs(root, blobs)
+	if err != nil {
+		return nil, err
+	}
+	if len(all) > 0 {
+		srcs = append(srcs, pathsSource("tree "+rev, all))
+	}
+	return srcs, nil
+}
+
+// pathsSource is a list of paths as a source of its own, one per line, so a
+// hit names the list and the line, never the path.
+func pathsSource(label string, paths []string) source {
+	return source{name: label + " (paths)", data: []byte(strings.Join(paths, "\n") + "\n")}
+}
+
+// stop ends a git that is still writing: a reader that refuses an object
+// stops reading, and git would block on the pipe, and Wait with it.
+func stop(cmd *exec.Cmd) {
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 }
 
 // pushRange turns a push event's BEFORE..AFTER into the range of commits the
@@ -367,17 +422,21 @@ func pushRange(root, spec, base string) (string, string) {
 // changedFiles is every file added or changed between base and rev, read as
 // it is at rev: the whole file, so a binary is read too.
 func changedFiles(root, base, rev string) ([]source, error) {
-	out, err := git(root, "diff", "-z", "--name-only", "--no-renames", "--diff-filter=ACMRT", base, rev)
+	out, err := git(root, "diff", "-z", "--raw", "--no-abbrev", "--no-renames", "--diff-filter=ACMRT", base, rev)
 	if err != nil {
 		return nil, err
 	}
-	var paths []string
-	for _, p := range strings.Split(string(out), "\x00") {
-		if p != "" {
-			paths = append(paths, p)
+	entries, err := parseRaw(out)
+	if err != nil {
+		return nil, err
+	}
+	var blobs []blobRef
+	for _, e := range entries {
+		if e.isBlob {
+			blobs = append(blobs, blobRef{path: e.dst, id: e.dstID})
 		}
 	}
-	return readBlobs(root, rev, paths)
+	return readBlobs(root, blobs)
 }
 
 // rangeSources is what every commit in a range adds, commit by commit: a value
@@ -389,65 +448,250 @@ func changedFiles(root, base, rev string) ([]source, error) {
 // A merge is read as its first-parent diff, which includes what the merge
 // itself resolved.
 //
-// Each commit is read by git calls of its own, never cut out of one `git log`
-// stream: a message or an added line can hold any byte but NUL (git refuses
-// one in a message), so no separator byte can frame them, and a message that
-// carried the separator once hid everything after it. The only stream shared
-// by several commits is the commit list itself, which is hex and spaces.
+// Nothing here trusts a separator inside text that a commit controls. This
+// once read one `git log -p --format=%x01%h%x02%B%x03` stream and cut it on
+// those bytes, so a message or an added line holding 0x01 or 0x03 moved the
+// cut and hid what followed it. Now the commits are listed by rev-list in a
+// format of hex digits only; each message is read from the raw commit object
+// through `git cat-file --batch`, which states its length before its bytes;
+// and each commit's patch comes from a `git show` of its own. A message or an
+// added line can hold any byte (0x01, NUL, a line that looks like a diff
+// header) and is still read whole, as what it is. `git commit` refuses a NUL
+// in a message, but `hash-object --literally` writes one, and `%B` stops at
+// it; the raw object does not.
 func rangeSources(root, rng string) ([]source, error) {
-	list, err := git(root, "log", "--format=%H %h", rng)
+	commits, err := listCommits(root, rng)
+	if err != nil {
+		return nil, err
+	}
+	msgs, err := readMessages(root, commits)
 	if err != nil {
 		return nil, err
 	}
 	var srcs []source
-	for _, line := range strings.Split(strings.TrimSpace(string(list)), "\n") {
-		if line == "" {
-			continue
+	for i, c := range commits {
+		name := "commit " + c.short + " (message)"
+		srcs = append(srcs, source{name: name, data: msgs[i].raw})
+		// A message in another encoding is read twice: as its bytes, and as
+		// git recodes it to UTF-8 for every reader. One commit per call, so
+		// there is no separator to trust.
+		if e := strings.ToLower(msgs[i].encoding); e != "" && e != "utf-8" && e != "utf8" {
+			recoded, err := git(root, "log", "-1", "--no-show-signature", "--no-notes", "--encoding=UTF-8", "--format=%B", c.full, "--")
+			if err != nil {
+				return nil, err
+			}
+			srcs = append(srcs, source{name: name, data: recoded})
 		}
-		full, short, ok := strings.Cut(line, " ")
-		if !ok || !isHex(full) || !isHex(short) {
-			return nil, fmt.Errorf("git log: unexpected commit line %q", line)
-		}
-		msg, err := git(root, "log", "-1", "--format=%B", full)
+		// Every path the commit adds, and both names of a rename or copy: a
+		// name is published as much as the bytes behind it.
+		raw, err := git(root, "show", "--format=", "--no-show-signature",
+			"--raw", "-z", "--no-abbrev", "-M", "-C", "--diff-merges=first-parent", c.full, "--")
 		if err != nil {
 			return nil, err
 		}
-		srcs = append(srcs, source{name: "commit " + short + " (message)", data: msg})
-		patch, err := git(root, "-c", "core.quotePath=false", "log", "-1", "-p", "-U0", "--no-color", "--no-ext-diff",
-			"--no-renames", "--diff-merges=first-parent", "--format=", full)
+		entries, err := parseRaw(raw)
+		if err != nil {
+			return nil, fmt.Errorf("commit %s: %v", c.short, err)
+		}
+		if paths := addedPaths(entries); len(paths) > 0 {
+			srcs = append(srcs, pathsSource("commit "+c.short, paths))
+		}
+		patch, err := git(root, "-c", "core.quotePath=false", "show", "--format=", "--no-show-signature",
+			"-p", "-U0", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames",
+			"--diff-merges=first-parent", "--src-prefix=a/", "--dst-prefix=b/", c.full, "--")
 		if err != nil {
 			return nil, err
 		}
-		added, binaries := parsePatch(short, patch)
-		srcs = append(srcs, added...)
-		more, err := readBlobs(root, full, binaries)
-		if err != nil {
-			return nil, err
-		}
-		for i := range more {
-			more[i].path, more[i].commit = more[i].name, short
-		}
+		more, binaries := parsePatch(c.short, patch)
 		srcs = append(srcs, more...)
+		if len(binaries) > 0 {
+			ids := map[string]string{}
+			for _, e := range entries {
+				if e.isBlob {
+					ids[e.dst] = e.dstID
+				}
+			}
+			var refs []blobRef
+			for n, b := range binaries {
+				id, ok := ids[b]
+				if !ok {
+					return nil, fmt.Errorf("commit %s: binary file %d of the patch is not in its raw diff", c.short, n+1)
+				}
+				refs = append(refs, blobRef{path: b, id: id})
+			}
+			blobs, err := readBlobs(root, refs)
+			if err != nil {
+				return nil, err
+			}
+			for j := range blobs {
+				blobs[j].path, blobs[j].commit = blobs[j].name, c.short
+			}
+			srcs = append(srcs, blobs...)
+		}
 	}
 	return srcs, nil
 }
 
+type commitID struct{ full, short string }
+
+// rawEntry is one record of `--raw -z --no-abbrev` output.
+type rawEntry struct {
+	status   byte   // A, C, D, M, R, T, U, X
+	src, dst string // dst == src unless renamed or copied
+	dstID    string // the object id after the change
+	isBlob   bool   // the new side is a regular file or a symlink, not a submodule
+}
+
+// parseRaw reads `--raw -z` output: ":<mode> <mode> <id> <id> <status>", NUL,
+// then one path, or two for a rename or copy, each ended by NUL. Paths cannot
+// hold NUL, so the split is exact whatever the names hold (a newline, a tab).
+func parseRaw(out []byte) ([]rawEntry, error) {
+	var entries []rawEntry
+	f := strings.Split(string(out), "\x00")
+	for i := 0; i < len(f); i++ {
+		if f[i] == "" {
+			continue
+		}
+		meta := strings.Fields(strings.TrimPrefix(f[i], ":"))
+		if !strings.HasPrefix(f[i], ":") || len(meta) != 5 || meta[4] == "" {
+			return nil, fmt.Errorf("unexpected raw diff record %d", len(entries)+1)
+		}
+		e := rawEntry{status: meta[4][0], dstID: meta[3], isBlob: !strings.HasPrefix(meta[1], "16")}
+		n := 1
+		if e.status == 'R' || e.status == 'C' {
+			n = 2
+		}
+		if i+n >= len(f) {
+			return nil, fmt.Errorf("truncated raw diff record %d", len(entries)+1)
+		}
+		e.src, e.dst = f[i+1], f[i+n]
+		if e.status == 'D' {
+			e.isBlob = false
+		}
+		entries = append(entries, e)
+		i += n
+	}
+	return entries, nil
+}
+
+// addedPaths is the paths of added files and both names of renames and
+// copies.
+func addedPaths(entries []rawEntry) []string {
+	var paths []string
+	for _, e := range entries {
+		switch e.status {
+		case 'A':
+			paths = append(paths, e.dst)
+		case 'R', 'C':
+			paths = append(paths, e.src, e.dst)
+		}
+	}
+	return paths
+}
+
+// listCommits is every commit in rng. The format holds two hex placeholders
+// and nothing a commit can write, and every line is checked to be just that.
+func listCommits(root, rng string) ([]commitID, error) {
+	out, err := git(root, "rev-list", "--no-commit-header", "--format=%H %h", rng, "--")
+	if err != nil {
+		return nil, err
+	}
+	var ids []commitID
+	for _, line := range strings.Split(string(out), "\n") {
+		if line == "" {
+			continue
+		}
+		full, short, ok := strings.Cut(line, " ")
+		if !ok || !isHex(full) || !isHex(short) || !strings.HasPrefix(full, short) {
+			return nil, fmt.Errorf("git rev-list %s: unexpected line %q", rng, line)
+		}
+		ids = append(ids, commitID{full, short})
+	}
+	return ids, nil
+}
+
 func isHex(s string) bool {
-	if s == "" {
+	if len(s) < 4 || len(s) > 64 {
 		return false
 	}
-	for i := 0; i < len(s); i++ {
-		if c := s[i]; !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') {
+	for _, c := range []byte(s) {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
 			return false
 		}
 	}
 	return true
 }
 
-// parsePatch reads one commit's `git log -1 -p -U0 --format=` output into one
-// source per file holding the lines the commit added, and lists the binary
-// files it added or changed. Inside a hunk every line starts with '+', '-',
-// ' ' or '\', so file content cannot pose as a `diff --git` header.
+type commitMsg struct {
+	raw      []byte // the message, byte for byte
+	encoding string // the commit's encoding header, "" when it has none (UTF-8)
+}
+
+// readMessages reads every commit object through one `git cat-file --batch`
+// and returns each one's message: the raw bytes after the header's blank line,
+// with nothing re-encoded, cut or stripped (a NUL included), and the encoding
+// the header declares for it.
+func readMessages(root string, commits []commitID) ([]commitMsg, error) {
+	if len(commits) == 0 {
+		return nil, nil
+	}
+	cmd := exec.Command("git", "-C", root, "cat-file", "--batch")
+	var in bytes.Buffer
+	for _, c := range commits {
+		fmt.Fprintf(&in, "%s\n", c.full)
+	}
+	cmd.Stdin = &in
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	r := bufio.NewReader(stdout)
+	msgs := make([]commitMsg, 0, len(commits))
+	for _, c := range commits {
+		header, err := r.ReadString('\n')
+		if err != nil {
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s: %v", c.full, err)
+		}
+		f := strings.Fields(header)
+		if len(f) != 3 || f[0] != c.full || f[1] != "commit" {
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s: %s", c.full, strings.TrimSpace(header))
+		}
+		var size int
+		if _, err := fmt.Sscan(f[2], &size); err != nil || size < 0 || size > maxFileSize {
+			stop(cmd)
+			return nil, fmt.Errorf("commit %s: %s bytes is over the %d-byte limit; it cannot be scanned, so it cannot pass", c.short, f[2], maxFileSize)
+		}
+		data := make([]byte, size+1) // the object, then a newline
+		if _, err := io.ReadFull(r, data); err != nil {
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s: %v", c.full, err)
+		}
+		obj := data[:size]
+		var m commitMsg
+		head := obj
+		if i := bytes.Index(obj, []byte("\n\n")); i >= 0 {
+			head, m.raw = obj[:i], obj[i+2:]
+		}
+		for _, line := range strings.Split(string(head), "\n") {
+			if v, ok := strings.CutPrefix(line, "encoding "); ok {
+				m.encoding = strings.TrimSpace(v)
+			}
+		}
+		msgs = append(msgs, m)
+	}
+	return msgs, cmd.Wait()
+}
+
+// parsePatch splits one commit's `git show -p -U0` output into one source per
+// file holding the lines the commit added, and lists the binary files it added
+// or changed. Every content line of a -U0 patch starts with '+', '-' or '\',
+// so no content can pose as a header; and the output holds this one commit,
+// so no content can pose as the start of another.
 func parsePatch(commit string, patch []byte) ([]source, []string) {
 	var srcs []source
 	var binaries []string
@@ -511,18 +755,22 @@ func unquotePath(p string) string {
 	return p
 }
 
-// readBlobs reads rev:path for every path through one `git cat-file --batch`.
-func readBlobs(root, rev string, paths []string) ([]source, error) {
-	if len(paths) == 0 {
+type blobRef struct{ path, id string }
+
+// readBlobs reads every blob by its object id through one `git cat-file
+// --batch`: an id is hex, so a path with any byte in it (a newline) is read
+// like any other, and no path is ever handed to git or printed raw.
+func readBlobs(root string, blobs []blobRef) ([]source, error) {
+	if len(blobs) == 0 {
 		return nil, nil
 	}
 	cmd := exec.Command("git", "-C", root, "cat-file", "--batch")
 	var in bytes.Buffer
-	for _, p := range paths {
-		if strings.ContainsAny(p, "\n") {
-			return nil, fmt.Errorf("cannot read a path with a newline in it: %q", p)
+	for _, b := range blobs {
+		if !isHex(b.id) {
+			return nil, fmt.Errorf("%s: unexpected object id %q", showPath(b.path), b.id)
 		}
-		fmt.Fprintf(&in, "%s:%s\n", rev, p)
+		fmt.Fprintf(&in, "%s\n", b.id)
 	}
 	cmd.Stdin = &in
 	stdout, err := cmd.StdoutPipe()
@@ -534,28 +782,29 @@ func readBlobs(root, rev string, paths []string) ([]source, error) {
 	}
 	r := bufio.NewReader(stdout)
 	var out []source
-	for _, p := range paths {
+	for _, b := range blobs {
+		p := showPath(b.path)
 		header, err := r.ReadString('\n')
 		if err != nil {
-			_ = cmd.Wait()
-			return nil, fmt.Errorf("git cat-file %s: %v", p, err)
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s (%s): %v", b.id, p, err)
 		}
 		f := strings.Fields(header)
-		if len(f) != 3 || f[1] != "blob" {
-			_ = cmd.Wait()
-			return nil, fmt.Errorf("git cat-file %s:%s: %s", rev, p, strings.TrimSpace(header))
+		if len(f) != 3 || f[0] != b.id || f[1] != "blob" {
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s (%s): %s", b.id, p, strings.TrimSpace(header))
 		}
 		var size int
 		if _, err := fmt.Sscan(f[2], &size); err != nil || size > maxFileSize {
-			_ = cmd.Wait()
+			stop(cmd)
 			return nil, fmt.Errorf("%s: %s bytes is over the %d-byte limit; it cannot be scanned, so it cannot pass", p, f[2], maxFileSize)
 		}
 		data := make([]byte, size+1) // the blob, then a newline
 		if _, err := io.ReadFull(r, data); err != nil {
-			_ = cmd.Wait()
-			return nil, fmt.Errorf("git cat-file %s: %v", p, err)
+			stop(cmd)
+			return nil, fmt.Errorf("git cat-file %s (%s): %v", b.id, p, err)
 		}
-		out = append(out, source{name: p, path: p, data: data[:size]})
+		out = append(out, source{name: b.path, path: b.path, data: data[:size]})
 	}
 	return out, cmd.Wait()
 }
@@ -588,7 +837,7 @@ func diskFiles(root string, paths []string) ([]source, error) {
 				return err
 			}
 			if info.Size() > maxFileSize {
-				return fmt.Errorf("%s: %d bytes is over the %d-byte limit; it cannot be scanned, so it cannot pass", path, info.Size(), maxFileSize)
+				return fmt.Errorf("%s: %d bytes is over the %d-byte limit; it cannot be scanned, so it cannot pass", showPath(path), info.Size(), maxFileSize)
 			}
 			data, err := os.ReadFile(path)
 			if err != nil {
@@ -602,8 +851,18 @@ func diskFiles(root string, paths []string) ([]source, error) {
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, quietPathError(err)
 		}
 	}
 	return out, nil
+}
+
+// quietPathError is err with the path in an *fs.PathError shown through
+// showPath: the operating system's message names the path it failed on.
+func quietPathError(err error) error {
+	var pe *fs.PathError
+	if errors.As(err, &pe) {
+		return fmt.Errorf("%s %s: %v", pe.Op, showPath(pe.Path), pe.Err)
+	}
+	return err
 }
