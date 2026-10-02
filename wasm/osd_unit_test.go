@@ -115,6 +115,14 @@ var osdModules = []struct {
 		{"unsigned_lt", []int32{-1, 1}},
 		{"add64", []int32{100, 23}},
 	}},
+	{"branches", "zcl_abapiti_branches", branchLoopCases},
+	{"suite", "zcl_abapiti_suite", func() []osdCase {
+		var cases []osdCase
+		for _, c := range suiteTestCases {
+			cases = append(cases, osdCase{c.FuncName, c.Args})
+		}
+		return cases
+	}()},
 }
 
 // wazeroResults runs each case through wazero and returns the i32 results
@@ -216,6 +224,10 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		var bin []byte
 		var err error
 		switch m.file {
+		case "branches":
+			bin = buildBranchLoopWasm()
+		case "suite":
+			bin = buildSuiteWasm()
 		case "memgrow":
 			bin = buildMemoryModule(1, true)
 		case "memzero":

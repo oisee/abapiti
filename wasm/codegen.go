@@ -20,9 +20,10 @@ func Compile(mod *Module, className string) string {
 type blockKind int
 
 const (
-	blockDO  blockKind = iota // block/loop → DO ... ENDDO
-	blockIF                   // if → IF ... ENDIF
-	blockTRY                  // try → TRY ... ENDTRY
+	blockDO   blockKind = iota // block → DO 1 TIMES ... ENDDO
+	blockIF                    // if → IF ... ENDIF
+	blockLOOP                  // loop → DO ... ENDDO
+	blockTRY                   // try → TRY ... ENDTRY
 )
 
 // blockEntry tracks the kind and the stack depth when the block was entered.
@@ -32,11 +33,12 @@ type blockEntry struct {
 }
 
 type compiler struct {
-	mod        *Module
-	className  string
-	sb         strings.Builder
-	indent     int
-	blockStack []blockEntry // tracks what to close on OpEnd + stack depth
+	mod         *Module
+	className   string
+	sb          strings.Builder
+	indent      int
+	outerLabels []blockEntry // labels outside an extracted method
+	blockStack  []blockEntry // tracks what to close on OpEnd + stack depth
 
 	// FUGR mode: emit PERFORM instead of method calls, gv_ instead of mv_
 	useFUGR       bool
@@ -60,12 +62,13 @@ type compiler struct {
 
 // blockMethodDef holds a block/loop body extracted for emission as a CLASS-METHOD.
 type blockMethodDef struct {
-	name       string
-	code       []Instruction
-	parentFunc *Function
-	startDepth int // virtual stack depth at block entry
-	isLoop     bool
-	body       string // generated ABAP method body (filled during emission)
+	name        string
+	code        []Instruction
+	parentFunc  *Function
+	startDepth  int // virtual stack depth at block entry
+	isLoop      bool
+	outerLabels []blockEntry
+	body        string // generated ABAP method body (filled during emission)
 }
 
 func (c *compiler) emit() string {
@@ -477,79 +480,45 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.emitCall(f, inst.FuncIndex, stack)
 
 		// Control flow
-		case OpBlock:
+		case OpBlock, OpLoop:
+			kind := blockDO
+			if inst.Op == OpLoop {
+				kind = blockLOOP
+			}
 			if c.useBlockMethods {
 				savedDepth := stack.depth
 				endIdx := findMatchingEnd(code, i)
-				bodyCode := make([]Instruction, endIdx-i-1)
-				copy(bodyCode, code[i+1:endIdx])
 				blockName := fmt.Sprintf("f%d_b%d", c.currentFuncIndex, c.blockCounter)
 				c.blockCounter++
+				labels := append([]blockEntry(nil), c.outerLabels...)
+				labels = append(labels, c.blockStack...)
 				c.blockMethods = append(c.blockMethods, &blockMethodDef{
-					name: blockName, code: bodyCode, parentFunc: f,
-					startDepth: savedDepth,
+					name: blockName, code: append([]Instruction(nil), code[i+1:endIdx]...), parentFunc: f,
+					startDepth: savedDepth, isLoop: inst.Op == OpLoop, outerLabels: labels,
 				})
-				// Call block CLASS-METHOD
-				c.line("%s%s( ). \" block", c.classPrefix(), blockName)
-				c.emitBrPropagation()
-				// Adjust stack for block result type
-				if inst.BlockType >= 0 && inst.BlockType != 0x40 {
-					stack.depth = savedDepth + 1
-				} else {
-					stack.depth = savedDepth
-				}
-				i = endIdx // skip past end
-			} else {
-				c.line("DO 1 TIMES. \" block")
-				c.indent++
-				c.blockStack = append(c.blockStack, blockEntry{kind: blockDO, savedDepth: stack.depth})
-			}
-		case OpLoop:
-			if c.useBlockMethods {
-				savedDepth := stack.depth
-				endIdx := findMatchingEnd(code, i)
-				bodyCode := make([]Instruction, endIdx-i-1)
-				copy(bodyCode, code[i+1:endIdx])
-				blockName := fmt.Sprintf("f%d_l%d", c.currentFuncIndex, c.blockCounter)
-				c.blockCounter++
-				c.blockMethods = append(c.blockMethods, &blockMethodDef{
-					name: blockName, code: bodyCode, parentFunc: f,
-					startDepth: savedDepth, isLoop: true,
-				})
-				// Emit DO + CLASS-METHOD call
-				br := c.brVar()
-				c.line("DO. \" loop")
-				c.indent++
-				c.line("%s = 0.", br)
 				c.line("%s%s( ).", c.classPrefix(), blockName)
-				c.line("IF %s = 0. EXIT. ENDIF. \" fallthrough exits loop", br)
-				c.line("%s = %s - 1.", br, br)
-				c.line("IF %s > 0. EXIT. ENDIF. \" escaping past loop", br)
-				c.indent--
-				c.line("ENDDO.")
-				c.emitBrPropagate() // don't consume — loop level consumed in DO
+				c.emitBrPropagate()
 				stack.depth = savedDepth
+				if inst.BlockType >= 0 && inst.BlockType != 0x40 {
+					stack.depth++
+				}
 				i = endIdx
 			} else {
-				c.line("DO. \" loop")
+				if kind == blockLOOP {
+					c.line("DO.")
+				} else {
+					c.line("DO 1 TIMES.")
+				}
 				c.indent++
-				c.blockStack = append(c.blockStack, blockEntry{kind: blockDO, savedDepth: stack.depth})
+				c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: stack.depth})
 			}
 		case OpIf:
-			if c.useBlockMethods {
-				// Wrap if in DO 1 TIMES for br support (safe: no cross-nesting since blocks are FORMs)
-				cond := stack.pop()
-				c.line("DO 1 TIMES. \" if")
-				c.indent++
-				c.line("IF %s <> 0.", cond)
-				c.indent++
-				c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: stack.depth})
-			} else {
-				cond := stack.pop()
-				c.line("IF %s <> 0.", cond)
-				c.indent++
-				c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: stack.depth})
-			}
+			cond := stack.pop()
+			c.line("DO 1 TIMES.")
+			c.indent++
+			c.line("IF %s <> 0.", cond)
+			c.indent++
+			c.blockStack = append(c.blockStack, blockEntry{kind: blockIF, savedDepth: stack.depth})
 		case OpElse:
 			c.indent--
 			c.line("ELSE.")
@@ -562,44 +531,31 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			if len(c.blockStack) > 0 {
 				entry := c.blockStack[len(c.blockStack)-1]
 				c.blockStack = c.blockStack[:len(c.blockStack)-1]
+				if entry.kind == blockLOOP {
+					c.line("EXIT.") // WASM loop fallthrough leaves the loop.
+				}
 				c.indent--
 				switch entry.kind {
 				case blockIF:
 					c.line("ENDIF.")
-					if c.useBlockMethods {
-						c.indent--
-						c.line("ENDDO. \" end if")
-						c.emitBrPropagation()
-					}
-				case blockDO:
+					c.indent--
+					c.line("ENDDO.")
+				case blockDO, blockLOOP:
 					c.line("ENDDO.")
 				case blockTRY:
 					c.line("ENDTRY.")
 				}
+				c.emitBrPropagation()
 			}
 		case OpBr:
-			if c.useBlockMethods {
-				br := c.brVar()
-				c.line("%s = %d. %s \" br %d", br, inst.LabelIndex+1, c.exitOrReturn(), inst.LabelIndex)
-			} else {
-				if inst.LabelIndex == 0 {
-					c.line("EXIT. \" br 0")
-				} else {
-					c.line("lv_br = %d. EXIT. \" br %d", inst.LabelIndex, inst.LabelIndex)
-				}
-			}
+			c.emitBranch(inst.LabelIndex)
 		case OpBrIf:
 			cond := stack.pop()
-			if c.useBlockMethods {
-				br := c.brVar()
-				c.line("IF %s <> 0. %s = %d. %s ENDIF. \" br_if %d", cond, br, inst.LabelIndex+1, c.exitOrReturn(), inst.LabelIndex)
-			} else {
-				if inst.LabelIndex == 0 {
-					c.line("IF %s <> 0. EXIT. ENDIF. \" br_if 0", cond)
-				} else {
-					c.line("IF %s <> 0. lv_br = %d. EXIT. ENDIF. \" br_if %d", cond, inst.LabelIndex, inst.LabelIndex)
-				}
-			}
+			c.line("IF %s <> 0.", cond)
+			c.indent++
+			c.emitBranch(inst.LabelIndex)
+			c.indent--
+			c.line("ENDIF.")
 		case OpReturn:
 			if c.useBlockMethods {
 				br := c.brVar()
@@ -1156,35 +1112,16 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		// br_table
 		case OpBrTable:
 			idx := stack.pop()
-			if c.useBlockMethods {
-				br := c.brVar()
-				escape := c.exitOrReturn()
-				c.line("CASE %s.", idx)
-				c.indent++
-				for i, label := range inst.Labels {
-					c.line("WHEN %d. %s = %d. %s", i, br, label+1, escape)
-				}
-				c.line("WHEN OTHERS. %s = %d. %s", br, inst.DefaultLabel+1, escape)
-				c.indent--
-				c.line("ENDCASE.")
-			} else {
-				c.line("CASE %s.", idx)
-				c.indent++
-				for i, label := range inst.Labels {
-					if label == 0 {
-						c.line("WHEN %d. EXIT.", i)
-					} else {
-						c.line("WHEN %d. lv_br = %d. EXIT.", i, label)
-					}
-				}
-				if inst.DefaultLabel == 0 {
-					c.line("WHEN OTHERS. EXIT.")
-				} else {
-					c.line("WHEN OTHERS. lv_br = %d. EXIT.", inst.DefaultLabel)
-				}
-				c.indent--
-				c.line("ENDCASE.")
+			c.line("CASE %s.", idx)
+			c.indent++
+			for i, label := range inst.Labels {
+				c.line("WHEN %d.", i)
+				c.emitBranch(label)
 			}
+			c.line("WHEN OTHERS.")
+			c.emitBranch(inst.DefaultLabel)
+			c.indent--
+			c.line("ENDCASE.")
 
 		default:
 			c.line("\" TODO: opcode 0x%02X", inst.Op)
@@ -1549,10 +1486,10 @@ func findMatchingEnd(code []Instruction, start int) int {
 	return len(code) - 1
 }
 
-// hasEnclosingDO returns true if the blockStack contains an if entry (which uses DO 1 TIMES).
+// hasEnclosingDO reports a local ABAP loop that can carry an escaping branch.
 func (c *compiler) hasEnclosingDO() bool {
 	for _, e := range c.blockStack {
-		if e.kind == blockIF {
+		if e.kind != blockTRY {
 			return true
 		}
 	}
@@ -1577,7 +1514,7 @@ func (c *compiler) rvVar() string {
 	return "rv"
 }
 
-// exitOrReturn returns "EXIT." if inside a DO (from an if wrapper), "RETURN." otherwise.
+// exitOrReturn leaves a local DO, or returns across an extracted method boundary.
 func (c *compiler) exitOrReturn() string {
 	if c.hasEnclosingDO() {
 		return "EXIT."
@@ -1585,25 +1522,40 @@ func (c *compiler) exitOrReturn() string {
 	return "RETURN."
 }
 
-// emitBrPropagation emits the br check after an if's ENDDO or block PERFORM.
-// It consumes one label level and propagates (EXIT/RETURN) if more levels remain.
-func (c *compiler) emitBrPropagation() {
-	br := c.brVar()
-	if c.hasEnclosingDO() {
-		c.line("IF %s > 0. %s = %s - 1. IF %s > 0. EXIT. ENDIF. ENDIF.", br, br, br, br)
-	} else {
-		c.line("IF %s > 0. %s = %s - 1. IF %s > 0. RETURN. ENDIF. ENDIF.", br, br, br, br)
+// emitBranch encodes exits as positive depths and loop continuations as negative
+// depths. Each closed label consumes one level; zero means ordinary execution.
+func (c *compiler) emitBranch(depth int) {
+	labels := append([]blockEntry(nil), c.outerLabels...)
+	labels = append(labels, c.blockStack...)
+	loop := int(depth) < len(labels) && labels[len(labels)-1-int(depth)].kind == blockLOOP
+	if loop && depth == 0 {
+		c.line("CONTINUE.")
+		return
 	}
+	value := int(depth) + 1
+	if loop {
+		value = -value
+	}
+	c.line("%s = %d. %s", c.brVar(), value, c.exitOrReturn())
 }
 
-// emitBrPropagate emits a propagation check that does NOT consume a level (for after loop ENDDO).
+// emitBrPropagation consumes the label just closed, then dispatches in its parent.
+func (c *compiler) emitBrPropagation() {
+	br := c.brVar()
+	c.line("IF %s > 0 AND %s <> 999. %s = %s - 1. ELSEIF %s < 0. %s = %s + 1. ENDIF.", br, br, br, br, br, br, br)
+	c.emitBrPropagate()
+}
+
+// emitBrPropagate also handles calls whose extracted method consumed its own label.
 func (c *compiler) emitBrPropagate() {
 	br := c.brVar()
-	if c.hasEnclosingDO() {
-		c.line("IF %s > 0. EXIT. ENDIF.", br)
-	} else {
-		c.line("IF %s > 0. RETURN. ENDIF.", br)
+	if len(c.blockStack) > 0 && c.blockStack[len(c.blockStack)-1].kind == blockLOOP {
+		c.line("IF %s = -1. %s = 0. CONTINUE. ENDIF.", br, br)
 	}
+	if c.useBlockMethods && !c.inBlockMethod && !c.hasEnclosingDO() && len(c.mod.Functions[c.currentFuncIndex].Type.Results) > 0 {
+		c.line("IF %s = 999. rv = %s. RETURN. ENDIF.", br, c.rvVar())
+	}
+	c.line("IF %s <> 0. %s ENDIF.", br, c.exitOrReturn())
 }
 
 // Block methods use CLASS-DATA on class g — no parameters needed.
@@ -1616,6 +1568,7 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 	// Save compiler state and use a separate builder for the body
 	savedSB := c.sb
 	savedBlockStack := c.blockStack
+	savedOuterLabels := c.outerLabels
 	savedInBlock := c.inBlockMethod
 	savedIndent := c.indent
 	savedPackLines := c.packLines
@@ -1623,6 +1576,7 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 
 	c.sb = strings.Builder{}
 	c.blockStack = nil
+	c.outerLabels = bm.outerLabels
 	c.inBlockMethod = true
 	c.useFUGR = true
 	c.fugrRedirects = redirects
@@ -1633,7 +1587,17 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 
 	// Inside CLASS-METHOD: no prefix (variables are class members)
 	stack := &virtualStack{depth: bm.startDepth, prefix: ""}
-	c.emitInstructions(bm.parentFunc, bm.code, stack, 0)
+	kind := blockDO
+	if bm.isLoop {
+		kind = blockLOOP
+		c.line("DO.")
+	} else {
+		c.line("DO 1 TIMES.")
+	}
+	c.indent++
+	c.blockStack = append(c.blockStack, blockEntry{kind: kind, savedDepth: bm.startDepth})
+	code := append(append([]Instruction(nil), bm.code...), Instruction{Op: OpEnd})
+	c.emitInstructions(bm.parentFunc, code, stack, 0)
 
 	c.flushPacker()
 
@@ -1642,6 +1606,7 @@ func (c *compiler) generateBlockBody(bm *blockMethodDef, redirects map[int]int) 
 	// Restore state
 	c.sb = savedSB
 	c.blockStack = savedBlockStack
+	c.outerLabels = savedOuterLabels
 	c.inBlockMethod = savedInBlock
 	c.indent = savedIndent
 	c.packLines = savedPackLines
