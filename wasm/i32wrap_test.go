@@ -43,7 +43,7 @@ func TestI32WrapGeneratedBackends(t *testing.T) {
 			}
 			multi := CompileMultiClass(mod, "z_i32wrap", 80)
 			checkI32Sources(t, "multi", multi.ChunkClasses, fixture.ops, false)
-			for _, src := range []string{multi.RuntimeClass, multi.MainClass} {
+			for _, src := range []string{multi.StateClass, multi.MainClass} {
 				for _, op := range []string{"i32_add", "i32_sub", "i32_mul"} {
 					if strings.Contains(src, op) {
 						t.Errorf("multi: unused helper %s", op)

@@ -8,3 +8,6 @@
 unknown method IPOW
 conversion x -> int8
 conversion int8 -> x
+# Split chunks require dynamic class and method names (ABAP 7.02). The pinned
+# Go frontend accepts only static CALL METHOD; OSD runs these same assertions.
+CALL METHOD form: CALL METHOD (lv_cls)=>(lv_meth) EXPORTING p0 = s0 RECEIVING rv = s0.

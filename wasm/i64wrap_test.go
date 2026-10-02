@@ -137,12 +137,12 @@ func TestI64WrapGeneratedBackends(t *testing.T) {
 			called := false
 			for _, src := range multi.ChunkClasses {
 				checkI64Source(t, src)
-				called = called || strings.Contains(src, "zcl_wasm_rt=>"+name+"( iv_a =")
+				called = called || strings.Contains(src, multi.StateName+"=>"+name+"( iv_a =")
 			}
 			if !called {
 				t.Errorf("multi: missing %s call", name)
 			}
-			if !strings.Contains(multi.RuntimeClass, "CLASS-METHODS "+name+" IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.") {
+			if !strings.Contains(multi.StateClass, "CLASS-METHODS "+name+" IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.") {
 				t.Errorf("multi: missing %s signature", name)
 			}
 		})
