@@ -6,7 +6,7 @@ Run JavaScript on SAP — via QuickJS (C) compiled through LLVM IR to ABAP.
 
 ```
 quickjs.c (55K lines C)
-    ↓ vsp compile llvm
+    ↓ abapiti compile llvm
 zcl_quickjs.abap (124K lines, 537 CLASS-METHODS)
     ↓ abapGit import
 SAP ABAP runtime
@@ -26,7 +26,7 @@ curl -L bellard.org/quickjs/quickjs-2024-01-13.tar.xz | tar xJ -C /tmp/
 
 ```bash
 # One command:
-vsp compile llvm /tmp/quickjs-2024-01-13/quickjs.c \
+abapiti compile llvm /tmp/quickjs-2024-01-13/quickjs.c \
   --class zcl_quickjs --zip -o quickjs.zip
 
 # Output: quickjs.zip (691KB, abapGit format)
@@ -35,7 +35,7 @@ vsp compile llvm /tmp/quickjs-2024-01-13/quickjs.c \
 
 Or use the pre-built ZIP:
 ```bash
-ls pkg/llvm2abap/output/quickjs_llvm.zip  # 691KB, ready to import
+ls quickjs_llvm.zip  # ~691KB, ready to import (generated, not committed)
 ```
 
 ### 3. Deploy to SAP
@@ -101,7 +101,7 @@ echo 'console.log([1,2,3,4,5].map(x=>x*x).filter(x=>x>5))' > test3.js
 ### ABAP (from same LLVM IR)
 
 ```bash
-vsp compile llvm /tmp/quickjs-2024-01-13/quickjs.c --class zcl_quickjs
+abapiti compile llvm /tmp/quickjs-2024-01-13/quickjs.c --class zcl_quickjs
 # → 537 CLASS-METHODS, 124K lines, 0 TODOs, max line 239 chars
 ```
 

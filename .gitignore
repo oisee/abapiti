@@ -1,0 +1,17 @@
+# Build output
+bin/
+dist/
+/abapiti
+*.test
+
+# Local-only material and credentials
+.local/
+.env
+cookies.txt
+.mcp.json
+
+# npm (package.json drives ts/ts_ast.js)
+node_modules/
+
+# Large local-only test inputs (the tests skip when they are missing)
+wasm/testdata/abaplint.wasm

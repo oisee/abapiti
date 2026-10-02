@@ -1,0 +1,45 @@
+ABAPiti (abapiti)
+Copyright (c) 2025-2026 Alice Vinogradova and contributors
+
+This product is licensed under the MIT License (see LICENSE).
+
+ABAPiti was split out of vibing-steampunk (vsp),
+https://github.com/oisee/vibing-steampunk, with its git history. The code
+under wasm/, llvm/, ts/, ts2go/, jseval/, abap/, cmd/ and fun/ was written in
+that repository under the same MIT License and the same copyright.
+
+--------------------------------------------------------------------------------
+Third-party material in this repository
+--------------------------------------------------------------------------------
+
+abaplint — https://github.com/abaplint/abaplint
+Copyright (c) Lars Hvam Petersen. Licensed under the MIT License.
+  ts/testdata/lexer.ts, the JavaScript lexer embedded in the jseval tests, the
+  ABAP classes in ts/testdata/abaplint_lexer/ and abap/abaplint-lexer.zip are
+  modelled on the abaplint lexer.
+
+QuickJS — https://bellard.org/quickjs/
+Copyright (c) 2017-2021 Fabrice Bellard and Charlie Gordon.
+Licensed under the MIT License.
+  wasm/testdata/quickjs_eval.wasm is QuickJS compiled to WebAssembly with Javy.
+
+Javy — https://github.com/bytecodealliance/javy
+Copyright Bytecode Alliance contributors. Licensed under the Apache License,
+Version 2.0, with LLVM Exceptions.
+  wasm/testdata/quickjs_eval.wasm contains the Javy runtime.
+
+--------------------------------------------------------------------------------
+Dependencies (not vendored)
+--------------------------------------------------------------------------------
+
+Go modules (see go.mod / go.sum):
+  github.com/spf13/cobra       Apache License 2.0 (linked into the abapiti CLI)
+  github.com/tetratelabs/wazero Apache License 2.0 (tests only)
+
+npm packages (see package.json; used at development time only, by ts/ts_ast.js,
+ts2go/ts_ast.js and the jseval oracle):
+  typescript                   Apache License 2.0
+  @abaplint/core               MIT License
+
+A copy of the Apache License, Version 2.0 is available at
+https://www.apache.org/licenses/LICENSE-2.0

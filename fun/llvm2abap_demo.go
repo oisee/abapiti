@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"github.com/oisee/vibing-steampunk/pkg/llvm2abap"
+	"github.com/oisee/abapiti/llvm"
 )
 
 const exampleC = `
@@ -53,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	mod, err := llvm2abap.Parse(string(src))
+	mod, err := llvm.Parse(string(src))
 	if err != nil {
 		fmt.Printf("Parse error: %v\n", err)
 		os.Exit(1)
@@ -67,6 +67,6 @@ func main() {
 	}
 	fmt.Printf("Parsed: %d functions, %d structs\n\n", nonExt, len(mod.Types))
 
-	abap := llvm2abap.Compile(mod, "zcl_compiled")
+	abap := llvm.Compile(mod, "zcl_compiled")
 	fmt.Println(abap)
 }
