@@ -123,6 +123,7 @@ var osdModules = []struct {
 		{"mul", []int32{-7, 3}},
 		{"mul", []int32{-7, 0}},
 	}},
+	{"runtime_helpers", "zcl_abapiti_runtime_helpers", func() []osdCase { _, cases := runtimeFixture(); return cases }()},
 	// Last: compileCFixture skips the whole test when clang is missing (as on
 	// the OSD runner), so no module after it would be generated there.
 	{"corpus", "zcl_abapiti_corpus", []osdCase{
@@ -271,6 +272,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		var bin []byte
 		var err error
 		switch m.file {
+		case "runtime_helpers":
+			bin, _ = runtimeFixture()
 		case "i32wrap":
 			bin = buildI32WrapModule()
 		case "branches":
@@ -312,6 +315,9 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			}
 		}
 		src := mustCompile(t, mod, m.class)
+		if m.file == "runtime_helpers" {
+			src = runtimeFixtureClass(mod, m.class)
+		}
 		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod))
 		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{

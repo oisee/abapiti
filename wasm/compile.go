@@ -365,7 +365,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 // --- Runtime Class ---
 
 func emitRuntimeClass() string {
-	return `CLASS zcl_wasm_rt DEFINITION PUBLIC FINAL CREATE PUBLIC.
+	src := `CLASS zcl_wasm_rt DEFINITION PUBLIC FINAL CREATE PUBLIC.
   PUBLIC SECTION.
     CLASS-METHODS i64_add IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS i64_sub IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
@@ -460,14 +460,17 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD mem_init.
-    DATA(lv_bytes) = xstrlen( CONV xstring( iv_hex ) ).
-    cv_mem+iv_off(lv_bytes) = iv_hex.
+    DATA lv_data TYPE xstring.
+    DATA lv_bytes TYPE i.
+    lv_data = iv_hex.
+    lv_bytes = xstrlen( lv_data ).
+    REPLACE SECTION OFFSET iv_off LENGTH lv_bytes OF cv_mem WITH lv_data IN BYTE MODE.
   ENDMETHOD.
 
   METHOD mem_copy.
     IF iv_n <= 0. RETURN. ENDIF.
     DATA(lv_src_data) = cv_mem+iv_src(iv_n).
-    cv_mem+iv_dst(iv_n) = lv_src_data.
+    REPLACE SECTION OFFSET iv_dst LENGTH iv_n OF cv_mem WITH lv_src_data IN BYTE MODE.
   ENDMETHOD.
 
   METHOD mem_fill.
@@ -476,24 +479,16 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     lv_byte = iv_val.
     DO iv_n TIMES.
       DATA(lv_off) = iv_dst + sy-index - 1.
-      cv_mem+lv_off(1) = lv_byte.
+      REPLACE SECTION OFFSET lv_off LENGTH 1 OF cv_mem WITH lv_byte IN BYTE MODE.
     ENDDO.
   ENDMETHOD.
 
   " === Unsigned 32-bit via INT8 promotion ===
   METHOD div_u32.
-    DATA(lv_a) = CONV int8( iv_a ).
-    DATA(lv_b) = CONV int8( iv_b ).
-    IF lv_a < 0. lv_a = lv_a + 4294967296. ENDIF.
-    IF lv_b < 0. lv_b = lv_b + 4294967296. ENDIF.
-    rv = CONV i( lv_a DIV lv_b ).
+` + kernelRuntimeBody("div_u32") + `
   ENDMETHOD.
   METHOD rem_u32.
-    DATA(lv_a) = CONV int8( iv_a ).
-    DATA(lv_b) = CONV int8( iv_b ).
-    IF lv_a < 0. lv_a = lv_a + 4294967296. ENDIF.
-    IF lv_b < 0. lv_b = lv_b + 4294967296. ENDIF.
-    rv = CONV i( lv_a MOD lv_b ).
+` + kernelRuntimeBody("rem_u32") + `
   ENDMETHOD.
   METHOD lt_u32.
     DATA(lv_a) = CONV int8( iv_a ).
@@ -544,31 +539,28 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = lv_r.
   ENDMETHOD.
   METHOD shl32.
-    DATA(lv_shift) = iv_shift MOD 32.
-    DATA(lv_val) = CONV int8( iv_val ).
-    IF lv_val < 0. lv_val = lv_val + 4294967296. ENDIF.
-    DATA(lv_result) = lv_val * ipow( base = 2 exp = lv_shift ).
-    rv = CONV i( lv_result MOD 4294967296 ).
+` + kernelRuntimeBody("shl32") + `
   ENDMETHOD.
   METHOD shr_s32.
-    DATA(lv_shift) = iv_shift MOD 32.
-    rv = iv_val DIV ipow( base = 2 exp = lv_shift ).
+` + kernelRuntimeBody("shr_s32") + `
   ENDMETHOD.
   METHOD shr_u32.
-    DATA(lv_shift) = iv_shift MOD 32.
-    DATA(lv_val) = CONV int8( iv_val ).
-    IF lv_val < 0. lv_val = lv_val + 4294967296. ENDIF.
-    rv = CONV i( lv_val DIV ipow( base = 2 exp = lv_shift ) ).
+` + kernelRuntimeBody("shr_u32") + `
   ENDMETHOD.
-  METHOD rotl32. rv = iv_val. ENDMETHOD.
-  METHOD rotr32. rv = iv_val. ENDMETHOD.
+  METHOD rotl32.
+` + kernelRuntimeBody("rotl32") + `
+  ENDMETHOD.
+  METHOD rotr32.
+` + kernelRuntimeBody("rotr32") + `
+  ENDMETHOD.
   METHOD clz32.
     DATA(lv_val) = CONV int8( iv_val ).
     IF lv_val < 0. lv_val = lv_val + 4294967296. ENDIF.
     IF lv_val = 0. rv = 32. RETURN. ENDIF.
     rv = 0.
-    DATA(lv_mask) = CONV int8( 2147483648 ). " 1 << 31
-    WHILE lv_val BIT-AND lv_mask = 0.
+    DATA lv_mask TYPE int8.
+    lv_mask = 2147483648.
+    WHILE lv_val < lv_mask.
       rv = rv + 1.
       lv_mask = lv_mask DIV 2.
     ENDWHILE.
@@ -594,30 +586,64 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   ENDMETHOD.
 
   " === 64-bit stubs (implement as needed) ===
-  METHOD div_u64. rv = iv_a DIV iv_b. ENDMETHOD.
-  METHOD rem_u64. rv = iv_a MOD iv_b. ENDMETHOD.
-  METHOD lt_u64. rv = xsdbool( iv_a < iv_b ). ENDMETHOD.
-  METHOD gt_u64. rv = xsdbool( iv_a > iv_b ). ENDMETHOD.
-  METHOD le_u64. rv = xsdbool( iv_a <= iv_b ). ENDMETHOD.
-  METHOD ge_u64. rv = xsdbool( iv_a >= iv_b ). ENDMETHOD.
+  METHOD div_u64.
+` + kernelRuntimeBody("div_u64") + `
+  ENDMETHOD.
+  METHOD rem_u64.
+` + kernelRuntimeBody("rem_u64") + `
+  ENDMETHOD.
+  METHOD lt_u64.
+` + kernelRuntimeBody("lt_u64") + `
+  ENDMETHOD.
+  METHOD gt_u64.
+` + kernelRuntimeBody("gt_u64") + `
+  ENDMETHOD.
+  METHOD le_u64.
+` + kernelRuntimeBody("le_u64") + `
+  ENDMETHOD.
+  METHOD ge_u64.
+` + kernelRuntimeBody("ge_u64") + `
+  ENDMETHOD.
   METHOD and64. DATA lv_a TYPE x LENGTH 8. DATA lv_b TYPE x LENGTH 8. lv_a = iv_a. lv_b = iv_b. DATA(lv_r) = lv_a BIT-AND lv_b. rv = lv_r. ENDMETHOD.
   METHOD or64. DATA lv_a TYPE x LENGTH 8. DATA lv_b TYPE x LENGTH 8. lv_a = iv_a. lv_b = iv_b. DATA(lv_r) = lv_a BIT-OR lv_b. rv = lv_r. ENDMETHOD.
   METHOD xor64. DATA lv_a TYPE x LENGTH 8. DATA lv_b TYPE x LENGTH 8. lv_a = iv_a. lv_b = iv_b. DATA(lv_r) = lv_a BIT-XOR lv_b. rv = lv_r. ENDMETHOD.
-  METHOD shl64. rv = iv_val * ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
-  METHOD shr_s64. rv = iv_val DIV ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
-  METHOD shr_u64. rv = iv_val DIV ipow( base = 2 exp = CONV i( iv_shift MOD 64 ) ). ENDMETHOD.
-  METHOD rotl64. rv = iv_val. ENDMETHOD.
-  METHOD rotr64. rv = iv_val. ENDMETHOD.
-  METHOD clz64. rv = 0. DATA(lv) = iv_val. IF lv = 0. rv = 64. RETURN. ENDIF. DATA(lv_m) = CONV int8( '4000000000000000' ). WHILE lv BIT-AND lv_m = 0. rv = rv + 1. lv_m = lv_m DIV 2. ENDWHILE. ENDMETHOD.
-  METHOD ctz64. rv = 0. DATA(lv) = iv_val. IF lv = 0. rv = 64. RETURN. ENDIF. WHILE lv MOD 2 = 0. rv = rv + 1. lv = lv DIV 2. ENDWHILE. ENDMETHOD.
-  METHOD popcnt64. rv = 0. DATA(lv) = iv_val. WHILE lv > 0. IF lv MOD 2 = 1. rv = rv + 1. ENDIF. lv = lv DIV 2. ENDWHILE. ENDMETHOD.
+  METHOD shl64.
+` + kernelRuntimeBody("shl64") + `
+  ENDMETHOD.
+  METHOD shr_s64.
+` + kernelRuntimeBody("shr_s64") + `
+  ENDMETHOD.
+  METHOD shr_u64.
+` + kernelRuntimeBody("shr_u64") + `
+  ENDMETHOD.
+  METHOD rotl64.
+` + kernelRuntimeBody("rotl64") + `
+  ENDMETHOD.
+  METHOD rotr64.
+` + kernelRuntimeBody("rotr64") + `
+  ENDMETHOD.
+  METHOD clz64.
+` + kernelRuntimeBody("clz64") + `
+  ENDMETHOD.
+  METHOD ctz64.
+` + kernelRuntimeBody("ctz64") + `
+  ENDMETHOD.
+  METHOD popcnt64.
+` + kernelRuntimeBody("popcnt64") + `
+  ENDMETHOD.
 
   " === Conversions ===
-  METHOD wrap_i64. rv = CONV i( iv_val MOD 4294967296 ). ENDMETHOD.
+  METHOD wrap_i64.
+` + kernelRuntimeBody("wrap_i64") + `
+  ENDMETHOD.
   METHOD extend_u32. rv = iv_val. IF rv < 0. rv = rv + 4294967296. ENDIF. ENDMETHOD.
   METHOD extend_u64_f. rv = iv_val. IF rv < 0. rv = rv + CONV f( '18446744073709551616' ). ENDIF. ENDMETHOD.
-  METHOD trunc_f_u32. rv = trunc( iv_val ). ENDMETHOD.
-  METHOD trunc_f_u64. rv = trunc( iv_val ). ENDMETHOD.
+  METHOD trunc_f_u32.
+` + kernelRuntimeBody("trunc_f_u32") + `
+  ENDMETHOD.
+  METHOD trunc_f_u64.
+` + kernelRuntimeBody("trunc_f_u64") + `
+  ENDMETHOD.
   METHOD extend8s_i32.
     rv = iv_val MOD 256.
     IF rv > 127. rv = rv - 256. ENDIF.
@@ -633,64 +659,51 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
     rv = abs( iv_mag ).
     IF iv_sign < 0. rv = - rv. ENDIF.
   ENDMETHOD.
-  METHOD reinterpret_f32_i32. rv = iv_val. ENDMETHOD.
-  METHOD reinterpret_i32_f32.
-    DATA lv_bits TYPE x LENGTH 4.
-    DATA lv_mask TYPE x LENGTH 4 VALUE '7F800000'.
-    lv_bits = iv_val.
-    lv_bits = lv_bits BIT-AND lv_mask.
-    IF lv_bits = lv_mask.
-      ` + wasmTrap + `
-    ENDIF.
-    rv = iv_val.
+  METHOD reinterpret_f32_i32.
+` + kernelRuntimeBody("reinterpret_f32_i32") + `
   ENDMETHOD.
-  METHOD reinterpret_f64_i64. rv = iv_val. ENDMETHOD.
+  METHOD reinterpret_i32_f32.
+` + kernelRuntimeBody("reinterpret_i32_f32") + `
+  ENDMETHOD.
+  METHOD reinterpret_f64_i64.
+` + kernelRuntimeBody("reinterpret_f64_i64") + `
+  ENDMETHOD.
   METHOD reinterpret_i64_f64.
-    DATA lv_bits TYPE x LENGTH 8.
-    DATA lv_mask TYPE x LENGTH 8 VALUE '7FF0000000000000'.
-    lv_bits = iv_val.
-    lv_bits = lv_bits BIT-AND lv_mask.
-    IF lv_bits = lv_mask.
-      ` + wasmTrap + `
-    ENDIF.
-    rv = iv_val.
+` + kernelRuntimeBody("reinterpret_i64_f64") + `
   ENDMETHOD.
 
   " === Memory i64/f32/f64 ===
   METHOD mem_ld_i64.
-    DATA lv_b TYPE x LENGTH 8.
-    lv_b = iv_mem+iv_addr(8).
-    " Reverse little-endian
-    DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
-    rv = lv_r.
+` + kernelRuntimeBody("mem_ld_i64") + `
   ENDMETHOD.
   METHOD mem_st_i64.
-    DATA lv_b TYPE x LENGTH 8. lv_b = iv_val.
-    DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
-    cv_mem+iv_addr(8) = lv_r.
+` + kernelRuntimeBody("mem_st_i64") + `
   ENDMETHOD.
-  METHOD mem_ld_i64_ext. rv = 0. ENDMETHOD.
-  METHOD mem_st_i64_trunc. ENDMETHOD.
+  METHOD mem_ld_i64_ext.
+` + kernelRuntimeBody("mem_ld_i64_ext") + `
+  ENDMETHOD.
+  METHOD mem_st_i64_trunc.
+` + kernelRuntimeBody("mem_st_i64_trunc") + `
+  ENDMETHOD.
   METHOD mem_ld_i32_16s.
-    DATA lv_b TYPE x LENGTH 2.
-    lv_b = iv_mem+iv_addr(2).
-    DATA(lv_r) = lv_b+1(1) && lv_b+0(1).
-    rv = lv_r.
-    IF rv > 32767. rv = rv - 65536. ENDIF.
+` + kernelRuntimeBody("mem_ld_i32_16s") + `
   ENDMETHOD.
-  METHOD mem_ld_f32. rv = 0. ENDMETHOD.
+  METHOD mem_ld_f32.
+` + kernelRuntimeBody("mem_ld_f32") + `
+  ENDMETHOD.
   METHOD mem_ld_f64.
-    DATA lv_b TYPE x LENGTH 8.
-    lv_b = iv_mem+iv_addr(8).
-    DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
-    rv = lv_r.
+` + kernelRuntimeBody("mem_ld_f64") + `
   ENDMETHOD.
-  METHOD mem_st_f32. ENDMETHOD.
+  METHOD mem_st_f32.
+` + kernelRuntimeBody("mem_st_f32") + `
+  ENDMETHOD.
   METHOD mem_st_f64.
-    DATA lv_b TYPE x LENGTH 8. lv_b = iv_val.
-    DATA(lv_r) = lv_b+7(1) && lv_b+6(1) && lv_b+5(1) && lv_b+4(1) && lv_b+3(1) && lv_b+2(1) && lv_b+1(1) && lv_b+0(1).
-    cv_mem+iv_addr(8) = lv_r.
+` + kernelRuntimeBody("mem_st_f64") + `
   ENDMETHOD.
 ENDCLASS.
 `
+	return stripABAPComments(runtimeMethodRE.ReplaceAllStringFunc(src, func(method string) string {
+		m := runtimeMethodRE.FindStringSubmatch(method)
+		return "METHOD " + m[1] + ".\n" + legacyRuntimeBody(m[1], strings.TrimSpace(m[2])) + "\nENDMETHOD."
+	}))
 }

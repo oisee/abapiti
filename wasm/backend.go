@@ -347,25 +347,17 @@ func emitFUGRInit(mod *Module, upper string) string {
 	}
 	sb.WriteString("\n")
 
-	// Data segments
+	// Byte replacements require a byte-typed source on the kernel.
+	declared := false
 	for _, seg := range mod.Data {
-		if len(seg.Data) > 0 {
-			hex := bytesToHex(seg.Data)
-			if len(hex) <= 200 {
-				sb.WriteString(fmt.Sprintf("  gv_mem+%d(%d) = '%s'.\n", seg.Offset, len(seg.Data), hex))
-			} else {
-				// Split long hex into chunks
-				for off := 0; off < len(hex); off += 200 {
-					end := off + 200
-					if end > len(hex) {
-						end = len(hex)
-					}
-					chunk := hex[off:end]
-					byteOff := seg.Offset + off/2
-					byteLen := (end - off) / 2
-					sb.WriteString(fmt.Sprintf("  gv_mem+%d(%d) = '%s'.\n", byteOff, byteLen, chunk))
-				}
+		for off := 0; off < len(seg.Data); off += 100 {
+			end := min(off+100, len(seg.Data))
+			if !declared {
+				sb.WriteString("  DATA lv_seg TYPE xstring.\n")
+				declared = true
 			}
+			fmt.Fprintf(&sb, "  lv_seg = '%s'.\n", bytesToHex(seg.Data[off:end]))
+			fmt.Fprintf(&sb, "  REPLACE SECTION OFFSET %d LENGTH %d OF gv_mem WITH lv_seg IN BYTE MODE.\n", seg.Offset+off, end-off)
 		}
 	}
 	sb.WriteString("\n")
