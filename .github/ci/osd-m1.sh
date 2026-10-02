@@ -8,8 +8,8 @@
 # vsp runs from an empty directory with every inherited SAP_*/VSP_* variable
 # removed, so it can only reach $SAP_URL as the OSD user DEVELOPER. The vsp
 # binary is the pinned release (vsp.version), checked against the committed
-# vsp.sha256 and the release's checksums.txt. Package $ZOSD_TEST_SRC: OSD
-# 0.6.1511 has no $TMP.
+# vsp.sha256 and the release's checksums.txt. Package $ZOSD_TEST_SRC (OSD
+# up to 0.6.1511 had no $TMP).
 set -euo pipefail
 
 work=${1:?usage: osd-m1.sh <workdir>}
@@ -57,7 +57,7 @@ echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
   > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
 gen="$work/gen/TestOSD_EmitUnitClasses"
 
-# Deploy and test. Any failure stops the run: on OSD 0.6.1511 a failed
+# Deploy and test. Any failure stops the run: on OSD up to 0.6.1511 a failed
 # activation poisons every later one.
 fail=0
 for c in "${classes[@]}"; do
