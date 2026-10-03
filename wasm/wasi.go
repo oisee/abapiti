@@ -339,7 +339,7 @@ func (c *compiler) emitWASIReset() {
 }
 
 func (c *compiler) emitWASIExportWrapper(index int, f *Function) {
-	c.line("METHOD %s.", sanitizeABAP(f.ExportName))
+	c.line("METHOD %s.", c.functionName(index))
 	c.indent++
 	c.emitWASIReset()
 	params := make([]string, len(f.Type.Params))

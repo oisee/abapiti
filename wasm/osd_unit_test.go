@@ -33,9 +33,10 @@ type osdResult struct {
 // osdModules are the M1 modules deployed to open-steamgate. Wrapping inputs
 // exercise the generated int8 i32 arithmetic on the ABAP runtime.
 var osdModules = []struct {
-	file  string
-	class string
-	cases []osdCase
+	file        string
+	class       string
+	cases       []osdCase
+	independent bool
 }{
 	{"add.wasm", "zcl_abapiti_add", []osdCase{
 		{"add", []int32{2, 3}},
@@ -45,7 +46,7 @@ var osdModules = []struct {
 		{"add", []int32{2147483647, 0}},
 		{"add", []int32{2147483647, 1}},
 		{"add", []int32{-2147483648, -1}},
-	}},
+	}, false},
 	{"factorial.wasm", "zcl_abapiti_factorial", []osdCase{
 		{"factorial", []int32{0}},
 		{"factorial", []int32{1}},
@@ -54,17 +55,17 @@ var osdModules = []struct {
 		{"factorial", []int32{12}},
 		{"factorial", []int32{13}},
 		{"factorial", []int32{20}},
-	}},
+	}, false},
 	{"memgrow", "zcl_abapiti_memgrow", []osdCase{
 		{"grow", []int32{1}},
 		{"grow", []int32{1}},
 		{"grow", []int32{-1}},
 		{"size", nil},
 		{"storeload", nil},
-	}},
+	}, false},
 	{"memzero", "zcl_abapiti_memzero", []osdCase{
 		{"size", nil},
-	}},
+	}, false},
 	// call_indirect through a table whose segment starts at 1 (as clang
 	// emits): slot 0 is null, slot 4 has another type, slot 5 an identical
 	// type under another index, 6 is out of range.
@@ -78,7 +79,7 @@ var osdModules = []struct {
 		{"call", []int32{6, 10}},
 		{"call", []int32{-1, 10}},
 		{"call", []int32{2, 7}},
-	}},
+	}, false},
 	// Sign-extending i64 loads and arithmetic right shifts.
 	{"helpers", "zcl_abapiti_helpers", []osdCase{
 		{"l8s", []int32{0}},
@@ -103,10 +104,10 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{-5, 63}},
 		{"sar64_hi", []int32{-5, 33}},
 		{"sar64_hi", []int32{1, 32}},
-	}},
-	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases()},
-	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases()},
-	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
+	}, false},
+	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases(), false},
+	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases(), false},
+	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases(), false},
 	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
 		{"add", []int32{2147483647, 1}},
 		{"add", []int32{-2147483648, -1}},
@@ -122,8 +123,8 @@ var osdModules = []struct {
 		{"mul", []int32{-2147483648, 2147483647}},
 		{"mul", []int32{-7, 3}},
 		{"mul", []int32{-7, 0}},
-	}},
-	{"runtime_helpers", "zcl_abapiti_runtime_helpers", func() []osdCase { _, cases := runtimeFixture(); return cases }()},
+	}, false},
+	{"runtime_helpers", "zcl_abapiti_runtime_helpers", func() []osdCase { _, cases := runtimeFixture(); return cases }(), true},
 	// Last: compileCFixture skips the whole test when clang is missing (as on
 	// the OSD runner), so no module after it would be generated there.
 	{"corpus", "zcl_abapiti_corpus", []osdCase{
@@ -135,15 +136,15 @@ var osdModules = []struct {
 		{"shr_u", []int32{-1, 1}},
 		{"unsigned_lt", []int32{-1, 1}},
 		{"add64", []int32{100, 23}},
-	}},
-	{"branches", "zcl_abapiti_branches", branchLoopCases},
+	}, false},
+	{"branches", "zcl_abapiti_branches", branchLoopCases, false},
 	{"suite", "zcl_abapiti_suite", func() []osdCase {
 		var cases []osdCase
 		for _, c := range suiteTestCases {
 			cases = append(cases, osdCase{c.FuncName, c.Args})
 		}
 		return cases
-	}()},
+	}(), false},
 }
 
 // wazeroResults runs each case through wazero and returns the i32 results
@@ -205,7 +206,26 @@ func moduleHasState(mod *Module) bool {
 	return false
 }
 
-func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay bool) string {
+func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay bool, mappings ...map[string]string) string {
+	// Standalone callers allocate exports in first-call order. Module emission
+	// passes its full map so internal functions participate in the namespace too.
+	names := make(map[string]string)
+	if len(mappings) > 0 {
+		names = mappings[0]
+	} else {
+		mod := &Module{}
+		for _, c := range cases {
+			if _, ok := names[c.fn]; !ok {
+				names[c.fn] = ""
+				mod.Functions = append(mod.Functions, Function{ExportName: c.fn})
+			}
+		}
+		allocated := moduleFunctionNames(mod)
+		for i, f := range mod.Functions {
+			names[f.ExportName] = allocated[i]
+		}
+	}
+
 	var sb strings.Builder
 	sb.WriteString("CLASS ltcl_wasm DEFINITION FINAL FOR TESTING\n")
 	sb.WriteString("  DURATION SHORT RISK LEVEL HARMLESS.\n")
@@ -230,23 +250,23 @@ func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay 
 		sb.WriteString("    DATA lv_trapped TYPE abap_bool.\n")
 		sb.WriteString("    CREATE OBJECT lo.\n")
 		// Replay preceding calls because each ABAP Unit method has a fresh instance.
-		prev := cases[:i]
+		priorCases := cases[:i]
 		if !replay {
-			prev = nil
+			priorCases = nil
 		}
-		for j, prior := range prev {
+		for j, prior := range priorCases {
 			priorParams := make([]string, len(prior.args))
 			for k, a := range prior.args {
 				priorParams[k] = fmt.Sprintf("p%d = %d", k, a)
 			}
-			call := fmt.Sprintf("lv_act = lo->%s( %s ).", prior.fn, strings.Join(priorParams, " "))
+			call := fmt.Sprintf("lv_act = lo->%s( %s ).", names[prior.fn], strings.Join(priorParams, " "))
 			if want[j].trap {
 				fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n    ENDTRY.\n", call)
 			} else {
 				fmt.Fprintf(&sb, "    %s\n", call)
 			}
 		}
-		call := fmt.Sprintf("lv_act = lo->%s( %s ).", c.fn, strings.Join(params, " "))
+		call := fmt.Sprintf("lv_act = lo->%s( %s ).", names[c.fn], strings.Join(params, " "))
 		if want[i].trap {
 			sb.WriteString("    lv_trapped = abap_false.\n")
 			fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n        lv_trapped = abap_true.\n    ENDTRY.\n", call)
@@ -259,7 +279,7 @@ func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay 
 		sb.WriteString("  ENDMETHOD.\n")
 	}
 	sb.WriteString("ENDCLASS.\n")
-	return sb.String()
+	return wrapLongLines(sb.String())
 }
 
 // TestOSD_EmitUnitClasses compiles the M1 modules and writes, per module, the
@@ -319,7 +339,14 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			want = runtimeFixtureResults(t, bin, m.cases)
 			src = runtimeFixtureClass(mod, m.class)
 		}
-		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod))
+		names := make(map[string]string)
+		allocated := moduleFunctionNames(mod)
+		for i, f := range mod.Functions {
+			if f.ExportName != "" {
+				names[f.ExportName] = allocated[i]
+			}
+		}
+		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod) && !m.independent, names)
 		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{
 			m.class + ".clas.abap":             src,

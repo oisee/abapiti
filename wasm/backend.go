@@ -158,10 +158,11 @@ func emitFUGR(mod *Module, fugrName string, funcsPerInclude int, redirects map[i
 	// Init include — memory/data/element initialization
 	result.Files[prefix+"INIT.abap"] = emitFUGRInit(mod, upper)
 
+	fmNames := functionModuleNames(mod, upper)
 	// Function module wrappers for exports
-	for _, f := range mod.Functions {
+	for i, f := range mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			fmName := upper + "_" + strings.ToUpper(sanitizeABAP(f.ExportName))
+			fmName := fmNames[i]
 			result.Files[fmName+".func.abap"] = emitFMWrapper(mod, &f, fmName, redirects)
 		}
 	}
@@ -243,10 +244,7 @@ func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, uppe
 }
 
 func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[int]int) {
-	name := fmt.Sprintf("f%d", funcIdx)
-	if f.ExportName != "" {
-		name = sanitizeABAP(f.ExportName)
-	}
+	name := c.functionName(funcIdx)
 
 	// FORM signature
 	var parts []string
@@ -395,10 +393,7 @@ func emitFMWrapper(mod *Module, f *Function, fmName string, redirects map[int]in
 	if canonIdx, ok := redirects[targetIdx]; ok {
 		targetIdx = canonIdx
 	}
-	targetName := fmt.Sprintf("f%d", targetIdx)
-	if mod.Functions[targetIdx].ExportName != "" {
-		targetName = sanitizeABAP(mod.Functions[targetIdx].ExportName)
-	}
+	targetName := moduleFunctionNames(mod)[targetIdx]
 
 	// PERFORM call
 	var params []string
@@ -448,9 +443,9 @@ func emitHybridClass(mod *Module, className, fugrName string) string {
 	c.line("METHODS constructor.")
 
 	// Public methods for exports
-	for _, f := range mod.Functions {
+	for i, f := range mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			c.emitMethodSignature(f.ExportName, f.Type, true)
+			c.emitMethodSignature(c.functionName(i), f.Type, true)
 		}
 	}
 
@@ -469,14 +464,14 @@ func emitHybridClass(mod *Module, className, fugrName string) string {
 	c.line("ENDMETHOD.")
 
 	// Export methods delegate to FMs
-	upper := strings.ToUpper(fugrName)
-	for _, f := range mod.Functions {
+	fmNames := functionModuleNames(mod, fugrName)
+	for i, f := range mod.Functions {
 		if f.ExportName == "" || f.Type == nil {
 			continue
 		}
-		fmName := upper + "_" + strings.ToUpper(sanitizeABAP(f.ExportName))
+		fmName := fmNames[i]
 
-		c.line("METHOD %s.", sanitizeABAP(f.ExportName))
+		c.line("METHOD %s.", c.functionName(i))
 		c.indent++
 
 		var importParams []string

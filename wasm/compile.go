@@ -36,45 +36,6 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) (output 
 	redirects := DeduplicateFunctions(mod)
 	dupes, _, savedInstrs := DedupStats(mod, redirects)
 
-	// Build function name map and chunk assignments
-	type funcInfo struct {
-		localIdx   int
-		name       string
-		chunkIdx   int
-		isDupe     bool
-		canonName  string
-		canonChunk int
-	}
-
-	funcMap := make([]funcInfo, len(mod.Functions))
-	activeFuncCount := 0
-
-	for i, f := range mod.Functions {
-		fi := funcInfo{localIdx: i}
-		if f.ExportName != "" {
-			fi.name = sanitizeABAP(f.ExportName)
-		} else {
-			fi.name = fmt.Sprintf("f%d", i)
-		}
-
-		if canonIdx, ok := redirects[i]; ok {
-			fi.isDupe = true
-			cf := mod.Functions[canonIdx]
-			if cf.ExportName != "" {
-				fi.canonName = sanitizeABAP(cf.ExportName)
-			} else {
-				fi.canonName = fmt.Sprintf("f%d", canonIdx)
-			}
-			fi.canonChunk = canonIdx / funcsPerChunk
-			fi.chunkIdx = canonIdx / funcsPerChunk // map to canonical's chunk
-		} else {
-			fi.chunkIdx = activeFuncCount / funcsPerChunk
-			activeFuncCount++
-		}
-
-		funcMap[i] = fi
-	}
-
 	// Determine chunk assignments for non-duplicate functions
 	chunkAssign := make([]int, len(mod.Functions))
 	slot := 0
@@ -152,10 +113,7 @@ func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerC
 		if f.Type == nil {
 			continue
 		}
-		name := fmt.Sprintf("f%d", i)
-		if f.ExportName != "" {
-			name = sanitizeABAP(f.ExportName)
-		}
+		name := c.functionName(i)
 		c.emitMethodSignature(name, f.Type, false)
 	}
 
@@ -178,10 +136,7 @@ func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerC
 		if f.Type == nil {
 			continue
 		}
-		name := fmt.Sprintf("f%d", i)
-		if f.ExportName != "" {
-			name = sanitizeABAP(f.ExportName)
-		}
+		name := c.functionName(i)
 		c.emitFunctionWithMainRef(name, f, baseName, chunkAssign, redirects)
 	}
 
@@ -223,9 +178,9 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	}
 
 	// Exported functions
-	for _, f := range mod.Functions {
+	for i, f := range mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			c.emitMethodSignature(f.ExportName, f.Type, true)
+			c.emitMethodSignature(c.functionName(i), f.Type, true)
 		}
 	}
 
@@ -315,7 +270,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 		if f.ExportName == "" || f.Type == nil {
 			continue
 		}
-		c.line("METHOD %s.", sanitizeABAP(f.ExportName))
+		c.line("METHOD %s.", c.functionName(i))
 		c.indent++
 
 		c.emitWASIReset()
@@ -326,10 +281,7 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 			targetIdx = canonIdx
 		}
 		chunkIdx := chunkAssign[targetIdx]
-		targetName := fmt.Sprintf("f%d", targetIdx)
-		if mod.Functions[targetIdx].ExportName != "" {
-			targetName = sanitizeABAP(mod.Functions[targetIdx].ExportName)
-		}
+		targetName := c.functionName(targetIdx)
 
 		// Build delegation call
 		var params []string

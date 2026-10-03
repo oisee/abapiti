@@ -125,15 +125,16 @@ func runtimeFixture() ([]byte, []osdCase) {
 		add64(fmt.Sprintf("copy%d", j), code)
 	}
 	add64("fill", cat(i32(64), i32(511), i32(8), []byte{0xfc, 11, 0}, i32(64), []byte{OpI64Load, 0, 0}))
-	add("load16s", cat(i32(0), []byte{OpI32Load16S, 0, 0}))
+	loadInit := cat(i32(0), i32(-2147450625), []byte{OpI32Store, 0, 0})
+	add("load16s", cat(loadInit, i32(0), []byte{OpI32Load16S, 0, 0}))
 	for j, op := range []byte{OpI64Load8S, OpI64Load8U, OpI64Load16S, OpI64Load16U, OpI64Load32S, OpI64Load32U} {
-		add64(fmt.Sprintf("loadext%d", j), cat(i32(0), []byte{op, 0, 0}))
+		add64(fmt.Sprintf("loadext%d", j), cat(loadInit, i32(0), []byte{op, 0, 0}))
 	}
 	for j, op := range []byte{OpI64Store8, OpI64Store16, OpI64Store32} {
-		add64(fmt.Sprintf("storetrunc%d", j), cat(i32(64), i64(-1), []byte{op, 0, 0}, i32(64), []byte{OpI64Load, 0, 0}))
+		add64(fmt.Sprintf("storetrunc%d", j), cat(i32(64), i64(0), []byte{OpI64Store, 0, 0}, i32(64), i64(-1), []byte{op, 0, 0}, i32(64), []byte{OpI64Load, 0, 0}))
 	}
-	add("loadf32", cat(i32(8), []byte{OpF32Load, 0, 0}, f32(4), []byte{OpF32Mul, OpI32TruncF32S}))
-	add("loadf64", cat(i32(16), []byte{OpF64Load, 0, 0}, f64(4), []byte{OpF64Mul, OpI32TruncF64S}))
+	add("loadf32", cat(i32(8), f32(-13.25), []byte{OpF32Store, 0, 0}, i32(8), []byte{OpF32Load, 0, 0}, f32(4), []byte{OpF32Mul, OpI32TruncF32S}))
+	add("loadf64", cat(i32(16), f64(-13.25), []byte{OpF64Store, 0, 0}, i32(16), []byte{OpF64Load, 0, 0}, f64(4), []byte{OpF64Mul, OpI32TruncF64S}))
 	add("storef32_bits", cat(i32(64), f32(-13.25), []byte{OpF32Store, 0, 0}, i32(64), []byte{OpI32Load, 0, 0}))
 	add64("storef64_bits", cat(i32(64), f64(-13.25), []byte{OpF64Store, 0, 0}, i32(64), []byte{OpI64Load, 0, 0}))
 	add("roundtripf32", cat(i32(64), f32(1.5), []byte{OpF32Store, 0, 0}, i32(64), []byte{OpF32Load, 0, 0}, f32(4), []byte{OpF32Mul, OpI32TruncF32S}))
@@ -275,5 +276,57 @@ func TestRuntimeFixtureKnownNegativeZeroGap(t *testing.T) {
 		if strings.Contains(c.fn, "negative_zero") && (want[i].trap || want[i].value != 0) {
 			t.Errorf("%s: ABAP zero normalization = %+v", c.fn, want[i])
 		}
+	}
+}
+
+func TestRuntimeFixtureIndependentCalls(t *testing.T) {
+	bin, cases := runtimeFixture()
+	want := wazeroResults(t, bin, cases)
+	// Reverse order exposes reads of memory changed by later fill/store probes.
+	reversed := append([]osdCase(nil), cases...)
+	for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
+		reversed[i], reversed[j] = reversed[j], reversed[i]
+	}
+	got := wazeroResults(t, bin, reversed)
+	for i, c := range cases {
+		if fresh := wazeroResults(t, bin, []osdCase{c})[0]; fresh != want[i] {
+			t.Errorf("%s fresh = %+v, sequential = %+v", c.fn, fresh, want[i])
+		}
+		if got[len(cases)-1-i] != want[i] {
+			t.Errorf("%s reversed = %+v, sequential = %+v", c.fn, got[len(cases)-1-i], want[i])
+		}
+	}
+	mod, err := Parse(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := moduleFunctionNames(mod)
+	src := runtimeFixtureClass(mod, "zcl_abapiti_runtime_helpers")
+	checkNamedMethods(t, src, names, true)
+	tests := osdTestClassReplay("zcl_abapiti_runtime_helpers", cases, runtimeFixtureResults(t, bin, cases), false)
+	if calls := strings.Count(tests, "lv_act = lo->"); calls != len(cases) {
+		t.Fatalf("independent test calls = %d, want %d", calls, len(cases))
+	}
+	for _, name := range names {
+		if strings.Count(tests, "lo->"+name+"(") != 1 {
+			t.Errorf("test must call %s exactly once", name)
+		}
+	}
+	checkLineLimit(t, map[string]string{"test class": tests})
+}
+
+func TestOSDTestClassReplay(t *testing.T) {
+	cases := []osdCase{{fn: "grow"}, {fn: "size"}, {fn: "grow"}}
+	want := []osdResult{{trap: true}, {value: 1}, {value: 2}}
+	for _, replay := range []bool{false, true} {
+		src := osdTestClassReplay("zcl_stateful", cases, want, replay)
+		expected := len(cases)
+		if replay {
+			expected = len(cases) * (len(cases) + 1) / 2
+		}
+		if calls := strings.Count(src, "lv_act = lo->"); calls != expected {
+			t.Errorf("replay %v: calls %d, want %d", replay, calls, expected)
+		}
+		checkTestClass(t, "zcl_stateful", src, want)
 	}
 }

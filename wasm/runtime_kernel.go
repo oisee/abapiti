@@ -321,9 +321,7 @@ IF lv_bits < 0. lv_sign = 1. ENDIF.
 `
 	if is64 {
 		body += `lv_exp = lv_bits DIV 4503599627370496 MOD 2048.
-IF lv_exp = 2047.
-` + wasmTrap + `
-ENDIF.
+IF lv_exp = 2047. ` + wasmTrap + ` ENDIF.
 lv_frac = lv_bits MOD 4503599627370496.
 rv = lv_frac.
 rv = rv / '4503599627370496'.
@@ -331,9 +329,7 @@ IF lv_exp = 0. lv_power = -1022. ELSE. lv_power = lv_exp - 1023. rv = rv + 1. EN
 `
 	} else {
 		body += `lv_exp = lv_bits DIV 8388608 MOD 256.
-IF lv_exp = 255.
-` + wasmTrap + `
-ENDIF.
+IF lv_exp = 255. ` + wasmTrap + ` ENDIF.
 lv_frac = lv_bits MOD 8388608.
 rv = lv_frac.
 rv = rv / 8388608.

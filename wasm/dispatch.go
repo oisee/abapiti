@@ -1,7 +1,6 @@
 package wasm
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -115,10 +114,7 @@ func (c *compiler) emitDispatchMethods() {
 				continue
 			}
 			c.line("WHEN %d.", f.Index)
-			name := fmt.Sprintf("f%d", i)
-			if f.ExportName != "" && !c.wasiExportWrappers() {
-				name = sanitizeABAP(f.ExportName)
-			}
+			name := c.bodyName(i)
 			prefix := ""
 			if len(ft.Results) > 0 {
 				prefix = "rv = "
