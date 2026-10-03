@@ -102,7 +102,7 @@ func TestSpecialFloatConstantsTrap(t *testing.T) {
 		for _, file := range files {
 			src += file + "\n"
 		}
-		flat := strings.Join(strings.Fields(src), " ")
+		flat := " " + strings.Join(strings.Fields(src), " ")
 		for i, tc := range cases {
 			name := tc.fn
 			if canonical, ok := redirects[i]; ok {

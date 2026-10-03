@@ -116,7 +116,7 @@ func (c *compiler) emitDispatchMethods() {
 			}
 			c.line("WHEN %d.", f.Index)
 			name := fmt.Sprintf("f%d", i)
-			if f.ExportName != "" {
+			if f.ExportName != "" && !c.wasiExportWrappers() {
 				name = sanitizeABAP(f.ExportName)
 			}
 			prefix := ""

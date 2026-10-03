@@ -109,8 +109,14 @@ func TestClassOutputInvariants(t *testing.T) {
 				builtins[name] = true
 			}
 			missing := make(map[string]bool)
-			for _, match := range classMethodCall.FindAllStringSubmatch(implementation, -1) {
-				name := match[1]
+			for _, match := range classMethodCall.FindAllStringSubmatchIndex(implementation, -1) {
+				name := implementation[match[2]:match[3]]
+				// Standard ABAP conversion classes are allowed; only implicit
+				// self calls must resolve to generated methods.
+				before := implementation[:match[0]]
+				if strings.HasSuffix(before, "=>") || strings.HasSuffix(before, "->") {
+					continue
+				}
 				if strings.HasPrefix(name, "iv_") || strings.HasPrefix(name, "lv_") || strings.HasPrefix(name, "mv_") {
 					continue
 				}

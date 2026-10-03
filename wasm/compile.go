@@ -131,7 +131,7 @@ func CompileMultiClass(mod *Module, baseName string, funcsPerChunk int) (output 
 // --- Chunk Class ---
 
 func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerChunk int, chunkAssign []int, redirects map[int]int) string {
-	c := &compiler{mod: mod, className: chunkName}
+	c := &compiler{mod: mod, className: chunkName, sharedMain: true}
 
 	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", chunkName)
 	c.indent++
@@ -193,29 +193,15 @@ func emitChunkClass(mod *Module, chunkName, baseName string, chunkIdx, funcsPerC
 
 // emitFunctionWithMainRef generates a method that accesses memory/globals via mo_main.
 func (c *compiler) emitFunctionWithMainRef(name string, f *Function, baseName string, chunkAssign []int, redirects map[int]int) {
-	c.line("METHOD %s.", sanitizeABAP(name))
-	c.indent++
-
-	c.line("%s", emitChainedDATA(f, c.copyParams))
-
-	stack := &virtualStack{}
-	c.blockStack = nil
-
-	// Emit instructions — memory/global access goes through mo_main
-	c.emitInstructions(f, f.Code, stack, 0)
-
-	if len(f.Type.Results) > 0 && stack.depth > 0 {
-		c.line("rv = %s.", stack.peek())
-	}
-
-	c.indent--
-	c.line("ENDMETHOD.")
+	// Reuse main's typed stacks, parameter copies and inline arithmetic.
+	c.copyParams = true
+	c.emitFunction(name, f)
 }
 
 // --- Main Class ---
 
 func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, chunkAssign []int, redirects map[int]int) string {
-	c := &compiler{mod: mod, className: baseName}
+	c := &compiler{mod: mod, className: baseName, usedRuntime: make(map[string]bool)}
 
 	c.line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", baseName)
 	c.indent++
@@ -223,6 +209,11 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.indent++
 
 	c.line("METHODS constructor.")
+	c.emitWASIDeclarations()
+	if c.hasWASI() {
+		c.usedRuntime["mem_st_i64"] = true
+		c.emitRuntimeDeclarations()
+	}
 
 	// Memory and globals are public so chunk classes can access them
 	c.line("DATA mv_mem TYPE xstring.")
@@ -264,9 +255,6 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 		c.line("DATA mt_tab%d TYPE STANDARD TABLE OF i WITH DEFAULT KEY.", t)
 	}
 
-	// WASI
-	c.line("DATA mo_wasi TYPE REF TO zcl_wasm_wasi.")
-
 	c.indent--
 	c.indent--
 	c.line("ENDCLASS.")
@@ -280,12 +268,12 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 
 	// Create chunk classes
 	for i := 0; i < numChunks; i++ {
-		c.line("mo_c%02d = NEW #( ).", i)
+		c.line("CREATE OBJECT mo_c%02d.", i)
 		c.line("mo_c%02d->mo_main = me.", i)
 	}
 
 	// WASI
-	c.line("mo_wasi = NEW #( ).")
+	c.emitWASIInit()
 
 	// Memory init
 	if mod.Memory != nil {
@@ -318,6 +306,8 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 	c.line("ENDMETHOD.")
 
 	// Memory helpers
+	c.emitWASIImplementation()
+	c.emitRuntimeHelpers()
 	c.emitMemoryHelpers()
 
 	// Exported functions — delegate to chunk classes
@@ -327,6 +317,8 @@ func emitMainClass(mod *Module, baseName string, numChunks, funcsPerChunk int, c
 		}
 		c.line("METHOD %s.", sanitizeABAP(f.ExportName))
 		c.indent++
+
+		c.emitWASIReset()
 
 		// Find the actual target (might be deduplicated)
 		targetIdx := i
