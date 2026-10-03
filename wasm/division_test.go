@@ -107,15 +107,22 @@ func buildDivisionModule(is64 bool, pairs [][2]int64, helpers ...string) ([]byte
 	return w.bytes(), cases
 }
 
+// The unit classes take a subset of the wazero grid: one test method per case
+// made osgo's generated test registry too large for the Go compiler.
 func divisionOSDCases(is64, remainder bool) []osdCase {
-	_, cases := buildDivisionModule(is64, divisionPairs(is64))
-	if !is64 {
-		return cases
+	pairs := divisionPairs(is64)
+	_, cases := buildDivisionModule(is64, pairs)
+	min, max := pairs[9][1], pairs[10][1]
+	small := []int64{0, -1, 7, -7, min, max}
+	keep := func(i int) bool {
+		if i < 121 {
+			return slices.Contains(small, pairs[i][0]) && slices.Contains(small, pairs[i][1])
+		}
+		return i < len(pairs)-12
 	}
-	// Separate test classes keep each full i64 grid within the source budget.
 	var selected []osdCase
-	for _, c := range cases {
-		if strings.Contains(c.fn, "rem_") == remainder {
+	for i, c := range cases {
+		if keep(i%len(pairs)) && (!is64 || strings.Contains(c.fn, "rem_") == remainder) {
 			selected = append(selected, c)
 		}
 	}
