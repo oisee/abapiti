@@ -71,13 +71,20 @@ jobs:
           path: ${{ runner.temp }}/osgo-artifacts
           if-no-files-found: warn
 
-  osd-m1:
+  osd-m1-shard:
+    name: osd-m1 shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       GH_TOKEN: ${{ github.token }}
       OSD_WARM: "0"
       STG_PORT: "3030"
+      OSD_SHARD: ${{ matrix.shard }}
+      OSD_SHARDS: "3"
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +100,7 @@ jobs:
       - name: Start OSD (pinned)
         run: .github/ci/osd-up.sh "$OSD_DIR"
 
-      - name: Deploy and test add, factorial
+      - name: Deploy and test this shard
         run: .github/ci/osd-m1.sh "$WORK"
 
       - name: Stop OSD
@@ -116,6 +123,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: osd-m1
+          name: osd-m1-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/artifacts
           if-no-files-found: warn
+
+  osd-m1:
+    needs: osd-m1-shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All shards passed
+        env:
+          RESULT: ${{ needs.osd-m1-shard.result }}
+        run: |
+          echo "osd-m1 shards: $RESULT"
+          [ "$RESULT" = success ]
