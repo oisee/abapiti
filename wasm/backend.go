@@ -158,10 +158,11 @@ func emitFUGR(mod *Module, fugrName string, funcsPerInclude int, redirects map[i
 	// Init include — memory/data/element initialization
 	result.Files[prefix+"INIT.abap"] = emitFUGRInit(mod, upper)
 
+	fmNames := functionModuleNames(mod, upper)
 	// Function module wrappers for exports
-	for _, f := range mod.Functions {
+	for i, f := range mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			fmName := upper + "_" + strings.ToUpper(sanitizeABAP(f.ExportName))
+			fmName := fmNames[i]
 			result.Files[fmName+".func.abap"] = emitFMWrapper(mod, &f, fmName, redirects)
 		}
 	}
@@ -243,10 +244,7 @@ func emitFUGRInclude(mod *Module, funcIndices []int, redirects map[int]int, uppe
 }
 
 func emitFORM(c *compiler, f *Function, funcIdx int, mod *Module, redirects map[int]int) {
-	name := fmt.Sprintf("f%d", funcIdx)
-	if f.ExportName != "" {
-		name = sanitizeABAP(f.ExportName)
-	}
+	name := c.functionName(funcIdx)
 
 	// FORM signature
 	var parts []string
@@ -347,25 +345,17 @@ func emitFUGRInit(mod *Module, upper string) string {
 	}
 	sb.WriteString("\n")
 
-	// Data segments
+	// Byte replacements require a byte-typed source on the kernel.
+	declared := false
 	for _, seg := range mod.Data {
-		if len(seg.Data) > 0 {
-			hex := bytesToHex(seg.Data)
-			if len(hex) <= 200 {
-				sb.WriteString(fmt.Sprintf("  gv_mem+%d(%d) = '%s'.\n", seg.Offset, len(seg.Data), hex))
-			} else {
-				// Split long hex into chunks
-				for off := 0; off < len(hex); off += 200 {
-					end := off + 200
-					if end > len(hex) {
-						end = len(hex)
-					}
-					chunk := hex[off:end]
-					byteOff := seg.Offset + off/2
-					byteLen := (end - off) / 2
-					sb.WriteString(fmt.Sprintf("  gv_mem+%d(%d) = '%s'.\n", byteOff, byteLen, chunk))
-				}
+		for off := 0; off < len(seg.Data); off += 100 {
+			end := min(off+100, len(seg.Data))
+			if !declared {
+				sb.WriteString("  DATA lv_seg TYPE xstring.\n")
+				declared = true
 			}
+			fmt.Fprintf(&sb, "  lv_seg = '%s'.\n", bytesToHex(seg.Data[off:end]))
+			fmt.Fprintf(&sb, "  REPLACE SECTION OFFSET %d LENGTH %d OF gv_mem WITH lv_seg IN BYTE MODE.\n", seg.Offset+off, end-off)
 		}
 	}
 	sb.WriteString("\n")
@@ -403,10 +393,7 @@ func emitFMWrapper(mod *Module, f *Function, fmName string, redirects map[int]in
 	if canonIdx, ok := redirects[targetIdx]; ok {
 		targetIdx = canonIdx
 	}
-	targetName := fmt.Sprintf("f%d", targetIdx)
-	if mod.Functions[targetIdx].ExportName != "" {
-		targetName = sanitizeABAP(mod.Functions[targetIdx].ExportName)
-	}
+	targetName := moduleFunctionNames(mod)[targetIdx]
 
 	// PERFORM call
 	var params []string
@@ -456,9 +443,9 @@ func emitHybridClass(mod *Module, className, fugrName string) string {
 	c.line("METHODS constructor.")
 
 	// Public methods for exports
-	for _, f := range mod.Functions {
+	for i, f := range mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			c.emitMethodSignature(f.ExportName, f.Type, true)
+			c.emitMethodSignature(c.functionName(i), f.Type, true)
 		}
 	}
 
@@ -477,14 +464,14 @@ func emitHybridClass(mod *Module, className, fugrName string) string {
 	c.line("ENDMETHOD.")
 
 	// Export methods delegate to FMs
-	upper := strings.ToUpper(fugrName)
-	for _, f := range mod.Functions {
+	fmNames := functionModuleNames(mod, fugrName)
+	for i, f := range mod.Functions {
 		if f.ExportName == "" || f.Type == nil {
 			continue
 		}
-		fmName := upper + "_" + strings.ToUpper(sanitizeABAP(f.ExportName))
+		fmName := fmNames[i]
 
-		c.line("METHOD %s.", sanitizeABAP(f.ExportName))
+		c.line("METHOD %s.", c.functionName(i))
 		c.indent++
 
 		var importParams []string

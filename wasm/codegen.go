@@ -38,6 +38,7 @@ type blockEntry struct {
 }
 
 type compiler struct {
+	names       []string
 	mod         *Module
 	className   string
 	sb          strings.Builder
@@ -106,9 +107,9 @@ func (c *compiler) emitDefinition() {
 	c.emitWASIDeclarations()
 
 	// Exported functions as public methods
-	for _, f := range c.mod.Functions {
+	for i, f := range c.mod.Functions {
 		if f.ExportName != "" && f.Type != nil {
-			c.emitMethodSignature(f.ExportName, f.Type, true)
+			c.emitMethodSignature(c.functionName(i), f.Type, true)
 		}
 	}
 
@@ -147,7 +148,7 @@ func (c *compiler) emitDefinition() {
 	// Internal functions, including bodies behind WASI export facades.
 	for i, f := range c.mod.Functions {
 		if f.Type != nil && (f.ExportName == "" || c.wasiExportWrappers()) {
-			name := fmt.Sprintf("f%d", i)
+			name := c.bodyName(i)
 			c.emitMethodSignature(name, f.Type, false)
 		}
 	}
@@ -194,10 +195,7 @@ func (c *compiler) emitImplementation() {
 	// Functions
 	for i, f := range c.mod.Functions {
 		if f.Type != nil {
-			name := fmt.Sprintf("f%d", i)
-			if f.ExportName != "" && !c.wasiExportWrappers() {
-				name = sanitizeABAP(f.ExportName)
-			}
+			name := c.bodyName(i)
 			c.emitFunction(name, &f)
 			if c.wasiExportWrappers() && f.ExportName != "" {
 				c.emitWASIExportWrapper(i, &f)
@@ -1197,10 +1195,7 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 		args[i] = stack.pop()
 	}
 
-	name := fmt.Sprintf("f%d", localIdx)
-	if target.ExportName != "" && !c.wasiExportWrappers() {
-		name = sanitizeABAP(target.ExportName)
-	}
+	name := c.bodyName(localIdx)
 
 	if c.useFUGR {
 		// PERFORM-based call
@@ -1775,6 +1770,8 @@ func (c *compiler) line(format string, args ...any) {
 		stmt = sharedStateRE.ReplaceAllString(stmt, "mo_main->$0")
 	}
 	if c.usedRuntime != nil {
+		stmt = strings.ReplaceAll(stmt, "iv_mem = mv_mem ", "")
+		stmt = strings.ReplaceAll(stmt, " CHANGING cv_mem = mv_mem", "")
 		stmt = runtimeCallRE.ReplaceAllStringFunc(stmt, func(call string) string {
 			name := strings.TrimPrefix(call, "zcl_wasm_rt=>")
 			c.usedRuntime[name] = true
@@ -1838,17 +1835,6 @@ func floatLiteral(v float64, bits int) string {
 		return s
 	}
 	return strconv.FormatFloat(v, 'e', -1, bits)
-}
-
-func sanitizeABAP(name string) string {
-	// ABAP identifiers: max 30 chars, alphanumeric + underscore
-	name = strings.ReplaceAll(name, "-", "_")
-	name = strings.ReplaceAll(name, ".", "_")
-	name = strings.ReplaceAll(name, "$", "_")
-	if len(name) > 30 {
-		name = name[:30]
-	}
-	return name
 }
 
 func bytesToHex(data []byte) string {
