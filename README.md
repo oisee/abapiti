@@ -63,9 +63,9 @@ Every case is checked against the same program run natively (C compiled by gcc, 
 | Rung | Size | SAP kernel (A4H) | OSG-JS | osgo |
 |---|---|---|---|---|
 | add, factorial | 62 bytes of wasm | 7/7, 7/7 | green in CI | green in CI |
-| Arithmetic edge cases (i32/i64 wrap, shifts, branches, memory.grow) | 191 tests | via the corpus | green in CI | 127 pass, 0 fail, rest waits for two osgo builtins |
-| C corpus: qsort, base64, crc32, fnv1a64, xorshift64*, Life, Mandelbrot, queens, sieve, recursion, function pointers, a Brainfuck interpreter | 9 KB of wasm, 39 checks | **39/39** | 12/12 programs | 5/12, the rest waits for `ipow` |
-| [Monocypher](https://monocypher.org): BLAKE2b, X25519, ChaCha20, Poly1305, Ed25519 sign and check | 53 KB of wasm → 5,209 lines | **10/10** in 29 s | 10/10 | waits for `ipow` |
+| Arithmetic edge cases (i32/i64 wrap, shifts, branches, memory.grow, saturating truncation, float traps) | 796 tests | via the corpus | green in CI | green in CI |
+| C corpus: qsort, base64, crc32, fnv1a64, xorshift64*, Life, Mandelbrot, queens, sieve, recursion, function pointers, a Brainfuck interpreter | 9 KB of wasm, 38 checks | **38/38** | 12/12 programs | **38/38** |
+| [Monocypher](https://monocypher.org): BLAKE2b, X25519, ChaCha20, Poly1305, Ed25519 sign and check | 53 KB of wasm → 5,209 lines | **10/10** in 29 s | 10/10 | **10/10** in 78 s |
 | [QuickJS](https://bellard.org/quickjs/) built without SIMD | 1.0 MB of wasm → 253K lines in 13 classes + 13 interfaces | in progress | | |
 
 A sorted array of 500 numbers takes 6.1 ms on the kernel. What is still a draft or left out is listed in [docs/TECH-DEBT.md](docs/TECH-DEBT.md).
