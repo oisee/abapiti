@@ -411,7 +411,7 @@ func emitWASIUnitClasses(t *testing.T, dir string) {
 	assertI("lo->yield( )", 0)
 	assertI("lo->get_exit_code( )", -1)
 	sb.WriteString("  ENDMETHOD.\nENDCLASS.\n")
-	for name, src := range map[string]string{class + ".clas.abap": Compile(mod, class), class + ".clas.testclasses.abap": sb.String()} {
+	for name, src := range map[string]string{class + ".clas.abap": mustCompile(t, mod, class), class + ".clas.testclasses.abap": sb.String()} {
 		if err = os.WriteFile(filepath.Join(dir, name), []byte(src), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -423,8 +423,11 @@ func TestWASIGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	multi := CompileMultiClass(mod, "zcl_wasi", 80)
-	for name, src := range map[string]string{"class": Compile(mod, "zcl_wasi"), "state": multi.MainClass} {
+	multi, err := CompileMultiClass(mod, "zcl_wasi", 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, src := range map[string]string{"class": mustCompile(t, mod, "zcl_wasi"), "state": multi.MainClass} {
 		assertNoABAPComments(t, name, src)
 		if parameterWrite.MatchString(src) {
 			t.Errorf("%s writes to IMPORTING parameter", name)
@@ -466,7 +469,7 @@ func TestWASIGeneration(t *testing.T) {
 	}
 
 	for _, backend := range []BackendKind{BackendFUGR, BackendHybrid} {
-		result := CompileWith(mod, "zwasi", backend, 80)
+		result := mustCompileWith(t, mod, "zwasi", backend, 80)
 		for name, src := range result.Files {
 			assertNoABAPComments(t, name, src)
 			if strings.Contains(src, "wasi_call(") {
