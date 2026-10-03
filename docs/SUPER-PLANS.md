@@ -1,14 +1,16 @@
 # abapiti super-plans
 
 Written 2026-10-03 from the question: "imagine nothing blocks us and wasm is
-finished — what interesting can we build?" Not a queue. Ideas ranked by how
+finished — what interesting things can we build?" Not a queue. Ideas ranked by how
 much they change what ABAP can do. Each line: the idea, why it matters, the
 first small proof.
 
 ## 0. Production path: a typed IR, not wasm
 
-wasm proved breadth (QuickJS, Lua, QR, donut bit for bit on the kernel) but is
-slow by construction: a stack machine with i32/f64 only, every C local whose
+wasm proved breadth (QuickJS on the kernel, see docs/history; Lua 5.4, a QR
+encoder and donut.c also ran there on 2026-10-03, records to follow) but is
+slow by construction: a stack machine that erases source types (no structs,
+no signedness, pointers become i32 offsets), every C local whose
 address is taken lives in linear memory, every load/store is a helper call on
 an xstring, i32 wrap needs helpers, control flow becomes DO/EXIT chains, and
 one method declares thousands of stack slots. Hand-written ABAP (zqjs) is
@@ -16,7 +18,8 @@ one method declares thousands of stack slots. Hand-written ABAP (zqjs) is
 
 We already have the typed alternatives:
 - **abapiti `llvm/`** (LLVM IR → ABAP, see [the 2026-03-29 report](history/reports/2026-03-29-003-llvm-abap-compilation-journey.md)): typed
-  CLASS-METHODS with real signatures, `i`/`int8`/`f`, alloca → DATA, structs;
+  CLASS-METHODS with real signatures, `i`/`int8`/`f`, named SSA values as
+  DATA (memory accesses and struct fields still go through byte offsets);
   34-function C corpus, FatFS 8,016 lines verified 5/5 on SAP, QuickJS
   537 methods / 124K lines (never run on SAP). Weak spot: basic blocks are a
   `CASE lv_block` string dispatch inside DO — slow, needs structured control
@@ -27,13 +30,14 @@ We already have the typed alternatives:
   second, independent typed path and as a cross-check.
 
 Decisive experiment (first thing after the freeze): the 12-program C corpus
-(`wasm/testdata/progs`, PR #25) through both `compile wasm` and `compile llvm`,
+(`wasm/testdata/progs`, added in PR #25) through both `compile wasm` and `compile llvm`,
 same native answers, measured on A4H and osgo. If llvm is several times faster
 on loops and memory, it becomes the production path and wasm stays the
 compatibility path (any language, huge programs).
 
 What a production-grade typed backend still needs: structured control flow;
-non-escaping arrays as internal tables or typed fields instead of xstring;
+alloca and non-escaping arrays as typed fields or internal tables instead of
+xstring;
 structs without pointer arithmetic as ABAP structures; range analysis to drop
 i32 wrap helpers; inlining; libc routines mapped to kernel statements; the same
 kernel rules as today (lines <= 255, nesting <= 100, 7.02, no comments).
@@ -56,8 +60,9 @@ kernel rules as today (lines <= 255, nesting <= 100, 7.02, no comments).
 
 - **SQLite in ABAP**: an in-memory SQL engine in a class — CSV/Excel uploads
   queried with real SQL, offline analysis, test fixtures, "DB in a variable".
-- **Full regex** (PCRE2 or RE2): lookbehind, Unicode classes, named groups, same
-  results as in the browser.
+- **Full regex**: PCRE2 (lookbehind, named groups, Unicode classes) or RE2
+  (linear time, no backtracking); ECMAScript semantics would need a third
+  engine.
 - **Compression**: zstd, brotli, xz next to the kernel's gzip.
 - **Crypto without kernel extensions**: Monocypher (Ed25519, X25519,
   BLAKE2b) already runs; signed documents and verifiable audit trails in pure
@@ -80,6 +85,8 @@ kernel rules as today (lines <= 255, nesting <= 100, 7.02, no comments).
 - **Same .wasm in the Fiori app and in the backend**: pricing, tax, scoring,
   configuration rules — one binary, identical results on both sides,
   because wasm is deterministic. No more "the UI and the backend disagree".
+  A goal, not a given: it needs conformance work on f32 rounding, NaN/Inf
+  and negative zero (see TECH-DEBT.md) and NaN-free numeric code.
 - **Rust crates in ABAP**: serde, chrono, decimal, rule engines; Go via TinyGo;
   Zig; AssemblyScript for TypeScript developers.
 
@@ -99,6 +106,9 @@ kernel rules as today (lines <= 255, nesting <= 100, 7.02, no comments).
   or JS interpreter can be saved after any step and resumed in another dialog
   step, job or system. Long calculations across LUW boundaries; coroutines
   across user interactions; "pause the job, ship it to another server".
+  Memory alone is not enough: globals, tables, the ABAP call stack and host
+  state must be checkpointed too, so this needs resumable code generation
+  (or checkpoints only between top-level calls).
 
 ## 7. abapiti as the ultimate oracle generator
 
