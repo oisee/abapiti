@@ -29,6 +29,21 @@ func runtimeTemplates() (map[string]string, map[string]string) {
 	return declarations, bodies
 }
 
+// Single-class memory helpers operate on the owning instance's buffer. Passing
+// that buffer by reference prevents runtimes from updating it in place.
+func singleClassRuntimeTemplates() (map[string]string, map[string]string) {
+	declarations, bodies := runtimeTemplates()
+	for name, declaration := range declarations {
+		declaration = strings.ReplaceAll(declaration, "iv_mem TYPE xstring ", "")
+		declaration = strings.ReplaceAll(declaration, " CHANGING cv_mem TYPE xstring", "")
+		declarations[name] = declaration
+		bodies[name] = runtimeMemoryRE.ReplaceAllString(bodies[name], "mv_mem")
+	}
+	return declarations, bodies
+}
+
+var runtimeMemoryRE = regexp.MustCompile(`\b(?:iv_mem|cv_mem)\b`)
+
 func legacyRuntimeBody(name, body string) string {
 	// The shared runtime predates the v702 class backend. Downport its
 	// inline declarations and elementary conversions for every backend.
@@ -282,7 +297,7 @@ func (c *compiler) runtimeNames() []string {
 }
 
 func (c *compiler) emitRuntimeDeclarations() {
-	declarations, _ := runtimeTemplates()
+	declarations, _ := singleClassRuntimeTemplates()
 	for _, name := range c.runtimeNames() {
 		if declaration, ok := declarations[name]; ok {
 			c.line("%s", declaration)
@@ -291,7 +306,7 @@ func (c *compiler) emitRuntimeDeclarations() {
 }
 
 func (c *compiler) emitRuntimeHelpers() {
-	_, bodies := runtimeTemplates()
+	_, bodies := singleClassRuntimeTemplates()
 	for _, name := range c.runtimeNames() {
 		body, ok := bodies[name]
 		if !ok {

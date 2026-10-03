@@ -96,8 +96,8 @@ func TestUniqueNamesAllBackends(t *testing.T) {
 	}
 	for _, backend := range []BackendKind{BackendClass, BackendFUGR, BackendHybrid} {
 		t.Run(backend.String(), func(t *testing.T) {
-			result := CompileWith(mod, "zcl_collision", backend, 3)
-			if !reflect.DeepEqual(result.Files, CompileWith(mod, "zcl_collision", backend, 3).Files) {
+			result := mustCompileWith(t, mod, "zcl_collision", backend, 3)
+			if !reflect.DeepEqual(result.Files, mustCompileWith(t, mod, "zcl_collision", backend, 3).Files) {
 				t.Fatal("unstable source")
 			}
 			checkLineLimit(t, result.Files)
@@ -149,7 +149,7 @@ func TestUniqueNamesAllBackends(t *testing.T) {
 	}
 	t.Run("multi-class", func(t *testing.T) {
 		for _, size := range []int{3, 80} {
-			result := CompileMultiClass(mod, "zcl_collision", size)
+			result := mustCompileMultiClass(t, mod, "zcl_collision", size)
 			checkNamedMethods(t, result.MainClass, exports, true)
 			for chunk, src := range result.ChunkClasses {
 				var expected []string
@@ -194,7 +194,7 @@ func TestUniqueNamesIndirectDispatch(t *testing.T) {
 	mod.Functions[0].ExportName = "probe_reinterpret64_negative_zero_lo"
 	mod.Functions[1].ExportName = "probe_reinterpret64_negative_zero_hi"
 	names := moduleFunctionNames(mod)
-	src := Compile(mod, "zcl_dispatch_collision")
+	src := mustCompile(t, mod, "zcl_dispatch_collision")
 	checkNamedMethods(t, src, []string{names[0], names[1]}, true)
 	dispatch := src[strings.Index(src, "METHOD dispatch_t0."):]
 	dispatch = dispatch[:strings.Index(dispatch, "ENDMETHOD.")]
@@ -214,7 +214,7 @@ func TestUniqueNamesDeduplicatedDelegates(t *testing.T) {
 		t.Fatal("fixture must redirect second function to first")
 	}
 	for _, backend := range []BackendKind{BackendFUGR, BackendHybrid} {
-		result := CompileWith(mod, "zcl_dupe", backend, 3)
+		result := mustCompileWith(t, mod, "zcl_dupe", backend, 3)
 		prefix := "zcl_dupe"
 		if backend == BackendHybrid {
 			prefix += "_int"
@@ -224,7 +224,7 @@ func TestUniqueNamesDeduplicatedDelegates(t *testing.T) {
 			t.Errorf("%s duplicate wrapper does not call canonical function", backend)
 		}
 	}
-	result := CompileMultiClass(mod, "zcl_dupe", 3)
+	result := mustCompileMultiClass(t, mod, "zcl_dupe", 3)
 	checkNamedMethods(t, result.MainClass, names[:2], true)
 	for _, name := range names[:2] {
 		body := result.MainClass[strings.Index(result.MainClass, "METHOD "+name+"."):]

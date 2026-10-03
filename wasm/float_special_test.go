@@ -213,14 +213,14 @@ func TestSpecialFloatTrapStaysOnPath(t *testing.T) {
 
 func TestRuntimeReinterpretExponentCheck(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		input  ValType
-		output ValType
-		op     byte
-		mask   string
+		name     string
+		input    ValType
+		output   ValType
+		op       byte
+		exponent string
 	}{
-		{"reinterpret_i32_f32", ValI32, ValF32, OpF32ReinterpretI32, "7F800000"},
-		{"reinterpret_i64_f64", ValI64, ValF64, OpF64ReinterpretI64, "7FF0000000000000"},
+		{"reinterpret_i32_f32", ValI32, ValF32, OpF32ReinterpretI32, "255"},
+		{"reinterpret_i64_f64", ValI64, ValF64, OpF64ReinterpretI64, "2047"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			bin := buildSingleFuncWasm("reinterpret", FuncType{Params: []ValType{tc.input}, Results: []ValType{tc.output}}, nil,
@@ -238,9 +238,11 @@ func TestRuntimeReinterpretExponentCheck(t *testing.T) {
 				}
 				body := flat[start:]
 				body = body[:strings.Index(body, "ENDMETHOD.")]
-				guard := "lv_bits = iv_val. lv_bits = lv_bits BIT-AND lv_mask. IF lv_bits = lv_mask. " + wasmTrap + " ENDIF. rv = iv_val."
-				if !strings.Contains(body, "VALUE '"+tc.mask+"'.") || !strings.Contains(body, guard) || parameterWrite.MatchString(body) {
-					t.Fatalf("helper must mask exponent and trap before numeric assignment: %s", body)
+				guard := "IF lv_exp = " + tc.exponent + ". " + wasmTrap + " ENDIF."
+				guardAt := strings.Index(body, guard)
+				decodeAt := strings.Index(body, "rv = lv_frac.")
+				if guardAt < 0 || decodeAt <= guardAt || parameterWrite.MatchString(body) {
+					t.Fatalf("helper must check exponent and trap before decoding: %s", body)
 				}
 			}
 		})

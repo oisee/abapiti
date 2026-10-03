@@ -1770,6 +1770,8 @@ func (c *compiler) line(format string, args ...any) {
 		stmt = sharedStateRE.ReplaceAllString(stmt, "mo_main->$0")
 	}
 	if c.usedRuntime != nil {
+		stmt = strings.ReplaceAll(stmt, "iv_mem = mv_mem ", "")
+		stmt = strings.ReplaceAll(stmt, " CHANGING cv_mem = mv_mem", "")
 		stmt = runtimeCallRE.ReplaceAllStringFunc(stmt, func(call string) string {
 			name := strings.TrimPrefix(call, "zcl_wasm_rt=>")
 			c.usedRuntime[name] = true

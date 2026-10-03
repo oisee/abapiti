@@ -228,7 +228,7 @@ func runtimeFixtureClass(mod *Module, class string) string {
 	if err != nil {
 		panic(err)
 	}
-	declarations, bodies := runtimeTemplates()
+	declarations, bodies := singleClassRuntimeTemplates()
 	var defs, impl strings.Builder
 	for _, name := range []string{"alloc_mem", "mem_init"} {
 		defs.WriteString(declarations[name] + "\n")
@@ -237,12 +237,12 @@ func runtimeFixtureClass(mod *Module, class string) string {
 	src = strings.Replace(src, "PRIVATE SECTION.", "PRIVATE SECTION.\n"+defs.String(), 1)
 	src = strings.Replace(src, "CLASS "+class+" IMPLEMENTATION.", "CLASS "+class+" IMPLEMENTATION.\n"+impl.String(), 1)
 	// The constructor still uses the normal allocator; this additional allocation
-	// tests the legacy helper's chunk and remainder paths, then copies the image.
-	init := "DATA lv_probe TYPE xstring.\nlv_probe = alloc_mem( 65537 ).\n"
+	// tests the legacy helper's chunk and remainder paths, then trims to one page.
+	init := "mv_mem = alloc_mem( 65537 ).\n"
 	for _, seg := range mod.Data {
-		init += fmt.Sprintf("mem_init( EXPORTING iv_off = %d iv_hex = '%s' CHANGING cv_mem = lv_probe ).\n", seg.Offset, strings.ToUpper(hex.EncodeToString(seg.Data)))
+		init += fmt.Sprintf("mem_init( iv_off = %d iv_hex = '%s' ).\n", seg.Offset, strings.ToUpper(hex.EncodeToString(seg.Data)))
 	}
-	init += "REPLACE SECTION OFFSET 0 LENGTH 24 OF mv_mem WITH lv_probe+0(24) IN BYTE MODE.\n"
+	init += fmt.Sprintf("mv_mem = mv_mem+0(%d).\n", mod.Memory.Min*65536)
 	start := strings.Index(src, "METHOD constructor.")
 	end := start + strings.Index(src[start:], "ENDMETHOD.")
 	src = src[:end] + init + src[end:]
