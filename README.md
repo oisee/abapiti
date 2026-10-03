@@ -17,6 +17,17 @@ flowchart LR
 
 ## News
 
+**2026-10-03 — three small programs run on the kernel bit for bit; JavaScript engines compared.**
+- A QR-code encoder (Nayuki's qrcodegen, 16 KB of wasm), the Lua 5.4 interpreter (710 KB, five classes, 8/8 scripts) and Andy Sloane's donut.c (doubles, sin/cos) run on A4H and osgo and give the native answers, once signed division is exact (#23). The QR below came out of the SAP spool and scans; the donut frame too.
+- Three ways to run JavaScript in ABAP, on native, Node, osgo, OSG-JS and A4H: QuickJS compiled by ABAPiti, [zmjs](https://github.com/oisee/zmjs) and Lars Hvam's [zqjs](https://github.com/larshp/zqjs) (both hand-written in ABAP). On the kernel zqjs answers 12 of our 16 test scripts, 4–60× faster than QuickJS compiled from wasm on those, but 8.6× slower on sorting 10,000 numbers; QuickJS answers all 16. zmjs was not timed. That is why the next step is speed, and why [SUPER-PLANS.md](docs/SUPER-PLANS.md) puts a typed IR (`llvm/`) forward as the production path.
+- Honest status: only the WebAssembly path is really verified (CI on wazero, osgo and OSG-JS, plus the kernel runs above). The `llvm/` and TypeScript paths compile, but beyond five small C functions run once on SAP nothing they produce has been executed or checked.
+- Runtime gaps found on the way went to [open-steamgate](https://github.com/oisee/open-steamgate/issues?q=label%3Akernel-diff) (#537–#543, label `kernel-diff`).
+
+<p>
+  <img src="docs/img/qr-a4h.png" alt="QR code for github.com/oisee/abapiti, encoded by qrcodegen compiled to ABAP and printed by the SAP kernel" width="185">
+  <img src="docs/img/donut-a4h.png" alt="ASCII frame of the spinning donut, computed by donut.c compiled to ABAP on the SAP kernel" width="380">
+</p>
+
 **2026-10-03 — QuickJS runs on a real SAP kernel.** Fabrice Bellard's [QuickJS](https://bellard.org/quickjs/) JavaScript engine, built for WebAssembly without SIMD (1.0 MB) and compiled by ABAPiti into 13 interfaces, a state class, 13 chunk classes and a facade (253K lines of ABAP), activates object by object on A4H (28/28 in 87 s) and evaluates JavaScript inside ABAP: `1+2`, a loop to 100, `Array.sort`, `JSON.stringify`, a recursive `fib(15)`, `toUpperCase`, `Math.sqrt`, `Map` and `RegExp`, and `printf` through WASI, all equal to the same module in wazero. The 9 tests take about 2 s on the kernel; the same classes pass on open-steamgate's Go runtime (osgo) too. Getting there needed kernel-valid runtime helpers, unique 30-character names, a nesting depth under the kernel's limit of about 128, and a split whose classes depend only on interfaces, so each one activates on its own.
 
 ## Why? Because we can.
