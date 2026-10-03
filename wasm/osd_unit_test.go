@@ -183,6 +183,28 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
 // generated class: one test method per case. A trapping case asserts that
 // the call raises; replayed trapping calls are caught.
 func osdTestClass(class string, cases []osdCase, want []osdResult) string {
+	return osdTestClassReplay(class, cases, want, true)
+}
+
+// moduleHasState reports whether a call can leave state behind for the next
+// call (memory stores, memory.grow/fill/copy/init, global.set). Only then must
+// each ABAP Unit method replay the preceding calls on its fresh instance;
+// without state the replay only makes the test class grow quadratically.
+func moduleHasState(mod *Module) bool {
+	for _, f := range mod.Functions {
+		for _, in := range f.Code {
+			switch {
+			case in.Op >= OpI32Store && in.Op <= OpI64Store32, in.Op == OpGlobalSet, in.Op == OpMemoryGrow:
+				return true
+			case in.Op == OpMiscPrefix && (in.MiscOp == MiscMemoryCopy || in.MiscOp == MiscMemoryFill || in.MiscOp == 0x08):
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay bool) string {
 	var sb strings.Builder
 	sb.WriteString("CLASS ltcl_wasm DEFINITION FINAL FOR TESTING\n")
 	sb.WriteString("  DURATION SHORT RISK LEVEL HARMLESS.\n")
@@ -207,7 +229,11 @@ func osdTestClass(class string, cases []osdCase, want []osdResult) string {
 		sb.WriteString("    DATA lv_trapped TYPE abap_bool.\n")
 		sb.WriteString("    CREATE OBJECT lo.\n")
 		// Replay preceding calls because each ABAP Unit method has a fresh instance.
-		for j, prior := range cases[:i] {
+		prev := cases[:i]
+		if !replay {
+			prev = nil
+		}
+		for j, prior := range prev {
 			priorParams := make([]string, len(prior.args))
 			for k, a := range prior.args {
 				priorParams[k] = fmt.Sprintf("p%d = %d", k, a)
@@ -285,7 +311,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			}
 		}
 		src := mustCompile(t, mod, m.class)
-		tests := osdTestClass(m.class, m.cases, want)
+		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod))
 		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{
 			m.class + ".clas.abap":             src,
