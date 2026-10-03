@@ -31,6 +31,9 @@ func (r *CompileResult) Files(base string) (map[string]string, error) {
 	files := map[string]string{}
 	objects := map[string]bool{}
 	add := func(name, extension, src string) error {
+		if err := checkABAPNesting(src); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
 		name = strings.ToLower(sanitizeABAP(name))
 		if objects[name] {
 			return fmt.Errorf("duplicate generated ABAP object name %q", name)

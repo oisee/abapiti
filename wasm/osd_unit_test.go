@@ -106,6 +106,7 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{-5, 33}},
 		{"sar64_hi", []int32{1, 32}},
 	}, false},
+	{"deep_switch", "zcl_abapiti_deep_switch", deepSwitchCases(), false},
 	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases(), false},
 	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases(), false},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases(), false},
@@ -307,6 +308,8 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		var bin []byte
 		var err error
 		switch m.file {
+		case "deep_switch":
+			bin = buildDeepSwitchWasm()
 		case "runtime_helpers":
 			bin, _ = runtimeFixture()
 		case "i32wrap":

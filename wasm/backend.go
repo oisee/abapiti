@@ -90,6 +90,9 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 
 	for fname, src := range result.Files {
 		result.Files[fname] = wrapLongLines(src)
+		if err := checkABAPNesting(src); err != nil {
+			return nil, fmt.Errorf("%s: %w", fname, err)
+		}
 	}
 
 	// Compute stats

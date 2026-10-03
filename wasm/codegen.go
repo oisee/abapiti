@@ -15,7 +15,11 @@ func Compile(mod *Module, className string) (source string, err error) {
 		mod:       mod,
 		className: className,
 	}
-	return wrapLongLines(c.emit()), nil
+	source = wrapLongLines(c.emit())
+	if err := checkABAPNesting(source); err != nil {
+		return "", err
+	}
+	return source, nil
 }
 
 // blockKind tracks what ABAP construct a WASM block maps to.
@@ -26,6 +30,7 @@ const (
 	blockIF                    // if → IF ... ENDIF
 	blockLOOP                  // loop → DO ... ENDDO
 	blockTRY                   // try → TRY ... ENDTRY
+	blockFLAT
 )
 
 // blockEntry tracks the kind and the stack depth when the block was entered.
@@ -518,6 +523,16 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		// Control flow
 		case OpBlock, OpLoop:
+			if inst.Op == OpBlock && !c.useBlockMethods {
+				count := 0
+				for j := i; j < len(code) && code[j].Op == OpBlock; j++ {
+					count++
+				}
+				if count >= 3 && c.indent+count >= flattenBlockThreshold {
+					i = c.emitFlatBlocks(f, code, i, count, stack)
+					continue
+				}
+			}
 			kind := blockDO
 			if inst.Op == OpLoop {
 				kind = blockLOOP
@@ -1639,9 +1654,13 @@ func (c *compiler) emitBranch(depth int, stack *virtualStack) {
 
 // emitBrPropagation consumes the label just closed, then dispatches in its parent.
 func (c *compiler) emitBrPropagation() {
+	c.emitBrConsume()
+	c.emitBrPropagate()
+}
+
+func (c *compiler) emitBrConsume() {
 	br := c.brVar()
 	c.line("IF %s > 0 AND %s <> 999. %s = %s - 1. ELSEIF %s < 0. %s = %s + 1. ENDIF.", br, br, br, br, br, br, br)
-	c.emitBrPropagate()
 }
 
 // emitBrPropagate also handles calls whose extracted method consumed its own label.
