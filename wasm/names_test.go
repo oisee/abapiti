@@ -234,3 +234,28 @@ func TestUniqueNamesDeduplicatedDelegates(t *testing.T) {
 		}
 	}
 }
+
+func TestFunctionNamesAvoidInternalNames(t *testing.T) {
+	mod := &Module{Functions: make([]Function, 7)}
+	for i, name := range []string{"mv_mem", "mo_main", "MV_G0", "wasi_call", "f5", "get_stdout", "foo"} {
+		mod.Functions[i].ExportName = name
+	}
+	names := moduleFunctionNames(mod)
+	seen := map[string]bool{}
+	for i := range mod.Functions {
+		seen[strings.ToLower(fmt.Sprintf("f%d", i))] = true
+	}
+	for i, n := range names {
+		l := strings.ToLower(n)
+		if looksInternal(n) || seen[l] {
+			t.Errorf("export %q got internal-looking name %q", mod.Functions[i].ExportName, n)
+		}
+		seen[l] = true
+		if len(n) > 30 {
+			t.Errorf("%q longer than 30", n)
+		}
+	}
+	if names[6] != "foo" {
+		t.Errorf("plain export renamed: %q", names[6])
+	}
+}

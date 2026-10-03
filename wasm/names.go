@@ -46,9 +46,33 @@ func sanitizeABAP(name string) string {
 	return name[:min(len(name), 30)]
 }
 
+// internalNamePrefixes are the prefixes of the generator's own attributes,
+// locals and helper methods (mv_mem, mo_main, mv_g<n>, mt_args, wasi_call,
+// mem_ld_i32, dispatch_t<n>, ...). An export that looks like one of them is
+// renamed with an e_ prefix, which no internal name uses.
+var internalNamePrefixes = []string{"mv_", "mt_", "mo_", "gv_", "gt_", "lv_", "ls_", "lt_", "wasi_", "mem_", "dispatch_"}
+
+var internalNames = map[string]bool{"constructor": true, "wasm_init": true, "get_exit_code": true, "get_stderr": true, "get_stdout": true, "set_args": true, "set_env": true, "set_stdin": true}
+
+func looksInternal(name string) bool {
+	lower := strings.ToLower(name)
+	if internalNames[lower] {
+		return true
+	}
+	for _, p := range internalNamePrefixes {
+		if strings.HasPrefix(lower, p) {
+			return true
+		}
+	}
+	if len(lower) > 1 && lower[0] == 'f' && strings.Trim(lower[1:], "0123456789") == "" {
+		return true
+	}
+	return false
+}
+
 func moduleFunctionNames(mod *Module) []string {
 	var a abapNameAllocator
-	for _, name := range []string{"constructor", "wasm_init", "mem_ld_i32", "mem_st_i32", "mem_ld_i32_8u", "mem_ld_i32_8s", "mem_ld_i32_16u", "mem_st_i32_8", "mem_st_i32_16", "mem_grow", "mem_zero_pages"} {
+	for name := range internalNames {
 		a.reserve(name)
 	}
 	declarations, _ := runtimeTemplates()
@@ -58,11 +82,20 @@ func moduleFunctionNames(mod *Module) []string {
 	for i := range mod.Types {
 		a.reserve(fmt.Sprintf("dispatch_t%d", i))
 	}
+	// Internal function names f<index> (bodies, also behind WASI export
+	// wrappers) are reserved for every index before any export is named.
+	for i := range mod.Functions {
+		a.reserve(fmt.Sprintf("f%d", i))
+	}
 	names := make([]string, len(mod.Functions))
 	for i, f := range mod.Functions {
-		raw := f.ExportName
-		if raw == "" {
-			raw = fmt.Sprintf("f%d", i)
+		if f.ExportName == "" {
+			names[i] = fmt.Sprintf("f%d", i)
+			continue
+		}
+		raw := sanitizeABAP(f.ExportName)
+		if looksInternal(raw) {
+			raw = "e_" + raw
 		}
 		names[i] = a.allocate(raw)
 	}
