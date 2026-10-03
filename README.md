@@ -15,6 +15,10 @@ flowchart LR
   N["native C · wazero"] -. "expected values" .-> A
 ```
 
+## News
+
+**2026-10-03 — QuickJS runs on a real SAP kernel.** Fabrice Bellard's [QuickJS](https://bellard.org/quickjs/) JavaScript engine, built for WebAssembly without SIMD (1.0 MB) and compiled by ABAPiti into 13 interfaces, a state class, 13 chunk classes and a facade (253K lines of ABAP), activates object by object on A4H (28/28 in 87 s) and evaluates JavaScript inside ABAP: `1+2`, a loop to 100, `Array.sort`, `JSON.stringify`, a recursive `fib(15)`, `toUpperCase`, `Math.sqrt`, `Map` and `RegExp`, and `printf` through WASI, all equal to the same module in wazero. The 9 tests take about 2 s on the kernel; the same classes pass on open-steamgate's Go runtime (osgo) too. Getting there needed kernel-valid runtime helpers, unique 30-character names, a nesting depth under the kernel's limit of about 128, and a split whose classes depend only on interfaces, so each one activates on its own.
+
 ## Why? Because we can.
 
 ABAPiti compiles WebAssembly, LLVM IR (so C, and in principle anything clang or rustc can lower) and TypeScript **into** ABAP, in the demoscene spirit of doing something just to see that it runs.
@@ -66,7 +70,7 @@ Every case is checked against the same program run natively (C compiled by gcc, 
 | Arithmetic edge cases (i32/i64 wrap, shifts, branches, memory.grow, saturating truncation, float traps) | 796 tests | via the corpus | green in CI | green in CI |
 | C corpus: qsort, base64, crc32, fnv1a64, xorshift64*, Life, Mandelbrot, queens, sieve, recursion, function pointers, a Brainfuck interpreter | 9 KB of wasm, 38 checks | **38/38** | 12/12 programs | **38/38** |
 | [Monocypher](https://monocypher.org): BLAKE2b, X25519, ChaCha20, Poly1305, Ed25519 sign and check | 53 KB of wasm → 5,209 lines | **10/10** in 29 s | 10/10 | **10/10** in 78 s |
-| [QuickJS](https://bellard.org/quickjs/) built without SIMD | 1.0 MB of wasm → 253K lines in 13 classes + 13 interfaces | in progress | | |
+| [QuickJS](https://bellard.org/quickjs/) built without SIMD: JavaScript eval inside ABAP | 1.0 MB of wasm → 253K lines in 15 classes + 13 interfaces | **9/9**, 28/28 objects activated | | **9/9** |
 
 A sorted array of 500 numbers takes 6.1 ms on the kernel. What is still a draft or left out is listed in [docs/TECH-DEBT.md](docs/TECH-DEBT.md).
 
@@ -76,7 +80,7 @@ One Go module, one CLI (`abapiti`), several frontends. Status as of 2026-10-03:
 
 | Frontend | Input → output | What works today | What does not (yet) |
 |---|---|---|---|
-| **`wasm/`** (WASM → ABAP, Go) | `.wasm` → a self-contained global ABAP class (`METHODS` per export, linear memory as `xstring`); a split into a state class, chunk classes and one interface per chunk (each activatable on its own) is in review. Backends: class, function group, hybrid, multi-class. | See *What runs today*. i32 and i64 arithmetic wraps like WebAssembly; branches, loops, `call_indirect`, `memory.grow`, sign extension, bulk memory. | Exceptions, SIMD, atomics; f32 is computed in double precision; NaN/Inf trap. See [docs/TECH-DEBT.md](docs/TECH-DEBT.md). |
+| **`wasm/`** (WASM → ABAP, Go) | `.wasm` → a self-contained global ABAP class (`METHODS` per export, linear memory as `xstring`); large modules split into a state class, chunk classes and one interface per chunk, each activatable on its own (`--split`, `--class-lines`); generated nesting stays below the kernel's limit. Backends: class, function group, hybrid, multi-class. | See *What runs today*. i32 and i64 arithmetic wraps like WebAssembly; branches, loops, `call_indirect`, `memory.grow`, sign extension, bulk memory. | Exceptions, SIMD, atomics; f32 is computed in double precision; NaN/Inf trap. See [docs/TECH-DEBT.md](docs/TECH-DEBT.md). |
 | **`abap/wasm_compiler/`** (WASM → ABAP, written in ABAP) | `.wasm` xstring → ABAP source, then `GENERATE SUBROUTINE POOL` on SAP | Self-hosting run on SAP (a 785-line compiler); it has an ABAP Unit class. | Not packaged for installation. Depends on `GENERATE SUBROUTINE POOL`, which OSD most likely cannot run. |
 | **`llvm/`** (LLVM IR / C → ABAP) | `.ll` or `.c` (via `clang`) → typed `CLASS-METHODS`; optional abapGit zip; multi-class split | 3 tests pass (a 34-function C corpus, leaf functions, control flow). FatFS: 28 functions → 8,016 lines, 0 TODOs, verified 5/5 on SAP via `GENERATE SUBROUTINE POOL`. QuickJS: 537 methods / 124 K lines, 0 TODOs. | QuickJS-as-ABAP is verified only natively (via `llc`), not on SAP. Test coverage is thin. `.c` input needs `clang` on the PATH. |
 | **`ts/`** (TypeScript → ABAP) | TS → JSON AST (node + `ts/ts_ast.js`) → ABAP classes | A lexer modelled on abaplint's was transpiled to ABAP (55 classes in `ts/testdata/abaplint_lexer/`) and ran on SAP. | Needs node and `npm install` at runtime, and finds `ts_ast.js` only from a source checkout (or `ABAPITI_TS_AST_PATH`). Its test skips without the TypeScript toolchain. |
@@ -116,7 +120,7 @@ OSD activates code through the abaplint transpiler, so a green OSD run proves th
 ## Roadmap
 
 - **M1 (done):** `abapiti compile wasm` output for **add** and **factorial**, plus the generated ABAP Unit class, deploys, activates and runs green on a pinned OSD in CI ([`osd-m1.yml`](.github/workflows/osd-m1.yml)) and on a real kernel, including i32 wrap-around.
-- **M2 (in progress):** the size ladder on all three targets: the C corpus (done on the kernel and OSG-JS), Monocypher (done on the kernel and OSG-JS), then QuickJS evaluating JavaScript inside ABAP.
+- **M2 (done on the kernel and osgo):** the size ladder: the C corpus, Monocypher, and QuickJS evaluating JavaScript inside ABAP. QuickJS on OSG-JS is still to run.
 - **M3:** the TypeScript-transpiled lexer vs the `@abaplint/core` lexer on the same inputs.
 - **M4:** jseval (Go) and ZCL_JSEVAL (ABAP) conformance.
 
