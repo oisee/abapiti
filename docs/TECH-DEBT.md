@@ -16,6 +16,7 @@ where the decision or the evidence lives. Remove a line when it is fixed.
 | SIMD, atomics, memory64, GC | Compilation fails with a clear error. | We build our own modules without them (QuickJS: wasi-sdk `-mcpu=mvp +sign-ext +bulk-memory`). | feat/trunc-sat |
 | Multi-value results across split classes | Rejected with a compile error in split mode. | Not used by our modules so far. | feat/multi-class |
 | FUGR backend | Keeps PERFORM helpers; known issues with `RETURN` of results. | Not a priority (class backend is the target). | PLAN.md |
+| OSD job (JS via ADT) duration | Deploys and activates every fixture class through ADT, ~1.5-2 min each; with the split, nesting and runtime-helper fixtures it needs ~50 min (limit raised to 90). | Correct, just slow. Move it to open-steamgate's `osgjs:unit` (runs from the files, ~20 s per run). | .github/workflows/osd-m1.yml |
 | C corpus in CI | The 12 C programs run locally and on A4H, not in CI (no clang/wasm-ld on the runner). | Add `apt-get install clang lld` as a reusable step, keep prebuilt `.wasm` as a cache. | PLAN.md |
 
 ## WASI (draft)
