@@ -71,6 +71,7 @@ func runtimeFixture() ([]byte, []osdCase) {
 		op32, op64 byte
 		compare    bool
 	}{
+		{"divs", OpI32DivS, OpI64DivS, false}, {"rems", OpI32RemS, OpI64RemS, false},
 		{"divu", OpI32DivU, OpI64DivU, false}, {"remu", OpI32RemU, OpI64RemU, false},
 		{"ltu", OpI32LtU, OpI64LtU, true}, {"gtu", OpI32GtU, OpI64GtU, true},
 		{"leu", OpI32LeU, OpI64LeU, true}, {"geu", OpI32GeU, OpI64GeU, true},
