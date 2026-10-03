@@ -68,11 +68,29 @@ for f in "$gen"/*.clas.abap; do
   classes+=("$b")
 done
 [ "${#classes[@]}" -gt 0 ] || { echo "osd-m1: the generator wrote no classes" >&2; exit 1; }
-echo "osd-m1: ${#classes[@]} classes: ${classes[*]}" >&2
+
+# OSD_SHARD of OSD_SHARDS: a fixture (its facade, state class, chunks and
+# interfaces) stays in one shard; fixtures are dealt round-robin by name.
+shards=${OSD_SHARDS:-1}
+shard=${OSD_SHARD:-1}
+[[ "$shards" =~ ^[1-9][0-9]*$ && "$shard" =~ ^[1-9][0-9]*$ && "$shard" -le "$shards" ]] ||
+  { echo "osd-m1: bad shard $shard of $shards" >&2; exit 1; }
+fixture() { local n=${1/#zif_/zcl_}; n=${n%_st}; [[ "$n" =~ ^(.*)_c[0-9]+$ ]] && n=${BASH_REMATCH[1]}; echo "$n"; }
+mapfile -t fixtures < <(for c in "${classes[@]}"; do fixture "$c"; done | sort -u)
+declare -A mine=()
+for i in "${!fixtures[@]}"; do
+  if [ $((i % shards + 1)) -eq "$shard" ]; then mine[${fixtures[$i]}]=1; fi
+done
+picked=()
+for c in "${classes[@]}"; do if [ -n "${mine[$(fixture "$c")]:-}" ]; then picked+=("$c"); fi; done
+classes=("${picked[@]}")
+[ "${#classes[@]}" -gt 0 ] || { echo "osd-m1: shard $shard of $shards has no classes" >&2; exit 1; }
+echo "osd-m1: shard $shard of $shards: ${#classes[@]} classes: ${classes[*]}" >&2
 
 # Interfaces activate first, then state, independent chunks and facades.
 for f in "$gen"/*.intf.abap; do
   [ -e "$f" ] || continue
+  [ -n "${mine[$(fixture "$(basename "$f" .intf.abap)")]:-}" ] || continue
   if ! vsp deploy "$f" "$pkg" --call-timeout 900 > "$work/log/deploy-$(basename "$f").log" 2>&1; then
     cat "$work/log/deploy-$(basename "$f").log" >&2
     exit 1
