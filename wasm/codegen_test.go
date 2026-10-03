@@ -77,7 +77,7 @@ func TestParseAndCompile(t *testing.T) {
 	}
 
 	// Compile to ABAP
-	abap := Compile(mod, "zcl_wasm_test")
+	abap := mustCompile(t, mod, "zcl_wasm_test")
 	t.Logf("Generated ABAP (%d bytes):\n%s", len(abap), abap)
 
 	// Verify structure

@@ -91,7 +91,7 @@ rv = lv_val.`
 	case "shr_s32", "shr_s64":
 		return shiftRightSignedBody(name == "shr_s64")
 	case "wrap_i64":
-		return `DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
+		return `DATA lv_p TYPE int8.
 lv_p = iv_val MOD 4294967296.
 IF lv_p >= 2147483648. lv_p = lv_p - 4294967296. ENDIF.
 rv = lv_p.`
@@ -333,17 +333,14 @@ func shiftRightSignedBody(is64 bool) string {
 	if is64 {
 		bits = "64"
 	}
-	return `DATA lv_p TYPE p LENGTH 16 DECIMALS 0.
-DATA lv_d TYPE p LENGTH 16 DECIMALS 0.
+	return `DATA lv_val TYPE int8.
 DATA lv_shift TYPE i.
 lv_shift = iv_shift MOD ` + bits + `.
-lv_d = 1.
+lv_val = iv_val.
 DO lv_shift TIMES.
-lv_d = lv_d * 2.
+lv_val = lv_val DIV 2.
 ENDDO.
-lv_p = iv_val.
-lv_p = lv_p DIV lv_d.
-rv = lv_p.`
+rv = lv_val.`
 }
 
 func shift64Body(left bool) string {

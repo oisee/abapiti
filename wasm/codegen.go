@@ -2,18 +2,20 @@ package wasm
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 // Compile takes a parsed WASM module and produces ABAP source code.
-func Compile(mod *Module, className string) string {
+func Compile(mod *Module, className string) (source string, err error) {
+	defer catchCompileError(&err)
 	c := &compiler{
 		mod:       mod,
 		className: className,
 	}
-	return wrapLongLines(c.emit())
+	return wrapLongLines(c.emit()), nil
 }
 
 // blockKind tracks what ABAP construct a WASM block maps to.
@@ -309,10 +311,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.line("%s = %d.", v, inst.I64Value)
 		case OpF32Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, floatLiteral(float64(inst.F32Value), 32))
+			c.emitFloatConst(v, float64(inst.F32Value), 32)
 		case OpF64Const:
 			v := stack.push()
-			c.line("%s = '%s'.", v, floatLiteral(inst.F64Value, 64))
+			c.emitFloatConst(v, inst.F64Value, 64)
 
 		// Local/Global access
 		case OpLocalGet:
@@ -627,10 +629,6 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.indent--
 			c.line("ENDTRY. \" delegate")
 
-		// SIMD — stub as trap (QuickJS shouldn't hit these in normal execution)
-		case OpSIMDPrefix:
-			c.line(wasmTrap)
-
 		// i64 arithmetic wraps modulo 2^64 through bounded integer helpers.
 		case OpI64Add:
 			b, a := stack.pop(), stack.pop()
@@ -842,7 +840,9 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			r := stack.push()
 			c.line("IF %s >= %s. %s = 1. ELSE. %s = 0. ENDIF.", a, b, r, r)
 
-		// f32 arithmetic
+		// f32 arithmetic uses ABAP TYPE f (double precision), like all f32 producers.
+		// Results are not rounded to IEEE f32; this pre-existing model limitation
+		// can affect trunc_sat near boundaries (2147483520 + 64 is one example).
 		case OpF32Add:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
@@ -1037,7 +1037,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpF32ReinterpretI32:
 			a := stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>reinterpret_i32_f32( %s ).", r, a)
+			if i > 0 && code[i-1].Op == OpI32Const && nonFiniteFloat(float64(math.Float32frombits(uint32(code[i-1].I32Value)))) {
+				c.line(wasmTrap)
+			} else {
+				c.line("%s = zcl_wasm_rt=>reinterpret_i32_f32( %s ).", r, a)
+			}
 		case OpI64ReinterpretF64:
 			a := stack.pop()
 			r := stack.push()
@@ -1045,7 +1049,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpF64ReinterpretI64:
 			a := stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>reinterpret_i64_f64( %s ).", r, a)
+			if i > 0 && code[i-1].Op == OpI64Const && nonFiniteFloat(math.Float64frombits(uint64(code[i-1].I64Value))) {
+				c.line(wasmTrap)
+			} else {
+				c.line("%s = zcl_wasm_rt=>reinterpret_i64_f64( %s ).", r, a)
+			}
 
 		// Sign extension
 		case OpI32Extend8S:
@@ -1076,6 +1084,10 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		// Misc prefix (0xFC)
 		case OpMiscPrefix:
 			switch inst.MiscOp {
+			case 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07:
+				a := stack.pop()
+				r := stack.push()
+				c.emitTruncSat(inst.MiscOp, r, a)
 			case MiscMemoryCopy:
 				n, src, dst := stack.pop(), stack.pop(), stack.pop()
 				c.line("zcl_wasm_rt=>mem_copy( EXPORTING iv_dst = %s iv_src = %s iv_n = %s CHANGING cv_mem = mv_mem ).", dst, src, n)
@@ -1083,7 +1095,7 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 				n, val, dst := stack.pop(), stack.pop(), stack.pop()
 				c.line("zcl_wasm_rt=>mem_fill( EXPORTING iv_dst = %s iv_val = %s iv_n = %s CHANGING cv_mem = mv_mem ).", dst, val, n)
 			default:
-				c.line("\" TODO: misc opcode 0xFC 0x%02X", inst.MiscOp)
+				panic(compileError{fmt.Errorf("unsupported opcode 0xFC 0x%02X in function %d", inst.MiscOp, f.Index)})
 			}
 
 		// f64 math functions
@@ -1134,8 +1146,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 			c.indent--
 			c.line("ENDCASE.")
 
+		case OpSIMDPrefix, OpAtomicPrefix:
+			panic(compileError{fmt.Errorf("unsupported opcode 0x%02X 0x%02X in function %d", inst.Op, inst.MiscOp, f.Index)})
+
 		default:
-			c.line("\" TODO: opcode 0x%02X", inst.Op)
+			panic(compileError{fmt.Errorf("unsupported opcode 0x%02X in function %d", inst.Op, f.Index)})
 		}
 	}
 }
@@ -1734,6 +1749,10 @@ func (s *virtualStack) name(index int) string {
 
 func (c *compiler) instructionResultType(f *Function, inst Instruction) ValType {
 	switch inst.Op {
+	case OpMiscPrefix:
+		if inst.MiscOp >= 4 && inst.MiscOp <= 7 {
+			return ValI64
+		}
 	case OpI64Const, OpI64Load, OpI64Load8S, OpI64Load8U,
 		OpI64Load16S, OpI64Load16U, OpI64Load32S, OpI64Load32U,
 		OpI64ExtendI32S, OpI64ExtendI32U, OpI64TruncF32S,
@@ -1828,11 +1847,29 @@ func (c *compiler) flushPacker() {
 // ones (magnitudes near 1e200 and above) could not fit an ABAP line.
 const maxFloatLiteral = 200
 
-// floatLiteral formats a float constant in fixed-point notation ("%f"), as the
-// generator always has. Only values whose fixed-point form would exceed
-// maxFloatLiteral, which produced over-long lines before, use exponent notation.
+// ABAP TYPE f cannot represent NaN or infinity. Trap when the constant is
+// pushed, so only execution of that path raises the usual WASM exception.
+func (c *compiler) emitFloatConst(slot string, value float64, bits int) {
+	if nonFiniteFloat(value) {
+		c.line(wasmTrap)
+		return
+	}
+	c.line("%s = '%s'.", slot, floatLiteral(value, bits))
+}
+
+func nonFiniteFloat(value float64) bool {
+	return math.IsNaN(value) || math.IsInf(value, 0)
+}
+
+// floatLiteral preserves the fixed-point spelling when it round-trips.
+// Longer literals use exponent notation to fit the ABAP line limit.
 func floatLiteral(v float64, bits int) string {
 	if s := fmt.Sprintf("%f", v); len(s) <= maxFloatLiteral {
+		if parsed, err := strconv.ParseFloat(s, 64); err == nil && parsed == v {
+			return s
+		}
+	}
+	if s := strconv.FormatFloat(v, 'f', -1, 64); len(s) <= maxFloatLiteral {
 		return s
 	}
 	return strconv.FormatFloat(v, 'e', -1, bits)
@@ -1890,4 +1927,44 @@ func estimateMaxStack(code []Instruction) int {
 		max = 8
 	}
 	return max
+}
+
+type compileError struct{ error }
+
+func catchCompileError(err *error) {
+	if failure := recover(); failure != nil {
+		if ce, ok := failure.(compileError); ok {
+			*err = ce.error
+		} else {
+			panic(failure)
+		}
+	}
+}
+
+func (c *compiler) emitTruncSat(op uint32, result, value string) {
+	lower, upper, min, max := "-2147483648", "2147483648", "-2147483648", "2147483647"
+	signBit, modulus := "2147483648", "4294967296"
+	if op >= 4 {
+		lower, upper = "-9223372036854775808", "9223372036854775808"
+		min, max = "-9223372036854775808", "9223372036854775807"
+		signBit, modulus = upper, "18446744073709551616"
+	}
+	unsigned := op&1 != 0
+	if unsigned {
+		lower, upper, min, max = "0", modulus, "0", "-1"
+	}
+	c.line("IF %s <> %s.", value, value)
+	c.line("%s = 0.", result)
+	c.line("ELSEIF %s <= '%s'.", value, lower)
+	c.line("%s = %s.", result, min)
+	c.line("ELSEIF %s >= '%s'.", value, upper)
+	c.line("%s = %s.", result, max)
+	if unsigned {
+		c.line("ELSEIF %s >= '%s'.", value, signBit)
+		c.line("%s = trunc( %s ) - '%s'.", value, value, modulus)
+		c.line("%s = %s.", result, value)
+	}
+	c.line("ELSE.")
+	c.line("%s = trunc( %s ).", result, value)
+	c.line("ENDIF.")
 }

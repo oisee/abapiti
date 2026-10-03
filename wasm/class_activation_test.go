@@ -52,6 +52,7 @@ func classFixtureModules(t *testing.T) map[string][]byte {
 		}
 		modules[strings.TrimSuffix(filepath.Base(file), ".wasm")] = bin
 	}
+	modules["truncsat"], _, _ = buildTruncSatModule(false)
 	modules["corpus"] = compileCFixture(t, "../llvm/testdata/corpus.c")
 	if dir := os.Getenv("MONOCYPHER_SRC_DIR"); dir != "" {
 		source := filepath.Join(dir, "monocypher.c")
@@ -81,7 +82,11 @@ func TestClassOutputInvariants(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			src := Compile(mod, "zcl_wasm_"+name)
+			if name == "quickjs_eval" {
+				expectQuickJSCompileError(t, mod)
+				return
+			}
+			src := mustCompile(t, mod, "zcl_wasm_"+name)
 			if outDir := os.Getenv("ABAPITI_CLASS_OUT"); outDir != "" {
 				if err := os.MkdirAll(outDir, 0755); err != nil {
 					t.Fatal(err)
@@ -144,13 +149,17 @@ func TestAllBackendOutputHasNoComments(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if name == "quickjs_eval" {
+				expectQuickJSCompileError(t, mod)
+				return
+			}
 			for _, backend := range []BackendKind{BackendFUGR, BackendHybrid} {
-				result := CompileWith(mod, "zcl_comment_test", backend, 80)
+				result := mustCompileWith(t, mod, "zcl_comment_test", backend, 80)
 				for file, src := range result.Files {
 					assertNoABAPComments(t, file, src)
 				}
 			}
-			multi := CompileMultiClass(mod, "zcl_comment_test", 80)
+			multi := mustCompileMultiClass(t, mod, "zcl_comment_test", 80)
 			assertNoABAPComments(t, "main", multi.MainClass)
 			assertNoABAPComments(t, "runtime", multi.RuntimeClass)
 			for file, src := range multi.ChunkClasses {

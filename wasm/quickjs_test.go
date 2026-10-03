@@ -3,7 +3,6 @@ package wasm
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -103,26 +102,7 @@ func TestParseQuickJS(t *testing.T) {
 		}
 	}
 
-	// Try to compile (may panic on unhandled opcodes — recover)
-	t.Log("\n--- Attempting compilation ---")
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Logf("Compilation panicked (expected for incomplete compiler): %v", r)
-			}
-		}()
-
-		abap := Compile(mod, "zcl_quickjs")
-		t.Logf("Generated ABAP size: %d bytes (%.1f KB)", len(abap), float64(len(abap))/1024)
-
-		// Write to file for inspection
-		outPath := filepath.Join(testOutDir(t), "quickjs_eval.clas.abap")
-		if err := os.WriteFile(outPath, []byte(abap), 0644); err != nil {
-			t.Logf("Failed to write output: %v", err)
-		} else {
-			t.Logf("Written to %s", outPath)
-		}
-	}()
+	expectQuickJSCompileError(t, mod)
 }
 
 // isHandled returns true if our codegen handles this opcode.
@@ -183,7 +163,7 @@ func isHandled(op byte) bool {
 		OpSelectT,
 		OpTry, OpCatch, OpCatchAll, OpThrow, OpRethrow, OpDelegate,
 		OpReturnCall, OpReturnCallIndirect,
-		OpMiscPrefix, OpSIMDPrefix:
+		OpMiscPrefix:
 		return true
 	default:
 		return false

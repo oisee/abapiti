@@ -109,7 +109,7 @@ func TestI64WrapGeneratedBackends(t *testing.T) {
 			}
 			name := map[byte]string{OpI64Add: "i64_add", OpI64Sub: "i64_sub", OpI64Mul: "i64_mul"}[c.op]
 			for _, backend := range []BackendKind{BackendClass, BackendFUGR, BackendHybrid} {
-				result := CompileWith(mod, "z_i64wrap", backend, 80)
+				result := mustCompileWith(t, mod, "z_i64wrap", backend, 80)
 				all := ""
 				for _, src := range result.Files {
 					all += src
@@ -133,7 +133,7 @@ func TestI64WrapGeneratedBackends(t *testing.T) {
 					t.Errorf("missing %s signature", name)
 				}
 			}
-			multi := CompileMultiClass(mod, "z_i64wrap", 80)
+			multi := mustCompileMultiClass(t, mod, "z_i64wrap", 80)
 			called := false
 			for _, src := range multi.ChunkClasses {
 				checkI64Source(t, src)

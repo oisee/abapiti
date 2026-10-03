@@ -52,7 +52,8 @@ type BackendStats struct {
 }
 
 // CompileWith compiles a WASM module using the specified backend.
-func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude int) *BackendResult {
+func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude int) (output *BackendResult, err error) {
+	defer catchCompileError(&err)
 	if funcsPerInclude <= 0 {
 		funcsPerInclude = 80
 	}
@@ -75,7 +76,10 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 		emitFUGR(mod, name, funcsPerInclude, redirects, result)
 	case BackendClass:
 		// Use the original single-class Compile for small modules
-		src := Compile(mod, name)
+		src, compileErr := Compile(mod, name)
+		if compileErr != nil {
+			return nil, compileErr
+		}
 		result.Files[name+".clas.abap"] = src
 	case BackendHybrid:
 		emitHybrid(mod, name, funcsPerInclude, redirects, result)
@@ -99,7 +103,7 @@ func CompileWith(mod *Module, name string, backend BackendKind, funcsPerInclude 
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // --- FUGR Backend ---

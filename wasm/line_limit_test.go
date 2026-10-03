@@ -57,6 +57,10 @@ func lineLimitModules(t *testing.T) []lineLimitModule {
 		if err != nil {
 			t.Fatalf("%s: %v", path, err)
 		}
+		if filepath.Base(path) == "quickjs_eval.wasm" {
+			expectQuickJSCompileError(t, mod)
+			continue
+		}
 		mods = append(mods, lineLimitModule{filepath.Base(path), mod})
 	}
 	for _, n := range []int{24, 40} {
@@ -76,11 +80,11 @@ func forEachBackend(t *testing.T, check func(t *testing.T, files map[string]stri
 		t.Run(m.name, func(t *testing.T) {
 			for _, backend := range []BackendKind{BackendClass, BackendFUGR, BackendHybrid} {
 				t.Run(backend.String(), func(t *testing.T) {
-					check(t, CompileWith(m.mod, "zcl_line_limit", backend, 80).Files)
+					check(t, mustCompileWith(t, m.mod, "zcl_line_limit", backend, 80).Files)
 				})
 			}
 			t.Run("multi-class", func(t *testing.T) {
-				result := CompileMultiClass(m.mod, "zcl_line_limit", 80)
+				result := mustCompileMultiClass(t, m.mod, "zcl_line_limit", 80)
 				files := map[string]string{"main.clas.abap": result.MainClass, "runtime.clas.abap": result.RuntimeClass}
 				for name, src := range result.ChunkClasses {
 					files[name+".clas.abap"] = src
@@ -114,7 +118,7 @@ func TestManyParamsWrapped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src := Compile(mod, "zcl_line_limit")
+	src := mustCompile(t, mod, "zcl_line_limit")
 	flat := strings.Join(strings.Fields(src), " ")
 	name := sanitizeABAP(longExportName)
 	for _, want := range []string{
@@ -220,6 +224,7 @@ func TestFloatConstLiterals(t *testing.T) {
 		want32 string
 	}{
 		{1.5, 0.25, "'1.500000'", "'0.250000'"},
+		{math.Nextafter(1, 0), 1e-8, "'0.9999999999999999'", "'0.00000000999999993922529'"},
 		{-2, 3, "'-2.000000'", "'3.000000'"},
 		{1e300, math.MaxFloat32, "'1e+300'", "'340282346638528859811704183484516925440.000000'"},
 	} {
@@ -227,7 +232,7 @@ func TestFloatConstLiterals(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		src := Compile(mod, "zcl_floats")
+		src := mustCompile(t, mod, "zcl_floats")
 		for _, want := range []string{tc.want64, tc.want32} {
 			if !strings.Contains(src, " = "+want+".") {
 				t.Errorf("missing literal %s", want)

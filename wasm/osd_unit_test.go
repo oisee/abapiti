@@ -17,7 +17,8 @@ import (
 // osdCase is one call of an exported WASM function. The expected value is not
 // written here: it is computed by running the same .wasm in wazero, so the
 // generated ABAP Unit test checks the ABAP against an independent engine.
-// When wazero traps, the ABAP call must raise an exception.
+// When wazero traps, the ABAP call must raise an exception. Non-finite float
+// constants have explicit ABAP trap expectations because TYPE f cannot hold them.
 type osdCase struct {
 	fn   string
 	args []int32
@@ -103,6 +104,8 @@ var osdModules = []struct {
 		{"sar64_hi", []int32{-5, 33}},
 		{"sar64_hi", []int32{1, 32}},
 	}},
+	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases()},
+	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases()},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases()},
 	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
 		{"add", []int32{2147483647, 1}},
@@ -180,6 +183,28 @@ func wazeroResults(t *testing.T, bin []byte, cases []osdCase) []osdResult {
 // generated class: one test method per case. A trapping case asserts that
 // the call raises; replayed trapping calls are caught.
 func osdTestClass(class string, cases []osdCase, want []osdResult) string {
+	return osdTestClassReplay(class, cases, want, true)
+}
+
+// moduleHasState reports whether a call can leave state behind for the next
+// call (memory stores, memory.grow/fill/copy/init, global.set). Only then must
+// each ABAP Unit method replay the preceding calls on its fresh instance;
+// without state the replay only makes the test class grow quadratically.
+func moduleHasState(mod *Module) bool {
+	for _, f := range mod.Functions {
+		for _, in := range f.Code {
+			switch {
+			case in.Op >= OpI32Store && in.Op <= OpI64Store32, in.Op == OpGlobalSet, in.Op == OpMemoryGrow:
+				return true
+			case in.Op == OpMiscPrefix && (in.MiscOp == MiscMemoryCopy || in.MiscOp == MiscMemoryFill || in.MiscOp == 0x08):
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay bool) string {
 	var sb strings.Builder
 	sb.WriteString("CLASS ltcl_wasm DEFINITION FINAL FOR TESTING\n")
 	sb.WriteString("  DURATION SHORT RISK LEVEL HARMLESS.\n")
@@ -204,7 +229,11 @@ func osdTestClass(class string, cases []osdCase, want []osdResult) string {
 		sb.WriteString("    DATA lv_trapped TYPE abap_bool.\n")
 		sb.WriteString("    CREATE OBJECT lo.\n")
 		// Replay preceding calls because each ABAP Unit method has a fresh instance.
-		for j, prior := range cases[:i] {
+		prev := cases[:i]
+		if !replay {
+			prev = nil
+		}
+		for j, prior := range prev {
 			priorParams := make([]string, len(prior.args))
 			for k, a := range prior.args {
 				priorParams[k] = fmt.Sprintf("p%d = %d", k, a)
@@ -255,6 +284,10 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = compileCFixture(t, "../llvm/testdata/corpus.c")
 		case "callind":
 			bin = buildCallIndirectModule()
+		case "floattrap":
+			bin, _ = buildSpecialFloatModule()
+		case "truncsat":
+			bin, _, _ = buildTruncSatModule(false)
 		case "i64wrap":
 			bin = buildI64WrapModule(i64WrapCases)
 		case "helpers":
@@ -270,8 +303,15 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			t.Fatalf("parse %s: %v", m.file, err)
 		}
 		want := wazeroResults(t, bin, m.cases)
-		src := Compile(mod, m.class)
-		tests := osdTestClass(m.class, m.cases, want)
+		if m.file == "floattrap" {
+			// WASM supports NaN/Inf (NaN trunc_sat returns zero), but ABAP
+			// traps at their construction, before the conversion can run.
+			for i := range want {
+				want[i] = osdResult{trap: true}
+			}
+		}
+		src := mustCompile(t, mod, m.class)
+		tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod))
 		checkTestClass(t, m.class, tests, want)
 		for name, body := range map[string]string{
 			m.class + ".clas.abap":             src,

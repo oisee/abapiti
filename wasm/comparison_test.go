@@ -7,11 +7,11 @@ import (
 
 func TestCompareCompilers(t *testing.T) {
 	files := map[string]string{
-		"Javy/QuickJS":     "/tmp/cmp_javy.wasm",
-		"porffor (JS)":     "/tmp/cmp_porffor.wasm",
-		"porffor (TS)":     "/tmp/test_ts.wasm",
-		"AssemblyScript":   "/tmp/as-test/test_as.wasm",
-		"ABAP tokenizer":   "/tmp/abap_tokenizer.wasm",
+		"Javy/QuickJS":   "/tmp/cmp_javy.wasm",
+		"porffor (JS)":   "/tmp/cmp_porffor.wasm",
+		"porffor (TS)":   "/tmp/test_ts.wasm",
+		"AssemblyScript": "/tmp/as-test/test_as.wasm",
+		"ABAP tokenizer": "/tmp/abap_tokenizer.wasm",
 	}
 
 	t.Log("=== WASM Compiler Comparison ===")
@@ -36,7 +36,7 @@ func TestCompareCompilers(t *testing.T) {
 			totalInstrs += len(f.Code)
 		}
 
-		abap := Compile(mod, "zcl_test")
+		abap := mustCompile(t, mod, "zcl_test")
 		lines := 0
 		for _, c := range abap {
 			if c == '\n' {

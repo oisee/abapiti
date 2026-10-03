@@ -25,14 +25,18 @@ func TestNoUnknownTrapClass(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", f, err)
 		}
-		outs := map[string]string{"class": Compile(mod, "zcl_trap_check")}
+		if filepath.Base(f) == "quickjs_eval.wasm" {
+			expectQuickJSCompileError(t, mod)
+			continue
+		}
+		outs := map[string]string{"class": mustCompile(t, mod, "zcl_trap_check")}
 		for _, b := range []BackendKind{BackendFUGR, BackendHybrid} {
-			r := CompileWith(mod, "ZTRAP", b, 0)
+			r := mustCompileWith(t, mod, "ZTRAP", b, 0)
 			for name, src := range r.Files {
 				outs[name] = src
 			}
 		}
-		mc := CompileMultiClass(mod, "zcl_trap", 0)
+		mc := mustCompileMultiClass(t, mod, "zcl_trap", 0)
 		outs["multi-main"] = mc.MainClass
 		outs["multi-runtime"] = mc.RuntimeClass
 		for name, src := range mc.ChunkClasses {

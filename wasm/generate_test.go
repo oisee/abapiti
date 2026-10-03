@@ -110,8 +110,8 @@ func buildSumToWasm() []byte {
 		OpLocalGet, 0x01, OpLocalGet, 0x02, OpI32Add, OpLocalSet, 0x01, // sum += i
 		OpLocalGet, 0x02, OpI32Const, 0x01, OpI32Add, OpLocalSet, 0x02, // i++
 		OpBr, 0x00, // br 0 → continue loop
-		OpEnd, // end loop
-		OpEnd, // end block
+		OpEnd,            // end loop
+		OpEnd,            // end block
 		OpLocalGet, 0x01, // return sum
 	})
 }
@@ -161,7 +161,7 @@ func buildExtendedSuiteWasm() []byte {
 	// Types
 	w.addSection(1, buildTypeSection([]FuncType{
 		{Params: []ValType{ValI32, ValI32}, Results: []ValType{ValI32}}, // type 0: (i32,i32)->i32
-		{Params: []ValType{ValI32}, Results: []ValType{ValI32}},        // type 1: (i32)->i32
+		{Params: []ValType{ValI32}, Results: []ValType{ValI32}},         // type 1: (i32)->i32
 	}))
 
 	// Functions: 12 funcs
@@ -410,7 +410,7 @@ func TestExtendedSuite_Compile(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	abap := Compile(mod, "zcl_wasm_extended")
+	abap := mustCompile(t, mod, "zcl_wasm_extended")
 	t.Logf("Go compiler → %d lines ABAP", strings.Count(abap, "\n"))
 
 	for _, name := range []string{"add", "factorial", "fibonacci", "gcd", "is_prime",

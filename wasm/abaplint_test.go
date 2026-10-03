@@ -38,7 +38,7 @@ func TestParseAbaplint(t *testing.T) {
 
 	// Try FUGR compilation
 	t.Log("\n--- Compiling to ABAP (FUGR backend) ---")
-	result := CompileWith(mod, "zabaplint", BackendFUGR, 100)
+	result := mustCompileWith(t, mod, "zabaplint", BackendFUGR, 100)
 
 	t.Logf("Files:          %d", result.Stats.FileCount)
 	t.Logf("Total lines:    %d", result.Stats.TotalLines)
