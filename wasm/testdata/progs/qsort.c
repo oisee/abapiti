@@ -16,10 +16,10 @@ EXPORT int sort_checksum(int n, int seed) {
   u32 x = (u32)seed;
   for (int i = 0; i < n; i++) { x = x * 1103515245u + 12345u; a[i] = (int)((x >> 8) % 100000u) - 50000; }
   qs(0, n - 1);
-  int sum = 0;
+  u32 sum = 0;
   for (int i = 0; i < n; i++) {
     if (i > 0 && a[i - 1] > a[i]) return 0;
-    sum = sum * 31 + a[i];
+    sum = sum * 31u + (u32)a[i];
   }
-  return sum;
+  return (int)sum;
 }
