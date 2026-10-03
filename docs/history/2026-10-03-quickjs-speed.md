@@ -32,6 +32,6 @@ The same WebAssembly module (QuickJS 2024-01-13, built without SIMD by wasi-sdk 
 
 ## Reading it
 
-- The kernel is 770× (script 0) to 18,600× (script 9) slower than native QuickJS, and 15–90× slower than wazero's interpreter: every WebAssembly instruction becomes several ABAP statements.
+- The kernel is 770× (script 0) to 18,600× (script 9) slower than native QuickJS, and 8–90× slower than wazero's interpreter: every WebAssembly instruction becomes several ABAP statements.
 - Scripts that spend their time inside large library routines (JSON, regexp) lose least; tight interpreter loops lose most.
 - osgo is 17–57× slower than the kernel on execution.
