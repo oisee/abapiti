@@ -1,0 +1,38 @@
+sieve primes_upto 10
+sieve primes_upto 100
+sieve primes_upto 1000
+sieve primes_upto 10000
+qsort sort_checksum 10 1
+qsort sort_checksum 100 42
+qsort sort_checksum 500 7
+crc32 crc32_check
+crc32 crc32_seq 0
+crc32 crc32_seq 1
+crc32 crc32_seq 256
+fnv fnv1a64_seq 0
+fnv fnv1a64_seq 1
+fnv fnv1a64_seq 100
+xorshift xorshift32 1 1
+xorshift xorshift32 12345 10
+xorshift xorshift64s 1 1
+xorshift xorshift64s 42 100
+queens queens 4
+queens queens 6
+queens queens 8
+bf bf_hello
+bf bf_hello_len
+fptr fold_ops 10
+fptr fold_ops 20
+life life 0
+life life 4
+life life 20
+mandel mandel 16 8
+mandel mandel 32 16
+base64 base64_seq 1
+base64 base64_seq 2
+base64 base64_seq 3
+base64 base64_seq 64
+recur hanoi 10
+recur hanoi 15
+recur ackermann 2 3
+recur ackermann 3 3
