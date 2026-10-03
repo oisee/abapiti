@@ -5,6 +5,3 @@
 # (a wrong value, an error, an unknown NOT_COMPILED). Remove a line as soon as
 # open-steamgate compiles it (the job prints which lines matched nothing).
 # The runtime behaviour itself is pinned on A4H; see the inbox/issue noted.
-unknown method IPOW
-conversion x -> int8
-conversion int8 -> x
