@@ -14,13 +14,18 @@ no signedness, pointers become i32 offsets), every C local whose
 address is taken lives in linear memory, every load/store is a helper call on
 an xstring, i32 wrap needs helpers, control flow becomes DO/EXIT chains, and
 one method declares thousands of stack slots. Hand-written ABAP (zqjs) is
-4–60x faster than QuickJS compiled from wasm.
+4–60x faster than QuickJS compiled from wasm on 12 of our 16 scripts (8.6x
+slower on sorting; it fails the other 4).
 
-We already have the typed alternatives:
+Only the wasm path is really verified today (CI on wazero, osgo and OSG-JS,
+kernel runs). The typed alternatives below compile, but almost nothing they
+produce has been executed:
+
 - **abapiti `llvm/`** (LLVM IR → ABAP, see [the 2026-03-29 report](history/reports/2026-03-29-003-llvm-abap-compilation-journey.md)): typed
   CLASS-METHODS with real signatures, `i`/`int8`/`f`, named SSA values as
   DATA (memory accesses and struct fields still go through byte offsets);
-  34-function C corpus, FatFS 8,016 lines verified 5/5 on SAP, QuickJS
+  34-function C corpus (five of its functions ran once on SAP), FatFS compiles
+  to 8,016 lines, QuickJS
   537 methods / 124K lines (never run on SAP). Weak spot: basic blocks are a
   `CASE lv_block` string dispatch inside DO — slow, needs structured control
   flow recovery (Relooper / stackifier) into IF/DO/EXIT.
@@ -124,7 +129,8 @@ kernel rules as today (lines <= 255, nesting <= 100, 7.02, no comments).
 ## 8. Speed: make compiled wasm beat hand-written interpreters
 
 - Today zqjs (hand-written ABAP) is 4–60× faster than QuickJS compiled from
-  wasm. Goal: the reverse. Typed locals, only used stack slots, real loops
+  wasm on 12 of 16 scripts (slower on sorting).
+  Goal: the reverse. Typed locals, only used stack slots, real loops
   instead of block/br, copy propagation, compare+branch fusion, memory access
   inlined, i32 kept in `i` where overflow cannot happen (range analysis),
   function inlining, profile-guided splitting.

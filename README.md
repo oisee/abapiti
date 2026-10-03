@@ -19,7 +19,8 @@ flowchart LR
 
 **2026-10-03 — three small programs run on the kernel bit for bit; JavaScript engines compared.**
 - A QR-code encoder (Nayuki's qrcodegen, 16 KB of wasm), the Lua 5.4 interpreter (710 KB, five classes, 8/8 scripts) and Andy Sloane's donut.c (doubles, sin/cos) run on A4H and osgo and give the native answers, once signed division is exact (#23). The QR below came out of the SAP spool and scans; the donut frame too.
-- Three ways to run JavaScript in ABAP, on native, Node, osgo, OSG-JS and A4H: QuickJS compiled by ABAPiti, [zmjs](https://github.com/oisee/zmjs) and Lars Hvam's [zqjs](https://github.com/larshp/zqjs) (both hand-written in ABAP). The hand-written engines are 4–60× faster than QuickJS compiled from wasm; QuickJS answers all 16 test scripts. That is why the next step is speed, and why [SUPER-PLANS.md](docs/SUPER-PLANS.md) puts a typed IR (`llvm/`) forward as the production path.
+- Three ways to run JavaScript in ABAP, on native, Node, osgo, OSG-JS and A4H: QuickJS compiled by ABAPiti, [zmjs](https://github.com/oisee/zmjs) and Lars Hvam's [zqjs](https://github.com/larshp/zqjs) (both hand-written in ABAP). On the kernel zqjs answers 12 of our 16 test scripts, 4–60× faster than QuickJS compiled from wasm on those, but 8.6× slower on sorting 10,000 numbers; QuickJS answers all 16. zmjs was not timed. That is why the next step is speed, and why [SUPER-PLANS.md](docs/SUPER-PLANS.md) puts a typed IR (`llvm/`) forward as the production path.
+- Honest status: only the WebAssembly path is really verified (CI on wazero, osgo and OSG-JS, plus the kernel runs above). The `llvm/` and TypeScript paths compile, but beyond five small C functions run once on SAP nothing they produce has been executed or checked.
 - Runtime gaps found on the way went to [open-steamgate](https://github.com/oisee/open-steamgate/issues?q=label%3Akernel-diff) (#537–#543, label `kernel-diff`).
 
 <p>
