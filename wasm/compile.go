@@ -14,6 +14,8 @@ func emitRuntimeClass() string {
     CLASS-METHODS mem_copy IMPORTING iv_dst TYPE i iv_src TYPE i iv_n TYPE i CHANGING cv_mem TYPE xstring.
     CLASS-METHODS mem_fill IMPORTING iv_dst TYPE i iv_val TYPE i iv_n TYPE i CHANGING cv_mem TYPE xstring.
     " Unsigned 32-bit ops
+    CLASS-METHODS div_s32 IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
+    CLASS-METHODS rem_s32 IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS div_u32 IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS rem_u32 IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS lt_u32 IMPORTING iv_a TYPE i iv_b TYPE i RETURNING VALUE(rv) TYPE abap_bool.
@@ -33,6 +35,8 @@ func emitRuntimeClass() string {
     CLASS-METHODS ctz32 IMPORTING iv_val TYPE i RETURNING VALUE(rv) TYPE i.
     CLASS-METHODS popcnt32 IMPORTING iv_val TYPE i RETURNING VALUE(rv) TYPE i.
     " Unsigned 64-bit ops
+    CLASS-METHODS div_s64 IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
+    CLASS-METHODS rem_s64 IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS div_u64 IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS rem_u64 IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE int8.
     CLASS-METHODS lt_u64 IMPORTING iv_a TYPE int8 iv_b TYPE int8 RETURNING VALUE(rv) TYPE abap_bool.
@@ -134,6 +138,12 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   ENDMETHOD.
 
   " === Unsigned 32-bit via INT8 promotion ===
+  METHOD div_s32.
+` + kernelRuntimeBody("div_s32") + `
+  ENDMETHOD.
+  METHOD rem_s32.
+` + kernelRuntimeBody("rem_s32") + `
+  ENDMETHOD.
   METHOD div_u32.
 ` + kernelRuntimeBody("div_u32") + `
   ENDMETHOD.
@@ -236,6 +246,12 @@ CLASS zcl_wasm_rt IMPLEMENTATION.
   ENDMETHOD.
 
   " === 64-bit stubs (implement as needed) ===
+  METHOD div_s64.
+` + kernelRuntimeBody("div_s64") + `
+  ENDMETHOD.
+  METHOD rem_s64.
+` + kernelRuntimeBody("rem_s64") + `
+  ENDMETHOD.
   METHOD div_u64.
 ` + kernelRuntimeBody("div_u64") + `
   ENDMETHOD.
