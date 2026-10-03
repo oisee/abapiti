@@ -244,7 +244,10 @@ func TestDeepSwitchNesting(t *testing.T) {
 	}
 	output := mustCompileMultiClass(t, mod, "zcl_deep", 2)
 	assertNestingBound(t, "main", output.MainClass)
-	assertNestingBound(t, "runtime", output.RuntimeClass)
+	assertNestingBound(t, "state", output.StateClass)
+	for name, src := range output.Interfaces {
+		assertNestingBound(t, name, src)
+	}
 	for name, src := range output.ChunkClasses {
 		assertNestingBound(t, name, src)
 	}
