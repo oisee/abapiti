@@ -36,8 +36,9 @@ timings: docs/history/2026-10-03-quickjs-speed.md (PR #24).
 
 1. **Profile.** Time per function on A4H (`GET RUN TIME`, background job) and
    osgo for the corpus and QuickJS; find where the time goes.
-2. **Stack slots.** Declare only the slots a method uses (in the QuickJS split
-   of 2026-10-03 one method declares 7,305 locals and uses 19) and stop copying values through them: keep them
+2. **Stack slots.** Declare only the slots a method uses (a review of the QuickJS
+   split found methods that declare thousands of slots and use a few dozen;
+   step 1 counts declared against used slots for every method) and stop copying values through them: keep them
    in typed locals.
 3. **Memory inline.** Loads and stores as `gv_mem+off(n)` and
    `REPLACE SECTION` in place, without a method call per access.
