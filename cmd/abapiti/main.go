@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/oisee/abapiti/wasm"
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +52,8 @@ func init() {
 
 // addWasmFlags registers the flags shared by "compile wasm" and the root shortcut.
 func addWasmFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("split", false, "Force independently activatable WASM classes")
+	cmd.Flags().Int("class-lines", wasm.DefaultClassLines, "Generated line budget per WASM chunk class")
 	cmd.Flags().Bool("allow-long-lines", false, "Allow output lines over 255 characters")
 	cmd.Flags().String("class", "", "ABAP class name (default: derived from filename)")
 	cmd.Flags().StringP("output", "o", "", "Output directory (default: stdout)")

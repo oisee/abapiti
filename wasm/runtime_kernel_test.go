@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var kernelScopeRE = regexp.MustCompile(`(?is)\b(?:METHOD|FORM|FUNCTION)\s+(\w+)([^.]*)\.(.*?)\b(?:ENDMETHOD|ENDFORM|ENDFUNCTION)\.`)
+var kernelScopeRE = regexp.MustCompile(`(?is)\b(?:METHOD|FORM|FUNCTION)\s+(\w+(?:~\w+)?)([^.]*)\.(.*?)\b(?:ENDMETHOD|ENDFORM|ENDFUNCTION)\.`)
 var kernelSignatureRE = regexp.MustCompile(`(?is)\b(?:CLASS-)?METHODS\s+(\w+)\s+([^.]*)\.`)
 var kernelTypeRE = regexp.MustCompile(`(?i)\b(\w+)\s+TYPE\s+(i|int8|p|xstring|string|x|f)\b`)
 var kernelValueRE = regexp.MustCompile(`(?i)VALUE\((\w+)\)`)
@@ -43,7 +43,11 @@ func kernelInvalidPatterns(src string) []string {
 		for name, typ := range globals {
 			types[name] = typ
 		}
-		typed(signatures[scope[1]], types)
+		method := scope[1]
+		if _, suffix, ok := strings.Cut(method, "~"); ok {
+			method = suffix
+		}
+		typed(signatures[method], types)
 		typed(scope[2], types)
 		typed(scope[3], types)
 		for _, m := range kernelBitRE.FindAllStringSubmatch(scope[3], -1) {
@@ -199,5 +203,42 @@ func TestSingleClassMemoryHelpersOwnBuffer(t *testing.T) {
 				t.Fatal(bad)
 			}
 		})
+	}
+}
+
+func TestSplitRuntimeHelpersKernelValid(t *testing.T) {
+	bin, _ := runtimeFixture()
+	mod, err := Parse(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := mustCompileMultiClass(t, mod, "zcl_split_kernel", 200)
+	assertSplitMemoryPrivate(t, r)
+	files := mustSplitFiles(t, r, "zcl_split_kernel")
+	checkLineLimit(t, files)
+	var all strings.Builder
+	for name, src := range files {
+		assertNoABAPComments(t, name, src)
+		if parameterWrite.MatchString(src) {
+			t.Errorf("%s writes to IMPORTING parameters", name)
+		}
+		all.WriteString(src)
+		all.WriteByte('\n')
+	}
+	if bad := kernelInvalidPatterns(all.String()); len(bad) > 0 {
+		t.Fatal(bad)
+	}
+	_, bodies := singleClassRuntimeTemplates()
+	found := 0
+	for _, method := range runtimeMethodRE.FindAllStringSubmatch(r.StateClass, -1) {
+		if body, ok := bodies[method[1]]; ok {
+			found++
+			if strings.Join(strings.Fields(method[2]), " ") != strings.Join(strings.Fields(body), " ") {
+				t.Errorf("split helper %s differs from the shared kernel-valid body", method[1])
+			}
+		}
+	}
+	if found < 20 {
+		t.Fatalf("fixture only exercised %d runtime helpers", found)
 	}
 }

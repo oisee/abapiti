@@ -15,7 +15,11 @@ func Compile(mod *Module, className string) (source string, err error) {
 		mod:       mod,
 		className: className,
 	}
-	return wrapLongLines(c.emit()), nil
+	source = wrapLongLines(c.emit())
+	if err := checkABAPNesting(source); err != nil {
+		return "", err
+	}
+	return source, nil
 }
 
 // blockKind tracks what ABAP construct a WASM block maps to.
@@ -26,6 +30,7 @@ const (
 	blockIF                    // if → IF ... ENDIF
 	blockLOOP                  // loop → DO ... ENDDO
 	blockTRY                   // try → TRY ... ENDTRY
+	blockFLAT
 )
 
 // blockEntry tracks the kind and the stack depth when the block was entered.
@@ -38,7 +43,15 @@ type blockEntry struct {
 }
 
 type compiler struct {
-	names       []string
+	names           []string
+	ownsMemory      bool
+	splitState      string
+	splitInterface  string
+	chunkAssign     []int
+	chunkIndex      int
+	crossChunkCalls int
+	indirectCalls   int
+
 	mod         *Module
 	className   string
 	sb          strings.Builder
@@ -142,6 +155,9 @@ func (c *compiler) emitDefinition() {
 	c.line("METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 	c.line("METHODS mem_grow IMPORTING iv_pages TYPE i RETURNING VALUE(rv) TYPE i.")
 	c.line("METHODS mem_zero_pages IMPORTING iv_pages TYPE i RETURNING VALUE(rv_mem) TYPE xstring.")
+	if c.ownsMemory {
+		c.line("METHODS mem_size RETURNING VALUE(rv) TYPE i.")
+	}
 	c.emitRuntimeDeclarations()
 	c.emitDispatchDeclarations()
 
@@ -159,7 +175,11 @@ func (c *compiler) emitDefinition() {
 }
 
 func (c *compiler) emitMethodSignature(name string, ft *FuncType, isPublic bool) {
-	parts := []string{"METHODS " + sanitizeABAP(name)}
+	kind := "METHODS "
+	if c.splitState != "" && c.splitInterface == "" {
+		kind = "CLASS-METHODS "
+	}
+	parts := []string{kind + sanitizeABAP(name)}
 
 	// Parameters
 	if len(ft.Params) > 0 {
@@ -248,7 +268,11 @@ func (c *compiler) emitConstructor() {
 // --- Function Code Generation ---
 
 func (c *compiler) emitFunction(name string, f *Function) {
-	c.line("METHOD %s.", sanitizeABAP(name))
+	methodName := sanitizeABAP(name)
+	if iface, method, ok := strings.Cut(name, "~"); ok {
+		methodName = sanitizeABAP(iface) + "~" + sanitizeABAP(method)
+	}
+	c.line("METHOD %s.", methodName)
 	c.indent++
 
 	// Emit chained DATA declaration
@@ -258,6 +282,10 @@ func (c *compiler) emitFunction(name string, f *Function) {
 			if inst.Op == OpCallIndirect {
 				c.line("DATA lv_ci_func TYPE i.")
 				c.line("DATA lv_ci_index TYPE i.")
+				if c.splitState != "" {
+					c.line("DATA ls_ci TYPE %s=>ty_func.", c.splitState)
+					c.line("DATA lv_ci_lookup TYPE i.")
+				}
 				break
 			}
 		}
@@ -479,7 +507,11 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		case OpMemorySize:
 			r := stack.push()
-			c.line("%s = %s.", r, c.memPagesVar())
+			if c.splitState != "" {
+				c.line("%s = mem_size( ).", r)
+			} else {
+				c.line("%s = %s.", r, c.memPagesVar())
+			}
 		case OpMemoryGrow:
 			pages := stack.pop()
 			r := stack.push()
@@ -491,6 +523,16 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 
 		// Control flow
 		case OpBlock, OpLoop:
+			if inst.Op == OpBlock && !c.useBlockMethods {
+				count := 0
+				for j := i; j < len(code) && code[j].Op == OpBlock; j++ {
+					count++
+				}
+				if count >= 3 && c.indent+count >= flattenBlockThreshold {
+					i = c.emitFlatBlocks(f, code, i, count, stack)
+					continue
+				}
+			}
 			kind := blockDO
 			if inst.Op == OpLoop {
 				kind = blockLOOP
@@ -1197,6 +1239,14 @@ func (c *compiler) emitCall(f *Function, funcIndex int, stack *virtualStack) {
 
 	name := c.bodyName(localIdx)
 
+	if c.splitState != "" {
+		name = c.splitInterface + "~" + c.bodyName(localIdx)
+		if c.chunkAssign[localIdx] != c.chunkIndex {
+			name = fmt.Sprintf("%s=>go_c%02d->%s", c.splitState, c.chunkAssign[localIdx]+1, c.bodyName(localIdx))
+			c.crossChunkCalls++
+		}
+	}
+
 	if c.useFUGR {
 		// PERFORM-based call
 		if len(target.Type.Results) > 0 {
@@ -1278,6 +1328,25 @@ func (c *compiler) emitCallIndirect(f *Function, typeIndex, tableIndex int, stac
 		c.line("DATA(lv_ci_func) = mt_tab%d[ %s + 1 ].", tableIndex, tableIdx)
 	}
 
+	if c.splitState != "" {
+		sig := typeIndex
+		for i := range c.mod.Types {
+			if sameFuncType(ft, &c.mod.Types[i]) {
+				sig = i
+				break
+			}
+		}
+		c.line("lv_ci_lookup = lv_ci_func + 1.")
+		c.line("READ TABLE %s=>mt_funcs INDEX lv_ci_lookup INTO ls_ci.", c.splitState)
+		c.line("IF sy-subrc <> 0 OR ls_ci-sig <> %d. %s ENDIF.", sig, callIndirectTrap)
+		result := ""
+		if len(ft.Results) > 0 {
+			result = stack.push()
+		}
+		c.emitStaticSplitCall(fmt.Sprintf("%s=>dispatch_s%d", c.splitState, sig), append([]string{"ls_ci-fid"}, args...), result, true)
+		c.indirectCalls++
+		return
+	}
 	// Generate dispatch
 	var paramParts []string
 	for i, a := range args {
@@ -1301,9 +1370,17 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 	for i := len(args) - 1; i >= 0; i-- {
 		args[i] = stack.pop()
 	}
+	result := ""
+	if len(imp.Type.Results) > 0 {
+		result = stack.push()
+	}
+	c.emitWASIArgs(imp, args, result)
+}
+
+func (c *compiler) emitWASIArgs(imp *Import, args []string, result string) {
 	if c.useFUGR || imp.Module != "wasi_snapshot_preview1" {
 		if len(imp.Type.Results) > 0 {
-			c.line("%s = 52.", stack.push())
+			c.line("%s = 52.", result)
 		}
 		if imp.Name == "proc_exit" {
 			c.line(wasmTrap)
@@ -1319,12 +1396,14 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 		"random_get", "proc_exit", "sched_yield":
 	default:
 		if len(imp.Type.Results) > 0 {
-			c.line("%s = 52.", stack.push())
+			c.line("%s = 52.", result)
 		}
 		return
 	}
 	prefix := ""
-	if c.sharedMain {
+	if c.splitState != "" {
+		prefix = c.splitState + "=>"
+	} else if c.sharedMain {
 		prefix = "mo_main->"
 	}
 	params := []string{fmt.Sprintf("iv_name = '%s'", strings.ReplaceAll(imp.Name, "'", "''"))}
@@ -1335,7 +1414,7 @@ func (c *compiler) emitWASICall(imp *Import, stack *virtualStack) {
 	}
 	call := fmt.Sprintf("%swasi_call( %s )", prefix, strings.Join(params, " "))
 	if len(imp.Type.Results) > 0 {
-		c.line("%s = %s.", stack.push(), call)
+		c.line("%s = %s.", result, call)
 	} else {
 		c.line("%s.", call)
 	}
@@ -1575,9 +1654,13 @@ func (c *compiler) emitBranch(depth int, stack *virtualStack) {
 
 // emitBrPropagation consumes the label just closed, then dispatches in its parent.
 func (c *compiler) emitBrPropagation() {
+	c.emitBrConsume()
+	c.emitBrPropagate()
+}
+
+func (c *compiler) emitBrConsume() {
 	br := c.brVar()
 	c.line("IF %s > 0 AND %s <> 999. %s = %s - 1. ELSEIF %s < 0. %s = %s + 1. ENDIF.", br, br, br, br, br, br, br)
-	c.emitBrPropagate()
 }
 
 // emitBrPropagate also handles calls whose extracted method consumed its own label.
@@ -1777,6 +1860,9 @@ func (c *compiler) line(format string, args ...any) {
 			c.usedRuntime[name] = true
 			return name
 		})
+	}
+	if c.splitState != "" {
+		stmt = c.splitStatement(stmt)
 	}
 	stmt = stripABAPComment(stmt)
 	if strings.TrimSpace(stmt) == "" {

@@ -56,27 +56,49 @@ echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
 (cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
   > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
 gen="$work/gen/TestOSD_EmitUnitClasses"
+# Flatten the same fixture sets consumed by osgo.
+cp "$gen"/split/*.abap "$gen/"
 classes=()
 for f in "$gen"/*.clas.abap; do
   [ -e "$f" ] || continue
   b=$(basename "$f" .clas.abap)
-  [ -f "$gen/$b.clas.testclasses.abap" ] || { echo "osd-m1: $b has no test class" >&2; exit 1; }
+  if [[ "$b" != *_st && ! "$b" =~ _c[0-9]+$ ]]; then
+    [ -f "$gen/$b.clas.testclasses.abap" ] || { echo "osd-m1: $b has no test class" >&2; exit 1; }
+  fi
   classes+=("$b")
 done
 [ "${#classes[@]}" -gt 0 ] || { echo "osd-m1: the generator wrote no classes" >&2; exit 1; }
 echo "osd-m1: ${#classes[@]} classes: ${classes[*]}" >&2
+
+# Interfaces activate first, then state, independent chunks and facades.
+for f in "$gen"/*.intf.abap; do
+  [ -e "$f" ] || continue
+  if ! vsp deploy "$f" "$pkg" --call-timeout 900 > "$work/log/deploy-$(basename "$f").log" 2>&1; then
+    cat "$work/log/deploy-$(basename "$f").log" >&2
+    exit 1
+  fi
+done
+ordered=()
+for c in "${classes[@]}"; do if [[ "$c" == *_st ]]; then ordered+=("$c"); fi; done
+for c in "${classes[@]}"; do if [[ "$c" =~ _c[0-9]+$ ]]; then ordered+=("$c"); fi; done
+for c in "${classes[@]}"; do
+  if [[ "$c" != *_st && ! "$c" =~ _c[0-9]+$ ]]; then ordered+=("$c"); fi
+done
+classes=("${ordered[@]}")
 
 # Deploy and test. Any failure stops the run: on OSD up to 0.6.1511 a failed
 # activation poisons every later one.
 fail=0
 for c in "${classes[@]}"; do
   for f in "$c.clas.abap" "$c.clas.testclasses.abap"; do
+    [ -f "$gen/$f" ] || continue
     if ! vsp deploy "$gen/$f" "$pkg" --call-timeout 900 > "$work/log/deploy-$f.log" 2>&1; then
       echo "osd-m1: deploy of $f failed" >&2
       cat "$work/log/deploy-$f.log" >&2
       exit 1
     fi
   done
+  [ -f "$gen/$c.clas.testclasses.abap" ] || continue
   # The exit status alone is not enough: the run must report exactly as many
   # passed tests as the generated test class has methods.
   want=$(grep -cE '^    METHODS c[0-9]+ FOR TESTING\.$' "$gen/$c.clas.testclasses.abap" || true)
