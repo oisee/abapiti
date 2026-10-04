@@ -35,3 +35,15 @@ Each fixture has `cases.txt` (`module export args...`), `native-results.txt`
 The builds print native answers and module SHA256 values. A module hash mismatch
 warns without failing, since compiler versions or build metadata can change
 the bytes; the Go test verifies the answers independently.
+
+## Licences of the downloaded code
+
+Nothing below is committed; `build.sh` downloads it into the ignored cache.
+
+- Monocypher 4.0.3: dual-licensed BSD-2-Clause or CC0-1.0 (see `LICENCE.md` in its release).
+- QuickJS 2024-01-13 (Fabrice Bellard, Charlie Gordon): MIT (see `LICENSE` in its release).
+- wasi-sdk 34.0: Apache-2.0 with the LLVM exception; its bundled wasi-libc and
+  other components carry their own notices inside the release archive.
+
+The drivers in this directory (`mono.c`, `qjs_eval.c`, the native drivers)
+are part of abapiti and use its licence.
