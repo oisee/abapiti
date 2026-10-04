@@ -1,0 +1,16 @@
+quickjs qjs_eval 0 = 3
+quickjs qjs_eval 1 = 5050
+quickjs qjs_eval 2 = 4009
+quickjs qjs_eval 3 = 19
+quickjs qjs_eval 4 = 610
+quickjs qjs_eval 5 = 65
+quickjs qjs_eval 6 = 1000
+quickjs qjs_eval 7 = 42
+quickjs qjs_eval 8 = 17711
+quickjs qjs_eval 9 = 42
+quickjs qjs_eval 10 = 20118
+quickjs qjs_eval 11 = 847439735
+quickjs qjs_eval 12 = 28197
+quickjs qjs_eval 13 = 100000
+quickjs qjs_eval 14 = 37114
+quickjs qjs_eval 15 = 12000

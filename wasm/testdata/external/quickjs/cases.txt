@@ -1,0 +1,16 @@
+quickjs qjs_eval 0
+quickjs qjs_eval 1
+quickjs qjs_eval 2
+quickjs qjs_eval 3
+quickjs qjs_eval 4
+quickjs qjs_eval 5
+quickjs qjs_eval 6
+quickjs qjs_eval 7
+quickjs qjs_eval 8
+quickjs qjs_eval 9
+quickjs qjs_eval 10
+quickjs qjs_eval 11
+quickjs qjs_eval 12
+quickjs qjs_eval 13
+quickjs qjs_eval 14
+quickjs qjs_eval 15

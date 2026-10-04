@@ -1,0 +1,10 @@
+mono blake2b 0 0
+mono blake2b 3 1
+mono blake2b 200 7
+mono x25519 1
+mono x25519 77
+mono chacha 64 5
+mono chacha 300 9
+mono poly 0 2
+mono poly 100 4
+mono eddsa 3
