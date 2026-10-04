@@ -1,0 +1,10 @@
+mono blake2b 0 0 = -1437841991
+mono blake2b 3 1 = 762815060
+mono blake2b 200 7 = -1058740209
+mono x25519 1 = 30051244
+mono x25519 77 = 111460299
+mono chacha 64 5 = -774082232
+mono chacha 300 9 = 871280412
+mono poly 0 2 = -1992710027
+mono poly 100 4 = -1575518979
+mono eddsa 3 = 1751534652
