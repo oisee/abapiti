@@ -1,6 +1,7 @@
 package abap
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -338,10 +339,7 @@ func Test750Semantics(t *testing.T) {
 	instance := func() *hir.Expr {
 		return &hir.Expr{Kind: hir.InstanceOf, Type: boolean, Owner: root.Name, X: local("ref", root)}
 	}
-	a, z := " {|}\\`€ \" \n\t", "end  "
 	m := method("run", i32, hir.B(
-		check(eq(rt("string.concat", hir.L(str, a), str, hir.L(str, z)), hir.L(str, a+z))),
-		check(eq(hir.L(str, strings.Repeat("{|}\\€ ", 100)), hir.L(str, strings.Repeat("{|}\\€ ", 100)))),
 		decl("ref", root, nil),
 		check(&hir.Expr{Kind: hir.Unary, Type: boolean, Op: "!", X: instance()}),
 		assign("ref", root, newObj(hir.Ref("SyntaxLeaf"))), check(instance()),
@@ -355,7 +353,42 @@ func Test750Semantics(t *testing.T) {
 		)}, ret(local("n", i32)),
 	))
 	m.Static = true
-	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: []*hir.Method{m}}}}
+	// These expectations come from the original Go strings, never stringLit or
+	// another emitted HIR literal. Byte comparison also preserves trailing blanks.
+	literals := []struct{ name, value string }{
+		{"backslash", `\`},
+		{"braces", `{}`},
+		{"pipe", `|`},
+		{"quotes", `"'`},
+		{"controls", "\x00\x01\b\t\n\v\f\r\x1f\x7f"},
+		{"blanks", "  trailing  "},
+		{"unicode", "€😀𐐷"},
+		{"empty", ""},
+		{"long", strings.Repeat("{|}\\€😀\"' ", 100) + "\n\tend  "},
+	}
+	// The current chunk budget is 60 input bytes. Place each special character
+	// just before, at, and after that boundary, including multi-byte characters
+	// and controls that split template runs. Repeated padding crosses more chunks.
+	for _, special := range []string{"\\", "{", "}", "|", "\"", "'", "\n", "\t", "😀", " "} {
+		for _, padding := range []int{59, 60, 61, 119, 120, 121} {
+			literals = append(literals, struct{ name, value string }{
+				fmt.Sprintf("boundary_%d", len(literals)),
+				strings.Repeat("a", padding) + special + strings.Repeat("b", 65) + special + "  ",
+			})
+		}
+	}
+	methods := []*hir.Method{m}
+	for _, literal := range literals {
+		getter := method(literal.name, str, ret(hir.L(str, literal.value)))
+		getter.Static = true
+		methods = append(methods, getter)
+	}
+	// Retain the concatenation regression, with an independent byte expectation.
+	concat := method("concat", str, ret(rt("string.concat", hir.L(str, " {|}\\`€ \"' \n\t"), str, hir.L(str, "end  "))))
+	concat.Static = true
+	methods = append(methods, concat)
+	literals = append(literals, struct{ name, value string }{"concat", " {|}\\`€ \"' \n\tend  "})
+	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: methods}}}
 	options := Options{}
 	if os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1" {
 		options = Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true}
@@ -366,7 +399,21 @@ func Test750Semantics(t *testing.T) {
 	}
 	names := hir.NewNames()
 	cls := names.Get("Syntax750")
-	files[cls+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\ncl_abap_unit_assert=>assert_equals( act = %s=>%s( ) exp = 3 ).\nENDMETHOD.\nENDCLASS.\n", cls, names.Get("member.run"))
+	var unit strings.Builder
+	fmt.Fprintf(&unit, "CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE xstring.\nDATA expected TYPE xstring.\nDATA hex_chunk TYPE xstring.\ncl_abap_unit_assert=>assert_equals( act = %s=>%s( ) exp = 3 ).\n", cls, names.Get("member.run"))
+	for _, literal := range literals {
+		fmt.Fprintf(&unit, "actual = cl_abap_codepage=>convert_to( source = %s=>%s( ) ).\nCLEAR expected.\n", cls, names.Get("member."+literal.name))
+		// Assignment to xstring decodes hex text; BYTE MODE joins raw bytes.
+		bytes := []byte(literal.value)
+		for len(bytes) > 0 {
+			n := min(len(bytes), 60)
+			fmt.Fprintf(&unit, "hex_chunk = '%s'.\nCONCATENATE expected hex_chunk INTO expected IN BYTE MODE.\n", strings.ToUpper(hex.EncodeToString(bytes[:n])))
+			bytes = bytes[n:]
+		}
+		fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_equals( act = actual exp = expected msg = '%s' ).\n", literal.name)
+	}
+	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
+	files[cls+".clas.testclasses.abap"] = unit.String()
 	for _, src := range files {
 		for _, line := range strings.Split(src, "\n") {
 			if len(line) > 255 {
