@@ -1,0 +1,1 @@
+export class Probe { public run(n: number): string { return n.toString(16); } }

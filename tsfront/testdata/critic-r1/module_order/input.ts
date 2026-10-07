@@ -1,0 +1,1 @@
+export class Probe { public static run(): number { return a; } } const a: number = 7; const b: number = Probe.run();

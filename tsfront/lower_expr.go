@@ -15,7 +15,20 @@ import (
 // `x === undefined` branches, dominating instanceof) becomes a hir.Narrow.
 
 func (l *lowerer) rtOp(op string, x *hir.Expr, t hir.Type, args ...*hir.Expr) *hir.Expr {
-	return &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: op, Type: t, X: x, Args: args}
+	ps, result, ok := hir.RuntimeSignature(op, x.Type)
+	if ok {
+		for i, a := range args {
+			if a != nil && i < len(ps) && ps[i].Kind == hir.I32 && a.Type.Kind == hir.Number {
+				args[i] = &hir.Expr{Kind: hir.RuntimeOp, Node: a.Node, Op: "number.index", Type: hir.T(hir.I32), X: a}
+			}
+		}
+		t = result
+	}
+	e := &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: op, Type: t, X: x, Args: args}
+	if t.Kind == hir.I32 {
+		return &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: "number.fromI32", Type: hir.T(hir.Number), X: e}
+	}
+	return e
 }
 
 // condition lowers an expression used where a boolean is required, applying
@@ -75,7 +88,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		// tsgo's scanner stores string literals decoded; Text() is the value.
 		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: n.Text()}
 	case ast.KindNumericLiteral:
-		return l.numericLiteral(n, hir.T(hir.I32), 1)
+		return l.numericLiteral(n, hir.T(hir.Number), 1)
 	case ast.KindTrueKeyword:
 		return hir.L(hir.T(hir.Bool), true)
 	case ast.KindFalseKeyword:
@@ -125,18 +138,19 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) numericLiteral(n *ast.Node, typ hir.Type, sign float64) *hir.Expr {
-	text := n.Text()
-	if strings.ContainsAny(text, ".eE") {
-		l.diagf(n, "unsupported-number", "numeric literal %s is not an i32 integer", text)
-		return nil
+	text := strings.ReplaceAll(n.Text(), "_", "")
+	v, err := strconv.ParseFloat(text, 64)
+	if err != nil {
+		if integer, intErr := strconv.ParseInt(text, 0, 64); intErr == nil {
+			v, err = float64(integer), nil
+		}
 	}
-	v, err := strconv.ParseInt(text, 0, 64)
 	if err != nil {
 		l.diagf(n, "unsupported-number", "numeric literal %s: %v", text, err)
 		return nil
 	}
-	l.checkNumberLiteral(n, float64(v)*sign)
-	return hir.L(typ, int(v)*int(sign))
+	l.checkNumberLiteral(n, v*sign)
+	return hir.L(typ, v*sign)
 }
 
 // identifier lowers a reference by resolving its symbol: locals and
@@ -186,6 +200,19 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	sym := l.resolve(n)
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
+		if f.Static {
+			var owner *hir.Class
+			if p.Expression.Kind == ast.KindThisKeyword {
+				owner = l.class
+			} else {
+				owner = l.classOf(l.resolve(p.Expression))
+			}
+			if owner != nil {
+				return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: owner.Name, Name: f.Name, Type: f.Type}
+			}
+			l.diagf(n, "unsupported-expr", "static field receiver is not a class")
+			return nil
+		}
 		if p.Expression.Kind == ast.KindThisKeyword {
 			return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: l.this(l.class)}
 		}
@@ -337,12 +364,16 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("string.toUpperCase", recv, str), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
-		case "replace":
+		case "replace", "replaceAll":
 			return l.replaceCall(n, recv, args), true
 		}
-	case hir.I32:
+	case hir.Number:
 		if name == "toString" {
-			return l.rtOp("i32.toString", recv, str), true
+			if len(args) != 0 {
+				l.diagf(n, "unsupported-call", "number.toString arguments are not lowered")
+				return nil, true
+			}
+			return l.rtOp("number.toString", recv, str), true
 		}
 	case hir.Array:
 		switch name {
@@ -376,10 +407,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	return nil, false
 }
 
-// replaceCall lowers s.replace(regexLiteral, literal): the only regular
-// expression shape this phase supports is a single character (optionally
-// escaped) with the global flag, mapped to string.replaceAll. Every other
-// pattern is reported, never silently dropped.
+// replaceCall maps global literal regex needles and substitution-free literal
+// replacements to string.replaceAll; all other forms are diagnosed.
 func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hir.Expr {
 	if len(args) != 2 || args[0].Kind != ast.KindRegularExpressionLiteral {
 		l.diagf(n, "unsupported-regex", "replace with a non-literal pattern is not lowered")
@@ -389,6 +418,10 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if !ok {
 		return nil
 	}
+	if args[1].Kind != ast.KindStringLiteral && args[1].Kind != ast.KindNoSubstitutionTemplateLiteral || strings.Contains(args[1].Text(), "$") {
+		l.diagf(args[1], "unsupported-regex", "replace requires a literal replacement without dollar substitutions")
+		return nil
+	}
 	with := l.expr(args[1])
 	if with == nil {
 		return nil
@@ -396,7 +429,7 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 }
 
-// simpleRegex accepts /\x/g and returns the decoded character.
+// simpleRegex accepts literal patterns with the global flag and decodes escapes.
 func (l *lowerer) simpleRegex(n *ast.Node) (string, bool) {
 	text := n.Text() // /pattern/flags
 	slash := strings.LastIndex(text[1:], "/")
@@ -410,17 +443,30 @@ func (l *lowerer) simpleRegex(n *ast.Node) (string, bool) {
 		l.diagf(n, "unsupported-regex", "regular expression /%s/%s: only the global flag is mapped", pattern, flags)
 		return "", false
 	}
-	l.diagf(n, "note-regex-mapped", "regex /%s/g mapped to string.replaceAll", pattern)
-	if len(pattern) == 1 && pattern[0] != '\\' && pattern[0] != '.' {
-		return pattern, true
-	}
-	if len(pattern) == 2 && pattern[0] == '\\' {
-		if s, ok := regexCharEscapes[pattern[1]]; ok {
-			return s, true
+	var decoded strings.Builder
+	for i := 0; i < len(pattern); i++ {
+		if pattern[i] == '\\' {
+			i++
+			if i >= len(pattern) {
+				break
+			}
+			if ch, ok := regexCharEscapes[pattern[i]]; ok && !(pattern[i] == '0' && i+1 < len(pattern) && pattern[i+1] >= '0' && pattern[i+1] <= '9') {
+				decoded.WriteString(ch)
+				continue
+			}
+		} else if !strings.ContainsRune(".^$*+?()[]{}|", rune(pattern[i])) {
+			decoded.WriteByte(pattern[i])
+			continue
 		}
+		l.diagf(n, "unsupported-regex", "regular expression /%s/g is not a literal pattern", pattern)
+		return "", false
 	}
-	l.diagf(n, "unsupported-regex", "regular expression /%s/g is not a single character", pattern)
-	return "", false
+	if decoded.Len() == 0 {
+		l.diagf(n, "unsupported-regex", "empty regular expression is not lowered")
+		return "", false
+	}
+	l.diagf(n, "note-regex-mapped", "regex /%s/g mapped to string.replaceAll", pattern)
+	return decoded.String(), true
 }
 
 var regexCharEscapes = map[byte]string{
@@ -549,9 +595,17 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	case ast.KindAsteriskToken:
 		return l.arithmetic(n, b, "*")
 	case ast.KindPercentToken:
-		return l.arithmetic(n, b, "%")
+		if b.Right.Kind == ast.KindNumericLiteral && b.Right.Text() == "2" {
+			x := l.expr(b.Left)
+			if x != nil {
+				return l.rtOp("number.remainder2", x, hir.T(hir.Number))
+			}
+			return nil
+		}
+		l.diagf(n, "unsupported-number", "Number remainder requires the literal divisor 2 in this phase")
+		return nil
 	case ast.KindSlashToken:
-		l.diagf(n, "unsupported-number", "division is not lowered under the i32 number policy")
+		l.diagf(n, "unsupported-number", "division is not lowered in this phase")
 		return nil
 	case ast.KindInstanceOfKeyword:
 		return l.instanceOf(n)
@@ -634,7 +688,7 @@ func (l *lowerer) prefixUnary(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: x}
 	case ast.KindMinusToken:
 		if u.Operand != nil && u.Operand.Kind == ast.KindNumericLiteral {
-			return l.numericLiteral(u.Operand, hir.T(hir.I32), -1)
+			return l.numericLiteral(u.Operand, hir.T(hir.Number), -1)
 		}
 		x := l.expr(u.Operand)
 		if x == nil {
@@ -646,10 +700,19 @@ func (l *lowerer) prefixUnary(n *ast.Node) *hir.Expr {
 	return nil
 }
 
-// asExpression keeps the checker's proof: the operand is lowered with its
-// natural type and viewed as the asserted reference type.
+// asExpression accepts only assertions whose operand already has the asserted
+// flow type. An assertion alone is never an ancestry proof.
 func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
-	return l.expr(n.Expression())
+	x := l.expr(n.Expression())
+	if x == nil {
+		return nil
+	}
+	target := l.mapTypeNode(n.Type())
+	if !x.Type.Equal(target) {
+		l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
+		return nil
+	}
+	return x
 }
 
 // objectLiteral lowers { ... } whose contextual type is a named alias shape,
@@ -696,85 +759,4 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 		args = append(args, a)
 	}
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(target.Name), Args: args}
-}
-
-// decodeStringLiteral decodes a TypeScript string literal's raw text
-// (including the quotes). The second result is an error message.
-func decodeStringLiteral(raw string) (string, string) {
-	if len(raw) < 2 {
-		return "", "too short"
-	}
-	quote := raw[0]
-	if quote != '"' && quote != '\'' && quote != '`' || raw[len(raw)-1] != quote {
-		return "", "not a quoted literal"
-	}
-	body := raw[1 : len(raw)-1]
-	var b strings.Builder
-	for i := 0; i < len(body); i++ {
-		c := body[i]
-		if c != '\\' {
-			b.WriteByte(c)
-			continue
-		}
-		i++
-		if i >= len(body) {
-			return "", "trailing backslash"
-		}
-		switch e := body[i]; e {
-		case 'n':
-			b.WriteByte('\n')
-		case 'r':
-			b.WriteByte('\r')
-		case 't':
-			b.WriteByte('\t')
-		case 'v':
-			b.WriteByte('\v')
-		case 'f':
-			b.WriteByte('\f')
-		case 'b':
-			b.WriteByte('\b')
-		case '0':
-			b.WriteByte(0)
-		case '\\', '/', '\'', '"', '`':
-			b.WriteByte(e)
-		case '\n':
-			// line continuation: nothing
-		case 'x':
-			if i+2 >= len(body) {
-				return "", "short \\x escape"
-			}
-			v, err := strconv.ParseUint(body[i+1:i+3], 16, 8)
-			if err != nil {
-				return "", "bad \\x escape"
-			}
-			b.WriteByte(byte(v))
-			i += 2
-		case 'u':
-			if i+1 < len(body) && body[i+1] == '{' {
-				end := strings.IndexByte(body[i+2:], '}')
-				if end < 0 {
-					return "", "unterminated \\u{ escape"
-				}
-				v, err := strconv.ParseUint(body[i+2:i+2+end], 16, 32)
-				if err != nil {
-					return "", "bad \\u{ escape"
-				}
-				b.WriteRune(rune(v))
-				i += 2 + end
-				continue
-			}
-			if i+4 >= len(body) {
-				return "", "short \\u escape"
-			}
-			v, err := strconv.ParseUint(body[i+1:i+5], 16, 32)
-			if err != nil {
-				return "", "bad \\u escape"
-			}
-			b.WriteRune(rune(v))
-			i += 4
-		default:
-			return "", "unsupported escape \\" + string(e)
-		}
-	}
-	return b.String(), ""
 }

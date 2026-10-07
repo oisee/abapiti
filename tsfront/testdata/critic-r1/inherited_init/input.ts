@@ -1,0 +1,1 @@
+export class Base { value: number; constructor(n: number) { this.value = n; } } export class Probe extends Base { x: number = 7; y: number = this.x + 1; run(): number { return this.value * 100 + this.x * 10 + this.y; } }

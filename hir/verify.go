@@ -207,7 +207,7 @@ func (v *verifier) typ(n Node, t Type) {
 	}
 	if t.Kind == OrderedMap || t.Kind == OrderedSet {
 		k := t.Args[0]
-		if k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef {
+		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef {
 			v.fail(n, "unsupported collection key "+k.String())
 		}
 	}

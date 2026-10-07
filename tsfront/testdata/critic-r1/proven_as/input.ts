@@ -1,0 +1,1 @@
+export class Base { run(): number { return 1; } } export class Sub extends Base { run(): number { return 2; } } export class Probe { run(p: Base): number { if (p instanceof Sub) { return (p as Sub).run(); } return 0; } }

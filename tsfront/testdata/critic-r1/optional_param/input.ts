@@ -1,0 +1,1 @@
+export class Probe { public run(p?: Probe): boolean { return p === undefined; } public caller(): boolean { return this.run(); } }

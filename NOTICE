@@ -16,7 +16,8 @@ abaplint — https://github.com/abaplint/abaplint
 Copyright (c) Lars Hvam Petersen. Licensed under the MIT License.
   ts/testdata/lexer.ts, the JavaScript lexer embedded in the jseval tests, the
   ABAP classes in ts/testdata/abaplint_lexer/ and abap/abaplint-lexer.zip are
-  modelled on the abaplint lexer.
+  modelled on the abaplint lexer. tsfront/testdata/lexer/src/ contains
+  vendored abaplint sources; see LICENSE.abaplint for the full MIT notice.
 
 QuickJS — https://bellard.org/quickjs/
 Copyright (c) 2017-2021 Fabrice Bellard and Charlie Gordon.

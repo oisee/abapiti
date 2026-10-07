@@ -41,6 +41,7 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 				l.lowerConstructorBody(m, c)
 			}
 		}
+		l.lowerImplicitInitializers(stmt, c)
 	}
 }
 
@@ -91,6 +92,16 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 			}
 		}
 	}
+	if c.Ctor == nil {
+		for _, m := range node.Members() {
+			if m.Kind == ast.KindPropertyDeclaration && m.Initializer() != nil && m.ModifierFlags()&ast.ModifierFlagsStatic == 0 {
+				c.Ctor = &hir.Method{Node: l.node(node), Name: "constructor", Result: hir.T(hir.Void)}
+				l.implicitCtors[c] = true
+				break
+			}
+		}
+	}
+
 }
 
 // propertySignature lowers one property declaration. Constructor parameter
@@ -186,6 +197,9 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 	sig := l.ck.GetSignatureFromDeclaration(node)
 	checked := map[int]bool{}
 	for i, p := range node.Parameters() {
+		if p.Initializer() != nil {
+			l.diagf(p, "unsupported-param-default", "parameter defaults are not lowered")
+		}
 		if ast.IsThisParameter(p) {
 			continue
 		}
@@ -304,11 +318,26 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 	seenSuper := false
 	for _, s := range m.Body().AsBlock().Statements.Nodes {
 		if !seenSuper && s.Kind == ast.KindExpressionStatement && l.isSuperCall(s.Expression()) {
-			stmts = append(stmts, l.superConstructorCall(s)...)
+			if touchesThis(s) {
+				l.diagf(s, "unsupported-before-super", "super arguments touch this before initialization")
+			} else {
+				stmts = append(stmts, l.superConstructorCall(s)...)
+			}
 			seenSuper = true
 			continue
 		}
-		afterSuper = append(afterSuper, s)
+		if c.Super != "" && !seenSuper {
+			if touchesThis(s) {
+				l.diagf(s, "unsupported-before-super", "statement before super touches this")
+				continue
+			}
+			stmts = append(stmts, l.stmts(s)...)
+		} else {
+			afterSuper = append(afterSuper, s)
+		}
+	}
+	if c.Super != "" && !seenSuper {
+		l.diagf(m, "unsupported-super", "derived constructor requires a top-level super call")
 	}
 	// Parameter properties and field initializers run in declaration order,
 	// after super() and before the constructor body.
@@ -323,19 +352,7 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 				X: l.this(c)},
 			Y: hir.V(name, l.declaredFieldType(c, name))})
 	}
-	for _, mem := range l.classMembers(m) {
-		if mem.Kind != ast.KindPropertyDeclaration || mem.Initializer() == nil {
-			continue
-		}
-		name, ok := l.memberName(mem, c)
-		if !ok {
-			continue
-		}
-		t := l.declaredFieldType(c, name)
-		prologue = append(prologue, &hir.Stmt{Kind: hir.Assign, Node: l.node(mem),
-			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(mem), Name: name, Type: t, X: l.this(c)},
-			Y: l.expr(mem.Initializer())})
-	}
+	prologue = append(prologue, l.fieldInitializers(m.Parent, c, false)...)
 	stmts = append(stmts, prologue...)
 	for _, s := range afterSuper {
 		stmts = append(stmts, l.stmts(s)...)
@@ -344,12 +361,72 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 	l.pop()
 }
 
-// classMembers returns the members of the class declaration owning m.
-func (l *lowerer) classMembers(m *ast.Node) []*ast.Node {
-	if m.Parent != nil {
-		return m.Parent.Members()
+// fieldInitializers preserves declaration order, with static and instance
+// initialization in their respective ABAP lifecycle methods.
+func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) []*hir.Stmt {
+	var out []*hir.Stmt
+	for _, mem := range node.Members() {
+		if mem.Kind != ast.KindPropertyDeclaration || mem.Initializer() == nil || (mem.ModifierFlags()&ast.ModifierFlagsStatic != 0) != static {
+			continue
+		}
+		name, ok := l.memberName(mem, c)
+		if !ok {
+			continue
+		}
+		t := l.declaredFieldType(c, name)
+		var target *hir.Expr
+		if static {
+			target = &hir.Expr{Kind: hir.StaticGet, Node: l.node(mem), Owner: c.Name, Name: name, Type: t}
+		} else {
+			target = &hir.Expr{Kind: hir.FieldGet, Node: l.node(mem), Name: name, Type: t, X: l.this(c)}
+		}
+		l.hint = t
+		x := l.expr(mem.Initializer())
+		l.hint = hir.Type{}
+		if x != nil {
+			out = append(out, &hir.Stmt{Kind: hir.Assign, Node: l.node(mem), X: target, Y: x})
+		}
 	}
-	return nil
+	return out
+}
+
+func (l *lowerer) lowerImplicitInitializers(node *ast.Node, c *hir.Class) {
+	if l.implicitCtors[c] {
+		l.method = c.Ctor
+		l.push()
+		var body []*hir.Stmt
+		for _, p := range c.Ctor.Params {
+			l.declare(p.Name, p.Type)
+		}
+		if c.Super != "" {
+			if base := l.baseConstructor(); base != nil {
+				var args []*hir.Expr
+				for _, p := range base.Params {
+					args = append(args, hir.V(p.Name, p.Type))
+				}
+				body = append(body, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(node), X: &hir.Expr{Kind: hir.SuperCall, Node: l.node(node), Name: "constructor", Type: hir.T(hir.Void), Args: args}})
+			}
+		}
+		body = append(body, l.fieldInitializers(node, c, false)...)
+		c.Ctor.Body = hir.B(body...)
+		l.pop()
+	}
+	init := &hir.Method{Node: l.node(node), Name: "class_constructor", Static: true, Result: hir.T(hir.Void)}
+	l.method = init
+	l.push()
+	body := l.fieldInitializers(node, c, true)
+	l.pop()
+	if len(body) > 0 {
+		init.Body = hir.B(body...)
+		c.Methods = append(c.Methods, init)
+	}
+}
+
+func touchesThis(n *ast.Node) bool {
+	if n.Kind == ast.KindThisKeyword {
+		return true
+	}
+	return n.ForEachChild(touchesThis)
 }
 
 func (l *lowerer) declaredFieldType(c *hir.Class, name string) hir.Type {
@@ -381,7 +458,9 @@ func (l *lowerer) superConstructorCall(s *ast.Node) []*hir.Stmt {
 	call := s.Expression()
 	base := l.baseConstructor()
 	if base == nil {
-		l.diagf(call, "unsupported-super", "super constructor call without a lowered base constructor")
+		if len(call.Arguments()) > 0 {
+			l.diagf(call, "unsupported-super", "super arguments without a lowered base constructor")
+		}
 		return nil
 	}
 	args, ok := l.callArgs(call, call.Arguments(), base.Params)

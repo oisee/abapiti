@@ -1,0 +1,1 @@
+const x = 7; throw new Error("oops"); export class Probe { public run(): number { return x; } }

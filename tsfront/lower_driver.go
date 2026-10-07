@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 // The differential corpus: ABAP snippets and real files (cases.json) plus the
@@ -56,7 +57,7 @@ func LoadLexerCorpus(dir string) ([]LexerCase, error) {
 // the lowered driver class, its dump and firstDiff methods, and those
 // methods' parameter names.
 type DriverParams struct {
-	Class, Dump, Diff, Raw, A, B string
+	Class, Dump, Diff, Raw, A, B, TokenCount, Virtual string
 }
 
 // LexerTestClass generates the ABAP Unit test class that runs the lowered
@@ -69,16 +70,22 @@ func LexerTestClass(cases []LexerCase, p DriverParams) string {
 	line := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
 	line("CLASS ltcl_lexer_diff DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.")
 	line("PRIVATE SECTION.")
+	line("DATA executed TYPE i.")
+	line("METHODS teardown.")
 	line("METHODS tokens FOR TESTING.")
 	line("ENDCLASS.")
 	line("CLASS ltcl_lexer_diff IMPLEMENTATION.")
+	line("METHOD teardown.")
+	line("cl_abap_unit_assert=>assert_equals( act = executed exp = %d msg = `corpus completion` ).", len(cases))
+	line("ENDMETHOD.")
 	line("METHOD tokens.")
 	for _, v := range []string{"raw", "expected", "actual", "msg"} {
 		line("DATA %s TYPE string.", v)
 	}
-	line("DATA diff TYPE i.")
+	line("DATA diff TYPE f.")
 	line("DATA idx TYPE i.")
 	line("DATA ch TYPE c LENGTH 1.")
+	line("DATA virtual TYPE abap_bool.")
 	for i, c := range cases {
 		line("CLEAR raw.")
 		for _, s := range abapStringBuild("raw", "ch", c.Abap) {
@@ -93,7 +100,11 @@ func LexerTestClass(cases []LexerCase, p DriverParams) string {
 		line("idx = %d.", i+1)
 		line("msg = |case %s { idx }|.", abapTemplate(c.Name))
 		line("cl_abap_unit_assert=>assert_equals( act = diff exp = -1 msg = msg ).")
+		line("cl_abap_unit_assert=>assert_equals( act = %s=>%s exp = %d msg = msg ).", p.Class, p.TokenCount, c.Tokens)
+		line("executed = executed + 1.")
 	}
+	line("CALL METHOD %s=>%s RECEIVING result = virtual.", p.Class, p.Virtual)
+	line("cl_abap_unit_assert=>assert_equals( act = virtual exp = abap_true msg = `virtual positions` ).")
 	line("ENDMETHOD.")
 	line("ENDCLASS.")
 	return b.String()
@@ -118,6 +129,7 @@ func chunkLimit(runes []rune, k int) int {
 	cut := k
 	for _, p := range modePhrases {
 		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 {
+			i = utf8.RuneCountInString(lower[:i])
 			if i < cut {
 				cut = i
 			}

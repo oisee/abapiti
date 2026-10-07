@@ -125,12 +125,14 @@ func main() {
 					fatal(err)
 				}
 				params := tsfront.DriverParams{
-					Class: names.Get("harness/lexer_dump.ts.LexerDump"),
-					Dump:  names.Get("member.dump"),
-					Diff:  names.Get("member.firstDiff"),
-					Raw:   names.Get("param.raw"),
-					A:     names.Get("param.a"),
-					B:     names.Get("param.b"),
+					Class:      names.Get("harness/lexer_dump.ts.LexerDump"),
+					Dump:       names.Get("member.dump"),
+					TokenCount: names.Get("member.tokenCount"),
+					Virtual:    names.Get("member.virtualProbe"),
+					Diff:       names.Get("member.firstDiff"),
+					Raw:        names.Get("param.raw"),
+					A:          names.Get("param.a"),
+					B:          names.Get("param.b"),
 				}
 				files[params.Class+".clas.testclasses.abap"] = tsfront.LexerTestClass(cases, params)
 				report["corpusCases"] = len(cases)

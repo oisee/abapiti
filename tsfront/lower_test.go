@@ -73,7 +73,7 @@ func TestLowerLexerClosure(t *testing.T) {
 	// skipped debug method are allowed.
 	want := map[string]int{
 		"skipped-computed-name": 1, // [Symbol.for("debug.description")] in AbstractToken
-		"note-number-i32":       39,
+		"note-number-binary64":  40,
 		"note-optional-param":   1,
 		"note-regex-mapped":     1,
 		"note-union-base":       1,
@@ -132,13 +132,25 @@ func TestLowerLexerClosure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(cases) != 44 {
+		t.Fatalf("corpus cardinality: %d, want 44", len(cases))
+	}
+	total := 0
+	for _, c := range cases {
+		total += c.Tokens
+	}
+	if total != 4663 {
+		t.Fatalf("corpus tokens: %d, want 4663", total)
+	}
 	params := DriverParams{
-		Class: names.Get("harness/lexer_dump.ts.LexerDump"),
-		Dump:  names.Get("member.dump"),
-		Diff:  names.Get("member.firstDiff"),
-		Raw:   names.Get("param.raw"),
-		A:     names.Get("param.a"),
-		B:     names.Get("param.b"),
+		Class:      names.Get("harness/lexer_dump.ts.LexerDump"),
+		Dump:       names.Get("member.dump"),
+		TokenCount: names.Get("member.tokenCount"),
+		Virtual:    names.Get("member.virtualProbe"),
+		Diff:       names.Get("member.firstDiff"),
+		Raw:        names.Get("param.raw"),
+		A:          names.Get("param.a"),
+		B:          names.Get("param.b"),
 	}
 	test := LexerTestClass(cases, params)
 	for _, line := range strings.Split(test, "\n") {

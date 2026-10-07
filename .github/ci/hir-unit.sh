@@ -27,4 +27,5 @@ for runtime in osgo osgjs; do
     ' "$work/hir-$runtime-$suite.json" "$status" "$runtime $suite" "$expected" || result=1
   done
 done
+node "$root/.github/ci/lexer-unit.mjs" "$work" || result=1
 exit "$result"

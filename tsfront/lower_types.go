@@ -5,17 +5,15 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"github.com/oisee/abapiti/internal/tsgo/jsnum"
+	"math"
 )
 
 // Type mapping. Declared annotations are mapped node by node with the checker
 // typing each node; checker types are mapped structurally for expressions.
 // Both routes must agree; the checker decides, the syntax only selects.
 //
-// Policy (see docs/adr/0005 and the phase-1 plan): TypeScript `number` maps
-// to HIR i32 while every numeric literal in the lowered sources is an i32
-// integer and no `/` appears; otherwise the site is rejected with a
-// diagnostic. Fractions and NaN/Infinity are not representable in this
-// policy and never lowered silently.
+// Policy: TypeScript number uses binary64. Integral syntax is not a range
+// proof: pinned OSG-JS does not trap i32 overflow, so i32 cannot enforce a trapping contract.
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
@@ -26,8 +24,8 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 	}
 	switch n.Kind {
 	case ast.KindNumberKeyword:
-		l.diagf(n, "note-number-i32", "number lowered as i32 (all literals integral, no division)")
-		return hir.T(hir.I32)
+		l.diagf(n, "note-number-binary64", "number lowered as binary64")
+		return hir.T(hir.Number)
 	case ast.KindStringKeyword:
 		return hir.T(hir.String)
 	case ast.KindBooleanKeyword:
@@ -85,10 +83,6 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return hir.T(hir.OrderedMap, arg(0), arg(1))
 	case "Array", "ReadonlyArray":
 		return hir.T(hir.Array, arg(0))
-	}
-	if sym == nil {
-		l.diagf(n, "unsupported-type", "unresolved type reference %s", typeRefName(n))
-		return hir.T(hir.Void)
 	}
 	if sym == nil {
 		l.diagf(n, "unsupported-type", "unresolved type reference %s", typeRefName(n))
@@ -195,7 +189,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		if flags&checker.TypeFlagsNumberLiteral != 0 {
 			l.checkNumberLiteral(n, t.AsLiteralType().Value())
 		}
-		return hir.T(hir.I32)
+		return hir.T(hir.Number)
 	case flags&checker.TypeFlagsStringLike != 0:
 		return hir.T(hir.String)
 	case flags&checker.TypeFlagsBooleanLiteral != 0 || flags&checker.TypeFlagsBoolean != 0:
@@ -233,7 +227,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	return hir.T(hir.Void)
 }
 
-// checkNumberLiteral enforces the i32 number policy for one literal value.
+// checkNumberLiteral rejects values outside the finite binary64 domain.
 func (l *lowerer) checkNumberLiteral(n *ast.Node, v any) {
 	f, ok := v.(float64)
 	if !ok {
@@ -241,8 +235,8 @@ func (l *lowerer) checkNumberLiteral(n *ast.Node, v any) {
 			f, ok = float64(j), true
 		}
 	}
-	if !ok || f != float64(int64(f)) || f < -2147483648 || f > 2147483647 {
-		l.diagf(n, "unsupported-number", "literal %v is not an i32 integer", v)
+	if !ok || math.IsInf(f, 0) || math.IsNaN(f) {
+		l.diagf(n, "unsupported-number", "literal %v is not finite binary64", v)
 	}
 }
 

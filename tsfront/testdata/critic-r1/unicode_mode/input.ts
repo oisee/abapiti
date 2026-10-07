@@ -1,0 +1,1 @@
+export class Probe { public run(): string { return "€€€€€€ IN BYTE MODE end"; } }

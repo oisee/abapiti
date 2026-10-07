@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
 )
@@ -482,14 +483,15 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 	case hir.Narrow:
 		a := b.expr(x.X)
-		if x.X.Type.Kind == hir.Optional {
-			// Unwrapping an optional reference: the same ABAP type.
-			b.line(n + " = " + a + ".")
-		} else {
-			// A proven downcast; a failed cast raises rather than aliasing wrong.
-			b.line(n + " ?= " + a + ".")
-
+		underlying := x.X.Type
+		if underlying.Kind == hir.Optional {
+			underlying = underlying.Args[0]
 		}
+		op := "?="
+		if underlying.Equal(t) {
+			op = "="
+		}
+		b.line(n + " " + op + " " + a + ".")
 	case hir.IsUndefined:
 		a := b.expr(x.X)
 		b.line("IF " + a + " IS INITIAL.")
@@ -543,7 +545,7 @@ func (b *body) trimLoop(a, lo, hi string, leading bool) {
 	b.line("WHILE " + cond + ".")
 	b.line(init)
 	b.line(ch + " = " + a + "+" + idx + "(1).")
-	b.line(code + " = cl_abap_conv_out_ce=>uccpi( " + ch + " ).")
+	b.codeUnit(code, ch)
 	var tests []string
 	for _, cp := range jsWhiteSpace {
 		tests = append(tests, fmt.Sprintf("%s = %d", code, cp))
@@ -555,6 +557,23 @@ func (b *body) trimLoop(a, lo, hi string, leading bool) {
 	b.line("EXIT.")
 	b.line("ENDIF.")
 	b.line("ENDWHILE.")
+}
+
+// codeUnit reads one BMP UTF-16 unit directly. The pinned library's uccpi
+// uses high-byte * 255 on OSG-JS; that is not a correct Unicode code point.
+func (b *body) codeUnit(target, ch string) {
+	conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
+	bytes := b.rawTemp("xstring")
+	low := b.rawTemp("x LENGTH 1")
+	high := b.rawTemp("x LENGTH 1")
+	highInt := b.temp(hir.T(hir.I32))
+	b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+	b.line("CALL METHOD " + conv + "->convert EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + ".")
+	b.line(low + " = " + bytes + "(1).")
+	b.line(high + " = " + bytes + "+1(1).")
+	b.line(target + " = " + low + ".")
+	b.line(highInt + " = " + high + ".")
+	b.line(target + " = " + target + " + " + highInt + " * 256.")
 }
 
 func (b *body) truth(n, a string, t hir.Type) {
@@ -617,8 +636,11 @@ func literalChunkLimit(r []rune, k int) int {
 	lower := strings.ToLower(string(r[:k]))
 	cut := k
 	for _, p := range literalModePhrases {
-		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 && i < cut {
-			cut = i
+		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 {
+			i = utf8.RuneCountInString(lower[:i])
+			if i < cut {
+				cut = i
+			}
 		}
 	}
 	if cut <= 0 {
@@ -706,9 +728,62 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	for i, v := range x.Args {
 		args = append(args, b.value(v, ps[i]))
 	}
+	if x.Op == "number.remainder2" {
+		// Division/multiplication by two are exact for finite binary64.
+		// Truncating the quotient and subtracting gives JS signed remainder.
+		q := b.temp(hir.T(hir.Number))
+		b.line(q + " = " + a + " / 2.")
+		b.line(q + " = trunc( " + q + " ).")
+		b.line(q + " = " + q + " * 2.")
+		b.line(n + " = " + a + " - " + q + ".")
+		return
+	}
+	if x.Op == "number.fromI32" {
+		b.line(n + " = " + a + ".")
+		return
+	}
+	if x.Op == "number.index" {
+		// ToIntegerOrInfinity: saturating indices preserves clamping/bounds
+		// semantics while preventing target i32 conversion overflow.
+		b.line("IF " + a + " > 2147483647.")
+		b.line(n + " = 2147483647.")
+		b.line("ELSEIF " + a + " < -2147483648.")
+		b.line(n + " = -2147483648.")
+		b.line("ELSE.")
+		b.line(n + " = trunc( " + a + " ).")
+		b.line("ENDIF.")
+		return
+	}
+	if x.Op == "number.toString" {
+		// This phase supports decimal rendering of safe integers. Other
+		// dynamic values trap rather than silently adopting ABAP formatting.
+		limit := b.temp(hir.T(hir.Number))
+		b.line(limit + " = '9007199254740991'.")
+		b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " > " + limit + " OR " + a + " < 0 - " + limit + ".")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		integer := b.temp(hir.T(hir.I64))
+		b.line(integer + " = " + a + ".")
+		b.line(n + " = |{ " + integer + " }|.")
+		return
+	}
 	if x.X.Type.Kind == hir.String {
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
+		switch x.Op {
+		case "string.substring", "string.substr", "string.charAt", "string.charCodeAt", "string.toUpperCase":
+			// Character slicing is not surrogate slicing on both runtimes.
+			// Reject supplementary input before producing a wrong value.
+			conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
+			bytes := b.rawTemp("xstring")
+			units := b.temp(hir.T(hir.I32))
+			b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+			b.line("CALL METHOD " + conv + "->convert EXPORTING data = " + a + " IMPORTING buffer = " + bytes + ".")
+			b.line(units + " = xstrlen( " + bytes + " ) / 2.")
+			b.line("IF " + units + " <> " + length + ".")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+		}
 		switch x.Op {
 		case "string.length":
 			bytes := b.rawTemp("xstring")
@@ -761,7 +836,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			// allowed as functional-method arguments.
 			ch := b.temp(hir.T(hir.String))
 			b.line(ch + " = " + a + "+" + args[0] + "(1).")
-			b.line(n + " = cl_abap_conv_out_ce=>uccpi( " + ch + " ).")
+			b.codeUnit(n, ch)
 		case "string.substr":
 			// Legacy substr: a negative start counts from the end, a
 			// non-positive length is the empty string, the result is cut at
@@ -796,6 +871,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 		case "string.toUpperCase":
 			b.line(n + " = " + a + ".")
+			for _, mapping := range fullUpperMappings {
+				b.line("REPLACE ALL OCCURRENCES OF `" + mapping[0] + "` IN " + n + " WITH `" + mapping[1] + "`.")
+			}
 			b.line("TRANSLATE " + n + " TO UPPER CASE.")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")

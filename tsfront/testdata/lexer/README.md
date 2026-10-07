@@ -1,7 +1,7 @@
 Vendored TypeScript closure for the lexer lowering test.
 
 `src/` is copied verbatim from abaplint core at commit
-577f875ebec44cfaf64841cfe71c8ab8dc32622e (MIT, see LICENSE) — only the files
+577f875ebec44cfaf64841cfe71c8ab8dc32622e (MIT, see LICENSE.abaplint) — only the files
 the lexer's transitive import closure needs: `position.ts`,
 `virtual_position.ts`, `files/_ifile.ts` and `abap/1_lexer/**`.
 

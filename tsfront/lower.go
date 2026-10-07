@@ -34,6 +34,7 @@ func (d LowerDiagnostic) String() string { return d.Category + " " + d.Loc + ": 
 func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
 		prog:          p,
+		implicitCtors: map[*hir.Class]bool{},
 		out:           &hir.Program{},
 		classes:       map[*ast.Symbol]*hir.Class{},
 		ifaces:        map[*ast.Symbol]*hir.Interface{},
@@ -76,6 +77,26 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 		l.signaturesFile(f)
 		done()
 	}
+	// An implicit derived constructor forwards the inherited parameter list.
+	var inherit func(*hir.Class)
+	visited := map[*hir.Class]bool{}
+	inherit = func(c *hir.Class) {
+		if visited[c] {
+			return
+		}
+		visited[c] = true
+		if base := l.classesByQualifiedName(c.Super); base != nil {
+			inherit(base)
+			if l.implicitCtors[c] {
+				if ctor := l.constructorOf(base); ctor != nil {
+					c.Ctor.Params = append([]hir.Param{}, ctor.Params...)
+				}
+			}
+		}
+	}
+	for _, c := range l.out.Classes {
+		inherit(c)
+	}
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
@@ -89,23 +110,24 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	prog    *Program
-	ck      *checker.Checker
-	file    *ast.SourceFile
-	out     *hir.Program
-	diags   []LowerDiagnostic
-	classes map[*ast.Symbol]*hir.Class
-	ifaces  map[*ast.Symbol]*hir.Interface
-	methods map[*ast.Symbol]*hir.Method
-	fields  map[*ast.Symbol]hir.Field
-	synths  map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
-	modules map[*ast.SourceFile]*hir.Class
-	modvars map[*ast.Symbol]string // module variable symbol -> field name
-	scope   []map[string]hir.Type
-	class   *hir.Class  // class whose member is being lowered
-	method  *hir.Method // method being lowered
-	serial  int
-	hint    hir.Type // contextual type for undefined literals
+	prog          *Program
+	ck            *checker.Checker
+	file          *ast.SourceFile
+	out           *hir.Program
+	diags         []LowerDiagnostic
+	classes       map[*ast.Symbol]*hir.Class
+	ifaces        map[*ast.Symbol]*hir.Interface
+	methods       map[*ast.Symbol]*hir.Method
+	fields        map[*ast.Symbol]hir.Field
+	synths        map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
+	modules       map[*ast.SourceFile]*hir.Class
+	modvars       map[*ast.Symbol]string // module variable symbol -> field name
+	scope         []map[string]hir.Type
+	class         *hir.Class  // class whose member is being lowered
+	method        *hir.Method // method being lowered
+	implicitCtors map[*hir.Class]bool
+	serial        int
+	hint          hir.Type // contextual type for undefined literals
 
 	// The per-file checkers hand out distinct symbol pointers for the same
 	// cross-file declaration, so every registry also has a by-name view keyed
@@ -122,6 +144,9 @@ type lowerer struct {
 
 // classOf resolves a class symbol through both registries.
 func (l *lowerer) classOf(sym *ast.Symbol) *hir.Class {
+	if sym == nil {
+		return nil
+	}
 	if c, ok := l.classes[sym]; ok {
 		return c
 	}
@@ -275,15 +300,25 @@ func (l *lowerer) lowerModule(f *ast.SourceFile) {
 	var decls []*ast.Node
 	for _, stmt := range f.Statements.Nodes {
 		if stmt.Kind != ast.KindVariableStatement {
+			switch stmt.Kind {
+			case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
+			default:
+				l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
+			}
 			continue
 		}
 		list := stmt.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
 			continue
 		}
+		if list.Flags&ast.NodeFlagsConst == 0 {
+			l.diagf(stmt, "unsupported-top-level", "only const initializers are supported at module scope")
+		}
 		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
 			if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Symbol() != nil {
 				decls = append(decls, d)
+			} else {
+				l.diagf(d, "unsupported-top-level", "module bindings require a simple identifier")
 			}
 		}
 	}
@@ -312,10 +347,14 @@ func (l *lowerer) lowerModule(f *ast.SourceFile) {
 func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	name := d.Name().Text()
 	init := d.Initializer()
+	if init == nil {
+		l.diagf(d, "unsupported-top-level", "module const requires an initializer")
+		return nil
+	}
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	switch {
-	case d.Type() != nil && init != nil:
+	case d.Type() != nil:
 		typ = l.mapTypeNode(d.Type())
 		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, l.expr(init), typ)}
 	case l.isNewCollection(init):
@@ -449,4 +488,13 @@ func itoa(n int) string {
 		b[i] = '-'
 	}
 	return string(b[i:])
+}
+
+func (l *lowerer) classesByQualifiedName(name string) *hir.Class {
+	for _, c := range l.out.Classes {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
 }

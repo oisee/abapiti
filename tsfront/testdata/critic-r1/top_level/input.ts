@@ -1,0 +1,1 @@
+export class Probe { public static x: number; public static run(): number { return Probe.x; } } Probe.x = 7;

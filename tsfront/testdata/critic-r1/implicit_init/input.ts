@@ -1,0 +1,1 @@
+export class Probe { private x: number = 7; public run(): number { return this.x; } }

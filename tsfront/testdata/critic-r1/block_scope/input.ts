@@ -1,0 +1,1 @@
+export class Probe { public run(): number { let x: number = 1; { let x: number = 2; } return x; } }

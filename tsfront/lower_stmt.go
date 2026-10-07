@@ -190,10 +190,6 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	return append(stmts, decl)
 }
 
-func (l *lowerer) assignLocal(at *ast.Node, name string, x *hir.Expr, t hir.Type) *hir.Stmt {
-	return &hir.Stmt{Kind: hir.Assign, Node: l.node(at), X: hir.V(name, t), Y: x}
-}
-
 // arrayLiteral lowers [a, b, ...] in a statement context into a fresh array
 // plus pushes; the element type is the checker type of the first element.
 func (l *lowerer) arrayLiteral(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
@@ -304,6 +300,19 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		sym := l.resolve(lhs)
 		f, hasField := l.fieldOf(sym)
 		if sym != nil && hasField {
+			if f.Static {
+				var owner *hir.Class
+				if p.Expression.Kind == ast.KindThisKeyword {
+					owner = l.class
+				} else {
+					owner = l.classOf(l.resolve(p.Expression))
+				}
+				if owner != nil {
+					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(lhs), Owner: owner.Name, Name: f.Name, Type: f.Type}
+				}
+				l.diagf(lhs, "unsupported-expr", "static field receiver is not a class")
+				return nil
+			}
 			if p.Expression.Kind == ast.KindThisKeyword {
 				return &hir.Expr{Kind: hir.FieldGet, Node: l.node(lhs), Name: f.Name, Type: f.Type, X: l.this(l.class)}
 			}
