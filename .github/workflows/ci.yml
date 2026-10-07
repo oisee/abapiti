@@ -101,13 +101,15 @@ jobs:
       # it implies -v, so the log is printed back the way plain `go test`
       # would: package lines, build errors, plus the output of the tests that
       # failed. The TypeScript test skips without `npm install`, and clang is
-      # optional, as before.
+      # optional, as before. -timeout 25m: under -race and coverage the wasm
+      # package needs about 380 s alone and shares the runner with tsfront
+      # (about 270 s), so the default 10 minutes per package is too tight.
       - name: Test
         id: test
         run: |
           echo "shuffle seed $SHUFFLE_SEED"
           status=0
-          go test -race -shuffle="$SHUFFLE_SEED" -json -coverprofile="$OUT/cover.out" ./... > "$OUT/test.json" || status=$?
+          go test -race -timeout 25m -shuffle="$SHUFFLE_SEED" -json -coverprofile="$OUT/cover.out" ./... > "$OUT/test.json" || status=$?
           jq -rsj '(map(select(.Action == "fail" and .Test != null) | .Package + " " + .Test)) as $failed
             | .[] | select(.Action == "output" or .Action == "build-output")
             | select(.Test == null or ((.Package + " " + .Test) as $k | $failed | index($k)))
