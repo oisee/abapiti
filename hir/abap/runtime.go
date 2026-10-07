@@ -80,7 +80,7 @@ func (e *emitter) runtime(t hir.Type) {
 		line("METHODS " + op + " RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + ".")
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
-	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "ENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
 }
 func (e *emitter) exception(t hir.Type) string {
 	name := e.name("exception." + t.String())
@@ -88,7 +88,7 @@ func (e *emitter) exception(t hir.Type) string {
 	if _, ok := e.files[file]; ok {
 		return name
 	}
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 	return name
 }
 
@@ -102,6 +102,8 @@ func (e *emitter) osgoInstanceHelper(owner string) string {
 	e.files[file] = fmt.Sprintf(`CLASS %s DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 CLASS-METHODS test IMPORTING value TYPE REF TO object RETURNING VALUE(result) TYPE abap_bool.
+PROTECTED SECTION.
+PRIVATE SECTION.
 ENDCLASS.
 CLASS %s IMPLEMENTATION.
 METHOD test.

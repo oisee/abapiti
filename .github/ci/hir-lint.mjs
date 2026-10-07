@@ -23,6 +23,13 @@ for (const n of files) {
   }
   const code = src.replace(/'(?:''|[^'])*'|`(?:``|[^`])*`|\|(?:\\.|[^|])*\|/g, "");
   if (code.includes('"')) throw new Error(`${n}: comment`);
+  if (n.endsWith(".clas.abap")) {
+    for (const section of ["PUBLIC", "PROTECTED", "PRIVATE"]) {
+      if (!new RegExp(`\\b${section}\\s+SECTION\\s*\\.`, "i").test(code)) {
+        throw new Error(`${n}: global class must contain ${section} SECTION`);
+      }
+    }
+  }
   constructs.inline ||= /\bDATA\s*\(/i.test(code);
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
   reg.addFile(new abaplint.MemoryFile(n, src));
