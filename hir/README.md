@@ -107,8 +107,20 @@ and binary64 overflow retain the target limits described above.
 
 Instance field initialization runs in declaration order in a constructor,
 including a synthesized constructor when absent. A synthesized derived
-constructor forwards its inherited parameters. Static fields initialize in
-declaration order in class_constructor. Pre-super statements retain their order;
+constructor forwards its inherited parameters. Static fields and module consts
+initialize in declaration order in class_constructor only when a conservative
+syntax whitelist proves their initializers pure: literals, constant expressions
+over literals/module constants, literal collection elements, and construction of
+runtime collections from those elements. Calls to user code, user-class
+construction, assignments, and other effectful expressions produce blocking
+`unsupported-static-init` diagnostics with file:line:col. Class-static reads are
+limited to earlier pure fields of the same class; cross-class reads are rejected
+even if their initializers appear pure, because mutable statics may change before
+lazy initialization. This is not eager TypeScript module evaluation: purity makes
+unused/lazily initialized classes unobservable within this accepted envelope.
+Static blocks and every unknown class member kind are blocking
+`unsupported-member` diagnostics, never silently dropped.
+Pre-super statements retain their order;
 those touching this are rejected. Parameter defaults are blocking diagnostics.
 Executable module statements other than const initializers are rejected.
 Regex replace mapping accepts nonempty literal needles (including decoded
@@ -120,8 +132,11 @@ The lexer differential is part of `.github/ci/hir-unit.sh`: sequential case
 blocks check full dumps and each token count, with teardown requiring the corpus
 cardinality even after an early RETURN. CI also requires the critic's early-return
 and removed-case mutations to fail on both pinned runtimes. The BMP limitation
-remains explicit. Supplementary slicing rejection, full BMP Unicode uppercasing, virtual
-positions and one-time static declaration order have separate runtime probes.
+remains explicit. String literals containing lone UTF-16 surrogate units (escaped
+or raw) are rejected with `unsupported-lone-surrogate` before rune conversion;
+valid pairs remain supplementary code points, not replacement characters.
+Supplementary slicing rejection, full BMP Unicode uppercasing, virtual
+positions and pure static declaration order have separate runtime probes.
 Local runtime results do not establish SAP kernel timing. SAP validation
 remains outstanding.
 

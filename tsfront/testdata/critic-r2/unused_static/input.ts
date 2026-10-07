@@ -1,0 +1,1 @@
+class Counter { static n = 0; static bump() { Counter.n = Counter.n + 1; return Counter.n; } } class Unused { static x = Counter.bump(); } export class Probe { run() { return Counter.n; } }

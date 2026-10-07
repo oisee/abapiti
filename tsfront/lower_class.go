@@ -39,6 +39,10 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 				l.lowerMethodBody(m)
 			case ast.KindConstructor:
 				l.lowerConstructorBody(m, c)
+			case ast.KindPropertyDeclaration:
+				// Initializers are handled below and in constructors.
+			default:
+				l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
 			}
 		}
 		l.lowerImplicitInitializers(stmt, c)
@@ -87,9 +91,7 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 		case ast.KindConstructor:
 			l.constructorSignature(m, c)
 		default:
-			if m.Kind == ast.KindGetAccessor || m.Kind == ast.KindSetAccessor || m.Kind == ast.KindIndexSignature {
-				l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
-			}
+			l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
 		}
 	}
 	if c.Ctor == nil {
@@ -371,6 +373,10 @@ func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) [
 		}
 		name, ok := l.memberName(mem, c)
 		if !ok {
+			continue
+		}
+		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) {
+			l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
 			continue
 		}
 		t := l.declaredFieldType(c, name)

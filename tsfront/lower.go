@@ -57,11 +57,11 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 		}
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
+		l.checkStringLiterals(f.AsNode())
 		l.registerFile(f)
 		done()
 	}
-	// Module values first: they only contain literals, so they cannot
-	// reference class members.
+	// Module values first: the purity whitelist excludes class dependencies.
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
@@ -351,6 +351,10 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		l.diagf(d, "unsupported-top-level", "module const requires an initializer")
 		return nil
 	}
+	if !l.pureInitializer(init, nil, map[*ast.Node]bool{}) {
+		l.diagf(init, "unsupported-static-init", "module initializer is not provably pure and order-independent")
+		return nil
+	}
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	switch {
@@ -400,7 +404,11 @@ func (l *lowerer) isNewCollection(n *ast.Node) bool {
 		return false
 	}
 	// Only the library collections, never a lowered class of the same name.
-	if l.classes[sym] != nil {
+	if l.classOf(sym) != nil {
+		return false
+	}
+	declFile := l.fileOfSymbol(sym)
+	if declFile == nil || !l.prog.prog.IsSourceFileDefaultLibrary(declFile.Path()) {
 		return false
 	}
 	return sym.Name == "Set" || sym.Name == "Map" || sym.Name == "Array"

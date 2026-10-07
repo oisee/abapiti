@@ -7,6 +7,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"github.com/oisee/abapiti/internal/tsgo/stringutil"
 )
 
 // Expression lowering. Every expression is lowered to its natural HIR node
@@ -85,8 +86,13 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	}
 	switch n.Kind {
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
-		// tsgo's scanner stores string literals decoded; Text() is the value.
-		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: n.Text()}
+		// Preflight already diagnosed lone units. Never pass them to HIR,
+		// where ordinary Go rune conversion would irreversibly replace them.
+		value := stringutil.CombineSurrogatePairs(n.Text())
+		if hasLoneSurrogate(value) {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: value}
 	case ast.KindNumericLiteral:
 		return l.numericLiteral(n, hir.T(hir.Number), 1)
 	case ast.KindTrueKeyword:

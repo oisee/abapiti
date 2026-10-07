@@ -32,6 +32,7 @@ func TestCriticR1Diagnostics(t *testing.T) {
 		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
 		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
 		"unproven_as": "unsupported-assertion", "super_reorder": "unsupported-top-level",
+		"constructor_timing": "unsupported-static-init",
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", name))
@@ -49,7 +50,7 @@ func TestCriticR1Diagnostics(t *testing.T) {
 }
 
 func TestCriticR1Accepted(t *testing.T) {
-	for _, name := range []string{"implicit_init", "static_init", "super_preserved", "optional_downcast", "unicode_mode", "overflow", "inherited_init", "static_order", "number_semantics", "proven_as", "regex_literals", "unicode_upper", "supplementary", "constructor_timing", "unicode_codes", "unicode_trim"} {
+	for _, name := range []string{"implicit_init", "static_init", "super_preserved", "optional_downcast", "unicode_mode", "overflow", "inherited_init", "static_order", "number_semantics", "proven_as", "regex_literals", "unicode_upper", "supplementary", "unicode_codes", "unicode_trim"} {
 		t.Run(name, func(t *testing.T) {
 			prog, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", name))
 			for _, d := range diags {
@@ -95,8 +96,6 @@ func TestCriticR1Accepted(t *testing.T) {
 				check = "DATA sub TYPE REF TO " + names.Get(sub.Name) + ".\nCREATE OBJECT sub.\nactual = obj->" + names.Get("member.run") + "( " + names.Get("param.p") + " = sub ).\nexpected = 2."
 			case "inherited_init":
 				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = 578."
-			case "constructor_timing":
-				check = "actual = " + names.Get(probe.Name) + "=>" + names.Get("member.run") + "( ).\nexpected = 122.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nactual = " + names.Get(probe.Name) + "=>" + names.Get("member.run") + "( )."
 			case "static_order":
 				check = "actual = " + names.Get(probe.Name) + "=>" + names.Get("member.run") + "( ).\nexpected = 78."
 			case "regex_literals":
