@@ -74,6 +74,7 @@ linters:
           - errcheck
     paths:
       - third_party$
+      - ^internal/tsgo(/|$)
       - builtin$
       - examples$
 

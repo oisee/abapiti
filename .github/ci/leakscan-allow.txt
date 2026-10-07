@@ -18,3 +18,10 @@
 
 path  **/go.sum                       packed-private-ip  Module checksums (h1: base64 SHA-256). Four hashed bytes that read as 192.168 or 172.16-31 are chance.
 path  **/package-lock.json            packed-private-ip  npm integrity hashes (base64 SHA-512). Four hashed bytes that read as an address are chance.
+path  internal/tsgo/bundled/libs/lib.dom.d.ts  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
+path  internal/tsgo/bundled/libs/lib.webworker.d.ts  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
+path  internal/tsgo/diagnostics/diagnostics_generated.go  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
+path  internal/tsgo/checker/grammarchecks.go  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
+path  internal/tsgo/transformers/estransforms/esdecorator.go  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
+path  internal/tsgo/transformers/estransforms/esdecorator.go  private-ip  Vendored typescript-go: ECMAScript specification section numbers in upstream comments (four dotted numbers starting with ten).
+path  internal/tsgo/transformers/estransforms/namedevaluation.go  private-ip  Vendored typescript-go: ECMAScript specification section numbers in upstream comments (four dotted numbers starting with ten).
