@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -158,6 +159,65 @@ func fixtures() []fixture {
 	c.Methods = append(c.Methods, bad, extra)
 	return fs
 }
+
+// Keep global definitions under review, including empty visibility sections and
+// runtime dependencies in both output modes. HIR dump goldens do not cover ABAP.
+func TestGlobalClassDefinitions(t *testing.T) {
+	for _, mode := range []struct {
+		name    string
+		options Options
+	}{
+		{name: "v750"},
+		{name: "osgo", options: Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true}},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
+			definitions := map[string]string{}
+			for _, f := range fixtures() {
+				files, err := EmitWithOptions(f.p, mode.options)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for name, src := range files {
+					if !strings.HasSuffix(name, ".clas.abap") {
+						continue
+					}
+					definition, _, found := strings.Cut(src, "ENDCLASS.\n")
+					if !found {
+						t.Fatalf("%s: missing ENDCLASS", name)
+					}
+					previous := -1
+					for _, section := range []string{"PUBLIC", "PROTECTED", "PRIVATE"} {
+						statement := section + " SECTION.\n"
+						index := strings.Index(definition, statement)
+						if index <= previous || strings.Count(definition, statement) != 1 {
+							t.Fatalf("%s: missing, repeated or out-of-order %s SECTION", name, section)
+						}
+						previous = index
+					}
+					definitions[name] = definition + "ENDCLASS.\n"
+				}
+			}
+			names := make([]string, 0, len(definitions))
+			for name := range definitions {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			var actual strings.Builder
+			for _, name := range names {
+				actual.WriteString(name + "\n" + definitions[name] + "\n")
+			}
+			path := filepath.Join("testdata", "global_definitions_"+mode.name+".txt")
+			gold, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if actual.String() != string(gold) {
+				t.Fatalf("global definitions differ from %s", path)
+			}
+		})
+	}
+}
+
 func TestFixtures(t *testing.T) {
 	out := t.TempDir()
 	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {

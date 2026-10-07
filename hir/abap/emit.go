@@ -165,7 +165,7 @@ func (e *emitter) class(c *hir.Class) {
 			b.WriteString(e.signature(m, false))
 		}
 	}
-	b.WriteString("ENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
+	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
 	if c.Ctor != nil {
 		b.WriteString(e.body(c, c.Ctor, "constructor"))
 	}
