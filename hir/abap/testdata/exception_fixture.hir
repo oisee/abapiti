@@ -1,0 +1,11 @@
+hir v1
+class Thrower
+  method boom static():i32
+    throw ("payload"):string
+class exception_fixture
+  method run static():i32
+    try
+      return (call Thrower.boom()):i32
+    catch caught:string
+      return (string.length((caught):string)):i32
+    end try

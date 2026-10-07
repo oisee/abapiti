@@ -1,0 +1,107 @@
+hir v1
+class collection_fixture
+  method run static():i32
+    var m:map<i32,string> = (new map<i32,string>()):map<i32,string>
+    var s:set<i32> = (new set<i32>()):set<i32>
+    (map.set((m):map<i32,string>, (1):i32, ("a"):string)):map<i32,string>
+    (map.set((m):map<i32,string>, (2):i32, ("b"):string)):map<i32,string>
+    (map.set((m):map<i32,string>, (1):i32, ("updated"):string)):map<i32,string>
+    (set.add((s):set<i32>, (3):i32)):set<i32>
+    (set.add((s):set<i32>, (4):i32)):set<i32>
+    (set.add((s):set<i32>, (3):i32)):set<i32>
+    var n:i32 = (0):i32
+    foreach k:i32 in (map.keys((m):map<i32,string>)):array<i32>
+      (n):i32 = (((n):i32 * (10):i32):i32 + (k):i32):i32
+    end foreach
+    foreach k:i32 in (set.values((s):set<i32>)):array<i32>
+      (n):i32 = (((n):i32 * (10):i32):i32 + (k):i32):i32
+    end foreach
+    return (n):i32
+  method explode static():bool
+    throw ("unexpected"):string
+  method extra static():i32
+    var a:array<i32> = (new array<i32>()):array<i32>
+    (array.push((a):array<i32>, (0):i32)):i32
+    (array.push((a):array<i32>, (3):i32)):i32
+    if (!((array.length((a):array<i32>)):i32 == (2):i32):bool):bool
+      return (99):i32
+    end if
+    if (!(undefined((array.get((a):array<i32>, (8):i32)):optional<i32>)):bool):bool
+      return (99):i32
+    end if
+    if (!(!(undefined((array.get((a):array<i32>, (0):i32)):optional<i32>)):bool):bool):bool
+      return (99):i32
+    end if
+    ((a):array<i32>[(0):i32]):i32 = (6):i32
+    if (!(((a):array<i32>[(0):i32]):i32 == (6):i32):bool):bool
+      return (99):i32
+    end if
+    var alias:array<i32> = (a):array<i32>
+    (array.push((alias):array<i32>, (7):i32)):i32
+    if (!((array.length((a):array<i32>)):i32 == (3):i32):bool):bool
+      return (99):i32
+    end if
+    var sm:map<string,i32> = (new map<string,i32>()):map<string,i32>
+    (map.set((sm):map<string,i32>, ("key"):string, (0):i32)):map<string,i32>
+    if (!(map.has((sm):map<string,i32>, ("key"):string)):bool):bool
+      return (99):i32
+    end if
+    if (!((map.size((sm):map<string,i32>)):i32 == (1):i32):bool):bool
+      return (99):i32
+    end if
+    if (!(!(boolean((map.get((sm):map<string,i32>, ("key"):string)):optional<i32>)):bool):bool):bool
+      return (99):i32
+    end if
+    var om:map<classref<collection_fixture>,i64> = (new map<classref<collection_fixture>,i64>()):map<classref<collection_fixture>,i64>
+    var key:classref<collection_fixture> = (new classref<collection_fixture>()):classref<collection_fixture>
+    (map.set((om):map<classref<collection_fixture>,i64>, (key):classref<collection_fixture>, (9007199254740993):i64)):map<classref<collection_fixture>,i64>
+    if (!(map.has((om):map<classref<collection_fixture>,i64>, (key):classref<collection_fixture>)):bool):bool
+      return (99):i32
+    end if
+    if (!(!(map.has((om):map<classref<collection_fixture>,i64>, (new classref<collection_fixture>()):classref<collection_fixture>)):bool):bool):bool
+      return (99):i32
+    end if
+    if (!(((-5):i32 / (2):i32):i32 == (-2):i32):bool):bool
+      return (99):i32
+    end if
+    if (!(((-5):i32 % (-2):i32):i32 == (-1):i32):bool):bool
+      return (99):i32
+    end if
+    if (!(((9223372036854775807):i64 / (3):i64):i64 == (3074457345618258602):i64):bool):bool
+      return (99):i32
+    end if
+    if (!(((5):number / (2):number):number == (2.5):number):bool):bool
+      return (99):i32
+    end if
+    if (!((string.length(("😀"):string)):i32 == (2):i32):bool):bool
+      return (99):i32
+    end if
+    if (!((string.substring(("abcd "):string, (4):i32, (1):i32)):string == ("bcd"):string):bool):bool
+      return (99):i32
+    end if
+    if (!((string.concat(("a "):string, ("b"):string)):string == ("a b"):string):bool):bool
+      return (99):i32
+    end if
+    if (!((string.charCodeAt(("€"):string, (0):i32)):number == (8364):number):bool):bool
+      return (99):i32
+    end if
+    if (!((true):bool || (call collection_fixture.explode()):bool):bool):bool
+      return (99):i32
+    end if
+    if (!(!((false):bool && (call collection_fixture.explode()):bool):bool):bool):bool
+      return (99):i32
+    end if
+    if (!(if (true):bool then (true):bool else (call collection_fixture.explode()):bool):bool):bool
+      return (99):i32
+    end if
+    var n:i32 = (0):i32
+    while ((n):i32 < (3):i32):bool
+      (n):i32 = ((n):i32 + (1):i32):i32
+      if ((n):i32 == (2):i32):bool
+        continue
+      end if
+      if ((n):i32 == (3):i32):bool
+        break
+      end if
+    end while
+    return (n):i32

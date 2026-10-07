@@ -146,7 +146,7 @@ jobs:
           [ "$builds" -gt 0 ] && counts="$counts, $builds packages did not build"
           cov=""
           if [ -s "$OUT/cover.out" ]; then
-            { head -1 "$OUT/cover.out"; grep -E '^github\.com/oisee/abapiti/(wasm|llvm|ts|ts2go|jseval)/' "$OUT/cover.out" || true; } > "$OUT/cover-lib.out"
+            { head -1 "$OUT/cover.out"; grep -E '^github\.com/oisee/abapiti/(wasm|llvm|ts|ts2go|jseval|hir)/' "$OUT/cover.out" || true; } > "$OUT/cover-lib.out"
             cov=$(go tool cover -func="$OUT/cover-lib.out" | awk '/^total:/ {print $3}')
           fi
           tree=""

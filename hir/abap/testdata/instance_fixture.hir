@@ -1,0 +1,19 @@
+hir v1
+class Root
+class Middle extends Root
+class Leaf extends Middle
+class Sibling extends Root
+class instance_fixture
+  method run static():i32
+    var x:classref<Root> = (new classref<Leaf>()):classref<Leaf>
+    var n:i32 = (0):i32
+    if ((x):classref<Root> instanceof Root):bool
+      (n):i32 = (1):i32
+    end if
+    if ((x):classref<Root> instanceof Middle):bool
+      (n):i32 = ((n):i32 + (1):i32):i32
+    end if
+    if ((x):classref<Root> instanceof Sibling):bool
+      (n):i32 = (99):i32
+    end if
+    return (n):i32

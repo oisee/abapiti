@@ -1,0 +1,12 @@
+hir v1
+interface Readable
+  method read():i32
+class AbstractReader abstract implements Readable
+  method read virtual abstract():i32
+class Reader extends AbstractReader
+  method read virtual():i32
+    return (11):i32
+class interface_fixture
+  method run static():i32
+    var r:interfaceref<Readable> = (new classref<Reader>()):classref<Reader>
+    return (virtual  (r):interfaceref<Readable>.read()):i32

@@ -1,0 +1,29 @@
+hir v1
+class OptionalObject
+class optional_fixture
+  method run static():i32
+    var missing:optional<i32> = (undefined):optional<i32>
+    var zero:optional<i32> = (0):optional<i32>
+    var present:optional<i32> = (5):i32
+    var ref:optional<classref<OptionalObject>> = (undefined):optional<classref<OptionalObject>>
+    var n:i32 = (0):i32
+    if (undefined((missing):optional<i32>)):bool
+      (n):i32 = (1):i32
+    end if
+    if (undefined((zero):optional<i32>)):bool
+      (n):i32 = (99):i32
+    end if
+    if (boolean((zero):optional<i32>)):bool
+      (n):i32 = (99):i32
+    end if
+    if (boolean((present):optional<i32>)):bool
+      (n):i32 = ((n):i32 + (1):i32):i32
+    end if
+    if (undefined((ref):optional<classref<OptionalObject>>)):bool
+      (n):i32 = ((n):i32 + (1):i32):i32
+    end if
+    (ref):optional<classref<OptionalObject>> = (new classref<OptionalObject>()):classref<OptionalObject>
+    if (boolean((ref):optional<classref<OptionalObject>>)):bool
+      (n):i32 = ((n):i32 + (1):i32):i32
+    end if
+    return (n):i32

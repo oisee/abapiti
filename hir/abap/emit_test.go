@@ -1,0 +1,221 @@
+package abap
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/oisee/abapiti/hir"
+)
+
+var i32 = hir.T(hir.I32)
+var boolean = hir.T(hir.Bool)
+var str = hir.T(hir.String)
+
+func lit(n int) *hir.Expr       { return hir.L(i32, n) }
+func ret(x *hir.Expr) *hir.Stmt { return &hir.Stmt{Kind: hir.Return, X: x} }
+func decl(n string, t hir.Type, x *hir.Expr) *hir.Stmt {
+	return &hir.Stmt{Kind: hir.VarDecl, Name: n, Type: t, X: x}
+}
+func local(n string, t hir.Type) *hir.Expr { return hir.V(n, t) }
+func binary(op string, a, b *hir.Expr, t hir.Type) *hir.Expr {
+	return &hir.Expr{Kind: hir.Binary, Op: op, X: a, Y: b, Type: t}
+}
+func run(x *hir.Expr) *hir.Stmt   { return &hir.Stmt{Kind: hir.ExprStmt, X: x} }
+func newObj(t hir.Type) *hir.Expr { return &hir.Expr{Kind: hir.New, Type: t} }
+func rt(op string, x *hir.Expr, t hir.Type, args ...*hir.Expr) *hir.Expr {
+	return &hir.Expr{Kind: hir.RuntimeOp, Op: op, X: x, Type: t, Args: args}
+}
+func method(n string, result hir.Type, body *hir.Stmt) *hir.Method {
+	return &hir.Method{Name: n, Result: result, Body: body}
+}
+func call(kind hir.ExprKind, x *hir.Expr, owner, n string, t hir.Type, args ...*hir.Expr) *hir.Expr {
+	return &hir.Expr{Kind: kind, X: x, Owner: owner, Name: n, Type: t, Args: args}
+}
+func assign(n string, t hir.Type, x *hir.Expr) *hir.Stmt {
+	return &hir.Stmt{Kind: hir.Assign, X: local(n, t), Y: x}
+}
+
+type fixture struct {
+	name string
+	p    *hir.Program
+	want int
+}
+
+func fixtures() []fixture {
+	var fs []fixture
+	add := func(n string, p *hir.Program, b *hir.Stmt, want int) {
+		m := method("run", i32, b)
+		m.Static = true
+		p.Classes = append(p.Classes, &hir.Class{Name: n, Methods: []*hir.Method{m}})
+		fs = append(fs, fixture{n, p, want})
+	}
+	base := method("value", i32, ret(lit(3)))
+	base.Virtual = true
+	child := method("value", i32, ret(binary("+", call(hir.SuperCall, nil, "", "value", i32), lit(4), i32)))
+	child.Virtual = true
+	ctor := method("constructor", hir.T(hir.Void), hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("Derived")}, Name: "n", Type: i32}, Y: local("p", i32)}, assign("p", i32, lit(99))))
+	ctor.Params = []hir.Param{{Name: "p", Type: i32}}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Base", Methods: []*hir.Method{base}}, {Name: "Derived", Super: "Base", Fields: []hir.Field{{Name: "n", Type: i32}}, Ctor: ctor, Methods: []*hir.Method{child}}}}
+	obj := newObj(hir.Ref("Derived"))
+	obj.Args = []*hir.Expr{local("arg", i32)}
+	add("virtual_fixture", p, hir.B(decl("arg", i32, lit(9)), decl("d", hir.Ref("Derived"), obj), decl("x", hir.Ref("Base"), local("d", hir.Ref("Derived"))), &hir.Stmt{Kind: hir.If, X: binary("==", local("arg", i32), lit(9), boolean), Body: &hir.Stmt{Kind: hir.If, X: binary("==", &hir.Expr{Kind: hir.FieldGet, Type: i32, X: local("d", hir.Ref("Derived")), Name: "n"}, lit(9), boolean), Body: ret(call(hir.VirtualCall, local("x", hir.Ref("Base")), "", "value", i32))}}, ret(lit(99))), 7)
+	iface := &hir.Interface{Name: "Readable", Methods: []*hir.Method{{Name: "read", Result: i32}}}
+	abs := &hir.Class{Name: "AbstractReader", Abstract: true, Implements: []string{"Readable"}, Methods: []*hir.Method{{Name: "read", Result: i32, Abstract: true, Virtual: true}}}
+	read := method("read", i32, ret(lit(11)))
+	read.Virtual = true
+	ir := hir.Type{Kind: hir.InterfaceRef, Name: "Readable"}
+	add("interface_fixture", &hir.Program{Interfaces: []*hir.Interface{iface}, Classes: []*hir.Class{abs, {Name: "Reader", Super: abs.Name, Methods: []*hir.Method{read}}}}, hir.B(decl("r", ir, newObj(hir.Ref("Reader"))), ret(call(hir.VirtualCall, local("r", ir), "", "read", i32))), 11)
+	inst := func(owner string) *hir.Expr {
+		return &hir.Expr{Kind: hir.InstanceOf, X: local("x", hir.Ref("Root")), Owner: owner, Type: boolean}
+	}
+	add("instance_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Root"}, {Name: "Middle", Super: "Root"}, {Name: "Leaf", Super: "Middle"}, {Name: "Sibling", Super: "Root"}}}, hir.B(decl("x", hir.Ref("Root"), newObj(hir.Ref("Leaf"))), decl("n", i32, lit(0)), &hir.Stmt{Kind: hir.If, X: inst("Root"), Body: assign("n", i32, lit(1))}, &hir.Stmt{Kind: hir.If, X: inst("Middle"), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, &hir.Stmt{Kind: hir.If, X: inst("Sibling"), Body: assign("n", i32, lit(99))}, ret(local("n", i32))), 2)
+	opt := hir.T(hir.Optional, i32)
+	oref := hir.T(hir.Optional, hir.Ref("OptionalObject"))
+	test := func(k hir.ExprKind, x *hir.Expr) *hir.Expr { return &hir.Expr{Kind: k, X: x, Type: boolean} }
+	add("optional_fixture", &hir.Program{Classes: []*hir.Class{{Name: "OptionalObject"}}}, hir.B(decl("missing", opt, hir.L(opt, nil)), decl("zero", opt, hir.L(opt, 0)), decl("present", opt, lit(5)), decl("ref", oref, hir.L(oref, nil)), decl("n", i32, lit(0)), &hir.Stmt{Kind: hir.If, X: test(hir.IsUndefined, local("missing", opt)), Body: assign("n", i32, lit(1))}, &hir.Stmt{Kind: hir.If, X: test(hir.IsUndefined, local("zero", opt)), Body: assign("n", i32, lit(99))}, &hir.Stmt{Kind: hir.If, X: test(hir.ToBoolean, local("zero", opt)), Body: assign("n", i32, lit(99))}, &hir.Stmt{Kind: hir.If, X: test(hir.ToBoolean, local("present", opt)), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, &hir.Stmt{Kind: hir.If, X: test(hir.IsUndefined, local("ref", oref)), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, assign("ref", oref, newObj(hir.Ref("OptionalObject"))), &hir.Stmt{Kind: hir.If, X: test(hir.ToBoolean, local("ref", oref)), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, ret(local("n", i32))), 4)
+	mt, st := hir.T(hir.OrderedMap, i32, str), hir.T(hir.OrderedSet, i32)
+	ml, sl := local("m", mt), local("s", st)
+	loop := func(x *hir.Expr) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.ForEach, Name: "k", Type: i32, X: x, Body: assign("n", i32, binary("+", binary("*", local("n", i32), lit(10), i32), local("k", i32), i32))}
+	}
+	add("collection_fixture", &hir.Program{}, hir.B(decl("m", mt, newObj(mt)), decl("s", st, newObj(st)), run(rt("map.set", ml, mt, lit(1), hir.L(str, "a"))), run(rt("map.set", ml, mt, lit(2), hir.L(str, "b"))), run(rt("map.set", ml, mt, lit(1), hir.L(str, "updated"))), run(rt("set.add", sl, st, lit(3))), run(rt("set.add", sl, st, lit(4))), run(rt("set.add", sl, st, lit(3))), decl("n", i32, lit(0)), loop(rt("map.keys", ml, hir.T(hir.Array, i32))), loop(rt("set.values", sl, hir.T(hir.Array, i32))), ret(local("n", i32))), 1234)
+	boom := method("boom", i32, &hir.Stmt{Kind: hir.Throw, X: hir.L(str, "payload")})
+	boom.Static = true
+	add("exception_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Thrower", Methods: []*hir.Method{boom}}}}, hir.B(&hir.Stmt{Kind: hir.Try, Name: "caught", Type: str, Body: ret(call(hir.DirectCall, nil, "Thrower", "boom", i32)), Else: ret(rt("string.length", local("caught", str), i32))}), 7)
+
+	c := fs[4].p.Classes[0]
+	check := func(x *hir.Expr) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", X: x, Type: boolean}, Body: ret(lit(99))}
+	}
+	eq := func(a, b *hir.Expr) *hir.Expr { return binary("==", a, b, boolean) }
+	arr := hir.T(hir.Array, i32)
+	al := local("a", arr)
+	sm := hir.T(hir.OrderedMap, str, i32)
+	sml := local("sm", sm)
+	om := hir.T(hir.OrderedMap, hir.Ref(c.Name), hir.T(hir.I64))
+	oml := local("om", om)
+	bad := method("explode", boolean, &hir.Stmt{Kind: hir.Throw, X: hir.L(str, "unexpected")})
+	bad.Static = true
+	boomCall := func() *hir.Expr { return call(hir.DirectCall, nil, c.Name, "explode", boolean) }
+	extra := method("extra", i32, hir.B(
+		decl("a", arr, newObj(arr)), run(rt("array.push", al, i32, lit(0))), run(rt("array.push", al, i32, lit(3))),
+		check(eq(rt("array.length", al, i32), lit(2))), check(test(hir.IsUndefined, rt("array.get", al, opt, lit(8)))),
+		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: test(hir.IsUndefined, rt("array.get", al, opt, lit(0)))}),
+		&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: lit(0)}, Y: lit(6)},
+		check(eq(&hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: lit(0)}, lit(6))),
+		decl("alias", arr, al), run(rt("array.push", local("alias", arr), i32, lit(7))), check(eq(rt("array.length", al, i32), lit(3))),
+		decl("sm", sm, newObj(sm)), run(rt("map.set", sml, sm, hir.L(str, "key"), lit(0))), check(rt("map.has", sml, boolean, hir.L(str, "key"))), check(eq(rt("map.size", sml, i32), lit(1))),
+		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: test(hir.ToBoolean, rt("map.get", sml, opt, hir.L(str, "key")))}),
+		decl("om", om, newObj(om)), decl("key", hir.Ref(c.Name), newObj(hir.Ref(c.Name))),
+		run(rt("map.set", oml, om, local("key", hir.Ref(c.Name)), hir.L(hir.T(hir.I64), int64(9007199254740993)))),
+		check(rt("map.has", oml, boolean, local("key", hir.Ref(c.Name)))),
+		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: rt("map.has", oml, boolean, newObj(hir.Ref(c.Name)))}),
+		check(eq(binary("/", lit(-5), lit(2), i32), lit(-2))),
+		check(eq(binary("%", lit(-5), lit(-2), i32), lit(-1))),
+		check(eq(binary("/", hir.L(hir.T(hir.I64), int64(9223372036854775807)), hir.L(hir.T(hir.I64), int64(3)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(3074457345618258602)))),
+		check(eq(binary("/", hir.L(hir.T(hir.Number), 5.0), hir.L(hir.T(hir.Number), 2.0), hir.T(hir.Number)), hir.L(hir.T(hir.Number), 2.5))),
+		check(eq(rt("string.length", hir.L(str, "😀"), i32), lit(2))),
+		check(eq(rt("string.substring", hir.L(str, "abcd "), str, lit(4), lit(1)), hir.L(str, "bcd"))),
+		check(eq(rt("string.concat", hir.L(str, "a "), str, hir.L(str, "b")), hir.L(str, "a b"))),
+		check(eq(rt("string.charCodeAt", hir.L(str, "€"), hir.T(hir.Number), lit(0)), hir.L(hir.T(hir.Number), 8364))),
+		check(binary("||", hir.L(boolean, true), boomCall(), boolean)),
+		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: binary("&&", hir.L(boolean, false), boomCall(), boolean)}),
+		check(&hir.Expr{Kind: hir.Conditional, Type: boolean, X: hir.L(boolean, true), Y: hir.L(boolean, true), Z: boomCall()}),
+		decl("n", i32, lit(0)), &hir.Stmt{Kind: hir.While, X: binary("<", local("n", i32), lit(3), boolean), Body: hir.B(assign("n", i32, binary("+", local("n", i32), lit(1), i32)), &hir.Stmt{Kind: hir.If, X: eq(local("n", i32), lit(2)), Body: &hir.Stmt{Kind: hir.Continue}}, &hir.Stmt{Kind: hir.If, X: eq(local("n", i32), lit(3)), Body: &hir.Stmt{Kind: hir.Break}})},
+		ret(local("n", i32)),
+	))
+	extra.Static = true
+	c.Methods = append(c.Methods, bad, extra)
+	return fs
+}
+func TestFixtures(t *testing.T) {
+	out := t.TempDir()
+	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+		out = filepath.Join(base, t.Name())
+		if err := os.MkdirAll(out, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, f := range fixtures() {
+		t.Run(f.name, func(t *testing.T) {
+			files, err := Emit(f.p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			names := hir.NewNames()
+			cls := names.Get(f.name)
+			m := names.Get("member.run")
+			files[cls+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE i.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = %d ).\nENDMETHOD.\nENDCLASS.\n", cls, m, f.want)
+
+			if f.name == "collection_fixture" {
+				file := cls + ".clas.testclasses.abap"
+				extra := fmt.Sprintf("actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = 3 ).\n", cls, names.Get("member.extra"))
+				files[file] = strings.Replace(files[file], "ENDMETHOD.", extra+"ENDMETHOD.", 1)
+			}
+			for n, s := range files {
+				for _, line := range strings.Split(s, "\n") {
+					if len(line) > 255 {
+						t.Fatalf("%s: long line", n)
+					}
+					if strings.HasPrefix(line, "*") || strings.Contains(line, "\"") {
+						t.Fatalf("%s: comment", n)
+					}
+				}
+				if err := os.WriteFile(filepath.Join(out, n), []byte(s), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			dump := hir.Dump(f.p)
+			path := filepath.Join("testdata", f.name+".hir")
+			gold, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(gold) != dump {
+				t.Fatalf("dump differs from %s", path)
+			}
+		})
+	}
+}
+func TestRejectUnverified(t *testing.T) {
+	p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", i32, ret(local("unknown", i32)))}}}}
+	if files, err := Emit(p); files != nil || err == nil {
+		t.Fatal("emitted invalid HIR")
+	}
+}
+
+func TestTargetDiagnostics(t *testing.T) {
+	for _, x := range []*hir.Expr{
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.RuntimeOp, Op: "string.charCodeAt", Type: hir.T(hir.Number), X: hir.L(str, "x"), Args: []*hir.Expr{lit(5)}},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "%", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0.5), Y: hir.L(hir.T(hir.Number), 0.1)},
+	} {
+		m := method("f", x.Type, ret(x))
+		m.Static = true
+		p := &hir.Program{Classes: []*hir.Class{{Name: "target", Methods: []*hir.Method{m}}}}
+		files, err := Emit(p)
+		if files != nil || err == nil || !strings.Contains(err.Error(), "node 17 (input.ts:4)") {
+			t.Fatalf("missing target diagnostic: %v", err)
+		}
+	}
+}
+func TestLongLiteral(t *testing.T) {
+	m := method("f", str, ret(hir.L(str, strings.Repeat("€` ", 300)+"\n\t")))
+	m.Static = true
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "long", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range files {
+		for _, line := range strings.Split(src, "\n") {
+			if len(line) > 255 {
+				t.Fatal("long literal source line")
+			}
+		}
+		if !strings.Contains(src, "uccpi( 10 )") {
+			t.Fatal("newline not encoded")
+		}
+	}
+}
