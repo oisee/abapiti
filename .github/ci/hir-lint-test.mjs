@@ -15,7 +15,9 @@ const source = statement => `CLASS z_hir_lint_test DEFINITION PUBLIC.
 ENDCLASS.
 CLASS z_hir_lint_test IMPLEMENTATION.
   METHOD run.
-    DATA t1 TYPE abap_bool.
+    DATA(t1) = abap_true.
+    DATA ref TYPE REF TO object.
+    t1 = xsdbool( ref IS INSTANCE OF object ).
     ${statement}
   ENDMETHOD.
 ENDCLASS.
@@ -29,10 +31,19 @@ function run(statement) {
 try {
   const valid = run("t1 = abap_true.");
   assert.equal(valid.status, 0, valid.stderr + valid.stdout);
+  const original = source("t1 = abap_true.");
+  writeFileSync(join(dir, "z_hir_lint_test.clas.abap"), original.replace("DATA(t1) = abap_true.", "DATA t1 TYPE abap_bool.").replace("t1 = xsdbool( ref IS INSTANCE OF object ).", "CLEAR t1."));
+  const old = spawnSync(process.execPath, [gate.pathname, dir, osg], {encoding: "utf8"});
+  assert.ifError(old.error);
+  assert.equal(old.status, 1);
+  assert.match(old.stderr, /must contain inline DATA and IS INSTANCE OF/);
   const invalid = run("CALL METHOD t1->missing.");
   assert.equal(invalid.status, 1, invalid.stderr + invalid.stdout);
   assert.match(invalid.stdout, /[1-9]\d* issues/);
-  console.log("HIR lint regression: valid snippet accepted, invalid call rejected");
+  const newer = run("FINAL(t2) = abap_true.");
+  assert.equal(newer.status, 1, newer.stderr + newer.stdout);
+  assert.match(newer.stdout, /[1-9]\d* issues/);
+  console.log("HIR lint regression: valid v750 accepted; old corpus, invalid call and FINAL rejected");
 } finally {
   rmSync(dir, {recursive: true, force: true});
 }

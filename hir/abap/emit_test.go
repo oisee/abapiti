@@ -1,6 +1,7 @@
 package abap
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"os"
@@ -167,7 +168,12 @@ func TestFixtures(t *testing.T) {
 	}
 	for _, f := range fixtures() {
 		t.Run(f.name, func(t *testing.T) {
-			files, err := Emit(f.p)
+			options := Options{}
+			if os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1" {
+				options.OsgoScalarValueFallback = true
+				options.OsgoInstanceOfFallback = true
+			}
+			files, err := EmitWithOptions(f.p, options)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -279,7 +285,7 @@ func TestTargetDiagnostics(t *testing.T) {
 	}
 }
 func TestLongLiteral(t *testing.T) {
-	m := method("f", str, ret(hir.L(str, strings.Repeat("€` ", 300)+"\n\t")))
+	m := method("f", str, ret(hir.L(str, strings.Repeat("€` {|}\\ ", 300)+"\n\t")))
 	m.Static = true
 	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "long", Methods: []*hir.Method{m}}}})
 	if err != nil {
@@ -318,5 +324,137 @@ func TestMalformedLiterals(t *testing.T) {
 		if files, err := Emit(p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
 			t.Fatalf("%s: missing diagnostic: %v", op, err)
 		}
+	}
+}
+
+// This runs on both ABAP runtimes when exported, exercising literals whose
+// template escaping matters and temporaries that must reset on every iteration.
+func Test750Semantics(t *testing.T) {
+	root := hir.Ref("SyntaxRoot")
+	arr := hir.T(hir.Array, i32)
+	eq := func(a, b *hir.Expr) *hir.Expr { return binary("==", a, b, boolean) }
+	check := func(x *hir.Expr) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", X: x, Type: boolean}, Body: ret(lit(99))}
+	}
+	instance := func() *hir.Expr {
+		return &hir.Expr{Kind: hir.InstanceOf, Type: boolean, Owner: root.Name, X: local("ref", root)}
+	}
+	m := method("run", i32, hir.B(
+		decl("ref", root, nil),
+		check(&hir.Expr{Kind: hir.Unary, Type: boolean, Op: "!", X: instance()}),
+		assign("ref", root, newObj(hir.Ref("SyntaxLeaf"))), check(instance()),
+		decl("a", arr, newObj(arr)), run(rt("array.push", local("a", arr), i32, lit(7))),
+		decl("n", i32, lit(0)),
+		&hir.Stmt{Kind: hir.While, X: binary("<", local("n", i32), lit(3), boolean), Body: hir.B(
+			decl("zero", i32, nil), check(eq(local("zero", i32), lit(0))), assign("zero", i32, lit(9)),
+			decl("v", i32, &hir.Expr{Kind: hir.IndexGet, Type: i32, X: local("a", arr), Y: local("n", i32)}),
+			check(eq(local("v", i32), &hir.Expr{Kind: hir.Conditional, Type: i32, X: eq(local("n", i32), lit(0)), Y: lit(7), Z: lit(0)})),
+			assign("n", i32, binary("+", local("n", i32), lit(1), i32)),
+		)}, ret(local("n", i32)),
+	))
+	m.Static = true
+	// These expectations come from the original Go strings, never stringLit or
+	// another emitted HIR literal. Byte comparison also preserves trailing blanks.
+	literals := []struct{ name, value string }{
+		{"backslash", `\`},
+		{"braces", `{}`},
+		{"pipe", `|`},
+		{"quotes", `"'`},
+		{"controls", "\x00\x01\b\t\n\v\f\r\x1f\x7f"},
+		{"blanks", "  trailing  "},
+		{"unicode", "€😀𐐷"},
+		{"empty", ""},
+		{"long", strings.Repeat("{|}\\€😀\"' ", 100) + "\n\tend  "},
+	}
+	// The current chunk budget is 60 input bytes. Place each special character
+	// just before, at, and after that boundary, including multi-byte characters
+	// and controls that split template runs. Repeated padding crosses more chunks.
+	for _, special := range []string{"\\", "{", "}", "|", "\"", "'", "\n", "\t", "😀", " "} {
+		for _, padding := range []int{59, 60, 61, 119, 120, 121} {
+			literals = append(literals, struct{ name, value string }{
+				fmt.Sprintf("boundary_%d", len(literals)),
+				strings.Repeat("a", padding) + special + strings.Repeat("b", 65) + special + "  ",
+			})
+		}
+	}
+	methods := []*hir.Method{m}
+	for _, literal := range literals {
+		getter := method(literal.name, str, ret(hir.L(str, literal.value)))
+		getter.Static = true
+		methods = append(methods, getter)
+	}
+	// Retain the concatenation regression, with an independent byte expectation.
+	concat := method("concat", str, ret(rt("string.concat", hir.L(str, " {|}\\`€ \"' \n\t"), str, hir.L(str, "end  "))))
+	concat.Static = true
+	methods = append(methods, concat)
+	literals = append(literals, struct{ name, value string }{"concat", " {|}\\`€ \"' \n\tend  "})
+	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: methods}}}
+	options := Options{}
+	if os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1" {
+		options = Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true}
+	}
+	files, err := EmitWithOptions(p, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := hir.NewNames()
+	cls := names.Get("Syntax750")
+	var unit strings.Builder
+	fmt.Fprintf(&unit, "CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE xstring.\nDATA expected TYPE xstring.\nDATA hex_chunk TYPE xstring.\ncl_abap_unit_assert=>assert_equals( act = %s=>%s( ) exp = 3 ).\n", cls, names.Get("member.run"))
+	for _, literal := range literals {
+		fmt.Fprintf(&unit, "actual = cl_abap_codepage=>convert_to( source = %s=>%s( ) ).\nCLEAR expected.\n", cls, names.Get("member."+literal.name))
+		// Assignment to xstring decodes hex text; BYTE MODE joins raw bytes.
+		bytes := []byte(literal.value)
+		for len(bytes) > 0 {
+			n := min(len(bytes), 60)
+			fmt.Fprintf(&unit, "hex_chunk = '%s'.\nCONCATENATE expected hex_chunk INTO expected IN BYTE MODE.\n", strings.ToUpper(hex.EncodeToString(bytes[:n])))
+			bytes = bytes[n:]
+		}
+		fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_equals( act = actual exp = expected msg = '%s' ).\n", literal.name)
+	}
+	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
+	files[cls+".clas.testclasses.abap"] = unit.String()
+	for _, src := range files {
+		for _, line := range strings.Split(src, "\n") {
+			if len(line) > 255 {
+				t.Fatal("long source line")
+			}
+		}
+	}
+	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+		out := filepath.Join(base, t.Name())
+		if err := os.MkdirAll(out, 0755); err != nil {
+			t.Fatal(err)
+		}
+		for n, src := range files {
+			if err := os.WriteFile(filepath.Join(out, n), []byte(src), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func Test750Options(t *testing.T) {
+	p := fixtures()[2].p
+	modern, err := Emit(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := EmitWithOptions(p, Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var a, b string
+	for _, src := range modern {
+		a += src
+	}
+	for _, src := range legacy {
+		b += src
+	}
+	if !strings.Contains(a, "IS INSTANCE OF") || !strings.Contains(a, "VALUE abap_bool( )") || strings.Contains(a, "narrowed ?=") {
+		t.Fatal("default syntax or helper regression")
+	}
+	if strings.Contains(b, "IS INSTANCE OF") || strings.Contains(b, "VALUE abap_bool( )") || !strings.Contains(b, "narrowed ?=") {
+		t.Fatal("compatibility options not scoped to selected constructs")
 	}
 }

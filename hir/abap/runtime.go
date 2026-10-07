@@ -2,8 +2,9 @@ package abap
 
 import (
 	"fmt"
-	"github.com/oisee/abapiti/hir"
 	"strings"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 func (e *emitter) runtime(t hir.Type) {
@@ -30,11 +31,11 @@ func (e *emitter) runtime(t hir.Type) {
 		line("METHODS length RETURNING VALUE(result) TYPE i.")
 		method("length", "result = lines( items ).\n")
 		line("METHODS get IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		code := "DATA idx TYPE i.\nDATA val TYPE " + elem + ".\nIF p0 < 0.\nRETURN.\nENDIF.\nidx = p0 + 1.\nREAD TABLE items INDEX idx INTO val.\nIF sy-subrc = 0.\n"
+		code := "IF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\n"
 		if t.Args[0].IsRef() {
 			code += "result = val.\n"
 		} else {
-			code += "CREATE OBJECT result.\nresult->has = abap_true.\nresult->value = val.\n"
+			code += "result = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\n"
 		}
 		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
@@ -60,15 +61,15 @@ func (e *emitter) runtime(t hir.Type) {
 			val = "p1"
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method(op, "DATA row TYPE entry.\nREAD TABLE entries WITH KEY k = p0 INTO row.\nIF sy-subrc = 0.\nrow-v = "+val+".\nMODIFY entries FROM row INDEX sy-tabix.\nELSE.\nrow-k = p0.\nrow-v = "+val+".\nAPPEND row TO entries.\nENDIF.\nresult = me.\n")
+		method(op, "READ TABLE entries WITH KEY k = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
 		if t.Kind == hir.OrderedMap {
 			opt := e.typ(hir.T(hir.Optional, value))
 			line("METHODS get IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE " + opt + ".")
-			code := "DATA row TYPE entry.\nREAD TABLE entries WITH KEY k = p0 INTO row.\nIF sy-subrc = 0.\n"
+			code := "READ TABLE entries WITH KEY k = p0 INTO DATA(row).\nIF sy-subrc = 0.\n"
 			if value.IsRef() {
 				code += "result = row-v.\n"
 			} else {
-				code += "CREATE OBJECT result.\nresult->has = abap_true.\nresult->value = row-v.\n"
+				code += "result = NEW #( ).\nresult->has = abap_true.\nresult->value = row-v.\n"
 			}
 			method("get", code+"ENDIF.\n")
 		}
@@ -77,11 +78,22 @@ func (e *emitter) runtime(t hir.Type) {
 			op = "keys"
 		}
 		line("METHODS " + op + " RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + ".")
-		method(op, "DATA row TYPE entry.\nCREATE OBJECT result.\nLOOP AT entries INTO row.\nAPPEND row-k TO result->items.\nENDLOOP.\n")
+		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "ENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
 }
-func (e *emitter) instanceHelper(owner string) string {
+func (e *emitter) exception(t hir.Type) string {
+	name := e.name("exception." + t.String())
+	file := name + ".clas.abap"
+	if _, ok := e.files[file]; ok {
+		return name
+	}
+	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+	return name
+}
+
+// osgoInstanceHelper is emitted only for OsgoInstanceOfFallback.
+func (e *emitter) osgoInstanceHelper(owner string) string {
 	name := e.name("instanceof." + owner)
 	file := name + ".clas.abap"
 	if _, ok := e.files[file]; ok {
@@ -105,14 +117,5 @@ ENDIF.
 ENDMETHOD.
 ENDCLASS.
 `, name, name, e.name(owner))
-	return name
-}
-func (e *emitter) exception(t hir.Type) string {
-	name := e.name("exception." + t.String())
-	file := name + ".clas.abap"
-	if _, ok := e.files[file]; ok {
-		return name
-	}
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 	return name
 }

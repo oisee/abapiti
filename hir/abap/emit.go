@@ -1,4 +1,4 @@
-// Package abap lowers verified object HIR to ABAP 7.02 (plus int8).
+// Package abap lowers verified object HIR to ABAP 7.50.
 package abap
 
 import (
@@ -12,19 +12,32 @@ import (
 )
 
 type emitter struct {
-	p     *hir.Program
-	names *hir.Names
-	files map[string]string
-	types map[string]bool
-	err   error
+	p       *hir.Program
+	names   *hir.Names
+	files   map[string]string
+	types   map[string]bool
+	err     error
+	options Options
+}
+
+// Options selects individual workarounds for constructs missing in osgo.
+// The zero value always emits the ABAP 7.50 syntax.
+type Options struct {
+	OsgoScalarValueFallback bool
+	OsgoInstanceOfFallback  bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
 func Emit(p *hir.Program) (map[string]string, error) {
+	return EmitWithOptions(p, Options{})
+}
+
+// EmitWithOptions emits with explicit runtime compatibility workarounds.
+func EmitWithOptions(p *hir.Program, options Options) (map[string]string, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, errors[0]
 	}
-	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}}
+	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, options: options}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
 		fmt.Fprintf(&b, "INTERFACE %s PUBLIC.\n", e.name(i.Name))
@@ -168,17 +181,16 @@ func (e *emitter) class(c *hir.Class) {
 			}
 			for _, m := range i.Methods {
 				fmt.Fprintf(&b, "METHOD %s~%s.\n", e.name(n), e.member(m.Name))
-				s := "CALL METHOD me->" + e.member(m.Name)
+				s := "me->" + e.member(m.Name) + "( "
 				if len(m.Params) > 0 {
-					s += " EXPORTING"
 					for _, p := range m.Params {
 						s += " " + e.param(p.Name) + " = " + e.param(p.Name)
 					}
 				}
 				if m.Result.Kind != hir.Void {
-					s += " RECEIVING result = result"
+					s = "result = " + s
 				}
-				b.WriteString(s + ".\nENDMETHOD.\n")
+				b.WriteString(s + " ).\nENDMETHOD.\n")
 			}
 		}
 	}
@@ -187,12 +199,13 @@ func (e *emitter) class(c *hir.Class) {
 }
 
 type body struct {
-	e          *emitter
-	c          *hir.Class
-	m          *hir.Method
-	decl, code strings.Builder
-	locals     map[string]string
-	serial     int
+	e                            *emitter
+	c                            *hir.Class
+	m                            *hir.Method
+	code                         strings.Builder
+	locals                       map[string]string
+	serial                       int
+	lastInit, lastName, lastType string
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
@@ -203,25 +216,56 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.line(n + " = " + e.param(p.Name) + ".")
 	}
 	b.stmt(m.Body)
-	return "METHOD " + name + ".\n" + b.decl.String() + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + name + ".\n" + b.code.String() + "ENDMETHOD.\n"
 }
-func (b *body) line(s string) { b.code.WriteString(s + "\n") }
-func (b *body) temp(t hir.Type) string {
-	b.serial++
-	n := fmt.Sprintf("t%d", b.serial)
-	fmt.Fprintf(&b.decl, "DATA %s TYPE %s.\n", n, b.e.typ(t))
-	return n
+
+// Temporaries are initialized at their evaluation point, including each loop
+// iteration. Fold an immediately following assignment into its declaration;
+// explicit conversions retain the HIR type rather than ABAP literal inference.
+func (b *body) line(s string) {
+	prefix := b.lastName + " = "
+	if b.lastInit != "" && strings.HasPrefix(s, prefix) {
+		code := b.code.String()
+		b.code.Reset()
+		b.code.WriteString(strings.TrimSuffix(code, b.lastInit))
+		rhs := strings.TrimSuffix(strings.TrimPrefix(s, prefix), ".")
+		if strings.HasPrefix(b.lastType, "REF TO ") {
+			typ := strings.TrimPrefix(b.lastType, "REF TO ")
+			if strings.HasPrefix(rhs, "NEW #( ") {
+				rhs = strings.Replace(rhs, "NEW #", "NEW "+typ, 1)
+			}
+			if strings.HasPrefix(rhs, "NEW "+typ+"(") || strings.HasPrefix(rhs, "NEW "+typ+" (") {
+				s = "DATA(" + b.lastName + ") = " + rhs + "."
+			} else {
+				s = "DATA(" + b.lastName + ") = CAST " + typ + "( " + rhs + " )."
+			}
+		} else {
+			s = "DATA(" + b.lastName + ") = CONV " + b.lastType + "( " + rhs + " )."
+		}
+	}
+	b.lastInit, b.lastName, b.lastType = "", "", ""
+	b.code.WriteString(s + "\n")
 }
+func (b *body) temp(t hir.Type) string { return b.rawTemp(b.e.typ(t)) }
 func (b *body) rawTemp(typ string) string {
 	b.serial++
 	n := fmt.Sprintf("t%d", b.serial)
-	fmt.Fprintf(&b.decl, "DATA %s TYPE %s.\n", n, typ)
+	var init string
+	if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") || b.e.options.OsgoScalarValueFallback {
+		init = "DATA " + n + " TYPE " + typ + ".\nCLEAR " + n + ".\n"
+	} else {
+		init = "DATA(" + n + ") = VALUE " + typ + "( ).\n"
+	}
+	b.line(strings.TrimSuffix(init, "\n"))
+	if !strings.Contains(typ, " LENGTH ") {
+		b.lastInit, b.lastName, b.lastType = init, n, typ
+	}
 	return n
 }
 func (b *body) convert(value string, src, dst hir.Type) string {
 	if dst.Kind == hir.Optional && src.Kind != hir.Optional && !dst.Args[0].IsRef() {
 		n := b.temp(dst)
-		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + " = NEW #( ).")
 		b.line(n + "->has = abap_true.")
 		b.line(n + "->value = " + value + ".")
 		return n
@@ -239,18 +283,16 @@ func (b *body) expr(x *hir.Expr) string {
 		return ""
 	}
 	n := b.temp(t)
-	b.line("CLEAR " + n + ".")
 	switch x.Kind {
 	case hir.Lit:
 		if x.Value == nil {
-			b.line("CLEAR " + n + ".")
 			break
 		}
 		lt := t
 		target := n
 		if t.Kind == hir.Optional {
 			lt = t.Args[0]
-			b.line("CREATE OBJECT " + n + ".")
+			b.line(n + " = NEW #( ).")
 			b.line(n + "->has = abap_true.")
 			target = n + "->value"
 		}
@@ -298,16 +340,16 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line(i + " = " + i + " + 1.")
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + n + ".")
 	case hir.New:
-		s := "CREATE OBJECT " + n
+		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
 		for i, a := range x.Args {
 			args = append(args, e.param(ctor.Params[i].Name)+" = "+b.value(a, ctor.Params[i].Type))
 		}
 		if len(args) > 0 {
-			s += " EXPORTING " + strings.Join(args, " ")
+			s += strings.Join(args, " ")
 		}
-		b.line(s + ".")
+		b.line(s + " ).")
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
@@ -365,7 +407,6 @@ func (b *body) expr(x *hir.Expr) string {
 			// Presence is independent of box identity; guard both dereferences.
 			ah, zh := b.temp(hir.T(hir.Bool)), b.temp(hir.T(hir.Bool))
 			for _, pair := range [][2]string{{a, ah}, {z, zh}} {
-				b.line("CLEAR " + pair[1] + ".")
 				b.line("IF " + pair[0] + " IS BOUND.")
 				b.line(pair[1] + " = " + pair[0] + "->has.")
 				b.line("ENDIF.")
@@ -391,18 +432,14 @@ func (b *body) expr(x *hir.Expr) string {
 			op = x.Op
 		}
 		if t.Kind == hir.Bool {
-			b.line("IF " + a + " " + op + " " + z + ".")
-			b.line(n + " = abap_true.")
-			b.line("ENDIF.")
+			b.line(n + " = xsdbool( " + a + " " + op + " " + z + " ).")
 		} else {
 			b.line(n + " = " + a + " " + op + " " + z + ".")
 		}
 	case hir.Unary:
 		a := b.expr(x.X)
 		if x.Op == "!" {
-			b.line("IF " + a + " = abap_false.")
-			b.line(n + " = abap_true.")
-			b.line("ENDIF.")
+			b.line(n + " = xsdbool( " + a + " = abap_false ).")
 		} else {
 			b.line(n + " = 0 - " + a + ".")
 		}
@@ -414,10 +451,12 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line(n + " = " + b.value(x.Z, t) + ".")
 		b.line("ENDIF.")
 	case hir.InstanceOf:
-		// A per-class helper uses a checked cast only to test ancestry. It never
-		// exposes the narrowed reference and works on 7.02 without IS INSTANCE OF.
-		helper := e.instanceHelper(x.Owner)
-		b.line(n + " = " + helper + "=>test( " + b.expr(x.X) + " ).")
+		a := b.expr(x.X)
+		if e.options.OsgoInstanceOfFallback {
+			b.line(n + " = " + e.osgoInstanceHelper(x.Owner) + "=>test( " + a + " ).")
+		} else {
+			b.line(n + " = xsdbool( " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
+		}
 	case hir.IsUndefined:
 		a := b.expr(x.X)
 		b.line("IF " + a + " IS INITIAL.")
@@ -454,21 +493,27 @@ func (b *body) truth(n, a string, t hir.Type) {
 	if t.IsRef() || t.Kind == hir.Optional {
 		test = a + " IS BOUND"
 	}
-	b.line("IF " + test + ".")
-	b.line(n + " = abap_true.")
-	b.line("ENDIF.")
+	b.line(n + " = xsdbool( " + test + " ).")
 }
 func (b *body) stringLit(n, s string) {
-	// Backtick literals preserve trailing blanks. Chunk before quoting so source
+	// String templates preserve trailing blanks. Chunk before escaping so source
 	// tokens always fit the 255-byte envelope (also bounds UTF-16 source length).
-	b.line("CLEAR " + n + ".")
+	if s == "" {
+		b.line(n + " = ||.")
+		return
+	}
+	first := true
 	for s != "" {
 		r := []rune(s)
 		if r[0] < 32 || r[0] == 127 {
+			if first {
+				b.line(n + " = ||.")
+			}
 			char := b.rawTemp("c LENGTH 1")
 			b.line(fmt.Sprintf("%s = cl_abap_conv_in_ce=>uccpi( %d ).", char, r[0]))
 			b.line("CONCATENATE " + n + " " + char + " INTO " + n + " RESPECTING BLANKS.")
 			s = string(r[1:])
+			first = false
 			continue
 		}
 		k := 0
@@ -479,7 +524,13 @@ func (b *body) stringLit(n, s string) {
 		}
 		chunk := string(r[:k])
 		s = string(r[k:])
-		b.line("CONCATENATE " + n + " `" + strings.ReplaceAll(chunk, "`", "``") + "` INTO " + n + " RESPECTING BLANKS.")
+		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
+		if first {
+			b.line(n + " = " + literal + ".")
+		} else {
+			b.line(n + " = " + n + " && " + literal + ".")
+		}
+		first = false
 	}
 }
 
@@ -545,20 +596,13 @@ func (b *body) call(x *hir.Expr, n string) {
 			}
 		}
 	}
-	s := "CALL METHOD " + recv + member
 	args := []string{}
 	for i, a := range x.Args {
 		args = append(args, e.param(m.Params[i].Name)+" = "+b.value(a, m.Params[i].Type))
 	}
-	if x.Kind == hir.SuperCall && n != "" {
-		b.line(n + " = " + recv + member + "( " + strings.Join(args, " ") + " ).")
-		return
-	}
-	if len(args) > 0 {
-		s += " EXPORTING " + strings.Join(args, " ")
-	}
+	s := recv + member + "( " + strings.Join(args, " ") + " )"
 	if n != "" {
-		s += " RECEIVING result = " + n
+		s = n + " = " + s
 	}
 	b.line(s + ".")
 }
@@ -572,13 +616,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.X.Type.Kind == hir.String {
 		switch x.Op {
 		case "string.length":
-			conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
 			bytes := b.rawTemp("xstring")
-			b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
-			b.line("CALL METHOD " + conv + "->convert EXPORTING data = " + a + " IMPORTING buffer = " + bytes + ".")
+			b.line("cl_abap_conv_out_ce=>create( encoding = '4103' )->convert( EXPORTING data = " + a + " IMPORTING buffer = " + bytes + " ).")
 			b.line(n + " = xstrlen( " + bytes + " ) / 2.")
 		case "string.concat":
-			b.line("CONCATENATE " + a + " " + args[0] + " INTO " + n + " RESPECTING BLANKS.")
+			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
 		case "string.substring":
 			if x.X.Kind != hir.Lit {
 				b.e.err = fmt.Errorf("node %d (%s): substring requires a proven BMP literal receiver until portable surrogate slicing is available", x.ID, x.Source)
@@ -596,11 +638,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			length := b.temp(hir.T(hir.I32))
 			b.line(length + " = strlen( " + a + " ).")
 			for _, v := range []string{lo, hi} {
-				b.line("IF " + v + " < 0.")
-				b.line(v + " = 0.")
-				b.line("ELSEIF " + v + " > " + length + ".")
-				b.line(v + " = " + length + ".")
-				b.line("ENDIF.")
+				b.line(v + " = COND i( WHEN " + v + " < 0 THEN 0 WHEN " + v + " > " + length + " THEN " + length + " ELSE " + v + " ).")
 			}
 			b.line("IF " + lo + " > " + hi + ".")
 			b.line(length + " = " + lo + ".")
@@ -627,15 +665,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	op := strings.Split(x.Op, ".")[1]
-	s := "CALL METHOD " + a + "->" + op
-	if len(args) > 0 {
-		s += " EXPORTING"
-		for i, arg := range args {
-			s += fmt.Sprintf(" p%d = %s", i, arg)
-		}
+	params := []string{}
+	for i, arg := range args {
+		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
+	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"
 	if n != "" {
-		s += " RECEIVING result = " + n
+		s = n + " = " + s
 	}
 	b.line(s + ".")
 }
@@ -657,7 +693,6 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.locals = old
 	case hir.VarDecl:
 		n := b.temp(s.Type)
-		b.line("CLEAR " + n + ".")
 		if s.X != nil {
 			b.line(n + " = " + b.value(s.X, s.Type) + ".")
 		}
@@ -726,7 +761,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		name := e.exception(s.X.Type)
 		n := b.rawTemp("REF TO " + name)
 		v := b.expr(s.X)
-		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + " = NEW #( ).")
 		b.line(n + "->payload = " + v + ".")
 		b.line("RAISE EXCEPTION " + n + ".")
 	case hir.Try:
@@ -759,14 +794,16 @@ func wrap(src string) (string, error) {
 			for i := 0; i < len(line) && i <= 240; i++ {
 				c := line[i]
 				if quote != 0 {
-					if c == quote {
-						if i+1 < len(line) && line[i+1] == quote {
+					if quote == '|' && c == '\\' {
+						i++
+					} else if c == quote {
+						if quote != '|' && i+1 < len(line) && line[i+1] == quote {
 							i++
 						} else {
 							quote = 0
 						}
 					}
-				} else if c == '`' || c == '\'' {
+				} else if c == '`' || c == '\'' || c == '|' {
 					quote = c
 				} else if c == ' ' {
 					cut = i

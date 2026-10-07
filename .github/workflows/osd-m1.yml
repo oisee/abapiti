@@ -62,11 +62,12 @@ jobs:
           set -euo pipefail
           out="$RUNNER_TEMP/osgo-artifacts"
           mkdir -p "$out"
-          for f in osgo.json osgo.err generate.log setup.log hir-osgo.json hir-osgo.err hir-osgjs.json hir-osgjs.err; do
+          for f in osgo.json osgo.err generate.log setup.log hir-osgo-TestFixtures.json hir-osgo-TestFixtures.err hir-osgjs-TestFixtures.json hir-osgjs-TestFixtures.err hir-osgo-Test750Semantics.json hir-osgo-Test750Semantics.err hir-osgjs-Test750Semantics.json hir-osgjs-Test750Semantics.err; do
             [ -f "$RUNNER_TEMP/osgo/$f" ] && cp "$RUNNER_TEMP/osgo/$f" "$out/"
           done
           if [ -d "$RUNNER_TEMP/osgo/gen" ]; then cp -r "$RUNNER_TEMP/osgo/gen" "$out/gen"; fi
           if [ -d "$RUNNER_TEMP/osgo/hir" ]; then cp -r "$RUNNER_TEMP/osgo/hir" "$out/hir"; fi
+          if [ -d "$RUNNER_TEMP/osgo/hir-osgo" ]; then cp -r "$RUNNER_TEMP/osgo/hir-osgo" "$out/hir-osgo"; fi
 
       - uses: actions/upload-artifact@v4
         if: always()

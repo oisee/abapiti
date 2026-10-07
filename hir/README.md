@@ -15,7 +15,7 @@ Expression evaluation creates temporaries in source order, with lazy conditional
 and boolean branches; loop conditions execute on every iteration.
 
 Number maps to binary64 `f`, and only explicit I32/I64 types map to `i`/`int8`.
-Strings use ABAP strings and backtick literals preserve blanks. Length counts
+Strings use ABAP strings and escaped string templates preserve blanks. Length counts
 UTF-16 units through code page 4103, including supplementary characters.
 Substring currently requires a BMP literal receiver; other uses fail with source
 diagnostics until all runtimes support surrogate slicing.
@@ -29,8 +29,8 @@ snapshots for ordinary Array ForEach. Collection mutation during snapshot
 iteration does not alter that snapshot. IndexGet is an unchecked element access;
 `array.get` returns Optional for callers needing an out-of-range test.
 
-InstanceOf uses a per-class helper that attempts a cast, catches cast failure,
-and returns a boolean without exposing a narrowed reference. Typed exceptions
+The emitter targets ABAP 7.50. InstanceOf uses IS INSTANCE OF and returns a
+boolean without exposing a narrowed reference. Typed exceptions
 inherit cx_no_check and carry a payload; Try's Type selects the payload wrapper
 caught by its handler. Interfaces forward to the ordinary virtual member so
 inherited implementations still dispatch through the derived class.
@@ -53,5 +53,13 @@ Closures, regular expressions, generators, and null are outside Phase 0.
 Six hand-built programs have dump goldens and one ABAP Unit method per fixture.
 `ABAPITI_TEST_OUT=/tmp/hir go test ./hir/abap -run TestFixtures -count=1` exports
 all sources to `/tmp/hir/TestFixtures`. The existing runtime CI job runs the HIR
-corpus through the v702 syntax gate and both osgo and OSG-JS, requiring all six
-rows to pass. No SAP access is needed for generation or these checks.
+corpus through the v750 syntax gate and both osgo and OSG-JS, requiring all six
+rows to pass. The default corpus must contain inline DATA and IS INSTANCE OF.
+`EmitWithOptions` exposes two explicit osgo workarounds: `OsgoScalarValueFallback`
+uses typed DATA/CLEAR instead of scalar VALUE initializers, and
+`OsgoInstanceOfFallback` emits checked-cast helpers instead of IS INSTANCE OF.
+CI selects these only for the osgo corpus through `ABAPITI_HIR_OSGO_COMPAT=1`;
+the default corpus is syntax-checked at v750 and runs unchanged on OSG-JS.
+CI also runs a semantic regression for template escaping, initial references,
+and temporaries reset on each loop iteration.
+No SAP access is needed for generation or these checks.
