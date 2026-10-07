@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -178,6 +179,11 @@ func TestFixtures(t *testing.T) {
 			if f.name == "collection_fixture" {
 				file := cls + ".clas.testclasses.abap"
 				extra := fmt.Sprintf("actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = 3 ).\n", cls, names.Get("member.extra"))
+				oracleFiles, assertions := int8Oracle(t)
+				for n, src := range oracleFiles {
+					files[n] = src
+				}
+				extra += assertions
 				files[file] = strings.Replace(files[file], "ENDMETHOD.", extra+"ENDMETHOD.", 1)
 			}
 			for n, s := range files {
@@ -204,6 +210,46 @@ func TestFixtures(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Expected decimal strings come from Go, independently of int8Lit. The ABAP
+// template formats the runtime int8 directly, without reconstructing its parts.
+func int8Oracle(t *testing.T) (map[string]string, string) {
+	t.Helper()
+	i64 := hir.T(hir.I64)
+	values := []int64{
+		math.MinInt64, math.MinInt64 + 1, math.MaxInt64 - 1, math.MaxInt64,
+		math.MinInt32 - 1, math.MinInt32, math.MinInt32 + 1,
+		math.MaxInt32 - 1, math.MaxInt32, math.MaxInt32 + 1,
+		-9007199254740993, -9007199254740992, 9007199254740992, 9007199254740993,
+		-1_000_000_001, -1_000_000_000, -999_999_999, -1, 0, 1,
+		999_999_999, 1_000_000_000, 1_000_000_001, 3074457345618258602,
+	}
+	c := &hir.Class{Name: "int8_oracle"}
+	names := hir.NewNames()
+	cls := names.Get(c.Name)
+	var assertions strings.Builder
+	assertions.WriteString("DATA value TYPE int8.\nDATA adjacent TYPE int8.\nDATA decimal TYPE string.\n")
+	for i, value := range values {
+		n := fmt.Sprintf("value_%d", i)
+		m := method(n, i64, ret(hir.L(i64, value)))
+		m.Static = true
+		c.Methods = append(c.Methods, m)
+		fmt.Fprintf(&assertions, "value = %s=>%s( ).\ndecimal = |{ value }|.\n", cls, names.Get("member."+n))
+		fmt.Fprintf(&assertions, "cl_abap_unit_assert=>assert_equals( act = decimal exp = `%s` ).\n", strconv.FormatInt(value, 10))
+		// Avoid overflowing MinInt64 while checking adjacent arithmetic.
+		if value != math.MinInt64 {
+			assertions.WriteString("adjacent = value - 1.\nadjacent = adjacent + 1.\n")
+		} else {
+			assertions.WriteString("adjacent = value + 1.\nadjacent = adjacent - 1.\n")
+		}
+		assertions.WriteString("cl_abap_unit_assert=>assert_equals( act = adjacent exp = value ).\n")
+	}
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{c}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files, assertions.String()
 }
 func TestRejectUnverified(t *testing.T) {
 	p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", i32, ret(local("unknown", i32)))}}}}
