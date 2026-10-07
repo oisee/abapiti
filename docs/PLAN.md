@@ -22,7 +22,8 @@ fast, instead of switching IR.
   32-bit wrap, 7.02 syntax, a global class instead of a report) on a large, version-dependent text
   format. Its gain, typed pointers and structs, is real but not an order of
   magnitude for pointer-based C.
-- `ts/` is source-to-source translation, a different niche; frozen for now.
+- `ts/` is source-to-source translation, a different niche; it is replaced
+  by its own track, [TS-HIR-PLAN.md](TS-HIR-PLAN.md).
 
 ## Goal
 
