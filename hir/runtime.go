@@ -11,6 +11,9 @@ type RuntimeSpec struct {
 var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
+	"string.charAt": {String, 1, false}, "string.substr": {String, 2, false},
+	"string.trim": {String, 0, false}, "string.toUpperCase": {String, 0, false},
+	"string.replaceAll": {String, 2, false}, "i32.toString": {I32, 0, false},
 	"array.push": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
 	"map.set": {OrderedMap, 2, true}, "map.get": {OrderedMap, 1, false}, "map.has": {OrderedMap, 1, false}, "map.size": {OrderedMap, 0, false},
 	"set.add": {OrderedSet, 1, true}, "set.has": {OrderedSet, 1, false}, "set.size": {OrderedSet, 0, false},
@@ -32,7 +35,17 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "string.substring":
 		return []Type{i, i}, T(String), true
 	case "string.charCodeAt":
-		return []Type{i}, T(Number), true
+		return []Type{i}, i, true
+	case "string.charAt":
+		return []Type{i}, T(String), true
+	case "string.trim", "string.toUpperCase":
+		return nil, T(String), true
+	case "string.substr":
+		return []Type{i, i}, T(String), true
+	case "string.replaceAll":
+		return []Type{T(String), T(String)}, T(String), true
+	case "i32.toString":
+		return nil, T(String), true
 	case "array.push":
 		return []Type{t.Args[0]}, i, true
 	case "array.get":

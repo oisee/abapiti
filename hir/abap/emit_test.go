@@ -148,7 +148,7 @@ func fixtures() []fixture {
 		check(eq(rt("string.length", hir.L(str, "😀"), i32), lit(2))),
 		check(eq(rt("string.substring", hir.L(str, "abcd "), str, lit(4), lit(1)), hir.L(str, "bcd"))),
 		check(eq(rt("string.concat", hir.L(str, "a "), str, hir.L(str, "b")), hir.L(str, "a b"))),
-		check(eq(rt("string.charCodeAt", hir.L(str, "€"), hir.T(hir.Number), lit(0)), hir.L(hir.T(hir.Number), 8364))),
+		check(eq(rt("string.charCodeAt", hir.L(str, "€"), i32, lit(0)), lit(8364))),
 		check(binary("||", hir.L(boolean, true), boomCall(), boolean)),
 		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: binary("&&", hir.L(boolean, false), boomCall(), boolean)}),
 		check(&hir.Expr{Kind: hir.Conditional, Type: boolean, X: hir.L(boolean, true), Y: hir.L(boolean, true), Z: boomCall()}),
@@ -331,7 +331,6 @@ func TestTargetDiagnostics(t *testing.T) {
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, math.Copysign(0, -1))},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: binary("+", hir.L(number, 1.0), hir.L(number, 1.0), number)},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: local("divisor", number)},
-		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.RuntimeOp, Op: "string.charCodeAt", Type: hir.T(hir.Number), X: hir.L(str, "x"), Args: []*hir.Expr{lit(5)}},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "%", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0.5), Y: hir.L(hir.T(hir.Number), 0.1)},
 	} {
 		m := method("f", x.Type, ret(x))

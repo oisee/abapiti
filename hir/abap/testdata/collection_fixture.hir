@@ -114,7 +114,7 @@ class collection_fixture
     if (!((string.concat(("a "):string, ("b"):string)):string == ("a b"):string):bool):bool
       return (99):i32
     end if
-    if (!((string.charCodeAt(("€"):string, (0):i32)):number == (8364):number):bool):bool
+    if (!((string.charCodeAt(("€"):string, (0):i32)):i32 == (8364):i32):bool):bool
       return (99):i32
     end if
     if (!((true):bool || (call collection_fixture.explode()):bool):bool):bool

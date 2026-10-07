@@ -107,6 +107,17 @@ func Verify(p *Program) []error {
 		}
 		for _, m := range c.Methods {
 			v.signature(m)
+			if m.Name == classConstructor {
+				// The implicit static class constructor: no parameters, no result,
+				// never virtual or abstract, exactly one per class, and it may not
+				// be called explicitly.
+				if !m.Static || m.Virtual || m.Abstract || len(m.Params) != 0 || m.Result.Kind != Void {
+					v.fail(m.Node, "invalid class constructor")
+				}
+				if names[m.Name] {
+					v.fail(m.Node, "duplicate class constructor")
+				}
+			}
 			if names[m.Name] || m.Name == "" || v.field(c.Super, m.Name) != nil {
 				v.fail(m.Node, "duplicate member "+m.Name)
 			}
@@ -114,7 +125,7 @@ func Verify(p *Program) []error {
 			if m.Abstract && (!c.Abstract || !m.Virtual || m.Static) {
 				v.fail(m.Node, "invalid abstract method")
 			}
-			if base := v.method(c.Super, m.Name); base != nil {
+			if base := v.method(c.Super, m.Name); base != nil && m.Name != classConstructor {
 				if !base.Virtual || m.Static || !sameSignature(base, m) {
 					v.fail(m.Node, "invalid override "+m.Name)
 				}
@@ -157,6 +168,11 @@ func Verify(p *Program) []error {
 	return v.errors
 }
 func (v *verifier) fail(n Node, s string) { v.errors = append(v.errors, Error{n, s}) }
+
+// classConstructor names the implicit static class constructor method. It is
+// emitted as ABAP's CLASS-METHODS class_constructor and runs implicitly.
+const classConstructor = "class_constructor"
+
 func (v *verifier) typ(n Node, t Type) {
 	arity := 0
 	switch t.Kind {
@@ -521,6 +537,10 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 				v.fail(e.Node, "constructor call outside constructor")
 			}
 		}
+		if f != nil && f.Name == classConstructor && e.Kind != SuperCall {
+			v.fail(e.Node, "class constructor is implicit")
+			f = nil
+		}
 		if f == nil {
 			v.fail(e.Node, "unresolved method "+e.Name)
 		} else {
@@ -618,6 +638,18 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		eq(t, T(Bool))
 		if a.Kind == Void || a.Kind == ClassValue {
 			v.fail(e.Node, "invalid boolean conversion")
+		}
+	case Narrow:
+		// A checker-proven typed view: unwrapping an Optional or downcasting a
+		// reference to a proven subtype. The emitter never invents the proof; a
+		// failed runtime cast raises instead of returning a wrong reference.
+		a := check(e.X)
+		base := a
+		if base.Kind == Optional {
+			base = base.Args[0]
+		}
+		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !v.accepts(base, t) {
+			v.fail(e.Node, "invalid narrowing "+a.String()+" to "+t.String())
 		}
 	case RuntimeOp:
 		a := check(e.X)

@@ -112,6 +112,7 @@ const (
 	InstanceOf  ExprKind = "instanceof"
 	IsUndefined ExprKind = "undefined"
 	ToBoolean   ExprKind = "boolean"
+	Narrow      ExprKind = "narrow"
 	RuntimeOp   ExprKind = "runtime"
 )
 

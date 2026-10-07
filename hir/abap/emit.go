@@ -34,8 +34,19 @@ func Emit(p *hir.Program) (map[string]string, error) {
 
 // EmitWithOptions emits with explicit runtime compatibility workarounds.
 func EmitWithOptions(p *hir.Program, options Options) (map[string]string, error) {
+	files, _, err := EmitNamedWithOptions(p, options)
+	return files, err
+}
+
+// EmitNamed additionally returns the name table used for emitted identities.
+func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
+	return EmitNamedWithOptions(p, Options{})
+}
+
+// EmitNamedWithOptions returns emitted identities with explicit runtime workarounds.
+func EmitNamedWithOptions(p *hir.Program, options Options) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
-		return nil, errors[0]
+		return nil, nil, errors[0]
 	}
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, options: options}
 	for _, i := range p.Interfaces {
@@ -53,14 +64,14 @@ func EmitWithOptions(p *hir.Program, options Options) (map[string]string, error)
 	for file, src := range e.files {
 		out, err := wrap(src)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", file, err)
+			return nil, nil, fmt.Errorf("%s: %w", file, err)
 		}
 		e.files[file] = out
 	}
 	if e.err != nil {
-		return nil, e.err
+		return nil, nil, e.err
 	}
-	return e.files, nil
+	return e.files, e.names, nil
 }
 func (e *emitter) name(s string) string   { return e.names.Get(s) }
 func (e *emitter) member(s string) string { return e.name("member." + s) }
@@ -111,6 +122,9 @@ func (e *emitter) typ(t hir.Type) string {
 	}
 }
 func (e *emitter) signature(m *hir.Method, ctor bool) string {
+	if m.Name == "class_constructor" && m.Static {
+		return "CLASS-METHODS class_constructor.\n"
+	}
 	kw, name := "METHODS", e.member(m.Name)
 	if ctor {
 		name = "constructor"
@@ -158,6 +172,10 @@ func (e *emitter) class(c *hir.Class) {
 		b.WriteString(e.signature(c.Ctor, true))
 	}
 	for _, m := range c.Methods {
+		if m.Name == "class_constructor" && m.Static {
+			b.WriteString("CLASS-METHODS class_constructor.\n")
+			continue
+		}
 		base, _ := e.method(e.classBy(c.Super), m.Name)
 		if base != nil {
 			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.member(m.Name))
@@ -170,9 +188,14 @@ func (e *emitter) class(c *hir.Class) {
 		b.WriteString(e.body(c, c.Ctor, "constructor"))
 	}
 	for _, m := range c.Methods {
-		if !m.Abstract {
-			b.WriteString(e.body(c, m, e.member(m.Name)))
+		if m.Abstract {
+			continue
 		}
+		name := e.member(m.Name)
+		if m.Name == "class_constructor" && m.Static {
+			name = "class_constructor"
+		}
+		b.WriteString(e.body(c, m, name))
 	}
 	for _, n := range c.Implements {
 		for _, i := range e.p.Interfaces {
@@ -457,6 +480,16 @@ func (b *body) expr(x *hir.Expr) string {
 		} else {
 			b.line(n + " = xsdbool( " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 		}
+	case hir.Narrow:
+		a := b.expr(x.X)
+		if x.X.Type.Kind == hir.Optional {
+			// Unwrapping an optional reference: the same ABAP type.
+			b.line(n + " = " + a + ".")
+		} else {
+			// A proven downcast; a failed cast raises rather than aliasing wrong.
+			b.line(n + " ?= " + a + ".")
+
+		}
 	case hir.IsUndefined:
 		a := b.expr(x.X)
 		b.line("IF " + a + " IS INITIAL.")
@@ -485,6 +518,45 @@ func (b *body) expr(x *hir.Expr) string {
 	}
 	return n
 }
+
+// jsWhiteSpace are the Unicode code points ECMAScript trim treats as white
+// space: the singletons plus the U+2000..U+200A range.
+var jsWhiteSpace = []int{9, 10, 11, 12, 13, 32, 160, 5760, 8232, 8233, 8239, 8287, 12288, 65279}
+
+// trimLoop advances lo (or retreats hi) over JavaScript white space in a.
+// The one-character section is materialized first: string offsets are not
+// allowed as functional-method arguments.
+func (b *body) trimLoop(a, lo, hi string, leading bool) {
+	code := b.temp(hir.T(hir.I32))
+	idx := b.temp(hir.T(hir.I32))
+	ch := b.temp(hir.T(hir.String))
+	cond := lo + " < " + hi
+	init := ""
+	step := lo + " = " + lo + " + 1."
+	if leading {
+		init = idx + " = " + lo + "."
+	} else {
+		cond = hi + " > " + lo
+		init = idx + " = " + hi + " - 1."
+		step = hi + " = " + hi + " - 1."
+	}
+	b.line("WHILE " + cond + ".")
+	b.line(init)
+	b.line(ch + " = " + a + "+" + idx + "(1).")
+	b.line(code + " = cl_abap_conv_out_ce=>uccpi( " + ch + " ).")
+	var tests []string
+	for _, cp := range jsWhiteSpace {
+		tests = append(tests, fmt.Sprintf("%s = %d", code, cp))
+	}
+	tests = append(tests, fmt.Sprintf("%s >= 8192 AND %s <= 8202", code, code))
+	b.line("IF " + strings.Join(tests, " OR ") + ".")
+	b.line(step)
+	b.line("ELSE.")
+	b.line("EXIT.")
+	b.line("ENDIF.")
+	b.line("ENDWHILE.")
+}
+
 func (b *body) truth(n, a string, t hir.Type) {
 	test := a + " IS NOT INITIAL"
 	if t.Kind == hir.String {
@@ -522,6 +594,7 @@ func (b *body) stringLit(n, s string) {
 			size += len(string(r[k])) * 2
 			k++
 		}
+		k = literalChunkLimit(r, k)
 		chunk := string(r[:k])
 		s = string(r[k:])
 		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
@@ -532,6 +605,26 @@ func (b *body) stringLit(n, s string) {
 		}
 		first = false
 	}
+}
+
+// literalModePhrases are keyword sequences that the CONCATENATE statement
+// parser can mistake for its own optional clauses when they appear inside a
+// literal (measured on osgo); chunks are cut so none appears in one piece.
+var literalModePhrases = []string{"IN BYTE MODE", "IN CHARACTER MODE"}
+
+// literalChunkLimit shortens a printable chunk accordingly.
+func literalChunkLimit(r []rune, k int) int {
+	lower := strings.ToLower(string(r[:k]))
+	cut := k
+	for _, p := range literalModePhrases {
+		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 && i < cut {
+			cut = i
+		}
+	}
+	if cut <= 0 {
+		return 1
+	}
+	return cut
 }
 
 // int8Lit uses only i-range literals, avoiding character-to-int8 conversion.
@@ -614,6 +707,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		args = append(args, b.value(v, ps[i]))
 	}
 	if x.X.Type.Kind == hir.String {
+		length := b.temp(hir.T(hir.I32))
+		b.line(length + " = strlen( " + a + " ).")
 		switch x.Op {
 		case "string.length":
 			bytes := b.rawTemp("xstring")
@@ -622,21 +717,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.concat":
 			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
 		case "string.substring":
-			if x.X.Kind != hir.Lit {
-				b.e.err = fmt.Errorf("node %d (%s): substring requires a proven BMP literal receiver until portable surrogate slicing is available", x.ID, x.Source)
-				return
-			}
-			value, ok := b.literalString(x.X)
-			if !ok {
-				return
-			}
-			if len(utf16.Encode([]rune(value))) != len([]rune(value)) {
-				b.e.err = fmt.Errorf("node %d (%s): substring requires a proven BMP literal receiver until portable surrogate slicing is available", x.ID, x.Source)
-				return
-			}
+			// JavaScript substring clamps both indices into [0, length] and
+			// swaps them when start is past end. Indices count UTF-16 code
+			// units; the input must stay inside the BMP (see README).
 			lo, hi := args[0], args[1]
-			length := b.temp(hir.T(hir.I32))
-			b.line(length + " = strlen( " + a + " ).")
 			for _, v := range []string{lo, hi} {
 				b.line(v + " = COND i( WHEN " + v + " < 0 THEN 0 WHEN " + v + " > " + length + " THEN " + length + " ELSE " + v + " ).")
 			}
@@ -647,6 +731,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 			b.line(length + " = " + hi + " - " + lo + ".")
 			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
+		case "string.charAt":
+			// charAt never raises: out of range is the empty string.
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
+			b.line("CLEAR " + n + ".")
+			b.line("ELSE.")
+			b.line(n + " = " + a + "+" + args[0] + "(1).")
+			b.line("ENDIF.")
 		case "string.charCodeAt":
 			if x.X.Kind == hir.Lit && x.Args[0].Kind == hir.Lit {
 				value, ok := b.literalString(x.X)
@@ -660,8 +751,61 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 					return
 				}
 			}
-			b.e.err = fmt.Errorf("node %d (%s): string.charCodeAt requires a proven in-range constant index and string (out-of-range is NaN)", x.ID, x.Source)
+			// Out of range JavaScript returns NaN, which the Number domain
+			// does not carry; raise instead of returning a wrong code unit
+			// (a documented divergence, like Number division by zero).
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			// The section is materialized first: string offsets are not
+			// allowed as functional-method arguments.
+			ch := b.temp(hir.T(hir.String))
+			b.line(ch + " = " + a + "+" + args[0] + "(1).")
+			b.line(n + " = cl_abap_conv_out_ce=>uccpi( " + ch + " ).")
+		case "string.substr":
+			// Legacy substr: a negative start counts from the end, a
+			// non-positive length is the empty string, the result is cut at
+			// the end of the receiver.
+			start, count := args[0], args[1]
+			b.line("IF " + start + " < 0.")
+			b.line(start + " = " + start + " + " + length + ".")
+			b.line("IF " + start + " < 0.")
+			b.line(start + " = 0.")
+			b.line("ENDIF.")
+			b.line("ENDIF.")
+			b.line("IF " + start + " > " + length + " OR " + count + " <= 0.")
+			b.line("CLEAR " + n + ".")
+			b.line("ELSE.")
+			b.line("IF " + count + " > " + length + " - " + start + ".")
+			b.line(count + " = " + length + " - " + start + ".")
+			b.line("ENDIF.")
+			b.line(n + " = " + a + "+" + start + "(" + count + ").")
+			b.line("ENDIF.")
+		case "string.trim":
+			lo := b.temp(hir.T(hir.I32))
+			hi := b.temp(hir.T(hir.I32))
+			b.line(lo + " = 0.")
+			b.line(hi + " = " + length + ".")
+			b.trimLoop(a, lo, hi, true)
+			b.trimLoop(a, lo, hi, false)
+			b.line("IF " + hi + " > " + lo + ".")
+			b.line(length + " = " + hi + " - " + lo + ".")
+			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
+			b.line("ELSE.")
+			b.line("CLEAR " + n + ".")
+			b.line("ENDIF.")
+		case "string.toUpperCase":
+			b.line(n + " = " + a + ".")
+			b.line("TRANSLATE " + n + " TO UPPER CASE.")
+		case "string.replaceAll":
+			b.line(n + " = " + a + ".")
+			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
 		}
+		return
+	}
+	if x.Op == "i32.toString" {
+		// A string template renders an i exactly like JavaScript String(int32).
+		b.line(n + " = |{ " + a + " }|.")
 		return
 	}
 	op := strings.Split(x.Op, ".")[1]

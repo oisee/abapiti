@@ -1,8 +1,11 @@
 // Package tsfront is the TypeScript front end of the TS→HIR→ABAP pipeline:
 // it loads a tsgo (TypeScript 7 in Go, vendored under internal/tsgo) Program
-// from a project's real tsconfig.json and dumps a deterministic JSON view of
-// the checked syntax trees (classes, functions, and a checker type on every
-// expression). Only this package sees tsgo types.
+// from a project's real tsconfig.json, dumps a deterministic JSON view of the
+// checked syntax trees (classes, functions, and a checker type on every
+// expression), and lowers checked sources into the object HIR (Lower); the
+// lowering takes every type from the checker and reports whatever it does not
+// support as a diagnostic instead of guessing. Only this package sees tsgo
+// types.
 package tsfront
 
 import (

@@ -30,7 +30,13 @@ iteration does not alter that snapshot. IndexGet is an unchecked element access;
 `array.get` returns Optional for callers needing an out-of-range test.
 
 The emitter targets ABAP 7.50. InstanceOf uses IS INSTANCE OF and returns a
-boolean without exposing a narrowed reference. Typed exceptions
+boolean without exposing a narrowed reference. Narrow is a typed
+view the front end's checker proved (flow narrowing, a dominating instanceof,
+an assertion after a check): unwrapping an optional reference is a plain move,
+a downcast is emitted as a checked `?=` so an unproven view raises instead of
+aliasing the wrong object. A method named class_constructor (static, no
+parameters, void) is emitted as ABAP's CLASS-METHODS class_constructor and
+runs implicitly; the verifier rejects explicit calls to it. Typed exceptions
 inherit cx_no_check and carry a payload; Try's Type selects the payload wrapper
 caught by its handler. Interfaces forward to the ordinary virtual member so
 inherited implementations still dispatch through the derived class.
@@ -44,10 +50,21 @@ overflow, raise in ABAP instead of giving Infinity. This is an accepted divergen
 until a later phase implements exceptional-number handling.
 Integer division truncates toward zero and remainder keeps the dividend sign.
 Number remainder is rejected until an IEEE remainder runtime is available.
-`string.charCodeAt` currently folds only a literal string and proven in-range
-literal index to its UTF-16 code unit. Other uses are rejected with node/source
-information, since out-of-range JavaScript results require NaN. The catalogue
-is the sole supported operation list; unknown operations fail verification.
+The string operations work on dynamic receivers: length counts UTF-16 code units
+through code page 4103, substring/charAt clamp like JavaScript, substr keeps its
+legacy negative-start semantics, trim strips exactly the ECMAScript white space
+set, and replaceAll replaces every occurrence of a literal needle (the front end
+maps the lexer's /\r/g to it and reports the mapping). i32.toString renders like
+JavaScript String(int32) through a string template. string.charCodeAt returns the
+UTF-16 code unit as i32 and raises cx_sy_range_out_of_bounds when out of range,
+where JavaScript yields NaN — a documented divergence, like Number division by
+zero. Indices count UTF-16 code units, which equals the character count only
+inside the BMP; the runtimes slice by characters, so input outside the BMP
+diverges: measured on osgo, the lexer raises on such input instead of producing
+wrong output. String literals are chunked so that no chunk contains IN BYTE MODE
+or IN CHARACTER MODE: the CONCATENATE statement parser mistakes those sequences
+inside a literal for its own clauses. The catalogue is the sole supported
+operation list; unknown operations fail verification.
 Closures, regular expressions, generators, and null are outside Phase 0.
 
 Six hand-built programs have dump goldens and one ABAP Unit method per fixture.

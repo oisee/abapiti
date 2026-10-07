@@ -149,6 +149,8 @@ func dumpExpr(e *Expr) string {
 		s = "if " + dumpExpr(e.X) + " then " + dumpExpr(e.Y) + " else " + dumpExpr(e.Z)
 	case InstanceOf:
 		s = dumpExpr(e.X) + " instanceof " + e.Owner
+	case Narrow:
+		s = "narrow " + dumpExpr(e.X) + " to " + e.Type.String()
 	case RuntimeOp:
 		s = e.Op + "(" + dumpExpr(e.X)
 		if a != "" {
