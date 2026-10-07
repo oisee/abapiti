@@ -102,6 +102,15 @@ tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP leg
   (30-character limit). The rules we already hold apply: no comments, lines of
   at most 255 characters, ABAP 7.02 plus `int8`, no writes to importing
   parameters.
+- **Monomorphisation is an optimisation, not the base:** the HIR keeps
+  polymorphic semantics, and a later pass specialises where it is proven:
+  lambdas passed to `map`/`filter`/`some`/`find` inlined into loops (designed
+  in with closures in phase 2), `Map`/`Set` per key and value type as typed
+  internal tables, generics instantiated (one generic declaration in the
+  sources; 88 explicit and 150 inferred instantiations, library types included),
+  calls devirtualised and leaf classes made `FINAL` from the whole-program
+  class hierarchy, `instanceof` as a class-id or ancestor-table test, object
+  literals per shape. The corpus comparison checks each step.
 - A Go emitter can be added later on the same HIR (virtual dispatch through
   interfaces); osgo may not need it.
 
