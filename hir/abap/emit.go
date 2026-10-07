@@ -568,7 +568,7 @@ func (b *body) codeUnit(target, ch string) {
 	high := b.rawTemp("x LENGTH 1")
 	highInt := b.temp(hir.T(hir.I32))
 	b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
-	b.line("CALL METHOD " + conv + "->convert EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + ".")
+	b.line(conv + "->convert( EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + " ).")
 	b.line(low + " = " + bytes + "(1).")
 	b.line(high + " = " + bytes + "+1(1).")
 	b.line(target + " = " + low + ".")

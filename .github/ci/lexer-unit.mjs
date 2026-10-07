@@ -19,6 +19,11 @@ execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1
  cwd:root,env:{...process.env, ABAPITI_TEST_OUT:gen},stdio:"inherit"
 });
 execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),gen,osg],{stdio:"inherit"});
+const compatGen = join(work,"lexer-r1-osgo");
+rmSync(compatGen,{recursive:true,force:true});
+execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1Accepted","-count=1"],{
+ cwd:root,env:{...process.env, ABAPITI_TEST_OUT:compatGen, ABAPITI_HIR_OSGO_COMPAT:"1"},stdio:"inherit"
+});
 function run(runtime, dir, label, pass, tests = 1, gapMessage) {
   const result = spawnSync("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
     cwd:osg,encoding:"utf8",maxBuffer:64*1024*1024,
@@ -33,37 +38,38 @@ function run(runtime, dir, label, pass, tests = 1, gapMessage) {
   if (gapMessage && d.rows.some(r=>r.message !== gapMessage)) throw new Error(`${runtime} ${label}: changed gap diagnostic`);
   console.log(`${runtime} ${label}: ${pass ? "PASS" : "expected FAIL"}${label === "baseline" ? " (44/44 cases, 4,663 tokens)" : ""}`);
 }
-const testfile = readdirSync(gen).find(n=>n.endsWith(".clas.testclasses.abap"));
-const original=readFileSync(join(gen,testfile),"utf8");
-function mutation(label, edit) {
- const dir=join(work,`lexer-r1-${label}`);
- rmSync(dir,{recursive:true,force:true});mkdirSync(dir,{recursive:true});
- for (const file of readdirSync(gen).filter(n=>n.endsWith(".abap"))) cpSync(join(gen,file),join(dir,file));
- const changed=edit(original);
- if(changed===original) throw new Error(`mutation ${label} did not change source`);
- writeFileSync(join(dir,testfile),changed);
- return dir;
-}
-const early=mutation("early",s=>{ let seen=0; return s.replaceAll("executed = executed + 1.",line=>++seen===2 ? line+"\nRETURN." : line); });
-const skip=mutation("skip",s=>{
- const blocks=[...s.matchAll(/CLEAR raw\./g)].map(m=>m.index);
- if(blocks.length!==44) throw new Error("case cardinality in emitted driver");
- const block=s.slice(blocks[1],blocks[2]);
- if(!block.includes("case single_dot")) throw new Error("second block must be critic's single_dot case");
- return s.slice(0,blocks[1])+s.slice(blocks[2]);
-});
-const count=mutation("token-count",s=>s.replace(/(=>\S+ exp = )1( msg = msg )/,"$1999$2"));
 for (const runtime of ["osgo","osgjs"]) {
- run(runtime,gen,"baseline",true);
+ const corpus = runtime === "osgo" ? compatGen : gen;
+ const testfile = readdirSync(corpus).find(n=>n.endsWith(".clas.testclasses.abap"));
+ const original=readFileSync(join(corpus,testfile),"utf8");
+ function mutation(label, edit) {
+  const dir=join(work,`lexer-r1-${runtime}-${label}`);
+  rmSync(dir,{recursive:true,force:true});mkdirSync(dir,{recursive:true});
+  for (const file of readdirSync(corpus).filter(n=>n.endsWith(".abap"))) cpSync(join(corpus,file),join(dir,file));
+  const changed=edit(original);
+  if(changed===original) throw new Error(`mutation ${label} did not change source`);
+  writeFileSync(join(dir,testfile),changed);
+  return dir;
+ }
+ const early=mutation("early",s=>{ let seen=0; return s.replaceAll("executed = executed + 1.",line=>++seen===2 ? line+"\nRETURN." : line); });
+ const skip=mutation("skip",s=>{
+  const blocks=[...s.matchAll(/CLEAR raw\./g)].map(m=>m.index);
+  if(blocks.length!==44) throw new Error("case cardinality in emitted driver");
+  const block=s.slice(blocks[1],blocks[2]);
+  if(!block.includes("case single_dot")) throw new Error("second block must be critic's single_dot case");
+  return s.slice(0,blocks[1])+s.slice(blocks[2]);
+ });
+ const count=mutation("token-count",s=>s.replace(/(=>\S+ exp = )1( msg = msg )/,"$1999$2"));
+ run(runtime,corpus,"baseline",true);
  run(runtime,early,"early",false);
  run(runtime,skip,"skip",false);
  run(runtime,count,"token-count",false);
- for (const probe of readdirSync(join(gen,"critic-r1"))) {
+ for (const probe of readdirSync(join(corpus,"critic-r1"))) {
   // SAP 7.58 and OSG-JS slice UTF-16 units; this pin of osgo slices runes
   // (logged runtime gap 026). Keep the exact surrogate assertion intact,
   // and require its known FAILURE rather than silently accepting a wrong value.
   const gap = runtime === "osgo" && probe === "supplementary";
-  run(runtime,join(gen,"critic-r1",probe),probe,!gap,1,gap ? "Expected '2', got '1'" : undefined);
+  run(runtime,join(corpus,"critic-r1",probe),probe,!gap,1,gap ? "Expected '2', got '1'" : undefined);
  }
 }
 clean();

@@ -61,7 +61,7 @@ func TestCriticR1Accepted(t *testing.T) {
 			if errs := hir.Verify(prog); len(errs) > 0 {
 				t.Fatal(errs)
 			}
-			files, names, err := abap.EmitNamed(prog)
+			files, names, err := abap.EmitNamedWithOptions(prog, testEmitOptions())
 			if err != nil {
 				t.Fatal(err)
 			}
