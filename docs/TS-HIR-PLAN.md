@@ -57,7 +57,7 @@ packages together:
 
 ```
 tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP legalisation  →  ABAP emitter
-       (tsfront)               (hir)              (lower)             (7.02 rules)        (emit/abap)
+       (tsfront)               (hir)              (lower)             (7.50 rules)        (emit/abap)
 ```
 
 - **Front end: tsgo** (Microsoft's TypeScript 7 compiler in Go), vendored at a
@@ -94,13 +94,14 @@ tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP leg
   `Number` stays a double unless the integer range is proven (abaplint has
   `Math.ceil(x / 2)`); evaluation order is preserved when temporaries are
   introduced.
-- **ABAP mapping.** Classes and inheritance map directly. `instanceof` goes
-  through a runtime helper, because `IS INSTANCE OF` is not in 7.02. Class
+- **ABAP mapping.** Classes and inheritance map directly. `instanceof` maps to
+  `IS INSTANCE OF` (ABAP 7.50, see [ADR 0003](adr/0003-abap-750-for-hir.md)). Class
   values become descriptors (name, parent, factory). Closures become small
   classes behind one interface per signature. `Map`/`Set` become runtime
   classes that keep insertion order. Long names go through one name table
   (30-character limit). The rules we already hold apply: no comments, lines of
-  at most 255 characters, ABAP 7.02 plus `int8`, no writes to importing
+  at most 255 characters, plain readable ABAP 7.50 including `int8`
+  ([ADR 0004](adr/0004-readable-750-style.md)), no writes to importing
   parameters.
 - **Monomorphisation is an optimisation, not the base:** the HIR keeps
   polymorphic semantics, and a later pass specialises where it is proven:
@@ -116,7 +117,7 @@ tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP leg
 
 ## How it is verified
 
-1. **Static gate on every build:** abaplint at `v702` plus our generation rules
+1. **Static gate on every build:** abaplint at `v750` (`check_syntax`) plus our generation rules
    on the generated code.
 2. **Differential runs on a corpus:** the same ABAP sources go through the
    original TypeScript (Node) and the generated ABAP; outputs are compared as
