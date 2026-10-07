@@ -15,8 +15,10 @@ bounded domain; Number/binary64 is used instead. The `overflow` and
 `number_semantics` probes require 2147483648 to survive arithmetic, field
 storage, return and comparison on both runtimes.
 
-`unicode_upper` covers full BMP uppercase expansions, `supplementary` requires
-either a visible bounds exception or the exact JavaScript surrogate unit, and the
+`unicode_upper` covers full BMP uppercase expansions. `supplementary` requires
+length 2 and the exact JavaScript surrogate unit for `"😀"`; the pinned rune-based
+osgo has an explicitly expected assertion failure (runtime gap 026), while
+OSG-JS must pass. The
 lexer harness checks virtual positions separately from the 44-case corpus.
 `constructor_timing` checks static declaration order and one-time initialization
 on both local runtimes. SAP kernel constructor timing remains unverified.

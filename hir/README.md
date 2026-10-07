@@ -15,10 +15,11 @@ Expression evaluation creates temporaries in source order, with lazy conditional
 and boolean branches; loop conditions execute on every iteration.
 
 Number maps to binary64 `f`, and only explicit I32/I64 types map to `i`/`int8`.
-Strings use ABAP strings and escaped string templates preserve blanks. Length counts
-UTF-16 units through code page 4103, including supplementary characters.
-Substring accepts dynamic BMP receivers. Surrogate slicing remains outside
-the verified runtime envelope.
+Strings use ABAP strings and escaped string templates preserve blanks. Length uses
+native strlen( ), and indexing/slicing use native sections: both count UTF-16
+code units on the SAP kernel (verified on 7.58) and OSG-JS, like JavaScript.
+The pinned osgo runtime instead counts runes; supplementary input is a known
+runtime gap, not an emitter restriction.
 Primitive optionals use specialized immutable boxes with value and has members;
 reference optionals use an initial reference. Primitive optional equality compares
 presence and, when present, the contained value. There is no null type in this phase.
@@ -52,20 +53,18 @@ Integer division truncates toward zero and remainder keeps the dividend sign.
 General Number remainder is rejected; the Number remainder-by-two runtime
 operation implements the lexer's literal `% 2` case.
 The string operations work on dynamic receivers: length counts UTF-16 code units
-through code page 4103, substring/charAt clamp like JavaScript, substr keeps its
+with strlen( ), substring/charAt clamp like JavaScript, substr keeps its
 legacy negative-start semantics, trim strips exactly the ECMAScript white space
 set, and replaceAll replaces every occurrence of a literal needle (the front end
 maps the lexer's /\r/g to it and reports the mapping). i32.toString renders like
 JavaScript String(int32) through a string template. string.charCodeAt returns the
 UTF-16 code unit as i32 and raises cx_sy_range_out_of_bounds when out of range,
 where JavaScript yields NaN — a documented divergence, like Number division by
-zero. Indices count UTF-16 code units, which equals the character count only
-inside the BMP; the runtimes slice by characters, so input outside the BMP
-is rejected visibly when the runtime character model disagrees with UTF-16:
-substring, substr, charAt, charCodeAt and uppercase compare the two lengths
-before producing a value. On OSG-JS, UTF-16 slicing can return the exact
-JavaScript code unit; the supplementary probe accepts that exact result. Length still counts supplementary
-UTF-16 units. Full BMP uppercasing applies the 102 full Unicode mapping
+zero. No operation converts the whole receiver merely to measure its length
+or guard a section. Dynamic charCodeAt converts only its one-unit section to
+UTF-16LE. The supplementary probe checks the exact JavaScript surrogate unit;
+on the pinned rune-based osgo it is an explicitly expected runtime failure.
+Full BMP uppercasing applies the 102 full Unicode mapping
 differences from the existing x/text dependency before target simple uppercase,
 including sharp s, ligatures and Greek expansions. String literals are chunked so that no chunk contains IN BYTE MODE
 or IN CHARACTER MODE: the CONCATENATE statement parser mistakes those sequences
@@ -131,12 +130,13 @@ blocking source diagnostics.
 The lexer differential is part of `.github/ci/hir-unit.sh`: sequential case
 blocks check full dumps and each token count, with teardown requiring the corpus
 cardinality even after an early RETURN. CI also requires the critic's early-return
-and removed-case mutations to fail on both pinned runtimes. The BMP limitation
-remains explicit. String literals containing lone UTF-16 surrogate units (escaped
-or raw) are rejected with `unsupported-lone-surrogate` before rune conversion;
-valid pairs remain supplementary code points, not replacement characters.
-Supplementary slicing rejection, full BMP Unicode uppercasing, virtual
-positions and pure static declaration order have separate runtime probes.
+and removed-case mutations to fail on both pinned runtimes. The 44-case corpus
+is BMP; the pinned osgo supplementary gap is tracked separately. String literals
+containing lone UTF-16 surrogate units (escaped or raw) are rejected with
+`unsupported-lone-surrogate` before rune conversion; valid pairs remain
+supplementary code points, not replacement characters. Supplementary slicing,
+full BMP Unicode uppercasing, virtual positions and pure static declaration
+order have separate runtime probes.
 Local runtime results do not establish SAP kernel timing. SAP validation
 remains outstanding.
 

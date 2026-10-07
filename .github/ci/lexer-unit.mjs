@@ -19,7 +19,7 @@ execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1
  cwd:root,env:{...process.env, ABAPITI_TEST_OUT:gen},stdio:"inherit"
 });
 execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),gen,osg],{stdio:"inherit"});
-function run(runtime, dir, label, pass, tests = 1) {
+function run(runtime, dir, label, pass, tests = 1, gapMessage) {
   const result = spawnSync("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
     cwd:osg,encoding:"utf8",maxBuffer:64*1024*1024,
     env:{...process.env,GOTOOLCHAIN:"go1.26.0",GOFLAGS:"-buildvcs=false"}
@@ -30,6 +30,7 @@ function run(runtime, dir, label, pass, tests = 1) {
   const d=JSON.parse(result.stdout), t=d.totals;
   if (!d.rows || t.tests !== tests || d.rows.length !== tests || t.error || t.not_compiled || d.overrides?.length) throw new Error(`${runtime} ${label}: invalid runtime report`);
   if (pass ? result.status !== 0 || t.success !== tests || d.rows.some(r=>r.status!=="SUCCESS") : result.status !== 1 || t.failure !== tests || d.rows.some(r=>r.status!=="FAILURE")) throw new Error(`${runtime} ${label}: unexpected verdict`);
+  if (gapMessage && d.rows.some(r=>r.message !== gapMessage)) throw new Error(`${runtime} ${label}: changed gap diagnostic`);
   console.log(`${runtime} ${label}: ${pass ? "PASS" : "expected FAIL"}${label === "baseline" ? " (44/44 cases, 4,663 tokens)" : ""}`);
 }
 const testfile = readdirSync(gen).find(n=>n.endsWith(".clas.testclasses.abap"));
@@ -57,6 +58,12 @@ for (const runtime of ["osgo","osgjs"]) {
  run(runtime,early,"early",false);
  run(runtime,skip,"skip",false);
  run(runtime,count,"token-count",false);
- for (const probe of readdirSync(join(gen,"critic-r1"))) run(runtime,join(gen,"critic-r1",probe),probe,true);
+ for (const probe of readdirSync(join(gen,"critic-r1"))) {
+  // SAP 7.58 and OSG-JS slice UTF-16 units; this pin of osgo slices runes
+  // (logged runtime gap 026). Keep the exact surrogate assertion intact,
+  // and require its known FAILURE rather than silently accepting a wrong value.
+  const gap = runtime === "osgo" && probe === "supplementary";
+  run(runtime,join(gen,"critic-r1",probe),probe,!gap,1,gap ? "Expected '2', got '1'" : undefined);
+ }
 }
 clean();

@@ -107,7 +107,7 @@ func TestCriticR1Accepted(t *testing.T) {
 			case "unicode_trim":
 				check = "text = obj->" + names.Get("member.run") + "( ).\ncl_abap_unit_assert=>assert_equals( act = text exp = `abc` )."
 			case "supplementary":
-				check = "DATA trapped TYPE abap_bool.\nDATA conv TYPE REF TO cl_abap_conv_out_ce.\nDATA bytes TYPE xstring.\nDATA expected_bytes TYPE xstring.\nTRY.\ntext = obj->" + names.Get("member.run") + "( ).\nCATCH cx_sy_range_out_of_bounds.\ntrapped = abap_true.\nENDTRY.\nIF trapped <> abap_true.\nconv = cl_abap_conv_out_ce=>create( encoding = '4103' ).\nCALL METHOD conv->convert EXPORTING data = text IMPORTING buffer = bytes.\nexpected_bytes = '3DD8'.\ncl_abap_unit_assert=>assert_equals( act = bytes exp = expected_bytes ).\nENDIF."
+				check = "DATA conv TYPE REF TO cl_abap_conv_out_ce.\nDATA bytes TYPE xstring.\nDATA expected_bytes TYPE xstring.\nactual = obj->" + names.Get("member.length") + "( ).\nexpected = 2.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\ntext = obj->" + names.Get("member.run") + "( ).\nconv = cl_abap_conv_out_ce=>create( encoding = '4103' ).\nCALL METHOD conv->convert EXPORTING data = text IMPORTING buffer = bytes.\nexpected_bytes = '3DD8'.\ncl_abap_unit_assert=>assert_equals( act = bytes exp = expected_bytes )."
 			case "number_semantics":
 				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = '2147483648'.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\ntext = obj->" + names.Get("member.indices") + "( ).\ncl_abap_unit_assert=>assert_equals( act = text exp = `bc` ).\nactual = obj->" + names.Get("member.remainder") + "( ).\nexpected = '-1.5'."
 			case "unicode_mode":

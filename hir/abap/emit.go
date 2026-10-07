@@ -559,7 +559,7 @@ func (b *body) trimLoop(a, lo, hi string, leading bool) {
 	b.line("ENDWHILE.")
 }
 
-// codeUnit reads one BMP UTF-16 unit directly. The pinned library's uccpi
+// codeUnit reads one UTF-16 unit directly. The pinned library's uccpi
 // uses high-byte * 255 on OSG-JS; that is not a correct Unicode code point.
 func (b *body) codeUnit(target, ch string) {
 	conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
@@ -770,31 +770,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.X.Type.Kind == hir.String {
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
-		switch x.Op {
-		case "string.substring", "string.substr", "string.charAt", "string.charCodeAt", "string.toUpperCase":
-			// Character slicing is not surrogate slicing on both runtimes.
-			// Reject supplementary input before producing a wrong value.
-			conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
-			bytes := b.rawTemp("xstring")
-			units := b.temp(hir.T(hir.I32))
-			b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
-			b.line("CALL METHOD " + conv + "->convert EXPORTING data = " + a + " IMPORTING buffer = " + bytes + ".")
-			b.line(units + " = xstrlen( " + bytes + " ) / 2.")
-			b.line("IF " + units + " <> " + length + ".")
-			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-			b.line("ENDIF.")
-		}
+		// ABAP strlen and sections count UTF-16 code units, like JavaScript.
+		// Runtime implementations that count runes are a runtime gap, not a
+		// reason to convert the entire receiver on every access.
 		switch x.Op {
 		case "string.length":
-			bytes := b.rawTemp("xstring")
-			b.line("cl_abap_conv_out_ce=>create( encoding = '4103' )->convert( EXPORTING data = " + a + " IMPORTING buffer = " + bytes + " ).")
-			b.line(n + " = xstrlen( " + bytes + " ) / 2.")
+			b.line(n + " = " + length + ".")
 		case "string.concat":
 			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
 		case "string.substring":
 			// JavaScript substring clamps both indices into [0, length] and
-			// swaps them when start is past end. Indices count UTF-16 code
-			// units; the input must stay inside the BMP (see README).
+			// swaps them when start is past end. Indices count UTF-16 units.
 			lo, hi := args[0], args[1]
 			for _, v := range []string{lo, hi} {
 				b.line(v + " = COND i( WHEN " + v + " < 0 THEN 0 WHEN " + v + " > " + length + " THEN " + length + " ELSE " + v + " ).")
