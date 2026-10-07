@@ -73,10 +73,15 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-  test:
-    name: test
+  test-shard:
+    name: test shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
+      TEST_SHARD: ${{ matrix.shard }}
       # -shuffle runs each package's tests in a random order, so a test that
       # only passes after another one has set something up shows up here. The
       # seed is the run id rather than `on`, so it is known before the run, is
@@ -96,26 +101,41 @@ jobs:
           mkdir -p "$RUNNER_TEMP/test"
           echo "OUT=$RUNNER_TEMP/test" >> "$GITHUB_ENV"
 
+      - name: Select tests
+        run: |
+          if [ "$TEST_SHARD" -lt 3 ]; then
+            go test -list . ./wasm > "$OUT/wasm-list.txt"
+            python3 .github/ci/test-shards.py split "$OUT/wasm-list.txt" "$OUT" "$TEST_SHARD"
+          else
+            go list ./... | grep -vx 'github.com/oisee/abapiti/wasm' > "$OUT/packages.txt"
+          fi
+
       # -race: the wasm tests run their inputs in wazero as the reference, and
       # wazero compiles and runs on goroutines of its own. -json for the counts;
       # it implies -v, so the log is printed back the way plain `go test`
       # would: package lines, build errors, plus the output of the tests that
       # failed. The TypeScript test skips without `npm install`, and clang is
-      # optional, as before. -timeout 25m: under -race and coverage the wasm
-      # package needs about 380 s alone and shares the runner with tsfront
-      # (about 270 s), so the default 10 minutes per package is too tight.
+      # optional, as before.
       - name: Test
         id: test
         run: |
           echo "shuffle seed $SHUFFLE_SEED"
           status=0
-          go test -race -timeout 25m -shuffle="$SHUFFLE_SEED" -json -coverprofile="$OUT/cover.out" ./... > "$OUT/test.json" || status=$?
+          if [ "$TEST_SHARD" -lt 3 ]; then
+            selection=(-run "$(cat "$OUT/wasm-run.txt")" ./wasm)
+          else
+            mapfile -t selection < "$OUT/packages.txt"
+            [ "${#selection[@]}" -gt 0 ]
+          fi
+          go test -race -shuffle="$SHUFFLE_SEED" -timeout 25m -json -coverprofile="$OUT/cover.out" "${selection[@]}" > "$OUT/test.json" || status=$?
           jq -rsj '(map(select(.Action == "fail" and .Test != null) | .Package + " " + .Test)) as $failed
             | .[] | select(.Action == "output" or .Action == "build-output")
             | select(.Test == null or ((.Package + " " + .Test) as $k | $failed | index($k)))
             | select(.Output | startswith("-test.shuffle ") | not)
             | .Output' "$OUT/test.json"
-          echo "reproduce with: go test -race -shuffle=$SHUFFLE_SEED ./..."
+          printf 'reproduce with: go test -race -shuffle=%s -timeout 25m ' "$SHUFFLE_SEED"
+          printf '%q ' "${selection[@]}"
+          echo
           exit $status
 
       # Tests write generated ABAP to t.TempDir(); the tree must stay clean. A
@@ -134,12 +154,58 @@ jobs:
           fi
           echo "work tree clean"
 
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/test/
+          if-no-files-found: warn
+          retention-days: 30
+
+  # Keep this exact check name for branch protection and the merge helper.
+  test:
+    name: test
+    needs: test-shard
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      SHUFFLE_SEED: ${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Output directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/test"
+          echo "OUT=$RUNNER_TEMP/test" >> "$GITHUB_ENV"
+
+      - name: Download shard results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-shard-*
+          path: ${{ runner.temp }}/test-shards
+
+      - name: Test aggregation helper
+        run: python3 .github/ci/test-shards-test.py
+
+      - name: Merge results and coverage
+        if: always()
+        run: python3 .github/ci/test-shards.py aggregate "$RUNNER_TEMP/test-shards" "$OUT"
+
+      - name: Every wasm test ran exactly once
+        if: always()
+        run: python3 .github/ci/test-shards.py check "$RUNNER_TEMP/test-shards"
+
       # One annotation the report reads back as the row's detail. Coverage is
       # over the compiler and interpreter packages only (wasm, llvm, ts, ts2go,
-      # jseval): cmd/ is thin glue and fun/ is demos, and counting them would
+      # jseval, hir): cmd/ is thin glue and fun/ is demos, and counting them would
       # make the total move for reasons that are not the compilers'.
       - name: Summarise
-        if: always() && steps.test.outcome != 'skipped'
+        if: always()
         run: |
           [ -s "$OUT/test.json" ] || exit 0
           counts=$(jq -rs '[.[] | select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip"))]
@@ -155,32 +221,36 @@ jobs:
           [ -e "$OUT/tree-dirty" ] && tree=" · TREE DIRTY after the tests"
           echo "::notice title=ci-report::${counts}${cov:+, compiler coverage $cov}${tree} · seed $SHUFFLE_SEED"
 
-      # Per-package numbers for ci-report.yml, which compares them with the
-      # last green run on main: tests, seconds and coverage, before and after.
-      - name: Per-package summary
-        if: always() && steps.test.outcome != 'skipped'
-        run: |
-          [ -s "$OUT/test.json" ] || exit 0
-          jq -s '
-            group_by(.Package)[] | select(.[0].Package != null) | {
-              pkg:     .[0].Package,
-              pass:    (map(select(.Test != null and .Action == "pass")) | length),
-              fail:    (map(select(.Test != null and .Action == "fail")) | length),
-              skip:    (map(select(.Test != null and .Action == "skip")) | length),
-              seconds: ((map(select(.Test == null and (.Action == "pass" or .Action == "fail")))[0].Elapsed) // null),
-              cover:   ([.[] | select(.Test == null and .Action == "output") | .Output
-                          | (capture("coverage: (?<c>[0-9.]+)% of statements") // empty) | .c | tonumber] | first)
-            }' "$OUT/test.json" | jq -s '{packages: .}' > "$OUT/test-summary.json"
-          jq -r '.packages | length' "$OUT/test-summary.json"
-
+      # The aggregate script writes the existing per-package schema. wasm's
+      # seconds sum both halves; its coverage comes from the merged blocks.
       - name: Upload the summary
-        if: always() && steps.test.outcome != 'skipped'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-summary
           path: ${{ runner.temp }}/test/test-summary.json
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Upload combined results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            ${{ runner.temp }}/test/test.json
+            ${{ runner.temp }}/test/cover.out
+            ${{ runner.temp }}/test/cover-lib.out
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: All shards passed
+        if: always()
+        env:
+          RESULT: ${{ needs.test-shard.result }}
+        run: |
+          echo "test shards: $RESULT"
+          [ "$RESULT" = success ]
 
   # No fuzz job: ABAPiti has no Fuzz targets yet. vsp's job (a few seconds per
   # target, crashers uploaded, advisory) is the model when one is added.
