@@ -28,6 +28,17 @@ Copyright Bytecode Alliance contributors. Licensed under the Apache License,
 Version 2.0, with LLVM Exceptions.
   wasm/testdata/quickjs_eval.wasm contains the Javy runtime.
 
+TypeScript 7 native compiler (typescript-go) —
+https://github.com/microsoft/typescript-go
+Copyright (c) Microsoft Corporation. Licensed under the Apache License,
+Version 2.0.
+  internal/tsgo/ is a copy of the internal/ packages of typescript-go at commit
+  2bd066d87f5bafd315be9f40889d0a60b9e58e0b, made by tools/sync-tsgo.sh. The
+  only change is the rewrite of Go import paths from
+  github.com/microsoft/typescript-go/internal to
+  github.com/oisee/abapiti/internal/tsgo. Its LICENSE and NOTICE.txt (the
+  third-party notices of typescript-go) are kept in internal/tsgo/.
+
 --------------------------------------------------------------------------------
 Dependencies (not vendored)
 --------------------------------------------------------------------------------
@@ -35,6 +46,10 @@ Dependencies (not vendored)
 Go modules (see go.mod / go.sum):
   github.com/spf13/cobra       Apache License 2.0 (linked into the abapiti CLI)
   github.com/tetratelabs/wazero Apache License 2.0 (tests only)
+  github.com/go-json-experiment/json  BSD 3-Clause (via internal/tsgo)
+  github.com/zeebo/xxh3        BSD 2-Clause (via internal/tsgo)
+  github.com/klauspost/cpuid/v2 MIT License and BSD 3-Clause (via internal/tsgo)
+  golang.org/x/sync, x/sys, x/text  BSD 3-Clause (via internal/tsgo)
 
 npm packages (see package.json; used at development time only, by ts/ts_ast.js,
 ts2go/ts_ast.js and the jseval oracle):
