@@ -53,16 +53,20 @@ jobs:
       - name: Run the generated classes on osgo
         run: .github/ci/osgo-unit.sh "$RUNNER_TEMP/osgo"
 
+      - name: Run the HIR corpus on osgo and OSG-JS
+        run: .github/ci/hir-unit.sh "$RUNNER_TEMP/osgo"
+
       - name: Collect artifacts
         if: always()
         run: |
           set -euo pipefail
           out="$RUNNER_TEMP/osgo-artifacts"
           mkdir -p "$out"
-          for f in osgo.json osgo.err generate.log setup.log; do
+          for f in osgo.json osgo.err generate.log setup.log hir-osgo.json hir-osgo.err hir-osgjs.json hir-osgjs.err; do
             [ -f "$RUNNER_TEMP/osgo/$f" ] && cp "$RUNNER_TEMP/osgo/$f" "$out/"
           done
           if [ -d "$RUNNER_TEMP/osgo/gen" ]; then cp -r "$RUNNER_TEMP/osgo/gen" "$out/gen"; fi
+          if [ -d "$RUNNER_TEMP/osgo/hir" ]; then cp -r "$RUNNER_TEMP/osgo/hir" "$out/hir"; fi
 
       - uses: actions/upload-artifact@v4
         if: always()

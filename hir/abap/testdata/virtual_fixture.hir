@@ -1,0 +1,23 @@
+hir v1
+class Base
+  method value virtual():i32
+    return (3):i32
+class Derived extends Base
+  field n:i32
+  constructor
+  method constructor(p:i32):void
+    ((this):classref<Derived>.n):i32 = (p):i32
+    (p):i32 = (99):i32
+  method value virtual():i32
+    return ((super .value()):i32 + (4):i32):i32
+class virtual_fixture
+  method run static():i32
+    var arg:i32 = (9):i32
+    var d:classref<Derived> = (new classref<Derived>((arg):i32)):classref<Derived>
+    var x:classref<Base> = (d):classref<Derived>
+    if ((arg):i32 == (9):i32):bool
+      if (((d):classref<Derived>.n):i32 == (9):i32):bool
+        return (virtual  (x):classref<Base>.value()):i32
+      end if
+    end if
+    return (99):i32
