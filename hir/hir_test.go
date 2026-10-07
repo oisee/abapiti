@@ -42,6 +42,11 @@ func TestVerifier(t *testing.T) {
 			call := func() *Expr { return &Expr{Kind: DirectCall, Owner: "C", Name: "noop", Type: T(Void)} }
 			p.Classes[0].Methods[0].Body.List = append([]*Stmt{{Kind: ExprStmt, X: &Expr{Kind: Binary, Op: "!=", Type: T(Bool), X: call(), Y: call()}}}, p.Classes[0].Methods[0].Body.List...)
 		}, "void equality operand"},
+		{"void conditional", func(p *Program) {
+			p.Classes[0].Methods = append(p.Classes[0].Methods, &Method{Name: "noop", Static: true, Result: T(Void), Body: B()})
+			call := func() *Expr { return &Expr{Kind: DirectCall, Owner: "C", Name: "noop", Type: T(Void)} }
+			p.Classes[0].Methods[0].Body.List = append([]*Stmt{{Kind: ExprStmt, X: &Expr{Node: Node{ID: 27, Source: "conditional.ts:10"}, Kind: Conditional, Type: T(Void), X: L(T(Bool), true), Y: call(), Z: call()}}}, p.Classes[0].Methods[0].Body.List...)
+		}, "node 27 (conditional.ts:10): void conditional"},
 		{"nil class method", func(p *Program) {
 			p.Classes[0].Node = Node{ID: 25, Source: "class.ts:1"}
 			p.Classes[0].Methods = append(p.Classes[0].Methods, nil)

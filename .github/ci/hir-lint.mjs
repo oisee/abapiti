@@ -8,7 +8,11 @@ const abaplint = require("@abaplint/core");
 const config = abaplint.Config.getDefault();
 config.get().syntax.version = abaplint.Version.v702;
 config.get().syntax.errorNamespace = ".*";
-config.get().rules = {parser_error: true, syntax: true};
+config.get().rules = {parser_error: true, check_syntax: true};
+const ruleNames = new Set(abaplint.ArtifactsRules.getRules().map(rule => rule.getMetadata().key));
+for (const name of Object.keys(config.get().rules)) {
+  if (!ruleNames.has(name)) throw new Error(`Unknown abaplint rule: ${name}`);
+}
 const reg = new abaplint.Registry(config);
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
 for (const n of files) {

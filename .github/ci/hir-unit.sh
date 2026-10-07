@@ -5,6 +5,7 @@ root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^TestFixtures$' -count=1)
+node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
 for runtime in osgo osgjs; do
   status=0

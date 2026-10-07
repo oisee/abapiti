@@ -594,6 +594,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			v.fail(e.Node, "invalid unary operator")
 		}
 	case Conditional:
+		if t.Kind == Void {
+			v.fail(e.Node, "void conditional")
+		}
 		eq(check(e.X), T(Bool))
 		if !v.accepts(t, check(e.Y)) || !v.accepts(t, check(e.Z)) {
 			v.fail(e.Node, "conditional type mismatch")
