@@ -137,6 +137,10 @@ func fixtures() []fixture {
 		check(eq(binary("/", lit(-5), lit(2), i32), lit(-2))),
 		check(eq(binary("%", lit(-5), lit(-2), i32), lit(-1))),
 		check(eq(binary("/", hir.L(hir.T(hir.I64), int64(9223372036854775807)), hir.L(hir.T(hir.I64), int64(3)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(3074457345618258602)))),
+		check(eq(binary("+", hir.L(hir.T(hir.I64), int64(math.MinInt64)), hir.L(hir.T(hir.I64), int64(math.MaxInt64)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(-1)))),
+		check(eq(binary("-", hir.L(hir.T(hir.I64), int64(9007199254740993)), hir.L(hir.T(hir.I64), int64(9007199254740992)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(1)))),
+		check(eq(binary("+", hir.L(hir.T(hir.I64), int64(math.MinInt32)-1), hir.L(hir.T(hir.I64), int64(math.MaxInt32)+1), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(-1)))),
+		check(eq(binary("+", hir.L(hir.T(hir.I64), int64(math.MinInt32)), hir.L(hir.T(hir.I64), int64(math.MaxInt32)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(-1)))),
 		check(eq(binary("/", hir.L(hir.T(hir.Number), 5.0), hir.L(hir.T(hir.Number), 2.0), hir.T(hir.Number)), hir.L(hir.T(hir.Number), 2.5))),
 		check(eq(rt("string.length", hir.L(str, "😀"), i32), lit(2))),
 		check(eq(rt("string.substring", hir.L(str, "abcd "), str, lit(4), lit(1)), hir.L(str, "bcd"))),
@@ -243,6 +247,30 @@ func TestLongLiteral(t *testing.T) {
 		}
 		if !strings.Contains(src, "uccpi( 10 )") {
 			t.Fatal("newline not encoded")
+		}
+	}
+}
+
+func TestMalformedLiterals(t *testing.T) {
+	for _, typ := range []hir.Type{str, boolean, hir.T(hir.I64), hir.T(hir.Optional, str)} {
+		x := hir.L(typ, struct{}{})
+		x.Node = hir.Node{ID: 42, Source: "bad.ts:7"}
+		p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", typ, ret(x))}}}}
+		if files, err := Emit(p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
+			t.Fatalf("%s: missing diagnostic: %v", typ, err)
+		}
+	}
+	for _, op := range []string{"string.substring", "string.charCodeAt"} {
+		x := hir.L(str, 123)
+		x.Node = hir.Node{ID: 42, Source: "bad.ts:7"}
+		expr := rt(op, x, str, lit(0), lit(1))
+		if op == "string.charCodeAt" {
+			expr.Type = hir.T(hir.Number)
+			expr.Args = expr.Args[:1]
+		}
+		p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", expr.Type, ret(expr))}}}}
+		if files, err := Emit(p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
+			t.Fatalf("%s: missing diagnostic: %v", op, err)
 		}
 	}
 }

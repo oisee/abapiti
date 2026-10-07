@@ -90,6 +90,18 @@ class collection_fixture
     if (!(((9223372036854775807):i64 / (3):i64):i64 == (3074457345618258602):i64):bool):bool
       return (99):i32
     end if
+    if (!(((-9223372036854775808):i64 + (9223372036854775807):i64):i64 == (-1):i64):bool):bool
+      return (99):i32
+    end if
+    if (!(((9007199254740993):i64 - (9007199254740992):i64):i64 == (1):i64):bool):bool
+      return (99):i32
+    end if
+    if (!(((-2147483649):i64 + (2147483648):i64):i64 == (-1):i64):bool):bool
+      return (99):i32
+    end if
+    if (!(((-2147483648):i64 + (2147483647):i64):i64 == (-1):i64):bool):bool
+      return (99):i32
+    end if
     if (!(((5):number / (2):number):number == (2.5):number):bool):bool
       return (99):i32
     end if

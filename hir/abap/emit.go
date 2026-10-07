@@ -256,13 +256,28 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		switch lt.Kind {
 		case hir.String:
-			b.stringLit(target, x.Value.(string))
+			value, ok := b.literalString(x)
+			if ok {
+				b.stringLit(target, value)
+			}
 		case hir.Bool:
 			s := "abap_false"
-			if x.Value.(bool) {
+			value, ok := x.Value.(bool)
+			if !ok {
+				e.err = fmt.Errorf("node %d (%s): expected bool literal, got %T", x.ID, x.Source, x.Value)
+				break
+			}
+			if value {
 				s = "abap_true"
 			}
 			b.line(target + " = " + s + ".")
+		case hir.I64:
+			value, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 64)
+			if err != nil {
+				e.err = fmt.Errorf("node %d (%s): invalid I64 literal: %w", x.ID, x.Source, err)
+				break
+			}
+			b.int8Lit(target, value)
 		default:
 			if f, err := strconv.ParseFloat(fmt.Sprint(x.Value), 64); err == nil && (math.IsNaN(f) || math.IsInf(f, 0)) {
 				e.err = fmt.Errorf("node %d (%s): ABAP f cannot represent non-finite Number", x.ID, x.Source)
@@ -467,6 +482,37 @@ func (b *body) stringLit(n, s string) {
 		b.line("CONCATENATE " + n + " `" + strings.ReplaceAll(chunk, "`", "``") + "` INTO " + n + " RESPECTING BLANKS.")
 	}
 }
+
+// int8Lit uses only i-range literals, avoiding character-to-int8 conversion.
+// Signed remainders also handle MinInt64 without negating it. Each intermediate
+// is a prefix of the final value and fits int8; the target keeps arithmetic exact.
+func (b *body) int8Lit(target string, value int64) {
+	const base int64 = 1_000_000_000
+	var parts []int64
+	for value < math.MinInt32 || value > math.MaxInt32 {
+		parts = append(parts, value%base)
+		value /= base
+	}
+	b.line(fmt.Sprintf("%s = %d.", target, value))
+	for i := len(parts) - 1; i >= 0; i-- {
+		b.line(fmt.Sprintf("%s = %s * %d.", target, target, base))
+		// Subtraction avoids a binary plus followed by a unary minus in ABAP.
+		if parts[i] < 0 {
+			b.line(fmt.Sprintf("%s = %s - %d.", target, target, -parts[i]))
+		} else {
+			b.line(fmt.Sprintf("%s = %s + %d.", target, target, parts[i]))
+		}
+	}
+}
+
+func (b *body) literalString(x *hir.Expr) (string, bool) {
+	value, ok := x.Value.(string)
+	if !ok {
+		b.e.err = fmt.Errorf("node %d (%s): expected string literal, got %T", x.ID, x.Source, x.Value)
+	}
+	return value, ok
+}
+
 func (b *body) call(x *hir.Expr, n string) {
 	e := b.e
 	owner := x.Owner
@@ -534,7 +580,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.concat":
 			b.line("CONCATENATE " + a + " " + args[0] + " INTO " + n + " RESPECTING BLANKS.")
 		case "string.substring":
-			if x.X.Kind != hir.Lit || len(utf16.Encode([]rune(x.X.Value.(string)))) != len([]rune(x.X.Value.(string))) {
+			if x.X.Kind != hir.Lit {
+				b.e.err = fmt.Errorf("node %d (%s): substring requires a proven BMP literal receiver until portable surrogate slicing is available", x.ID, x.Source)
+				return
+			}
+			value, ok := b.literalString(x.X)
+			if !ok {
+				return
+			}
+			if len(utf16.Encode([]rune(value))) != len([]rune(value)) {
 				b.e.err = fmt.Errorf("node %d (%s): substring requires a proven BMP literal receiver until portable surrogate slicing is available", x.ID, x.Source)
 				return
 			}
@@ -557,7 +611,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
 		case "string.charCodeAt":
 			if x.X.Kind == hir.Lit && x.Args[0].Kind == hir.Lit {
-				units := utf16.Encode([]rune(x.X.Value.(string)))
+				value, ok := b.literalString(x.X)
+				if !ok {
+					return
+				}
+				units := utf16.Encode([]rune(value))
 				index, err := strconv.Atoi(fmt.Sprint(x.Args[0].Value))
 				if err == nil && index >= 0 && index < len(units) {
 					b.line(fmt.Sprintf("%s = %d.", n, units[index]))
