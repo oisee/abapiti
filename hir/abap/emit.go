@@ -339,6 +339,38 @@ func (b *body) expr(x *hir.Expr) string {
 			e.err = fmt.Errorf("node %d (%s): Number remainder requires an IEEE runtime", x.ID, x.Source)
 			break
 		}
+		if x.Op == "/" && t.Kind == hir.Number {
+			divisor, err := strconv.ParseFloat(fmt.Sprint(x.Y.Value), 64)
+			if x.Y.Kind != hir.Lit || err != nil || divisor == 0 || math.IsNaN(divisor) || math.IsInf(divisor, 0) {
+				e.err = fmt.Errorf("node %d (%s): Number division requires a non-zero literal divisor", x.ID, x.Source)
+				break
+			}
+		}
+		if (x.Op == "==" || x.Op == "!=") && x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
+			// Presence is independent of box identity; guard both dereferences.
+			ah, zh := b.temp(hir.T(hir.Bool)), b.temp(hir.T(hir.Bool))
+			for _, pair := range [][2]string{{a, ah}, {z, zh}} {
+				b.line("CLEAR " + pair[1] + ".")
+				b.line("IF " + pair[0] + " IS BOUND.")
+				b.line(pair[1] + " = " + pair[0] + "->has.")
+				b.line("ENDIF.")
+			}
+			b.line("IF " + ah + " = " + zh + ".")
+			b.line("IF " + ah + " = abap_false.")
+			b.line(n + " = abap_true.")
+			b.line("ELSEIF " + a + "->value = " + z + "->value.")
+			b.line(n + " = abap_true.")
+			b.line("ENDIF.")
+			b.line("ENDIF.")
+			if x.Op == "!=" {
+				b.line("IF " + n + " = abap_true.")
+				b.line(n + " = abap_false.")
+				b.line("ELSE.")
+				b.line(n + " = abap_true.")
+				b.line("ENDIF.")
+			}
+			break
+		}
 		op := map[string]string{"==": "=", "!=": "<>", "%": "MOD"}[x.Op]
 		if op == "" {
 			op = x.Op

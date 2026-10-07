@@ -68,6 +68,24 @@ func Verify(p *Program) []error {
 	if len(v.errors) > 0 {
 		return v.errors
 	}
+	// Reject nil declarations before any signature or member lookup uses them.
+	for _, i := range p.Interfaces {
+		for _, m := range i.Methods {
+			if m == nil {
+				v.fail(i.Node, "nil interface method")
+			}
+		}
+	}
+	for _, c := range p.Classes {
+		for _, m := range c.Methods {
+			if m == nil {
+				v.fail(c.Node, "nil class method")
+			}
+		}
+	}
+	if len(v.errors) > 0 {
+		return v.errors
+	}
 	for _, i := range p.Interfaces {
 		names := map[string]bool{}
 		for _, m := range i.Methods {
@@ -480,6 +498,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			eq(t, a.Args[0])
 		}
 	case DirectCall, VirtualCall, SuperCall:
+		if e.Kind == VirtualCall && e.X == nil {
+			v.fail(e.Node, "virtual call requires object receiver")
+		}
 		owner := e.Owner
 		if e.Kind == SuperCall {
 			owner = c.Super
@@ -545,6 +566,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		switch e.Op {
 		case "==", "!=":
 			eq(t, T(Bool))
+			if a.Kind == Void || b.Kind == Void {
+				v.fail(e.Node, "void equality operand")
+			}
 		case "<", "<=", ">", ">=":
 			eq(t, T(Bool))
 			if !numeric(a) {

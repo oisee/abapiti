@@ -7,5 +7,8 @@ class exception_fixture
     try
       return (call Thrower.boom()):i32
     catch caught:string
-      return (string.length((caught):string)):i32
+      if ((caught):string == ("payload"):string):bool
+        return (7):i32
+      end if
+      return (99):i32
     end try

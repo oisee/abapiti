@@ -25,6 +25,30 @@ func TestVerifier(t *testing.T) {
 		{"virtual", func(p *Program) {
 			p.Classes[0].Methods[0].Body.List[0].X = &Expr{Kind: VirtualCall, X: &Expr{Kind: This, Type: Ref("C")}, Name: "f", Type: i, Args: []*Expr{L(i, 1)}}
 		}, "virtual call on non-virtual"},
+		{"virtual receiver", func(p *Program) {
+			p.Classes[0].Methods[0].Virtual = true
+			p.Classes[0].Methods[0].Body.List[0].X = &Expr{Node: Node{ID: 23, Source: "call.ts:8"}, Kind: VirtualCall, Owner: "C", Name: "f", Type: i, Args: []*Expr{L(i, 1)}}
+		}, "node 23 (call.ts:8): virtual call requires object receiver"},
+		{"virtual non-object receiver", func(p *Program) {
+			p.Classes[0].Methods[0].Body.List[0].X = &Expr{Kind: VirtualCall, X: L(i, 1), Name: "f", Type: i}
+		}, "call on non-object"},
+		{"void equality", func(p *Program) {
+			p.Classes[0].Methods = append(p.Classes[0].Methods, &Method{Name: "noop", Static: true, Result: T(Void), Body: B()})
+			call := func() *Expr { return &Expr{Kind: DirectCall, Owner: "C", Name: "noop", Type: T(Void)} }
+			p.Classes[0].Methods[0].Body.List = append([]*Stmt{{Kind: ExprStmt, X: &Expr{Node: Node{ID: 24, Source: "eq.ts:9"}, Kind: Binary, Op: "==", Type: T(Bool), X: call(), Y: call()}}}, p.Classes[0].Methods[0].Body.List...)
+		}, "node 24 (eq.ts:9): void equality operand"},
+		{"void inequality", func(p *Program) {
+			p.Classes[0].Methods = append(p.Classes[0].Methods, &Method{Name: "noop", Static: true, Result: T(Void), Body: B()})
+			call := func() *Expr { return &Expr{Kind: DirectCall, Owner: "C", Name: "noop", Type: T(Void)} }
+			p.Classes[0].Methods[0].Body.List = append([]*Stmt{{Kind: ExprStmt, X: &Expr{Kind: Binary, Op: "!=", Type: T(Bool), X: call(), Y: call()}}}, p.Classes[0].Methods[0].Body.List...)
+		}, "void equality operand"},
+		{"nil class method", func(p *Program) {
+			p.Classes[0].Node = Node{ID: 25, Source: "class.ts:1"}
+			p.Classes[0].Methods = append(p.Classes[0].Methods, nil)
+		}, "node 25 (class.ts:1): nil class method"},
+		{"nil interface method", func(p *Program) {
+			p.Interfaces = []*Interface{{Node: Node{ID: 26, Source: "interface.ts:1"}, Name: "I", Methods: []*Method{nil}}}
+		}, "node 26 (interface.ts:1): nil interface method"},
 		{"abstract", func(p *Program) {
 			p.Classes[0].Abstract = true
 			p.Classes[0].Methods[0].Abstract = true

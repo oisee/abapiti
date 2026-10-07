@@ -2,6 +2,33 @@ hir v1
 class OptionalObject
 class optional_fixture
   method run static():i32
+    if (!((0):optional<i32> == (0):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!((undefined):optional<i32> == (undefined):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!((undefined):optional<i32> != (0):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!((0):optional<i32> != (undefined):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!((1):optional<i32> != (2):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!(!((0):optional<i32> != (0):optional<i32>):bool):bool):bool
+      return (99):i32
+    end if
+    if (!(("same"):optional<string> == ("same"):optional<string>):bool):bool
+      return (99):i32
+    end if
+    if (!((false):optional<bool> == (false):optional<bool>):bool):bool
+      return (99):i32
+    end if
+    if (!((2.5):optional<number> == (2.5):optional<number>):bool):bool
+      return (99):i32
+    end if
     var missing:optional<i32> = (undefined):optional<i32>
     var zero:optional<i32> = (0):optional<i32>
     var present:optional<i32> = (5):i32

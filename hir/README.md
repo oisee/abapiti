@@ -20,7 +20,8 @@ UTF-16 units through code page 4103, including supplementary characters.
 Substring currently requires a BMP literal receiver; other uses fail with source
 diagnostics until all runtimes support surrogate slicing.
 Primitive optionals use specialized immutable boxes with value and has members;
-reference optionals use an initial reference. There is no null type in this phase.
+reference optionals use an initial reference. Primitive optional equality compares
+presence and, when present, the contained value. There is no null type in this phase.
 Arrays, maps, and sets are reference objects, preserving aliasing. Maps and sets
 use linear lookup in an insertion-ordered table; updating a key preserves its
 position, and reference keys compare identity. `map.keys` and `set.values` return
@@ -36,8 +37,11 @@ inherited implementations still dispatch through the derived class.
 
 Target limits are explicit: class descriptors/ClassValue execution is deferred;
 non-finite Number literals are rejected with node/source diagnostics because ABAP
-f cannot represent them. Arithmetic retains ABAP f's overflow and division-by-zero
-exceptions; a complete JavaScript exceptional-number runtime is future work.
+f cannot represent them. Number division requires a non-zero literal divisor;
+other divisors fail with node/source diagnostics. Number +, -, and * remain
+supported. Results beyond the binary64 range (|x| > ~1.8e308), including division
+overflow, raise in ABAP instead of giving Infinity. This is an accepted divergence
+until a later phase implements exceptional-number handling.
 Integer division truncates toward zero and remainder keeps the dividend sign.
 Number remainder is rejected until an IEEE remainder runtime is available.
 `string.charCodeAt` currently folds only a literal string and proven in-range

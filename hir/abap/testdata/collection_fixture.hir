@@ -52,10 +52,30 @@ class collection_fixture
     if (!(!(boolean((map.get((sm):map<string,i32>, ("key"):string)):optional<i32>)):bool):bool):bool
       return (99):i32
     end if
+    if (!((map.get((sm):map<string,i32>, ("key"):string)):optional<i32> == (0):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!(undefined((map.get((sm):map<string,i32>, ("missing"):string)):optional<i32>)):bool):bool
+      return (99):i32
+    end if
+    (map.set((sm):map<string,i32>, ("other"):string, (7):i32)):map<string,i32>
+    if (!((map.get((sm):map<string,i32>, ("other"):string)):optional<i32> == (7):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    (map.set((sm):map<string,i32>, ("key"):string, (9):i32)):map<string,i32>
+    if (!((map.get((sm):map<string,i32>, ("key"):string)):optional<i32> == (9):optional<i32>):bool):bool
+      return (99):i32
+    end if
+    if (!((map.size((sm):map<string,i32>)):i32 == (2):i32):bool):bool
+      return (99):i32
+    end if
     var om:map<classref<collection_fixture>,i64> = (new map<classref<collection_fixture>,i64>()):map<classref<collection_fixture>,i64>
     var key:classref<collection_fixture> = (new classref<collection_fixture>()):classref<collection_fixture>
     (map.set((om):map<classref<collection_fixture>,i64>, (key):classref<collection_fixture>, (9007199254740993):i64)):map<classref<collection_fixture>,i64>
     if (!(map.has((om):map<classref<collection_fixture>,i64>, (key):classref<collection_fixture>)):bool):bool
+      return (99):i32
+    end if
+    if (!((map.get((om):map<classref<collection_fixture>,i64>, (key):classref<collection_fixture>)):optional<i64> == (9007199254740993):optional<i64>):bool):bool
       return (99):i32
     end if
     if (!(!(map.has((om):map<classref<collection_fixture>,i64>, (new classref<collection_fixture>()):classref<collection_fixture>)):bool):bool):bool

@@ -2,6 +2,7 @@ package abap
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,13 +85,25 @@ func fixtures() []fixture {
 	add("collection_fixture", &hir.Program{}, hir.B(decl("m", mt, newObj(mt)), decl("s", st, newObj(st)), run(rt("map.set", ml, mt, lit(1), hir.L(str, "a"))), run(rt("map.set", ml, mt, lit(2), hir.L(str, "b"))), run(rt("map.set", ml, mt, lit(1), hir.L(str, "updated"))), run(rt("set.add", sl, st, lit(3))), run(rt("set.add", sl, st, lit(4))), run(rt("set.add", sl, st, lit(3))), decl("n", i32, lit(0)), loop(rt("map.keys", ml, hir.T(hir.Array, i32))), loop(rt("set.values", sl, hir.T(hir.Array, i32))), ret(local("n", i32))), 1234)
 	boom := method("boom", i32, &hir.Stmt{Kind: hir.Throw, X: hir.L(str, "payload")})
 	boom.Static = true
-	add("exception_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Thrower", Methods: []*hir.Method{boom}}}}, hir.B(&hir.Stmt{Kind: hir.Try, Name: "caught", Type: str, Body: ret(call(hir.DirectCall, nil, "Thrower", "boom", i32)), Else: ret(rt("string.length", local("caught", str), i32))}), 7)
+	add("exception_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Thrower", Methods: []*hir.Method{boom}}}}, hir.B(&hir.Stmt{Kind: hir.Try, Name: "caught", Type: str, Body: ret(call(hir.DirectCall, nil, "Thrower", "boom", i32)), Else: hir.B(&hir.Stmt{Kind: hir.If, X: binary("==", local("caught", str), hir.L(str, "payload"), boolean), Body: ret(lit(7))}, ret(lit(99)))}), 7)
 
 	c := fs[4].p.Classes[0]
 	check := func(x *hir.Expr) *hir.Stmt {
 		return &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", X: x, Type: boolean}, Body: ret(lit(99))}
 	}
 	eq := func(a, b *hir.Expr) *hir.Expr { return binary("==", a, b, boolean) }
+	// Exercise independent boxes, absent and present operands, and both equality operators.
+	fs[3].p.Classes[1].Methods[0].Body.List = append([]*hir.Stmt{
+		check(eq(hir.L(opt, 0), hir.L(opt, 0))),
+		check(eq(hir.L(opt, nil), hir.L(opt, nil))),
+		check(binary("!=", hir.L(opt, nil), hir.L(opt, 0), boolean)),
+		check(binary("!=", hir.L(opt, 0), hir.L(opt, nil), boolean)),
+		check(binary("!=", hir.L(opt, 1), hir.L(opt, 2), boolean)),
+		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: binary("!=", hir.L(opt, 0), hir.L(opt, 0), boolean)}),
+		check(eq(hir.L(hir.T(hir.Optional, str), "same"), hir.L(hir.T(hir.Optional, str), "same"))),
+		check(eq(hir.L(hir.T(hir.Optional, boolean), false), hir.L(hir.T(hir.Optional, boolean), false))),
+		check(eq(hir.L(hir.T(hir.Optional, hir.T(hir.Number)), 2.5), hir.L(hir.T(hir.Optional, hir.T(hir.Number)), 2.5))),
+	}, fs[3].p.Classes[1].Methods[0].Body.List...)
 	arr := hir.T(hir.Array, i32)
 	al := local("a", arr)
 	sm := hir.T(hir.OrderedMap, str, i32)
@@ -109,9 +122,17 @@ func fixtures() []fixture {
 		decl("alias", arr, al), run(rt("array.push", local("alias", arr), i32, lit(7))), check(eq(rt("array.length", al, i32), lit(3))),
 		decl("sm", sm, newObj(sm)), run(rt("map.set", sml, sm, hir.L(str, "key"), lit(0))), check(rt("map.has", sml, boolean, hir.L(str, "key"))), check(eq(rt("map.size", sml, i32), lit(1))),
 		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: test(hir.ToBoolean, rt("map.get", sml, opt, hir.L(str, "key")))}),
+		check(eq(rt("map.get", sml, opt, hir.L(str, "key")), hir.L(opt, 0))),
+		check(test(hir.IsUndefined, rt("map.get", sml, opt, hir.L(str, "missing")))),
+		run(rt("map.set", sml, sm, hir.L(str, "other"), lit(7))),
+		check(eq(rt("map.get", sml, opt, hir.L(str, "other")), hir.L(opt, 7))),
+		run(rt("map.set", sml, sm, hir.L(str, "key"), lit(9))),
+		check(eq(rt("map.get", sml, opt, hir.L(str, "key")), hir.L(opt, 9))),
+		check(eq(rt("map.size", sml, i32), lit(2))),
 		decl("om", om, newObj(om)), decl("key", hir.Ref(c.Name), newObj(hir.Ref(c.Name))),
 		run(rt("map.set", oml, om, local("key", hir.Ref(c.Name)), hir.L(hir.T(hir.I64), int64(9007199254740993)))),
 		check(rt("map.has", oml, boolean, local("key", hir.Ref(c.Name)))),
+		check(eq(rt("map.get", oml, hir.T(hir.Optional, hir.T(hir.I64)), local("key", hir.Ref(c.Name))), hir.L(hir.T(hir.Optional, hir.T(hir.I64)), int64(9007199254740993)))),
 		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: rt("map.has", oml, boolean, newObj(hir.Ref(c.Name)))}),
 		check(eq(binary("/", lit(-5), lit(2), i32), lit(-2))),
 		check(eq(binary("%", lit(-5), lit(-2), i32), lit(-1))),
@@ -188,11 +209,17 @@ func TestRejectUnverified(t *testing.T) {
 }
 
 func TestTargetDiagnostics(t *testing.T) {
+	number := hir.T(hir.Number)
 	for _, x := range []*hir.Expr{
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, 0.0)},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, math.Copysign(0, -1))},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: binary("+", hir.L(number, 1.0), hir.L(number, 1.0), number)},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: local("divisor", number)},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.RuntimeOp, Op: "string.charCodeAt", Type: hir.T(hir.Number), X: hir.L(str, "x"), Args: []*hir.Expr{lit(5)}},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "%", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0.5), Y: hir.L(hir.T(hir.Number), 0.1)},
 	} {
 		m := method("f", x.Type, ret(x))
+		m.Params = []hir.Param{{Name: "divisor", Type: number}}
 		m.Static = true
 		p := &hir.Program{Classes: []*hir.Class{{Name: "target", Methods: []*hir.Method{m}}}}
 		files, err := Emit(p)
