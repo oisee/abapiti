@@ -34,5 +34,6 @@ func RegistryDeployment() []Entry {
 	entries = append(entries, registryClocks()...)
 	entries = append(entries, registryXML()...)
 	entries = append(entries, registryIterators()...)
-	return append(entries, registryJSON()...)
+	entries = append(entries, registryJSON()...)
+	return append(entries, registryOpaqueSignatures()...)
 }
