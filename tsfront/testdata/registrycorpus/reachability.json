@@ -27953,6 +27953,216 @@
       "workloads": []
     },
     {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 173,
+      "end": 360,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.dump",
+      "line": 6,
+      "sha256": "9fa27294d496605d48cdf24a6c59ff60bddbf7f3fee403912ad1b79467c8d312",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 364,
+      "end": 1472,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.traverseSpaghetti",
+      "line": 12,
+      "sha256": "96c583573c7829fcdce1cc53a3c23768958d9f4a48d011acfe55f2796faff987",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 1476,
+      "end": 3409,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.dumpNode",
+      "line": 45,
+      "sha256": "3cab497048d3e5c116b4c4338bd4237b2e66785cc53da069c913005f1546cfae",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 3471,
+      "end": 3717,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.escape",
+      "line": 97,
+      "sha256": "2cd7679680ae734b2d4747b91ea1892f198380ab68b72966baced1e0ae711113",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 748,
+      "end": 1384,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.find",
+      "line": 17,
+      "sha256": "46f7b5dafb3c09f747f30eeff8415b803ca3c905b13699c9ae42dd122c9da642",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 1439,
+      "end": 2320,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpDDLS",
+      "line": 39,
+      "sha256": "72136d3c840ba5007129e8d24846b1d9035d9faf579682ad8ed05bb289c274fb",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 2324,
+      "end": 3288,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpABAP",
+      "line": 65,
+      "sha256": "1a9aab1c326eea2667b47f6ad991e7c3c7dc88016b7718e983717fb61fd114b7",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 3292,
+      "end": 3738,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpInfo",
+      "line": 93,
+      "sha256": "c8eccdfde0f1b189225f263aa7748a7dbd3008fa652847d2c32d2614d9e0469b",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 3742,
+      "end": 5187,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.cursorInformation",
+      "line": 108,
+      "sha256": "d1ec496b2ed2c9bbd8ba11acb0e1d62c8b6f02b26a7d3342594e848f2c755f9b",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 5191,
+      "end": 5622,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.fullPath",
+      "line": 144,
+      "sha256": "b74ca65bc9ddd749bbe46ec17e0d6632961d477cfc481e1c298ccb993e1a7988",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 5626,
+      "end": 6845,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.traverse",
+      "line": 159,
+      "sha256": "41b6936b480f537f05f18321d3c017eb7f941e9b49c53c1523e9aca206692d00",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 6849,
+      "end": 7454,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.fileInformation",
+      "line": 193,
+      "sha256": "2c15e576d938bd677613ae76b8dd02b575258cc5b903c6dc305c509314d90588",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7458,
+      "end": 7704,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.escape",
+      "line": 211,
+      "sha256": "2cd7679680ae734b2d4747b91ea1892f198380ab68b72966baced1e0ae711113",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7708,
+      "end": 7913,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToStatement",
+      "line": 220,
+      "sha256": "fd21c5abbdf4c73628c1618d48d5014862261c702eb90a949521a740493070d8",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7917,
+      "end": 8122,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToStructure",
+      "line": 225,
+      "sha256": "3cc5c1ca29f43842b3daf73cec9f37785923fee74789cc3ddde0f7730bac7467",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8126,
+      "end": 8336,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToExpression",
+      "line": 230,
+      "sha256": "ab7d22c52a6bdab9c50f7c190ebb090201c54338ae4d25b2058c79991432bcc8",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8340,
+      "end": 8985,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.outputNodes",
+      "line": 235,
+      "sha256": "cb3e390153a4f35497904a0436547d85badd304550db95135366a555a33cf17b",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8989,
+      "end": 9794,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.tokens",
+      "line": 257,
+      "sha256": "ca796afa371a4c875ff9c32b3d31ce4530fd6f6d8ebec1c2b72ed570ff19c69f",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 9798,
+      "end": 10231,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.buildStatements",
+      "line": 283,
+      "sha256": "24187ddfe63916d472e270a3319119f9f5b74784ce6b73f35db7d279fba03834",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 10235,
+      "end": 10716,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.buildStructure",
+      "line": 298,
+      "sha256": "2550a3592966383e0b94bd3d856008670863989305943a25a8320c500c6adc62",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 10720,
+      "end": 11207,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpFiles",
+      "line": 310,
+      "sha256": "846aefd72bf92ccb7f5d01b71a71535d5e525695740ad07a1991567c6b4458b0",
+      "executed": false
+    },
+    {
       "file": "src/lsp/highlight.ts",
       "start": 436,
       "end": 859,

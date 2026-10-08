@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -342,6 +344,12 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 	if n == nil {
 		return nil
 	}
+	if l.isHostProcessCall(n) {
+		// Node host I/O (process.stderr.write in performance output): no ABAP
+		// equivalent; reaching it raises with the TypeScript location.
+		l.diagf(n, "note-host-process", "process host call traps when reached")
+		return &hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.locOf(n)}
+	}
 	if n.Kind == ast.KindPostfixUnaryExpression {
 		u := n.AsPostfixUnaryExpression()
 		if u.Operator == ast.KindPlusPlusToken || u.Operator == ast.KindMinusMinusToken {
@@ -617,3 +625,28 @@ func (l *lowerer) fileOfSymbol(sym *ast.Symbol) *ast.SourceFile {
 }
 
 func (l *lowerer) isNamespaceValue(n *ast.Node) bool { _, ok := l.namespaceRef(n); return ok }
+
+// isHostProcessCall: a call statement whose callee chain is rooted at the
+// Node global `process` (declared outside the translated sources).
+func (l *lowerer) isHostProcessCall(n *ast.Node) bool {
+	if n.Kind != ast.KindCallExpression {
+		return false
+	}
+	x := n.AsCallExpression().Expression
+	for x != nil && x.Kind == ast.KindPropertyAccessExpression {
+		x = x.AsPropertyAccessExpression().Expression
+	}
+	if x == nil || x.Kind != ast.KindIdentifier || x.Text() != "process" {
+		return false
+	}
+	sym := l.resolve(x)
+	if sym == nil {
+		return true
+	}
+	for _, d := range sym.Declarations {
+		if f := ast.GetSourceFileOfNode(d); f != nil && !strings.HasSuffix(f.FileName(), ".d.ts") {
+			return false
+		}
+	}
+	return true
+}
