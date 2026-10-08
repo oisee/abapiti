@@ -107,14 +107,12 @@ func (l *lowerer) registerEnum(f *ast.SourceFile, n *ast.Node) {
 		if m.Name() == nil {
 			continue
 		}
-		v := m.Name().Text()
-		if init := m.Initializer(); init != nil && init.Kind == ast.KindStringLiteral {
-			v = init.Text()
-		} else {
+		init := m.Initializer()
+		if init == nil || init.Kind != ast.KindStringLiteral {
 			// Non-string-literal members (numbers, computed) are not lowered.
 			return
 		}
-		members[m.Name().Text()] = v
+		members[m.Name().Text()] = init.Text()
 	}
 	l.enums[f.FileName()+" "+n.Name().Text()] = members
 }

@@ -49,7 +49,11 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	for i := len(l.replacements) - 1; i >= 0; i-- {
 		if l.replacements[i][0] == n {
-			return l.replacements[i][1].(*hir.Expr)
+			x, ok := l.replacements[i][1].(*hir.Expr)
+			if !ok {
+				panic("tsfront: replacement is not an expression")
+			}
+			return x
 		}
 	}
 	saved := l.pend
@@ -370,7 +374,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	name := n.Text()
 	for i := len(l.replacements) - 1; i >= 0; i-- {
 		if node, ok := l.replacements[i][0].(*ast.Node); ok && node == n {
-			return l.replacements[i][1].(*hir.Expr)
+			x, ok := l.replacements[i][1].(*hir.Expr)
+			if !ok {
+				panic("tsfront: replacement is not an expression")
+			}
+			return x
 		}
 	}
 	if t, ok := l.lookup(name); ok {
@@ -1614,87 +1622,6 @@ func shapeClassOf(classes []*hir.Class, t hir.Type) *hir.Class {
 		}
 	}
 	return nil
-}
-
-// decodeStringLiteral decodes a TypeScript string literal's raw text
-// (including the quotes). The second result is an error message.
-func decodeStringLiteral(raw string) (string, string) {
-	if len(raw) < 2 {
-		return "", "too short"
-	}
-	quote := raw[0]
-	if quote != '"' && quote != '\'' && quote != '`' || raw[len(raw)-1] != quote {
-		return "", "not a quoted literal"
-	}
-	body := raw[1 : len(raw)-1]
-	var b strings.Builder
-	for i := 0; i < len(body); i++ {
-		c := body[i]
-		if c != '\\' {
-			b.WriteByte(c)
-			continue
-		}
-		i++
-		if i >= len(body) {
-			return "", "trailing backslash"
-		}
-		switch e := body[i]; e {
-		case 'n':
-			b.WriteByte('\n')
-		case 'r':
-			b.WriteByte('\r')
-		case 't':
-			b.WriteByte('\t')
-		case 'v':
-			b.WriteByte('\v')
-		case 'f':
-			b.WriteByte('\f')
-		case 'b':
-			b.WriteByte('\b')
-		case '0':
-			b.WriteByte(0)
-		case '\\', '/', '\'', '"', '`':
-			b.WriteByte(e)
-		case '\n':
-			// line continuation: nothing
-		case 'x':
-			if i+2 >= len(body) {
-				return "", "short \\x escape"
-			}
-			v, err := strconv.ParseUint(body[i+1:i+3], 16, 8)
-			if err != nil {
-				return "", "bad \\x escape"
-			}
-			b.WriteByte(byte(v))
-			i += 2
-		case 'u':
-			if i+1 < len(body) && body[i+1] == '{' {
-				end := strings.IndexByte(body[i+2:], '}')
-				if end < 0 {
-					return "", "unterminated \\u{ escape"
-				}
-				v, err := strconv.ParseUint(body[i+2:i+2+end], 16, 32)
-				if err != nil {
-					return "", "bad \\u{ escape"
-				}
-				b.WriteRune(rune(v))
-				i += 2 + end
-				continue
-			}
-			if i+4 >= len(body) {
-				return "", "short \\u escape"
-			}
-			v, err := strconv.ParseUint(body[i+1:i+5], 16, 32)
-			if err != nil {
-				return "", "bad \\u escape"
-			}
-			b.WriteRune(rune(v))
-			i += 4
-		default:
-			return "", "unsupported escape \\" + string(e)
-		}
-	}
-	return b.String(), ""
 }
 
 func (l *lowerer) indexValue(x *hir.Expr) *hir.Expr {

@@ -145,10 +145,6 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		l.diagf(n, "unsupported-type", "unresolved type reference %s", typeRefName(n))
 		return hir.T(hir.Void)
 	}
-	if sym == nil {
-		l.diagf(n, "unsupported-type", "unresolved type reference %s", typeRefName(n))
-		return hir.T(hir.Void)
-	}
 	if len(targs) > 0 {
 		// Generic instantiations erase to the declaration's constraint.
 		l.diagf(n, "note-generic-erased", "type arguments of %s are erased", name)

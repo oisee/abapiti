@@ -233,15 +233,6 @@ func (l *lowerer) applyFnDefaults(params []*ast.ParameterDeclarationNode, m *hir
 	}
 }
 
-func indexOf(xs []string, x string) int {
-	for i, v := range xs {
-		if v == x {
-			return i
-		}
-	}
-	return -1
-}
-
 // freeLocals lists the enclosing-method local names an arrow function reads
 // without assigning them (and without declaring them itself).
 func (l *lowerer) freeLocals(fn *ast.Node) []string {

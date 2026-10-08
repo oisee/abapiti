@@ -13,17 +13,6 @@ import (
 // array higher-order calls inlined into loops (ADR-0006), spread arguments
 // and the Object.* helpers.
 
-// exprWrap wraps any pending prelude statements collected while lowering n
-// into a hir.Seq around x.
-func (l *lowerer) exprWrap(n *ast.Node, x *hir.Expr) *hir.Expr {
-	if x == nil || len(l.pend) == 0 {
-		return x
-	}
-	pre := l.pend
-	l.pend = nil
-	return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: x.Type, Y: x, Stmt: hir.B(pre...)}
-}
-
 // pendStmt appends a prelude statement.
 func (l *lowerer) pendStmt(s *hir.Stmt) { l.pend = append(l.pend, s) }
 
@@ -474,9 +463,8 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 			}
 			sv = l.tempInit(p, sv.Type, sv)
 			l.diagf(p, "note-object-spread", "record spread copies the entries")
-			k := "k"
 			l.serial++
-			k = "k" + itoa(l.serial)
+			k := "k" + itoa(l.serial)
 			l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(p), Name: k, Type: keyT,
 				X: l.rtOp("map.keys", sv, hir.T(hir.Array, keyT)),
 				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p),
