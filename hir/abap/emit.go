@@ -432,6 +432,8 @@ func (e *emitter) class(c *hir.Class) {
 }
 
 type body struct {
+	integerConstants             map[string]int64
+	integerBounds                bool
 	e                            *emitter
 	c                            *hir.Class
 	m                            *hir.Method
@@ -629,9 +631,16 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("ENDIF.")
 	case hir.CheckedNumericConvert:
 		a := b.expr(x.X)
-		low := b.constant("check_lo_"+strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n"), "f", strconv.FormatInt(x.Range.Min, 10))
-		high := b.constant("check_hi_"+strings.ReplaceAll(strconv.FormatInt(x.Range.Max, 36), "-", "n"), "f", strconv.FormatInt(x.Range.Max, 10))
-		b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " < " + low + " OR " + a + " > " + high + ".")
+		loName := "check_lo_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n")
+		hiName := "check_hi_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Max, 36), "-", "n")
+		if x.X.Type.Kind == hir.Number {
+			low := b.constant(loName, "f", strconv.FormatInt(x.Range.Min, 10))
+			high := b.constant(hiName, "f", strconv.FormatInt(x.Range.Max, 10))
+			b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " < " + low + " OR " + a + " > " + high + ".")
+		} else {
+			low, high := b.integerConstant(loName, x.Range.Min), b.integerConstant(hiName, x.Range.Max)
+			b.line("IF " + a + " < " + low + " OR " + a + " > " + high + ".")
+		}
 		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 		b.line("ENDIF.")
 		b.line(n + " = " + a + ".")
@@ -799,6 +808,9 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line(n + " = xsdbool( " + a + " " + op + " " + z + " ).")
 		} else {
 			b.line(n + " = " + a + " " + op + " " + z + ".")
+			if x.CheckIntegerOverflow {
+				b.integerOverflow(n)
+			}
 		}
 	case hir.Unary:
 		a := b.expr(x.X)
@@ -806,6 +818,9 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line(n + " = xsdbool( " + a + " = abap_false ).")
 		} else {
 			b.line(n + " = 0 - " + a + ".")
+			if x.CheckIntegerOverflow {
+				b.integerOverflow(n)
+			}
 		}
 	case hir.Conditional:
 		a := b.expr(x.X)
@@ -1102,6 +1117,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	for i, v := range x.Args {
 		args = append(args, b.value(v, ps[i]))
 	}
+	if x.Op == "i64.remainder2" {
+		b.line(n + " = " + a + " MOD 2.")
+		b.line("IF " + a + " < 0 AND " + n + " <> 0.")
+		b.line(n + " = " + n + " - 2.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "number.remainder2" {
 		// Division/multiplication by two are exact for finite binary64.
 		// Truncating the quotient and subtracting gives JS signed remainder.
@@ -1275,7 +1297,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		return
 	}
-	if x.Op == "i32.toString" {
+	if x.Op == "i32.toString" || x.Op == "i64.toString" {
 		// A string template renders an i exactly like JavaScript String(int32).
 		b.line(n + " = |{ " + a + " }|.")
 		return
@@ -1550,5 +1572,47 @@ func (b *body) constantDeclarations() string {
 	for _, k := range keys {
 		out.WriteString(b.constants[k])
 	}
+	if b.integerBounds {
+		init := &body{}
+		init.line("DATA range_int8_bound_min TYPE int8.")
+		init.line("DATA range_int8_bound_max TYPE int8.")
+		init.int8Lit("range_int8_bound_min", -9007199254740991)
+		init.int8Lit("range_int8_bound_max", 9007199254740991)
+		out.WriteString(init.code.String())
+	}
+	keys = keys[:0]
+	for name := range b.integerConstants {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	for _, name := range keys {
+		init := &body{}
+		init.line("DATA " + name + " TYPE int8.")
+		init.int8Lit(name, b.integerConstants[name])
+		out.WriteString(init.code.String())
+	}
 	return out.String()
+}
+
+// The opt-in integer contract must reject loss of JS integer precision long
+// before native int8 overflows, including in bigint-backed runtimes.
+func (b *body) integerOverflow(n string) {
+	b.integerBounds = true
+	low, high := "range_int8_bound_min", "range_int8_bound_max"
+	b.line("IF " + n + " < " + low + " OR " + n + " > " + high + ".")
+	b.line("RAISE EXCEPTION TYPE cx_sy_arithmetic_overflow.")
+	b.line("ENDIF.")
+}
+
+func (b *body) integerConstant(name string, value int64) string {
+	if b.integerConstants == nil {
+		b.integerConstants = map[string]int64{}
+	}
+	prefix := "range_int_"
+	if len(prefix)+len(name) > 30 {
+		prefix = "range_i_"
+	}
+	name = prefix + name
+	b.integerConstants[name] = value
+	return name
 }

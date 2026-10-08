@@ -12,6 +12,8 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"i64.toString":      {I64, 0, false},
+	"i64.remainder2":    {I64, 0, false},
 	"number.remainder2": {Number, 0, false},
 	"number.index":      {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
@@ -87,9 +89,11 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(RegExp), T(String)}, T(String), true
 	case "number.index":
 		return nil, i, true
+	case "i64.remainder2":
+		return nil, T(I64), true
 	case "number.remainder2", "number.fromI32":
 		return nil, T(Number), true
-	case "number.toString", "i32.toString":
+	case "number.toString", "i32.toString", "i64.toString":
 		return nil, T(String), true
 	case "array.push":
 		return []Type{t.Args[0]}, i, true

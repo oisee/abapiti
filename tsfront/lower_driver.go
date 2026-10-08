@@ -56,6 +56,7 @@ func LoadLexerCorpus(dir string) ([]LexerCase, error) {
 // the lowered driver class, its dump and firstDiff methods, and those
 // methods' parameter names.
 type DriverParams struct {
+	IntegerNumbers                                    bool
 	Class, Dump, Diff, Raw, A, B, TokenCount, Virtual string
 }
 
@@ -81,7 +82,11 @@ func LexerTestClass(cases []LexerCase, p DriverParams) string {
 	for _, v := range []string{"raw", "expected", "actual", "msg"} {
 		line("DATA %s TYPE string.", v)
 	}
-	line("DATA diff TYPE f.")
+	if p.IntegerNumbers {
+		line("DATA diff TYPE int8.")
+	} else {
+		line("DATA diff TYPE f.")
+	}
 	line("DATA idx TYPE i.")
 	line("DATA ch TYPE c LENGTH 1.")
 	line("DATA virtual TYPE abap_bool.")

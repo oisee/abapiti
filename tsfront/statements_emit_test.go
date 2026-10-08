@@ -28,7 +28,7 @@ func TestEmitStatementsClosure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	params := DriverParams{Class: names.Get("harness/statements_dump.ts.StatementsDump"), Dump: names.Get("member.dump"), Diff: names.Get("member.firstDiff"), Raw: names.Get("param.raw"), A: names.Get("param.a"), B: names.Get("param.b")}
+	params := DriverParams{IntegerNumbers: os.Getenv("ABAPITI_ASSUME_INT") == "1", Class: names.Get("harness/statements_dump.ts.StatementsDump"), Dump: names.Get("member.dump"), Diff: names.Get("member.firstDiff"), Raw: names.Get("param.raw"), A: names.Get("param.a"), B: names.Get("param.b")}
 	files[params.Class+".clas.testclasses.abap"] = StatementsTestClass(cases, params, names.Get("member.lastTokens"), names.Get("member.lastStatements"))
 	regressions, err := LoadStatementsCorpus(filepath.Join("testdata", "stmtsregressions"))
 	if err != nil {

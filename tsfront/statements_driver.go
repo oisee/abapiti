@@ -89,7 +89,11 @@ func StatementsTestClass(cases []StatementCase, p DriverParams, tokens, statemen
 	line("ENDMETHOD.")
 	line("METHOD compare.")
 	line("DATA actual TYPE string.")
-	line("DATA diff TYPE f.")
+	if p.IntegerNumbers {
+		line("DATA diff TYPE int8.")
+	} else {
+		line("DATA diff TYPE f.")
+	}
 	line("DATA idx TYPE i.")
 	line("DATA actual_lines TYPE STANDARD TABLE OF string WITH DEFAULT KEY.")
 	line("DATA expected_lines TYPE STANDARD TABLE OF string WITH DEFAULT KEY.")
