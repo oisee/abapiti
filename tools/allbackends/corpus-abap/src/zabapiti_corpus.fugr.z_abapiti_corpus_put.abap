@@ -4,7 +4,7 @@ FUNCTION z_abapiti_corpus_put.
   CLEAR ev_ok.
   ev_size = 0.
   ev_message = space.
-  IF iv_setname IS INITIAL OR iv_idx <= 0 OR iv_name IS INITIAL OR strlen( iv_name ) > 60.
+  IF iv_setname IS INITIAL OR iv_idx <= 0 OR iv_name IS INITIAL OR strlen( iv_name ) > 255.
     ev_message = 'Invalid set name, index, or file name'.
     RETURN.
   ENDIF.
