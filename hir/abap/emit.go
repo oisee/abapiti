@@ -579,6 +579,11 @@ func (b *body) expr(x *hir.Expr) string {
 	}
 	e, t := b.e, x.Type
 	if t.Kind == hir.Void {
+		if x.Kind == hir.RuntimeOp {
+			// A void runtime operation at statement level (dynamic.put).
+			b.runtimeOp(x, "")
+			return ""
+		}
 		b.call(x, "")
 		return ""
 	}

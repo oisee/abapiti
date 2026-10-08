@@ -497,3 +497,36 @@ func (l *lowerer) completeInterfaceValueSlots() {
 		iface.Methods = append(iface.Methods, added...)
 	}
 }
+
+// dynamicRecordLiteral lowers an object literal typed `any` to a tagged
+// record (the representation of parsed JSON/XML objects): an empty record
+// from the strict JSON runtime, one dynamic.put per property.
+func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
+	record := l.tempInit(n, hir.T(hir.Dynamic), l.rtOp("json.parseSubset", hir.L(hir.T(hir.String), "{}"), hir.T(hir.Dynamic)))
+	for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+		var value *ast.Node
+		switch p.Kind {
+		case ast.KindPropertyAssignment:
+			value = p.Initializer()
+		case ast.KindShorthandPropertyAssignment:
+			value = p.Name()
+		default:
+			l.diagf(p, "unsupported-type", "tagged record property %s is not lowered", p.Kind.String())
+			return nil
+		}
+		name := p.Name()
+		if name == nil || (name.Kind != ast.KindIdentifier && name.Kind != ast.KindStringLiteral) {
+			l.diagf(p, "unsupported-type", "tagged record property needs a literal name")
+			return nil
+		}
+		l.hint = hir.T(hir.Dynamic)
+		v := l.expr(value)
+		l.hint = hir.Type{}
+		if v == nil {
+			return nil
+		}
+		l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p), X: l.rtOp("dynamic.put", record, hir.T(hir.Void), hir.L(hir.T(hir.String), name.Text()), l.coerce(v, hir.T(hir.Dynamic)))})
+	}
+	l.diagf(n, "note-dynamic-record", "object literal typed any lowered as a tagged record")
+	return record
+}

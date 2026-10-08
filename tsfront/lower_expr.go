@@ -2035,6 +2035,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 			hint = part
 		}
 	}
+	if hint.Kind == hir.Dynamic {
+		return l.dynamicRecordLiteral(n)
+	}
 	// A record hint builds a map: spreads copy entries, keys set.
 	if hint.Kind == hir.OrderedMap {
 		return l.recordLiteral(n, hint)

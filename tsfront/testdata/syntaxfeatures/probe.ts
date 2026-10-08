@@ -169,7 +169,7 @@ export class Probe {
     const bag: {[k: string]: any} = {};
     let ruleIndex = 0;
     for (const rule of rules) { bag["r" + ruleIndex] = rule.getConfig(); ruleIndex++; }
-    const bagKeys = Object.keys(bag).join("") + (bag["r1"] === undefined ? "u" : "d") + `${bag["r1"]?.level}`;
+    const bagKeys = Object.keys(bag).join("") + (bag["r1"] === undefined ? "u" : "d") + (typeof bag["r1"] === "object" ? "o" : "x");
     const parts: string[] = [evolving.join("+"), viewed,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
