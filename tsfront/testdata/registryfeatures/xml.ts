@@ -13,7 +13,14 @@ export class XMLProbe {
     const missing: any = undefined;
     const empty: any = "";
     const list: any = flag ? ["a"] : "s";
-    return `${Array.isArray(list)}/${Array.isArray(x)}/${Array.isArray(missing)}|${typeof x}/${x === null}/${x === 0}/${!!x}/${x ?? "fallback"}|${typeof bool}/${!!bool}/${bool}|${missing === undefined}/${missing === null}/${missing ?? "fallback"}|${!!empty}`;
+    const key: any = flag ? "ab" : 1;
+    const upper = typeof key === "string" ? key.toUpperCase() : "n";
+    const r = /a.c/i;
+    const g = new RegExp("x/y", "gi");
+    let hits = "";
+    if (r.exec(flag ? "ABC" : "zz")) { hits += "e"; }
+    if (!r.exec("zz")) { hits += "n"; }
+    return `${upper}/${r.toString()}/${g.toString()}/${hits}|${Array.isArray(list)}/${Array.isArray(x)}/${Array.isArray(missing)}|${typeof x}/${x === null}/${x === 0}/${!!x}/${x ?? "fallback"}|${typeof bool}/${!!bool}/${bool}|${missing === undefined}/${missing === null}/${missing ?? "fallback"}|${!!empty}`;
   }
   public static parse(xml: string): unknown { throw new Error("external XML adapter"); }
 }

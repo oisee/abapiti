@@ -396,7 +396,35 @@ DATA i TYPE i.
 DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
-source = pattern.
+DATA escaped TYPE abap_bool.
+n = strlen( pattern ).
+WHILE i < n.
+  c = pattern+i(1).
+  IF escaped = abap_true.
+    escaped = abap_false.
+    source = source && c.
+  ELSEIF c = '\'.
+    escaped = abap_true.
+    source = source && c.
+  ELSEIF c = '/' AND in_class = abap_false.
+    source = source && '\/'.
+  ELSEIF c = cl_abap_char_utilities=>newline.
+    source = source && '\n'.
+  ELSE.
+    IF c = '['.
+      in_class = abap_true.
+    ELSEIF c = ']'.
+      in_class = abap_false.
+    ENDIF.
+    source = source && c.
+  ENDIF.
+  i = i + 1.
+ENDWHILE.
+IF source IS INITIAL.
+  source = '(?:)'.
+ENDIF.
+i = 0.
+in_class = abap_false.
 excluded = excluded_pattern.
 n = strlen( pattern ).
 WHILE i < n.

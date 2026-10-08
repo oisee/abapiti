@@ -1562,6 +1562,16 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "regexp.source":
 		b.line(n + " = " + a + "->source.")
 		return
+	case "regexp.toString":
+		// JavaScript prints the flags in canonical order: g before i.
+		b.line(n + " = |/{ " + a + "->source }/|.")
+		b.line("IF " + a + "->global = abap_true.")
+		b.line(n + " = " + n + " && `g`.")
+		b.line("ENDIF.")
+		b.line("IF " + a + "->ignore_case = abap_true.")
+		b.line(n + " = " + n + " && `i`.")
+		b.line("ENDIF.")
+		return
 	}
 	if x.Op == "record.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")

@@ -1116,6 +1116,27 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		switch name {
 		case "test":
 			return l.rtOp("regexp.test", recv, boolT, one()), true
+		case "exec":
+			// Only the match's truthiness is read: exec and test advance a
+			// global regexp's lastIndex alike.
+			if isConditionOnly(n) {
+				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
+				return l.rtOp("regexp.test", recv, boolT, one()), true
+			}
+		case "toString":
+			if len(args) == 0 {
+				return l.rtOp("regexp.toString", recv, str), true
+			}
+		}
+	case hir.Dynamic:
+		// A checker-narrowed string (typeof x === "string" on an any) reads the
+		// box's string and dispatches as a string method.
+		if n.Expression().Kind != ast.KindPropertyAccessExpression {
+			break
+		}
+		if t := l.ck.GetTypeAtLocation(n.Expression().AsPropertyAccessExpression().Expression); t != nil && t.Flags()&checker.TypeFlagsStringLike != 0 && t.Flags()&checker.TypeFlagsUnion == 0 {
+			l.diagf(n, "note-dynamic-string", "string method on a checker-narrowed dynamic string")
+			return l.libraryCall(n, name, l.rtOp("dynamic.asString", recv, str))
 		}
 	case hir.Array:
 		switch name {
@@ -2174,4 +2195,25 @@ func (l *lowerer) declaredMethodUndefinedCompare(n *ast.Node, b *ast.BinaryExpre
 	}
 	l.diagf(n, "note-declared-method", "a declared method is never undefined")
 	return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: recv}), Y: hir.L(hir.T(hir.Bool), negated)}, true
+}
+
+// isConditionOnly reports whether a call's value is only tested for
+// truthiness: an if/while condition, possibly under logical negation.
+func isConditionOnly(n *ast.Node) bool {
+	child, p := n, n.Parent
+	for p != nil && p.Kind == ast.KindParenthesizedExpression {
+		child, p = p, p.Parent
+	}
+	if p == nil {
+		return false
+	}
+	switch p.Kind {
+	case ast.KindIfStatement:
+		return p.AsIfStatement().Expression == child
+	case ast.KindWhileStatement:
+		return p.AsWhileStatement().Expression == child
+	case ast.KindPrefixUnaryExpression:
+		return p.AsPrefixUnaryExpression().Operator == ast.KindExclamationToken
+	}
+	return false
 }
