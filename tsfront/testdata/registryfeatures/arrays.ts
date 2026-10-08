@@ -12,6 +12,9 @@ export class GrandItem extends IdentityBase implements GrandView {
   public getOwn(): string { return "own"; }
   public getGrand(): string { return "grand"; }
 }
+export class SecondGrandItem extends IdentityBase implements ChildView {
+  public getOwn(): string { return "second"; }
+}
 export class OtherItem implements OtherNamed {
   constructor(public name: string) {}
   public getName(): string { return this.name; }
@@ -23,6 +26,20 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static optionalIdentity(base?: IdentityBase): string {
+    if (base === undefined) { return "absent"; }
+    return base.getToken();
+  }
+  private static unionIdentity(value: GrandItem | SecondGrandItem): string {
+    return ArrayProbe.optionalIdentity(value);
+  }
+  private static optionalViewIdentity(value?: ChildView): string { return ArrayProbe.optionalIdentity(value); }
+  public static brandedOptional(): string {
+    const first = new GrandItem("first");
+    const second = new SecondGrandItem("second");
+    const iface: ChildView = first;
+    return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}`;
+  }
   public static sliceAndUnshift(): string {
     const text = "abcde";
     const empty: number[] = [];

@@ -9,5 +9,6 @@
   "denseCallbacks": "true/true/false/true/7/1/8/true/ab/x/0",
   "postfix": "3/6/11/10/7/8/1/1/9/true/true",
   "continueUpdates": "4/4/12",
-  "sliceAndUnshift": "abcde/de/abc//cd//bc/1/2/3/0/true"
+  "sliceAndUnshift": "abcde/de/abc//cd//bc/1/2/3/0/true",
+  "brandedOptional": "first/absent/first/first/second"
 }

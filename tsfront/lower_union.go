@@ -116,6 +116,12 @@ func (l *lowerer) completeUnionInterfaces() {
 	sort.Strings(keys)
 	for _, key := range keys {
 		view := l.unions[key]
+		if l.ifaceClassBases != nil {
+			delete(l.ifaceClassBases, view.iface.Name)
+			if base := l.commonBrandedClass(view.parts); base != "" {
+				l.ifaceClassBases[view.iface.Name] = base
+			}
+		}
 		// ABAP uses nominal interfaces. Every concrete implementation of a
 		// constituent interface must implement the synthesized common view.
 		for _, part := range view.parts {
@@ -182,4 +188,41 @@ func (l *lowerer) completeUnionInterfaces() {
 			}
 		}
 	}
+}
+
+// Structural public members alone do not prove a native class identity. Every
+// constituent must carry the same private/protected instance class brand.
+func (l *lowerer) commonBrandedClass(parts []hir.Type) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	baseName := func(part hir.Type) string {
+		if part.Kind == hir.ClassRef {
+			return part.Name
+		}
+		if part.Kind == hir.InterfaceRef {
+			return l.ifaceClassBases[part.Name]
+		}
+		return ""
+	}
+	for candidate := l.classByName(baseName(parts[0])); candidate != nil; candidate = l.classByName(candidate.Super) {
+		if !l.classHasNominalBrand(candidate.Name) {
+			continue
+		}
+		common := true
+		for _, part := range parts[1:] {
+			found := false
+			for class := l.classByName(baseName(part)); class != nil; class = l.classByName(class.Super) {
+				if class.Name == candidate.Name {
+					found = true
+					break
+				}
+			}
+			common = common && found
+		}
+		if common {
+			return candidate.Name
+		}
+	}
+	return ""
 }

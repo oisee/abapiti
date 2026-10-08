@@ -377,6 +377,26 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
 		return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
 	}
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.ClassRef {
+		if x.Type.Kind == hir.InterfaceRef {
+			converted := l.coerce(x, dst.Args[0])
+			if converted.Type.Equal(dst.Args[0]) {
+				return l.coerce(converted, dst)
+			}
+		}
+		if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.InterfaceRef {
+			source := x.Type.Args[0]
+			for base := l.classByName(l.ifaceClassBases[source.Name]); base != nil; base = l.classByName(base.Super) {
+				if base.Name != dst.Args[0].Name {
+					continue
+				}
+				saved := l.tempInit(nil, x.Type, x)
+				present := &hir.Expr{Kind: hir.Narrow, Type: source, X: saved}
+				converted := &hir.Expr{Kind: hir.Cast, Type: dst.Args[0], X: present}
+				return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: converted}
+			}
+		}
+	}
 	if x.Type.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef {
 		for base := l.classByName(l.ifaceClassBases[x.Type.Name]); base != nil; base = l.classByName(base.Super) {
 			if base.Name == dst.Name {

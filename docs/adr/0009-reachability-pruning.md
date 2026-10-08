@@ -274,3 +274,12 @@ swap reversed endpoints. Zero/one/two argument forms preserve receiver evaluatio
 One-value Array.unshift mutates the same dense array, keeps native references,
 and returns its new length. Variadic/spread unshift remains blocking. Independent
 array differential: 11/11 on each runtime, 22 emitted files, zero v750 issues.
+
+Branded interface-to-class coercions preserve optional native references: absent
+references remain absent, and present references retain identity. Common union
+method views carry a class ancestor only when every constituent carries the
+same private/protected instance class brand. A public-only structural class is
+insufficient. Both original implementations in the fixture pass through a common
+base; absent and present interface arguments agree on both runtimes (12/12 array
+observations, 24 files, zero v750 issues). Existing public-only rejection tests
+remain green. This removes 58 HIR conversion failures without relaxing verification.
