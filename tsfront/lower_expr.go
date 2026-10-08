@@ -126,9 +126,14 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
+		// The checker sees the declared sibling class; the local holds the
+		// common base and may carry any of the assigned classes.
+		return x
+	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}

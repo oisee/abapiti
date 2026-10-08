@@ -190,7 +190,7 @@ func (l *lowerer) assignedAfter(fn *ast.Node, name string) bool {
 				}
 			}
 		case ast.KindPostfixUnaryExpression, ast.KindPrefixUnaryExpression:
-			operand := x.AsNode()
+			var operand *ast.Node
 			var op ast.Kind
 			if x.Kind == ast.KindPostfixUnaryExpression {
 				op = x.AsPostfixUnaryExpression().Operator

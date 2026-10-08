@@ -31,8 +31,9 @@ class Trivial {
   constructor(value: number) { this.value = value; }
 }
 type Data = {qualifiedName?: string, derived?: boolean, ddic?: string};
-class Sibling1 { public tag(): string { return "s1"; } }
-class Sibling2 { public tag(): string { return "s2"; } }
+abstract class SiblingBase { public abstract tag(): string; }
+class Sibling1 extends SiblingBase { public tag(): string { return "s1"; } }
+class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } }
 type Meta = {[key: string]: number};
 export class Probe {
   private static readonly cache: Map<string, number> = new Map();
@@ -114,12 +115,13 @@ export class Probe {
     const primUndef = prim === undefined;
     const missingPending = Probe.pending === undefined;
     const seed = Probe.seed.value + (Probe.table["b"] ?? 0) + Probe.cache.size;
-    return [
+    const parts: string[] = [
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
-      names.join(","), idx, allNamed, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
-      parsed, nan, big, sliced, ch, far, replaced, sorted.join(" "), before, after, skipped, keys,
-      chained, fin, sw, shadow + inner, restName, derived, sib.tag(), tagged, errText, emptyErr,
-      this.log.join(";"), this.counter, primUndef, missingPending, seed, Probe.unrelated(new ClassDef("u")), n, flag,
-    ].join("|");
+      names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
+      `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
+      chained, fin, sw, shadow + inner, restName, `${derived}`, sib.tag(), tagged, errText, emptyErr,
+      this.log.join(";"), `${this.counter}`, `${primUndef}`, `${missingPending}`, `${seed}`, Probe.unrelated(new ClassDef("u")), `${n}`, `${flag}`,
+    ];
+    return parts.join("|");
   }
 }

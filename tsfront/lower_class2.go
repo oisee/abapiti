@@ -386,6 +386,15 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		if target.Kind == hir.Optional {
 			target = target.Args[0]
 		}
+		if src.Kind == hir.InterfaceRef && target.Kind == hir.InterfaceRef && src.Name != target.Name && l.acceptsType(target, src) {
+			// Structurally compatible interfaces are distinct ABAP interface
+			// types: the assignment needs the checked cast.
+			narrowTo := dst
+			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {
+				narrowTo = hir.T(hir.Optional, dst)
+			}
+			return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: narrowTo, X: x}
+		}
 		if src.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef && target.Name != hir.RootObject && (l.interfaceHasClassBase(src.Name, target) || l.unionPartsAccepted(src.Name, target)) {
 			narrowTo := dst
 			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {

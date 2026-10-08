@@ -736,6 +736,19 @@ func (l *lowerer) synthFromAlias(n *ast.Node, sym *ast.Symbol) *hir.Class {
 		l.diagf(n, "unsupported-type", "alias %s has no lowered declaration", sym.Name)
 		return nil
 	}
+	if alias := decl.AsTypeAliasDeclaration(); alias.Type != nil && alias.Type.Kind == ast.KindTypeLiteral {
+		// An alias of an index-signature record is a map, not a shape; the
+		// checker mapping of the caller produces it.
+		saved := l.file
+		l.file = ast.GetSourceFileOfNode(decl)
+		before := len(l.diags)
+		record := l.recordType(alias.Type)
+		l.diags = l.diags[:before]
+		l.file = saved
+		if record.Kind == hir.OrderedMap {
+			return nil
+		}
+	}
 	lit := decl.Type()
 	if lit == nil || lit.Kind != ast.KindTypeLiteral {
 		l.diagf(n, "unsupported-type", "alias %s is not an object shape", sym.Name)

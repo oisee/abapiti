@@ -148,8 +148,11 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	name := decls[0].Name().Text()
 	recv := l.expr(f.Expression)
 	if recv != nil && recv.Type.Kind == hir.Optional && recv.Type.Args[0].Kind == hir.OrderedMap && recv.Type.Args[0].Args[0].Kind == hir.String {
-		// for-in over undefined iterates nothing.
-		present := l.tempInit(n, recv.Type, recv)
+		// for-in over undefined iterates nothing. The receiver is evaluated
+		// once into a local declared by the returned block.
+		l.serial++
+		present := hir.V("t"+itoa(l.serial), recv.Type)
+		decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: present.Name, Type: recv.Type, X: recv}
 		keys := l.rtOp("map.keys", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: present}, hir.T(hir.Array, hir.T(hir.String)))
 		l.push()
 		l.declare(name, hir.T(hir.String))
@@ -157,10 +160,13 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 		l.pop()
 		loop := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
 		absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}
-		return &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(loop)}
+		return hir.B(decl, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(loop)})
 	}
-	if recv == nil || recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
-		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map")
+	if recv == nil {
+		return nil
+	}
+	if recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
+		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map (%s)", recv.Type.String())
 		return nil
 	}
 	keys := l.rtOp("map.keys", recv, hir.T(hir.Array, hir.T(hir.String)))

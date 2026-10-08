@@ -297,6 +297,10 @@ func (l *lowerer) widenLet(d *ast.Node, sym *ast.Symbol, typ hir.Type) hir.Type 
 	if !changed {
 		return typ
 	}
+	if l.widenedLets == nil {
+		l.widenedLets = map[*ast.Symbol]bool{}
+	}
+	l.widenedLets[sym] = true
 	l.diagf(d, "note-let-widened", "let %s widened to the common base %s of its assignments", d.Name().Text(), base.Name)
 	if optional {
 		return hir.T(hir.Optional, base)

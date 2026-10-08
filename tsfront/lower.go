@@ -324,6 +324,9 @@ type lowerer struct {
 	shapeLike map[string]bool
 	// thisOverride replaces `this` while a closure body is lowered.
 	thisOverride *hir.Expr
+	// widenedLets: let symbols whose HIR type is the common base of their
+	// assignments; the checker's narrower view of them is not applied.
+	widenedLets map[*ast.Symbol]bool
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	continueAsBreak map[*ast.Node]bool
