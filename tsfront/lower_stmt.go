@@ -445,6 +445,17 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 	if target == nil {
 		return nil
 	}
+	if target.Kind == hir.RuntimeOp && target.Op == "dynamic.put" {
+		// box[k] = v on a tagged record.
+		l.hint = hir.T(hir.Dynamic)
+		v := l.expr(rhs)
+		l.hint = hir.Type{}
+		if v == nil {
+			return nil
+		}
+		put := l.rtOp("dynamic.put", target.X, hir.T(hir.Void), target.Args[0], l.coerce(v, hir.T(hir.Dynamic)))
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: put}
+	}
 	if target.Kind == hir.RuntimeOp && target.Op == "map.set" {
 		// m[k] = v lowers to map.set(m, k, v).
 		l.hint = target.X.Type.Args[1]
@@ -453,7 +464,7 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 		if v == nil {
 			return nil
 		}
-		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], v)
+		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], l.coerce(v, target.X.Type.Args[1]))
 		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: set}
 	}
 	l.hint = target.Type
@@ -496,6 +507,14 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
 		case hir.Array:
 			return &hir.Expr{Kind: hir.IndexGet, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(arg)}
+		case hir.Dynamic:
+			if arg.Type.Kind == hir.Number {
+				arg = l.primitiveString(lhs, arg)
+			}
+			if arg.Type.Kind == hir.String {
+				return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "dynamic.put", Type: hir.T(hir.Void),
+					X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
+			}
 		}
 		l.diagf(lhs, "unsupported-assignment", "element assignment on %s is not lowered", recv.Type.Kind)
 		return nil

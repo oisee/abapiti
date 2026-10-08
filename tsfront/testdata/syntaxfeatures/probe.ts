@@ -50,7 +50,25 @@ class ENode extends Holder<ENode | TNode> {
   public kindOf(): string { return "e"; }
   public concat(): string { return "E"; }
 }
+interface IConfigured { getConfig(): void; }
+class RuleA implements IConfigured { public getConfig(): {level: number} { return {level: 3}; } }
+class RuleB implements IConfigured { public getConfig(): {level: number} { return {level: 5}; } }
+class Rel {
+  private readonly brand = true;
+  constructor(public readonly ordinal: number, public readonly name: string) {}
+  public isBranded(): boolean { return this.brand; }
+}
+type Opts = {release?: Rel, tag?: string};
 export class Probe {
+  private static readonly defaultRel = new Rel(0, "newest");
+  private static isRel(o: Opts | Rel): o is Rel { return o instanceof Rel; }
+  public static pick(o: Opts | Rel | undefined): string {
+    if (o === undefined || Probe.isRel(o)) {
+      const r = o ?? Probe.defaultRel;
+      return r.name;
+    }
+    return o.tag ?? "notag";
+  }
   private static readonly cache: Map<string, number> = new Map();
   private static pending: string | undefined = undefined;
   private static readonly seed: Trivial = new Trivial(5);
@@ -137,6 +155,22 @@ export class Probe {
     evolving.push("tail");
     const root = new ENode(1, flag);
     const viewed = (root.firstKid()?.concat() ?? "none") + (root.firstKid()?.kindOf() ?? "") + (new ENode(0, flag).firstKid()?.concat() ?? "none");
+    const recs: {[k: string]: {[t: string]: boolean}} = {a: {x: true, y: true}, b: {z: true}};
+    delete recs["a"]?.["x"];
+    delete recs["zz"]?.["q"];
+    const recsKeys = Object.keys(recs["a"]).length + ":" + Object.keys(recs).join("");
+    if (Object.keys(recs["b"]).length === 1) { delete recs["b"]; } else { delete recs["b"]["z"]; }
+    const afterDel = Object.keys(recs).join(",") + Object.keys(recs["a"]).join("");
+    const picked = Probe.pick(new Rel(7, raw)) + Probe.pick(undefined) + Probe.pick({tag: needle}) + Probe.pick({release: Probe.defaultRel});
+    const box: any = flag ? {DDTEXT: raw, NUM: n} : undefined;
+    const boxText: string | undefined = box?.DDTEXT || "";
+    const boxMissing: string = box?.MISSING || "dflt";
+    const boxNum: number = box?.NUM || -1;
+    const rules: IConfigured[] = [new RuleA(), new RuleB()];
+    const bag: {[k: string]: any} = {};
+    let ruleIndex = 0;
+    for (const rule of rules) { bag["r" + ruleIndex] = rule.getConfig(); ruleIndex++; }
+    const bagKeys = Object.keys(bag).join("") + (bag["r1"] === undefined ? "u" : "d") + (typeof bag["r1"] === "object" ? "o" : "x");
     const downcast = Probe.base(sib) instanceof Sibling2 ? (Probe.base(sib) as Sibling2).only2() : "not2";
     const typed = `${typeof counter === "boolean"}/${typeof n === "number"}/${typeof flag === "string"}/${typeof sib !== "number"}`;
     const nested: {[k: string]: {[n: string]: string[]}} = {};
@@ -150,6 +184,7 @@ export class Probe {
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
       chained, fin, sw, shadow + inner, restName, `${derived}`, sib.tag(), tagged, errText, emptyErr,
       this.log.join(";"), `${this.counter}`, `${primUndef}`, `${missingPending}`, `${seed}`, Probe.unrelated(new ClassDef("u")), `${n}`, `${flag}`,
+      recsKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys,
     ];
     return parts.join("|");
   }

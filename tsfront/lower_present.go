@@ -7,6 +7,7 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"github.com/oisee/abapiti/internal/tsgo/jsnum"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 )
 
 // checkerMayBeUndefined reports whether the checker admits undefined at n.
@@ -367,4 +368,165 @@ func (l *lowerer) shapeAliasOf(declared, actual hir.Type) bool {
 		}
 	}
 	return true
+}
+
+// propertyAnnotationOverride applies a Patterns.Annotations entry of an
+// enclosing override to the declared type node of a property signature (the
+// members of a method's anonymous result type).
+func (l *lowerer) propertyAnnotationOverride(p *ast.Symbol) (hir.Type, bool) {
+	if p == nil || p.ValueDeclaration == nil || p.ValueDeclaration.Type() == nil {
+		return hir.Type{}, false
+	}
+	typeNode := p.ValueDeclaration.Type()
+	f := ast.GetSourceFileOfNode(typeNode)
+	if f == nil {
+		return hir.Type{}, false
+	}
+	for parent := typeNode; parent != nil; parent = parent.Parent {
+		entry, ok := l.overrides[parent]
+		if !ok || entry.Patterns == nil {
+			continue
+		}
+		span := f.Text()[scanner.GetTokenPosOfNode(typeNode, f, false):typeNode.End()]
+		if typ, ok := entry.Patterns.Annotations[span]; ok {
+			l.diagf(typeNode, "note-override", "%s: %s", entry.ID, entry.Rationale)
+			return typ, true
+		}
+	}
+	return hir.Type{}, false
+}
+
+// narrowedOperand applies the checker's flow type to an operand the general
+// narrowing skips (the left side of `??` after a type predicate).
+func (l *lowerer) narrowedOperand(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x.Type.Kind != hir.Optional || !x.Type.Args[0].IsRef() {
+		return x
+	}
+	t := l.ck.GetTypeAtLocation(n)
+	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+		return x
+	}
+	before := len(l.diags)
+	typ := l.mapCheckerType(n, t)
+	blocked := hasBlocking(l.diags[before:])
+	l.diags = l.diags[:before]
+	if blocked || typ.Kind != hir.Optional || !typ.Args[0].IsRef() || typ.Equal(x.Type) || !l.acceptsType(x.Type.Args[0], typ.Args[0]) {
+		return x
+	}
+	return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
+}
+
+// primitiveHint reports a string/number/bool hint, optional or not.
+func (l *lowerer) primitiveHint(hint hir.Type) bool {
+	if hint.Kind == hir.Optional {
+		hint = hint.Args[0]
+	}
+	return hint.Kind == hir.String || hint.Kind == hir.Number || hint.Kind == hir.Bool
+}
+
+// taggedOperand coerces a short-circuit operand to the result type; an
+// optional tagged operand stays absent when absent and is unboxed otherwise.
+func (l *lowerer) taggedOperand(x *hir.Expr, typ hir.Type) *hir.Expr {
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && typ.Kind != hir.Dynamic {
+		unboxed := l.coerce(&hir.Expr{Kind: hir.Narrow, Type: hir.T(hir.Dynamic), X: x}, typ)
+		if typ.Kind != hir.Optional {
+			return unboxed
+		}
+		return &hir.Expr{Kind: hir.Conditional, Type: typ, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: typ}, Z: unboxed}
+	}
+	return l.coerce(x, typ)
+}
+
+// completeInterfaceValueSlots adds `m_value` to an interface whose void slot
+// m is implemented with a value by every implementer (TypeScript's `void`
+// return admits any value; the ABI keeps the object). Interface calls in a
+// value context dispatch through it.
+func (l *lowerer) completeInterfaceValueSlots() {
+	hasMethod := func(c *hir.Class, name string) bool {
+		for ; c != nil; c = l.classByName(c.Super) {
+			for _, m := range c.Methods {
+				if m.Name == name {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, iface := range l.out.Interfaces {
+		var added []*hir.Method
+		for _, m := range iface.Methods {
+			if m.Result.Kind != hir.Void || strings.HasSuffix(m.Name, "_value") || l.interfaceMethod(iface.Name, m.Name+"_value") != nil {
+				continue
+			}
+			implementers := 0
+			all := true
+			var abstracts []*hir.Class
+			for _, c := range l.out.Classes {
+				implements := false
+				for base := c; base != nil; base = l.classByName(base.Super) {
+					implements = implements || containsString(base.Implements, iface.Name)
+				}
+				if !implements {
+					continue
+				}
+				implementers++
+				if hasMethod(c, m.Name+"_value") {
+					continue
+				}
+				if c.Abstract {
+					// The abstract base declares the void slot; its concrete
+					// subclasses carry the value slots.
+					abstracts = append(abstracts, c)
+					continue
+				}
+				all = false
+			}
+			if implementers == 0 || !all {
+				continue
+			}
+			value := func() *hir.Method {
+				return &hir.Method{Node: m.Node, Name: m.Name + "_value", Virtual: true, Result: hir.Ref(hir.RootObject), Params: append([]hir.Param(nil), m.Params...)}
+			}
+			for _, c := range abstracts {
+				abstract := value()
+				abstract.Abstract = true
+				c.Methods = append(c.Methods, abstract)
+			}
+			added = append(added, value())
+		}
+		iface.Methods = append(iface.Methods, added...)
+	}
+}
+
+// dynamicRecordLiteral lowers an object literal typed `any` to a tagged
+// record (the representation of parsed JSON/XML objects): an empty record
+// from the strict JSON runtime, one dynamic.put per property.
+func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
+	record := l.tempInit(n, hir.T(hir.Dynamic), l.rtOp("json.parseSubset", hir.L(hir.T(hir.String), "{}"), hir.T(hir.Dynamic)))
+	for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+		var value *ast.Node
+		switch p.Kind {
+		case ast.KindPropertyAssignment:
+			value = p.Initializer()
+		case ast.KindShorthandPropertyAssignment:
+			value = p.Name()
+		default:
+			l.diagf(p, "unsupported-type", "tagged record property %s is not lowered", p.Kind.String())
+			return nil
+		}
+		name := p.Name()
+		if name == nil || (name.Kind != ast.KindIdentifier && name.Kind != ast.KindStringLiteral) {
+			l.diagf(p, "unsupported-type", "tagged record property needs a literal name")
+			return nil
+		}
+		l.hint = hir.T(hir.Dynamic)
+		v := l.expr(value)
+		l.hint = hir.Type{}
+		if v == nil {
+			return nil
+		}
+		l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p), X: l.rtOp("dynamic.put", record, hir.T(hir.Void), hir.L(hir.T(hir.String), name.Text()), l.coerce(v, hir.T(hir.Dynamic)))})
+	}
+	l.diagf(n, "note-dynamic-record", "object literal typed any lowered as a tagged record")
+	return record
 }

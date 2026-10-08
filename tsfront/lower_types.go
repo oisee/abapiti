@@ -573,6 +573,8 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			// An empty literal's never[]: matches any array field of a
 			// reused shape; it never defines a shape of its own.
 			ft = hir.T(hir.Array, hir.T(hir.Void))
+		} else if annotated, ok := l.propertyAnnotationOverride(p); ok {
+			ft = annotated
 		} else {
 			ft = l.mapCheckerType(n, pt)
 		}
