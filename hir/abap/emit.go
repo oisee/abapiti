@@ -1169,6 +1169,20 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ELSE.")
 			b.line("CLEAR " + n + ".")
 			b.line("ENDIF.")
+		case "string.repeatIndent":
+			// The enclosing source certificate proves non-negative integer indentation.
+			// The helper remains fail-closed if called without that domain proof.
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " > 2147483647 OR " + args[0] + " <> trunc( " + args[0] + " ).")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			index := b.temp(hir.T(hir.I32))
+			b.line(index + " = 0.")
+			b.line("CLEAR " + n + ".")
+			b.line("WHILE " + index + " < " + args[0] + ".")
+			b.line(n + " = |{ " + n + " }{ " + a + " }|.")
+			b.line(index + " = " + index + " + 1.")
+			b.line("ENDWHILE.")
+
 		case "string.substring":
 			// JavaScript substring clamps both indices into [0, length] and
 			// swaps them when start is past end. Indices count UTF-16 units.

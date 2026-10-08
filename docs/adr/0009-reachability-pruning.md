@@ -297,3 +297,14 @@ explanation. Their rejection drivers verify both the exact exception class and
 nonempty message on both pinned runtimes, as required by the documented divergence
 comparator. All existing JSON/config graphs and all 188 XML inventory observations
 remain equal (JSON 8/8, XML 190/190; v750 zero issues on 43/384 files).
+
+DumpScope's two String.repeat expressions use a complete class fingerprint and
+an explicit indentation helper. The public dump begins at indent=0, private
+traversal calls only increment it, and dumpNode receives that same indent. Thus
+every reached count is a non-negative integer; units (including the existing
+missing semicolon in one unit) remain exact. The helper raises outside the
+certificate domain and general String.repeat remains blocked. Number's builtin
+MAX_SAFE_INTEGER/MIN_SAFE_INTEGER values lower exactly to binary64 safe-integer
+literals; a shadowed Number declaration must not take this path. The independent
+fixture checks zero/two indent and both sentinels on each runtime (13/13, 24 files,
+zero v750 issues). Generalise later: full String.repeat argument/RangeError ABI.

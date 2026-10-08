@@ -26,6 +26,10 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static repeatIndent(indent: number): string { return "&nbsp".repeat(indent * 2); }
+  public static indentation(): string {
+    return `${ArrayProbe.repeatIndent(0)}|${ArrayProbe.repeatIndent(2)}|${Number.MAX_SAFE_INTEGER}|${Number.MIN_SAFE_INTEGER}`;
+  }
   private static optionalIdentity(base?: IdentityBase): string {
     if (base === undefined) { return "absent"; }
     return base.getToken();

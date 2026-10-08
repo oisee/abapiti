@@ -571,6 +571,18 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	if x, ok := l.enumMember(n, p); ok {
 		return x
 	}
+	if p.Expression.Kind == ast.KindIdentifier {
+		symbol := l.resolve(p.Expression)
+		if symbol != nil && symbol.Name == "Number" && l.librarySymbol(symbol) && l.classOf(symbol) == nil {
+			switch p.Name().Text() {
+			case "MAX_SAFE_INTEGER":
+				return hir.L(hir.T(hir.Number), float64(9007199254740991))
+			case "MIN_SAFE_INTEGER":
+				return hir.L(hir.T(hir.Number), float64(-9007199254740991))
+			}
+		}
+	}
+
 	sym := l.resolve(n)
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {

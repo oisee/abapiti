@@ -38,5 +38,6 @@ func RegistryDeployment() []Entry {
 	entries = append(entries, registryOpaqueSignatures()...)
 	entries = append(entries, registryDenseCallbacks()...)
 	entries = append(entries, registrySorts()...)
-	return append(entries, registryStaticSingletons()...)
+	entries = append(entries, registryStaticSingletons()...)
+	return append(entries, registryDumpIndentation()...)
 }
