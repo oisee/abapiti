@@ -369,6 +369,11 @@ func (e *emitter) class(c *hir.Class) {
 			continue
 		}
 		base, _ := e.method(e.classBy(c.Super), m.Name)
+		if base != nil && m.Abstract {
+			// An abstract redeclaration of an inherited (abstract) method adds
+			// nothing ABAP can express.
+			continue
+		}
 		if base != nil {
 			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.member(m.Name))
 		} else {
@@ -396,10 +401,14 @@ func (e *emitter) class(c *hir.Class) {
 			name = e.name("builtin.initialize." + c.Name)
 		}
 		if impl := e.overrideBody(c, m); impl != nil {
-			b.WriteString(e.overrideImplementation(c, impl, m))
+			if e.forwardsToImplementation(impl, m) {
+				b.WriteString(e.slotForwarder(c, m, impl))
+			} else {
+				b.WriteString(e.overrideImplementation(c, impl, m))
+			}
 		} else if original, _, specialized := strings.Cut(m.Name, "_instantiated_"); specialized {
 			slot, _ := e.method(c, original)
-			if slot != nil && e.overrideBody(c, slot) == m {
+			if slot != nil && e.overrideBody(c, slot) == m && !e.forwardsToImplementation(m, slot) {
 				b.WriteString(e.narrowedBridge(c, m, slot))
 			} else {
 				b.WriteString(e.body(c, m, name))
@@ -489,11 +498,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 		}
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
-		op := " = "
-		if e.typ(p.Type) != e.typ(slot.Params[j].Type) && p.Type.IsRef() {
-			op = " ?= "
-		}
-		b.line(n + op + e.param(slot.Params[j].Name) + ".")
+		b.line(n + " = " + b.convert(e.param(slot.Params[j].Name), slot.Params[j].Type, p.Type) + ".")
 	}
 	b.stmt(impl.Body)
 	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
@@ -558,10 +563,40 @@ func (b *body) rawTemp(typ string) string {
 	return n
 }
 func (b *body) convert(value string, src, dst hir.Type) string {
+	if src.Equal(dst) {
+		return value
+	}
+	if dst.Kind == hir.Dynamic {
+		// A typed value into an erased `any` slot: box it.
+		n := b.temp(dst)
+		b.boxDynamic(n, value, src)
+		return n
+	}
+	if src.Kind == hir.Dynamic && (dst.IsRef() || dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool || dst.Kind == hir.ClassValue) {
+		// An erased `any` into the implementation's type: checked unboxing.
+		return b.unbox(value, dst)
+	}
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.InterfaceRef && !src.Equal(dst) {
 		n := b.temp(dst)
 		b.line(n + " ?= " + value + ".")
 		return n
+	}
+	if (src.IsRef() || (src.Kind == hir.Optional && src.Args[0].IsRef())) && (dst.IsRef() || (dst.Kind == hir.Optional && dst.Args[0].IsRef())) {
+		from, to := src, dst
+		if from.Kind == hir.Optional {
+			from = from.Args[0]
+		}
+		if to.Kind == hir.Optional {
+			to = to.Args[0]
+		}
+		if (from.Kind == hir.ClassRef || from.Kind == hir.InterfaceRef) && (to.Kind == hir.ClassRef || to.Kind == hir.InterfaceRef) && !b.e.upcast(from, to) {
+			// A checked cast through the object root (class/interface relation unknown statically).
+			root := b.rawTemp("REF TO object")
+			b.line(root + " = " + value + ".")
+			n := b.temp(dst)
+			b.line(n + " ?= " + root + ".")
+			return n
+		}
 	}
 	if dst.Kind == hir.Optional && src.Kind != hir.Optional && !dst.Args[0].IsRef() {
 		n := b.temp(dst)
