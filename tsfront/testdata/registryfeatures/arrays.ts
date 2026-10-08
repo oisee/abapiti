@@ -1,6 +1,17 @@
 export interface Named { getName(): string; left(): boolean; }
 export interface OtherNamed { getName(): string; right(): boolean; }
 export interface NumberRecord { [name: string]: number; }
+export class IdentityBase {
+  constructor(private token: string) {}
+  public getToken(): string { return this.token; }
+}
+export interface ChildView extends IdentityBase { getOwn(): string; }
+export interface GrandView extends ChildView { getGrand(): string; }
+export class GrandItem extends IdentityBase implements GrandView {
+  constructor(token: string) { super(token); }
+  public getOwn(): string { return "own"; }
+  public getGrand(): string { return "grand"; }
+}
 export class OtherItem implements OtherNamed {
   constructor(public name: string) {}
   public getName(): string { return this.name; }
@@ -12,6 +23,14 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static baseToken(value: IdentityBase): string { return value.getToken(); }
+  private static childToken(value: ChildView): string { return value.getToken(); }
+  public static interfaceHeritage(): string {
+    const item = new GrandItem("token");
+    const grand: GrandView = item;
+    const child: ChildView = grand;
+    return `${grand.getToken()}/${grand.getOwn()}/${child.getOwn()}/${ArrayProbe.baseToken(grand)}/${ArrayProbe.childToken(grand)}/${grand === item}`;
+  }
   public static namedRecord(): string {
     const values: NumberRecord = {first: 0, second: 7};
     const alias = values;

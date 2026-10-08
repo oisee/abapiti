@@ -377,6 +377,13 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
 		return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
 	}
+	if x.Type.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef {
+		for base := l.classByName(l.ifaceClassBases[x.Type.Name]); base != nil; base = l.classByName(base.Super) {
+			if base.Name == dst.Name {
+				return &hir.Expr{Kind: hir.Cast, Node: x.Node, Type: dst, X: x}
+			}
+		}
+	}
 	if x.Type.Kind == hir.ClassRef && dst.Kind == hir.InterfaceRef && !l.acceptsType(dst, x.Type) {
 		l.recordImplements(x.Type, dst)
 	}

@@ -378,6 +378,26 @@ func TestStatementsUnionReceiverInterface(t *testing.T) {
 	}
 }
 
+func TestInterfacePublicClassBaseDoesNotProveNativeInstance(t *testing.T) {
+	// Valid structural TypeScript: child need not be an instance of Base.
+	// A nominal ABAP cast would raise instead of returning "structural".
+	prog, diags := lowerProbe(t, sourceProbe(t, `
+ class Base { token(): string { return "base"; } }
+ interface Child extends Base { own(): string; }
+ class Structural implements Child {
+   token(): string { return "structural"; }
+   own(): string { return "own"; }
+ }
+ export class Probe {
+   static read(value: Base): string { return value.token(); }
+   static run(): string { const child: Child = new Structural(); return Probe.read(child); }
+ }
+ `))
+	if !hasBlocking(diags) && len(hir.Verify(prog)) == 0 {
+		t.Fatal("structural interface-to-class flow must block without a nominal brand")
+	}
+}
+
 func TestStatementsCapturedLiftedCallee(t *testing.T) {
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": `
  export class Probe { run(): number {

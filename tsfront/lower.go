@@ -153,6 +153,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	for _, c := range l.out.Classes {
 		inherit(c)
 	}
+	l.completeInterfaceHeritage()
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
@@ -293,9 +294,10 @@ type lowerer struct {
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
-	views    map[string]*hir.Interface
-	unions   map[string]*unionView
-	abiReady bool
+	views           map[string]*hir.Interface
+	unions          map[string]*unionView
+	abiReady        bool
+	ifaceClassBases map[string]string
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
