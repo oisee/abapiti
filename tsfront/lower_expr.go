@@ -1985,12 +1985,14 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 		return l.rtOp("dynamic.asRef", x, mapped)
 	case (mapped.Kind == hir.ClassRef || mapped.Kind == hir.InterfaceRef) && !mapped.Equal(x.Type):
 		if mapped.Kind == hir.ClassRef && x.Type.Kind == hir.ClassRef && l.classesByQualifiedName(mapped.Name) != nil {
-			// A nominal downcast is checked by ABAP's ?= (move-cast error
-			// where JavaScript would carry on with a mistyped object).
-			for c := l.classesByQualifiedName(mapped.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
-				if c.Super == x.Type.Name {
-					l.diagf(n, "note-checked-downcast", "assertion to subclass %s lowered as a checked cast", mapped.Name)
-					return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+			// A source-proven nominal downcast is checked by ABAP's ?=. An
+			// unproven one stays refused: JavaScript would carry on with the
+			// mistyped object where ?= raises.
+			if l.pinnedCheckedCast(n) {
+				for c := l.classesByQualifiedName(mapped.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
+					if c.Super == x.Type.Name {
+						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+					}
 				}
 			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
