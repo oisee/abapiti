@@ -283,3 +283,11 @@ insufficient. Both original implementations in the fixture pass through a common
 base; absent and present interface arguments agree on both runtimes (12/12 array
 observations, 24 files, zero v750 issues). Existing public-only rejection tests
 remain green. This removes 58 HIR conversion failures without relaxing verification.
+
+Checker-proven instanceof narrowing to a constituent union uses a checked native
+interface cast when that view has a shared private/protected class ancestor.
+The flat HIR interface is not itself a subclass, so a subclass Narrow node would
+be invalid. The source tests provide the constituent proof; the runtime cast
+retains the nominal check. Absent and unrelated base instances take the original
+negative branch. Both runtimes pass all 12 array observations (24 files, zero
+v750 issues); this removes 39 more HIR failures without changing verification.

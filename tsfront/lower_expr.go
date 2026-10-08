@@ -199,6 +199,20 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef) {
 		return l.rtOp("dynamic.asRef", x, typ)
 	}
+	if typ.Kind == hir.InterfaceRef && l.ifaceClassBases[typ.Name] != "" {
+		base := x.Type
+		if base.Kind == hir.Optional {
+			base = base.Args[0]
+		}
+		if base.Kind == hir.ClassRef && l.acceptsType(base, hir.Ref(l.ifaceClassBases[typ.Name])) {
+			if x.Type.Kind == hir.Optional {
+				x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: x}
+			}
+			// The checker proved the constituent union after the source tests.
+			// Its flat ABAP interface is a nominal view, not a HIR subclass.
+			return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: typ, X: x}
+		}
+	}
 	if (typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && typ.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], typ.Args[0])) || (typ.Kind == hir.Array && x.Type.Kind == hir.Array && l.acceptsType(x.Type, typ)) || typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || (x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Equal(typ)) {
 		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
 	}

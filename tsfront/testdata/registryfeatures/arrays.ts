@@ -34,11 +34,15 @@ export class ArrayProbe {
     return ArrayProbe.optionalIdentity(value);
   }
   private static optionalViewIdentity(value?: ChildView): string { return ArrayProbe.optionalIdentity(value); }
+  private static narrowedBranded(base?: IdentityBase): string {
+    if (!(base instanceof GrandItem) && !(base instanceof SecondGrandItem)) { return "absent"; }
+    return ArrayProbe.unionIdentity(base);
+  }
   public static brandedOptional(): string {
     const first = new GrandItem("first");
     const second = new SecondGrandItem("second");
     const iface: ChildView = first;
-    return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}`;
+    return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}/${ArrayProbe.narrowedBranded(first)}/${ArrayProbe.narrowedBranded(second)}/${ArrayProbe.narrowedBranded()}/${ArrayProbe.narrowedBranded(new IdentityBase("plain"))}`;
   }
   public static sliceAndUnshift(): string {
     const text = "abcde";
