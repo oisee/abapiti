@@ -242,3 +242,20 @@ initialization. Both runtimes pass all nine array observations. Non-numeric and
 record-map postfix targets remain blocked. Builtin undefined and null constants
 are pure static initializers; shadowed identifiers still require the ordinary
 constant/purity proof.
+
+Five private readonly type singletons have reviewed static allocation certificates
+under complete class fingerprints. Each constructor only calls AbstractType's
+no-argument constructor, which assigns undefined to its instance data; the full
+AbstractType class is independently fingerprinted as a source guard. There is no
+external read/write, callback, or initializer back-edge, and each private value
+is observed only through its own getter. Eager versus lazy allocation timing is
+therefore unobservable; construction occurs once and reference identity remains
+stable. Other allocations remain subject to the generic static purity gate.
+A changed base dependency fails validation before lowering. Generalise later:
+constructor effect proofs and observable initialization dependency ordering.
+
+For inherited slots whose concrete implementation omits trailing parameters,
+the checker-typed forwarding bridge now passes initial ABI fillers. The moved
+slot body is that same implementation and has no binding for these arguments;
+it cannot observe their value. Rest/arguments semantics are not erased by this
+change. Base-view calls still evaluate and pass their actual arguments normally.

@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 	"github.com/oisee/abapiti/internal/tsgo/stringutil"
 )
 
@@ -149,4 +150,17 @@ func (l *lowerer) moduleInitializer(n *ast.Node) bool {
 	}
 	walk(n)
 	return safe
+}
+
+// These certificates are source-fingerprinted, including constructor dependencies.
+// They do not authorize other allocations in the same class.
+func (l *lowerer) pinnedStaticInitializer(n *ast.Node) bool {
+	text := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+	for parent := n; parent != nil; parent = parent.Parent {
+		if e, ok := l.overrides[parent]; ok && e.Patterns != nil && e.Patterns.StaticInitializers[text] {
+			l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
+			return true
+		}
+	}
+	return false
 }

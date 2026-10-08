@@ -305,8 +305,11 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 	args := []string{}
 	for j, p := range slot.Params {
 		if j >= len(m.Params) {
-			e.err = fmt.Errorf("class %s method %s: specialized super override omits inherited parameters", c.Name, slot.Name)
-			return ""
+			// This implementation declares no binding for the trailing argument.
+			// The inherited slot body is this same implementation; it cannot
+			// observe the ABI filler (JS arguments/rest are not erased here).
+			args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
+			continue
 		}
 		actual := m.Params[j]
 		args = append(args, e.param(p.Name)+" = "+b.value(hir.V(actual.Name, actual.Type), p.Type))

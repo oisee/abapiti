@@ -669,7 +669,7 @@ func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) [
 		if !ok {
 			continue
 		}
-		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) {
+		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) && !l.pinnedStaticInitializer(mem.Initializer()) {
 			l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
 			continue
 		}

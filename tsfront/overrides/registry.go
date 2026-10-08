@@ -21,6 +21,10 @@ type Patterns struct {
 	// DenseCallbacks certifies these exact calls: dense receiver and callback
 	// does not change its membership. No general sparse-array ABI is claimed.
 	DenseCallbacks map[string]bool
+	// StaticInitializers names reviewed allocations whose eager/lazy timing is unobservable.
+	StaticInitializers map[string]bool
+	// SourceGuard pins a dependency used in an adapter safety proof.
+	SourceGuard bool
 }
 type Entry struct {
 	ID        string
@@ -84,7 +88,7 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
-	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0) {
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.StaticInitializers) > 0 || e.Patterns.SourceGuard) {
 		n++
 	}
 	if e.Result != nil {
