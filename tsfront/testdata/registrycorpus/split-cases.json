@@ -1,0 +1,18 @@
+[
+ {"raw":"","separator":""},
+ {"raw":"","separator":"|"},
+ {"raw":"|","separator":"|"},
+ {"raw":"||","separator":"|"},
+ {"raw":" a | b | ","separator":"|"},
+ {"raw":"abab","separator":"ab"},
+ {"raw":"aaaa","separator":"aa"},
+ {"raw":"aaaa","separator":"aaa"},
+ {"raw":"abc","separator":"abcd"},
+ {"raw":"abc","separator":""},
+ {"raw":"a \tb\r\n","separator":"\n"},
+ {"raw":"x","separator":"x"},
+ {"raw":" a  b ","separator":" "},
+ {"raw":"a.b.","separator":"."},
+ {"raw":"a*.*b","separator":"*.*"},
+ {"raw":"line \r\n\nlast ","separator":"\n"}
+]

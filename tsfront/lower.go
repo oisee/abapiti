@@ -260,6 +260,10 @@ type lowerer struct {
 	method    *hir.Method // method being lowered
 	serial    int
 	hint      hir.Type // contextual type for undefined literals
+	// Anonymous checker graphs may contain cycles without a nominal reference
+	// to stop structural expansion. Reject those instead of overflowing the
+	// Go stack. Entries live only for the current recursive mapping call.
+	mappingTypes map[*checker.Type]bool
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

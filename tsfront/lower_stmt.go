@@ -434,7 +434,7 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.FieldGet, Node: l.node(lhs), Name: f.Name, Type: f.Type, X: recv}
 		}
-		l.diagf(lhs, "unsupported-assignment", "assignment to property %s is not lowered", lhs.Text())
+		l.diagf(lhs, "unsupported-assignment", "assignment to property %s is not lowered", p.Name().Text())
 	default:
 		l.diagf(lhs, "unsupported-assignment", "assignment target %s is not lowered", lhs.Kind.String())
 	}

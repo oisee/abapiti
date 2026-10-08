@@ -287,6 +287,15 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		l.diagf(n, "unsupported-type", "no checker type")
 		return hir.T(hir.Void)
 	}
+	if l.mappingTypes[t] {
+		l.diagf(n, "unsupported-type", "recursive checker type has no lowered nominal reference")
+		return hir.T(hir.Void)
+	}
+	if l.mappingTypes == nil {
+		l.mappingTypes = map[*checker.Type]bool{}
+	}
+	l.mappingTypes[t] = true
+	defer delete(l.mappingTypes, t)
 	if t.IsUnion() {
 		optional := false
 		var parts []hir.Type

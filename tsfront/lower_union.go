@@ -74,7 +74,13 @@ func (l *lowerer) unionMethods(t hir.Type) map[string]*hir.Method {
 				}
 				for _, d := range sym.Declarations {
 					for _, member := range d.Members() {
-						if member.Name() != nil && member.Name().Text() == m.Name && member.ModifierFlags()&(ast.ModifierFlagsPrivate|ast.ModifierFlagsProtected) != 0 {
+						name := ""
+						if e, ok := l.overrides[member]; ok && e.Method != nil {
+							name = e.Method().Name
+						} else if n := member.Name(); n != nil && (n.Kind == ast.KindIdentifier || n.Kind == ast.KindPrivateIdentifier || n.Kind == ast.KindStringLiteral) {
+							name = n.Text()
+						}
+						if name == m.Name && member.ModifierFlags()&(ast.ModifierFlagsPrivate|ast.ModifierFlagsProtected) != 0 {
 							public = false
 						}
 					}

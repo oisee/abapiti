@@ -1,0 +1,92 @@
+[
+  {
+    "filename": "ztest.prog.abap",
+    "raw": "REPORT ztest.\n",
+    "dump": "ztest.prog.abap\nZTEST\nPROG\nREPORT ztest.\n\n2\n13:REPORT ztest.\n0:"
+  },
+  {
+    "filename": "src/if_http_client.intf.abap",
+    "raw": "INTERFACE if_http_client PUBLIC.\nENDINTERFACE.",
+    "dump": "src/if_http_client.intf.abap\nIF_HTTP_CLIENT\nINTF\nINTERFACE if_http_client PUBLIC.\nENDINTERFACE.\n2\n32:INTERFACE if_http_client PUBLIC.\n13:ENDINTERFACE."
+  },
+  {
+    "filename": "src\\cl_http_client.clas.abap",
+    "raw": "\r\n\n",
+    "dump": "src\\cl_http_client.clas.abap\nCL_HTTP_CLIENT\nCLAS\n\r\n\n\n3\n1:\r\n0:\n0:"
+  },
+  {
+    "filename": "src/exceptions/cx_foo.clas.xml",
+    "raw": "<abapGit/>",
+    "dump": "src/exceptions/cx_foo.clas.xml\nCX_FOO\nCLAS\n<abapGit/>\n1\n10:<abapGit/>"
+  },
+  {
+    "filename": "ZCASE.PROG.ABAP",
+    "raw": "REPORT zcase.",
+    "dump": "ZCASE.PROG.ABAP\nZCASE\nPROG\nREPORT zcase.\n1\n13:REPORT zcase."
+  },
+  {
+    "filename": "#namespace#object.clas.abap",
+    "raw": "",
+    "dump": "#namespace#object.clas.abap\n/NAMESPACE/OBJECT\nCLAS\n\n1\n0:"
+  },
+  {
+    "filename": "%23namespace%23object.clas.abap",
+    "raw": "a\nb",
+    "dump": "%23namespace%23object.clas.abap\n/NAMESPACE/OBJECT\nCLAS\na\nb\n2\n1:a\n1:b"
+  },
+  {
+    "filename": "%23namespace%23object%3e%3c.clas.abap",
+    "raw": "\t x \r\n",
+    "dump": "%23namespace%23object%3e%3c.clas.abap\n/NAMESPACE/OBJECT><\nCLAS\n\t x \r\n\n2\n5:\t x \r\n0:"
+  },
+  {
+    "filename": "%23namespace%23object%3E%3C.clas.abap",
+    "raw": "a\n\nb",
+    "dump": "%23namespace%23object%3E%3C.clas.abap\n/NAMESPACE/OBJECT%3E%3C\nCLAS\na\n\nb\n3\n1:a\n0:\n1:b"
+  },
+  {
+    "filename": "(namespace)object.type.abap",
+    "raw": "TYPE-POOL object.",
+    "dump": "(namespace)object.type.abap\n/NAMESPACE/OBJECT\nTYPE\nTYPE-POOL object.\n1\n17:TYPE-POOL object."
+  },
+  {
+    "filename": "identity.xslt.source.xml",
+    "raw": "<root/>",
+    "dump": "identity.xslt.source.xml\nIDENTITY\nXSLT\n<root/>\n1\n7:<root/>"
+  },
+  {
+    "filename": "cx_abap_datfm.abap",
+    "raw": "CLASS cx_abap_datfm DEFINITION. ENDCLASS.",
+    "dump": "cx_abap_datfm.abap\nCX_ABAP_DATFM\nABAP\nCLASS cx_abap_datfm DEFINITION. ENDCLASS.\n1\n41:CLASS cx_abap_datfm DEFINITION. ENDCLASS."
+  },
+  {
+    "filename": ".gitignore",
+    "raw": "\n",
+    "dump": ".gitignore\n\nGITIGNORE\n\n\n2\n0:\n0:"
+  },
+  {
+    "filename": "nodot",
+    "raw": "space ",
+    "dump": "nodot\nNODOT\n<undefined>\nspace \n1\n6:space "
+  },
+  {
+    "filename": "/zroot.prog.abap",
+    "raw": "\n\n",
+    "dump": "/zroot.prog.abap\n/ZROOT\nPROG\n\n\n\n3\n0:\n0:\n0:"
+  },
+  {
+    "filename": "\\zroot.prog.abap",
+    "raw": "line\r",
+    "dump": "\\zroot.prog.abap\n\\ZROOT\nPROG\nline\r\n1\n5:line\r"
+  },
+  {
+    "filename": "dir/",
+    "raw": "",
+    "dump": "dir/\n\n<undefined>\n\n1\n0:"
+  },
+  {
+    "filename": "",
+    "raw": "",
+    "dump": "\n\n<undefined>\n\n1\n0:"
+  }
+]

@@ -1239,8 +1239,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = -1.")
 			b.line("ENDIF.")
 		case "string.split":
-			b.line("CREATE OBJECT " + n + ".")
-			b.line("SPLIT " + a + " AT " + args[0] + " INTO TABLE " + n + "->items.")
+			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
 			b.line("CALL METHOD " + args[0] + "->replace EXPORTING p0 = " + a + " p1 = " + args[1] + " RECEIVING result = " + n + ".")
 		case "string.replaceAll":

@@ -110,7 +110,11 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 	}
 	for _, m := range node.Members() {
 		if m.Kind != ast.KindPropertySignature && m.Kind != ast.KindPropertyDeclaration {
-			l.diagf(m, "skipped-interface-member", "data interface %s: member %s is skipped", i.Name, m.Name().Text())
+			l.diagf(m, "skipped-interface-member", "data interface %s: member %s is skipped", i.Name, m.Kind.String())
+			continue
+		}
+		if m.Name() == nil || (m.Name().Kind != ast.KindIdentifier && m.Name().Kind != ast.KindStringLiteral && m.Name().Kind != ast.KindPrivateIdentifier) {
+			l.diagf(m, "skipped-computed-name", "data interface %s has a computed property name", i.Name)
 			continue
 		}
 		name := m.Name().Text()
@@ -482,7 +486,11 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 	}
 	for _, m := range node.Members() {
 		if m.Kind != ast.KindMethodDeclaration && m.Kind != ast.KindMethodSignature {
-			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, m.Name().Text())
+			name := m.Kind.String()
+			if n := m.Name(); n != nil && (n.Kind == ast.KindIdentifier || n.Kind == ast.KindPrivateIdentifier || n.Kind == ast.KindStringLiteral) {
+				name = m.Name().Text()
+			}
+			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, name)
 			continue
 		}
 		name, ok := l.memberName(m, nil)
