@@ -1,6 +1,10 @@
 package tsfront
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 // The static Registry closure contains callable/indexed interfaces. These
 // unnamed members must produce blocking diagnostics rather than panic while
@@ -45,4 +49,22 @@ func TestRegistryDynamicPropertyAssignmentFailsClosed(t *testing.T) {
 	requireDiagnostic(t, sourceProbe(t, `
 export class Probe { run(value: any): void { value.config = {}; } }
 `), "unsupported-assignment")
+}
+
+// Critic (PR #50): delete on a Map must not remove the entry; JS keeps it.
+func TestRegistryDeleteOnMapFailsClosed(t *testing.T) {
+	dir := sourceProbe(t, `
+export class Probe {
+  run(): boolean {
+    const m = new Map<string, number>();
+    m.set("x", 1);
+    delete m["x"];
+    return m.has("x");
+  }
+}
+`)
+	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"target":"ES2022","strict":true,"noImplicitAny":false},"files":["input.ts"]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	requireDiagnostic(t, dir, "unsupported-expr")
 }

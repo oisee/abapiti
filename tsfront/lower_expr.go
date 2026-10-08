@@ -220,13 +220,16 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindDeleteExpression:
 		operand := n.AsDeleteExpression().Expression
 		var receiver, key *hir.Expr
+		var receiverNode *ast.Node
 		switch operand.Kind {
 		case ast.KindElementAccessExpression:
 			p := operand.AsElementAccessExpression()
+			receiverNode = p.Expression
 			receiver = l.expr(p.Expression)
 			key = l.expr(p.ArgumentExpression)
 		case ast.KindPropertyAccessExpression:
 			p := operand.AsPropertyAccessExpression()
+			receiverNode = p.Expression
 			receiver = l.expr(p.Expression)
 			key = hir.L(hir.T(hir.String), p.Name().Text())
 		default:
@@ -234,6 +237,12 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		if receiver == nil || key == nil {
+			return nil
+		}
+		// Maps share the OrderedMap representation with records, but delete on a
+		// Map only removes an own property, never an entry.
+		if sym := l.ck.GetTypeAtLocation(receiverNode).Symbol(); sym != nil && (sym.Name == "Map" || sym.Name == "ReadonlyMap") {
+			l.diagf(n, "unsupported-expr", "delete on a Map does not remove its entries")
 			return nil
 		}
 		if receiver.Type.Kind != hir.OrderedMap || !receiver.Type.Args[0].Equal(key.Type) {
