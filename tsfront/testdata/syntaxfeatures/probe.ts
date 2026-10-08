@@ -139,7 +139,12 @@ export class Probe {
     const viewed = (root.firstKid()?.concat() ?? "none") + (root.firstKid()?.kindOf() ?? "") + (new ENode(0, flag).firstKid()?.concat() ?? "none");
     const downcast = Probe.base(sib) instanceof Sibling2 ? (Probe.base(sib) as Sibling2).only2() : "not2";
     const typed = `${typeof counter === "boolean"}/${typeof n === "number"}/${typeof flag === "string"}/${typeof sib !== "number"}`;
-    const parts: string[] = [evolving.join("+"), viewed, downcast, typed,
+    const nested: {[k: string]: {[n: string]: string[]}} = {};
+    nested["m"] = {};
+    nested["m"]["1"] = ["keep", needle, "keep2"];
+    nested["m"]["1"] = nested["m"]["1"].filter(v => v !== needle);
+    const filtered = nested["m"]["1"].join(",");
+    const parts: string[] = [evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,

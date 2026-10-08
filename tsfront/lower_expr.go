@@ -866,6 +866,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array && ast.IsOptionalChain(n) {
 				return l.withLocal(p.Expression, recvX, func() *hir.Expr { return l.optionalChain(n) })
 			}
+			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// An index-signature read the checker types as present: a
+				// checked narrow raises where JavaScript would throw a TypeError.
+				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
+			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
 					return x
