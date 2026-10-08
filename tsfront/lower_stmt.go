@@ -369,6 +369,22 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 		switch b.OperatorToken.Kind {
 		case ast.KindEqualsToken:
 			return l.assignment(n, b.Left, b.Right)
+		case ast.KindQuestionQuestionEqualsToken:
+			// a ??= b: assign only while a is absent; b is evaluated only then.
+			target := l.assignTarget(b.Left)
+			if target == nil {
+				return nil
+			}
+			if !(target.Kind == hir.Local || target.Kind == hir.FieldGet && target.X != nil && target.X.Kind == hir.This) || !(target.Type.Kind == hir.Optional || target.Type.IsRef()) {
+				l.diagf(n, "unsupported-expr", "??= needs an optional local or this field")
+				return nil
+			}
+			value := l.expr(b.Right)
+			if value == nil {
+				return nil
+			}
+			return &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: target},
+				Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: l.coerce(value, target.Type)})}
 		case ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 			op := map[ast.Kind]string{
 				ast.KindPlusEqualsToken: "+", ast.KindMinusEqualsToken: "-", ast.KindAsteriskEqualsToken: "*"}[b.OperatorToken.Kind]
