@@ -43,7 +43,8 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"record.delete": {OrderedMap, 1, true},
 	"map.set":       {OrderedMap, 2, true}, "map.get": {OrderedMap, 1, false}, "map.has": {OrderedMap, 1, false}, "map.size": {OrderedMap, 0, false},
 	"set.add": {OrderedSet, 1, true}, "set.has": {OrderedSet, 1, false}, "set.size": {OrderedSet, 0, false},
-	"set.copy": {OrderedSet, 1, false},
+	"set.copy":      {OrderedSet, 1, false},
+	"set.fromArray": {OrderedSet, 1, true},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
 	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false},
 	"classvalue.name": {ClassValue, 0, false},
@@ -57,11 +58,12 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
-	"object.classOf": true, // any object ref -> ClassValue
-	"classvalue.new": true, // ClassValue -> a class or interface reference
-	"dynamic.of":     true, // any value -> Dynamic (tagged box)
-	"dynamic.asRef":  true, // Dynamic -> a class or interface reference
-	"regexp.new":     true, // pattern, [flags] -> RegExp
+	"object.classOf":      true, // any object ref -> ClassValue
+	"classvalue.new":      true, // ClassValue -> a class or interface reference
+	"dynamic.of":          true, // any value -> Dynamic (tagged box)
+	"dynamic.asRef":       true,
+	"dynamic.materialize": true, // Dynamic -> a class or interface reference
+	"regexp.new":          true, // pattern, [flags] -> RegExp
 }
 
 func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
@@ -163,6 +165,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t.Args[0]}, t, true
 	case "set.copy":
 		return []Type{t}, t, true
+	case "set.fromArray":
+		return []Type{T(Array, t.Args[0])}, t, true
 	case "map.keys", "set.values":
 		return nil, T(Array, t.Args[0]), true
 	case "classvalue.name":

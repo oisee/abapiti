@@ -1,0 +1,10 @@
+[
+  {
+    "input": "{\"global\":{\"files\":\"/src/**/*.abap\"},\"syntax\":{\"version\":\"v702\",\"errorNamespace\":\"^Z\",\"globalConstants\":[\"B\",\"A\",\"B\"],\"ambigiousVoids\":[\"Z\",\"Z\"]},\"rules\":{\"unknown_rule\":false},\"targetRules\":null,\"extra\":{\"retained\":[1,true,null]}}",
+    "expected": "/src/**/*.abap/v702/^Z/B,A/Z/0/false/false/false/true"
+  },
+  {
+    "input": "{\"global\":{\"files\":\"x\",\"skipIncludesWithoutMain\":true,\"errorOnDuplicateFilenames\":true},\"syntax\":{\"errorNamespace\":\"^Y\"},\"rules\":{}}",
+    "expected": "x/undefined/^Y///0/true/true/undefined/false"
+  }
+]

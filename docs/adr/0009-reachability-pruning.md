@@ -163,3 +163,23 @@ and the two RulesRunner parameter annotations agree with these replacements;
 changing an unrelated Generator/Iterable annotation does not enable lowering.
 The shared RulesRunner span pins both its clock expressions and its reviewed
 parameter annotation. Every adaptation remains override debt to generalise later.
+
+The strict JSON adapter builds the same recursive graph, rejecting JSON5-only
+syntax explicitly. A fingerprinted Config constructor pattern replaces only the
+external JSON5 parse/default-export shim; the existing TypeScript defaults and
+version checks remain live. A checked materializer projects graph fields into
+native data shapes with their constructor ABI, preserving optional presence,
+primitive tags and array contents. Every materialized data shape also retains its
+entire original source graph, including unknown keys; no graph node is blindly
+cast to a native object reference. Projection into executable classes or unsupported
+shape ABIs remains blocking. Full resolved-config serialization must encode current
+native fields over that backing metadata; the backing graph alone is not a claim
+that constructor mutations have been serialized.
+
+Typed `new Set(array)` and immediate Set spreads preserve first occurrence order
+for supported primitive/reference elements; Dynamic and Optional element boxes
+remain blocking because identity of wrapper boxes is not JS SameValueZero.
+Config constructor constant/void deduplication now uses these operations. Component
+differentials check the original config graph, unknown-field retention and ordinary
+TypeScript defaulting consumers on both runtimes. Full Registry acceptance remains
+strictly gated on emission and its inventory/config/dump and mutation comparisons.

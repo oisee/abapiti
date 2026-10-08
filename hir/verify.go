@@ -808,6 +808,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		}
 		eq(t, T(Dynamic))
 		args(nil)
+	case "dynamic.materialize":
+		if a.Kind != Dynamic || t.Kind != ClassRef {
+			v.fail(e.Node, "dynamic.materialize needs Dynamic in and a data class reference out")
+		}
+		args(nil)
 	case "dynamic.asRef":
 		if a.Kind != Dynamic || !ref(t) {
 			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")

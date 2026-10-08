@@ -12,12 +12,13 @@ import (
 )
 
 type emitter struct {
-	p          *hir.Program
-	names      *hir.Names
-	files      map[string]string
-	types      map[string]bool
-	err        error
-	valueSlots map[string]bool
+	p            *hir.Program
+	names        *hir.Names
+	files        map[string]string
+	types        map[string]bool
+	err          error
+	valueSlots   map[string]bool
+	materialized map[string]bool
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
@@ -195,6 +196,9 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.InstanceOf && x.Y != nil {
 			need = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
+			e.materializer(x.Type)
+		}
 		if x.Type.Kind == hir.RegExp {
 			e.regexpUsed = true
 		}
@@ -338,6 +342,9 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
+	if e.materialized[c.Name] {
+		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
+	}
 	for _, i := range c.Implements {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
 	}
@@ -1264,6 +1271,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "dynamic.materialize":
+		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
+		return
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")

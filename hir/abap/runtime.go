@@ -120,6 +120,17 @@ func (e *emitter) runtime(t hir.Type) {
 			method("get", code+"ENDIF.\n")
 		}
 		if t.Kind == hir.OrderedSet {
+			line("METHODS fromArray IMPORTING p0 TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
+			code := "DATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
+			if t.Args[0].IsRef() {
+				code += "DATA native TYPE REF TO object.\nLOOP AT p0->items INTO native.\nrow ?= native.\n"
+			} else {
+				code += "LOOP AT p0->items INTO row.\n"
+			}
+			code += "ignored = add( row ).\nENDLOOP.\nresult = me.\n"
+			method("fromArray", code)
+		}
+		if t.Kind == hir.OrderedSet {
 			line("METHODS copy IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 			method("copy", "CREATE OBJECT result.\nAPPEND LINES OF p0->entries TO result->entries.\n")
 		}

@@ -423,6 +423,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
 				sv := l.expr(el.Expression())
+				if sv != nil && sv.Type.Kind == hir.OrderedSet {
+					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
+				}
 				if sv == nil || sv.Type.Kind != hir.Array {
 					l.diagf(el, "unsupported-array", "spread element needs an array")
 					return nil
@@ -1303,6 +1306,11 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		args := n.Arguments()
 		if len(args) == 1 {
 			a := l.expr(args[0])
+			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
+				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
+				fresh := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
+				return l.rtOp("set.fromArray", fresh, typ, a)
+			}
 			if a != nil && a.Type.Kind == hir.OrderedSet {
 				l.diagf(n, "note-set-copy", "new Set(set) lowered to a copy")
 				return l.rtOp("set.copy", a, a.Type, a)

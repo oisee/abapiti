@@ -30,3 +30,11 @@ const iteratorCompiled=ts.transpileModule(readFileSync(iteratorFile,'utf8'),{com
 const iteratorModule={exports:{}};
 new Function('exports','module',iteratorCompiled)(iteratorModule.exports,iteratorModule);
 writeFileSync('tsfront/testdata/registryfeatures/iterators-oracle.json',JSON.stringify({run:iteratorModule.exports.IteratorProbe.run()},null,2)+'\n');
+
+const jsonFile=resolve('tsfront/testdata/registryfeatures/json.ts');
+const jsonCompiled=ts.transpileModule(readFileSync(jsonFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const jsonModule={exports:{}};
+new Function('exports','module',jsonCompiled)(jsonModule.exports,jsonModule);
+jsonModule.exports.JSONProbe.config=JSON.parse;
+const configCases=[{global:{files:'/src/**/*.abap'},syntax:{version:'v702',errorNamespace:'^Z',globalConstants:['B','A','B'],ambigiousVoids:['Z','Z']},rules:{unknown_rule:false},targetRules:null,extra:{retained:[1,true,null]}},{global:{files:'x',skipIncludesWithoutMain:true,errorOnDuplicateFilenames:true},syntax:{errorNamespace:'^Y'},rules:{}}];
+writeFileSync('tsfront/testdata/registryfeatures/config-oracle.json',JSON.stringify(configCases.map(input=>({input:JSON.stringify(input),expected:jsonModule.exports.JSONProbe.defaults(JSON.stringify(input))})),null,2)+'\n');

@@ -284,6 +284,7 @@ DATA entries TYPE entries_type.
 METHODS size RETURNING VALUE(result) TYPE i.
 METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
 METHODS add IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_set__edc1f1305a34c6.
+METHODS fromArray IMPORTING p0 TYPE REF TO z_runtime_arra_59ccfd100c9888 RETURNING VALUE(result) TYPE REF TO z_runtime_set__edc1f1305a34c6.
 METHODS copy IMPORTING p0 TYPE REF TO z_runtime_set__edc1f1305a34c6 RETURNING VALUE(result) TYPE REF TO z_runtime_set__edc1f1305a34c6.
 METHODS values RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 PROTECTED SECTION.

@@ -32,6 +32,8 @@ func TestEmitRegistryJSON(t *testing.T) {
 	}
 	registry, err := overrides.New(overrides.Entry{ID: "json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.parse", Kind: "KindMethodDeclaration"}, SHA256: "4d627fb0829356bf92903ad6dd03bba444f77d7c57560f3c162f7a1bd23a7db9", Rationale: "strict JSON external adapter differential", Method: func() *hir.Method {
 		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.Dynamic), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "json.parseSubset", Type: hir.T(hir.Dynamic), X: hir.V("text", hir.T(hir.String))}})}
+	}}, overrides.Entry{ID: "typed-json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.config", Kind: "KindMethodDeclaration"}, SHA256: "64d64c5d5ae6d288faa6c7732fd89638a55f9cd3725a91f59dcc25aa2055fdad", Rationale: "same typed adapter projection as Config constructor", Method: func() *hir.Method {
+		return &hir.Method{Name: "config", Static: true, Result: hir.Ref("json.ts.ConfigGraph"), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: overrides.StrictJSONProjection(hir.V("text", hir.T(hir.String)), hir.Ref("json.ts.ConfigGraph"))})}
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -64,6 +66,20 @@ func TestEmitRegistryJSON(t *testing.T) {
 		inputs = append(inputs, string(raw))
 	}
 	inputs = append(inputs, `{"global":{"files":"/src/**/*.abap"},"syntax":{"version":"v702"},"rules":{"unknown_rule":false},"list":[0,"second"],"n":null}`, `{"a":"\"\\\/\b\f\n\r\t\u0041\u00e9\u03b1\ud83d\ude00","a": "last", "n":-1.25e+2,"empty":{},"array":[],"bool":true}`, `{"escaped":"\"\\\/\b\f\n\r\t\u0041\u00e9\u03b1\ud83d\ude00", "nested":[null,false,true,0,1.25,-125,{}]}`)
+	configRaw, err := os.ReadFile("testdata/registryfeatures/config-oracle.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var configCases []struct{ Input, Expected string }
+	if err := json.Unmarshal(configRaw, &configCases); err != nil {
+		t.Fatal(err)
+	}
+	if len(configCases) != 2 {
+		t.Fatal("missing original config observations")
+	}
+	for _, test := range configCases {
+		inputs = append(inputs, test.Input)
+	}
 	for i, input := range inputs {
 		var value any
 		if err := json.Unmarshal([]byte(input), &value); err != nil {
@@ -79,6 +95,7 @@ func TestEmitRegistryJSON(t *testing.T) {
 		for _, s := range abapStringBuild("text", "ch", input) {
 			line("%s", s)
 		}
+		line("DATA input TYPE string.\ninput = text.")
 		line("DATA root TYPE REF TO %s.", dynamic)
 		line("root = %s=>%s( text ).", class, names.Get("member.parse"))
 		serial := 0
@@ -135,6 +152,22 @@ func TestEmitRegistryJSON(t *testing.T) {
 			}
 		}
 		check(value, "root")
+		if i <= 1 || i >= 5 {
+			line("DATA typed TYPE REF TO %s.", names.Get("json.ts.ConfigGraph"))
+			line("typed = %s=>%s( input ).", class, names.Get("member.config"))
+			line("cl_abap_unit_assert=>assert_bound( typed ).")
+			line("root = typed->%s.", names.Get("builtin.materializedSource"))
+			check(value, "root")
+			if i >= 5 {
+				line("DATA actual TYPE string.")
+				line("actual = %s=>%s( input ).", class, names.Get("member.defaults"))
+				line("CLEAR text.")
+				for _, s := range abapStringBuild("text", "ch", configCases[i-5].Expected) {
+					line("%s", s)
+				}
+				line("cl_abap_unit_assert=>assert_equals( act = actual exp = text ).")
+			}
+		}
 		line("ENDMETHOD.\nENDCLASS.")
 		files[driver+".clas.testclasses.abap"] = b.String()
 	}
