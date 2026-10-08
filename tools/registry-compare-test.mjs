@@ -56,3 +56,33 @@ test("metadata key order is immaterial; filename case and file order are observa
  assert.notEqual(firstDifference("ZCASE.PROG.ABAP","zcase.prog.abap"),null);
  assert.notEqual(firstDifference({xml:null},{}),null);
 });
+
+test('documented subset divergences require the specified loud failures', () => {
+ const root=mkdtempSync(join(tmpdir(),'registry-scope-'));
+ const candidate=mkdtempSync(join(tmpdir(),'registry-subset-'));
+ try {
+  const original=fixture();
+  original.negative.malformed_xml={outcome:'return',value:original.inventory};
+  write(root,original);
+  const translated=structuredClone(original);
+  translated.negative.json5={outcome:'throw',error:'RegistryJSONSubsetError',message:'JSON5-only syntax'};
+  translated.negative.malformed_config={outcome:'throw',error:'RegistryJSONSubsetError',message:'invalid JSON'};
+  translated.negative.malformed_xml={outcome:'throw',error:'RegistryXMLSubsetError',message:'mismatched end tag'};
+  write(candidate,translated);
+  assert.equal(compareDirectories(root,candidate).verdict,'MISMATCH');
+  const result=compareDirectories(root,candidate,{translated:true});
+  assert.equal(result.verdict,'OK');
+  assert.equal(result.divergences.length,3);
+  assert(result.divergences.every(d=>d.pass && d.reason));
+  for (const name of ['json5','malformed_config','malformed_xml']) {
+   for (const bad of [original.negative[name],{outcome:'throw',error:'Error',message:'unrelated failure'},
+    {...translated.negative[name],message:''}]) {
+    const mutant=structuredClone(translated);mutant.negative[name]=bad;write(candidate,mutant);
+    assert.equal(compareDirectories(root,candidate,{translated:true}).verdict,'MISMATCH');
+   }
+  }
+  translated.inventory[0].dependency=false;
+  write(candidate,translated);
+  assert.equal(compareDirectories(root,candidate,{translated:true}).verdict,'MISMATCH');
+ } finally {rmSync(root,{recursive:true,force:true});rmSync(candidate,{recursive:true,force:true});}
+});

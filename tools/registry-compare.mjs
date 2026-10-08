@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 import {join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {createHash} from "node:crypto";
+import {compareDocumentedDivergences, documentedDivergences} from './registry-scope.mjs';
 
 export function firstDifference(expected, actual, path = "$") {
  if (expected === actual) return null;
@@ -67,16 +68,24 @@ export function validateObservations(o) {
  }
 
 }
-export function compareDirectories(expectedDir, actualDir) {
+export function compareDirectories(expectedDir, actualDir, {translated = false} = {}) {
  const observations = ["manifest","inventory","config","dumps","negative"];
  const read = dir => Object.fromEntries(observations.map(name=>[name,JSON.parse(readFileSync(join(dir,name+'.json'),'utf8'))]));
  const expectedObservations=read(expectedDir), actualObservations=read(actualDir);
  validateObservations(expectedObservations); validateObservations(actualObservations);
  const result = {verdict:"OK", comparisons:[]};
+ if (translated) {
+  result.divergences = compareDocumentedDivergences(expectedObservations.negative, actualObservations.negative);
+  if (result.divergences.some(d=>!d.pass)) result.verdict = 'MISMATCH';
+ }
  for (const name of observations) {
   const expected = expectedObservations[name];
   const actual = actualObservations[name];
-  const difference = firstDifference(expected,actual);
+  let difference;
+  if (translated && name === 'negative') {
+   const inScope = data => Object.fromEntries(Object.entries(data).filter(([key])=>!documentedDivergences.some(d=>d.name===key)));
+   difference = firstDifference(inScope(expected),inScope(actual));
+  } else difference = firstDifference(expected,actual);
   const sha = data => createHash("sha256").update(canonical(data)).digest("hex");
   result.comparisons.push({name,expectedSHA256:sha(expected),actualSHA256:sha(actual),difference});
   if (difference) result.verdict = "MISMATCH";
@@ -84,9 +93,10 @@ export function compareDirectories(expectedDir, actualDir) {
  return result;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
- const [expected,actual] = process.argv.slice(2);
+ const [expected,actual,mode] = process.argv.slice(2);
  if (!actual) throw new Error("usage: registry-compare.mjs original-observations translated-observations");
- const result = compareDirectories(expected,actual);
+ if (mode && mode !== '--translated') throw new Error('unknown comparison mode: '+mode);
+ const result = compareDirectories(expected,actual,{translated:mode==='--translated'});
  console.log(JSON.stringify(result,null,2));
  if (result.verdict !== "OK") process.exitCode = 1;
 }
