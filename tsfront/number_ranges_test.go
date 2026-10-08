@@ -494,14 +494,38 @@ run(other:Probe):number {this.n=0; ` + change + ` const observed=this.n;return o
 }
 
 func TestNumberRangeInheritedAliasWrite(t *testing.T) {
-	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
-private n=0;
-run(other:Derived):number {this.n=0;other.n=0.5;const observed=this.n;return observed;}
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Base {protected n=0;}
+export class Middle extends Base {}
+export class Derived extends Middle {
+run(flag:boolean):number {this.n=0;const alias=this;alias.n=0.5;const observed=flag?this.n:0;return observed;}
 }
-export class Derived extends Probe {}`}, []string{"probe.ts"})
-	m := rangeClass(t, p, ".Probe").Methods[0]
-	if rangeLocals(m)["observed"] != hir.Number {
-		t.Fatal("inherited alias write missed declaring-class summary")
+`}, []string{"probe.ts"})
+	m := rangeClass(t, p, ".Derived").Methods[0]
+	if got := rangeLocals(m)["observed"]; got != hir.Number {
+		t.Fatalf("inherited alias write acquired %v", got)
+	}
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberRangeSuperReturnedThisAliasWrite(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Base {
+protected n=0;
+self():Base {return this;}
+}
+export class Derived extends Base {
+self():Base {return super.self();}
+run(flag:boolean):number {this.n=0;const alias=this.self();alias.n=0.5;const observed=flag?this.n:0;return observed;}
+}`}, []string{"probe.ts"})
+	var run *hir.Method
+	for _, candidate := range rangeClass(t, p, ".Derived").Methods {
+		if candidate.Name == "run" {
+			run = candidate
+		}
+	}
+	if got := rangeLocals(run)["observed"]; got != hir.Number {
+		t.Fatalf("super-returned this alias write acquired %v", got)
 	}
 	if _, err := abap.Emit(p); err != nil {
 		t.Fatal(err)
@@ -578,6 +602,82 @@ run(n:number):number {{const n=7;const read=()=>n;return read();}}
 	}
 }
 
+func TestNumberBoundaryCatchShadowedClosureCapture(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+private start=0;
+private raw="abc";
+add(offset:number):string {
+this.start=offset;
+{const offset=new Error("outer");try {throw new Error("inner");} catch(offset:any) {const read=():string=>offset.message;return read();}}
+return "";
+}
+get():string {return this.raw.charAt(this.start);}
+}`}, []string{"probe.ts"})
+	var add *hir.Method
+	for _, candidate := range rangeClass(t, p, ".Probe").Methods {
+		if candidate.Name == "add" {
+			add = candidate
+		}
+	}
+	var caught string
+	walkNumberStmt(add.Body, func(s *hir.Stmt) {
+		if s.Kind == hir.Try {
+			caught = s.Name
+		}
+	}, func(e *hir.Expr) {})
+	walkNumberStmt(add.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+		if e.Kind != hir.VirtualCall || !strings.HasPrefix(e.Name, "fn_") || len(e.Args) == 0 {
+			return
+		}
+		arg := e.Args[0]
+		if arg.Kind != hir.Local || arg.Name != caught {
+			t.Fatalf("capture crossed catch binding: got %q, want %q", arg.Name, caught)
+		}
+	})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberBindingScopeWalkerKinds(t *testing.T) {
+	// These are the HIR binder shapes produced by every supported TypeScript
+	// binding construct. Class static blocks are rejected before lowering and
+	// therefore have no HIR local binder.
+	for _, s := range []*hir.Stmt{
+		{Kind: hir.VarDecl, Name: "x"},
+		{Kind: hir.ForEach, Name: "x"},
+		{Kind: hir.Try, Name: "x"},
+	} {
+		if !numberBindsLocal(s) {
+			t.Fatalf("%s binder is not handled by the scope walker", s.Kind)
+		}
+	}
+	for _, kind := range []ast.Kind{
+		ast.KindVariableDeclaration,
+		ast.KindParameter,
+		ast.KindCatchClause,
+		ast.KindForStatement,
+		ast.KindForOfStatement,
+		ast.KindForInStatement,
+		ast.KindArrowFunction,
+		ast.KindFunctionExpression,
+		ast.KindFunctionDeclaration,
+		ast.KindClassStaticBlockDeclaration,
+	} {
+		hirKind := numberBindingHIRKind(kind)
+		if kind == ast.KindClassStaticBlockDeclaration {
+			if hirKind != "" {
+				t.Fatal("unsupported static blocks must not claim a binder")
+			}
+			continue
+		}
+		binder := &hir.Stmt{Kind: hirKind, Name: "x"}
+		if hirKind == "" || !numberBindsLocal(binder) {
+			t.Fatalf("%s binder is not handled by the scope walker", kind)
+		}
+	}
+}
+
 // This fixture exercises observable results on both ABAP runtimes when exported.
 func TestNumberFix1Semantics(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `
@@ -608,6 +708,99 @@ export class Shadow {private start=0;private raw="abc";add(offset:number):number
 		}
 		for name, source := range files {
 			if err := os.WriteFile(filepath.Join(out, name), []byte(source), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func TestNumberFix2Semantics(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `
+export class Base {protected n=0;}
+export class Middle extends Base {}
+export class TwoLevels extends Middle {
+run(flag:boolean):number {this.n=0;const alias=this;alias.n=0.5;const observed=flag?this.n:0;return observed;}
+}
+export class SuperBase {protected n=0; self():SuperBase {return this;}}
+export class SuperDerived extends SuperBase {
+self():SuperBase {return super.self();}
+run(flag:boolean):number {this.n=0;const alias=this.self();alias.n=0.5;const observed=flag?this.n:0;return observed;}
+}
+export class Catch {
+private start=0;
+private raw="abc";
+add(offset:number):string {
+this.start=offset;
+{const offset=new Error("outer");try {throw new Error("inner");} catch(offset:any) {const read=():string=>offset.message;return read();}}
+return "";
+}
+get():string {return this.raw.charAt(this.start);}
+}
+export class CatchLoop {
+private start=0;
+private raw="abc";
+add(offset:number):string {
+this.start=offset;
+for(const ignored of ["x"]){try {throw new Error("loop");} catch(offset:any){const read=():string=>offset.message;return read();}}
+return "";
+}
+get():string {return this.raw.charAt(this.start);}
+}
+export class NestedCatch {
+private start=0;
+private raw="abc";
+add(offset:number):string {
+this.start=offset;
+try {throw new Error("outer");}
+catch(offset:any){try {throw new Error("inner");} catch(offset:any){const read=():string=>offset.message;return read();}}
+return "";
+}
+get():string {return this.raw.charAt(this.start);}
+}
+`}, []string{"probe.ts"})
+	files, names, err := abap.EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source strings.Builder
+	source.WriteString("CLASS ltcl_fix2 DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS semantics FOR TESTING.\nENDCLASS.\nCLASS ltcl_fix2 IMPLEMENTATION.\nMETHOD semantics.\n")
+	for i, probe := range []struct {
+		class, method, value, args string
+		numeric                    bool
+	}{
+		{".TwoLevels", "run", "0.5", "abap_true", true},
+		{".SuperDerived", "run", "0.5", "abap_true", true},
+		{".Catch", "add", "inner", names.Get("param.offset") + " = CONV f( 1 )", false},
+		{".CatchLoop", "add", "loop", names.Get("param.offset") + " = CONV f( 1 )", false},
+		{".NestedCatch", "add", "inner", names.Get("param.offset") + " = CONV f( 1 )", false},
+	} {
+		className := names.Get(rangeClass(t, p, probe.class).Name)
+		if probe.numeric {
+			source.WriteString(fmt.Sprintf("DATA ref%d TYPE REF TO %s.\n", i, className))
+			source.WriteString(fmt.Sprintf("CREATE OBJECT ref%d.\n", i))
+			if i == 0 {
+				source.WriteString("DATA mark TYPE abap_bool.\n")
+			}
+			source.WriteString("mark = xsdbool( 1 = 1 ).\n")
+			source.WriteString(fmt.Sprintf("cl_abap_unit_assert=>assert_equals( act = xsdbool( ref%d IS INSTANCE OF %s ) exp = mark ).\n", i, className))
+			source.WriteString(fmt.Sprintf("DATA(number_actual%d) = ref%d->%s( %s ).\n", i, i, names.Get("member."+probe.method), probe.args))
+			source.WriteString(fmt.Sprintf("cl_abap_unit_assert=>assert_equals( act = number_actual%d exp = '%s' ).\n", i, probe.value))
+		} else {
+			source.WriteString(fmt.Sprintf("DATA string_ref%d TYPE REF TO %s.\n", i, className))
+			source.WriteString(fmt.Sprintf("CREATE OBJECT string_ref%d.\n", i))
+			source.WriteString(fmt.Sprintf("DATA(string_actual%d) = string_ref%d->%s( %s ).\n", i, i, names.Get("member."+probe.method), probe.args))
+			source.WriteString(fmt.Sprintf("cl_abap_unit_assert=>assert_equals( act = string_actual%d exp = '%s' ).\n", i, probe.value))
+		}
+	}
+	source.WriteString("ENDMETHOD.\nENDCLASS.\n")
+	className := names.Get(rangeClass(t, p, ".TwoLevels").Name)
+	files[className+".clas.testclasses.abap"] = source.String()
+	if out := os.Getenv("ABAPITI_FIX2_OUT"); out != "" {
+		if err := os.MkdirAll(out, 0755); err != nil {
+			t.Fatal(err)
+		}
+		for name, generated := range files {
+			if err := os.WriteFile(filepath.Join(out, name), []byte(generated), 0644); err != nil {
 				t.Fatal(err)
 			}
 		}

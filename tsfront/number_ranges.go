@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/oisee/abapiti/hir"
 )
@@ -200,6 +201,48 @@ func (p *numberPass) field(e *hir.Expr) string {
 	return owner + "." + e.Name
 }
 
+func (p *numberPass) declaringField(owner, name string) string {
+	for current := owner; current != ""; {
+		found := false
+		for _, class := range p.prog.Classes {
+			if class.Name != current {
+				continue
+			}
+			for _, field := range class.Fields {
+				if field.Name == name {
+					return class.Name + "." + name
+				}
+			}
+			current = class.Super
+			found = true
+			break
+		}
+		if !found {
+			break
+		}
+	}
+	return owner + "." + name
+}
+
+func (p *numberPass) tracksField(key string) bool {
+	owner, field, found := strings.Cut(key, ".")
+	if !found {
+		return false
+	}
+	for _, class := range p.prog.Classes {
+		if class.Name != owner {
+			continue
+		}
+		for _, candidate := range class.Fields {
+			if candidate.Name == field && candidate.Type.Kind == hir.Number && (candidate.Private || candidate.Readonly) {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
 func (p *numberPass) resolve(e *hir.Expr) *hir.Method {
 	owner := e.Owner
 	if e.Kind == hir.New {
@@ -271,12 +314,31 @@ func (p *numberPass) invalidateFields(env map[string]numberInterval) {
 				}
 			}
 			if k[0] == '@' {
-				env[k] = p.fields[p.current.class.Name+"."+k[1:]]
+				owner, name := p.current.class.Name, k[1:]
+				field := p.declaringField(owner, name)
+				env[k] = p.fieldSummary(field)
 			} else {
-				env[k] = p.fields[k[1:]]
+				env[k] = p.fieldSummary(k[1:])
 			}
 		}
 	}
+}
+
+func (p *numberPass) fieldSummary(key string) numberInterval {
+	if value, ok := p.fields[key]; ok {
+		return value
+	}
+	if p.tracksField(key) {
+		return missingNumberFact(key)
+	}
+	return numberTop
+}
+
+func missingNumberFact(key string) numberInterval {
+	if numberAssertMissingFacts {
+		panic("tsfront: missing number fact is not bottom: " + key)
+	}
+	return numberTop
 }
 func (p *numberPass) expr(e *hir.Expr, env map[string]numberInterval) numberInterval {
 	if e == nil {

@@ -330,8 +330,15 @@ type funcRef struct {
 // passed as leading parameters (they are immutable locals).
 type localFn struct {
 	method   *hir.Method
-	captures []string // local names, in declaration order
+	captures []localCapture
 	owner    *hir.Class
+}
+
+type localCapture struct {
+	name   string
+	typ    hir.Type
+	symbol *ast.Symbol
+	node   *ast.Node
 }
 
 // classOf resolves a class symbol through both registries. The by-name

@@ -225,14 +225,12 @@ func (l *lowerer) distinguishNumberLocals() {
 				seen[param.Name] = true
 			}
 			renamed := map[*ast.Symbol]string{}
-			originalNames := map[*hir.Stmt]string{}
 			walkNumberStmt(m.Body, func(s *hir.Stmt) {
-				if s.Kind != hir.VarDecl {
+				if !numberBindsLocal(s) {
 					return
 				}
-				name := s.Name
-				originalNames[s] = name
 				symbol := l.declSymbols[s]
+				name := s.Name
 				if seen[name] && symbol != nil {
 					for {
 						l.serial++
@@ -251,80 +249,26 @@ func (l *lowerer) distinguishNumberLocals() {
 					e.Name = name
 				}
 			})
-			// Lowering also synthesizes local reads (for example lifted capture
-			// arguments) without a source symbol. Bind those reads in their HIR scope.
-			l.renameSyntheticNumberLocals(m.Body, originalNames, map[string]string{})
 		}
 	}
 }
 
-func (l *lowerer) renameSyntheticNumberLocals(body *hir.Stmt, original map[*hir.Stmt]string, env map[string]string) {
-	var expr func(*hir.Expr, map[string]string)
-	var stmt func(*hir.Stmt, map[string]string)
-	clone := func(env map[string]string) map[string]string {
-		out := map[string]string{}
-		for k, v := range env {
-			out[k] = v
-		}
-		return out
+func numberBindsLocal(s *hir.Stmt) bool {
+	return s.Kind == hir.VarDecl || s.Kind == hir.ForEach || s.Kind == hir.Try
+}
+
+func numberBindingHIRKind(kind ast.Kind) hir.StmtKind {
+	switch kind {
+	case ast.KindVariableDeclaration, ast.KindForStatement, ast.KindParameter,
+		ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindFunctionDeclaration:
+		return hir.VarDecl
+	case ast.KindCatchClause:
+		return hir.Try
+	case ast.KindForOfStatement, ast.KindForInStatement:
+		return hir.ForEach
+	case ast.KindClassStaticBlockDeclaration:
+		return ""
+	default:
+		return ""
 	}
-	expr = func(e *hir.Expr, env map[string]string) {
-		if e == nil {
-			return
-		}
-		if e.Kind == hir.Local && l.localSymbols[e] == nil {
-			if name := env[e.Name]; name != "" {
-				e.Name = name
-			}
-		}
-		if e.Kind == hir.Seq {
-			scope := clone(env)
-			if e.Stmt != nil {
-				for _, s := range e.Stmt.List {
-					stmt(s, scope)
-				}
-			}
-			expr(e.Y, scope)
-			return
-		}
-		expr(e.X, env)
-		expr(e.Y, env)
-		expr(e.Z, env)
-		for _, a := range e.Args {
-			expr(a, env)
-		}
-	}
-	stmt = func(s *hir.Stmt, env map[string]string) {
-		if s == nil {
-			return
-		}
-		if s.Kind == hir.Block {
-			scope := clone(env)
-			for _, child := range s.List {
-				stmt(child, scope)
-			}
-			return
-		}
-		expr(s.X, env)
-		expr(s.Y, env)
-		if s.Kind == hir.VarDecl {
-			name := original[s]
-			if name == "" {
-				name = s.Name
-			}
-			env[name] = s.Name
-		}
-		if s.Kind == hir.ForEach {
-			scope := clone(env)
-			scope[s.Name] = s.Name
-			stmt(s.Body, scope)
-			return
-		}
-		stmt(s.Body, env)
-		stmt(s.Else, env)
-		for _, child := range s.List {
-			stmt(child, env)
-		}
-	}
-	stmt(body, env)
 }
