@@ -11,10 +11,6 @@ func TestInstanceOfInitialReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	compatFiles, err := EmitWithOptions(p, Options{OsgoInstanceOfFallback: true})
-	if err != nil {
-		t.Fatal(err)
-	}
 	concat := func(files map[string]string) string {
 		var all strings.Builder
 		for _, src := range files {
@@ -22,11 +18,8 @@ func TestInstanceOfInitialReference(t *testing.T) {
 		}
 		return all.String()
 	}
-	modern, legacy := concat(defaultFiles), concat(compatFiles)
+	modern := concat(defaultFiles)
 	if !strings.Contains(modern, "IS BOUND AND") || !strings.Contains(modern, "IS INSTANCE OF") || strings.Contains(modern, "narrowed ?=") {
 		t.Fatal("default InstanceOf must reject initial references before the static-type test")
-	}
-	if !strings.Contains(legacy, "IF value IS BOUND.") || !strings.Contains(legacy, "narrowed ?=") || strings.Contains(legacy, "IS INSTANCE OF") {
-		t.Fatal("compatibility InstanceOf helper must reject initial references before the cast")
 	}
 }

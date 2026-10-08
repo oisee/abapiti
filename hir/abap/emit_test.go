@@ -165,60 +165,50 @@ func fixtures() []fixture {
 }
 
 // Keep global definitions under review, including empty visibility sections and
-// runtime dependencies in both output modes. HIR dump goldens do not cover ABAP.
+// runtime dependencies. HIR dump goldens do not cover ABAP.
 func TestGlobalClassDefinitions(t *testing.T) {
-	for _, mode := range []struct {
-		name    string
-		options Options
-	}{
-		{name: "v750"},
-		{name: "osgo", options: Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true}},
-	} {
-		t.Run(mode.name, func(t *testing.T) {
-			definitions := map[string]string{}
-			for _, f := range fixtures() {
-				files, err := EmitWithOptions(f.p, mode.options)
-				if err != nil {
-					t.Fatal(err)
+	definitions := map[string]string{}
+	for _, f := range fixtures() {
+		files, err := Emit(f.p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, src := range files {
+			if !strings.HasSuffix(name, ".clas.abap") {
+				continue
+			}
+			definition, _, found := strings.Cut(src, "ENDCLASS.\n")
+			if !found {
+				t.Fatalf("%s: missing ENDCLASS", name)
+			}
+			previous := -1
+			for _, section := range []string{"PUBLIC", "PROTECTED", "PRIVATE"} {
+				statement := section + " SECTION.\n"
+				index := strings.Index(definition, statement)
+				if index <= previous || strings.Count(definition, statement) != 1 {
+					t.Fatalf("%s: missing, repeated or out-of-order %s SECTION", name, section)
 				}
-				for name, src := range files {
-					if !strings.HasSuffix(name, ".clas.abap") {
-						continue
-					}
-					definition, _, found := strings.Cut(src, "ENDCLASS.\n")
-					if !found {
-						t.Fatalf("%s: missing ENDCLASS", name)
-					}
-					previous := -1
-					for _, section := range []string{"PUBLIC", "PROTECTED", "PRIVATE"} {
-						statement := section + " SECTION.\n"
-						index := strings.Index(definition, statement)
-						if index <= previous || strings.Count(definition, statement) != 1 {
-							t.Fatalf("%s: missing, repeated or out-of-order %s SECTION", name, section)
-						}
-						previous = index
-					}
-					definitions[name] = definition + "ENDCLASS.\n"
-				}
+				previous = index
 			}
-			names := make([]string, 0, len(definitions))
-			for name := range definitions {
-				names = append(names, name)
-			}
-			sort.Strings(names)
-			var actual strings.Builder
-			for _, name := range names {
-				actual.WriteString(name + "\n" + definitions[name] + "\n")
-			}
-			path := filepath.Join("testdata", "global_definitions_"+mode.name+".txt")
-			gold, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if actual.String() != string(gold) {
-				t.Fatalf("global definitions differ from %s", path)
-			}
-		})
+			definitions[name] = definition + "ENDCLASS.\n"
+		}
+	}
+	names := make([]string, 0, len(definitions))
+	for name := range definitions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var actual strings.Builder
+	for _, name := range names {
+		actual.WriteString(name + "\n" + definitions[name] + "\n")
+	}
+	path := filepath.Join("testdata", "global_definitions_v750.txt")
+	gold, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual.String() != string(gold) {
+		t.Fatalf("global definitions differ from %s", path)
 	}
 }
 
@@ -232,12 +222,7 @@ func TestFixtures(t *testing.T) {
 	}
 	for _, f := range fixtures() {
 		t.Run(f.name, func(t *testing.T) {
-			options := Options{}
-			if os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1" {
-				options.OsgoScalarValueFallback = true
-				options.OsgoInstanceOfFallback = true
-			}
-			files, err := EmitWithOptions(f.p, options)
+			files, err := Emit(f.p)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -473,6 +458,8 @@ func Test750Semantics(t *testing.T) {
 		{"blanks", "  trailing  "},
 		{"unicode", "€😀𐐷"},
 		{"empty", ""},
+		{"byte_mode", "€€€€€€ IN BYTE MODE end"},
+		{"character_mode", "€€€€€€ IN CHARACTER MODE end"},
 		{"long", strings.Repeat("{|}\\€😀\"' ", 100) + "\n\tend  "},
 	}
 	// The current chunk budget is 60 input bytes. Place each special character
@@ -498,11 +485,7 @@ func Test750Semantics(t *testing.T) {
 	methods = append(methods, concat)
 	literals = append(literals, struct{ name, value string }{"concat", " {|}\\`€ \"' \n\tend  "})
 	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: methods}}}
-	options := Options{}
-	if os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1" {
-		options = Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true}
-	}
-	files, err := EmitWithOptions(p, options)
+	files, err := Emit(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,27 +526,17 @@ func Test750Semantics(t *testing.T) {
 	}
 }
 
-func Test750Options(t *testing.T) {
+func Test750Syntax(t *testing.T) {
 	p := fixtures()[2].p
 	modern, err := Emit(p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy, err := EmitWithOptions(p, Options{OsgoScalarValueFallback: true, OsgoInstanceOfFallback: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var a, b string
+	var a string
 	for _, src := range modern {
 		a += src
 	}
-	for _, src := range legacy {
-		b += src
-	}
 	if !strings.Contains(a, "IS INSTANCE OF") || !strings.Contains(a, "VALUE abap_bool( )") || strings.Contains(a, "narrowed ?=") {
 		t.Fatal("default syntax or helper regression")
-	}
-	if strings.Contains(b, "IS INSTANCE OF") || strings.Contains(b, "VALUE abap_bool( )") || !strings.Contains(b, "narrowed ?=") {
-		t.Fatal("compatibility options not scoped to selected constructs")
 	}
 }

@@ -61,7 +61,7 @@ func TestCriticR1Accepted(t *testing.T) {
 			if errs := hir.Verify(prog); len(errs) > 0 {
 				t.Fatal(errs)
 			}
-			files, names, err := abap.EmitNamedWithOptions(prog, testEmitOptions())
+			files, names, err := abap.EmitNamed(prog)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,8 +155,8 @@ ENDCLASS.
 					t.Fatal("optional downcast needs checked assignment")
 				}
 			case "unicode_mode":
-				if strings.Contains(source, "IN BYTE MODE") {
-					t.Fatal("unsplit mode phrase")
+				if !strings.Contains(source, "IN BYTE MODE") {
+					t.Fatal("mode phrase should remain in the literal")
 				}
 			case "super_preserved":
 				if probe.Ctor.Body.List[0].Kind != hir.Assign || probe.Ctor.Body.List[1].X.Kind != hir.SuperCall {
@@ -182,13 +182,12 @@ ENDCLASS.
 	}
 }
 
-func TestChunkLimitUnicode(t *testing.T) {
-	for _, phrase := range modePhrases {
-		s := "€€€€€€ " + phrase + " end"
-		for _, line := range abapStringBuild("raw", "ch", s) {
-			if strings.Contains(line, phrase) {
-				t.Fatalf("phrase survives: %s", line)
-			}
+func TestStringBuildModeLiteral(t *testing.T) {
+	for _, phrase := range []string{"IN BYTE MODE", "IN CHARACTER MODE"} {
+		value := "€€€€€€ " + phrase + " end"
+		lines := abapStringBuild("raw", "ch", value)
+		if len(lines) != 1 || !strings.Contains(lines[0], "`"+value+"`") {
+			t.Fatalf("literal was split: %v", lines)
 		}
 	}
 }

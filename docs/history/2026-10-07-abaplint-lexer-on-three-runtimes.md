@@ -55,7 +55,9 @@ The throwaway packages were deleted, with no residue.
 On A4H, 2026-10-07, `strlen` of `😀A` is 3 and `s+2(1)` is `A`: ABAP
 counts UTF-16 code units, like JavaScript. OSG-JS at
 `ad3d1e87cd3c3545b32dd4ba2ddeceb25708f05f` agrees; osgo at that SHA counts
-runes. Case 026 has a patch at open-steamgate.
+runes. The current CI pin, `7e7294323fd380859a71552b18b39ddffde93c69`, fixes case 026
+with UTF-16 length and sections; the supplementary probe must now pass on both
+runtimes.
 
 Critic rounds 1–2 after the first green run found a harness that could pass
 after an early `RETURN`; it now checks the completion count. They also

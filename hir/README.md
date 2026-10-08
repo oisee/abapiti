@@ -17,9 +17,8 @@ and boolean branches; loop conditions execute on every iteration.
 Number maps to binary64 `f`, and only explicit I32/I64 types map to `i`/`int8`.
 Strings use ABAP strings and escaped string templates preserve blanks. Length uses
 native strlen( ), and indexing/slicing use native sections: both count UTF-16
-code units on the SAP kernel (verified on 7.58) and OSG-JS, like JavaScript.
-The pinned osgo runtime instead counts runes; supplementary input is a known
-runtime gap, not an emitter restriction.
+code units on the SAP kernel (verified on 7.58), OSG-JS and pinned osgo, like
+JavaScript. The osgo pin fixes runtime gap 026 for supplementary input.
 Primitive optionals use specialized immutable boxes with value and has members;
 reference optionals use an initial reference. Primitive optional equality compares
 presence and, when present, the contained value. There is no null type in this phase.
@@ -63,13 +62,12 @@ where JavaScript yields NaN — a documented divergence, like Number division by
 zero. No operation converts the whole receiver merely to measure its length
 or guard a section. Dynamic charCodeAt converts only its one-unit section to
 UTF-16LE. The supplementary probe checks the exact JavaScript surrogate unit;
-on the pinned rune-based osgo it is an explicitly expected runtime failure.
+it must pass on both pinned runtimes.
 Full BMP uppercasing applies the 102 full Unicode mapping
 differences from the existing x/text dependency before target simple uppercase,
-including sharp s, ligatures and Greek expansions. String literals are chunked so that no chunk contains IN BYTE MODE
-or IN CHARACTER MODE: the CONCATENATE statement parser mistakes those sequences
-inside a literal for its own clauses. The catalogue is the sole supported
-operation list; unknown operations fail verification.
+including sharp s, ligatures and Greek expansions. String literals are chunked
+to stay within the ABAP line limit. The catalogue is the sole supported operation
+list; unknown operations fail verification.
 Closures, regular expressions, generators, and null are outside Phase 0.
 
 Six hand-built programs have dump goldens and one ABAP Unit method per fixture.
@@ -77,11 +75,12 @@ Six hand-built programs have dump goldens and one ABAP Unit method per fixture.
 all sources to `/tmp/hir/TestFixtures`. The existing runtime CI job runs the HIR
 corpus through the v750 syntax gate and both osgo and OSG-JS, requiring all six
 rows to pass. The default corpus must contain inline DATA and IS INSTANCE OF.
-`EmitWithOptions` exposes two explicit osgo workarounds: `OsgoScalarValueFallback`
-uses typed DATA/CLEAR instead of scalar VALUE initializers, and
-`OsgoInstanceOfFallback` emits checked-cast helpers instead of IS INSTANCE OF.
-CI selects these only for the osgo corpus through `ABAPITI_HIR_OSGO_COMPAT=1`;
-the default corpus is syntax-checked at v750 and runs unchanged on OSG-JS.
+Both runtimes use the same default ABAP 7.50 output, including scalar VALUE
+initializers and IS BOUND guards before IS INSTANCE OF. The osgo CI pin is
+`7e7294323fd380859a71552b18b39ddffde93c69`, which supports these constructs
+and mode keywords inside literals, with fixes for per-session statics (029),
+UTF-16 length/sections and their memoization (026/031), the core read_int4 pin,
+and IS INSTANCE OF dependency closure (034).
 CI also runs a semantic regression for template escaping, initial references,
 and temporaries reset on each loop iteration.
 No SAP access is needed for generation or these checks.
@@ -131,7 +130,7 @@ The lexer differential is part of `.github/ci/hir-unit.sh`: sequential case
 blocks check full dumps and each token count, with teardown requiring the corpus
 cardinality even after an early RETURN. CI also requires the critic's early-return
 and removed-case mutations to fail on both pinned runtimes. The 44-case corpus
-is BMP; the pinned osgo supplementary gap is tracked separately. String literals
+is BMP; a separate supplementary probe must pass on both runtimes. String literals
 containing lone UTF-16 surrogate units (escaped or raw) are rejected with
 `unsupported-lone-surrogate` before rune conversion; valid pairs remain
 supplementary code points, not replacement characters. Supplementary slicing,

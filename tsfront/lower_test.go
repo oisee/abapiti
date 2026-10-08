@@ -110,7 +110,7 @@ func TestLowerLexerClosure(t *testing.T) {
 		}
 		os.WriteFile(filepath.Join(out, "lexer.hir.txt"), []byte(hir.Dump(prog)), 0o644)
 	}
-	files, names, err := abap.EmitNamedWithOptions(prog, testEmitOptions())
+	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatalf("emit: %v", err)
 	}
@@ -174,10 +174,4 @@ func sortedKeys(m map[string]int) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-// testEmitOptions selects workarounds only for the osgo runtime corpus.
-func testEmitOptions() abap.Options {
-	compat := os.Getenv("ABAPITI_HIR_OSGO_COMPAT") == "1"
-	return abap.Options{OsgoScalarValueFallback: compat, OsgoInstanceOfFallback: compat}
 }
