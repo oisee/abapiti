@@ -729,7 +729,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		p := callee.AsPropertyAccessExpression()
 		name := callee.Name().Text()
 		// Array higher-order calls inline into loops before anything else.
-		if p.Expression != nil && p.QuestionDotToken == nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach") && !isGlobalObjectExpr(p.Expression) {
+		if p.Expression != nil && p.QuestionDotToken == nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "find" || name == "reduce" || name == "forEach") && !isGlobalObjectExpr(p.Expression) {
 			outputHint := l.hint
 			l.hint = hir.Type{}
 			recvX := l.expr(p.Expression)

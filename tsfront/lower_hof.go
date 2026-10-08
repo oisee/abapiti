@@ -20,7 +20,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	}
 	elem := recv.Type.Args[0]
 	switch name {
-	case "map", "filter", "some", "reduce":
+	case "map", "filter", "some", "reduce", "find":
 	default:
 		return nil, false
 	}
@@ -36,6 +36,10 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		l.diagf(n, "unsupported-call", "%s needs one callback", name)
 		return nil, true
 	}
+	if name == "find" && !elem.IsRef() {
+		l.diagf(n, "unsupported-call", "find on primitive arrays needs an absence-preserving callback ABI")
+		return nil, true
+	}
 	body, params, ok := l.callbackBody(n, args[0], elem)
 	if !ok {
 		return nil, true
@@ -43,6 +47,9 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	l.diagf(n, "note-callback-inline", "%s callback inlined into a loop", name)
 	if body.Type.Kind == hir.Void {
 		return nil, true
+	}
+	if name == "find" {
+		return l.findReferenceLoop(n, recv, elem, body, params), true
 	}
 
 	// Loop shape: ForEach binds params[0]; a second parameter is the index
@@ -90,6 +97,33 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return out, true
 	}
 	return nil, false
+}
+
+// find captures length once, but reads the current slot for each callback.
+// Unlike a table LOOP this ignores appended slots and observes removals and
+// replacements. Reference slots preserve undefined as an initial reference;
+// primitive slots need a separate callback ABI and remain blocked.
+func (l *lowerer) findReferenceLoop(n *ast.Node, receiver *hir.Expr, elem hir.Type, predicate *hir.Expr, params []string) *hir.Expr {
+	recv := l.tempInit(n, receiver.Type, receiver)
+	limit := l.tempInit(n, hir.T(hir.Number), l.rtOp("array.length", recv, hir.T(hir.I32)))
+	index := l.tempInit(n, hir.T(hir.Number), hir.L(hir.T(hir.Number), 0))
+	optional := hir.T(hir.Optional, elem)
+	out := l.tempInit(n, optional, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: optional, Value: nil})
+	var body []*hir.Stmt
+	body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: elem,
+		X: &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: elem, X: l.rtOp("array.get", recv, optional, index)}})
+	if len(params) >= 2 {
+		body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[1], Type: hir.T(hir.Number), X: l.coerce(index, hir.T(hir.Number))})
+	}
+	if len(params) >= 3 {
+		body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[2], Type: recv.Type, X: recv})
+	}
+	body = append(body, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.toBool(n, predicate), Body: hir.B(
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: out, Y: l.coerce(hir.V(params[0], elem), optional)},
+		&hir.Stmt{Kind: hir.Break, Node: l.node(n)},
+	)}, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit}, Body: hir.B(body...)})
+	return out
 }
 
 // toBool applies JavaScript truthiness when the expression is not boolean.

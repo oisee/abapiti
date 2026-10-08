@@ -12,6 +12,33 @@ export class ArrayProbe {
     return `${before}/${ArrayProbe.map.size}/${ArrayProbe.map.get("key")}/${ArrayProbe.values.size}`;
   }
   private static visits = 0;
+  private static appendDuringFind(item: Item, index: number, array: Item[]): boolean {
+    ArrayProbe.visits++;
+    if (index === 0) { array.push(new Item("appended")); }
+    return false;
+  }
+  private static removeDuringFind(item: Item, index: number, array: Item[]): boolean {
+    ArrayProbe.visits++;
+    if (index === 0) { array.pop(); array.pop(); }
+    return item === undefined;
+  }
+  public static find(): string {
+    const a = new Item("a");
+    const b = new Item("b");
+    const refs: Item[] = [a, b];
+    const first = refs.find(entry => entry === b);
+    const none = refs.find(entry => entry.name === "missing");
+    ArrayProbe.visits = 0;
+    refs.find((entry, index, array) => ArrayProbe.appendDuringFind(entry, index, array));
+    const appendedVisits = ArrayProbe.visits;
+    const removed: Item[] = [a, b];
+    ArrayProbe.visits = 0;
+    const missing = removed.find((entry, index, array) => ArrayProbe.removeDuringFind(entry, index, array));
+    const removedVisits = ArrayProbe.visits;
+    const empty: Item[] = [];
+    const emptyResult = empty.find(entry => true);
+    return `${first === b}/${none === undefined}/${appendedVisits}/${refs.length}/${missing === undefined}/${removedVisits}/${emptyResult === undefined}`;
+  }
   private static index(): number { ArrayProbe.visits++; return 0; }
   public static optionalIndex(): string {
     ArrayProbe.visits = 0;
