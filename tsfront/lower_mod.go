@@ -229,6 +229,12 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 			}
 		case ast.KindVariableStatement:
 			vars = true
+		case ast.KindIfStatement, ast.KindExpressionStatement:
+			if !l.moduleInitializer(stmt) {
+				l.diagf(stmt, "unsupported-top-level", "top-level %s observes class statics and is not lowered", stmt.Kind.String())
+				continue
+			}
+			vars = true
 		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
 			l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
@@ -253,6 +259,9 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 	}
 	if funcs {
 		l.moduleFunctions(f, mod)
+	}
+	if vars {
+		body = append(body, l.moduleStatements(f)...)
 	}
 	if len(body) > 0 || funcs {
 		init.Body = hir.B(body...)

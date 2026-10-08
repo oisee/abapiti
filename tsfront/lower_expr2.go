@@ -56,8 +56,32 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		}
 		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
 	case hir.Dynamic:
+		// The checker's flow-narrowed receiver type (after a typeof test)
+		// names the record behind the box; the checked view raises otherwise.
+		if t := l.ck.GetTypeAtLocation(e.Expression); t != nil {
+			before := len(l.diags)
+			mapped := l.mapCheckerType(e.Expression, t)
+			if hasBlocking(l.diags[before:]) {
+				l.diags = l.diags[:before]
+			} else if mapped.Kind == hir.OrderedMap && mapped.Args[0].Kind == hir.String {
+				k := l.expr(arg)
+				if k == nil {
+					return nil
+				}
+				l.diagf(n, "note-dynamic-record", "element access on a dynamic value through its narrowed record type")
+				view := l.rtOp("dynamic.asRef", recv, mapped)
+				return l.rtOp("map.get", view, hir.T(hir.Optional, mapped.Args[1]), k)
+			}
+		}
 		l.diagf(n, "unsupported-expr", "element access on a dynamic value is not lowered")
 		return nil
+	case hir.String:
+		// s[i] is one UTF-16 unit, or undefined outside the string.
+		k := l.expr(arg)
+		if k == nil {
+			return nil
+		}
+		return l.rtOp("string.at", recv, hir.T(hir.Optional, hir.T(hir.String)), l.indexValue(k))
 	}
 	l.diagf(n, "unsupported-expr", "element access on %s is not lowered", recv.Type.Kind)
 	return nil
@@ -167,6 +191,14 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 	case hir.Dynamic:
 		test = &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", e, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
 	case hir.Optional:
+		if e.Type.Args[0].Kind == hir.Dynamic && want != "undefined" {
+			// Absent never matches a concrete tag; present dispatches on it.
+			present := l.tempInit(n, e.Type, e)
+			tag := &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
+			defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
+			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}
+			break
+		}
 		if e.Type.Args[0].Kind != hir.ClassValue || want != "function" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type)
 			return nil
@@ -556,6 +588,21 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	if recv.Type.Kind != hir.Optional && !recv.Type.IsRef() {
+		switch recv.Type.Kind {
+		case hir.String, hir.Number, hir.Bool:
+			// A narrowed primitive is never absent: the chain is plain access.
+			l.diagf(n, "note-optional-chain", "optional chain on a present primitive lowered as plain access")
+			return l.withLocal(base, recv, func() *hir.Expr {
+				switch n.Kind {
+				case ast.KindCallExpression:
+					return l.call(n)
+				case ast.KindPropertyAccessExpression:
+					return l.propertyAccess(n)
+				default:
+					return l.elementAccess(n)
+				}
+			})
+		}
 		l.diagf(n, "unsupported-expr", "optional chain needs a reference or optional receiver")
 		return nil
 	}

@@ -27,6 +27,9 @@ type Entry struct {
 	Body        func() *hir.Stmt
 	Method      func() *hir.Method
 	Expressions map[string]func() *hir.Expr
+	// Assume names a property the lowering may take for granted at the
+	// target ("pure-static-initializer"); the source is still lowered.
+	Assume string
 }
 type Registry struct{ entries map[Key]Entry }
 
@@ -94,6 +97,9 @@ func builderCount(e Entry) int {
 		n++
 	}
 	if len(e.Expressions) > 0 {
+		n++
+	}
+	if e.Assume != "" {
 		n++
 	}
 	return n

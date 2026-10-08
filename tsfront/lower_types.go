@@ -165,6 +165,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
 	}
+	if t, ok := l.indexOnlyInterface(sym); ok {
+		l.diagf(n, "note-record-map", "index-signature interface %s lowered as an insertion-ordered map", name)
+		return t
+	}
 	if i := l.ifaceOf(sym); i != nil {
 		return hir.Type{Kind: hir.InterfaceRef, Name: i.Name}
 	}
@@ -276,6 +280,23 @@ func (l *lowerer) union(n *ast.Node, parts []hir.Type, optional bool) hir.Type {
 	for _, d := range distinct {
 		kinds[d.Kind] = true
 	}
+	// Unrelated reference types: the object root keeps identity and
+	// instanceof; any member access on it is a (loud) diagnostic.
+	if len(kinds) > 0 && len(kinds) <= 2 && !kinds[hir.Dynamic] {
+		refsOnly := true
+		for k := range kinds {
+			if k != hir.ClassRef && k != hir.InterfaceRef {
+				refsOnly = false
+			}
+		}
+		if refsOnly {
+			l.diagf(n, "note-union-root", "union of unrelated references lowered to the object root")
+			if optional {
+				return hir.T(hir.Optional, hir.Ref(hir.RootObject))
+			}
+			return hir.Ref(hir.RootObject)
+		}
+	}
 	if len(kinds) > 1 {
 		l.diagf(n, "note-dynamic-union", "union of %d kinds lowered as a Dynamic (tagged) value", len(kinds))
 		return hir.T(hir.Dynamic)
@@ -321,11 +342,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				optional = true
 				continue
 			}
+			if l.isNeverArray(c) && len(t.AsUnionOrIntersectionType().Types()) > 1 {
+				// `never[]` (an empty literal) adds nothing to a union.
+				continue
+			}
 			p := l.mapCheckerType(n, c)
 			if p.Kind == hir.Void {
 				return p
 			}
 			parts = append(parts, p)
+		}
+		if len(parts) == 0 {
+			l.diagf(n, "unsupported-type", "union of empty array types has no element type")
+			return hir.T(hir.Void)
 		}
 		return l.union(n, parts, optional)
 	}

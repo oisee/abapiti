@@ -46,7 +46,13 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 			if b.OperatorToken.Kind == ast.KindBarBarToken {
 				op = "||"
 			}
-			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: l.condition(b.Left), Y: l.condition(b.Right)}
+			left := l.condition(b.Left)
+			if value, ok := constantBool(left); ok && value == (op == "||") {
+				// The right operand is never evaluated in JavaScript either.
+				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant left operand")
+				return left
+			}
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: left, Y: l.condition(b.Right)}
 		}
 	}
 	x := l.expr(n)
@@ -282,6 +288,11 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 				op = "-"
 			}
 			x := l.expr(u.Operand)
+			if x != nil && x.Kind != hir.Local {
+				if old := l.postfixUpdate(n, x, op); old != nil {
+					return old
+				}
+			}
 			if x == nil || x.Kind != hir.Local {
 				l.diagf(n, "unsupported-expr", "postfix %s needs a local operand", op)
 				return nil
@@ -404,6 +415,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
 				sv := l.expr(el.Expression())
+				if sv != nil && sv.Type.Kind == hir.OrderedSet {
+					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
+				}
 				if sv == nil || sv.Type.Kind != hir.Array {
 					l.diagf(el, "unsupported-array", "spread element needs an array")
 					return nil
@@ -429,7 +443,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
-		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil {
+		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil || n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
 		}
 		return l.elementAccess(n)
@@ -511,6 +525,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	p := n.AsPropertyAccessExpression()
+	if x, ok := l.numberStatic(n, p); ok {
+		return x
+	}
 	if x, ok := l.classValueRef(n); ok {
 		return x
 	}
@@ -695,7 +712,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		p := callee.AsPropertyAccessExpression()
 		name := callee.Name().Text()
 		// Array higher-order calls inline into loops before anything else.
-		if p.Expression != nil && p.QuestionDotToken == nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach") && !isGlobalObjectExpr(p.Expression) {
+		if p.Expression != nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach" || name == "find" || name == "findIndex" || name == "flatMap") && !isGlobalObjectExpr(p.Expression) {
 			outputHint := l.hint
 			l.hint = hir.Type{}
 			recvX := l.expr(p.Expression)
@@ -710,6 +727,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// Object.keys and friends (no lowered class is ever named Object).
 		if isGlobalObjectExpr(p.Expression) {
 			if x, ok := l.objectStatic(n, name); ok {
+				return x
+			}
+		}
+		if l.isGlobalArrayExpr(p.Expression) {
+			if x, ok := l.arrayStatic(n, name); ok {
 				return x
 			}
 		}
@@ -878,6 +900,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
+		return x
+	}
+	if x, ok := l.globalCall(n, callee); ok {
 		return x
 	}
 	l.diagf(n, "unsupported-call", "call to %s is not lowered", callee.Kind.String())
@@ -1067,7 +1092,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("map.size", recv, i32), true
 		}
 	}
-	return nil, false
+	return l.syntaxLibraryCall(n, name, recv)
 }
 
 // replaceCall lowers s.replace(pattern, with): a RegExp (literal or
@@ -1272,6 +1297,12 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if a != nil && a.Type.Kind == hir.OrderedSet {
 				l.diagf(n, "note-set-copy", "new Set(set) lowered to a copy")
 				return l.rtOp("set.copy", a, a.Type, a)
+			}
+			if a != nil && a.Type.Kind == hir.Array {
+				return l.setFromArray(n, a)
+			}
+			if a != nil && a.Type.Kind == hir.Optional && a.Type.Args[0].Kind == hir.Array {
+				return l.setFromOptionalArray(n, a)
 			}
 		}
 	}
@@ -1522,6 +1553,12 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	if c := l.classOf(l.resolve(b.Right)); c != nil {
+		if l.unrelatedClasses(x.Type, c.Name) {
+			// The HIR static type of x and c share no subclass: the test is
+			// the constant false (HIR references are soundly typed).
+			l.diagf(n, "note-instanceof-unrelated", "instanceof between unrelated classes is the constant false")
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: x}), Y: hir.L(hir.T(hir.Bool), false)}
+		}
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Owner: c.Name}
 	}
 	cv := l.expr(b.Right)
@@ -1557,6 +1594,13 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return nil
 		}
 		if x.Type.Kind != hir.Optional && !x.Type.IsRef() {
+			switch x.Type.Kind {
+			case hir.String, hir.Number, hir.Bool, hir.I32:
+				// A HIR primitive is never undefined (absent primitives are
+				// boxed optionals, and unwrapping an absent box raises).
+				l.diagf(n, "note-undefined-constant", "comparison of a primitive with undefined is constant")
+				return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: x}), Y: hir.L(hir.T(hir.Bool), negated)}
+			}
 			l.diagf(n, "unsupported-expr", "undefined comparison needs an optional or reference operand")
 			return nil
 		}
@@ -1571,10 +1615,10 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 		return nil
 	}
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(y.Type) {
-		y = l.coerce(y, x.Type)
+		y = l.optionalView(y, x.Type)
 	}
 	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
-		x = l.coerce(x, y.Type)
+		x = l.optionalView(x, y.Type)
 	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
@@ -1770,10 +1814,17 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 		case ast.KindSpreadAssignment:
 			// Copy every field of the spread value into its parameter.
 			sv := l.expr(p.Expression())
+			if sv != nil && sv.Type.Kind == hir.Optional && sv.Type.Args[0].Kind == hir.ClassRef {
+				if !l.optionalSpreadArgs(p, sv, ctor, args) {
+					return nil
+				}
+				continue
+			}
 			if sv == nil || sv.Type.Kind != hir.ClassRef {
 				l.diagf(p, "unsupported-type", "spread needs a shape value")
 				return nil
 			}
+			sv = l.tempInit(p, sv.Type, sv)
 			l.diagf(p, "note-object-spread", "object spread copies the fields of %s", sv.Type.Name)
 			for i, cp := range ctor.Params {
 				for _, c := range l.out.Classes {

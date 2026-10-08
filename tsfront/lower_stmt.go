@@ -91,6 +91,21 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindIfStatement:
 		ifs := n.AsIfStatement()
 		s := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.condition(ifs.Expression)}
+		if value, ok := constantBool(s.X); ok {
+			// A branch the constant condition never selects is dead code in
+			// JavaScript too; it is not lowered.
+			l.diagf(n, "note-dead-branch", "if with a constant condition keeps only the live branch")
+			var live *hir.Stmt
+			if value {
+				live = l.scopeBlock(ifs.ThenStatement)
+			} else if ifs.ElseStatement != nil {
+				live = l.scopeBlock(ifs.ElseStatement)
+			}
+			if s.X.Kind == hir.Seq {
+				return hir.B(s.X.Stmt, live)
+			}
+			return live
+		}
 		s.Body = l.scopeBlock(ifs.ThenStatement)
 		if ifs.ElseStatement != nil {
 			s.Else = l.scopeBlock(ifs.ElseStatement)
@@ -116,8 +131,14 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		}
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
+		if flag, ok := l.breakViaFlag[n]; ok {
+			return hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: flag, Y: hir.L(hir.T(hir.Bool), true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})
+		}
 		return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
 	case ast.KindContinueStatement:
+		if l.continueAsBreak[n] {
+			return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
+		}
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
 	case ast.KindEmptyStatement:
 		return nil
@@ -460,12 +481,17 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	if f.Condition != nil {
 		cond = l.condition(f.Condition)
 	}
-	if f.Incrementor != nil && l.containsContinue(f.Statement) {
-		l.diagf(n, "unsupported-statement", "continue in a for loop with an update is not lowered")
-		return nil
-	}
 	l.push()
 	body := []*hir.Stmt{}
+	if f.Incrementor != nil && l.containsContinue(f.Statement) {
+		wrapped := l.forBodyWithContinue(n, f.Statement, f.Incrementor)
+		l.pop()
+		if wrapped == nil {
+			return nil
+		}
+		out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: wrapped})
+		return hir.B(out...)
+	}
 	if f.Statement != nil {
 		body = append(body, l.scopeBlock(f.Statement))
 	}

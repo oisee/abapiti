@@ -114,6 +114,9 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 		if value == nil {
 			return nil
 		}
+		if subject.Type.Kind == hir.Optional && subject.Type.Args[0].Equal(value.Type) {
+			value = l.optionalView(value, subject.Type)
+		}
 		cond := &hir.Expr{Kind: hir.Binary, Node: l.node(c), Op: "==", Type: hir.T(hir.Bool), X: subject, Y: value}
 		body := hir.B(l.stmtList(c.AsCaseOrDefaultClause().Statements.Nodes)...)
 		chain = &hir.Stmt{Kind: hir.If, Node: l.node(c), X: cond, Body: body, Else: chain}
@@ -136,6 +139,18 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	}
 	name := decls[0].Name().Text()
 	recv := l.expr(f.Expression)
+	if recv != nil && recv.Type.Kind == hir.Optional && recv.Type.Args[0].Kind == hir.OrderedMap && recv.Type.Args[0].Args[0].Kind == hir.String {
+		// for-in over undefined iterates nothing.
+		present := l.tempInit(n, recv.Type, recv)
+		keys := l.rtOp("map.keys", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: present}, hir.T(hir.Array, hir.T(hir.String)))
+		l.push()
+		l.declare(name, hir.T(hir.String))
+		body := l.scopeBlock(f.Statement)
+		l.pop()
+		loop := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
+		absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}
+		return &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(loop)}
+	}
 	if recv == nil || recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
 		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map")
 		return nil

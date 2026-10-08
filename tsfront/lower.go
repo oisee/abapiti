@@ -153,6 +153,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	for _, c := range l.out.Classes {
 		inherit(c)
 	}
+	l.completeInterfaceHeritage()
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
@@ -296,6 +297,17 @@ type lowerer struct {
 	views    map[string]*hir.Interface
 	unions   map[string]*unionView
 	abiReady bool
+	// Interface heritage (lower_iface_heritage.go).
+	ifaceDone       map[*hir.Interface]bool
+	ifaceBases      map[*hir.Interface][]*hir.Interface
+	ifaceClassBases []ifaceClassBase
+	// ifaceClassBaseNames: lowered interface name -> class names it extends
+	// (directly or through base interfaces).
+	ifaceClassBaseNames map[string][]string
+	// `continue`/`break` statements rewritten inside a for loop with an
+	// update expression (lower_syntax.go).
+	continueAsBreak map[*ast.Node]bool
+	breakViaFlag    map[*ast.Node]*hir.Expr
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node

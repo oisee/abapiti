@@ -100,6 +100,11 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 					continue
 				}
 				for _, field := range base.Fields {
+					if l.dataInterfaceDeclares(node, field.Name) {
+						// The derived interface redeclares the member; its own
+						// declaration below supplies the field once.
+						continue
+					}
 					field.Node = l.node(node)
 					c.Fields = append(c.Fields, field)
 					ctor.Params = append(ctor.Params, hir.Param{Name: field.Name, Type: field.Type})
@@ -486,11 +491,19 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 }
 
 func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
+	if l.ifaceDone == nil {
+		l.ifaceDone = map[*hir.Interface]bool{}
+	}
+	if l.ifaceDone[i] {
+		return
+	}
+	l.ifaceDone[i] = true
 	if e, ok := l.overrides[node]; ok && e.Interface != nil {
 		i.Methods = e.Interface().Methods
 		l.diagf(node, "note-override", "%s: %s", e.ID, e.Rationale)
 		return
 	}
+	defer l.interfaceHeritage(node, i)
 	for _, m := range node.Members() {
 		if m.Kind != ast.KindMethodDeclaration && m.Kind != ast.KindMethodSignature {
 			name := m.Kind.String()
@@ -667,8 +680,12 @@ func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) [
 			continue
 		}
 		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) {
-			l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
-			continue
+			if e, ok := l.overrides[mem]; ok && e.Assume == "pure-static-initializer" {
+				l.diagf(mem, "note-override", "%s: %s", e.ID, e.Rationale)
+			} else {
+				l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
+				continue
+			}
 		}
 		t := l.declaredFieldType(c, name)
 		var target *hir.Expr

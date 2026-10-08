@@ -32,9 +32,9 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 				return
 			}
 			switch n.Kind {
-			case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindFunctionDeclaration, ast.KindMethodDeclaration:
+			case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindFunctionDeclaration, ast.KindMethodDeclaration, ast.KindPropertyDeclaration:
 				if n.Name() != nil && (n.Name().Kind == ast.KindIdentifier || n.Name().Kind == ast.KindStringLiteral) {
-					if n.Kind == ast.KindMethodDeclaration && symbol != "" {
+					if (n.Kind == ast.KindMethodDeclaration || n.Kind == ast.KindPropertyDeclaration) && symbol != "" {
 						symbol += "." + n.Name().Text()
 					} else {
 						symbol = n.Name().Text()

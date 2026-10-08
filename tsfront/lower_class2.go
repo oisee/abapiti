@@ -362,6 +362,38 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
 		return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
 	}
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic {
+		switch {
+		case x.Type.Kind == hir.Dynamic || x.Type.Equal(dst):
+		case x.Type.Kind == hir.Optional && x.Type.Args[0].Kind != hir.Dynamic:
+			// An absent value stays absent; a present one is boxed.
+			present := l.tempInit(nil, x.Type, x)
+			absent := &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: present}
+			boxed := l.rtOp("dynamic.of", &hir.Expr{Kind: hir.Narrow, Type: x.Type.Args[0], X: present}, hir.T(hir.Dynamic))
+			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: absent, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: boxed}
+		case x.Type.Kind != hir.Optional && x.Type.Kind != hir.Void:
+			return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
+		}
+	}
+	// An interface value flowing into a class its declaration extends: the
+	// checked cast raises only for an implementer outside the declared
+	// hierarchy, which TypeScript's structural typing would not admit.
+	{
+		src, target := x.Type, dst
+		if src.Kind == hir.Optional {
+			src = src.Args[0]
+		}
+		if target.Kind == hir.Optional {
+			target = target.Args[0]
+		}
+		if src.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef && target.Name != hir.RootObject && l.interfaceHasClassBase(src.Name, target) {
+			narrowTo := dst
+			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {
+				narrowTo = hir.T(hir.Optional, dst)
+			}
+			return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: narrowTo, X: x}
+		}
+	}
 	if x.Type.Kind == hir.ClassRef && dst.Kind == hir.InterfaceRef && !l.acceptsType(dst, x.Type) {
 		l.recordImplements(x.Type, dst)
 	}
