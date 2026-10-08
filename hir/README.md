@@ -114,11 +114,15 @@ Instance field initialization runs in declaration order in a constructor,
 including a synthesized constructor when absent. A synthesized derived
 constructor forwards its inherited parameters. Static fields and module consts
 initialize in declaration order in class_constructor only when a conservative
-syntax whitelist proves their initializers pure: literals, constant expressions
-over literals/module constants, literal collection elements, and construction of
-runtime collections from those elements. Calls to user code, user-class
-construction, assignments, and other effectful expressions produce blocking
-`unsupported-static-init` diagnostics with file:line:col. Class-static reads are
+syntax whitelist proves their initializers pure: literals, `undefined`, constant
+expressions over literals/module constants, literal collection elements, object
+literals of pure values, construction of runtime collections (empty or from
+those elements), and construction of lowered classes whose constructor chain
+only forwards pure or parameter values into own fields. Calls to user code,
+effectful constructors, assignments, and other effectful expressions produce
+blocking `unsupported-static-init` diagnostics with file:line:col; a
+fingerprinted `Assume: pure-static-initializer` override may vouch for one
+declaration. Class-static reads are
 limited to earlier pure fields of the same class; cross-class reads are rejected
 even if their initializers appear pure, because mutable statics may change before
 lazy initialization. This is not eager TypeScript module evaluation: purity makes

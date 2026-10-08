@@ -95,6 +95,21 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindIfStatement:
 		ifs := n.AsIfStatement()
 		s := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.condition(ifs.Expression)}
+		if value, ok := constantBool(s.X); ok {
+			// A branch the constant condition never selects is dead code in
+			// JavaScript too; it is not lowered.
+			l.diagf(n, "note-dead-branch", "if with a constant condition keeps only the live branch")
+			var live *hir.Stmt
+			if value {
+				live = l.scopeBlock(ifs.ThenStatement)
+			} else if ifs.ElseStatement != nil {
+				live = l.scopeBlock(ifs.ElseStatement)
+			}
+			if s.X.Kind == hir.Seq {
+				return hir.B(s.X.Stmt, live)
+			}
+			return live
+		}
 		s.Body = l.scopeBlock(ifs.ThenStatement)
 		if ifs.ElseStatement != nil {
 			s.Else = l.scopeBlock(ifs.ElseStatement)
@@ -109,7 +124,10 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		return l.forOfStatement(n)
 	case ast.KindReturnStatement:
 		r := n.AsReturnStatement()
-		if r.Expression == nil {
+		if r.Expression == nil || (l.method != nil && l.method.Result.Kind == hir.Void && isUndefinedKeyword(r.Expression)) {
+			if l.method != nil && l.method.Result.Kind == hir.Optional {
+				return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: &hir.Expr{Kind: hir.Lit, Type: l.method.Result}}
+			}
 			return &hir.Stmt{Kind: hir.Return, Node: l.node(n)}
 		}
 		l.hint = l.method.Result
@@ -120,6 +138,9 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		}
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
+		if flag, ok := l.breakViaFlag[n]; ok {
+			return hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: flag, Y: hir.L(hir.T(hir.Bool), true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})
+		}
 		return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
 	case ast.KindContinueStatement:
 		if n.AsContinueStatement().Label != nil {
@@ -256,6 +277,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				}
 			}
 		}
+		if d.Type() == nil && init != nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst == 0 {
+			typ = l.widenLet(d, sym, typ)
+		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.
 			l.hint = typ
@@ -275,7 +299,10 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 		}
 	}
-	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: l.coerce(x, typ)}
+	if x != nil {
+		x = l.coerce(x, typ)
+	}
+	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
 	l.declare(name, typ)
 	return append(stmts, decl)
 }

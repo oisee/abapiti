@@ -10,7 +10,7 @@ import (
 // HIR method interfaces are flat. Preserve the public inherited slots before
 // class bridges and union views are completed, regardless of source-file order.
 func (l *lowerer) completeInterfaceHeritage() {
-	l.ifaceClassBases = map[string]string{}
+	l.ifaceClassBaseOf = map[string]string{}
 	bases := map[string][]hir.Type{}
 	for name, node := range l.ifaceNodes {
 		heritage := node.AsInterfaceDeclaration().HeritageClauses
@@ -63,9 +63,9 @@ func (l *lowerer) completeInterfaceHeritage() {
 				complete(base.Name)
 			}
 			if base.Kind == hir.ClassRef && l.classHasNominalBrand(base.Name) {
-				l.ifaceClassBases[name] = base.Name
-			} else if parent := l.ifaceClassBases[base.Name]; parent != "" {
-				l.ifaceClassBases[name] = parent
+				l.ifaceClassBaseOf[name] = base.Name
+			} else if parent := l.ifaceClassBaseOf[base.Name]; parent != "" {
+				l.ifaceClassBaseOf[name] = parent
 			}
 			methods := l.unionMethods(base)
 			inherited := []string{}

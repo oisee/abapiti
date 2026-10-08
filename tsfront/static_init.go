@@ -41,6 +41,9 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		c := n.AsConditionalExpression()
 		return pure(c.Condition) && pure(c.WhenTrue) && pure(c.WhenFalse)
 	case ast.KindIdentifier:
+		if l.pureSyntaxInitializer(n, owner, visiting) {
+			return true
+		}
 		sym := l.resolve(n)
 		if sym != nil && sym.Name == "undefined" && sym.ValueDeclaration == nil {
 			return true
@@ -77,7 +80,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return l.pureInitializer(d.Initializer(), d, visiting)
 	case ast.KindObjectLiteralExpression:
-		return len(n.AsObjectLiteralExpression().Properties.Nodes) == 0
+		return len(n.AsObjectLiteralExpression().Properties.Nodes) == 0 || l.pureSyntaxInitializer(n, owner, visiting)
 	case ast.KindArrayLiteralExpression:
 		for _, el := range n.AsArrayLiteralExpression().Elements.Nodes {
 			if !pure(el) {
@@ -95,7 +98,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 			}
 		}
 		if !l.isNewCollection(n) {
-			return false
+			return l.pureSyntaxInitializer(n, owner, visiting)
 		}
 		for _, arg := range n.Arguments() {
 			if !pure(arg) {
@@ -104,7 +107,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return true
 	}
-	return false
+	return l.pureSyntaxInitializer(n, owner, visiting)
 }
 
 // Inspect scanner strings as JS code units, before Go's rune decoding can

@@ -63,6 +63,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		entries = append(entries, e)
 	}
 	entries = append(entries, overrides.RegistryDeployment()...)
+	entries = append(entries, overrides.Syntax()...)
 	registry, err := overrides.New(entries...)
 	if err != nil {
 		t.Fatal(err)
@@ -140,6 +141,11 @@ func TestRegistryClosureGate(t *testing.T) {
 		}
 		if err := os.WriteFile(filepath.Join(out, "registry-verify.txt"), []byte(strings.Join(lines, "\n")), 0644); err != nil {
 			t.Fatal(err)
+		}
+		if os.Getenv("ABAPITI_TEST_DUMP") != "" {
+			if err := os.WriteFile(filepath.Join(out, "registry-hir.txt"), []byte(hir.Dump(prog)), 0644); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	t.Logf("%d files, %d classes, %d interfaces, %d blocking diagnostics, %d HIR errors", len(files), len(prog.Classes), len(prog.Interfaces), len(blocking), len(verification))

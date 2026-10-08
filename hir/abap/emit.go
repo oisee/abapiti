@@ -845,6 +845,21 @@ func (b *body) expr(x *hir.Expr) string {
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
+		source := x.X.Type
+		if source.Kind == hir.Optional {
+			source = source.Args[0]
+		}
+		target := x.Type
+		if target.Kind == hir.Optional {
+			target = target.Args[0]
+		}
+		if (source.Kind == hir.ClassRef && target.Kind == hir.InterfaceRef) || (source.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef) {
+			// A class/interface cross cast: widen to the object root first so
+			// the checked `?=` is valid whatever the static relation.
+			root := b.temp(hir.Ref(hir.RootObject))
+			b.line(root + " = " + a + ".")
+			a = root
+		}
 		if x.X.Type.Kind == hir.Optional {
 			base := x.X.Type.Args[0]
 			if !base.IsRef() {
@@ -927,6 +942,96 @@ func (b *body) trimLoop(a, lo, hi string, leading bool) {
 
 // codeUnit reads one UTF-16 unit directly. The pinned library's uccpi
 // uses high-byte * 255 on OSG-JS; that is not a correct Unicode code point.
+// parseInt10 implements JavaScript parseInt(s, 10): leading ECMAScript white
+// space is skipped, an optional sign is read, then decimal digits up to the
+// first non-digit. No digit at all yields the absent box (NaN).
+func (b *body) parseInt10(n, a, length string) {
+	lo := b.temp(hir.T(hir.I32))
+	hi := b.temp(hir.T(hir.I32))
+	b.line(lo + " = 0.")
+	b.line(hi + " = " + length + ".")
+	b.trimLoop(a, lo, hi, true)
+	sign := b.temp(hir.T(hir.Number))
+	value := b.temp(hir.T(hir.Number))
+	digits := b.temp(hir.T(hir.I32))
+	ch := b.temp(hir.T(hir.String))
+	b.line(sign + " = 1.")
+	b.line(value + " = 0.")
+	b.line(digits + " = 0.")
+	b.line("IF " + lo + " < " + hi + ".")
+	b.line(ch + " = " + a + "+" + lo + "(1).")
+	b.line("IF " + ch + " = '-'.")
+	b.line(sign + " = -1.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ELSEIF " + ch + " = '+'.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ENDIF.")
+	b.line("ENDIF.")
+	b.line("WHILE " + lo + " < " + hi + ".")
+	b.line(ch + " = " + a + "+" + lo + "(1).")
+	b.line("IF " + ch + " CA '0123456789' AND " + ch + " <> ` `.")
+	b.line(value + " = " + value + " * 10 + ( " + ch + " ).")
+	b.line(digits + " = " + digits + " + 1.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ELSE.")
+	b.line("EXIT.")
+	b.line("ENDIF.")
+	b.line("ENDWHILE.")
+	b.line("IF " + digits + " = 0.")
+	b.line("CLEAR " + n + ".")
+	b.line("ELSE.")
+	b.line(n + " = NEW #( ).")
+	b.line(n + "->has = abap_true.")
+	b.line(n + "->value = " + sign + " * " + value + ".")
+	b.line("ENDIF.")
+}
+
+// localeCompareNames implements a.localeCompare(b) for strings over the
+// ABAP object-name alphabet. ICU root collation orders these code units as
+// "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" (verified against Node's
+// Intl.Collator); a shorter prefix sorts first. Any other code unit in
+// either operand raises cx_sy_range_out_of_bounds instead of guessing.
+func (b *body) localeCompareNames(n, a, other, length string) {
+	const alphabet = "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	rank := func(s, out string) {
+		b.line("IF " + s + " = ``.")
+		b.line(out + " = -1.")
+		b.line("ELSE.")
+		b.line("FIND " + s + " IN `" + alphabet + "` MATCH OFFSET " + out + ".")
+		b.line("IF sy-subrc <> 0.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line("ENDIF.")
+	}
+	olen := b.temp(hir.T(hir.I32))
+	idx := b.temp(hir.T(hir.I32))
+	ca := b.temp(hir.T(hir.String))
+	cb := b.temp(hir.T(hir.String))
+	ra := b.temp(hir.T(hir.I32))
+	rb := b.temp(hir.T(hir.I32))
+	b.line(olen + " = strlen( " + other + " ).")
+	b.line(idx + " = 0.")
+	b.line(n + " = 0.")
+	b.line("WHILE " + n + " = 0 AND ( " + idx + " < " + length + " OR " + idx + " < " + olen + " ).")
+	b.line("CLEAR " + ca + ".")
+	b.line("CLEAR " + cb + ".")
+	b.line("IF " + idx + " < " + length + ".")
+	b.line(ca + " = " + a + "+" + idx + "(1).")
+	b.line("ENDIF.")
+	b.line("IF " + idx + " < " + olen + ".")
+	b.line(cb + " = " + other + "+" + idx + "(1).")
+	b.line("ENDIF.")
+	rank(ca, ra)
+	rank(cb, rb)
+	b.line("IF " + ra + " < " + rb + ".")
+	b.line(n + " = -1.")
+	b.line("ELSEIF " + ra + " > " + rb + ".")
+	b.line(n + " = 1.")
+	b.line("ENDIF.")
+	b.line(idx + " = " + idx + " + 1.")
+	b.line("ENDWHILE.")
+}
+
 func (b *body) codeUnit(target, ch string) {
 	conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
 	bytes := b.rawTemp("xstring")
@@ -1302,6 +1407,28 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+		case "string.replaceFirst":
+			// JavaScript replace with a string pattern: the first occurrence
+			// only; an empty needle inserts before the first code unit.
+			b.line(n + " = " + a + ".")
+			b.line("IF " + args[0] + " = ``.")
+			b.line(n + " = |{ " + args[1] + " }{ " + a + " }|.")
+			b.line("ELSE.")
+			b.line("REPLACE FIRST OCCURRENCE OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+			b.line("ENDIF.")
+		case "string.at":
+			// s[i]: absent outside [0, length), otherwise one UTF-16 unit.
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
+			b.line("CLEAR " + n + ".")
+			b.line("ELSE.")
+			b.line(n + " = NEW #( ).")
+			b.line(n + "->has = abap_true.")
+			b.line(n + "->value = " + a + "+" + args[0] + "(1).")
+			b.line("ENDIF.")
+		case "string.parseInt10":
+			b.parseInt10(n, a, length)
+		case "string.localeCompareNames":
+			b.localeCompareNames(n, a, args[0], length)
 		}
 		return
 	}
@@ -1428,7 +1555,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
 	target := n
-	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && x.X.Type.Args[0].IsRef() {
+	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && (x.X.Type.Args[0].IsRef() || (x.X.Type.Args[0].Kind == hir.Optional && x.X.Type.Args[0].Args[0].IsRef())) {
 		target = b.temp(hir.Ref(hir.RootObject))
 	}
 	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"
@@ -1549,6 +1676,18 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line(n + " = NEW #( ).")
 		b.line(n + "->payload = " + v + ".")
 		b.line("RAISE EXCEPTION " + n + ".")
+	case hir.Finally:
+		// Normal completion runs the finally block after the TRY; anything
+		// leaving the body is caught, the block runs, and the same exception
+		// object is raised again.
+		n := b.rawTemp("REF TO cx_root")
+		b.line("TRY.")
+		b.stmt(s.Body)
+		b.line("CATCH cx_root INTO " + n + ".")
+		b.stmt(s.Else)
+		b.line("RAISE EXCEPTION " + n + ".")
+		b.line("ENDTRY.")
+		b.stmt(s.Else)
 	case hir.Try:
 		name := e.exception(s.Type)
 		n := b.rawTemp("REF TO " + name)

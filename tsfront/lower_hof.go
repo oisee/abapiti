@@ -28,7 +28,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		}
 		return l.denseCallbackLoop(n, name, recv, args), true
 	default:
-		return nil, false
+		return l.syntaxHofCall(n, name, recv, args)
 	}
 	if name == "reduce" {
 		if len(args) != 2 {
@@ -258,11 +258,25 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		value = body
 	} else {
 		stmts := body.AsBlock().Statements.Nodes
-		if len(stmts) != 1 || stmts[0].Kind != ast.KindReturnStatement || stmts[0].AsReturnStatement().Expression == nil {
-			l.diagf(n, "unsupported-callback", "callback block must be exactly one return")
+		last := len(stmts) - 1
+		if last < 0 || stmts[last].Kind != ast.KindReturnStatement || stmts[last].AsReturnStatement().Expression == nil {
+			l.diagf(n, "unsupported-callback", "callback block must end with a return of a value")
 			return nil, nil, false
 		}
-		value = stmts[0].AsReturnStatement().Expression
+		for _, s := range stmts[:last] {
+			if l.containsReturn(s) {
+				l.diagf(n, "unsupported-callback", "callback block must have exactly one return")
+				return nil, nil, false
+			}
+		}
+		// Leading statements run per element, before the result value.
+		keep := l.hint
+		for _, s := range stmts[:last] {
+			lowered := l.stmts(s)
+			l.pend = append(l.pend, lowered...)
+		}
+		l.hint = keep
+		value = stmts[last].AsReturnStatement().Expression
 	}
 	if l.hint.Kind == hir.Array {
 		l.hint = l.hint.Args[0]
@@ -296,13 +310,29 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				continue
 			}
 			local := be.Name().Text()
+			if be.DotDotDotToken != nil {
+				// `...rest` is a fresh object of the remaining fields.
+				l.objectRest(el, local, x)
+				continue
+			}
 			field := local
 			if be.PropertyName != nil && be.PropertyName.Kind == ast.KindIdentifier {
 				field = be.PropertyName.Text()
 			}
 			ft := l.patternFieldType(x.Type, field)
-			l.declare(local, ft)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: ft,
+			lt := ft
+			if sym := el.Symbol(); sym != nil && ft.IsRef() {
+				// A required physical field may be an optional binding.
+				before := len(l.diags)
+				mapped := l.mapCheckerType(el, l.ck.GetTypeOfSymbol(sym))
+				if hasBlocking(l.diags[before:]) {
+					l.diags = l.diags[:before]
+				} else if mapped.Kind == hir.Optional && mapped.Args[0].Equal(ft) {
+					lt = mapped
+				}
+			}
+			l.declare(local, lt)
+			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
 				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}})
 		}
 	case ast.KindArrayBindingPattern:
@@ -539,15 +569,22 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) 
 // yielding the new length (which the callers ignore).
 func (l *lowerer) spreadPush(n *ast.Node, recv *hir.Expr, spread *ast.Node) *hir.Expr {
 	xs := l.expr(spread.Expression())
-	if xs == nil || xs.Type.Kind != hir.Array || !recv.Type.Equal(xs.Type) {
-		l.diagf(n, "unsupported-call", "push spread needs a matching array")
+	if xs != nil && xs.Type.Kind == hir.OrderedSet {
+		xs = l.rtOp("set.values", xs, hir.T(hir.Array, xs.Type.Args[0]))
+	}
+	if xs == nil || xs.Type.Kind != hir.Array || !l.acceptsType(recv.Type.Args[0], xs.Type.Args[0]) {
+		have := "nil"
+		if xs != nil {
+			have = xs.Type.String()
+		}
+		l.diagf(n, "unsupported-call", "push spread needs a matching array (%s <- %s)", recv.Type.String(), have)
 		return nil
 	}
 	l.serial++
 	v := "p" + itoa(l.serial)
-	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v, Type: recv.Type.Args[0], X: xs,
+	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v, Type: xs.Type.Args[0], X: xs,
 		Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
-			X: l.rtOp("array.push", recv, hir.T(hir.I32), hir.V(v, recv.Type.Args[0]))})})
+			X: l.rtOp("array.push", recv, hir.T(hir.I32), l.coerce(hir.V(v, xs.Type.Args[0]), recv.Type.Args[0]))})})
 	return l.rtOp("array.length", recv, hir.T(hir.I32))
 }
 

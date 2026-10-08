@@ -124,6 +124,21 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		}
 		done()
 	}
+	// Data interfaces before class signatures: anonymous shapes with the
+	// same fields reuse them instead of synthesizing a second class.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range l.statementNodes(f) {
+			if stmt.Kind == ast.KindInterfaceDeclaration && l.isDataInterface(stmt) {
+				if c := l.classOf(stmt.Symbol()); c != nil && c.Ctor == nil {
+					l.dataInterfaceClass(stmt, &hir.Interface{Node: c.Node, Name: c.Name})
+				}
+			}
+		}
+		done()
+	}
 	// Signatures before module values and bodies: module-level functions
 	// (lowered with the modules) call into classes.
 	for _, name := range files {
@@ -154,6 +169,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		inherit(c)
 	}
 	l.completeInterfaceHeritage()
+	l.completeIfaceClassHeritage()
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
@@ -295,10 +311,29 @@ type lowerer struct {
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
-	views           map[string]*hir.Interface
-	unions          map[string]*unionView
-	abiReady        bool
-	ifaceClassBases map[string]string
+	views    map[string]*hir.Interface
+	unions   map[string]*unionView
+	abiReady bool
+	// Interface heritage (lower_iface_heritage.go).
+	ifaceDone       map[*hir.Interface]bool
+	ifaceBases      map[*hir.Interface][]*hir.Interface
+	ifaceClassBases []ifaceClassBase
+	// ifaceClassBaseNames: lowered interface name -> class names it extends
+	// (directly or through base interfaces).
+	ifaceClassBaseNames map[string][]string
+	// shapeLike marks data-interface classes: plain objects that an
+	// anonymous shape with the same fields may reuse.
+	shapeLike map[string]bool
+	// thisOverride replaces `this` while a closure body is lowered.
+	thisOverride *hir.Expr
+	// widenedLets: let symbols whose HIR type is the common base of their
+	// assignments; the checker's narrower view of them is not applied.
+	widenedLets map[*ast.Symbol]bool
+	// `continue`/`break` statements rewritten inside a for loop with an
+	// update expression (lower_syntax.go).
+	continueAsBreak map[*ast.Node]bool
+	breakViaFlag    map[*ast.Node]*hir.Expr
+	ifaceClassBaseOf map[string]string
 	bridgeTargets   map[*hir.Method]*hir.Method
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).

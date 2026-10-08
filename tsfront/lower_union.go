@@ -116,10 +116,10 @@ func (l *lowerer) completeUnionInterfaces() {
 	sort.Strings(keys)
 	for _, key := range keys {
 		view := l.unions[key]
-		if l.ifaceClassBases != nil {
-			delete(l.ifaceClassBases, view.iface.Name)
+		if l.ifaceClassBaseOf != nil {
+			delete(l.ifaceClassBaseOf, view.iface.Name)
 			if base := l.commonBrandedClass(view.parts); base != "" {
-				l.ifaceClassBases[view.iface.Name] = base
+				l.ifaceClassBaseOf[view.iface.Name] = base
 			}
 		}
 		// ABAP uses nominal interfaces. Every concrete implementation of a
@@ -157,33 +157,56 @@ func (l *lowerer) completeUnionInterfaces() {
 				continue
 			}
 			same := true
+			result := m.Result
+			params := append([]hir.Param(nil), m.Params...)
 			for _, set := range sets[1:] {
 				other := set[name]
-				if other == nil || !other.Result.Equal(m.Result) {
+				if other == nil {
 					same = false
 					break
 				}
-				short, long := m, other
-				if len(short.Params) > len(long.Params) {
+				// Results may differ covariantly: the view returns the
+				// wider type; a forwarder can return a subtype into it.
+				switch {
+				case other.Result.Equal(result):
+				case l.acceptsType(result, other.Result):
+				case l.acceptsType(other.Result, result):
+					result = other.Result
+				default:
+					same = false
+				}
+				if !same {
+					break
+				}
+				short, long := params, other.Params
+				if len(short) > len(long) {
 					short, long = long, short
 				}
-				for j, p := range short.Params {
-					if !p.Type.Equal(long.Params[j].Type) {
+				for j, p := range short {
+					// A parameter must be accepted by every constituent: keep
+					// the narrower type.
+					switch {
+					case p.Type.Equal(long[j].Type):
+					case l.acceptsType(long[j].Type, p.Type):
+						long[j] = hir.Param{Name: long[j].Name, Type: p.Type, Variadic: long[j].Variadic}
+					case l.acceptsType(p.Type, long[j].Type):
+					default:
 						same = false
 					}
 				}
-				for _, p := range long.Params[len(short.Params):] {
+				for _, p := range long[len(short):] {
 					if p.Type.Kind != hir.Optional {
 						same = false
 					}
 				}
-				m = long
+				params = append([]hir.Param(nil), long...)
 			}
 			if same {
 				cp := *m
 				cp.Abstract = false
 				cp.Body = nil
-				cp.Params = append([]hir.Param(nil), m.Params...)
+				cp.Result = result
+				cp.Params = params
 				view.iface.Methods = append(view.iface.Methods, &cp)
 			}
 		}
@@ -201,7 +224,7 @@ func (l *lowerer) commonBrandedClass(parts []hir.Type) string {
 			return part.Name
 		}
 		if part.Kind == hir.InterfaceRef {
-			return l.ifaceClassBases[part.Name]
+			return l.ifaceClassBaseOf[part.Name]
 		}
 		return ""
 	}

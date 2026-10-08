@@ -157,6 +157,9 @@ const (
 	Trap  StmtKind = "trap"
 	Throw StmtKind = "throw"
 	Try   StmtKind = "try"
+	// Finally runs Body, then Else exactly once: after normal completion, or
+	// before re-raising whatever left Body (Body has no return/break/continue).
+	Finally StmtKind = "finally"
 )
 
 // Try uses Body and Else for the try and catch bodies. Name/Type bind the
