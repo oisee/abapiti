@@ -1,7 +1,7 @@
 // Always compile the original pinned source into a disposable directory.
 // Existing build output is never trusted or imported by the oracle.
 import {execFileSync} from "node:child_process";
-import {mkdtempSync, readFileSync, rmSync, symlinkSync} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 
@@ -23,8 +23,14 @@ export function buildUpstream(repositoryArg = "/home/alice/dev/abaplint") {
  const temporary = mkdtempSync(join(tmpdir(),"statements-oracle-"));
  const dispose = () => rmSync(temporary,{recursive:true,force:true});
  try {
+  const source = join(temporary,"source");
+  mkdirSync(source);
+  const archive = execFileSync("git",["-C",repository,"archive",upstreamPin],{maxBuffer:64*1024*1024});
+  execFileSync("tar",["-x","-C",source],{input:archive});
+  symlinkSync(join(repository,"node_modules"),join(source,"node_modules"),"dir");
+  symlinkSync(join(repository,"packages/core/node_modules"),join(source,"packages/core/node_modules"),"dir");
   symlinkSync(join(repository,"node_modules"),join(temporary,"node_modules"),"dir");
-  execFileSync(process.execPath,[join(compiler,"bin/tsc"),"--project",join(repository,"packages/core/tsconfig.json"),"--outDir",join(temporary,"build"),"--incremental","false"],{stdio:["ignore","pipe","pipe"]});
+  execFileSync(process.execPath,[join(compiler,"bin/tsc"),"--project",join(source,"packages/core/tsconfig.json"),"--outDir",join(temporary,"build"),"--incremental","false"],{stdio:["ignore","pipe","pipe"]});
   symlinkSync(join(repository,"packages/core/node_modules"),join(temporary,"build/node_modules"),"dir");
   console.error(`oracle: fresh original upstream build ${upstreamPin}, TypeScript ${JSON.parse(readFileSync(join(compiler,"package.json"),"utf8")).version}`);
   return {core:join(temporary,"build/src"),dispose};

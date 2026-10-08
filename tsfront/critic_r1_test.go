@@ -79,9 +79,9 @@ func TestCriticR1Accepted(t *testing.T) {
 			var check string
 			switch name {
 			case "default":
-				check = "DATA boxed TYPE " + strings.TrimPrefix("REF TO "+names.Get("runtime.optional<number>"), "") + ".\nboxed = obj->" + names.Get("member.caller") + "( ).\nactual = boxed->value.\nexpected = 7."
+				check = "DATA boxed TYPE REF TO " + names.Get("runtime.optional<number>") + ".\nboxed = obj->" + names.Get("member.caller") + "( ).\nactual = boxed->value.\nexpected = 7."
 			case "default_required":
-				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = 7."
+				check = "DATA absent TYPE REF TO " + names.Get("runtime.optional<number>") + ".\nactual = obj->" + names.Get("member.run") + "( " + names.Get("param.n") + " = absent ).\nexpected = 7."
 			case "implicit_init":
 				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = 7."
 			case "static_init":

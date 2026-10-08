@@ -376,7 +376,7 @@ func (b *body) initialize(owner string) {
 // explicit conversions retain the HIR type rather than ABAP literal inference.
 func (b *body) line(s string) {
 	prefix := b.lastName + " = "
-	if b.lastInit != "" && strings.HasPrefix(s, prefix) {
+	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) {
 		code := b.code.String()
 		b.code.Reset()
 		b.code.WriteString(strings.TrimSuffix(code, b.lastInit))

@@ -631,3 +631,18 @@ func TestClassValueFactoryExposesZeroArgumentClasses(t *testing.T) {
 		t.Fatal("required constructor exposed as zero-argument factory branch")
 	}
 }
+
+func TestRootObjectTemporary(t *testing.T) {
+	root := hir.Ref(hir.RootObject)
+	m := method("run", root, hir.B(ret(hir.V("input", root))))
+	m.Params = []hir.Param{{Name: "input", Type: root}}
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "RootView", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, source := range files {
+		if strings.Contains(source, "CAST object(") || strings.Contains(source, "CAST object (") {
+			t.Fatal("root-reference temporary must retain its declared ABAP type")
+		}
+	}
+}
