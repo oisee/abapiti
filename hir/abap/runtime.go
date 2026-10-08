@@ -31,6 +31,8 @@ func (e *emitter) runtime(t hir.Type) {
 		method("reverse", "DATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
 		line("METHODS push IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
 		method("push", "APPEND p0 TO items.\nresult = lines( items ).\n")
+		line("METHODS unshift IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
+		method("unshift", "INSERT p0 INTO items INDEX 1.\nresult = lines( items ).\n")
 		line("METHODS length RETURNING VALUE(result) TYPE i.")
 		method("length", "result = lines( items ).\n")
 		line("METHODS concat IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")

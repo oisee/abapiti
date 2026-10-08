@@ -976,6 +976,23 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("string.charAt", recv, str, one()), true
 		case "charCodeAt":
 			return l.rtOp("string.charCodeAt", recv, i32, one()), true
+		case "slice":
+			if len(args) > 2 {
+				return nil, false
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			start := hir.L(hir.T(hir.Number), 0)
+			if len(args) > 0 {
+				start = l.expr(args[0])
+			}
+			end := l.rtOp("string.length", recv, i32)
+			if len(args) > 1 {
+				end = l.expr(args[1])
+			}
+			if start == nil || end == nil {
+				return nil, true
+			}
+			return l.rtOp("string.slice", recv, str, start, end), true
 		case "substring":
 			if len(args) == 1 {
 				recv = l.tempInit(n, recv.Type, recv)
@@ -1036,8 +1053,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, false
 			}
 			return l.rtOp("array.reverse", recv, recv.Type), true
-		case "push":
-			if len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
+		case "push", "unshift":
+			if name == "push" && len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
 				l.diagf(n, "note-spread-push", "push(...x) inlined into a loop")
 				return l.spreadPush(n, recv, args[0]), true
 			}
@@ -1051,7 +1068,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			if value == nil {
 				return nil, true
 			}
-			return l.rtOp("array.push", recv, i32, l.coerce(value, recv.Type.Args[0])), true
+			return l.rtOp("array."+name, recv, i32, l.coerce(value, recv.Type.Args[0])), true
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":

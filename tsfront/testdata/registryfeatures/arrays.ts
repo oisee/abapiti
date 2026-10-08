@@ -23,6 +23,17 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  public static sliceAndUnshift(): string {
+    const text = "abcde";
+    const empty: number[] = [];
+    const size = empty.unshift(0);
+    const alias = empty;
+    const size2 = alias.unshift(3);
+    const item = new Item("same");
+    const refs: Item[] = [];
+    refs.unshift(item);
+    return `${text.slice()}/${text.slice(-2)}/${text.slice(-20, 3)}/${text.slice(4, 2)}/${text.slice(2, -1)}/${text.slice(99)}/${text.slice(1.9, 3.9)}/${size}/${size2}/${empty[0]}/${empty[1]}/${refs[0] === item}`;
+  }
   public static continueUpdates(): string {
     let visits = 0;
     let updates = 0;

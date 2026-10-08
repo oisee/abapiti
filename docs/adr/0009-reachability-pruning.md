@@ -267,3 +267,10 @@ and returns retain their abrupt completion behavior. Labelled continues remain
 blocking; finally was already blocking. Original/translated differential covers
 update side effects and nested while, for-of and classic-for ownership on both
 runtimes (10/10 array observations, zero v750 issues).
+
+String.slice now uses relative negative indexes, truncates fractional indexes via
+the existing numeric index operation, clamps to the string length and does not
+swap reversed endpoints. Zero/one/two argument forms preserve receiver evaluation.
+One-value Array.unshift mutates the same dense array, keeps native references,
+and returns its new length. Variadic/spread unshift remains blocking. Independent
+array differential: 11/11 on each runtime, 22 emitted files, zero v750 issues.

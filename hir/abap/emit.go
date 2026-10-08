@@ -1155,6 +1155,20 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + length + ".")
 		case "string.concat":
 			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
+		case "string.slice":
+			lo, hi := args[0], args[1]
+			for _, v := range []string{lo, hi} {
+				b.line("IF " + v + " < 0.")
+				b.line(v + " = " + length + " + " + v + ".")
+				b.line("ENDIF.")
+				b.line(v + " = COND i( WHEN " + v + " < 0 THEN 0 WHEN " + v + " > " + length + " THEN " + length + " ELSE " + v + " ).")
+			}
+			b.line("IF " + hi + " > " + lo + ".")
+			b.line(length + " = " + hi + " - " + lo + ".")
+			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
+			b.line("ELSE.")
+			b.line("CLEAR " + n + ".")
+			b.line("ENDIF.")
 		case "string.substring":
 			// JavaScript substring clamps both indices into [0, length] and
 			// swaps them when start is past end. Indices count UTF-16 units.

@@ -118,6 +118,7 @@ TYPES items_type TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
 DATA items TYPE items_type.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS push IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE i.
+METHODS unshift IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
 METHODS concat IMPORTING p0 TYPE REF TO z_runtime_arra_59ccfd100c9888 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
@@ -143,6 +144,7 @@ TYPES items_type TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 DATA items TYPE items_type.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS push IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE i.
+METHODS unshift IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
 METHODS concat IMPORTING p0 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
@@ -168,6 +170,7 @@ TYPES items_type TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
 DATA items TYPE items_type.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS push IMPORTING p0 TYPE REF TO object RETURNING VALUE(result) TYPE i.
+METHODS unshift IMPORTING p0 TYPE REF TO object RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
 METHODS concat IMPORTING p0 TYPE REF TO z_runtime_arra_c22708faf2e354 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.

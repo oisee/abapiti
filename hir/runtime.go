@@ -26,7 +26,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"number.remainder2":         {Number, 0, false},
 	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
-	"string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
+	"string.slice": {String, 2, false}, "string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
 	"string.charAt": {String, 1, false}, "string.substr": {String, 2, false},
 	"string.trim": {String, 0, false}, "string.toUpperCase": {String, 0, false},
 	"string.replaceAll": {String, 2, false}, "i32.toString": {I32, 0, false},
@@ -35,7 +35,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.toLowerCase":  {String, 0, false},
 	"string.replaceRegex": {String, 2, false},
 	"array.reverse":       {Array, 0, true},
-	"array.push":          {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
+	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
 	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
 	"array.slice1": {Array, 1, false}, "array.slice2": {Array, 2, false},
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
@@ -93,7 +93,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, T(String), true
 	case "string.compareRegistryKey", "string.compareObjectName":
 		return []Type{T(String)}, i, true
-	case "string.substring":
+	case "string.substring", "string.slice":
 		return []Type{i, i}, T(String), true
 	case "string.charCodeAt":
 		return []Type{i}, i, true
@@ -125,7 +125,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, b, true
 	case "number.toString", "i32.toString":
 		return nil, T(String), true
-	case "array.push":
+	case "array.push", "array.unshift":
 		return []Type{t.Args[0]}, i, true
 	case "array.get":
 		return []Type{i}, T(Optional, t.Args[0]), true
