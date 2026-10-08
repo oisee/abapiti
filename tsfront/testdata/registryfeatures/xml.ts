@@ -12,7 +12,8 @@ export class XMLProbe {
     const bool: any = flag ? false : true;
     const missing: any = undefined;
     const empty: any = "";
-    return `${typeof x}/${x === null}/${x === 0}/${!!x}/${x ?? "fallback"}|${typeof bool}/${!!bool}/${bool}|${missing === undefined}/${missing === null}/${missing ?? "fallback"}|${!!empty}`;
+    const list: any = flag ? ["a"] : "s";
+    return `${Array.isArray(list)}/${Array.isArray(x)}/${Array.isArray(missing)}|${typeof x}/${x === null}/${x === 0}/${!!x}/${x ?? "fallback"}|${typeof bool}/${!!bool}/${bool}|${missing === undefined}/${missing === null}/${missing ?? "fallback"}|${!!empty}`;
   }
   public static parse(xml: string): unknown { throw new Error("external XML adapter"); }
 }

@@ -22,6 +22,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
 	descCount                                       map[string]int
@@ -61,6 +62,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		e.class(c)
 	}
 	e.support()
+	e.markArrays()
 	for file, src := range e.files {
 		out, err := wrap(src)
 		if err != nil {
@@ -1526,6 +1528,23 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + a + "->" + method + "( ).")
 		b.line("ELSE.")
 		b.line(n + " = `undefined`.")
+		b.line("ENDIF.")
+		return
+	case "dynamic.isArray":
+		// An unbound box is undefined, which is not an array.
+		b.line(n + " = abap_false.")
+		b.line("IF " + a + " IS BOUND.")
+		b.e.isArrayUsed = true
+		b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array.")
+		b.line(n + " = abap_true.")
+		b.line("ELSEIF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS BOUND.")
+		mark := b.rawTemp("REF TO " + b.e.name("runtime.arraymark"))
+		b.line("TRY.")
+		b.line(mark + " ?= " + a + "->oval.")
+		b.line(n + " = abap_true.")
+		b.line("CATCH cx_sy_move_cast_error.")
+		b.line("ENDTRY.")
+		b.line("ENDIF.")
 		b.line("ENDIF.")
 		return
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":

@@ -404,6 +404,17 @@ func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 				return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", d, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), "object")}, true
 			}
 		}
+		if x.Type.Kind == hir.Dynamic {
+			l.diagf(n, "note-is-array", "Array.isArray on a dynamic value reads the box's array tag")
+			return l.rtOp("dynamic.isArray", x, hir.T(hir.Bool)), true
+		}
+		if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic {
+			present := l.tempInit(n, x.Type, x)
+			defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
+			d := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}
+			l.diagf(n, "note-is-array", "Array.isArray on a dynamic value reads the box's array tag")
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: l.rtOp("dynamic.isArray", d, hir.T(hir.Bool))}, true
+		}
 		l.diagf(n, "unsupported-call", "Array.isArray on %s is not lowered", x.Type.Kind)
 		return nil, true
 	}

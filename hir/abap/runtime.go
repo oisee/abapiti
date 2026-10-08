@@ -678,3 +678,25 @@ ENDMETHOD.
 ENDCLASS.
 `
 }
+
+// markArrays gives every emitted array class an empty marker interface when
+// Array.isArray on a dynamic value needs to recognise a boxed array. Programs
+// that do not ask keep their exact previous output.
+func (e *emitter) markArrays() {
+	if !e.isArrayUsed {
+		return
+	}
+	mark := e.name("runtime.arraymark")
+	e.files[mark+".intf.abap"] = "INTERFACE " + mark + " PUBLIC.\nENDINTERFACE.\n"
+	for id := range e.types {
+		if !strings.HasPrefix(id, "runtime."+string(hir.Array)+"<") {
+			continue
+		}
+		file := e.name(id) + ".clas.abap"
+		src, ok := e.files[file]
+		if !ok {
+			continue
+		}
+		e.files[file] = strings.Replace(src, "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
+	}
+}

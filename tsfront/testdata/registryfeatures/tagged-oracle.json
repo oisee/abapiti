@@ -1,10 +1,10 @@
 [
   {
     "flag": true,
-    "expected": "number/false/true/false/0|boolean/false/false|true/false/fallback|false"
+    "expected": "true/false/false|number/false/true/false/0|boolean/false/false|true/false/fallback|false"
   },
   {
     "flag": false,
-    "expected": "object/true/false/false/fallback|boolean/true/true|true/false/fallback|false"
+    "expected": "false/false/false|object/true/false/false/fallback|boolean/true/true|true/false/fallback|false"
   }
 ]
