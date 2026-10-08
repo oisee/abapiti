@@ -69,13 +69,18 @@ func main() {
 	report["methods"] = methods
 	report["fields"] = fields
 	byCategory := map[string]int{}
+	var numberSites []string
 	examples := map[string][]string{}
 	for _, d := range diags {
+		if d.Category == "note-number-ranges" {
+			numberSites = append(numberSites, d.Message)
+		}
 		byCategory[d.Category]++
 		if len(examples[d.Category]) < 2 {
 			examples[d.Category] = append(examples[d.Category], d.String())
 		}
 	}
+	report["numberSites"] = numberSites
 	report["diagnostics"] = byCategory
 	report["examples"] = examples
 	blocking := 0

@@ -314,7 +314,7 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	if m.QuestionToken() != nil && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
-	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static}
+	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
 	c.Fields = append(c.Fields, f)
 	if sym := m.Symbol(); sym != nil {
 		l.fields[sym] = f
@@ -331,7 +331,7 @@ func (l *lowerer) methodSignature(m *ast.Node, c *hir.Class) {
 	if !ok {
 		return
 	}
-	hm := &hir.Method{Node: l.node(m), Name: name}
+	hm := &hir.Method{Node: l.node(m), Name: name, Internal: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0}
 	hm.Static = m.ModifierFlags()&ast.ModifierFlagsStatic != 0
 	hm.Abstract = m.ModifierFlags()&ast.ModifierFlagsAbstract != 0
 	hm.Virtual = !hm.Static
@@ -373,7 +373,7 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 		} else if ps := p.Symbol(); ps != nil {
 			typ = l.mapCheckerType(p, l.ck.GetTypeOfSymbol(ps))
 		}
-		f := hir.Field{Node: l.node(p), Name: name, Type: typ}
+		f := hir.Field{Node: l.node(p), Name: name, Type: typ, Private: p.ModifierFlags()&ast.ModifierFlagsPrivate != 0, Readonly: p.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
 		c.Fields = append(c.Fields, f)
 		if ps := p.Symbol(); ps != nil {
 			l.fields[ps] = f

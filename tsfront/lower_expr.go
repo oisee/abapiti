@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -680,6 +681,22 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
 		name := callee.Name().Text()
+		if p.Expression.Kind == ast.KindIdentifier && p.Expression.Text() == "Math" && (name == "min" || name == "max") {
+			sym := l.resolve(p.Expression)
+			file := l.fileOfSymbol(sym)
+			if file != nil && l.prog.prog.IsSourceFileDefaultLibrary(file.Path()) {
+				args := n.Arguments()
+				if len(args) != 2 {
+					l.diagf(n, "unsupported-call", "Math.%s requires two arguments in this phase", name)
+					return nil
+				}
+				x, y := l.expr(args[0]), l.expr(args[1])
+				if x == nil || y == nil {
+					return nil
+				}
+				return &hir.Expr{Kind: hir.NumericMinMax, Node: l.node(n), Op: name, Type: hir.T(hir.Number), X: x, Y: y}
+			}
+		}
 		// Array higher-order calls inline into loops before anything else.
 		if p.Expression != nil && p.QuestionDotToken == nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach") && !isGlobalObjectExpr(p.Expression) {
 			outputHint := l.hint
@@ -1384,10 +1401,26 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			}
 			return nil
 		}
-		l.diagf(n, "unsupported-number", "Number remainder requires the literal divisor 2 in this phase")
+		if b.Right.Kind == ast.KindNumericLiteral {
+			divisor := l.numericLiteral(b.Right, hir.T(hir.Number), 1)
+			r := numericLiteral(divisor)
+			if r.state == 1 && r.lo > 0 {
+				return l.arithmetic(n, b, "%")
+			}
+		}
+		l.diagf(n, "unsupported-number", "Number remainder requires the literal divisor 2 or a proven integral dividend")
 		return nil
 	case ast.KindSlashToken:
-		l.diagf(n, "unsupported-number", "division is not lowered in this phase")
+		if b.Right.Kind == ast.KindNumericLiteral || b.Right.Kind == ast.KindPrefixUnaryExpression {
+			rhs := l.expr(b.Right)
+			if rhs != nil && rhs.Kind == hir.Lit {
+				v, err := strconv.ParseFloat(fmt.Sprint(rhs.Value), 64)
+				if err == nil && v != 0 {
+					return l.arithmetic(n, b, "/")
+				}
+			}
+		}
+		l.diagf(n, "unsupported-number", "Number division requires a non-zero literal divisor")
 		return nil
 	case ast.KindInstanceOfKeyword:
 		return l.instanceOf(n)

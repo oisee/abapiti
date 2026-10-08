@@ -160,7 +160,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 				continue
 			}
 			mod := l.moduleClassOf(f)
-			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Result: hir.T(hir.Void)}
+			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
 			if e, ok := l.overrides[fn]; ok && e.Method != nil {
 				hm = e.Method()
@@ -204,7 +204,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 					continue
 				}
 				mod := l.moduleClassOf(f)
-				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true})
+				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
 				l.modvars[d.Symbol()] = d.Name().Text()
 				l.modvarsByName[f.FileName()+" "+d.Name().Text()] = modvarRef{owner: mod.Name, field: d.Name().Text()}
 			}
@@ -244,6 +244,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	}
 	l.completeUnionInterfaces()
 	l.covariantImplements()
+	l.inferNumberRanges()
 	return l.out, l.diags, nil
 }
 
@@ -612,7 +613,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		}
 	}
 	if !found {
-		mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true})
+		mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
 	}
 	l.modvars[d.Symbol()] = name
 	l.modvarsByName[l.file.FileName()+" "+name] = modvarRef{owner: mod.Name, field: name}
