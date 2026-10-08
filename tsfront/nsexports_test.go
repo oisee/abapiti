@@ -27,3 +27,20 @@ func TestNamespaceNonClassExports(t *testing.T) {
 		})
 	}
 }
+
+// A module constant that is only re-exported is left out; one read anywhere
+// keeps the ordinary lowering (and its diagnostics).
+func TestModuleConstUnread(t *testing.T) {
+	for name, wantNote := range map[string]bool{"read": false, "unread": true} {
+		t.Run(name, func(t *testing.T) {
+			_, diags := lowerProbe(t, filepath.Join("testdata", "modconst", name))
+			note := false
+			for _, d := range diags {
+				note = note || d.Category == "note-module-const-unread"
+			}
+			if note != wantNote {
+				t.Fatalf("note-module-const-unread = %v, want %v: %v", note, wantNote, diags)
+			}
+		})
+	}
+}
