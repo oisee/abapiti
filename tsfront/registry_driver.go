@@ -72,7 +72,7 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 		line("DATA %s TYPE string.", s)
 	}
 	for _, s := range []string{"start", "stop", "load_us", "run_us"} {
-		line("DATA %s TYPE int8.", s)
+		line("DATA %s TYPE i.", s)
 	}
 	line("GET RUN TIME FIELD start.")
 	line("CREATE OBJECT h.")
