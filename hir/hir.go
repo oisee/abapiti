@@ -153,8 +153,10 @@ const (
 	Break    StmtKind = "break"
 	Continue StmtKind = "continue"
 	Return   StmtKind = "return"
-	Throw    StmtKind = "throw"
-	Try      StmtKind = "try"
+	// Trap raises a dedicated, uncatchable-by-TS-payload coverage exception.
+	Trap  StmtKind = "trap"
+	Throw StmtKind = "throw"
+	Try   StmtKind = "try"
 )
 
 // Try uses Body and Else for the try and catch bodies. Name/Type bind the

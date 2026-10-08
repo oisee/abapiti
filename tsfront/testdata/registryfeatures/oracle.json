@@ -1,0 +1,44 @@
+[
+  {
+    "raw": "abc",
+    "needle": "b",
+    "n": 7,
+    "flag": true,
+    "expected": " first abc\n7/true last |true|true/true|second,third"
+  },
+  {
+    "raw": "abc",
+    "needle": "x",
+    "n": -3,
+    "flag": false,
+    "expected": " first abc\n-3/false last |false|true/true|second,third"
+  },
+  {
+    "raw": "",
+    "needle": "",
+    "n": 0,
+    "flag": false,
+    "expected": " first \n0/false last |true|true/true|second,third"
+  },
+  {
+    "raw": "a  ",
+    "needle": " ",
+    "n": 42,
+    "flag": true,
+    "expected": " first a  \n42/true last |true|true/true|second,third"
+  },
+  {
+    "raw": "€😀",
+    "needle": "😀",
+    "n": 9007199254740991,
+    "flag": true,
+    "expected": " first €😀\n9007199254740991/true last |true|true/true|second,third"
+  },
+  {
+    "raw": "a\n\t`|",
+    "needle": "\t",
+    "n": -9007199254740991,
+    "flag": false,
+    "expected": " first a\n\t`|\n-9007199254740991/false last |true|true/true|second,third"
+  }
+]

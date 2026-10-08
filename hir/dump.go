@@ -98,6 +98,8 @@ func dumpStmt(b *strings.Builder, s *Stmt, indent string) {
 		line("catch %s:%s", s.Name, s.Type)
 		dumpStmt(b, s.Else, indent+"  ")
 		line("end try")
+	case Trap:
+		line("trap %s", s.Name)
 	case Return, Throw:
 		line("%s %s", s.Kind, dumpExpr(s.X))
 	default:

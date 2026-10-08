@@ -65,7 +65,21 @@ func TestRegistryClosureGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, diags, err := p.LowerWithOverrides(files, registry)
+	var coverage *Reachability
+	if path := os.Getenv("REGISTRY_REACHABILITY"); path != "" {
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		coverage = &Reachability{}
+		if err := json.Unmarshal(data, coverage); err != nil {
+			t.Fatal(err)
+		}
+		if coverage.UpstreamPin != manifest.Pin {
+			t.Fatal("coverage upstream pin mismatch")
+		}
+	}
+	prog, diags, err := p.LowerWithReachability(files, registry, coverage)
 	if err != nil {
 		t.Fatal(err)
 	}

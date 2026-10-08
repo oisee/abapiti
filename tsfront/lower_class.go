@@ -553,14 +553,17 @@ func (l *lowerer) memberName(m *ast.Node, c *hir.Class) (string, bool) {
 // lowerMethodBody lowers the body of one method (skipping what the signature
 // pass rejected).
 func (l *lowerer) lowerMethodBody(m *ast.Node) {
-	if e, ok := l.overrides[m]; ok && e.Method != nil {
-		return
-	}
 	hm := l.methodOfNode(m)
 	if hm == nil {
 		return
 	}
 	l.method = hm
+	if l.trapUnexecuted(m, hm) {
+		return
+	}
+	if e, ok := l.overrides[m]; ok && e.Method != nil {
+		return
+	}
 	if m.Body() == nil {
 		return
 	}
@@ -585,6 +588,9 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 		return
 	}
 	l.method = hm
+	if l.trapUnexecuted(m, hm) {
+		return
+	}
 	l.push()
 	for _, p := range hm.Params {
 		l.declare(p.Name, p.Type)

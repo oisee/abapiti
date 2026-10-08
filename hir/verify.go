@@ -344,7 +344,7 @@ func returns(s *Stmt) bool {
 		return false
 	}
 	switch s.Kind {
-	case Return, Throw:
+	case Return, Throw, Trap:
 		return true
 	case Block:
 		for _, x := range s.List {
@@ -447,6 +447,10 @@ func (v *verifier) stmt(c *Class, m *Method, s *Stmt, env map[string]Type, loops
 			}
 		} else {
 			assign(m.Result, s.X)
+		}
+	case Trap:
+		if s.Name == "" {
+			v.fail(s.Node, "trap without source location")
 		}
 	case Throw:
 		if check(s.X).Kind == Void {
