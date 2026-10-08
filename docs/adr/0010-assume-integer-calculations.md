@@ -8,13 +8,17 @@ uses its options rather than the environment. The default path remains unchanged
 Run the existing proven-range pass unchanged. Its I32 proofs still select `i`;
 remaining Number storage, including public signatures and nested collection or
 optional types, defaults to I64 / `int8`. This is an integer input contract,
-not a binary64 semantics optimization. Integer arithmetic must raise on overflow.
+not a binary64 semantics optimization. All values must stay within JS safe
+integers (±9007199254740991).
+Integer arithmetic must raise when a result leaves that domain. Negative zero
+is not preserved: `-0` becomes `0`; division is blocked unless explicitly approved.
 An explicit HIR arithmetic marker requests range guards in generated ABAP so
-bigint-backed execution also rejects values outside signed 64 bits. Native ABAP
-can raise before those guards. Operands are evaluated once, in source order.
+bigint-backed execution also rejects values outside the safe-integer domain.
+Native ABAP can raise before those guards. Operands are evaluated once, in source order.
 
 Potential fractional sources are blocking diagnostics at their exact TS spans:
 division, negative/non-literal exponentiation, fractional/exponent literals,
+literals outside the safe-integer range,
 Math functions that need integral-result evidence, parseFloat/Number conversions,
 and fractional numeric formatting. Unsupported TS operations remain blocking;
 an exception does not authorize implementing unsupported operations incorrectly.
@@ -34,7 +38,7 @@ cross into integer storage through CheckedNumericConvert: a non-integral or
 out-of-range result raises cx_sy_range_out_of_bounds. Binary64 crossings are
 limited to exact JS safe integers (±9007199254740991). This conservative bound
 avoids rounding an int8 operand into a different float. Integer decimal formatting
-uses int8 directly and covers the entire signed 64-bit domain. Existing string
+uses int8 directly within the safe-integer domain. Existing string
 index boundaries retain their checked I32 domain rather than silently truncating.
 
 The vendored lexer closure and statements/structures closure require an empty

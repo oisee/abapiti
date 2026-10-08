@@ -3,6 +3,7 @@ package tsfront
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -90,6 +91,14 @@ func integerHazard(n *ast.Node) string {
 		text := strings.ToLower(f.Text()[scanner.GetTokenPosOfNode(n, f, false):n.End()])
 		if !strings.HasPrefix(text, "0x") && !strings.HasPrefix(text, "0b") && !strings.HasPrefix(text, "0o") && strings.ContainsAny(text, ".e") {
 			return "fractional or exponent numeric literal"
+		}
+		text = strings.ReplaceAll(text, "_", "")
+		base := 10
+		if strings.HasPrefix(text, "0x") || strings.HasPrefix(text, "0b") || strings.HasPrefix(text, "0o") {
+			base = 0
+		}
+		if v, ok := new(big.Int).SetString(text, base); ok && v.Cmp(big.NewInt(safeInteger)) > 0 {
+			return "numeric literal outside the JS safe-integer range"
 		}
 	case ast.KindBinaryExpression:
 		b := n.AsBinaryExpression()
@@ -253,7 +262,7 @@ func (l *lowerer) assumeIntegerTypes() {
 		}
 		if e.Kind == hir.Lit && original.Kind == hir.Number {
 			v, err := strconv.ParseFloat(fmt.Sprint(e.Value), 64)
-			if err != nil || math.Trunc(v) != v || v < -9223372036854775808.0 || v >= 9223372036854775808.0 {
+			if err != nil || math.Trunc(v) != v || v < -float64(safeInteger) || v > float64(safeInteger) {
 				if !l.floatSites[e.Source] {
 					l.diags = append(l.diags, LowerDiagnostic{Category: "assume-integer", Loc: e.Source, Message: "non-integral or unsafe HIR literal requires a fingerprinted TS exception"})
 				}

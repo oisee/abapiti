@@ -1576,8 +1576,8 @@ func (b *body) constantDeclarations() string {
 		init := &body{}
 		init.line("DATA range_int8_bound_min TYPE int8.")
 		init.line("DATA range_int8_bound_max TYPE int8.")
-		init.int8Lit("range_int8_bound_min", math.MinInt64)
-		init.int8Lit("range_int8_bound_max", math.MaxInt64)
+		init.int8Lit("range_int8_bound_min", -9007199254740991)
+		init.int8Lit("range_int8_bound_max", 9007199254740991)
 		out.WriteString(init.code.String())
 	}
 	keys = keys[:0]
@@ -1594,6 +1594,8 @@ func (b *body) constantDeclarations() string {
 	return out.String()
 }
 
+// The opt-in integer contract must reject loss of JS integer precision long
+// before native int8 overflows, including in bigint-backed runtimes.
 func (b *body) integerOverflow(n string) {
 	b.integerBounds = true
 	low, high := "range_int8_bound_min", "range_int8_bound_max"

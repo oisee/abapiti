@@ -60,7 +60,7 @@ func TestAssumeIntegerContract(t *testing.T) {
 }
 
 func TestAssumeIntegerBlockingSites(t *testing.T) {
-	for _, expression := range []string{"5/2", "1.5", "1e3", "n**-1", "n**n", "Math.sqrt(n)", "Math.log(n)", "Math.pow(n,2)", "Math.random()", "Math.sin(n)", "Math.ceil(n)", "Math.floor(n)", "Math.round(n)", "Math.trunc(n)", `parseFloat("1.5")`, `Number("1.5")`, "n.toFixed(2)"} {
+	for _, expression := range []string{"1000000000000000128", "9007199254740992", "0x20000000000000", "0b100000000000000000000000000000000000000000000000000000", "0o400000000000000000", "9_007_199_254_740_992", "5/2", "1.5", "1e3", "n**-1", "n**n", "Math.sqrt(n)", "Math.log(n)", "Math.pow(n,2)", "Math.random()", "Math.sin(n)", "Math.ceil(n)", "Math.floor(n)", "Math.round(n)", "Math.trunc(n)", `parseFloat("1.5")`, `Number("1.5")`, "n.toFixed(2)"} {
 		t.Run(expression, func(t *testing.T) {
 			p := integerProbe(t, `export class Probe { run(n:number) { return `+expression+`; } }`)
 			_, ds, err := p.LowerWithOptions([]string{"probe.ts"}, LowerOptions{AssumeOnlyIntegerCalculations: true})
@@ -159,7 +159,9 @@ func TestAssumeIntegerRuntime(t *testing.T) {
  static sub(n:number,m:number):number { return n-m; }
  static mul(n:number,m:number):number { return n*m; }
  static neg(n:number):number { return -n; }
- static constantOverflow():number { return 4611686018427387904*2; }
+ static constantOverflow():number { return 94906267*94906267; }
+ static cancel(n:number):number { return n+1-n; }
+ static boundary():number { return 9007199254740991; }
  static render(n:number):string { return n.toString(); }
  }`
 	options := LowerOptions{AssumeOnlyIntegerCalculations: true, IntegerExceptions: []IntegerException{
@@ -185,17 +187,17 @@ func TestAssumeIntegerRuntime(t *testing.T) {
  PRIVATE SECTION.
  METHODS boundary FOR TESTING.
  METHODS overflow FOR TESTING.
+ METHODS product FOR TESTING.
+ METHODS cancel FOR TESTING.
  ENDCLASS.
  CLASS ltcl_integer IMPLEMENTATION.
  METHOD boundary.
  DATA actual TYPE int8.
  DATA text TYPE string.
  DATA hi TYPE int8.
- hi = 922337203.
- hi = hi * 1000000000.
- hi = hi + 685477580.
- hi = hi * 10.
- hi = hi + 7.
+ hi = 900719925.
+ hi = hi * 10000000.
+ hi = hi + 4740991.
  actual = CLASSNAME=>HALF( N = 6 ).
  cl_abap_unit_assert=>assert_equals( act = actual exp = 3 ).
  actual = CLASSNAME=>DOUBLE( N = 4 ).
@@ -207,23 +209,26 @@ func TestAssumeIntegerRuntime(t *testing.T) {
  cl_abap_unit_assert=>fail( msg = 'fraction accepted' ).
  CATCH cx_sy_range_out_of_bounds.
  ENDTRY.
+ actual = CLASSNAME=>BOUNDARY( ).
+ cl_abap_unit_assert=>assert_equals( act = actual exp = hi ).
  text = CLASSNAME=>RENDER( N = hi ).
- cl_abap_unit_assert=>assert_equals( act = text exp = '9223372036854775807' ).
+ cl_abap_unit_assert=>assert_equals( act = text exp = '9007199254740991' ).
  actual = CLASSNAME=>SUB( N = hi M = 1 ).
  text = CLASSNAME=>RENDER( N = actual ).
- cl_abap_unit_assert=>assert_equals( act = text exp = '9223372036854775806' ).
+ cl_abap_unit_assert=>assert_equals( act = text exp = '9007199254740990' ).
  ENDMETHOD.
  METHOD overflow.
  DATA actual TYPE int8.
  DATA hi TYPE int8.
- hi = 922337203.
- hi = hi * 1000000000.
- hi = hi + 685477580.
- hi = hi * 10.
- hi = hi + 7.
+ hi = 900719925.
+ hi = hi * 10000000.
+ hi = hi + 4740991.
  DATA lo TYPE int8.
  lo = 0 - hi.
- lo = lo - 1.
+ actual = CLASSNAME=>NEG( N = lo ).
+ cl_abap_unit_assert=>assert_equals( act = actual exp = hi ).
+ actual = CLASSNAME=>NEG( N = hi ).
+ cl_abap_unit_assert=>assert_equals( act = actual exp = lo ).
  TRY.
  actual = CLASSNAME=>ADD( N = hi M = 1 ).
  cl_abap_unit_assert=>fail( msg = 'addition overflow accepted' ).
@@ -240,19 +245,34 @@ func TestAssumeIntegerRuntime(t *testing.T) {
  CATCH cx_sy_arithmetic_overflow.
  ENDTRY.
  TRY.
- actual = CLASSNAME=>NEG( N = lo ).
+ actual = CLASSNAME=>NEG( N = lo - 1 ).
  cl_abap_unit_assert=>fail( msg = 'negation overflow accepted' ).
  CATCH cx_sy_arithmetic_overflow.
  ENDTRY.
+ ENDMETHOD.
+ METHOD product.
+ DATA actual TYPE int8.
  TRY.
  actual = CLASSNAME=>CONSTOVERFLOW( ).
- cl_abap_unit_assert=>fail( msg = 'wide literal overflow accepted' ).
+ cl_abap_unit_assert=>fail( msg = 'unsafe product accepted' ).
+ CATCH cx_sy_arithmetic_overflow.
+ ENDTRY.
+ ENDMETHOD.
+ METHOD cancel.
+ DATA actual TYPE int8.
+ DATA hi TYPE int8.
+ hi = 900719925.
+ hi = hi * 10000000.
+ hi = hi + 4740991.
+ TRY.
+ actual = CLASSNAME=>CANCEL( N = hi ).
+ cl_abap_unit_assert=>fail( msg = 'unsafe intermediate accepted' ).
  CATCH cx_sy_arithmetic_overflow.
  ENDTRY.
  ENDMETHOD.
  ENDCLASS.
  `
-	for from, to := range map[string]string{"CLASSNAME": names.Get("probe.ts.Probe"), "HALF": names.Get("member.half"), "DOUBLE": names.Get("member.double"), "PAIR": names.Get("member.pair"), "ADD": names.Get("member.add"), "SUB": names.Get("member.sub"), "MUL": names.Get("member.mul"), "NEG": names.Get("member.neg"), "CONSTOVERFLOW": names.Get("member.constantOverflow"), "RENDER": names.Get("member.render"), "N =": names.Get("param.n") + " =", "M =": names.Get("param.m") + " ="} {
+	for from, to := range map[string]string{"CLASSNAME": names.Get("probe.ts.Probe"), "HALF": names.Get("member.half"), "DOUBLE": names.Get("member.double"), "PAIR": names.Get("member.pair"), "ADD": names.Get("member.add"), "SUB": names.Get("member.sub"), "MUL": names.Get("member.mul"), "NEG": names.Get("member.neg"), "CONSTOVERFLOW": names.Get("member.constantOverflow"), "RENDER": names.Get("member.render"), "CANCEL": names.Get("member.cancel"), "BOUNDARY": names.Get("member.boundary"), "N =": names.Get("param.n") + " =", "M =": names.Get("param.m") + " ="} {
 		driver = strings.ReplaceAll(driver, from, to)
 	}
 	files[names.Get("probe.ts.Probe")+".clas.testclasses.abap"] = driver
