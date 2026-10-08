@@ -124,6 +124,21 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		}
 		done()
 	}
+	// Data interfaces before class signatures: anonymous shapes with the
+	// same fields reuse them instead of synthesizing a second class.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range l.statementNodes(f) {
+			if stmt.Kind == ast.KindInterfaceDeclaration && l.isDataInterface(stmt) {
+				if c := l.classOf(stmt.Symbol()); c != nil && c.Ctor == nil {
+					l.dataInterfaceClass(stmt, &hir.Interface{Node: c.Node, Name: c.Name})
+				}
+			}
+		}
+		done()
+	}
 	// Signatures before module values and bodies: module-level functions
 	// (lowered with the modules) call into classes.
 	for _, name := range files {
@@ -304,6 +319,9 @@ type lowerer struct {
 	// ifaceClassBaseNames: lowered interface name -> class names it extends
 	// (directly or through base interfaces).
 	ifaceClassBaseNames map[string][]string
+	// shapeLike marks data-interface classes: plain objects that an
+	// anonymous shape with the same fields may reuse.
+	shapeLike map[string]bool
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	continueAsBreak map[*ast.Node]bool

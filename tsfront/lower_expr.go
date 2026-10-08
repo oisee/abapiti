@@ -52,7 +52,17 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant left operand")
 				return left
 			}
-			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: left, Y: l.condition(b.Right)}
+			right := l.condition(b.Right)
+			if left == nil || right == nil {
+				return nil
+			}
+			if value, ok := constantBool(right); ok && value == (op == "||") {
+				// `a && false` / `a || true`: a is still evaluated, the
+				// result is the constant.
+				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant right operand")
+				return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: left}, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: right}), Y: hir.L(hir.T(hir.Bool), value)}
+			}
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: left, Y: right}
 		}
 	}
 	x := l.expr(n)
@@ -182,7 +192,7 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, typ)
 	}
-	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef) {
+	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || typ.Kind == hir.Array || typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
 		return l.rtOp("dynamic.asRef", x, typ)
 	}
 	if (typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && typ.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], typ.Args[0])) || (typ.Kind == hir.Array && x.Type.Kind == hir.Array && l.acceptsType(x.Type, typ)) || typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || (x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Equal(typ)) {
@@ -306,7 +316,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		c := n.AsConditionalExpression()
 		x := l.condition(c.Condition)
 		hint := l.hint
-		if hint.Kind == hir.Void {
+		if hint.Kind == hir.Void || hint.Kind == "" {
 			l.hint = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 		}
 		branchHint := l.hint
@@ -320,10 +330,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		result := y.Type
 		if !y.Type.Equal(z.Type) {
 			result = hint
-			if result.Kind == hir.Void {
+			if result.Kind == hir.Void || result.Kind == "" {
 				result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			}
-			if result.Kind == hir.Void {
+			if result.Kind == hir.Void || result.Kind == "" {
 				return nil
 			}
 		}
@@ -348,6 +358,11 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if len(els) == 0 {
 			if l.hint.Kind != hir.Array && l.hint.Kind != hir.OrderedSet {
 				if t := l.ck.GetContextualType(n, 0); t != nil {
+					if arr := l.singleArrayConstituent(t); arr != nil {
+						// A tagged (union) context: the one array constituent
+						// gives the element type; the value is boxed later.
+						t = arr
+					}
 					l.hint = l.mapCheckerType(n, t)
 				}
 			}
@@ -1138,6 +1153,14 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
 	}
+	if pat != nil && pat.Type.Kind == hir.String && (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$") {
+		if n.Expression().Name().Text() == "replace" {
+			l.diagf(n, "note-replace-first", "string replace with a dynamic string pattern replaces the first occurrence")
+			return l.rtOp("string.replaceFirst", recv, hir.T(hir.String), pat, with)
+		}
+		l.diagf(n, "note-replace-all", "replaceAll with a dynamic string pattern")
+		return l.rtOp("string.replaceAll", recv, hir.T(hir.String), pat, with)
+	}
 	l.diagf(n, "unsupported-regex", "replace with a non-literal pattern is not lowered")
 	return nil
 }
@@ -1413,7 +1436,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
 			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
-				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s", typ.String())
+				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s (left %s, right %s)", typ.String(), left.Type.String(), right.Type.String())
 				return nil
 			}
 			if op == ast.KindAmpersandAmpersandToken {
@@ -1553,6 +1576,20 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	if c := l.classOf(l.resolve(b.Right)); c != nil {
+		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
+			// A box holding a string, number or class value is never an
+			// instance; an object reference is tested as such.
+			l.diagf(n, "note-instanceof-dynamic", "instanceof on a tagged value tests its object reference")
+			d := x
+			if x.Type.Kind == hir.Optional {
+				present := l.tempInit(n, x.Type, x)
+				d = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}
+				test := &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: l.rtOp("dynamic.asRef", d, hir.Ref(hir.RootObject)), Owner: c.Name}
+				defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
+				return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: test}
+			}
+			return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: l.rtOp("dynamic.asRef", d, hir.Ref(hir.RootObject)), Owner: c.Name}
+		}
 		if l.unrelatedClasses(x.Type, c.Name) {
 			// The HIR static type of x and c share no subclass: the test is
 			// the constant false (HIR references are soundly typed).
@@ -1584,6 +1621,16 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	}
 	leftUndef := l.isUndefinedType(b.Left)
 	rightUndef := l.isUndefinedType(b.Right)
+	if leftUndef && rightUndef {
+		// `x === undefined` where the checker already narrowed x to
+		// undefined: still a presence test of x.
+		switch {
+		case isUndefinedKeyword(b.Right) && !isUndefinedKeyword(b.Left):
+			leftUndef = false
+		case isUndefinedKeyword(b.Left) && !isUndefinedKeyword(b.Right):
+			rightUndef = false
+		}
+	}
 	if leftUndef != rightUndef {
 		operand := b.Left
 		if leftUndef {

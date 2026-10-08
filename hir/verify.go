@@ -356,6 +356,23 @@ func (v *verifier) body(c *Class, m *Method) {
 		v.fail(m.Node, "method may fall through without return")
 	}
 }
+// exits reports a return, break or continue anywhere in the block.
+func exits(s *Stmt) bool {
+	if s == nil {
+		return false
+	}
+	switch s.Kind {
+	case Return, Break, Continue:
+		return true
+	}
+	for _, x := range s.List {
+		if exits(x) {
+			return true
+		}
+	}
+	return exits(s.Body) || exits(s.Else)
+}
+
 func returns(s *Stmt) bool {
 	if s == nil {
 		return false
@@ -415,7 +432,18 @@ func (v *verifier) stmt(c *Class, m *Method, s *Stmt, env map[string]Type, loops
 	switch s.Kind {
 	case Block:
 		scope := clone(env)
+		declared := map[string]bool{}
 		for _, x := range s.List {
+			if x != nil && x.Kind == VarDecl {
+				// A nested block may shadow an enclosing local (the emitter
+				// allocates a fresh temporary per declaration); redeclaring
+				// a name within the same block is an error.
+				if declared[x.Name] {
+					v.fail(x.Node, "invalid local "+x.Name)
+				}
+				declared[x.Name] = true
+				delete(scope, x.Name)
+			}
 			v.stmt(c, m, x, scope, loops)
 		}
 	case VarDecl:
@@ -479,6 +507,18 @@ func (v *verifier) stmt(c *Class, m *Method, s *Stmt, env map[string]Type, loops
 		e := clone(env)
 		e[s.Name] = s.Type
 		v.stmt(c, m, s.Else, e, loops)
+	case Finally:
+		if s.Body == nil || s.Else == nil {
+			v.fail(s.Node, "finally needs a body and a finally block")
+			break
+		}
+		if exits(s.Body) {
+			v.fail(s.Node, "finally body must not return, break or continue")
+		}
+		// Both blocks run at loop depth 0 of their own: a break inside the
+		// finally block would not be a loop control of the enclosing loop.
+		v.stmt(c, m, s.Body, clone(env), 0)
+		v.stmt(c, m, s.Else, clone(env), 0)
 	default:
 		v.fail(s.Node, "unknown statement "+string(s.Kind))
 	}
@@ -755,7 +795,7 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		if target.Kind == Optional {
 			target = target.Args[0]
 		}
-		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || (!v.accepts(base, target) && !v.crossCastable(base, target))) {
+		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || (!v.accepts(base, target) && !v.accepts(target, base) && !v.crossCastable(base, target))) {
 			v.fail(e.Node, "invalid narrowing "+a.String()+" to "+t.String())
 		}
 	case ClassOf:
@@ -767,7 +807,7 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		// An unchecked view (TypeScript `as`): the front end records no proof;
 		// a wrong view raises at run time instead of aliasing the wrong type.
 		a := check(e.X)
-		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !a.IsRef() {
+		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !(a.IsRef() || (a.Kind == Optional && a.Args[0].IsRef())) {
 			v.fail(e.Node, "invalid cast "+a.String()+" to "+t.String())
 		}
 	case Seq:

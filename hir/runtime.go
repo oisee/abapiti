@@ -60,6 +60,15 @@ var SpecialOps = map[string]bool{
 	"regexp.new":     true, // pattern, [flags] -> RegExp
 }
 
+// optionalOf wraps t as an Optional; an optional element stays as it is
+// (absent either way, never nested).
+func optionalOf(t Type) Type {
+	if t.Kind == Optional {
+		return t
+	}
+	return T(Optional, t)
+}
+
 func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	s, ok := RuntimeSpecs[op]
 	if !ok || s.Receiver != t.Kind || (t.Kind != String && len(t.Args) != map[Kind]int{Array: 1, OrderedMap: 2, OrderedSet: 1}[t.Kind]) {
@@ -106,7 +115,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "array.push":
 		return []Type{t.Args[0]}, i, true
 	case "array.get":
-		return []Type{i}, T(Optional, t.Args[0]), true
+		return []Type{i}, optionalOf(t.Args[0]), true
 	case "array.reverse":
 		return nil, t, true
 	case "array.concat":
@@ -124,7 +133,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "array.splice3":
 		return []Type{i, i, t.Args[0]}, t, true
 	case "array.pop", "array.shift":
-		return nil, T(Optional, t.Args[0]), true
+		return nil, optionalOf(t.Args[0]), true
 	case "array.unshift":
 		return []Type{t.Args[0]}, i, true
 	case "set.delete":

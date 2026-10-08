@@ -247,7 +247,17 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 	if len(args) == 0 || len(args) > 2 {
 		return nil, false
 	}
-	p := l.expr(args[0])
+	var p *hir.Expr
+	if args[0].Kind == ast.KindRegularExpressionLiteral {
+		// new RegExp(/source/f, flags): the source text with the new flags.
+		text := args[0].Text()
+		if slash := strings.LastIndex(text[1:], "/"); slash >= 0 {
+			p = &hir.Expr{Kind: hir.Lit, Node: l.node(args[0]), Type: hir.T(hir.String), Value: text[1 : 1+slash]}
+		}
+	}
+	if p == nil {
+		p = l.expr(args[0])
+	}
 	if p == nil {
 		return nil, false
 	}
@@ -627,6 +637,33 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 			return l.elementAccess(n)
 		}
 	})
+	if value != nil && (value.Type.IsRef() || (value.Type.Kind == hir.Optional && value.Type.Args[0].IsRef())) {
+		// An erased generic member keeps its constraint; the checker's
+		// instantiated type at this use is the proven view.
+		if t := l.ck.GetTypeAtLocation(n); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 {
+			before := len(l.diags)
+			typ := l.mapCheckerType(n, t)
+			if hasBlocking(l.diags[before:]) {
+				l.diags = l.diags[:before]
+			} else {
+				l.diags = l.diags[:before]
+				if typ.Kind == hir.Optional {
+					typ = typ.Args[0]
+				}
+				inner := value.Type
+				if inner.Kind == hir.Optional {
+					inner = inner.Args[0]
+				}
+				if typ.IsRef() && !typ.Equal(inner) && l.acceptsType(inner, typ) {
+					target := typ
+					if value.Type.Kind == hir.Optional {
+						target = hir.T(hir.Optional, typ)
+					}
+					value = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: target, X: value}
+				}
+			}
+		}
+	}
 	pre := l.pend
 	l.pend = saved
 	if value == nil {

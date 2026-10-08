@@ -227,10 +227,12 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			}
 		}
 		// Leading statements run per element, before the result value.
+		keep := l.hint
 		for _, s := range stmts[:last] {
 			lowered := l.stmts(s)
 			l.pend = append(l.pend, lowered...)
 		}
+		l.hint = keep
 		value = stmts[last].AsReturnStatement().Expression
 	}
 	if l.hint.Kind == hir.Array {
@@ -265,13 +267,29 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				continue
 			}
 			local := be.Name().Text()
+			if be.DotDotDotToken != nil {
+				// `...rest` is a fresh object of the remaining fields.
+				l.objectRest(el, local, x)
+				continue
+			}
 			field := local
 			if be.PropertyName != nil && be.PropertyName.Kind == ast.KindIdentifier {
 				field = be.PropertyName.Text()
 			}
 			ft := l.patternFieldType(x.Type, field)
-			l.declare(local, ft)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: ft,
+			lt := ft
+			if sym := el.Symbol(); sym != nil && ft.IsRef() {
+				// A required physical field may be an optional binding.
+				before := len(l.diags)
+				mapped := l.mapCheckerType(el, l.ck.GetTypeOfSymbol(sym))
+				if hasBlocking(l.diags[before:]) {
+					l.diags = l.diags[:before]
+				} else if mapped.Kind == hir.Optional && mapped.Args[0].Equal(ft) {
+					lt = mapped
+				}
+			}
+			l.declare(local, lt)
+			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
 				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}})
 		}
 	case ast.KindArrayBindingPattern:
@@ -512,7 +530,11 @@ func (l *lowerer) spreadPush(n *ast.Node, recv *hir.Expr, spread *ast.Node) *hir
 		xs = l.rtOp("set.values", xs, hir.T(hir.Array, xs.Type.Args[0]))
 	}
 	if xs == nil || xs.Type.Kind != hir.Array || !l.acceptsType(recv.Type.Args[0], xs.Type.Args[0]) {
-		l.diagf(n, "unsupported-call", "push spread needs a matching array")
+		have := "nil"
+		if xs != nil {
+			have = xs.Type.String()
+		}
+		l.diagf(n, "unsupported-call", "push spread needs a matching array (%s <- %s)", recv.Type.String(), have)
 		return nil
 	}
 	l.serial++

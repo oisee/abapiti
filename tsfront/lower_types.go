@@ -568,7 +568,7 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 	// Required and optional reference properties have one physical layout.
 	// Reuse the existing shape; the checker narrows required reads at use sites.
 	for _, c := range l.out.Classes {
-		if !strings.HasPrefix(c.Name, "shape.") || len(c.Fields) != len(fields) {
+		if (!strings.HasPrefix(c.Name, "shape.") && !l.shapeLike[c.Name]) || len(c.Fields) != len(fields) || c.Ctor == nil {
 			continue
 		}
 		same := true
@@ -595,17 +595,71 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			return c
 		}
 	}
+	// A data object with a subset of a data interface's fields (the rest
+	// optional) is that data interface with the others absent: plain
+	// objects have no identity of their own.
+	for _, c := range l.out.Classes {
+		if !l.shapeLike[c.Name] || c.Ctor == nil || len(c.Fields) <= len(fields) {
+			continue
+		}
+		matched := 0
+		ok := true
+		for _, cf := range c.Fields {
+			found := false
+			for _, f := range fields {
+				if f.Name != cf.Name {
+					continue
+				}
+				a, b := f.Type, cf.Type
+				if a.Kind == hir.Optional && a.Args[0].IsRef() {
+					a = a.Args[0]
+				}
+				if b.Kind == hir.Optional && b.Args[0].IsRef() {
+					b = b.Args[0]
+				}
+				if !a.Equal(b) && !(b.Kind == hir.Optional && b.Args[0].Equal(a)) {
+					ok = false
+				}
+				found = true
+			}
+			if found {
+				matched++
+			} else if cf.Type.Kind != hir.Optional {
+				ok = false
+			}
+		}
+		if ok && matched == len(fields) {
+			for _, p := range props {
+				for _, cf := range c.Fields {
+					if cf.Name == p.Name {
+						l.fields[p] = cf
+					}
+				}
+			}
+			l.diagf(n, "note-shape-subset", "anonymous shape lowered as the data interface %s with absent extra fields", c.Name)
+			return c
+		}
+	}
 	c := &hir.Class{Node: l.node(n), Name: key}
 	ctor := &hir.Method{Node: l.node(n), Name: "constructor", Result: hir.T(hir.Void)}
 	var list []*hir.Stmt
 	for idx, p := range props {
 		ft := fields[idx].Type
 		c.Fields = append(c.Fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft})
-		ctor.Params = append(ctor.Params, hir.Param{Name: p.Name, Type: ft})
+		// Reference fields share one physical layout with their optional
+		// views, so the constructor accepts an absent reference and stores
+		// it as the initial reference.
+		pt := ft
+		value := hir.V(p.Name, ft)
+		if ft.IsRef() {
+			pt = hir.T(hir.Optional, ft)
+			value = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: ft, X: hir.V(p.Name, pt)}
+		}
+		ctor.Params = append(ctor.Params, hir.Param{Name: p.Name, Type: pt})
 		list = append(list, &hir.Stmt{Kind: hir.Assign, Node: l.node(n),
 			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: p.Name, Type: ft,
 				X: &hir.Expr{Kind: hir.This, Node: l.node(n), Type: hir.Ref(key)}},
-			Y: hir.V(p.Name, ft)})
+			Y: value})
 		l.fields[p] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
 		if p.Parent != nil {
 			l.fieldsBy[p.Parent.Name+"."+p.Name] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
@@ -659,6 +713,10 @@ func (l *lowerer) synthFromAlias(n *ast.Node, sym *ast.Symbol) *hir.Class {
 	l.file = f
 	defer func() { l.file = savedFile }()
 	c := &hir.Class{Node: l.node(decl), Name: l.qualifiedName(f, sym.Name)}
+	if l.shapeLike == nil {
+		l.shapeLike = map[string]bool{}
+	}
+	l.shapeLike[c.Name] = true
 	// Register before the members so recursive shapes resolve to the same
 	// class instead of recursing.
 	l.synths[sym] = c

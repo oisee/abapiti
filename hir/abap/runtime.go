@@ -25,6 +25,9 @@ func (e *emitter) runtime(t hir.Type) {
 	case hir.Array:
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
+		if t.Args[0].Kind == hir.Optional {
+			opt = t.Args[0]
+		}
 		line("TYPES items_type TYPE STANDARD TABLE OF " + elem + " WITH DEFAULT KEY.")
 		line("DATA items TYPE items_type.")
 		line("METHODS reverse RETURNING VALUE(result) TYPE REF TO " + name + ".")
@@ -47,14 +50,15 @@ func (e *emitter) runtime(t hir.Type) {
 		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
+		refElem := t.Args[0].IsRef() || (t.Args[0].Kind == hir.Optional && t.Args[0].Args[0].IsRef())
 		line("METHODS pop RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		if t.Args[0].IsRef() {
+		if refElem {
 			method("pop", "IF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		} else {
 			method("pop", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		}
 		line("METHODS shift RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		if t.Args[0].IsRef() {
+		if refElem {
 			method("shift", "IF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO result.\nDELETE items INDEX 1.\nENDIF.\n")
 		} else {
 			method("shift", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX 1.\nENDIF.\n")
@@ -79,7 +83,7 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("METHODS get IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
 		code := "IF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\n"
-		if t.Args[0].IsRef() {
+		if refElem {
 			code += "result = val.\n"
 		} else {
 			code += "result = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\n"

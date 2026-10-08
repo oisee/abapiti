@@ -386,7 +386,7 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		if target.Kind == hir.Optional {
 			target = target.Args[0]
 		}
-		if src.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef && target.Name != hir.RootObject && l.interfaceHasClassBase(src.Name, target) {
+		if src.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef && target.Name != hir.RootObject && (l.interfaceHasClassBase(src.Name, target) || l.unionPartsAccepted(src.Name, target)) {
 			narrowTo := dst
 			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {
 				narrowTo = hir.T(hir.Optional, dst)

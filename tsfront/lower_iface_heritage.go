@@ -193,6 +193,23 @@ func (l *lowerer) interfaceBasesByName(name string) []string {
 	return out
 }
 
+// unionPartsAccepted reports whether every constituent of a union view is
+// accepted by the class (the view is then a proven subtype at run time).
+func (l *lowerer) unionPartsAccepted(view string, class hir.Type) bool {
+	for _, u := range l.unions {
+		if u.iface.Name != view {
+			continue
+		}
+		for _, p := range u.parts {
+			if !l.acceptsType(class, p) {
+				return false
+			}
+		}
+		return len(u.parts) > 0
+	}
+	return false
+}
+
 // interfaceHasClassBase reports whether every implementer of the interface
 // is, by declaration, an instance of the class (the interface extends it).
 func (l *lowerer) interfaceHasClassBase(iface string, class hir.Type) bool {

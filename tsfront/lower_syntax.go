@@ -159,6 +159,15 @@ func (l *lowerer) forEachLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb *as
 	return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Bool), Value: false}
 }
 
+// containsLoopControl reports a break or continue that would leave the
+// node (nested loops and functions keep their own).
+func (l *lowerer) containsLoopControl(n *ast.Node) bool {
+	targets := map[*ast.Node]bool{}
+	continueTargets(n, targets)
+	breakTargets(n, targets)
+	return len(targets) > 0
+}
+
 func (l *lowerer) containsReturn(n *ast.Node) bool {
 	found := false
 	var walk func(*ast.Node)
@@ -375,6 +384,25 @@ func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		case hir.Array:
 			l.diagf(n, "note-is-array", "Array.isArray on an array is the constant true")
 			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: x}), Y: hir.L(hir.T(hir.Bool), true)}, true
+		case hir.Dynamic, hir.Optional:
+			// When every object constituent of the checker's union is an
+			// array, the box's "object" tag decides.
+			if t := l.ck.GetTypeAtLocation(args[0]); t != nil && l.objectPartsAreArrays(t) {
+				d := x
+				if x.Type.Kind == hir.Optional {
+					if x.Type.Args[0].Kind != hir.Dynamic {
+						break
+					}
+					present := l.tempInit(n, x.Type, x)
+					defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
+					d = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}
+					tag := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", d, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), "object")}
+					l.diagf(n, "note-is-array", "Array.isArray on a tagged value decided by its object tag")
+					return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}, true
+				}
+				l.diagf(n, "note-is-array", "Array.isArray on a tagged value decided by its object tag")
+				return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", d, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), "object")}, true
+			}
 		}
 		l.diagf(n, "unsupported-call", "Array.isArray on %s is not lowered", x.Type.Kind)
 		return nil, true

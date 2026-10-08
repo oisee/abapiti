@@ -120,7 +120,10 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		return l.forOfStatement(n)
 	case ast.KindReturnStatement:
 		r := n.AsReturnStatement()
-		if r.Expression == nil {
+		if r.Expression == nil || (l.method != nil && l.method.Result.Kind == hir.Void && isUndefinedKeyword(r.Expression)) {
+			if l.method != nil && l.method.Result.Kind == hir.Optional {
+				return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: &hir.Expr{Kind: hir.Lit, Type: l.method.Result}}
+			}
 			return &hir.Stmt{Kind: hir.Return, Node: l.node(n)}
 		}
 		l.hint = l.method.Result
@@ -257,6 +260,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				}
 			}
 		}
+		if d.Type() == nil && init != nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst == 0 {
+			typ = l.widenLet(d, sym, typ)
+		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.
 			l.hint = typ
@@ -275,6 +281,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				typ = x.Type
 			}
 		}
+	}
+	if x != nil {
+		x = l.coerce(x, typ)
 	}
 	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
 	l.declare(name, typ)

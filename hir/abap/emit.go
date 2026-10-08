@@ -1491,7 +1491,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
 	target := n
-	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && x.X.Type.Args[0].IsRef() {
+	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && (x.X.Type.Args[0].IsRef() || (x.X.Type.Args[0].Kind == hir.Optional && x.X.Type.Args[0].Args[0].IsRef())) {
 		target = b.temp(hir.Ref(hir.RootObject))
 	}
 	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"
@@ -1612,6 +1612,18 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line(n + " = NEW #( ).")
 		b.line(n + "->payload = " + v + ".")
 		b.line("RAISE EXCEPTION " + n + ".")
+	case hir.Finally:
+		// Normal completion runs the finally block after the TRY; anything
+		// leaving the body is caught, the block runs, and the same exception
+		// object is raised again.
+		n := b.rawTemp("REF TO cx_root")
+		b.line("TRY.")
+		b.stmt(s.Body)
+		b.line("CATCH cx_root INTO " + n + ".")
+		b.stmt(s.Else)
+		b.line("RAISE EXCEPTION " + n + ".")
+		b.line("ENDTRY.")
+		b.stmt(s.Else)
 	case hir.Try:
 		name := e.exception(s.Type)
 		n := b.rawTemp("REF TO " + name)

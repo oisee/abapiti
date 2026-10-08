@@ -71,6 +71,10 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 		c = &hir.Class{Node: i.Node, Name: i.Name}
 		l.out.Classes = append(l.out.Classes, c)
 	}
+	if l.shapeLike == nil {
+		l.shapeLike = map[string]bool{}
+	}
+	l.shapeLike[c.Name] = true
 	if c.Ctor != nil {
 		return
 	}

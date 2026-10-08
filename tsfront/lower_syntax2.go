@@ -179,6 +179,143 @@ func (l *lowerer) optionalView(x *hir.Expr, opt hir.Type) *hir.Expr {
 	return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: opt, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: opt}}
 }
 
+func isUndefinedKeyword(n *ast.Node) bool {
+	for n != nil && n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	return n != nil && n.Kind == ast.KindIdentifier && n.Text() == "undefined"
+}
+
+// objectRest declares `rest` from `const {a, ...rest} = x`: the checker's
+// type of the binding names the remaining fields, copied into a new shape.
+func (l *lowerer) objectRest(el *ast.Node, local string, x *hir.Expr) {
+	t := l.ck.GetTypeAtLocation(el.Name())
+	if t == nil {
+		l.diagf(el, "unsupported-binding", "object rest without a checker type")
+		return
+	}
+	typ := l.mapCheckerType(el, t)
+	if typ.Kind != hir.ClassRef {
+		l.diagf(el, "unsupported-binding", "object rest needs a shape type")
+		return
+	}
+	target := l.classByName(typ.Name)
+	source := l.classByName(x.Type.Name)
+	if target == nil || target.Ctor == nil || source == nil {
+		l.diagf(el, "unsupported-binding", "object rest needs lowered shapes")
+		return
+	}
+	// When every omitted field of the source is optional, the rest value
+	// keeps the source's shape with those fields absent (the omitted keys
+	// are never enumerated in the closure).
+	if source.Ctor != nil && source != target {
+		omittedOptional := true
+		for _, f := range source.Fields {
+			inTarget := false
+			for _, p := range target.Ctor.Params {
+				if p.Name == f.Name {
+					inTarget = true
+				}
+			}
+			if !inTarget && f.Type.Kind != hir.Optional {
+				omittedOptional = false
+			}
+		}
+		if omittedOptional {
+			target = source
+			typ = x.Type
+		}
+	}
+	args := make([]*hir.Expr, len(target.Ctor.Params))
+	for i, p := range target.Ctor.Params {
+		for _, f := range source.Fields {
+			if f.Name == p.Name {
+				args[i] = l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: f.Name, Type: f.Type, X: x}, p.Type)
+			}
+		}
+		if args[i] == nil {
+			l.diagf(el, "unsupported-binding", "object rest field %s is not in the source shape", p.Name)
+			return
+		}
+	}
+	l.diagf(el, "note-object-rest", "object rest copies the remaining fields into %s", typ.Name)
+	l.declare(local, typ)
+	l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: typ, X: &hir.Expr{Kind: hir.New, Node: l.node(el), Type: typ, Args: args}})
+}
+
+// widenLet widens the inferred type of a `let` without annotation to the
+// nearest common base class of every later assignment: TypeScript's
+// structural typing admits sibling classes that the nominal HIR cannot.
+func (l *lowerer) widenLet(d *ast.Node, sym *ast.Symbol, typ hir.Type) hir.Type {
+	optional := typ.Kind == hir.Optional
+	base := typ
+	if optional {
+		base = base.Args[0]
+	}
+	if base.Kind != hir.ClassRef {
+		return typ
+	}
+	var body *ast.Node
+	for p := d.Parent; p != nil; p = p.Parent {
+		if p.Kind == ast.KindMethodDeclaration || p.Kind == ast.KindFunctionDeclaration || p.Kind == ast.KindConstructor || p.Kind == ast.KindArrowFunction || p.Kind == ast.KindFunctionExpression {
+			body = p.Body()
+			break
+		}
+	}
+	if body == nil {
+		return typ
+	}
+	changed := false
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil {
+			return
+		}
+		if x.Kind == ast.KindBinaryExpression {
+			b := x.AsBinaryExpression()
+			if b.OperatorToken.Kind == ast.KindEqualsToken && b.Left.Kind == ast.KindIdentifier && b.Left.Text() == d.Name().Text() && l.resolve(b.Left) == sym {
+				if t := l.ck.GetTypeAtLocation(b.Right); t != nil {
+					before := len(l.diags)
+					mapped := l.mapCheckerType(x, t)
+					l.diags = l.diags[:before]
+					if mapped.Kind == hir.Optional {
+						optional = true
+						mapped = mapped.Args[0]
+					}
+					if mapped.Kind == hir.ClassRef && !l.acceptsType(base, mapped) {
+						if common := l.commonAncestor(base.Name, mapped.Name); common != "" {
+							base = hir.Ref(common)
+							changed = true
+						}
+					}
+				}
+			}
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(body)
+	if !changed {
+		return typ
+	}
+	l.diagf(d, "note-let-widened", "let %s widened to the common base %s of its assignments", d.Name().Text(), base.Name)
+	if optional {
+		return hir.T(hir.Optional, base)
+	}
+	return base
+}
+
+// commonAncestor returns the nearest class both names derive from.
+func (l *lowerer) commonAncestor(a, b string) string {
+	for x := l.classByName(a); x != nil; x = l.classByName(x.Super) {
+		for y := l.classByName(b); y != nil; y = l.classByName(y.Super) {
+			if x.Name == y.Name {
+				return x.Name
+			}
+		}
+	}
+	return ""
+}
+
 // constantBool recognizes a boolean literal, possibly behind a Seq that only
 // evaluates operands for their effects.
 func constantBool(x *hir.Expr) (bool, bool) {
@@ -217,6 +354,44 @@ func (l *lowerer) unrelatedClasses(t hir.Type, c string) bool {
 		return false
 	}
 	return !ancestor(t.Name, c) && !ancestor(c, t.Name)
+}
+
+// objectPartsAreArrays reports whether every non-primitive constituent of
+// the checker type is an array type.
+func (l *lowerer) objectPartsAreArrays(t *checker.Type) bool {
+	parts := []*checker.Type{t}
+	if t.IsUnion() {
+		parts = t.AsUnionOrIntersectionType().Types()
+	}
+	objects := 0
+	for _, c := range parts {
+		if c.Flags()&checker.TypeFlagsObject == 0 {
+			continue
+		}
+		if !l.ck.IsArrayType(c) {
+			return false
+		}
+		objects++
+	}
+	return objects > 0
+}
+
+// singleArrayConstituent returns the only array type among a union's
+// constituents, or nil.
+func (l *lowerer) singleArrayConstituent(t *checker.Type) *checker.Type {
+	if t == nil || !t.IsUnion() {
+		return nil
+	}
+	var found *checker.Type
+	for _, c := range t.AsUnionOrIntersectionType().Types() {
+		if l.ck.IsArrayType(c) {
+			if found != nil {
+				return nil
+			}
+			found = c
+		}
+	}
+	return found
 }
 
 // isNeverArray reports a checker type `never[]` (an empty literal's type).
