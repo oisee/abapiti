@@ -1,0 +1,1 @@
+export class Probe { public static run(): number { return 1; } } throw new Error("oops");

@@ -1,0 +1,1 @@
+export class Probe { public run(s: string): string { return s.replace(/a/g, "$$"); } }

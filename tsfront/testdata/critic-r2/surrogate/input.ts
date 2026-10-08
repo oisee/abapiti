@@ -1,0 +1,1 @@
+export class Probe { run() { const s = "\uD800"; return s.charCodeAt(0); } }

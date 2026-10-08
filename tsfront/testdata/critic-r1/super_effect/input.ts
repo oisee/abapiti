@@ -1,0 +1,1 @@
+export class Base { public constructor(n: number) {} } export class Probe extends Base { public constructor() { let x: number = 7; super(1); x = x + 1; } }

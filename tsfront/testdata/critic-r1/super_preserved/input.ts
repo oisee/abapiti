@@ -1,0 +1,1 @@
+export class Counter { public static count: number = 0; } export class Base { public trace: number = Counter.count; public constructor() {} public run(): number { return this.trace; } } export class Probe extends Base { public constructor() { Counter.count = Counter.count + 1; super(); } }

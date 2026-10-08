@@ -1,0 +1,1 @@
+export class Probe { public x: number = 7; public constructor() {} public run(p?: Probe): number | undefined { return p?.x; } }

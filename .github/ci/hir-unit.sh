@@ -4,6 +4,7 @@ work=${1:?usage: hir-unit.sh <osgo workdir>}
 root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
+rm -rf "$gen/TestFixtures" "$gen/Test750Semantics" "$work/hir-osgo/TestFixtures" "$work/hir-osgo/Test750Semantics"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^(TestFixtures|Test750Semantics)$' -count=1)
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
@@ -27,4 +28,5 @@ for runtime in osgo osgjs; do
     ' "$work/hir-$runtime-$suite.json" "$status" "$runtime $suite" "$expected" || result=1
   done
 done
+node "$root/.github/ci/lexer-unit.mjs" "$work" || result=1
 exit "$result"

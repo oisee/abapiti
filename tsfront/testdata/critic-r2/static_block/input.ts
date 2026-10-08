@@ -1,0 +1,1 @@
+export class Probe { static x = 0; static { Probe.x = 7; } run() { return Probe.x; } }

@@ -1,0 +1,1 @@
+export class Probe { public run(): number { return 2147483647 + 1; } }

@@ -1,0 +1,1 @@
+const a = 7; const b = a + 1; const s = new Set<number>([a,b]); export class Probe { public run(): boolean { return s.has(b); } }

@@ -1,0 +1,1 @@
+export class Probe { public run(): number { let x: number = 9; for (let x: number = 0; x < 2; x = x + 1) { } return x; } }

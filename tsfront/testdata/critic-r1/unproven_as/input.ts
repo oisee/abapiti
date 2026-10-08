@@ -1,0 +1,1 @@
+export class Base { public run(): number { return 1; } } export class Sub extends Base { public run(): number { return 2; } } export class Probe { public run(p: Base): number { return (p as Sub).run(); } }

@@ -1,0 +1,1 @@
+export class Counter { static count: number = 0; static next(): number { Counter.count = Counter.count + 1; return Counter.count; } } export class Probe { static a: number = Counter.next(); static b: number = Counter.next(); static run(): number { return Probe.a * 100 + Probe.b * 10 + Counter.count; } }

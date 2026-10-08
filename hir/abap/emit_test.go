@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -145,10 +146,12 @@ func fixtures() []fixture {
 		check(eq(binary("+", hir.L(hir.T(hir.I64), int64(math.MinInt32)-1), hir.L(hir.T(hir.I64), int64(math.MaxInt32)+1), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(-1)))),
 		check(eq(binary("+", hir.L(hir.T(hir.I64), int64(math.MinInt32)), hir.L(hir.T(hir.I64), int64(math.MaxInt32)), hir.T(hir.I64)), hir.L(hir.T(hir.I64), int64(-1)))),
 		check(eq(binary("/", hir.L(hir.T(hir.Number), 5.0), hir.L(hir.T(hir.Number), 2.0), hir.T(hir.Number)), hir.L(hir.T(hir.Number), 2.5))),
-		check(eq(rt("string.length", hir.L(str, "😀"), i32), lit(2))),
+		// Supplementary length/indexing is checked in the dedicated runtime
+		// probe; keep these shared collection fixtures within the pin's BMP envelope.
+		check(eq(rt("string.length", hir.L(str, "€A"), i32), lit(2))),
 		check(eq(rt("string.substring", hir.L(str, "abcd "), str, lit(4), lit(1)), hir.L(str, "bcd"))),
 		check(eq(rt("string.concat", hir.L(str, "a "), str, hir.L(str, "b")), hir.L(str, "a b"))),
-		check(eq(rt("string.charCodeAt", hir.L(str, "€"), hir.T(hir.Number), lit(0)), hir.L(hir.T(hir.Number), 8364))),
+		check(eq(rt("string.charCodeAt", hir.L(str, "€"), i32, lit(0)), lit(8364))),
 		check(binary("||", hir.L(boolean, true), boomCall(), boolean)),
 		check(&hir.Expr{Kind: hir.Unary, Op: "!", Type: boolean, X: binary("&&", hir.L(boolean, false), boomCall(), boolean)}),
 		check(&hir.Expr{Kind: hir.Conditional, Type: boolean, X: hir.L(boolean, true), Y: hir.L(boolean, true), Z: boomCall()}),
@@ -331,7 +334,6 @@ func TestTargetDiagnostics(t *testing.T) {
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, math.Copysign(0, -1))},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: binary("+", hir.L(number, 1.0), hir.L(number, 1.0), number)},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: local("divisor", number)},
-		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.RuntimeOp, Op: "string.charCodeAt", Type: hir.T(hir.Number), X: hir.L(str, "x"), Args: []*hir.Expr{lit(5)}},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "%", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0.5), Y: hir.L(hir.T(hir.Number), 0.1)},
 	} {
 		m := method("f", x.Type, ret(x))
@@ -360,6 +362,52 @@ func TestLongLiteral(t *testing.T) {
 		if !strings.Contains(src, "uccpi( 10 )") {
 			t.Fatal("newline not encoded")
 		}
+	}
+}
+
+// Dynamic receivers ensure these checks exercise lowering, not literal folding.
+func TestStringUnitAccess(t *testing.T) {
+	for _, op := range []string{"string.length", "string.charAt", "string.substring", "string.substr", "string.charCodeAt"} {
+		t.Run(op, func(t *testing.T) {
+			result := str
+			var args []*hir.Expr
+			switch op {
+			case "string.length":
+				result = i32
+			case "string.charAt", "string.charCodeAt":
+				args = []*hir.Expr{local("index", i32)}
+				if op == "string.charCodeAt" {
+					result = i32
+				}
+			default:
+				args = []*hir.Expr{local("index", i32), lit(2)}
+			}
+			m := method("access", result, ret(rt(op, local("source", str), result, args...)))
+			m.Static = true
+			m.Params = []hir.Param{{Name: "source", Type: str}, {Name: "index", Type: i32}}
+			files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "access", Methods: []*hir.Method{m}}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var src string
+			for _, file := range files {
+				src += file
+			}
+			if !strings.Contains(src, "strlen( ") {
+				t.Fatal("missing native UTF-16 length")
+			}
+			section := regexp.MustCompile(`(?:DATA\()?([a-z]\w*)\)? = (?:CONV string\( )?\w+\+\w+\((?:1|\w+)\)(?: \))?\.`).FindStringSubmatch(src)
+			if op != "string.length" && section == nil {
+				t.Fatal("missing native string section")
+			}
+			if op == "string.charCodeAt" {
+				if !regexp.MustCompile(`EXPORTING\s+data\s*=\s*`+section[1]+`\s+IMPORTING\s+buffer`).MatchString(src) || !strings.Contains(src, " * 256.") || len(regexp.MustCompile(`->convert\s*\(`).FindAllStringIndex(src, -1)) != 1 {
+					t.Fatalf("expected one character conversion with direct UTF-16LE decoding:\n%s", src)
+				}
+			} else if strings.Contains(src, "cl_abap_conv") || strings.Contains(src, "xstrlen") {
+				t.Fatal("string length/section must not convert codepages")
+			}
+		})
 	}
 }
 

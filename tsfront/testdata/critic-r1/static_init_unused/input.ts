@@ -1,0 +1,1 @@
+export class Probe { public static x: number = 7; public run(): number { return 1; } }

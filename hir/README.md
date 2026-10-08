@@ -15,10 +15,11 @@ Expression evaluation creates temporaries in source order, with lazy conditional
 and boolean branches; loop conditions execute on every iteration.
 
 Number maps to binary64 `f`, and only explicit I32/I64 types map to `i`/`int8`.
-Strings use ABAP strings and escaped string templates preserve blanks. Length counts
-UTF-16 units through code page 4103, including supplementary characters.
-Substring currently requires a BMP literal receiver; other uses fail with source
-diagnostics until all runtimes support surrogate slicing.
+Strings use ABAP strings and escaped string templates preserve blanks. Length uses
+native strlen( ), and indexing/slicing use native sections: both count UTF-16
+code units on the SAP kernel (verified on 7.58) and OSG-JS, like JavaScript.
+The pinned osgo runtime instead counts runes; supplementary input is a known
+runtime gap, not an emitter restriction.
 Primitive optionals use specialized immutable boxes with value and has members;
 reference optionals use an initial reference. Primitive optional equality compares
 presence and, when present, the contained value. There is no null type in this phase.
@@ -30,7 +31,13 @@ iteration does not alter that snapshot. IndexGet is an unchecked element access;
 `array.get` returns Optional for callers needing an out-of-range test.
 
 The emitter targets ABAP 7.50. InstanceOf uses IS INSTANCE OF and returns a
-boolean without exposing a narrowed reference. Typed exceptions
+boolean without exposing a narrowed reference. Narrow is a typed
+view the front end's checker proved (flow narrowing, a dominating instanceof,
+an assertion whose operand is already flow narrowed). Optional references are
+unwrapped first; equal underlying types use `=`, and downcasts use checked `?=`.
+The TypeScript frontend rejects assertions that lack checker-proven narrowing. A method named class_constructor (static, no
+parameters, void) is emitted as ABAP's CLASS-METHODS class_constructor and
+runs implicitly; the verifier rejects explicit calls to it. Typed exceptions
 inherit cx_no_check and carry a payload; Try's Type selects the payload wrapper
 caught by its handler. Interfaces forward to the ordinary virtual member so
 inherited implementations still dispatch through the derived class.
@@ -43,11 +50,26 @@ supported. Results beyond the binary64 range (|x| > ~1.8e308), including divisio
 overflow, raise in ABAP instead of giving Infinity. This is an accepted divergence
 until a later phase implements exceptional-number handling.
 Integer division truncates toward zero and remainder keeps the dividend sign.
-Number remainder is rejected until an IEEE remainder runtime is available.
-`string.charCodeAt` currently folds only a literal string and proven in-range
-literal index to its UTF-16 code unit. Other uses are rejected with node/source
-information, since out-of-range JavaScript results require NaN. The catalogue
-is the sole supported operation list; unknown operations fail verification.
+General Number remainder is rejected; the Number remainder-by-two runtime
+operation implements the lexer's literal `% 2` case.
+The string operations work on dynamic receivers: length counts UTF-16 code units
+with strlen( ), substring/charAt clamp like JavaScript, substr keeps its
+legacy negative-start semantics, trim strips exactly the ECMAScript white space
+set, and replaceAll replaces every occurrence of a literal needle (the front end
+maps the lexer's /\r/g to it and reports the mapping). i32.toString renders like
+JavaScript String(int32) through a string template. string.charCodeAt returns the
+UTF-16 code unit as i32 and raises cx_sy_range_out_of_bounds when out of range,
+where JavaScript yields NaN — a documented divergence, like Number division by
+zero. No operation converts the whole receiver merely to measure its length
+or guard a section. Dynamic charCodeAt converts only its one-unit section to
+UTF-16LE. The supplementary probe checks the exact JavaScript surrogate unit;
+on the pinned rune-based osgo it is an explicitly expected runtime failure.
+Full BMP uppercasing applies the 102 full Unicode mapping
+differences from the existing x/text dependency before target simple uppercase,
+including sharp s, ligatures and Greek expansions. String literals are chunked so that no chunk contains IN BYTE MODE
+or IN CHARACTER MODE: the CONCATENATE statement parser mistakes those sequences
+inside a literal for its own clauses. The catalogue is the sole supported
+operation list; unknown operations fail verification.
 Closures, regular expressions, generators, and null are outside Phase 0.
 
 Six hand-built programs have dump goldens and one ABAP Unit method per fixture.
@@ -63,3 +85,61 @@ the default corpus is syntax-checked at v750 and runs unchanged on OSG-JS.
 CI also runs a semantic regression for template escaping, initial references,
 and temporaries reset on each loop iteration.
 No SAP access is needed for generation or these checks.
+
+Phase 1 number contract (Fix round 1): TypeScript `number` maps to Number/ABAP
+`f`, including fields, parameters, arithmetic and collections. Integral literals
+and absence of division do not prove an i32 range. On clean open-steamgate
+`ad3d1e87cd3c3545b32dd4ba2ddeceb25708f05f`, assignment, arithmetic, return and
+comparison overflow probes trap on osgo but do not trap on OSG-JS. Therefore
+an i32 trapping contract is unavailable and the frontend does not use it.
+`2147483647 + 1` must remain 2147483648 when stored, returned and compared.
+Runtime regression sources are under `tsfront/testdata/critic-r1/`.
+String indices explicitly truncate toward zero and saturate to the i32 bounds
+before the existing clamping/bounds checks. Number remainder is accepted only
+with literal divisor 2: binary64 scaling by two, truncation and subtraction
+preserve the signed remainder without rounding a division by an arbitrary
+number. General division/remainder are blocking frontend diagnostics.
+Decimal Number.toString is supported for safe integers; dynamic fractions or
+values beyond the safe integer range raise instead of using ABAP formatting.
+Arguments to number.toString are blocking diagnostics. Exceptional numbers
+and binary64 overflow retain the target limits described above.
+
+Instance field initialization runs in declaration order in a constructor,
+including a synthesized constructor when absent. A synthesized derived
+constructor forwards its inherited parameters. Static fields and module consts
+initialize in declaration order in class_constructor only when a conservative
+syntax whitelist proves their initializers pure: literals, constant expressions
+over literals/module constants, literal collection elements, and construction of
+runtime collections from those elements. Calls to user code, user-class
+construction, assignments, and other effectful expressions produce blocking
+`unsupported-static-init` diagnostics with file:line:col. Class-static reads are
+limited to earlier pure fields of the same class; cross-class reads are rejected
+even if their initializers appear pure, because mutable statics may change before
+lazy initialization. This is not eager TypeScript module evaluation: purity makes
+unused/lazily initialized classes unobservable within this accepted envelope.
+Static blocks and every unknown class member kind are blocking
+`unsupported-member` diagnostics, never silently dropped.
+Pre-super statements retain their order;
+those touching this are rejected. Parameter defaults are blocking diagnostics.
+Executable module statements other than const initializers are rejected.
+Regex replace mapping accepts nonempty literal needles (including decoded
+literal escapes), the global flag only, and literal replacements without `$`.
+Anchors, metacharacters, substitution strings and dynamic replacements are
+blocking source diagnostics.
+
+The lexer differential is part of `.github/ci/hir-unit.sh`: sequential case
+blocks check full dumps and each token count, with teardown requiring the corpus
+cardinality even after an early RETURN. CI also requires the critic's early-return
+and removed-case mutations to fail on both pinned runtimes. The 44-case corpus
+is BMP; the pinned osgo supplementary gap is tracked separately. String literals
+containing lone UTF-16 surrogate units (escaped or raw) are rejected with
+`unsupported-lone-surrogate` before rune conversion; valid pairs remain
+supplementary code points, not replacement characters. Supplementary slicing,
+full BMP Unicode uppercasing, virtual positions and pure static declaration
+order have separate runtime probes.
+Local runtime results do not establish SAP kernel timing. SAP validation
+remains outstanding.
+
+Dynamic charCodeAt and trim decode UTF-16LE bytes directly (low + high * 256),
+avoiding the pinned library's erroneous high-byte * 255 implementation on
+OSG-JS. Direct euro-code and Unicode whitespace regressions cover this path.

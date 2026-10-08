@@ -1,0 +1,1 @@
+export class Probe { x: number; run(): number { this.x = 2147483647 + 1; const n = this.x; if (n !== 2147483648) { return -1; } return n; } indices(): string { return "abcd".substring(1.9, 3.2); } remainder(): number { return -5.5 % 2; } }

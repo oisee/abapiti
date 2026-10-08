@@ -1,0 +1,1 @@
+export class Probe { public run(n: number | undefined = 7): number | undefined { return n; } public caller(): number | undefined { return this.run(undefined); } }
