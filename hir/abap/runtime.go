@@ -1,7 +1,6 @@
 package abap
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -89,35 +88,5 @@ func (e *emitter) exception(t hir.Type) string {
 		return name
 	}
 	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
-	return name
-}
-
-// osgoInstanceHelper is emitted only for OsgoInstanceOfFallback.
-func (e *emitter) osgoInstanceHelper(owner string) string {
-	name := e.name("instanceof." + owner)
-	file := name + ".clas.abap"
-	if _, ok := e.files[file]; ok {
-		return name
-	}
-	e.files[file] = fmt.Sprintf(`CLASS %s DEFINITION PUBLIC CREATE PUBLIC.
-PUBLIC SECTION.
-CLASS-METHODS test IMPORTING value TYPE REF TO object RETURNING VALUE(result) TYPE abap_bool.
-PROTECTED SECTION.
-PRIVATE SECTION.
-ENDCLASS.
-CLASS %s IMPLEMENTATION.
-METHOD test.
-DATA narrowed TYPE REF TO %s.
-IF value IS BOUND.
-TRY.
-narrowed ?= value.
-result = abap_true.
-CATCH cx_sy_move_cast_error.
-result = abap_false.
-ENDTRY.
-ENDIF.
-ENDMETHOD.
-ENDCLASS.
-`, name, name, e.name(owner))
 	return name
 }

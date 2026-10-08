@@ -7,49 +7,30 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf16"
-	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
 )
 
 type emitter struct {
-	p       *hir.Program
-	names   *hir.Names
-	files   map[string]string
-	types   map[string]bool
-	err     error
-	options Options
-}
-
-// Options selects individual workarounds for constructs missing in osgo.
-// The zero value always emits the ABAP 7.50 syntax.
-type Options struct {
-	OsgoScalarValueFallback bool
-	OsgoInstanceOfFallback  bool
+	p     *hir.Program
+	names *hir.Names
+	files map[string]string
+	types map[string]bool
+	err   error
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
 func Emit(p *hir.Program) (map[string]string, error) {
-	return EmitWithOptions(p, Options{})
-}
-
-// EmitWithOptions emits with explicit runtime compatibility workarounds.
-func EmitWithOptions(p *hir.Program, options Options) (map[string]string, error) {
-	files, _, err := EmitNamedWithOptions(p, options)
+	files, _, err := EmitNamed(p)
 	return files, err
 }
 
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
-	return EmitNamedWithOptions(p, Options{})
-}
-
-// EmitNamedWithOptions returns emitted identities with explicit runtime workarounds.
-func EmitNamedWithOptions(p *hir.Program, options Options) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
-	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, options: options}
+	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
 		fmt.Fprintf(&b, "INTERFACE %s PUBLIC.\n", e.name(i.Name))
@@ -275,7 +256,7 @@ func (b *body) rawTemp(typ string) string {
 	b.serial++
 	n := fmt.Sprintf("t%d", b.serial)
 	var init string
-	if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") || b.e.options.OsgoScalarValueFallback {
+	if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") {
 		init = "DATA " + n + " TYPE " + typ + ".\nCLEAR " + n + ".\n"
 	} else {
 		init = "DATA(" + n + ") = VALUE " + typ + "( ).\n"
@@ -476,11 +457,7 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("ENDIF.")
 	case hir.InstanceOf:
 		a := b.expr(x.X)
-		if e.options.OsgoInstanceOfFallback {
-			b.line(n + " = " + e.osgoInstanceHelper(x.Owner) + "=>test( " + a + " ).")
-		} else {
-			b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
-		}
+		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 	case hir.Narrow:
 		a := b.expr(x.X)
 		underlying := x.X.Type
@@ -613,7 +590,6 @@ func (b *body) stringLit(n, s string) {
 			size += len(string(r[k])) * 2
 			k++
 		}
-		k = literalChunkLimit(r, k)
 		chunk := string(r[:k])
 		s = string(r[k:])
 		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
@@ -624,29 +600,6 @@ func (b *body) stringLit(n, s string) {
 		}
 		first = false
 	}
-}
-
-// literalModePhrases are keyword sequences that the CONCATENATE statement
-// parser can mistake for its own optional clauses when they appear inside a
-// literal (measured on osgo); chunks are cut so none appears in one piece.
-var literalModePhrases = []string{"IN BYTE MODE", "IN CHARACTER MODE"}
-
-// literalChunkLimit shortens a printable chunk accordingly.
-func literalChunkLimit(r []rune, k int) int {
-	lower := strings.ToLower(string(r[:k]))
-	cut := k
-	for _, p := range literalModePhrases {
-		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 {
-			i = utf8.RuneCountInString(lower[:i])
-			if i < cut {
-				cut = i
-			}
-		}
-	}
-	if cut <= 0 {
-		return 1
-	}
-	return cut
 }
 
 // int8Lit uses only i-range literals, avoiding character-to-int8 conversion.

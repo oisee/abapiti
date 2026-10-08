@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 )
 
 // The differential corpus: ABAP snippets and real files (cases.json) plus the
@@ -116,31 +115,6 @@ func abapTemplate(s string) string {
 	return r.Replace(s)
 }
 
-// modePhrases are keyword sequences that the CONCATENATE statement parser can
-// mistake for its own optional clauses when they appear inside a literal
-// (measured on osgo: a literal containing IN BYTE MODE fails to compile).
-// Chunks are cut so that none of them appears in one piece.
-var modePhrases = []string{"IN BYTE MODE", "IN CHARACTER MODE"}
-
-// chunkLimit shortens a printable chunk so that no mode phrase stays inside
-// it; runes is the chunk as runes, k the proposed length in runes.
-func chunkLimit(runes []rune, k int) int {
-	lower := strings.ToLower(string(runes[:k]))
-	cut := k
-	for _, p := range modePhrases {
-		if i := strings.Index(lower, strings.ToLower(p)); i >= 0 {
-			i = utf8.RuneCountInString(lower[:i])
-			if i < cut {
-				cut = i
-			}
-		}
-	}
-	if cut <= 0 {
-		return 1 // always make progress, splitting the phrase itself
-	}
-	return cut
-}
-
 // abapStringBuild emits statements that build value in variable varname,
 // chunk by chunk, like the HIR emitter's string literals: printable runs in
 // backtick literals, control characters through uccpi. ch must be a c LENGTH 1
@@ -163,7 +137,6 @@ func abapStringBuild(varname, ch, value string) []string {
 		if k == 0 {
 			k = 1 // a single long rune still fits one line
 		}
-		k = chunkLimit(r, k)
 		chunk := strings.ReplaceAll(string(r[:k]), "`", "``")
 		out = append(out, fmt.Sprintf("CONCATENATE %s `%s` INTO %s RESPECTING BLANKS.", varname, chunk, varname))
 		value = string(r[k:])
