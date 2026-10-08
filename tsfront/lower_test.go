@@ -114,6 +114,7 @@ func TestLowerLexerClosure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("emit: %v", err)
 	}
+	assertSuperSameMethod(t, files)
 	var lines int
 	for name, src := range files {
 		for _, line := range strings.Split(src, "\n") {

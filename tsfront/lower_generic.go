@@ -4,19 +4,14 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-// eraseGenericOverrides fixes the ABI before bodies are lowered. A specialized
-// implementation keeps its checker signature behind a forwarding bridge; the
-// virtual slot and interface slot retain the declaration's erased signature.
+// eraseGenericOverrides fixes inherited and interface ABIs before bodies are
+// lowered, including nongeneric covariant returns. The virtual slot retains
+// the declaration signature; a separate method records the checker signature.
+// The ABAP emitter places inherited bodies in their redefinition slots.
 func (l *lowerer) eraseGenericOverrides() {
 	classes := map[string]*hir.Class{}
-	generic := map[string]bool{}
-	for sym, c := range l.classes {
+	for _, c := range l.classes {
 		classes[c.Name] = c
-		for _, d := range sym.Declarations {
-			if len(d.TypeParameters()) > 0 {
-				generic[c.Name] = true
-			}
-		}
 	}
 	var visit func(*hir.Class)
 	done := map[string]bool{}
@@ -27,9 +22,6 @@ func (l *lowerer) eraseGenericOverrides() {
 		done[c.Name] = true
 		base := classes[c.Super]
 		visit(base)
-		if base != nil && generic[base.Name] {
-			generic[c.Name] = true
-		}
 		slots := map[string]*hir.Method{}
 		for _, name := range c.Implements {
 			for _, i := range l.out.Interfaces {
@@ -40,7 +32,7 @@ func (l *lowerer) eraseGenericOverrides() {
 				}
 			}
 		}
-		if base != nil && generic[c.Name] {
+		if base != nil {
 			for _, m := range base.Methods {
 				if m.Virtual {
 					slots[m.Name] = m

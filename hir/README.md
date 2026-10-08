@@ -162,6 +162,13 @@ arrays share one ABAP object table and cast elements on reads, preserving identi
 and mutation through all views. Verification still checks the erased signature
 and the direction of every narrowing.
 
+In ABAP, inherited override bodies occupy the REDEFINITION slot; specialized
+variants forward through `me->` and use checked downcasts for their results.
+A void inheritance slot with reference-returning overrides gains an object
+result in emitted ABAP, while void callers and interface wrappers discard it.
+`super.m()` is emitted only inside that same method (or a constructor's
+`super()` call); cross-method super calls produce a blocking emission diagnostic.
+
 The ABAP emitter initializes translated static registries through guarded
 class-specific methods on first use. This follows ABAP static initialization
 while avoiding OSG-JS module-import constructors calling unregistered modules.

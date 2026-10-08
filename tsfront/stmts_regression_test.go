@@ -341,9 +341,11 @@ func TestStatementsGenericErasedBridges(t *testing.T) {
    run(): string { return this.getChildren()[0].value(); }
  }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	files, err := abap.Emit(prog)
+	if err != nil {
 		t.Fatal(err)
 	}
+	assertSuperSameMethod(t, files)
 	dump := hir.Dump(prog)
 	if !strings.Contains(dump, "instantiated") || !strings.Contains(dump, "narrow") {
 		t.Fatal("missing bridge or use-site narrowing", dump)

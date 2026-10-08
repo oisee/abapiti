@@ -12,11 +12,12 @@ import (
 )
 
 type emitter struct {
-	p     *hir.Program
-	names *hir.Names
-	files map[string]string
-	types map[string]bool
-	err   error
+	p          *hir.Program
+	names      *hir.Names
+	files      map[string]string
+	types      map[string]bool
+	err        error
+	valueSlots map[string]bool
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
@@ -38,6 +39,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	}
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
+	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
@@ -234,6 +236,97 @@ func (e *emitter) walkStmt(s *hir.Stmt, walk func(*hir.Expr)) {
 	}
 }
 
+// slotKey identifies the first declaration of an inherited virtual slot.
+func (e *emitter) slotKey(c *hir.Class, name string) string {
+	owner := c
+	for base := e.classBy(c.Super); base != nil; base = e.classBy(base.Super) {
+		if _, found := e.method(base, name); found != nil {
+			owner = found
+		}
+	}
+	return owner.Name + "." + name
+}
+
+// TS permits a value-returning override of a void method. ABAP needs one
+// return signature for the entire inheritance slot so the redefinition can
+// retain that value. Void callers and interface wrappers still discard it.
+func (e *emitter) promoteValueSlots() {
+	e.valueSlots = map[string]bool{}
+	for _, c := range e.p.Classes {
+		for _, m := range c.Methods {
+			original, _, specialized := strings.Cut(m.Name, "_instantiated_")
+			if !specialized || !m.Result.IsRef() {
+				continue
+			}
+			slot, _ := e.method(c, original)
+			base, _ := e.method(e.classBy(c.Super), original)
+			if slot != nil && base != nil && slot.Result.Kind == hir.Void {
+				e.valueSlots[e.slotKey(c, original)] = true
+			}
+		}
+	}
+}
+func (e *emitter) emittedMethod(c *hir.Class, m *hir.Method) *hir.Method {
+	if m.Result.Kind != hir.Void || !e.valueSlots[e.slotKey(c, m.Name)] {
+		return m
+	}
+	clone := *m
+	clone.Result = hir.Ref(hir.RootObject)
+	return &clone
+}
+
+// overrideBody finds the checker-typed implementation behind an erased slot.
+// ABAP requires SUPER->m to occur in METHOD m, so the implementation body
+// belongs to the inherited slot; the checker-typed variant forwards to it.
+func (e *emitter) overrideBody(c *hir.Class, slot *hir.Method) *hir.Method {
+	if base, _ := e.method(e.classBy(c.Super), slot.Name); base == nil {
+		return nil
+	}
+	for _, m := range c.Methods {
+		if m.Name == slot.Name+"_instantiated_"+c.Name {
+			return m
+		}
+	}
+	return nil
+}
+
+func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
+	slot = e.emittedMethod(c, slot)
+	b := &body{e: e, c: c, m: m, implemented: e.member(m.Name), locals: map[string]string{}}
+	for _, p := range m.Params {
+		n := b.temp(p.Type)
+		b.locals[p.Name] = n
+		b.line(n + " = " + e.param(p.Name) + ".")
+	}
+	args := []string{}
+	for j, p := range slot.Params {
+		if j >= len(m.Params) {
+			e.err = fmt.Errorf("class %s method %s: specialized super override omits inherited parameters", c.Name, slot.Name)
+			return ""
+		}
+		actual := m.Params[j]
+		args = append(args, e.param(p.Name)+" = "+b.value(hir.V(actual.Name, actual.Type), p.Type))
+	}
+	call := "me->" + e.member(slot.Name) + "( " + strings.Join(args, " ") + " )"
+	if m.Result.Kind == hir.Void {
+		b.line(call + ".")
+	} else {
+		if slot.Result.Kind == hir.Void {
+			e.err = fmt.Errorf("class %s method %s: value-returning override of void superclass slot is unsupported", c.Name, slot.Name)
+			return ""
+		}
+		result := b.temp(slot.Result)
+		b.line(result + " = " + call + ".")
+		op := " = "
+		if !m.Result.Equal(slot.Result) {
+			op = " ?= "
+		}
+		b.line("result" + op + result + ".")
+	}
+	b.line("RETURN.")
+	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+}
+
 func (e *emitter) class(c *hir.Class) {
 	var b strings.Builder
 	s := "CLASS " + e.name(c.Name) + " DEFINITION PUBLIC"
@@ -267,7 +360,7 @@ func (e *emitter) class(c *hir.Class) {
 		if base != nil {
 			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.member(m.Name))
 		} else {
-			b.WriteString(e.signature(m, false))
+			b.WriteString(e.signature(e.emittedMethod(c, m), false))
 		}
 	}
 	if e.descriptors {
@@ -290,7 +383,18 @@ func (e *emitter) class(c *hir.Class) {
 		if m.Name == "class_constructor" && m.Static {
 			name = e.name("builtin.initialize." + c.Name)
 		}
-		b.WriteString(e.body(c, m, name))
+		if impl := e.overrideBody(c, m); impl != nil {
+			b.WriteString(e.overrideImplementation(c, impl, m))
+		} else if original, _, specialized := strings.Cut(m.Name, "_instantiated_"); specialized {
+			slot, _ := e.method(c, original)
+			if slot != nil && e.overrideBody(c, slot) == m {
+				b.WriteString(e.narrowedBridge(c, m, slot))
+			} else {
+				b.WriteString(e.body(c, m, name))
+			}
+		} else {
+			b.WriteString(e.body(c, m, name))
+		}
 	}
 	if e.descriptors {
 		name := e.name("builtin.classOf")
@@ -330,6 +434,7 @@ type body struct {
 	e                            *emitter
 	c                            *hir.Class
 	m                            *hir.Method
+	implemented                  string
 	code                         strings.Builder
 	locals                       map[string]string
 	serial                       int
@@ -337,7 +442,8 @@ type body struct {
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
-	b := &body{e: e, c: c, m: m, locals: map[string]string{}}
+	m = e.emittedMethod(c, m)
+	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
 	if m.Name == "class_constructor" && m.Static {
 		flag := e.name("builtin.initialized." + c.Name)
 		b.line("IF " + flag + " = abap_true.")
@@ -354,6 +460,23 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	}
 	b.stmt(m.Body)
 	return "METHOD " + name + ".\n" + b.code.String() + "ENDMETHOD.\n"
+}
+
+func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) string {
+	clone := *impl
+	clone.Result = e.emittedMethod(c, slot).Result
+	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}}
+	for j, p := range impl.Params {
+		n := b.temp(p.Type)
+		b.locals[p.Name] = n
+		op := " = "
+		if e.typ(p.Type) != e.typ(slot.Params[j].Type) && p.Type.IsRef() {
+			op = " ?= "
+		}
+		b.line(n + op + e.param(slot.Params[j].Name) + ".")
+	}
+	b.stmt(impl.Body)
+	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
 }
 
 // Explicit lazy initialization avoids eager module constructors calling a
@@ -894,11 +1017,24 @@ func (b *body) call(x *hir.Expr, n string) {
 	} else {
 		recv = e.name(owner) + "=>"
 	}
-	m, _ = e.method(e.classBy(owner), x.Name)
-	member := e.member(x.Name)
+	callName := x.Name
+	if x.Kind == hir.SuperCall {
+		if original, _, specialized := strings.Cut(callName, "_instantiated_"); specialized {
+			callName = original
+		}
+	}
+	m, _ = e.method(e.classBy(owner), callName)
+	if m != nil {
+		m = e.emittedMethod(e.classBy(owner), m)
+	}
+	member := e.member(callName)
 	if x.Kind == hir.SuperCall && x.Name == "constructor" {
 		m = e.p.Constructor(owner)
 		member = "constructor"
+	}
+	if x.Kind == hir.SuperCall && member != b.implemented {
+		e.err = fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name)
+		return
 	}
 	if m == nil {
 		for _, i := range e.p.Interfaces {
@@ -917,9 +1053,12 @@ func (b *body) call(x *hir.Expr, n string) {
 		args = append(args, e.param(m.Params[i].Name)+" = "+b.value(a, m.Params[i].Type))
 	}
 	target := n
+	if x.Kind == hir.SuperCall && n != "" && !x.Type.Equal(m.Result) {
+		target = b.temp(m.Result)
+	}
 	s := recv + member + "( " + strings.Join(args, " ") + " )"
 	if n != "" {
-		s = n + " = " + s
+		s = target + " = " + s
 	}
 	b.line(s + ".")
 	if target != n {
@@ -1276,7 +1415,7 @@ func (b *body) stmt(s *hir.Stmt) {
 	case hir.Continue:
 		b.line("CONTINUE.")
 	case hir.Return:
-		if s.X != nil && b.m.Result.Kind == hir.Void {
+		if s.X != nil && (b.m.Result.Kind == hir.Void || s.X.Type.Kind == hir.Void) {
 			b.expr(s.X)
 		} else if s.X != nil {
 			b.line("result = " + b.value(s.X, b.m.Result) + ".")

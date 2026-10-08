@@ -23,6 +23,7 @@ func TestEmitStatementsClosure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertSuperSameMethod(t, files)
 	cases, err := LoadStatementsCorpus(filepath.Join("testdata", "stmtscorpus"))
 	if err != nil {
 		t.Fatal(err)

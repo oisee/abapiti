@@ -16,6 +16,12 @@ func TestCriticR4ErasedVirtualDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The historical cross-method super call is invalid on the kernel.
+	rejected := lowerStatementsProbe(t, map[string]string{"probe.ts": string(source)}, []string{"probe.ts"})
+	if _, err := abap.Emit(rejected); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
+		t.Fatalf("expected cross-method super rejection, got %v", err)
+	}
+	source = []byte(strings.Replace(string(source), "return super.get().value();", "return this.get().value();", 1))
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": string(source)}, []string{"probe.ts"})
 	var probe *hir.Class
 	for _, c := range prog.Classes {
@@ -44,7 +50,7 @@ CLASS ltcl_dispatch IMPLEMENTATION.
 METHOD dispatch.
 DATA actual TYPE string.
 actual = %s=>%s( ).
-cl_abap_unit_assert=>assert_equals( act = actual exp = `+"`sub|sub|sub|node|sub`"+` ).
+cl_abap_unit_assert=>assert_equals( act = actual exp = `+"`sub|sub|sub|sub|sub`"+` ).
 ENDMETHOD.
 ENDCLASS.
 `, names.Get(probe.Name), names.Get("member.run"))
