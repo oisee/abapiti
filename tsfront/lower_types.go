@@ -38,6 +38,8 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.Ref(hir.RootObject)
 	case ast.KindVoidKeyword:
 		return hir.T(hir.Void)
+	case ast.KindUndefinedKeyword:
+		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case ast.KindArrayType:
 		return hir.T(hir.Array, l.mapTypeNode(n.AsArrayTypeNode().ElementType))
 	case ast.KindParenthesizedType:
@@ -354,13 +356,12 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	case flags&checker.TypeFlagsVoid != 0:
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsUndefined != 0:
-		// `undefined` on its own is only lowered as the absent value of an
-		// Optional, with the contextual element type from the hint.
+		// A standalone undefined result still has a value, unlike void.
+		// There is no present payload; retain absence using the tagged ABI.
 		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
 			return hir.T(hir.Optional, l.hint.Args[0])
 		}
-		l.diagf(n, "unsupported-type", "undefined without an optional context")
-		return hir.T(hir.Void)
+		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case flags&checker.TypeFlagsNull != 0:
 		l.diagf(n, "unsupported-type", "null without an optional context")
 		return hir.T(hir.Void)

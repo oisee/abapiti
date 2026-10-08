@@ -295,7 +295,13 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		c := n.AsConditionalExpression()
 		x := l.condition(c.Condition)
 		hint := l.hint
-		y, z := l.expr(c.WhenTrue), l.expr(c.WhenFalse)
+		if hint.Kind == hir.Void {
+			l.hint = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		}
+		branchHint := l.hint
+		y := l.expr(c.WhenTrue)
+		l.hint = branchHint
+		z := l.expr(c.WhenFalse)
 		l.hint = hint
 		if x == nil || y == nil || z == nil {
 			return nil
@@ -333,6 +339,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 				if t := l.ck.GetContextualType(n, 0); t != nil {
 					l.hint = l.mapCheckerType(n, t)
 				}
+			}
+			if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
+				l.hint = l.hint.Args[0]
 			}
 			if l.hint.Kind == hir.Array || l.hint.Kind == hir.OrderedSet {
 				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: l.hint}
@@ -472,8 +481,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
 			return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, l.hint.Args[0])}
 		}
-		l.diagf(n, "unsupported-expr", "undefined without an optional context")
-		return nil
+		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, hir.T(hir.Dynamic))}
 	}
 	if owner, fieldName, ok := l.modvarOf(sym); ok {
 		for _, mod := range l.out.Classes {
@@ -1345,11 +1353,25 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			x = l.tempInit(n, x.Type, x)
+			hint := l.hint
+			base := x.Type
+			if base.Kind == hir.Optional {
+				base = base.Args[0]
+			}
+			if base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0 {
+				l.hint = base
+			}
 			y := l.expr(b.Right)
+			l.hint = hint
 			if y == nil {
 				return nil
 			}
-			typ := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			var typ hir.Type
+			if base.Kind == hir.Array && base.Equal(y.Type) {
+				typ = base
+			} else {
+				typ = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			}
 			if typ.Kind == hir.Dynamic {
 				l.diagf(n, "unsupported-shortcircuit", "mixed tagged operands require value-preserving truthiness")
 				return nil
@@ -1382,13 +1404,12 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil || y == nil {
 			return nil
 		}
-		if x.Type.Kind == hir.Optional || y.Type.Kind == hir.Optional {
-			l.diagf(n, "unsupported-optional-comparison", "relational comparison requires JavaScript primitive coercion")
-			return nil
-		}
 		cop := map[ast.Kind]string{
 			ast.KindLessThanToken: "<", ast.KindLessThanEqualsToken: "<=",
 			ast.KindGreaterThanToken: ">", ast.KindGreaterThanEqualsToken: ">="}[op]
+		if x.Type.Kind == hir.Optional || y.Type.Kind == hir.Optional {
+			return l.optionalRelation(n, cop, x, y)
+		}
 		return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: cop, Type: hir.T(hir.Bool), X: x, Y: y}
 	case ast.KindPlusToken:
 		if l.ck.GetTypeAtLocation(n).IsStringLike() {
@@ -1432,7 +1453,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			l.diagf(n, "unsupported-expr", "?? needs an optional left operand")
 			return nil
 		}
+		x = l.tempInit(n, x.Type, x)
+		hint := l.hint
+		l.hint = x.Type.Args[0]
 		y := l.expr(b.Right)
+		l.hint = hint
 		if y == nil {
 			return nil
 		}
@@ -1445,6 +1470,39 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	}
 	l.diagf(n, "unsupported-expr", "binary operator %s is not lowered", op.String())
 	return nil
+}
+
+// Undefined converts to NaN in a relational comparison, so every relational
+// operator returns false when either optional primitive is absent. Capture
+// both operands before testing the tags: the RHS still executes in that case.
+// Mixed primitive coercion remains blocking until its JS semantics are present.
+func (l *lowerer) optionalRelation(n *ast.Node, op string, x, y *hir.Expr) *hir.Expr {
+	base := func(t hir.Type) hir.Type {
+		if t.Kind == hir.Optional {
+			return t.Args[0]
+		}
+		return t
+	}
+	t := base(x.Type)
+	if !t.Equal(base(y.Type)) || (t.Kind != hir.Number && t.Kind != hir.String) {
+		l.diagf(n, "unsupported-optional-comparison", "mixed optional comparison requires JavaScript primitive coercion")
+		return nil
+	}
+	x = l.tempInit(n, x.Type, x)
+	y = l.tempInit(n, y.Type, y)
+	var guards []*hir.Expr
+	narrow := func(v *hir.Expr) *hir.Expr {
+		if v.Type.Kind != hir.Optional {
+			return v
+		}
+		guards = append(guards, &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: v}})
+		return &hir.Expr{Kind: hir.Narrow, Type: t, X: v}
+	}
+	result := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: hir.T(hir.Bool), X: narrow(x), Y: narrow(y)}
+	for i := len(guards) - 1; i >= 0; i-- {
+		result = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "&&", Type: hir.T(hir.Bool), X: guards[i], Y: result}
+	}
+	return result
 }
 
 func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *hir.Expr {

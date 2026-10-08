@@ -4,41 +4,41 @@
     "needle": "b",
     "n": 7,
     "flag": true,
-    "expected": " first abc\n7/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first abc\n7/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|2/0/true/true/true/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   },
   {
     "raw": "abc",
     "needle": "x",
     "n": -3,
     "flag": false,
-    "expected": " first abc\n-3/false last |false|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first abc\n-3/false last |false|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|0/1/false/false/false/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   },
   {
     "raw": "",
     "needle": "",
     "n": 0,
     "flag": false,
-    "expected": " first \n0/false last |true|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first \n0/false last |true|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|0/1/false/false/false/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   },
   {
     "raw": "a  ",
     "needle": " ",
     "n": 42,
     "flag": true,
-    "expected": " first a  \n42/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first a  \n42/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|2/0/true/true/true/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   },
   {
     "raw": "€😀",
     "needle": "😀",
     "n": 9007199254740991,
     "flag": true,
-    "expected": " first €😀\n9007199254740991/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first €😀\n9007199254740991/true last |true|true/true|second,third|First,Second,Last/last/same,same,last|0/0/0|true/false|0|2/0/true/true/true/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   },
   {
     "raw": "a\n\t`|",
     "needle": "\t",
     "n": -9007199254740991,
     "flag": false,
-    "expected": " first a\n\t`|\n-9007199254740991/false last |true|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
+    "expected": " first a\n\t`|\n-9007199254740991/false last |true|true/true|second,third|First,Second,Last/undefined/same,same,last|0/0/0|false/true|undefined|0/1/false/false/false/false/true/false/1|1,2,3,Private,Protected,Public,Alias/1/Public/string:Alias;string:Protected;string:Public;number:1;number:2;number:3;number:1;"
   }
 ]
