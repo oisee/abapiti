@@ -1,0 +1,1 @@
+{"compilerOptions": {"target": "es2020", "strictNullChecks": true, "strictPropertyInitialization": false, "noEmit": true}, "files": ["input.ts"]}
