@@ -34,7 +34,7 @@ func TestEmitRegistryArrays(t *testing.T) {
 	text := string(raw)
 	start := strings.Index(text, "export class ArrayProbe")
 	end := strings.LastIndex(text, "}") + 1
-	registry, err := overrides.New(overrides.Entry{ID: "fixture-dense-callbacks", Key: overrides.Key{File: "arrays.ts", Symbol: "ArrayProbe", Kind: "KindClassDeclaration"}, SHA256: overrides.Fingerprint(text[start:end]), Rationale: "fixture dense arrays, callbacks only replace current slots", Patterns: &overrides.Patterns{Expressions: map[string]func() *hir.Expr{`"&nbsp".repeat(indent * 2)`: func() *hir.Expr { return overrides.IndentationRepeat("&nbsp") }}, DenseCallbacks: map[string]bool{
+	registry, err := overrides.New(overrides.Entry{ID: "fixture-dense-callbacks", Key: overrides.Key{File: "arrays.ts", Symbol: "ArrayProbe", Kind: "KindClassDeclaration"}, SHA256: overrides.Fingerprint(text[start:end]), Rationale: "fixture dense arrays, callbacks only replace current slots", Patterns: &overrides.Patterns{MatchTests: map[string]bool{`name.match(/^Y/)`: true, `name.match(/^Z/)`: true, `name.match(/test$/i)`: true, `ArrayProbe.matchReceiver().match(ArrayProbe.matchPattern())`: true}, Expressions: map[string]func() *hir.Expr{`"&nbsp".repeat(indent * 2)`: func() *hir.Expr { return overrides.IndentationRepeat("&nbsp") }}, DenseCallbacks: map[string]bool{
 		`texts.find(text => text === "")`:        true,
 		`texts.find(text => text === "missing")`: true,
 		`texts.every(text => text.length > 0)`:   true,
@@ -70,11 +70,11 @@ func TestEmitRegistryArrays(t *testing.T) {
 	}
 	class := names.Get("arrays.ts.ArrayProbe")
 	driver := "CLASS ltcl_arrays DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\n"
-	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "brandedOptional", "indentation"} {
+	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "brandedOptional", "indentation", "matchTests"} {
 		driver += fmt.Sprintf("METHODS %s FOR TESTING.\n", method)
 	}
 	driver += "ENDCLASS.\nCLASS ltcl_arrays IMPLEMENTATION.\n"
-	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "brandedOptional", "indentation"} {
+	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "brandedOptional", "indentation", "matchTests"} {
 		expected, ok := oracle[method]
 		if !ok {
 			t.Fatal("missing original observation", method)

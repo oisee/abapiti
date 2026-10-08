@@ -26,6 +26,18 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static matchReceiver(): string { ArrayProbe.matchOrder += "r"; return "ZTEST"; }
+  private static matchPattern(): RegExp { ArrayProbe.matchOrder += "p"; return /^Z/; }
+  private static matchOrder = "";
+  public static matchTests(): string {
+    const name = "ZTEST";
+    const missing = name.match(/^Y/) === null;
+    const present = name.match(/^Z/) !== null;
+    let truth = "";
+    if (name.match(/test$/i)) { truth = "yes"; }
+    const effects = ArrayProbe.matchReceiver().match(ArrayProbe.matchPattern()) !== null;
+    return `${missing}/${present}/${truth}/${effects}/${ArrayProbe.matchOrder}`;
+  }
   private static repeatIndent(indent: number): string { return "&nbsp".repeat(indent * 2); }
   public static indentation(): string {
     return `${ArrayProbe.repeatIndent(0)}|${ArrayProbe.repeatIndent(2)}|${Number.MAX_SAFE_INTEGER}|${Number.MIN_SAFE_INTEGER}`;

@@ -308,3 +308,15 @@ MAX_SAFE_INTEGER/MIN_SAFE_INTEGER values lower exactly to binary64 safe-integer
 literals; a shadowed Number declaration must not take this path. The independent
 fixture checks zero/two indent and both sentinels on each runtime (13/13, 24 files,
 zero v750 issues). Generalise later: full String.repeat argument/RangeError ABI.
+
+Six String.match sites under four complete class pins use only null tests or
+truthiness. Their arrays/captures do not escape. The adaptation evaluates the
+string receiver first, then the regexp, and performs a first-match existence
+check. Null equality negates that result; truthiness/non-null uses it directly.
+The regexp helper has a separate match_test method so later RegExp.test state
+support cannot change this adapter accidentally. Match state is unobserved in
+the reached five-object workload (customRegex is absent on its five naming
+implementations). General String.match remains blocked. Differential covers
+present/missing/case-insensitive matches and receiver/argument effects on both
+runtimes (14/14, 25 files, zero v750 issues). Generalise later: capture arrays,
+match metadata and the full RegExp lastIndex/flags ABI.

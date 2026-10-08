@@ -376,6 +376,7 @@ DATA ignore_case TYPE abap_bool.
 DATA global TYPE abap_bool.
 METHODS constructor IMPORTING pattern TYPE string flags TYPE string excluded_pattern TYPE string OPTIONAL.
 METHODS test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
+METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
 METHODS replace IMPORTING p0 TYPE string p1 TYPE string RETURNING VALUE(result) TYPE string.
 PROTECTED SECTION.
 PRIVATE SECTION.
@@ -448,6 +449,26 @@ WHILE i < n.
 ENDWHILE.
 ENDMETHOD.
 METHOD test.
+IF excluded IS NOT INITIAL.
+  IF ignore_case = abap_true.
+    FIND REGEX excluded IN p0 IGNORING CASE.
+  ELSE.
+    FIND REGEX excluded IN p0.
+  ENDIF.
+  IF sy-subrc = 0.
+    RETURN.
+  ENDIF.
+ENDIF.
+IF ignore_case = abap_true.
+  FIND REGEX posix IN p0 IGNORING CASE.
+ELSE.
+  FIND REGEX posix IN p0.
+ENDIF.
+IF sy-subrc = 0.
+  result = abap_true.
+ENDIF.
+ENDMETHOD.
+METHOD match_test.
 IF excluded IS NOT INITIAL.
   IF ignore_case = abap_true.
     FIND REGEX excluded IN p0 IGNORING CASE.

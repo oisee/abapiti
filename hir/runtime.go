@@ -49,9 +49,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"set.fromArray": {OrderedSet, 1, true},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
 	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false},
-	"classvalue.name": {ClassValue, 0, false},
-	"classvalue.has":  {ClassValue, 1, false},
-	"regexp.test":     {RegExp, 1, false}, "regexp.source": {RegExp, 0, false},
+	"classvalue.name":   {ClassValue, 0, false},
+	"classvalue.has":    {ClassValue, 1, false},
+	"regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false},
 	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
@@ -179,7 +179,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(String), true
 	case "classvalue.has":
 		return []Type{T(String)}, b, true
-	case "regexp.test":
+	case "regexp.test", "regexp.match_test":
 		return []Type{T(String)}, b, true
 	case "regexp.source":
 		return nil, T(String), true

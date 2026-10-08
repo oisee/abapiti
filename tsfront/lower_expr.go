@@ -223,6 +223,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	if n == nil {
 		return nil
 	}
+	if matched, ok := l.pinnedMatchTest(n); ok {
+		return matched
+	}
 	switch n.Kind {
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
 		// Preflight already diagnosed lone units. Never pass them to HIR,
