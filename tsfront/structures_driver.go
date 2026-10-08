@@ -3,6 +3,7 @@ package tsfront
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -38,11 +39,15 @@ func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, n
 		chunks = append(chunks, input[start:end])
 		start = end
 	}
+	corpus := os.Getenv("STRUCTURES_BENCH_CORPUS") != ""
+	if corpus {
+		chunks = nil
+	}
 	parts := len(chunks)
 	driver := names.Get("harness/structures_dump.ts.StructuresDump")
 	line("CLASS zcl_phase3_benchmark DEFINITION PUBLIC FINAL CREATE PUBLIC.")
 	line("PUBLIC SECTION.")
-	line("CLASS-METHODS run RETURNING VALUE(ok) TYPE abap_bool.")
+	line("CLASS-METHODS run IMPORTING print TYPE abap_bool DEFAULT abap_false EXPORTING report TYPE string RETURNING VALUE(ok) TYPE abap_bool.")
 	line("PROTECTED SECTION.")
 	line("PRIVATE SECTION.")
 	for i := 0; i < parts; i++ {
@@ -60,24 +65,38 @@ func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, n
 	line("DATA lexed TYPE REF TO %s.", names.Get("src/abap/1_lexer/lexer_result.ts.IABAPLexerResult"))
 	line("DATA parsed TYPE REF TO %s.", names.Get("src/abap/2_statements/statement_result.ts.IStatementResult"))
 	line("DATA result TYPE REF TO %s.", names.Get("src/abap/3_structures/structure_result.ts.IStructureResult"))
-	for i := 0; i < parts; i++ {
-		line("CALL METHOD input_%03d CHANGING raw = raw.", i)
+	if corpus {
+		line("DATA(log) = zcl_abapiti_log=>start( subobject = 'BENCH' extnumber = `structures %s` ).", c.Filename)
+		line("raw = zcl_abapiti_corpus=>get_text( setname = 'ZABAPGIT' name = `%s` ).", c.Filename)
+		line("log->info( |input loaded: { strlen( raw ) } characters| ).")
+	} else {
+		for i := 0; i < parts; i++ {
+			line("CALL METHOD input_%03d CHANGING raw = raw.", i)
+		}
+		line("raw = cl_http_utility=>decode_base64( raw ).")
 	}
-	line("raw = cl_http_utility=>decode_base64( raw ).")
+	stage := func(name, field string) {
+		if corpus {
+			line("log->stage( name = `%s` microseconds = CONV int8( %s ) ).", name, field)
+		}
+	}
 	line("GET RUN TIME FIELD start.")
 	line("CALL METHOD %s=>%s EXPORTING %s = raw %s = `%s` RECEIVING result = lexed.", driver, names.Get("member.lex"), names.Get("param.raw"), names.Get("param.filename"), c.Filename)
 	line("GET RUN TIME FIELD stop.")
 	line("lex_us = stop - start.")
+	stage("lexer", "lex_us")
 	line("tokens = lexed->%s->length( ).", names.Get("member.tokens"))
 	line("GET RUN TIME FIELD start.")
 	line("CALL METHOD %s=>%s EXPORTING %s = lexed RECEIVING result = parsed.", driver, names.Get("member.parseStatements"), names.Get("param.lexed"))
 	line("GET RUN TIME FIELD stop.")
 	line("statements_us = stop - start.")
+	stage("statements", "statements_us")
 	line("statements = parsed->%s->length( ).", names.Get("member.statements"))
 	line("GET RUN TIME FIELD start.")
 	line("CALL METHOD %s=>%s EXPORTING %s = parsed RECEIVING result = result.", driver, names.Get("member.parseStructures"), names.Get("param.input"))
 	line("GET RUN TIME FIELD stop.")
 	line("structures_us = stop - start.")
+	stage("structures", "structures_us")
 	line("issues = result->%s->length( ).", names.Get("member.issues"))
 	line("GET RUN TIME FIELD start.")
 	line("CALL METHOD %s=>%s EXPORTING %s = lexed RECEIVING result = dump.", driver, names.Get("member.dumpLexed"), names.Get("param.input"))
@@ -98,12 +117,16 @@ func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, n
 	line("ELSE.")
 	line("verdict = `MISMATCH`.")
 	line("ENDIF.")
-	line("WRITE: / `tokens`, tokens, `statements`, statements, `structures`, structures, `issues`, issues.")
-	line("WRITE: / `lex_us`, lex_us, `statements_us`, statements_us, `structures_us`, structures_us, `dump_hash_us`, dump_hash_us.")
+	line("report = |STAGETIME { verdict } tokens { tokens } statements { statements } structures { structures } issues { issues } lex_us { lex_us } statements_us { statements_us } structures_us { structures_us } dump_hash_us { dump_hash_us }|.")
+	if corpus {
+		line("log->info( report ).")
+	}
+	line("IF print = abap_true.")
+	line("WRITE: / report.")
 	line("WRITE: / `lexer_sha256`, lexer_hash.")
 	line("WRITE: / `statements_sha256`, statements_hash.")
 	line("WRITE: / `structures_sha256`, structures_hash.")
-	line("WRITE: / verdict.")
+	line("ENDIF.")
 	line("ENDMETHOD.")
 	for i := 0; i < parts; i++ {
 		line("METHOD input_%03d.", i)
@@ -123,7 +146,7 @@ func benchmarkHash(b *strings.Builder, target string) {
 }
 
 func StructuresBenchmarkReport() string {
-	return "REPORT zphase3_structures_bench.\nDATA ok TYPE abap_bool.\nok = zcl_phase3_benchmark=>run( ).\n"
+	return "REPORT zphase3_structures_bench.\nDATA ok TYPE abap_bool.\nDATA report TYPE string.\nok = zcl_phase3_benchmark=>run( EXPORTING print = abap_true IMPORTING report = report ).\n"
 }
 
 func StructuresBenchmarkTest() string {
@@ -134,8 +157,9 @@ ENDCLASS.
 CLASS ltcl_benchmark IMPLEMENTATION.
 METHOD benchmark.
 DATA ok TYPE abap_bool.
-ok = zcl_phase3_benchmark=>run( ).
-cl_abap_unit_assert=>assert_equals( act = ok exp = abap_true msg = ` + "`benchmark stage hashes`" + ` ).
+DATA report TYPE string.
+ok = zcl_phase3_benchmark=>run( IMPORTING report = report ).
+cl_abap_unit_assert=>fail( msg = report ).
 ENDMETHOD.
 ENDCLASS.
 `

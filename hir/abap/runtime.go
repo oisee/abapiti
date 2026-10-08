@@ -52,10 +52,12 @@ func (e *emitter) runtime(t hir.Type) {
 		method("splice1", "DATA from TYPE i.\nDATA head TYPE items_type.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from >= lines( items ).\nRETURN.\nENDIF.\n"+
 			"IF from * 2 > lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\nRETURN.\nENDIF.\n"+
 			"IF from > 0.\nAPPEND LINES OF items FROM 1 TO from TO head.\nENDIF.\nresult->items = items.\nCLEAR items.\nIF from > 0.\nDELETE result->items FROM 1 TO from.\nENDIF.\nitems = head.\n")
+		line("METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
+		method("splice1_view", "result = splice1( p0 ).\n")
 		line("METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
+		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
+		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
 		// An optional element is itself the optional box pop/shift/get return.
 		refElem := t.Args[0].IsRef() || t.Args[0].Kind == hir.Optional
 		line("METHODS pop RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
@@ -82,7 +84,7 @@ func (e *emitter) runtime(t hir.Type) {
 			line("METHODS join IMPORTING p0 TYPE " + e.typ(hir.T(hir.Optional, hir.T(hir.String))) + " RETURNING VALUE(result) TYPE string.")
 		}
 		if t.Args[0].Kind == hir.String {
-			method("join", "DATA row TYPE "+elem+".\nLOOP AT items INTO row.\nIF result IS INITIAL AND sy-tabix = 1.\nresult = row.\nELSE.\nIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value row INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` row INTO result RESPECTING BLANKS.\nENDIF.\nENDIF.\nENDLOOP.\n")
+			method("join", "IF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
 		} else if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
 			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		}

@@ -41,7 +41,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
 	"array.slice1": {Array, 1, false}, "array.slice2": {Array, 2, false},
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
-	"array.splice3": {Array, 3, true}, "array.pop": {Array, 0, true}, "array.shift": {Array, 0, true},
+	"array.splice3": {Array, 3, true}, "array.splice1_view": {Array, 1, true}, "array.pop": {Array, 0, true}, "array.shift": {Array, 0, true},
 	"array.indexOf": {Array, 1, false}, "array.includes": {Array, 1, false},
 	"array.join": {Array, 1, false},
 	"set.delete": {OrderedSet, 1, true}, "map.values": {OrderedMap, 0, false},
@@ -159,6 +159,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "array.slice2":
 		return []Type{i, i}, t, true
 	case "array.splice1":
+		return []Type{i}, t, true
+	case "array.splice1_view":
 		return []Type{i}, t, true
 	case "array.splice2":
 		return []Type{i, i}, t, true

@@ -37,12 +37,11 @@ export class StructuresDump {
   }
 
   public static dumpLexed(input: IABAPLexerResult): string {
-    let out = "";
+    const parts: string[] = [];
     for (const token of input.tokens) {
-      if (out !== "") { out = out + "\n"; }
-      out = out + token.constructor.name + "|" + token.getStr() + "|" + token.getRow().toString() + "|" + token.getCol().toString();
+      parts.push(token.constructor.name + "|" + token.getStr() + "|" + token.getRow().toString() + "|" + token.getCol().toString());
     }
-    return out;
+    return parts.join("\n");
   }
 
   public static dumpStatements(input: IStatementResult): string {
@@ -56,18 +55,18 @@ export class StructuresDump {
     StructuresDump.lastStructures = 0;
     StructuresDump.references = statements;
     StructuresDump.nextReference = 0;
-    let out = input.tokens.length.toString() + "|" + statements.length.toString() + "|" + result.issues.length.toString();
+    const parts: string[] = [input.tokens.length.toString() + "|" + statements.length.toString() + "|" + result.issues.length.toString()];
     for (const issue of result.issues) {
-      out = out + "\nI|" + issue.getKey() + "|" + issue.getSeverity() + "|" + issue.getFilename()
+      parts.push("I|" + issue.getKey() + "|" + issue.getSeverity() + "|" + issue.getFilename()
         + "|" + issue.getStart().getRow().toString() + ":" + issue.getStart().getCol().toString()
         + "|" + issue.getEnd().getRow().toString() + ":" + issue.getEnd().getCol().toString()
-        + "|" + issue.getMessage();
+        + "|" + issue.getMessage());
     }
     const root = result.node;
     if (root !== undefined) {
-      out = out + StructuresDump.node(root, 0);
+      StructuresDump.node(root, 0, parts);
     }
-    return out;
+    return parts.join("\n");
   }
 
   // Successful trees visit statements in source order. A forward cursor
@@ -93,16 +92,16 @@ export class StructuresDump {
     throw new Error("structure references an unknown statement");
   }
 
-  private static node(node: StructureNode | StatementNode, depth: number): string {
+  private static node(node: StructureNode | StatementNode, depth: number, parts: string[]): void {
     if (node instanceof StatementNode) {
       const index = StructuresDump.reference(node);
-      return "\n" + depth.toString() + "|T" + index.toString() + "|" + node.get().constructor.name;
+      parts.push(depth.toString() + "|T" + index.toString() + "|" + node.get().constructor.name);
+      return;
     }
     StructuresDump.lastStructures = StructuresDump.lastStructures + 1;
-    let out = "\n" + depth.toString() + "|S" + node.get().constructor.name + "|" + node.getChildren().length.toString();
+    parts.push(depth.toString() + "|S" + node.get().constructor.name + "|" + node.getChildren().length.toString());
     for (const child of node.getChildren()) {
-      out = out + StructuresDump.node(child, depth + 1);
+      StructuresDump.node(child, depth + 1, parts);
     }
-    return out;
   }
 }
