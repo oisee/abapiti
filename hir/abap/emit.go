@@ -1100,6 +1100,12 @@ func (b *body) stringLit(n, s string) {
 		chunk := string(r[:k])
 		s = string(r[k:])
 		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
+		if strings.Contains(chunk, "\\") {
+			// abaplint's lexer misreads an escaped backslash before an
+			// escaped template delimiter (open-steamgate inbox 040); a
+			// backquoted literal has no escapes and keeps trailing blanks.
+			literal = "`" + strings.ReplaceAll(chunk, "`", "``") + "`"
+		}
 		if first {
 			b.line(n + " = " + literal + ".")
 		} else {

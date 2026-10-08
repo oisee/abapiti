@@ -52,7 +52,8 @@ func (e *emitter) runtime(t hir.Type) {
 		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
-		refElem := t.Args[0].IsRef() || (t.Args[0].Kind == hir.Optional && t.Args[0].Args[0].IsRef())
+		// An optional element is itself the optional box pop/shift/get return.
+		refElem := t.Args[0].IsRef() || t.Args[0].Kind == hir.Optional
 		line("METHODS pop RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
 		if refElem {
 			method("pop", "IF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
