@@ -78,9 +78,10 @@ type Interface struct {
 }
 type Field struct {
 	Node
-	Name   string
-	Type   Type
-	Static bool
+	Name              string
+	Type              Type
+	Static            bool
+	Private, Readonly bool
 }
 type Param struct {
 	Name string
@@ -95,6 +96,7 @@ type Method struct {
 	Params                    []Param
 	Result                    Type
 	Static, Virtual, Abstract bool
+	Internal                  bool // private or unexported TS callable
 	Body                      *Stmt
 }
 
@@ -103,25 +105,28 @@ type Method struct {
 type ExprKind string
 
 const (
-	Lit         ExprKind = "lit"
-	Local       ExprKind = "local"
-	This        ExprKind = "this"
-	FieldGet    ExprKind = "field"
-	StaticGet   ExprKind = "static"
-	IndexGet    ExprKind = "index"
-	DirectCall  ExprKind = "call"
-	VirtualCall ExprKind = "virtual"
-	SuperCall   ExprKind = "super"
-	New         ExprKind = "new"
-	Binary      ExprKind = "binary"
-	Unary       ExprKind = "unary"
-	Conditional ExprKind = "conditional"
-	InstanceOf  ExprKind = "instanceof"
-	IsUndefined ExprKind = "undefined"
-	ToBoolean   ExprKind = "boolean"
-	Narrow      ExprKind = "narrow"
-	Cast        ExprKind = "cast"
-	RuntimeOp   ExprKind = "runtime"
+	Lit                   ExprKind = "lit"
+	Local                 ExprKind = "local"
+	This                  ExprKind = "this"
+	FieldGet              ExprKind = "field"
+	StaticGet             ExprKind = "static"
+	IndexGet              ExprKind = "index"
+	DirectCall            ExprKind = "call"
+	VirtualCall           ExprKind = "virtual"
+	SuperCall             ExprKind = "super"
+	New                   ExprKind = "new"
+	Binary                ExprKind = "binary"
+	Unary                 ExprKind = "unary"
+	Conditional           ExprKind = "conditional"
+	InstanceOf            ExprKind = "instanceof"
+	IsUndefined           ExprKind = "undefined"
+	ToBoolean             ExprKind = "boolean"
+	Narrow                ExprKind = "narrow"
+	Cast                  ExprKind = "cast"
+	NumericConvert        ExprKind = "numeric_convert"
+	CheckedNumericConvert ExprKind = "checked_numeric_convert"
+	NumericMinMax         ExprKind = "numeric_minmax"
+	RuntimeOp             ExprKind = "runtime"
 	// ClassOf is the class value of a statically known class (a descriptor
 	// reference at run time).
 	ClassOf ExprKind = "classof"
@@ -129,6 +134,10 @@ const (
 	// home for statements that must precede an expression (inlined loops).
 	Seq ExprKind = "seq"
 )
+
+// IntegerRange is a frontend proof of an integral, negative-zero-free value.
+// Bounds are confined to JS safe integers even when represented as int8.
+type IntegerRange struct{ Min, Max int64 }
 
 type Expr struct {
 	Node
@@ -138,7 +147,8 @@ type Expr struct {
 	Value           any // nil denotes undefined; primitive Optional literals denote present values
 	X, Y, Z         *Expr
 	Args            []*Expr
-	Stmt            *Stmt // Seq: the statements evaluated before Y
+	Range           *IntegerRange // NumericConvert narrowing proof
+	Stmt            *Stmt         // Seq: the statements evaluated before Y
 }
 type StmtKind string
 

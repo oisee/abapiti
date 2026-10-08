@@ -4,6 +4,7 @@ package abap
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf16"
@@ -340,7 +341,7 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 		b.line("result" + op + result + ".")
 	}
 	b.line("RETURN.")
-	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
 }
 
 func (e *emitter) class(c *hir.Class) {
@@ -471,6 +472,7 @@ type body struct {
 	locals                       map[string]string
 	serial                       int
 	lastInit, lastName, lastType string
+	constants                    map[string]string
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
@@ -496,7 +498,7 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.line(n + " = " + e.param(p.Name) + ".")
 	}
 	b.stmt(m.Body)
-	return "METHOD " + name + ".\n" + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + name + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
 }
 
 func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) string {
@@ -517,7 +519,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 		b.line(n + " = " + b.convert(e.param(slot.Params[j].Name), slot.Params[j].Type, p.Type) + ".")
 	}
 	b.stmt(impl.Body)
-	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
 }
 
 // Explicit lazy initialization avoids eager module constructors calling a
@@ -715,6 +717,26 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			b.line(target + " = '" + fmt.Sprint(x.Value) + "'.")
 		}
+	case hir.NumericMinMax:
+		a, z := b.expr(x.X), b.expr(x.Y)
+		op := "<"
+		if x.Op == "max" {
+			op = ">"
+		}
+		b.line(n + " = " + z + ".")
+		b.line("IF " + a + " " + op + " " + z + ".")
+		b.line(n + " = " + a + ".")
+		b.line("ENDIF.")
+	case hir.CheckedNumericConvert:
+		a := b.expr(x.X)
+		low := b.constant("check_lo_"+strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n"), "f", strconv.FormatInt(x.Range.Min, 10))
+		high := b.constant("check_hi_"+strings.ReplaceAll(strconv.FormatInt(x.Range.Max, 36), "-", "n"), "f", strconv.FormatInt(x.Range.Max, 10))
+		b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " < " + low + " OR " + a + " > " + high + ".")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line(n + " = " + a + ".")
+	case hir.NumericConvert:
+		b.line(n + " = " + b.expr(x.X) + ".")
 	case hir.Local:
 		b.line(n + " = " + b.locals[x.Name] + ".")
 	case hir.This:
@@ -1443,10 +1465,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "number.index" {
 		// ToIntegerOrInfinity: saturating indices preserves clamping/bounds
 		// semantics while preventing target i32 conversion overflow.
-		b.line("IF " + a + " > 2147483647.")
-		b.line(n + " = 2147483647.")
-		b.line("ELSEIF " + a + " < -2147483648.")
-		b.line(n + " = -2147483648.")
+		upper := b.constant("i32_upper", "f", "2147483647")
+		lower := b.constant("i32_lower", "f", "-2147483648")
+		b.line("IF " + a + " > " + upper + ".")
+		b.line(n + " = " + upper + ".")
+		b.line("ELSEIF " + a + " < " + lower + ".")
+		b.line(n + " = " + lower + ".")
 		b.line("ELSE.")
 		b.line(n + " = trunc( " + a + " ).")
 		b.line("ENDIF.")
@@ -1455,8 +1479,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "number.toString" {
 		// This phase supports decimal rendering of safe integers. Other
 		// dynamic values trap rather than silently adopting ABAP formatting.
-		limit := b.temp(hir.T(hir.Number))
-		b.line(limit + " = '9007199254740991'.")
+		limit := b.constant("safe_integer", "f", "9007199254740991")
 		b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " > " + limit + " OR " + a + " < 0 - " + limit + ".")
 		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 		b.line("ENDIF.")
@@ -2212,4 +2235,27 @@ func (e *emitter) needsImplicitSuper(c *hir.Class, m *hir.Method) bool {
 		})
 	}
 	return !called
+}
+
+// Numeric bounds are constants declared once per method, never rebuilt on a
+// loop back edge (in particular the packed spelling of the i32 lower bound).
+func (b *body) constant(name, typ, value string) string {
+	if b.constants == nil {
+		b.constants = map[string]string{}
+	}
+	name = "range_" + name
+	b.constants[name] = "CONSTANTS " + name + " TYPE " + typ + " VALUE '" + value + "'.\n"
+	return name
+}
+func (b *body) constantDeclarations() string {
+	keys := make([]string, 0, len(b.constants))
+	for k := range b.constants {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var out strings.Builder
+	for _, k := range keys {
+		out.WriteString(b.constants[k])
+	}
+	return out.String()
 }

@@ -418,12 +418,16 @@ func (l *lowerer) lookupTypeOf(name string) hir.Type {
 func (l *lowerer) localFnCall(n *ast.Node, lf *localFn, callee *ast.Node) *hir.Expr {
 	args := []*hir.Expr{}
 	for _, c := range lf.captures {
-		t, ok := l.lookup(c)
-		if !ok {
-			l.diagf(callee, "unsupported-call", "capture %s is not in scope", c)
+		if c.typ.Kind == hir.Void {
+			l.diagf(callee, "unsupported-call", "capture %s is not in scope", c.name)
 			return nil
 		}
-		args = append(args, hir.V(c, t))
+		capture := hir.V(c.name, c.typ)
+		if l.localSymbols == nil {
+			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+		}
+		l.localSymbols[capture] = c.symbol
+		args = append(args, capture)
 	}
 	rest, ok := l.callArgsMethod(n, n.Arguments(), lf.method, len(args))
 	if !ok {

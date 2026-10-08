@@ -336,6 +336,10 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		x = l.coerce(x, typ)
 	}
 	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
+	if l.declSymbols == nil {
+		l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+	}
+	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(d.Name())
 	l.declare(name, typ)
 	return append(stmts, decl)
 }
@@ -520,8 +524,8 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		return nil
 	case ast.KindIdentifier:
 		name := lhs.Text()
-		if t, ok := l.lookup(name); ok {
-			return hir.V(name, t)
+		if _, ok := l.lookup(name); ok {
+			return l.identifier(lhs)
 		}
 		if sym := l.resolve(lhs); sym != nil {
 			if owner, fieldName, ok := l.modvarOf(sym); ok {

@@ -17,8 +17,9 @@ import (
 // typing each node; checker types are mapped structurally for expressions.
 // Both routes must agree; the checker decides, the syntax only selects.
 //
-// Policy: TypeScript number uses binary64. Integral syntax is not a range
-// proof: pinned OSG-JS does not trap i32 overflow, so i32 cannot enforce a trapping contract.
+// Policy: TypeScript number defaults to binary64. The lowering range pass
+// specializes storage and arithmetic only after an all-path integer proof;
+// the runtime must never be relied upon to trap i32 overflow.
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
@@ -38,7 +39,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 	}
 	switch n.Kind {
 	case ast.KindNumberKeyword:
-		l.diagf(n, "note-number-binary64", "number lowered as binary64")
+		l.diagf(n, "note-number-binary64", "number defaults to binary64 pending integer range inference")
 		return hir.T(hir.Number)
 	case ast.KindStringKeyword:
 		return hir.T(hir.String)

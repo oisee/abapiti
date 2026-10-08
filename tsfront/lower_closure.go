@@ -62,8 +62,8 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	}
 	captures := l.freeLocals(n)
 	for _, c := range captures {
-		if l.assignedAfter(n, c) {
-			l.diagf(n, "unsupported-closure", "captured %s is assigned after the closure is created", c)
+		if l.assignedAfter(n, c.name) {
+			l.diagf(n, "unsupported-closure", "captured %s is assigned after the closure is created", c.name)
 			return nil
 		}
 	}
@@ -86,7 +86,8 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 			Y: hir.V(fname, t)})
 		args = append(args, value)
 	}
-	for _, cap := range captures {
+	for _, captured := range captures {
+		cap := captured.name
 		t, ok := l.lookup(cap)
 		if !ok || t.Kind == hir.Void {
 			l.diagf(n, "unsupported-closure", "captured %s has no lowered type", cap)
@@ -112,7 +113,8 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	l.push()
 	self := &hir.Expr{Kind: hir.This, Node: l.node(n), Type: hir.Ref(name)}
 	var prologue []*hir.Stmt
-	for _, cap := range captures {
+	for _, captured := range captures {
+		cap := captured.name
 		t, _ := savedLookup(savedScope, cap)
 		l.declare(cap, t)
 		prologue = append(prologue, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: cap, Type: t,

@@ -803,6 +803,30 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			v.fail(e.Node, "classof unresolved class "+e.Owner)
 		}
 		eq(t, T(ClassValue))
+	case NumericMinMax:
+		a, b := check(e.X), check(e.Y)
+		eq(a, b)
+		eq(a, t)
+		if !numeric(t) || (e.Op != "min" && e.Op != "max") {
+			v.fail(e.Node, "invalid numeric min/max")
+		}
+	case CheckedNumericConvert:
+		a := check(e.X)
+		r := e.Range
+		if !numeric(a) || (t.Kind != I32 && t.Kind != I64) || r == nil || r.Min > r.Max || r.Min < -9007199254740991 || r.Max > 9007199254740991 || t.Kind == I32 && (r.Min < math.MinInt32 || r.Max > math.MaxInt32) {
+			v.fail(e.Node, "invalid checked integer conversion")
+		}
+	case NumericConvert:
+		a := check(e.X)
+		if !numeric(a) || !numeric(t) {
+			v.fail(e.Node, "numeric conversion requires numeric types")
+		}
+		if !(t.Kind == Number || a.Kind == I32 && t.Kind == I64) {
+			r := e.Range
+			if r == nil || r.Min > r.Max || r.Min < -9007199254740991 || r.Max > 9007199254740991 || t.Kind == I32 && (r.Min < math.MinInt32 || r.Max > math.MaxInt32) {
+				v.fail(e.Node, "numeric narrowing requires an integer range proof")
+			}
+		}
 	case Cast:
 		// An unchecked view (TypeScript `as`): the front end records no proof;
 		// a wrong view raises at run time instead of aliasing the wrong type.

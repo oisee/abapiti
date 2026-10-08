@@ -25,7 +25,13 @@ rmSync(gen,{recursive:true,force:true});
 execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1Accepted","-count=1"],{
  cwd:root,env:{...process.env, ABAPITI_TEST_OUT:gen},stdio:"inherit"
 });
+const fix2 = join(work,"number-fix2");
+rmSync(fix2,{recursive:true,force:true});
+execFileSync("go",["test","./tsfront","-run","^TestNumberFix2Semantics$","-count=1"],{
+ cwd:root,env:{...process.env, ABAPITI_FIX2_OUT:fix2},stdio:"inherit"
+});
 execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),gen,osg],{stdio:"inherit"});
+execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),fix2,osg],{stdio:"inherit"});
 async function run(runtime, dir, label, pass, tests = 1) {
   const result = await new Promise((resolve, reject) => {
     const child = spawn("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
@@ -75,6 +81,7 @@ for (const runtime of ["osgo","osgjs"]) {
  for (const probe of readdirSync(join(corpus,"critic-r1"))) {
   await run(runtime,join(corpus,"critic-r1",probe),probe,true);
  }
+ await run(runtime,fix2,"number-fix2",true);
 }
 await clean();
 }

@@ -36,6 +36,12 @@ func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 	}
 	typ := l.throwBaseType(n)
 	s := &hir.Stmt{Kind: hir.Try, Node: l.node(n), Name: name, Type: typ}
+	if cc.VariableDeclaration != nil && cc.VariableDeclaration.Name() != nil && cc.VariableDeclaration.Name().Kind == ast.KindIdentifier {
+		if l.declSymbols == nil {
+			l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+		}
+		l.declSymbols[s] = l.ck.GetSymbolAtLocation(cc.VariableDeclaration.Name())
+	}
 	s.Body = l.scopeBlock(t.TryBlock)
 	l.push()
 	l.declare(name, typ)
