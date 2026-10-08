@@ -2,6 +2,7 @@
 import {execFileSync, spawnSync} from "node:child_process";
 import {cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync} from "node:fs";
 import {join, resolve} from "node:path";
+import {assertPinnedTranspiler} from "./osg-transpiler.mjs";
 const [workArg] = process.argv.slice(2);
 if (!workArg) throw new Error("usage: lexer-unit.mjs <osgo workdir>");
 const work = resolve(workArg);
@@ -13,6 +14,7 @@ function clean() {
       execFileSync("git",["status","--porcelain","--untracked-files=all"],{cwd:osg,encoding:"utf8"}).trim()) throw new Error("runtime must be clean at CI pin");
 }
 clean();
+await assertPinnedTranspiler(osg);
 const gen = join(work,"lexer-r1");
 rmSync(gen,{recursive:true,force:true});
 execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1Accepted","-count=1"],{
