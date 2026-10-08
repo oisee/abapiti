@@ -324,9 +324,23 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			l.diagf(n, "unsupported-expr", "delete on a Map does not remove its entries")
 			return nil
 		}
-		if receiver.Type.Kind != hir.OrderedMap || !receiver.Type.Args[0].Equal(key.Type) {
+		base := receiver.Type
+		if base.Kind == hir.Optional {
+			base = base.Args[0]
+		}
+		if base.Kind == hir.OrderedMap && base.Args[0].Kind == hir.String && key.Type.Kind == hir.Number {
+			key = l.primitiveString(n, key)
+		}
+		if base.Kind != hir.OrderedMap || !base.Args[0].Equal(key.Type) {
 			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
 			return nil
+		}
+		if receiver.Type.Kind == hir.Optional {
+			// `delete a[k]?.[m]` and `delete a[k][m]`: an absent record
+			// deletes nothing and the expression is true.
+			saved := l.tempInit(n, receiver.Type, receiver)
+			present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: saved}
+			return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: saved}, Y: hir.L(hir.T(hir.Bool), true), Z: l.rtOp("record.delete", present, hir.T(hir.Bool), key)}
 		}
 		return l.rtOp("record.delete", receiver, hir.T(hir.Bool), key)
 	case ast.KindThisKeyword:
@@ -962,7 +976,14 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 					return nil
 				}
 			}
-			if slot.Result.Kind == hir.Void && hm.Result.IsRef() {
+			if slot.Result.Kind == hir.Void && recv.Type.Kind == hir.InterfaceRef && l.hint.Kind != "" && l.hint.Kind != hir.Void {
+				// `rules[key] = rule.getConfig()` through a void-declared
+				// interface slot: the implementations' value slot carries
+				// the object JavaScript returns.
+				if value := l.interfaceMethod(recv.Type.Name, slot.Name+"_value"); value != nil {
+					slot = value
+				}
+			} else if slot.Result.Kind == hir.Void && hm.Result.IsRef() {
 				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
 					found := false
 					for _, m := range c.Methods {
@@ -1622,12 +1643,18 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			} else {
 				typ = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			}
+			if typ.Kind == hir.Dynamic && base.Kind == hir.Dynamic && l.primitiveHint(hint) {
+				// `box?.DDTEXT || ""` into a string result: the taken tagged
+				// operand is unboxed as the result's primitive (raises for
+				// another payload).
+				typ = hint
+			}
 			if typ.Kind == hir.Dynamic {
 				l.diagf(n, "unsupported-shortcircuit", "mixed tagged operands require value-preserving truthiness")
 				return nil
 			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
-			left, right := l.coerce(x, typ), l.coerce(y, typ)
+			left, right := l.taggedOperand(x, typ), l.coerce(y, typ)
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
@@ -1698,6 +1725,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil {
 			return nil
 		}
+		x = l.narrowedOperand(b.Left, x)
 		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic {
 			l.diagf(n, "unsupported-expr", "?? needs an optional or tagged left operand")
 			return nil

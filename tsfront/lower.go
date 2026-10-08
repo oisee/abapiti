@@ -175,6 +175,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	l.completeUnionInterfaces()
 	l.covariantImplements()
 	l.eraseGenericOverrides()
+	l.completeInterfaceValueSlots()
 	// Register all module function signatures before lowering any function body.
 	for _, name := range files {
 		f, _ := p.File(name)

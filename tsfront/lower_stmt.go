@@ -453,7 +453,7 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 		if v == nil {
 			return nil
 		}
-		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], v)
+		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], l.coerce(v, target.X.Type.Args[1]))
 		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: set}
 	}
 	l.hint = target.Type

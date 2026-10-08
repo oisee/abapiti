@@ -335,6 +335,9 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		if x == nil {
 			return nil, false
 		}
+		// Object.keys(undefined) throws in JavaScript: the checked narrowing
+		// raises for an absent record the checker typed present.
+		x = l.presentValue(args[0], x, hir.Type{})
 		switch x.Type.Kind {
 		case hir.OrderedMap:
 			return l.rtOp("map.keys", x, hir.T(hir.Array, x.Type.Args[0])), true
