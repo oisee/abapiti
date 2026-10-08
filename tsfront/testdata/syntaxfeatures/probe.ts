@@ -33,7 +33,7 @@ class Trivial {
 type Data = {qualifiedName?: string, derived?: boolean, ddic?: string};
 abstract class SiblingBase { public abstract tag(): string; }
 class Sibling1 extends SiblingBase { public tag(): string { return "s1"; } }
-class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } }
+class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } public only2(): string { return "only2"; } }
 type Meta = {[key: string]: number};
 interface INodeLike { kindOf(): string; }
 abstract class Holder<T extends INodeLike> implements INodeLike {
@@ -85,6 +85,7 @@ export class Probe {
     if (Array.isArray(v)) { let s = 0; for (const n of v) { s += n; } return `arr:${s}`; }
     return `str:${v}`;
   }
+  private static base(x: SiblingBase): SiblingBase { return x; }
   public run(raw: string, needle: string, n: number, flag: boolean): string {
     const scope = new Scope();
     scope.add(new ClassDef("zcl_" + raw));
@@ -154,12 +155,12 @@ export class Probe {
     evolving.push("tail");
     const root = new ENode(1, flag);
     const viewed = (root.firstKid()?.concat() ?? "none") + (root.firstKid()?.kindOf() ?? "") + (new ENode(0, flag).firstKid()?.concat() ?? "none");
-    const nested: {[k: string]: {[t: string]: boolean}} = {a: {x: true, y: true}, b: {z: true}};
-    delete nested["a"]?.["x"];
-    delete nested["zz"]?.["q"];
-    const nestedKeys = Object.keys(nested["a"]).length + ":" + Object.keys(nested).join("");
-    if (Object.keys(nested["b"]).length === 1) { delete nested["b"]; } else { delete nested["b"]["z"]; }
-    const afterDel = Object.keys(nested).join(",") + Object.keys(nested["a"]).join("");
+    const recs: {[k: string]: {[t: string]: boolean}} = {a: {x: true, y: true}, b: {z: true}};
+    delete recs["a"]?.["x"];
+    delete recs["zz"]?.["q"];
+    const recsKeys = Object.keys(recs["a"]).length + ":" + Object.keys(recs).join("");
+    if (Object.keys(recs["b"]).length === 1) { delete recs["b"]; } else { delete recs["b"]["z"]; }
+    const afterDel = Object.keys(recs).join(",") + Object.keys(recs["a"]).join("");
     const picked = Probe.pick(new Rel(7, raw)) + Probe.pick(undefined) + Probe.pick({tag: needle}) + Probe.pick({release: Probe.defaultRel});
     const box: any = flag ? {DDTEXT: raw, NUM: n} : undefined;
     const boxText: string | undefined = box?.DDTEXT || "";
@@ -170,13 +171,20 @@ export class Probe {
     let ruleIndex = 0;
     for (const rule of rules) { bag["r" + ruleIndex] = rule.getConfig(); ruleIndex++; }
     const bagKeys = Object.keys(bag).join("") + (bag["r1"] === undefined ? "u" : "d") + (typeof bag["r1"] === "object" ? "o" : "x");
-    const parts: string[] = [evolving.join("+"), viewed,
+    const downcast = Probe.base(sib) instanceof Sibling2 ? (Probe.base(sib) as Sibling2).only2() : "not2";
+    const typed = `${typeof counter === "boolean"}/${typeof n === "number"}/${typeof flag === "string"}/${typeof sib !== "number"}`;
+    const nested: {[k: string]: {[n: string]: string[]}} = {};
+    nested["m"] = {};
+    nested["m"]["1"] = ["keep", needle, "keep2"];
+    nested["m"]["1"] = nested["m"]["1"].filter(v => v !== needle);
+    const filtered = nested["m"]["1"].join(",");
+    const parts: string[] = [evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
       chained, fin, sw, shadow + inner, restName, `${derived}`, sib.tag(), tagged, errText, emptyErr,
       this.log.join(";"), `${this.counter}`, `${primUndef}`, `${missingPending}`, `${seed}`, Probe.unrelated(new ClassDef("u")), `${n}`, `${flag}`,
-      nestedKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys,
+      recsKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys,
     ];
     return parts.join("|");
   }

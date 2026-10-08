@@ -277,7 +277,7 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	l.ensureNamespaceField(mod, typ)
 	decl := l.assignStatic(mod, f.AsNode(), "ns", &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: mod.Name}, Type: typ}, typ)
 	out := []*hir.Stmt{decl}
-	skipped := 0
+	skipped := []string{}
 	for _, name := range l.nsExportOrder(f) {
 		var c *hir.Class
 		for _, sym := range l.ck.GetExportsOfModule(f.Symbol) {
@@ -293,7 +293,7 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 			break
 		}
 		if c == nil {
-			skipped++
+			skipped = append(skipped, name)
 			continue
 		}
 		out = append(out, &hir.Stmt{Kind: hir.ExprStmt, Node: hir.Node{ID: l.nextID(), Source: mod.Name},
@@ -301,8 +301,12 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 				&hir.Expr{Kind: hir.Lit, Node: hir.Node{ID: l.nextID(), Source: mod.Name}, Type: hir.T(hir.String), Value: name},
 				&hir.Expr{Kind: hir.ClassOf, Node: hir.Node{ID: l.nextID(), Source: c.Node.Source}, Owner: c.Name, Type: hir.T(hir.ClassValue)})})
 	}
-	if skipped > 0 {
-		l.diagf(f.Statements.Nodes[0], "unsupported-namespace-export", "%s: %d exports cannot be represented by the class-value namespace map", relName(f.FileName()), skipped)
+	if len(skipped) > 0 && !l.namespaceReadsAny(f, skipped) {
+		l.diagf(f.Statements.Nodes[0], "note-namespace-export-unread", "%s: non-class exports %s are never read through a namespace", relName(f.FileName()), strings.Join(skipped, ", "))
+		return out
+	}
+	if len(skipped) > 0 {
+		l.diagf(f.Statements.Nodes[0], "unsupported-namespace-export", "%s: %d exports cannot be represented by the class-value namespace map: %s", relName(f.FileName()), len(skipped), strings.Join(skipped, ", "))
 	}
 	return out
 }
@@ -394,6 +398,10 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 		}
 		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
 			if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Symbol() != nil {
+				if trivialInitializer(d.Initializer()) && !l.moduleConstRead(d) {
+					l.diagf(d, "note-module-const-unread", "module constant %s is only re-exported, never read in the program", d.Name().Text())
+					continue
+				}
 				*body = append(*body, l.moduleVar(d, mod)...)
 			}
 		}
@@ -450,4 +458,163 @@ func (l *lowerer) numericEnumOf(sym *ast.Symbol) map[string]float64 {
 		}
 	}
 	return nil
+}
+
+// namespaceReadsAny reports whether any program file reads one of the named
+// exports of f as a member of a namespace (ns.name, ns["name"] aside: those
+// are dynamic and always counted as reads).
+func (l *lowerer) namespaceReadsAny(f *ast.SourceFile, names []string) bool {
+	want := map[*ast.Symbol]bool{}
+	wanted := map[string]bool{}
+	for _, sym := range l.ck.GetExportsOfModule(f.Symbol) {
+		for _, name := range names {
+			if sym.Name == name {
+				if sym.Flags&ast.SymbolFlagsAlias != 0 {
+					if target, ok := l.ck.ResolveAlias(sym); ok {
+						sym = target
+					}
+				}
+				want[sym] = true
+				wanted[name] = true
+			}
+		}
+	}
+	savedFile, savedCk := l.file, l.ck
+	defer func() { l.file, l.ck = savedFile, savedCk }()
+	for _, other := range l.prog.prog.SourceFiles() {
+		if other.IsDeclarationFile {
+			continue
+		}
+		ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), other)
+		found := false
+		var walk func(*ast.Node)
+		walk = func(n *ast.Node) {
+			if found || n == nil {
+				return
+			}
+			switch n.Kind {
+			case ast.KindPropertyAccessExpression:
+				if name := n.Name(); name != nil && wanted[name.Text()] {
+					if sym := ck.GetSymbolAtLocation(name); sym != nil {
+						if sym.Flags&ast.SymbolFlagsAlias != 0 {
+							if target, ok := ck.ResolveAlias(sym); ok {
+								sym = target
+							}
+						}
+						if want[sym] {
+							found = true
+							return
+						}
+					}
+				}
+			case ast.KindElementAccessExpression:
+				if x := n.AsElementAccessExpression().Expression; x != nil {
+					if sym := ck.GetSymbolAtLocation(x); sym != nil && sym.Flags&ast.SymbolFlagsAlias != 0 {
+						if target, ok := ck.ResolveAlias(sym); ok && target == f.Symbol {
+							found = true
+							return
+						}
+					}
+				}
+			}
+			n.ForEachChild(func(c *ast.Node) bool { walk(c); return found })
+		}
+		walk(other.AsNode())
+		done()
+		if found {
+			return true
+		}
+	}
+	return false
+}
+
+// moduleConstRead reports whether any program file reads the module constant
+// declared by d (an export specifier re-exporting it is not a read). The
+// identifier index is built once over all non-declaration files.
+func (l *lowerer) moduleConstRead(d *ast.Node) bool {
+	if l.constReads == nil {
+		l.constReads = map[*ast.Symbol]bool{}
+		names := map[string]bool{}
+		for _, f := range l.prog.prog.SourceFiles() {
+			if f.IsDeclarationFile {
+				continue
+			}
+			for _, stmt := range f.Statements.Nodes {
+				if stmt.Kind == ast.KindVariableStatement {
+					for _, v := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+						if v.Name() != nil && v.Name().Kind == ast.KindIdentifier {
+							names[v.Name().Text()] = true
+						}
+					}
+				}
+			}
+		}
+		savedFile, savedCk := l.file, l.ck
+		for _, f := range l.prog.prog.SourceFiles() {
+			if f.IsDeclarationFile {
+				continue
+			}
+			ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
+			var walk func(*ast.Node)
+			walk = func(n *ast.Node) {
+				declaring := n.Parent != nil && n.Parent.Kind == ast.KindVariableDeclaration && n.Parent.Name() == n
+				if n.Kind == ast.KindIdentifier && names[n.Text()] && n.Parent != nil && !declaring && n.Parent.Kind != ast.KindExportSpecifier && n.Parent.Kind != ast.KindImportSpecifier {
+					sym := ck.GetSymbolAtLocation(n)
+					if n.Parent.Kind == ast.KindShorthandPropertyAssignment {
+						sym = ck.GetShorthandAssignmentValueSymbol(n.Parent)
+					}
+					if sym != nil {
+						if sym.Flags&ast.SymbolFlagsAlias != 0 {
+							if target, ok := ck.ResolveAlias(sym); ok {
+								sym = target
+							}
+						}
+						l.constReads[sym] = true
+					}
+				}
+				n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+			}
+			walk(f.AsNode())
+			done()
+		}
+		l.file, l.ck = savedFile, savedCk
+	}
+	return l.constReads[d.Symbol()]
+}
+
+// trivialInitializer: evaluating the expression at import has no effect
+// (literals, identifiers, and object/array literals built from them), so a
+// never-read constant can be left out without changing module timing.
+func trivialInitializer(n *ast.Node) bool {
+	if n == nil {
+		return true
+	}
+	switch n.Kind {
+	case ast.KindStringLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword, ast.KindNullKeyword, ast.KindIdentifier, ast.KindNoSubstitutionTemplateLiteral:
+		return true
+	case ast.KindArrayLiteralExpression:
+		for _, e := range n.AsArrayLiteralExpression().Elements.Nodes {
+			if !trivialInitializer(e) {
+				return false
+			}
+		}
+		return true
+	case ast.KindObjectLiteralExpression:
+		for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+			switch p.Kind {
+			case ast.KindShorthandPropertyAssignment:
+			case ast.KindPropertyAssignment:
+				if p.Name() != nil && p.Name().Kind == ast.KindComputedPropertyName {
+					return false
+				}
+				if !trivialInitializer(p.Initializer()) {
+					return false
+				}
+			default:
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

@@ -880,6 +880,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array && ast.IsOptionalChain(n) {
 				return l.withLocal(p.Expression, recvX, func() *hir.Expr { return l.optionalChain(n) })
 			}
+			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// An index-signature read the checker types as present: a
+				// checked narrow raises where JavaScript would throw a TypeError.
+				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
+			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
 					return x
@@ -2013,6 +2018,16 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 		return l.rtOp("dynamic.asRef", x, mapped)
 	case (mapped.Kind == hir.ClassRef || mapped.Kind == hir.InterfaceRef) && !mapped.Equal(x.Type):
 		if mapped.Kind == hir.ClassRef && x.Type.Kind == hir.ClassRef && l.classesByQualifiedName(mapped.Name) != nil {
+			// A source-proven nominal downcast is checked by ABAP's ?=. An
+			// unproven one stays refused: JavaScript would carry on with the
+			// mistyped object where ?= raises.
+			if l.pinnedCheckedCast(n) {
+				for c := l.classesByQualifiedName(mapped.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
+					if c.Super == x.Type.Name {
+						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+					}
+				}
+			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
 			return nil
 		}

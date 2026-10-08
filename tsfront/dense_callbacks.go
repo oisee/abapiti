@@ -133,3 +133,16 @@ func (l *lowerer) denseCallbackStatements(n, callback *ast.Node, elem hir.Type) 
 	}
 	return hir.B(append(l.pend, &hir.Stmt{Kind: hir.ExprStmt, X: value})...), names, true
 }
+
+// pinnedCheckedCast reports whether an enclosing fingerprinted override
+// certifies this exact assertion as a proven downcast.
+func (l *lowerer) pinnedCheckedCast(n *ast.Node) bool {
+	text := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+	for parent := n; parent != nil; parent = parent.Parent {
+		if e, ok := l.overrides[parent]; ok && e.Patterns != nil && e.Patterns.CheckedCasts[text] {
+			l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
+			return true
+		}
+	}
+	return false
+}

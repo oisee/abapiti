@@ -228,6 +228,16 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 	case hir.ClassValue:
 		l.diagf(n, "note-typeof-classvalue", "typeof on a class value is always \"function\"")
 		test = hir.L(hir.T(hir.Bool), want == "function")
+	case hir.Number, hir.I32, hir.Bool, hir.ClassRef, hir.InterfaceRef:
+		// A statically typed operand has a fixed tag; a reference is never
+		// a primitive (whether it is null decides only "object", not folded).
+		tag := map[hir.Kind]string{hir.Number: "number", hir.I32: "number", hir.Bool: "boolean"}[e.Type.Kind]
+		if tag == "" && want == "object" {
+			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type.Kind)
+			return nil
+		}
+		l.diagf(n, "note-typeof-static", "typeof on a statically typed %s folds to a constant", e.Type.Kind)
+		test = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: e}), Y: hir.L(hir.T(hir.Bool), tag == want)}
 	default:
 		l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type.Kind)
 		return nil

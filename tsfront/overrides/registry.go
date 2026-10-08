@@ -25,6 +25,10 @@ type Patterns struct {
 	MatchTests map[string]bool
 	// StaticInitializers names reviewed allocations whose eager/lazy timing is unobservable.
 	StaticInitializers map[string]bool
+	// CheckedCasts certifies these exact `x as Sub` assertions as nominal
+	// downcasts the source has already proven (an enclosing instanceof of the
+	// same pure expression); they lower to ABAP's checked ?=.
+	CheckedCasts map[string]bool
 	// SourceGuard pins a dependency used in an adapter safety proof.
 	SourceGuard bool
 }
@@ -93,7 +97,7 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
-	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.MatchTests) > 0 || len(e.Patterns.StaticInitializers) > 0 || e.Patterns.SourceGuard) {
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.CheckedCasts) > 0 || len(e.Patterns.MatchTests) > 0 || len(e.Patterns.StaticInitializers) > 0 || e.Patterns.SourceGuard) {
 		n++
 	}
 	if e.Result != nil {

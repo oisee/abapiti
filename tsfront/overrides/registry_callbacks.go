@@ -1,5 +1,7 @@
 package overrides
 
+import "github.com/oisee/abapiti/hir"
+
 // Reached arrays are dense; callbacks only read them or replace current entries.
 // Stack/result pushes target other arrays. Membership cannot change while iterating.
 func registryDenseCallbacks() []Entry {
@@ -32,6 +34,14 @@ func registryDenseCallbacks() []Entry {
 		}}},
 		{ID: "abaplint-dense-callback-Catch.runSyntax", Key: Key{"src/abap/5_syntax/statements/catch.ts", "Catch.runSyntax", "KindMethodDeclaration"}, SHA256: "4f8f21e98eeeae98acd365c4d6892e14e5209123787172b31c288c6a3882bf31", Rationale: "classNames is Array.from of a Set<string>: dense and not mutated; the callback only reads the scope, so an absent result means no element matched", Patterns: &Patterns{DenseCallbacks: map[string]bool{
 			"classNames.find(name => input.scope.findClassDefinition(name) === undefined)": true,
+		}}},
+		{ID: "abaplint-select-single-full-key-default-conf", Key: Key{"src/rules/select_single_full_key.ts", "SelectSingleFullKey.getConfig", "KindMethodDeclaration"}, SHA256: "b86b0823577309d8039eb10ba09ba8a187bfd82e8c5930ff869cbeb99080da32", Rationale: "the default literal {allowPseudo: true} equals a fresh SelectSingleFullKeyConf: exclude is read from the registry config, and an undefined severity defaults to Error in Issue.atRange", Patterns: &Patterns{Expressions: map[string]func() *hir.Expr{
+			"{\n        allowPseudo: true,\n      }": func() *hir.Expr {
+				return &hir.Expr{Kind: hir.New, Type: hir.Ref("src/rules/select_single_full_key.ts.SelectSingleFullKeyConf")}
+			},
+		}}},
+		{ID: "abaplint-checked-cast-UnknownTypes.traverse", Key: Key{"src/rules/unknown_types.ts", "UnknownTypes.traverse", "KindMethodDeclaration"}, SHA256: "1839f90560822532c74d59d0cb24ca5a9fd014f7f6f6406bc13270e39f45e0f8", Rationale: "the assertion sits under `r.resolved.getType() instanceof UnknownType` in the same condition; TypedIdentifier.getType is a plain field read with no override, so the downcast is proven and ?= never raises", Patterns: &Patterns{CheckedCasts: map[string]bool{
+			"r.resolved.getType() as UnknownType": true,
 		}}},
 	}
 }

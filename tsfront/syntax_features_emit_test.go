@@ -10,6 +10,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // The syntax-closure lowerings (interface heritage, inlined array callbacks,
@@ -22,7 +23,20 @@ func TestEmitSyntaxFeatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, nil, nil)
+	raw, err := os.ReadFile(filepath.Join(dir, "probe.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	start := strings.Index(text, "export class Probe")
+	end := strings.LastIndex(text, "}") + 1
+	registry, err := overrides.New(overrides.Entry{ID: "fixture-checked-cast", Key: overrides.Key{File: "probe.ts", Symbol: "Probe", Kind: "KindClassDeclaration"}, SHA256: overrides.Fingerprint(text[start:end]), Rationale: "fixture: the assertion sits under an instanceof of the same pure call", Patterns: &overrides.Patterns{CheckedCasts: map[string]bool{
+		`Probe.base(sib) as Sibling2`: true,
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, registry, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +66,7 @@ func TestEmitSyntaxFeatures(t *testing.T) {
 		Flag        bool
 		Expected    string
 	}
-	raw, err := os.ReadFile(filepath.Join(dir, "oracle.json"))
+	raw, err = os.ReadFile(filepath.Join(dir, "oracle.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

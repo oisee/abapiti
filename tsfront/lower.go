@@ -335,10 +335,10 @@ type lowerer struct {
 	guards map[*ast.Symbol]hir.Type
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
-	continueAsBreak map[*ast.Node]bool
-	breakViaFlag    map[*ast.Node]*hir.Expr
+	continueAsBreak  map[*ast.Node]bool
+	breakViaFlag     map[*ast.Node]*hir.Expr
 	ifaceClassBaseOf map[string]string
-	bridgeTargets   map[*hir.Method]*hir.Method
+	bridgeTargets    map[*hir.Method]*hir.Method
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
@@ -366,6 +366,7 @@ type lowerer struct {
 	methodsBy     map[string]*hir.Method
 	fieldsBy      map[string]hir.Field
 	modvarsByName map[string]modvarRef // current file + var name -> module field
+	constReads    map[*ast.Symbol]bool // module constants read anywhere in the program
 	synthsByName  map[string]*hir.Class
 }
 
