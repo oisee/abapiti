@@ -6,8 +6,8 @@ import "testing"
 // builder, a rationale and a full fingerprint; the inventory lists them all.
 func TestSyntaxOverrides(t *testing.T) {
 	entries := Syntax()
-	if len(entries) != 10 {
-		t.Fatalf("expected 10 syntax overrides, got %d", len(entries))
+	if len(entries) != 12 {
+		t.Fatalf("expected 12 syntax overrides, got %d", len(entries))
 	}
 	r, err := New(entries...)
 	if err != nil {
