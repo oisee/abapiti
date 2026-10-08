@@ -19,6 +19,10 @@ export class StatementsDump {
     const statements = parsed[0].statements;
     StatementsDump.lastStatements = statements.length;
 
+    return StatementsDump.fromStatements(statements);
+  }
+
+  public static fromStatements(statements: readonly StatementNode[]): string {
     let out = statements.length.toString();
     for (const statement of statements) {
       out = out + "\n" + StatementsDump.statement(statement);

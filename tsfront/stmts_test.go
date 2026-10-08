@@ -43,6 +43,18 @@ func stmtsLowerFiles(t *testing.T) []string {
 			return nil
 		})
 	}
+	if os.Getenv("STRUCTURES_EMIT") != "" {
+		filepath.WalkDir(filepath.Join(root, "abap", "3_structures"), func(path string, e os.DirEntry, err error) error {
+			if err == nil && !e.IsDir() && strings.HasSuffix(path, ".ts") {
+				rel, _ := filepath.Rel(root, path)
+				lowered[filepath.ToSlash(rel)] = true
+			}
+			return nil
+		})
+		lowered["issue.ts"] = true
+		lowered["severity.ts"] = true
+		lowered["abap/4_file_information/_identifier.ts"] = true
+	}
 	var out []string
 	for rel := range lowered {
 		if strings.HasSuffix(rel, "index.ts") && strings.Contains(rel, "3_structures") {
@@ -53,6 +65,9 @@ func stmtsLowerFiles(t *testing.T) []string {
 	// deterministic order: sorted; the harness goes last.
 	sort.Strings(out)
 	out = append(out, "harness/test_file.ts", "harness/statements_dump.ts")
+	if os.Getenv("STRUCTURES_EMIT") != "" {
+		out = append(out, "harness/structures_dump.ts")
+	}
 	return out
 }
 

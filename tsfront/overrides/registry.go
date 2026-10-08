@@ -17,6 +17,7 @@ type Entry struct {
 	SHA256    string
 	Rationale string
 	// Exactly one builder is provided. Builders must return fresh nodes.
+	Result      func() hir.Type
 	Types       map[string]hir.Type
 	Interface   func() *hir.Interface
 	Statements  map[string]func() *hir.Stmt
@@ -69,6 +70,9 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
+	if e.Result != nil {
+		n++
+	}
 	if len(e.Types) > 0 {
 		n++
 	}

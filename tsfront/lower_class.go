@@ -439,7 +439,10 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 		hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ})
 		checked[len(hm.Params)-1] = true
 	}
-	if node.Type() != nil {
+	if e, ok := l.overrides[node]; ok && e.Result != nil {
+		hm.Result = e.Result()
+		l.diagf(node, "note-override", "%s: %s", e.ID, e.Rationale)
+	} else if node.Type() != nil {
 		hm.Result = l.mapTypeNode(node.Type())
 	} else if sig != nil {
 		result := l.ck.GetReturnTypeOfSignature(sig)

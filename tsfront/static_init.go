@@ -72,6 +72,8 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 			return false
 		}
 		return l.pureInitializer(d.Initializer(), d, visiting)
+	case ast.KindObjectLiteralExpression:
+		return len(n.AsObjectLiteralExpression().Properties.Nodes) == 0
 	case ast.KindArrayLiteralExpression:
 		for _, el := range n.AsArrayLiteralExpression().Elements.Nodes {
 			if !pure(el) {

@@ -3,13 +3,15 @@ import {IFile} from "../src/files/_ifile";
 
 export class TestFile implements IFile {
   private readonly raw: string;
+  private readonly filename: string;
 
-  public constructor(raw: string) {
+  public constructor(raw: string, filename: string = "ztest.prog.abap") {
     this.raw = raw;
+    this.filename = filename;
   }
 
   public getFilename(): string {
-    return "ztest.prog.abap";
+    return this.filename;
   }
 
   public getObjectType(): string | undefined {
@@ -25,6 +27,6 @@ export class TestFile implements IFile {
   }
 
   public getRawRows(): string[] {
-    return [];
+    return this.raw.split("\n");
   }
 }

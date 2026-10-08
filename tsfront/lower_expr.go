@@ -36,6 +36,19 @@ func (l *lowerer) rtOp(op string, x *hir.Expr, t hir.Type, args ...*hir.Expr) *h
 // condition lowers an expression used where a boolean is required, applying
 // JavaScript truthiness where the checker type is not boolean.
 func (l *lowerer) condition(n *ast.Node) *hir.Expr {
+	if n.Kind == ast.KindParenthesizedExpression {
+		return l.condition(n.Expression())
+	}
+	if n.Kind == ast.KindBinaryExpression {
+		b := n.AsBinaryExpression()
+		if b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindBarBarToken {
+			op := "&&"
+			if b.OperatorToken.Kind == ast.KindBarBarToken {
+				op = "||"
+			}
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: l.condition(b.Left), Y: l.condition(b.Right)}
+		}
+	}
 	x := l.expr(n)
 	if x == nil {
 		return nil
@@ -99,7 +112,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken)) {
 			return x
 		}
 	}
@@ -121,6 +134,26 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 		return x
 	}
 	l.diags = l.diags[:before]
+	if x.Type.Kind == hir.ClassRef && typ.Kind == hir.ClassRef && strings.HasPrefix(typ.Name, "shape.") {
+		var a, b *hir.Class
+		for _, c := range l.out.Classes {
+			if c.Name == x.Type.Name {
+				a = c
+			}
+			if c.Name == typ.Name {
+				b = c
+			}
+		}
+		if a != nil && b != nil && len(a.Fields) == len(b.Fields) {
+			same := true
+			for i, f := range a.Fields {
+				same = same && f.Name == b.Fields[i].Name && f.Type.Equal(b.Fields[i].Type)
+			}
+			if same {
+				return x
+			}
+		}
+	}
 	return l.narrowed(n, x, typ)
 }
 
@@ -831,6 +864,10 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.stringLastIndexOf(n, recv, args[0]), true
 		case "substr":
+			if len(args) == 1 {
+				recv = l.tempInit(n, recv.Type, recv)
+				return l.rtOp("string.substr", recv, str, l.expr(args[0]), l.rtOp("string.length", recv, i32)), true
+			}
 			a, b := two()
 			return l.rtOp("string.substr", recv, str, a, b), true
 		case "trim":
@@ -1213,6 +1250,35 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	case ast.KindExclamationEqualsEqualsToken, ast.KindExclamationEqualsToken:
 		return l.equality(n, b, true)
 	case ast.KindAmpersandAmpersandToken, ast.KindBarBarToken:
+		if !l.ck.GetTypeAtLocation(n).IsBooleanLike() {
+			x := l.expr(b.Left)
+			if x == nil {
+				return nil
+			}
+			x = l.tempInit(n, x.Type, x)
+			y := l.expr(b.Right)
+			if y == nil {
+				return nil
+			}
+			typ := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			if typ.Kind == hir.Dynamic {
+				l.diagf(n, "unsupported-shortcircuit", "mixed tagged operands require value-preserving truthiness")
+				return nil
+			}
+			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
+			left, right := l.coerce(x, typ), l.coerce(y, typ)
+			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
+				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
+			}
+			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
+				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s", typ.String())
+				return nil
+			}
+			if op == ast.KindAmpersandAmpersandToken {
+				left, right = right, left
+			}
+			return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: typ, X: condition, Y: left, Z: right}
+		}
 		hop := "&&"
 		if op == ast.KindBarBarToken {
 			hop = "||"
