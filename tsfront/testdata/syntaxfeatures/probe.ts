@@ -116,7 +116,10 @@ export class Probe {
     const primUndef = prim === undefined;
     const missingPending = Probe.pending === undefined;
     const seed = Probe.seed.value + (Probe.table["b"] ?? 0) + Probe.cache.size;
-    const parts: string[] = [
+    const evolving = [];
+    evolving.push(...names.slice(0, 1));
+    evolving.push("tail");
+    const parts: string[] = [evolving.join("+"),
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,

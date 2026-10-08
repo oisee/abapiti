@@ -4,34 +4,34 @@
     "needle": "b",
     "n": 7,
     "flag": true,
-    "expected": "zcl_abcdef|CLAS|absent|ZCL_ABCDEF:CLAS,ZIF_ABCDEF:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|bcde|ef|f|a|none|a_cdefbabcdef|/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|ABCDEF|ab|B|abcdefb|q|true|s2|arr:6|Error: abcdef|Error|b!|1|false|true|7|u|7|true"
+    "expected": "ZCL_ABCDEF:CLAS+tail|zcl_abcdef|CLAS|absent|ZCL_ABCDEF:CLAS,ZIF_ABCDEF:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|bcde|ef|f|a|none|a_cdefbabcdef|/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|ABCDEF|ab|B|abcdefb|q|true|s2|arr:6|Error: abcdef|Error|b!|1|false|true|7|u|7|true"
   },
   {
     "raw": "hello",
     "needle": "x",
     "n": -3,
     "flag": false,
-    "expected": "zcl_hello|CLAS|absent|ZCL_HELLO:CLAS,ZIF_HELLO:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|ell|lo||h|none|hello_hello|/X 9X A A_B A/B A0 Z_A|0|1|9|||ab|X|hellox|q|true|s1|str:hello|Error: hello|Error|x!|1|false|true|7|u|-3|false"
+    "expected": "ZCL_HELLO:CLAS+tail|zcl_hello|CLAS|absent|ZCL_HELLO:CLAS,ZIF_HELLO:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|ell|lo||h|none|hello_hello|/X 9X A A_B A/B A0 Z_A|0|1|9|||ab|X|hellox|q|true|s1|str:hello|Error: hello|Error|x!|1|false|true|7|u|-3|false"
   },
   {
     "raw": "Z",
     "needle": "",
     "n": 0,
     "flag": false,
-    "expected": "zcl_Z|CLAS|absent|ZCL_Z:CLAS,ZIF_Z:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991||Z||Z|none|_ZZ|/X 9X A A_B A/B A0 Z_A|0|1|9|||ab|D|Z|q|true|s1|str:Z|Error: Z|Error|!|1|false|true|7|u|0|false"
+    "expected": "ZCL_Z:CLAS+tail|zcl_Z|CLAS|absent|ZCL_Z:CLAS,ZIF_Z:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991||Z||Z|none|_ZZ|/X 9X A A_B A/B A0 Z_A|0|1|9|||ab|D|Z|q|true|s1|str:Z|Error: Z|Error|!|1|false|true|7|u|0|false"
   },
   {
     "raw": "a  ",
     "needle": " ",
     "n": 42,
     "flag": true,
-    "expected": "zcl_a  |CLAS|absent|ZCL_A  :CLAS,ZIF_A  :INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991| |  ||a|none|a_  a  |/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|A  |ab|D|a   |q|true|s2|arr:6|Error: a  |Error| !|1|false|true|7|u|42|true"
+    "expected": "ZCL_A  :CLAS+tail|zcl_a  |CLAS|absent|ZCL_A  :CLAS,ZIF_A  :INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991| |  ||a|none|a_  a  |/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|A  |ab|D|a   |q|true|s2|arr:6|Error: a  |Error| !|1|false|true|7|u|42|true"
   },
   {
     "raw": "€😀xy",
     "needle": "😀",
     "n": 9007199254740991,
     "flag": true,
-    "expected": "zcl_€😀xy|CLAS|absent|ZCL_€😀XY:CLAS,ZIF_€😀XY:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|😀x|xy||€|none|€_xy😀€😀xy|/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|€😀XY|ab|D|€😀xy😀|q|true|s2|arr:6|Error: €😀xy|Error|😀!|1|false|true|7|u|9007199254740991|true"
+    "expected": "ZCL_€😀XY:CLAS+tail|zcl_€😀xy|CLAS|absent|ZCL_€😀XY:CLAS,ZIF_€😀XY:INTF|1|true|xyz|0CLAS1INTF|q1|q0,q2,q3|baba|38|false|9007199254740991|😀x|xy||€|none|€_xy😀€😀xy|/X 9X A A_B A/B A0 Z_A|0|1|9|k1k2|€😀XY|ab|D|€😀xy😀|q|true|s2|arr:6|Error: €😀xy|Error|😀!|1|false|true|7|u|9007199254740991|true"
   }
 ]

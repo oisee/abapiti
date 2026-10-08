@@ -228,6 +228,12 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if len(init.AsArrayLiteralExpression().Elements.Nodes) == 0 && typ.Kind == hir.Array && typ.Args[0].Kind == hir.Dynamic {
+			if evolved, ok := l.evolvedArrayType(d, sym); ok {
+				l.diagf(d, "note-evolving-array", "empty array literal takes its evolved type %s", evolved)
+				typ = evolved
+			}
+		}
 		if typ.Kind == hir.Void {
 
 			return nil
@@ -665,4 +671,34 @@ func (l *lowerer) isHostProcessCall(n *ast.Node) bool {
 		}
 	}
 	return true
+}
+
+// evolvedArrayType: `const x = []` without an annotation is an evolving
+// any[] whose element type the checker settles at each later reference. The
+// type at the last reference in the enclosing function is the evolved one.
+func (l *lowerer) evolvedArrayType(d *ast.Node, sym *ast.Symbol) (hir.Type, bool) {
+	fn := d.Parent
+	for fn != nil && !ast.IsFunctionLike(fn) && fn.Kind != ast.KindSourceFile {
+		fn = fn.Parent
+	}
+	if fn == nil {
+		return hir.Type{}, false
+	}
+	var last *ast.Node
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x.Kind == ast.KindIdentifier && x != d.Name() && l.ck.GetSymbolAtLocation(x) == sym {
+			last = x
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(fn)
+	if last == nil {
+		return hir.Type{}, false
+	}
+	t := l.mapCheckerType(d, l.ck.GetTypeAtLocation(last))
+	if t.Kind != hir.Array || t.Args[0].Kind == hir.Dynamic {
+		return hir.Type{}, false
+	}
+	return t, true
 }
