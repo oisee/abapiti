@@ -192,6 +192,14 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: value}
+	case ast.KindTemplateExpression:
+		return l.templateExpr(n)
+	case ast.KindTemplateHead, ast.KindTemplateMiddle, ast.KindTemplateTail:
+		value := stringutil.CombineSurrogatePairs(n.Text())
+		if hasLoneSurrogate(value) {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: value}
 	case ast.KindNumericLiteral:
 		return l.numericLiteral(n, hir.T(hir.Number), 1)
 	case ast.KindTrueKeyword:
@@ -209,6 +217,39 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		return x
 	case ast.KindIdentifier:
 		return l.identifier(n)
+	case ast.KindDeleteExpression:
+		operand := n.AsDeleteExpression().Expression
+		var receiver, key *hir.Expr
+		var receiverNode *ast.Node
+		switch operand.Kind {
+		case ast.KindElementAccessExpression:
+			p := operand.AsElementAccessExpression()
+			receiverNode = p.Expression
+			receiver = l.expr(p.Expression)
+			key = l.expr(p.ArgumentExpression)
+		case ast.KindPropertyAccessExpression:
+			p := operand.AsPropertyAccessExpression()
+			receiverNode = p.Expression
+			receiver = l.expr(p.Expression)
+			key = hir.L(hir.T(hir.String), p.Name().Text())
+		default:
+			l.diagf(n, "unsupported-expr", "delete needs a record property")
+			return nil
+		}
+		if receiver == nil || key == nil {
+			return nil
+		}
+		// Maps share the OrderedMap representation with records, but delete on a
+		// Map only removes an own property, never an entry.
+		if sym := l.ck.GetTypeAtLocation(receiverNode).Symbol(); sym != nil && (sym.Name == "Map" || sym.Name == "ReadonlyMap") {
+			l.diagf(n, "unsupported-expr", "delete on a Map does not remove its entries")
+			return nil
+		}
+		if receiver.Type.Kind != hir.OrderedMap || !receiver.Type.Args[0].Equal(key.Type) {
+			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
+			return nil
+		}
+		return l.rtOp("record.delete", receiver, hir.T(hir.Bool), key)
 	case ast.KindThisKeyword:
 		return l.this(l.class)
 	case ast.KindParenthesizedExpression:
@@ -847,6 +888,21 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	switch recv.Type.Kind {
 	case hir.String:
 		switch name {
+		case "includes":
+			if len(args) != 1 {
+				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")
+				return nil, true
+			}
+			search := l.expr(args[0])
+			if search == nil {
+				return nil, true
+			}
+			if search.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-call", "string.includes requires a string search value")
+				return nil, true
+			}
+			index := l.rtOp("string.indexOf", recv, i32, search)
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: boolT, Op: ">=", X: index, Y: hir.L(hir.T(hir.Number), float64(0))}, true
 		case "charAt":
 			return l.rtOp("string.charAt", recv, str, one()), true
 		case "charCodeAt":
@@ -1695,4 +1751,35 @@ func (l *lowerer) indexValue(x *hir.Expr) *hir.Expr {
 		return &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: "number.index", Type: hir.T(hir.I32), X: x}
 	}
 	return x
+}
+
+// templateExpr uses cooked scanner literals and evaluates substitutions once,
+// left to right. Object/array coercion requires JS ToPrimitive and is rejected.
+func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
+	t := n.AsTemplateExpression()
+	result := l.expr(t.Head)
+	for _, span := range t.TemplateSpans.Nodes {
+		part := l.expr(span.Expression())
+		if part == nil {
+			return nil
+		}
+		switch part.Type.Kind {
+		case hir.String:
+		case hir.Number:
+			part = l.rtOp("number.toString", part, hir.T(hir.String))
+		case hir.I32:
+			part = l.rtOp("i32.toString", part, hir.T(hir.String))
+		case hir.Bool:
+			part = &hir.Expr{Kind: hir.Conditional, Node: part.Node, Type: hir.T(hir.String), X: part, Y: hir.L(hir.T(hir.String), "true"), Z: hir.L(hir.T(hir.String), "false")}
+		default:
+			l.diagf(span, "unsupported-expr", "template substitution of %s requires JavaScript string coercion", part.Type)
+			return nil
+		}
+		tail := l.expr(span.AsTemplateSpan().Literal)
+		if result == nil || tail == nil {
+			return nil
+		}
+		result = l.rtOp("string.concat", l.rtOp("string.concat", result, hir.T(hir.String), part), hir.T(hir.String), tail)
+	}
+	return result
 }

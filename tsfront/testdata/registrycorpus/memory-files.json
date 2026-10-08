@@ -1,0 +1,20 @@
+[
+ {"filename":"ztest.prog.abap","raw":"REPORT ztest.\n"},
+ {"filename":"src/if_http_client.intf.abap","raw":"INTERFACE if_http_client PUBLIC.\nENDINTERFACE."},
+ {"filename":"src\\cl_http_client.clas.abap","raw":"\r\n\n"},
+ {"filename":"src/exceptions/cx_foo.clas.xml","raw":"<abapGit/>"},
+ {"filename":"ZCASE.PROG.ABAP","raw":"REPORT zcase."},
+ {"filename":"#namespace#object.clas.abap","raw":""},
+ {"filename":"%23namespace%23object.clas.abap","raw":"a\nb"},
+ {"filename":"%23namespace%23object%3e%3c.clas.abap","raw":"\t x \r\n"},
+ {"filename":"%23namespace%23object%3E%3C.clas.abap","raw":"a\n\nb"},
+ {"filename":"(namespace)object.type.abap","raw":"TYPE-POOL object."},
+ {"filename":"identity.xslt.source.xml","raw":"<root/>"},
+ {"filename":"cx_abap_datfm.abap","raw":"CLASS cx_abap_datfm DEFINITION. ENDCLASS."},
+ {"filename":".gitignore","raw":"\n"},
+ {"filename":"nodot","raw":"space "},
+ {"filename":"/zroot.prog.abap","raw":"\n\n"},
+ {"filename":"\\zroot.prog.abap","raw":"line\r"},
+ {"filename":"dir/","raw":""},
+ {"filename":"","raw":""}
+]

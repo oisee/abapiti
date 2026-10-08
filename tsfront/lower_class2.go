@@ -19,11 +19,14 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	if hm == nil {
 		return nil
 	}
+	l.class = owner
+	l.method = hm
+	if l.trapUnexecuted(fn, hm) {
+		return hm
+	}
 	if e, ok := l.overrides[fn]; ok && e.Method != nil {
 		return hm
 	}
-	l.class = owner
-	l.method = hm
 	if l.methodFailed(hm) {
 		return nil
 	}

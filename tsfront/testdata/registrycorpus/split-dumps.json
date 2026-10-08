@@ -1,0 +1,82 @@
+[
+  {
+    "raw": "",
+    "separator": "",
+    "dump": "0"
+  },
+  {
+    "raw": "",
+    "separator": "|",
+    "dump": "1\n0:"
+  },
+  {
+    "raw": "|",
+    "separator": "|",
+    "dump": "2\n0:\n0:"
+  },
+  {
+    "raw": "||",
+    "separator": "|",
+    "dump": "3\n0:\n0:\n0:"
+  },
+  {
+    "raw": " a | b | ",
+    "separator": "|",
+    "dump": "3\n3: a \n3: b \n1: "
+  },
+  {
+    "raw": "abab",
+    "separator": "ab",
+    "dump": "3\n0:\n0:\n0:"
+  },
+  {
+    "raw": "aaaa",
+    "separator": "aa",
+    "dump": "3\n0:\n0:\n0:"
+  },
+  {
+    "raw": "aaaa",
+    "separator": "aaa",
+    "dump": "2\n0:\n1:a"
+  },
+  {
+    "raw": "abc",
+    "separator": "abcd",
+    "dump": "1\n3:abc"
+  },
+  {
+    "raw": "abc",
+    "separator": "",
+    "dump": "3\n1:a\n1:b\n1:c"
+  },
+  {
+    "raw": "a \tb\r\n",
+    "separator": "\n",
+    "dump": "2\n5:a \tb\r\n0:"
+  },
+  {
+    "raw": "x",
+    "separator": "x",
+    "dump": "2\n0:\n0:"
+  },
+  {
+    "raw": " a  b ",
+    "separator": " ",
+    "dump": "5\n0:\n1:a\n0:\n1:b\n0:"
+  },
+  {
+    "raw": "a.b.",
+    "separator": ".",
+    "dump": "3\n1:a\n1:b\n0:"
+  },
+  {
+    "raw": "a*.*b",
+    "separator": "*.*",
+    "dump": "2\n1:a\n1:b"
+  },
+  {
+    "raw": "line \r\n\nlast ",
+    "separator": "\n",
+    "dump": "3\n6:line \r\n0:\n5:last "
+  }
+]

@@ -12,3 +12,4 @@ rewritten after it is accepted; a later record supersedes it and says so.
 | [0005](0005-number-semantics.md) | `number` stays binary64 unless an integer range is proven | 2026-10-07 |
 | [0006](0006-monomorphisation-later.md) | Monomorphisation is an optimisation pass, not the HIR's model | 2026-10-07 |
 | [0007](0007-verification-order.md) | Verification: static gate, differential corpus on osgo and OSG-JS, A4H after every phase | 2026-10-07 |
+| [0009](0009-reachability-pruning.md) | Proposed: source-pinned workload body pruning; declaration pruning needs a reference graph | 2026-10-08 |

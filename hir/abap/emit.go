@@ -1234,13 +1234,16 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 			b.line("ENDIF.")
 		case "string.indexOf":
+			b.line("IF " + args[0] + " IS INITIAL.")
+			b.line(n + " = 0.")
+			b.line("ELSE.")
 			b.line("FIND " + args[0] + " IN " + a + " MATCH OFFSET " + n + ".")
 			b.line("IF sy-subrc <> 0.")
 			b.line(n + " = -1.")
 			b.line("ENDIF.")
+			b.line("ENDIF.")
 		case "string.split":
-			b.line("CREATE OBJECT " + n + ".")
-			b.line("SPLIT " + a + " AT " + args[0] + " INTO TABLE " + n + "->items.")
+			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
 			b.line("CALL METHOD " + args[0] + "->replace EXPORTING p0 = " + a + " p1 = " + args[1] + " RECEIVING result = " + n + ".")
 		case "string.replaceAll":
@@ -1314,6 +1317,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "regexp.source":
 		b.line(n + " = " + a + "->source.")
+		return
+	}
+	if x.Op == "record.delete" {
+		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
+		b.line(n + " = abap_true.")
 		return
 	}
 	op := strings.Split(x.Op, ".")[1]
@@ -1429,6 +1437,13 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("result = " + b.value(s.X, b.m.Result) + ".")
 		}
 		b.line("RETURN.")
+	case hir.Trap:
+		name := e.name("exception.unexecuted")
+		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA source_location TYPE string.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+		n := b.rawTemp("REF TO " + name)
+		b.line(n + " = NEW #( ).")
+		b.line(n + "->source_location = " + b.expr(hir.L(hir.T(hir.String), s.Name)) + ".")
+		b.line("RAISE EXCEPTION " + n + ".")
 	case hir.Throw:
 		name := e.exception(s.X.Type)
 		n := b.rawTemp("REF TO " + name)

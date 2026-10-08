@@ -30,8 +30,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
 	"array.splice3": {Array, 3, true}, "array.pop": {Array, 0, true},
 	"array.indexOf": {Array, 1, false}, "array.includes": {Array, 1, false},
-	"array.join": {Array, 1, false},
-	"map.set":    {OrderedMap, 2, true}, "map.get": {OrderedMap, 1, false}, "map.has": {OrderedMap, 1, false}, "map.size": {OrderedMap, 0, false},
+	"array.join":    {Array, 1, false},
+	"record.delete": {OrderedMap, 1, true},
+	"map.set":       {OrderedMap, 2, true}, "map.get": {OrderedMap, 1, false}, "map.has": {OrderedMap, 1, false}, "map.size": {OrderedMap, 0, false},
 	"set.add": {OrderedSet, 1, true}, "set.has": {OrderedSet, 1, false}, "set.size": {OrderedSet, 0, false},
 	"set.copy": {OrderedSet, 1, false},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
@@ -128,7 +129,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t.Args[0], t.Args[1]}, t, true
 	case "map.get":
 		return []Type{t.Args[0]}, T(Optional, t.Args[1]), true
-	case "map.has", "set.has":
+	case "record.delete", "map.has", "set.has":
 		return []Type{t.Args[0]}, b, true
 	case "set.add":
 		return []Type{t.Args[0]}, t, true
