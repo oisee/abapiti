@@ -3,5 +3,5 @@ FUNCTION z_abapiti_corpus_list.
   IF iv_setname IS INITIAL.
     RETURN.
   ENDIF.
-  SELECT idx name size sha256 FROM zabapiti_corpus INTO CORRESPONDING FIELDS OF TABLE et_files WHERE setname = iv_setname ORDER BY PRIMARY KEY.
+  SELECT idx name filesize sha256 FROM zabapiti_corpus INTO CORRESPONDING FIELDS OF TABLE et_files WHERE setname = iv_setname ORDER BY PRIMARY KEY.
 ENDFUNCTION.

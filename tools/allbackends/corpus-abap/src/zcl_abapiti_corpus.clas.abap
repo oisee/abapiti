@@ -5,7 +5,7 @@ PUBLIC SECTION.
     TYPES idx TYPE i.
     TYPES name TYPE c LENGTH 255.
     TYPES v TYPE xstring.
-    TYPES size TYPE int8.
+    TYPES filesize TYPE int8.
     TYPES sha256 TYPE c LENGTH 64.
   TYPES END OF ty_file.
   TYPES ty_files TYPE STANDARD TABLE OF ty_file WITH DEFAULT KEY.
@@ -348,10 +348,10 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       row-idx = COND i( WHEN meta-idx > 0 THEN meta-idx ELSE next_idx ).
       row-name = meta-name.
       row-v = content.
-      row-size = meta-size.
+      row-filesize = meta-size.
       row-sha256 = meta-sha256.
       APPEND row TO rows.
-      bytes = bytes + row-size.
+      bytes = bytes + row-filesize.
       IF expected_hash( meta-path ) IS NOT INITIAL.
         verified = verified + 1.
       ENDIF.
@@ -435,7 +435,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       file-name = name.
       file-v = get_by_name( setname = 'CORPUS' name = name ).
       condition = |SETNAME = 'CORPUS' AND NAME = { quote( name ) }|.
-      SELECT SINGLE idx size sha256 FROM (table_name) INTO CORRESPONDING FIELDS OF file WHERE (condition).
+      SELECT SINGLE idx filesize sha256 FROM (table_name) INTO CORRESPONDING FIELDS OF file WHERE (condition).
       IF sy-subrc = 0.
         APPEND file TO result.
       ENDIF.

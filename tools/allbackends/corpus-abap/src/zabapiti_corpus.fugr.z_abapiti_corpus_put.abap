@@ -17,7 +17,7 @@ FUNCTION z_abapiti_corpus_put.
         row-idx = iv_idx.
         row-name = iv_name.
         row-v = decoded.
-        row-size = xstrlen( row-v ).
+        row-filesize = xstrlen( row-v ).
         DELETE FROM zabapiti_corpus WHERE setname = iv_setname AND idx = iv_idx.
         INSERT zabapiti_corpus FROM row.
       ELSE.
@@ -26,19 +26,19 @@ FUNCTION z_abapiti_corpus_put.
           ev_message = 'Part 0 is missing'.
           RETURN.
         ENDIF.
-        IF row-size <> 393216 * iv_part.
+        IF row-filesize <> 393216 * iv_part.
           ev_message = 'Part number is not consecutive'.
           RETURN.
         ENDIF.
         CONCATENATE row-v decoded INTO row-v IN BYTE MODE.
-        row-size = xstrlen( row-v ).
+        row-filesize = xstrlen( row-v ).
         UPDATE zabapiti_corpus FROM row.
       ENDIF.
       IF sy-subrc <> 0.
         ev_message = 'Database update failed'.
         RETURN.
       ENDIF.
-      ev_size = row-size.
+      ev_size = row-filesize.
       IF iv_last = abap_true.
         CLEAR row-sha256.
         cl_abap_message_digest=>calculate_hash_for_raw( EXPORTING if_algorithm = 'SHA256' if_data = row-v IMPORTING ef_hashstring = hash ).
