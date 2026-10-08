@@ -52,7 +52,12 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant left operand")
 				return left
 			}
-			right := l.condition(b.Right)
+			var right *hir.Expr
+			if sym, typ, ok := l.definedGuard(b.Left); ok && op == "&&" {
+				right = l.withGuard(sym, typ, func() *hir.Expr { return l.condition(b.Right) })
+			} else {
+				right = l.condition(b.Right)
+			}
 			if left == nil || right == nil {
 				return nil
 			}
@@ -555,6 +560,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if t, ok := l.lookup(name); ok {
 		x := hir.V(name, t)
 		x.Node = l.node(n)
+		if t.Kind == hir.Optional && len(l.guards) > 0 {
+			if typ, guarded := l.guards[l.resolve(n)]; guarded && t.Args[0].Equal(typ) {
+				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
+			}
+		}
 		return x
 	}
 	sym := l.resolve(n)
@@ -603,6 +613,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.enumMember(n, p); ok {
+		return x
+	}
+	if x, ok := l.ambientLiteral(n); ok {
 		return x
 	}
 	if p.Expression.Kind == ast.KindIdentifier {
@@ -886,7 +899,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			// Ordinary calls must use the erased virtual slot. The specialized
 			// implementation name is reserved for its bridge and super calls.
 			slot := hm
-			if original, _, specialized := strings.Cut(hm.Name, "_instantiated_"); specialized {
+			if original, _, specialized := strings.Cut(hm.Name, "_instantiated_"); specialized && !l.ownSpecialized(recv.Type, hm, original) {
 				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
 					if m := l.methodsBy[c.Name+"."+original]; m != nil && m.Name == original {
 						slot = m
@@ -1016,7 +1029,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		if len(args) != 1 {
 			return nil
 		}
-		return l.expr(args[0])
+		return l.presentValue(args[0], l.expr(args[0]), hir.Type{})
 	}
 	two := func() (*hir.Expr, *hir.Expr) {
 		if len(args) != 2 {

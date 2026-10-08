@@ -21,7 +21,7 @@ func RegistryDeployment() []Entry {
 			for i, typ := range []string{"CLAS", "INTF", "PROG", "TYPE", "XSLT"} {
 				ref := refs[i]
 				constructed := &hir.Expr{Kind: hir.New, Type: hir.Ref(ref.File + "." + ref.Symbol), Args: []*hir.Expr{hir.V("name", hir.T(hir.String))}}
-				body = append(body, &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Binary, Op: "===", Type: hir.T(hir.Bool), X: hir.V("type", hir.T(hir.String)), Y: hir.L(hir.T(hir.String), typ)}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.Cast, Type: result, X: constructed}})})
+				body = append(body, &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: hir.V("type", hir.T(hir.String)), Y: hir.L(hir.T(hir.String), typ)}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.Cast, Type: result, X: constructed}})})
 			}
 			body = append(body, &hir.Stmt{Kind: hir.Trap, Name: "src/artifacts_objects.ts:8"})
 			m.Body = hir.B(body...)

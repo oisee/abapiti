@@ -74,7 +74,10 @@ func (l *lowerer) eraseGenericOverrides() {
 				}
 				actual := m.Params[j]
 				x := hir.V(p.Name, p.Type)
-				if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
+				if actual.Type.Kind == hir.Optional && actual.Type.Args[0].Equal(p.Type) {
+					// The implementation accepts absence too: widen, never check.
+					x = &hir.Expr{Kind: hir.Conditional, Type: actual.Type, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: actual.Type}}
+				} else if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
 					x = &hir.Expr{Kind: hir.Narrow, Type: actual.Type, X: x}
 				}
 				args = append(args, x)
