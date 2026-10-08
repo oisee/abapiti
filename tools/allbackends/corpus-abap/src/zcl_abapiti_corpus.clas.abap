@@ -29,6 +29,7 @@ PRIVATE SECTION.
   TYPES ty_summaries TYPE SORTED TABLE OF ty_summary WITH UNIQUE KEY set_id.
   TYPES BEGIN OF ty_meta.
     TYPES path TYPE string.
+    TYPES zip_name TYPE string.
     TYPES set_id TYPE c LENGTH 30.
     TYPES name TYPE string.
     TYPES size TYPE int8.
@@ -166,10 +167,10 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       hash = to_upper( line(64) ).
       path = substring( val = line off = 66 ).
       CONDENSE path.
-      expected-path = |abapiti/{ path }|.
+      expected-path = to_lower( |abapiti/{ path }| ).
       expected-sha256 = hash.
       INSERT expected INTO TABLE zip_data-expected.
-      APPEND expected-path TO zip_data-plain.
+      APPEND |abapiti/{ path }| TO zip_data-plain.
     ENDLOOP.
     zip_archive->get( EXPORTING name = 'abapiti/corpus/MANIFEST.tsv' IMPORTING content = manifest ).
     text = cl_abap_codepage=>convert_from( source = manifest codepage = `UTF-8` ).
@@ -180,11 +181,11 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       ENDIF.
       SPLIT line AT cl_abap_char_utilities=>horizontal_tab INTO hash size_text stored origin.
       CONDENSE size_text.
-      expected-path = |abapiti/corpus/{ stored }|.
+      expected-path = to_lower( |abapiti/corpus/{ stored }| ).
       expected-size = size_text.
       expected-sha256 = to_upper( hash ).
       INSERT expected INTO TABLE zip_data-expected.
-      APPEND expected-path TO zip_data-corpus.
+      APPEND |abapiti/corpus/{ stored }| TO zip_data-corpus.
     ENDLOOP.
   ENDMETHOD.
   METHOD validate_members.
@@ -206,14 +207,18 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       add_member( EXPORTING entity = entity set_id = set_id member_name = member_name idx = member_idx ).
     ENDLOOP.
     LOOP AT zip_data-corpus INTO DATA(corpus_path).
-      IF NOT line_exists( zip_data-meta[ path = corpus_path ] ).
-        bump_mismatch( 'CORPUS' ).
-      ENDIF.
+      DATA(corpus_idx) = sy-tabix.
+      CLEAR entity.
+      entity-name = corpus_path.
+      zip_archive->get( EXPORTING name = entity-name IMPORTING content = entity-content ).
+      add_member( EXPORTING entity = entity set_id = 'CORPUS' member_name = substring( val = corpus_path off = 15 ) idx = corpus_idx ).
     ENDLOOP.
     LOOP AT zip_data-expected INTO DATA(expected).
       IF NOT line_exists( zip_data-meta[ path = expected-path ] ).
         IF expected-path CP 'abapiti/zabapgit/*'.
           bump_mismatch( 'ZABAPGIT' ).
+        ELSEIF expected-path CP 'abapiti/corpus/*'.
+          bump_mismatch( 'CORPUS' ).
         ELSE.
           bump_mismatch( 'DEPS' ).
         ENDIF.
@@ -235,26 +240,18 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       RETURN.
     ENDIF.
     meta-path = entity-name.
+    meta-zip_name = entity-name.
     TRANSLATE meta-path TO LOWER CASE.
     meta-set_id = set_id.
     meta-name = member_name.
     meta-size = xstrlen( entity-content ).
     meta-sha256 = member_hash( entity-content ).
     IF set_id = 'CORPUS'.
-      IF meta-path = 'abapiti/corpus/manifest.tsv'.
-        meta-idx = idx.
-      ELSE.
-        READ TABLE zip_data-corpus TRANSPORTING NO FIELDS WITH KEY table_line = meta-path.
-        IF sy-subrc <> 0.
-          bump_mismatch( set_id ).
-          RETURN.
-        ENDIF.
-        meta-idx = sy-tabix.
-      ENDIF.
+      meta-idx = idx.
     ELSE.
       meta-idx = idx.
     ENDIF.
-    IF expected_hash( meta-path ) <> meta-sha256 OR ( line_exists( zip_data-expected[ path = meta-path ] ) AND zip_data-expected[ path = meta-path ]-size <> meta-size ).
+    IF line_exists( zip_data-expected[ path = meta-path ] ) AND ( expected_hash( meta-path ) <> meta-sha256 OR ( zip_data-expected[ path = meta-path ]-size > 0 AND zip_data-expected[ path = meta-path ]-size <> meta-size ) ).
       bump_mismatch( set_id ).
       RETURN.
     ENDIF.
@@ -321,7 +318,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
           bump_mismatch( 'DEPS' ).
         ENDIF.
       ELSEIF member CP 'abapiti/corpus/*'.
-        IF member <> 'abapiti/corpus/manifest.tsv' AND NOT line_exists( zip_data-corpus[ table_line = member ] ).
+        IF member <> 'abapiti/corpus/manifest.tsv' AND NOT line_exists( zip_data-expected[ path = member ] ).
           bump_mismatch( 'CORPUS' ).
         ENDIF.
       ELSEIF member = 'abapiti/sets/corpus500.txt'.
@@ -345,7 +342,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
     LOOP AT zip_data-meta INTO DATA(meta) WHERE set_id = set_id.
       next_idx = next_idx + 1.
       DATA content TYPE xstring.
-      zip_archive->get( EXPORTING name = meta-path IMPORTING content = content ).
+      zip_archive->get( EXPORTING name = meta-zip_name IMPORTING content = content ).
       CLEAR row.
       row-setname = set_id.
       row-idx = COND i( WHEN meta-idx > 0 THEN meta-idx ELSE next_idx ).
