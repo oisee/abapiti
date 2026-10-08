@@ -76,7 +76,8 @@ func fixtures() []fixture {
 	inst := func(owner string) *hir.Expr {
 		return &hir.Expr{Kind: hir.InstanceOf, X: local("x", hir.Ref("Root")), Owner: owner, Type: boolean}
 	}
-	add("instance_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Root"}, {Name: "Middle", Super: "Root"}, {Name: "Leaf", Super: "Middle"}, {Name: "Sibling", Super: "Root"}}}, hir.B(decl("x", hir.Ref("Root"), newObj(hir.Ref("Leaf"))), decl("n", i32, lit(0)), &hir.Stmt{Kind: hir.If, X: inst("Root"), Body: assign("n", i32, lit(1))}, &hir.Stmt{Kind: hir.If, X: inst("Middle"), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, &hir.Stmt{Kind: hir.If, X: inst("Sibling"), Body: assign("n", i32, lit(99))}, ret(local("n", i32))), 2)
+	rootRef := hir.Ref("Root")
+	add("instance_fixture", &hir.Program{Classes: []*hir.Class{{Name: "Root"}, {Name: "Middle", Super: "Root"}, {Name: "Leaf", Super: "Middle"}, {Name: "Sibling", Super: "Root"}}}, hir.B(decl("x", rootRef, nil), decl("n", i32, lit(0)), &hir.Stmt{Kind: hir.If, X: inst("Root"), Body: assign("n", i32, lit(99))}, assign("x", rootRef, newObj(hir.Ref("Leaf"))), &hir.Stmt{Kind: hir.If, X: inst("Root"), Body: assign("n", i32, lit(1))}, &hir.Stmt{Kind: hir.If, X: inst("Middle"), Body: assign("n", i32, binary("+", local("n", i32), lit(1), i32))}, &hir.Stmt{Kind: hir.If, X: inst("Sibling"), Body: assign("n", i32, lit(99))}, ret(local("n", i32))), 2)
 	opt := hir.T(hir.Optional, i32)
 	oref := hir.T(hir.Optional, hir.Ref("OptionalObject"))
 	test := func(k hir.ExprKind, x *hir.Expr) *hir.Expr { return &hir.Expr{Kind: k, X: x, Type: boolean} }
