@@ -137,41 +137,46 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	}
 	// Captures: free identifiers that resolve to locals of the enclosing
 	// method and are never assigned.
-	captures := []string{}
-	seen := map[string]bool{}
-	for _, name := range l.freeLocals(fn) {
-		lf := l.localFns[name]
-		if pending := l.pendingFns[name]; lf == nil && pending != nil {
-			delete(l.pendingFns, name)
-			lf = l.liftLocalFn(name, pending)
+	captures := []localCapture{}
+	seen := map[*ast.Symbol]bool{}
+	for _, capture := range l.freeLocals(fn) {
+		if capture.symbol == nil || capture.typ.Kind == hir.Void {
+			l.diagf(capture.node, "unsupported-call", "capture %s has no checked binding", capture.name)
+			return nil
 		}
-		names := []string{name}
+		lf := l.localFns[capture.name]
+		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil {
+			delete(l.pendingFns, capture.name)
+			lf = l.liftLocalFn(capture.name, pending)
+		}
 		// Known lifted callees remain direct calls. Their actual lexical inputs
 		// must be carried through the caller, rather than capturing a void value.
 		if lf != nil {
-			names = lf.captures
-		}
-		for _, c := range names {
-			if !seen[c] {
-				captures = append(captures, c)
-				seen[c] = true
+			for _, transitive := range lf.captures {
+				if !seen[transitive.symbol] {
+					captures = append(captures, transitive)
+					seen[transitive.symbol] = true
+				}
 			}
+			continue
+		}
+		if !seen[capture.symbol] {
+			captures = append(captures, capture)
+			seen[capture.symbol] = true
 		}
 	}
-	sortStrings(captures)
 	m := &hir.Method{Node: l.node(fn), Name: "fn_" + name, Virtual: true, Result: hir.T(hir.Void)}
 	if l.method != nil && l.method.Static {
 		m.Static = true
 		m.Virtual = false
 	}
 	for _, c := range captures {
-		t, _ := l.lookup(c)
-		m.Params = append(m.Params, hir.Param{Name: c, Type: t})
+		m.Params = append(m.Params, hir.Param{Name: c.name, Type: c.typ})
 	}
 	sigParams := fn.Parameters()
 	l.push()
 	for i, c := range captures {
-		l.declare(c, m.Params[i].Type)
+		l.declare(c.name, m.Params[i].Type)
 	}
 	for _, p := range sigParams {
 		if p.Name() == nil || p.Name().Kind != ast.KindIdentifier {
@@ -238,10 +243,10 @@ func (l *lowerer) applyFnDefaults(params []*ast.ParameterDeclarationNode, m *hir
 
 // freeLocals lists the enclosing-method local names an arrow function reads
 // without assigning them (and without declaring them itself).
-func (l *lowerer) freeLocals(fn *ast.Node) []string {
+func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 	declared := map[string]bool{}
 	assigned := map[string]bool{}
-	used := map[string]bool{}
+	used := map[string][]*ast.Node{}
 	var walk func(*ast.Node, bool)
 	walkChildren := func(x *ast.Node, inFn bool) {
 		x.ForEachChild(func(c *ast.Node) bool { walk(c, inFn); return false })
@@ -274,7 +279,7 @@ func (l *lowerer) freeLocals(fn *ast.Node) []string {
 			name := x.Text()
 			if _, isLocal := l.lookup(name); isLocal {
 				if inFn {
-					used[name] = true
+					used[name] = append(used[name], x)
 				}
 			}
 			return
@@ -287,6 +292,11 @@ func (l *lowerer) freeLocals(fn *ast.Node) []string {
 						assigned[b.Left.Text()] = true
 					}
 				}
+				// Property/index assignment evaluates its receiver too; capturing
+				// that reference does not assign the local binding itself.
+				if b.Left.Kind != ast.KindIdentifier {
+					walk(b.Left, inFn)
+				}
 				walk(b.Right, inFn)
 				return
 			}
@@ -297,14 +307,45 @@ func (l *lowerer) freeLocals(fn *ast.Node) []string {
 		walkChildren(x, inFn)
 	}
 	walk(fn, true)
-	var out []string
+	var names []string
 	for name := range used {
 		if !declared[name] && !assigned[name] {
-			out = append(out, name)
+			names = append(names, name)
 		}
 	}
-	sortStrings(out)
+	sortStrings(names)
+	out := make([]localCapture, 0, len(names))
+	for _, name := range names {
+		node := used[name][0]
+		symbol := l.ck.GetSymbolAtLocation(node)
+		typ, _ := l.checkedBindingType(symbol)
+		if typ.Kind == hir.Void {
+			if fallback, ok := l.lookup(name); ok {
+				typ = fallback
+			}
+		}
+		out = append(out, localCapture{name: name, typ: typ, symbol: symbol, node: node})
+	}
 	return out
+}
+
+func (l *lowerer) checkedBindingType(symbol *ast.Symbol) (hir.Type, bool) {
+	if symbol == nil {
+		return hir.Type{}, false
+	}
+	for declaration, declarationSymbol := range l.declSymbols {
+		if declarationSymbol == symbol {
+			return declaration.Type, true
+		}
+	}
+	for method, params := range l.paramSymbols {
+		for _, param := range method.Params {
+			if params[param.Name] == symbol {
+				return param.Type, true
+			}
+		}
+	}
+	return hir.Type{}, false
 }
 
 // covariantImplements applies the structural interface edges discovered

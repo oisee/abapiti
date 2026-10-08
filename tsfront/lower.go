@@ -160,7 +160,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 				continue
 			}
 			mod := l.moduleClassOf(f)
-			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Result: hir.T(hir.Void)}
+			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
 			if e, ok := l.overrides[fn]; ok && e.Method != nil {
 				hm = e.Method()
@@ -204,7 +204,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 					continue
 				}
 				mod := l.moduleClassOf(f)
-				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true})
+				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
 				l.modvars[d.Symbol()] = d.Name().Text()
 				l.modvarsByName[f.FileName()+" "+d.Name().Text()] = modvarRef{owner: mod.Name, field: d.Name().Text()}
 			}
@@ -244,6 +244,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	}
 	l.completeUnionInterfaces()
 	l.covariantImplements()
+	l.inferNumberRanges()
 	return l.out, l.diags, nil
 }
 
@@ -313,6 +314,11 @@ type lowerer struct {
 	fieldsBy      map[string]hir.Field
 	modvarsByName map[string]modvarRef // current file + var name -> module field
 	synthsByName  map[string]*hir.Class
+
+	// Retain checker binding identity for post-lowering boundary rewrites.
+	localSymbols map[*hir.Expr]*ast.Symbol
+	declSymbols  map[*hir.Stmt]*ast.Symbol
+	paramSymbols map[*hir.Method]map[string]*ast.Symbol
 }
 
 // funcRef names the module class and static method of a module function.
@@ -324,8 +330,15 @@ type funcRef struct {
 // passed as leading parameters (they are immutable locals).
 type localFn struct {
 	method   *hir.Method
-	captures []string // local names, in declaration order
+	captures []localCapture
 	owner    *hir.Class
+}
+
+type localCapture struct {
+	name   string
+	typ    hir.Type
+	symbol *ast.Symbol
+	node   *ast.Node
 }
 
 // classOf resolves a class symbol through both registries. The by-name
@@ -612,7 +625,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		}
 	}
 	if !found {
-		mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true})
+		mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
 	}
 	l.modvars[d.Symbol()] = name
 	l.modvarsByName[l.file.FileName()+" "+name] = modvarRef{owner: mod.Name, field: name}

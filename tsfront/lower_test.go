@@ -74,6 +74,8 @@ func TestLowerLexerClosure(t *testing.T) {
 	want := map[string]int{
 		"note-override":        1, // fingerprinted debugDescription trap in AbstractToken
 		"note-number-binary64": 40,
+		"note-number-ranges":   59,
+		"note-number-boundary": 1,
 		"note-optional-param":  1,
 		"note-regex-mapped":    1,
 		"note-union-base":      1,
