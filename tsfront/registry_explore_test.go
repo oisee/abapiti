@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -98,7 +99,20 @@ func TestRegistryClosureGate(t *testing.T) {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}
-		data, err := json.MarshalIndent(blocking, "", "  ")
+		var inventory []struct {
+			ID, File, Symbol, Kind, SHA256, Rationale string
+		}
+		for _, e := range registry.Inventory() {
+			inventory = append(inventory, struct{ ID, File, Symbol, Kind, SHA256, Rationale string }{e.ID, e.Key.File, e.Key.Symbol, e.Key.Kind, e.SHA256, e.Rationale})
+		}
+		data, err := json.MarshalIndent(inventory, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(out, "registry-overrides.json"), append(data, '\n'), 0644); err != nil {
+			t.Fatal(err)
+		}
+		data, err = json.MarshalIndent(blocking, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -132,4 +146,21 @@ func TestRegistryClosureGate(t *testing.T) {
 	if len(blocking) != 0 || len(verification) != 0 {
 		t.Fatalf("Registry closure is not translatable; do not emit partial output")
 	}
+	// Passing lowering is not acceptance by itself: exercise the actual ABAP
+	// backend and preserve the complete emission for lint and differential work.
+	emitted, _, err := abap.EmitNamed(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(emitted) == 0 {
+		t.Fatal("Registry closure emitted no files")
+	}
+	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+		for name, contents := range emitted {
+			if err := os.WriteFile(filepath.Join(out, name), []byte(contents), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
 }
