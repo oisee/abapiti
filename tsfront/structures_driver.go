@@ -42,7 +42,7 @@ func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, n
 	driver := names.Get("harness/structures_dump.ts.StructuresDump")
 	line("CLASS zcl_phase3_benchmark DEFINITION PUBLIC FINAL CREATE PUBLIC.")
 	line("PUBLIC SECTION.")
-	line("CLASS-METHODS run RETURNING VALUE(ok) TYPE abap_bool.")
+	line("CLASS-METHODS run IMPORTING print TYPE abap_bool DEFAULT abap_false EXPORTING report TYPE string RETURNING VALUE(ok) TYPE abap_bool.")
 	line("PROTECTED SECTION.")
 	line("PRIVATE SECTION.")
 	for i := 0; i < parts; i++ {
@@ -98,12 +98,13 @@ func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, n
 	line("ELSE.")
 	line("verdict = `MISMATCH`.")
 	line("ENDIF.")
-	line("WRITE: / `tokens`, tokens, `statements`, statements, `structures`, structures, `issues`, issues.")
-	line("WRITE: / `lex_us`, lex_us, `statements_us`, statements_us, `structures_us`, structures_us, `dump_hash_us`, dump_hash_us.")
+	line("report = |STAGETIME { verdict } tokens { tokens } statements { statements } structures { structures } issues { issues } lex_us { lex_us } statements_us { statements_us } structures_us { structures_us } dump_hash_us { dump_hash_us }|.")
+	line("IF print = abap_true.")
+	line("WRITE: / report.")
 	line("WRITE: / `lexer_sha256`, lexer_hash.")
 	line("WRITE: / `statements_sha256`, statements_hash.")
 	line("WRITE: / `structures_sha256`, structures_hash.")
-	line("WRITE: / verdict.")
+	line("ENDIF.")
 	line("ENDMETHOD.")
 	for i := 0; i < parts; i++ {
 		line("METHOD input_%03d.", i)
@@ -123,7 +124,7 @@ func benchmarkHash(b *strings.Builder, target string) {
 }
 
 func StructuresBenchmarkReport() string {
-	return "REPORT zphase3_structures_bench.\nDATA ok TYPE abap_bool.\nok = zcl_phase3_benchmark=>run( ).\n"
+	return "REPORT zphase3_structures_bench.\nDATA ok TYPE abap_bool.\nDATA report TYPE string.\nok = zcl_phase3_benchmark=>run( EXPORTING print = abap_true IMPORTING report = report ).\n"
 }
 
 func StructuresBenchmarkTest() string {
@@ -134,8 +135,9 @@ ENDCLASS.
 CLASS ltcl_benchmark IMPLEMENTATION.
 METHOD benchmark.
 DATA ok TYPE abap_bool.
-ok = zcl_phase3_benchmark=>run( ).
-cl_abap_unit_assert=>assert_equals( act = ok exp = abap_true msg = ` + "`benchmark stage hashes`" + ` ).
+DATA report TYPE string.
+ok = zcl_phase3_benchmark=>run( IMPORTING report = report ).
+cl_abap_unit_assert=>fail( msg = report ).
 ENDMETHOD.
 ENDCLASS.
 `

@@ -658,11 +658,25 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		b.line(i + " = " + i + " + 1.")
+		base := b.temp(x.X.Type)
+		index := b.temp(hir.T(hir.I32))
+		b.line("CLEAR " + base + ".")
+		b.line("IF " + a + "->view_bound = abap_true.")
+		b.line("IF " + i + " >= 1 AND " + i + " <= " + a + "->view_to - " + a + "->view_from.")
+		b.line(base + " = " + a + "->view_base.")
+		b.line(index + " = " + a + "->view_from + " + i + ".")
+		b.line("ENDIF.")
+		b.line("ELSE.")
+		b.line(base + " = " + a + ".")
+		b.line(index + " = " + i + ".")
+		b.line("ENDIF.")
 		row := n
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
 		}
-		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
+		b.line("IF " + base + " IS BOUND.")
+		b.line("READ TABLE " + base + "->items INDEX " + index + " INTO " + row + ".")
+		b.line("ENDIF.")
 		if row != n {
 			b.line(n + " ?= " + row + ".")
 		}
@@ -1423,6 +1437,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
 			b.line(i + " = " + i + " + 1.")
+			b.line(a + "->view_materialize( ).")
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
 			b.line("CLEAR " + row + ".")
 			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
@@ -1459,6 +1474,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		row := n
 		if s.Type.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
+		}
+		if s.X.Type.Kind == hir.Array {
+			b.line(a + "->view_materialize( ).")
 		}
 		b.line("LOOP AT " + a + "->items INTO " + row + ".")
 		if row != n {
