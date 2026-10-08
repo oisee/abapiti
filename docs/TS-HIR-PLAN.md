@@ -23,8 +23,9 @@ Node needs 29 seconds for that check, so the budget is about ten times Node.
 The same classes should also run on ABAP Cloud (Steampunk, public S/4HANA
 Cloud). Then abapGit could lint before a commit inside any system, without Node,
 which fits abapGit's "Road to the Cloud" (one codeline on every stack,
-[abapGit#7880](https://github.com/abapGit/abapGit/issues/7880)). The generator
-already avoids `CALL FUNCTION` and SAP GUI; a static gate keeps it that way.
+[abapGit#7880](https://github.com/abapGit/abapGit/issues/7880)). This is a later
+direction, not work for now: first the full check on the classic stack. A Cloud
+syntax gate comes after the rules phase.
 
 We do not need all of TypeScript, only the subset these two code bases use, and
 we measured which one (below). The measurement covers the packages' own
@@ -134,8 +135,6 @@ tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP leg
 1. **Static gate on every build:** abaplint at `v750` (`check_syntax`) plus our generation rules
    on the generated code, using the newest abaplint rather than the one the runtimes pin (2.120.70
    rejects `SUPER->` to a different method, which the kernel refuses and 2.120.59 accepted).
-   A second, advisory gate checks the translated code (not test harnesses or benchmark loaders)
-   at `syntax.version = Cloud`; it becomes blocking once it is clean.
 2. **Differential runs on a corpus:** the same ABAP sources go through the
    original TypeScript (Node) and the generated ABAP; outputs are compared as
    JSON (tokens, statements, structures, findings). Generated ABAP runs on osgo
