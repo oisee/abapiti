@@ -23,11 +23,11 @@ export class StatementsDump {
   }
 
   public static fromStatements(statements: readonly StatementNode[]): string {
-    let out = statements.length.toString();
+    const parts: string[] = [statements.length.toString()];
     for (const statement of statements) {
-      out = out + "\n" + StatementsDump.statement(statement);
+      parts.push(StatementsDump.statement(statement));
     }
-    return out;
+    return parts.join("\n");
   }
 
   private static statement(statement: StatementNode): string {

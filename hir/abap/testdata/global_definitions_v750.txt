@@ -116,6 +116,12 @@ CLASS z_runtime_arra_59ccfd100c9888 DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 TYPES items_type TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
 DATA items TYPE items_type.
+DATA view_bound TYPE abap_bool.
+DATA view_base TYPE REF TO z_runtime_arra_59ccfd100c9888.
+DATA view_from TYPE i.
+DATA view_to TYPE i.
+METHODS view_length RETURNING VALUE(result) TYPE i.
+METHODS view_materialize.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS push IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
@@ -124,6 +130,7 @@ METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888
 METHODS slice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
+METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
 METHODS pop RETURNING VALUE(result) TYPE REF TO z_runtime_opti_6c43db715f35c9.
@@ -140,6 +147,12 @@ CLASS z_runtime_arra_8ecd6afe19e0a5 DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 TYPES items_type TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
 DATA items TYPE items_type.
+DATA view_bound TYPE abap_bool.
+DATA view_base TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+DATA view_from TYPE i.
+DATA view_to TYPE i.
+METHODS view_length RETURNING VALUE(result) TYPE i.
+METHODS view_materialize.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS push IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
@@ -148,6 +161,7 @@ METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5
 METHODS slice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE string RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
 METHODS pop RETURNING VALUE(result) TYPE REF TO z_runtime_opti_4ba3bdccd169bb.
@@ -164,6 +178,12 @@ CLASS z_runtime_arra_c22708faf2e354 DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 TYPES items_type TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
 DATA items TYPE items_type.
+DATA view_bound TYPE abap_bool.
+DATA view_base TYPE REF TO z_runtime_arra_c22708faf2e354.
+DATA view_from TYPE i.
+DATA view_to TYPE i.
+METHODS view_length RETURNING VALUE(result) TYPE i.
+METHODS view_materialize.
 METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS push IMPORTING p0 TYPE REF TO object RETURNING VALUE(result) TYPE i.
 METHODS length RETURNING VALUE(result) TYPE i.
@@ -172,6 +192,7 @@ METHODS slice0 RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354
 METHODS slice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
+METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE REF TO object RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
 METHODS pop RETURNING VALUE(result) TYPE REF TO object.

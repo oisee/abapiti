@@ -27,56 +27,66 @@ func (e *emitter) runtime(t hir.Type) {
 		opt := hir.T(hir.Optional, t.Args[0])
 		line("TYPES items_type TYPE STANDARD TABLE OF " + elem + " WITH DEFAULT KEY.")
 		line("DATA items TYPE items_type.")
+		line("DATA view_bound TYPE abap_bool.")
+		line("DATA view_base TYPE REF TO " + name + ".")
+		line("DATA view_from TYPE i.")
+		line("DATA view_to TYPE i.")
+		line("METHODS view_length RETURNING VALUE(result) TYPE i.")
+		method("view_length", "IF view_bound = abap_true.\nresult = view_to - view_from.\nELSE.\nresult = lines( items ).\nENDIF.\n")
+		line("METHODS view_materialize.")
+		method("view_materialize", "DATA base TYPE REF TO "+name+".\nDATA rows TYPE items_type.\nIF view_bound = abap_true.\nbase = view_base.\nAPPEND LINES OF base->items FROM view_from + 1 TO view_to TO rows.\nitems = rows.\nCLEAR view_bound.\nCLEAR view_base.\nview_from = 0.\nview_to = 0.\nENDIF.\n")
 		line("METHODS reverse RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("reverse", "DATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
+		method("reverse", "view_materialize( ).\nDATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
 		line("METHODS push IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
-		method("push", "APPEND p0 TO items.\nresult = lines( items ).\n")
+		method("push", "view_materialize( ).\nAPPEND p0 TO items.\nresult = lines( items ).\n")
 		line("METHODS length RETURNING VALUE(result) TYPE i.")
-		method("length", "result = lines( items ).\n")
+		method("length", "result = view_length( ).\n")
 		line("METHODS concat IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("concat", "CREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\nAPPEND LINES OF p0->items TO result->items.\n")
+		method("concat", "view_materialize( ).\np0->view_materialize( ).\nCREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\nAPPEND LINES OF p0->items TO result->items.\n")
 		line("METHODS slice0 RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice0", "CREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\n")
+		method("slice0", "view_materialize( ).\nCREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\n")
 		line("METHODS slice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice1", "DATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from < lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nENDIF.\n")
+		method("slice1", "view_materialize( ).\nDATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from < lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nENDIF.\n")
 		line("METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice2", "DATA from TYPE i.\nDATA upto TYPE i.\nfrom = p0.\nupto = p1.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF upto < 0.\nupto = lines( items ) + upto.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF upto > lines( items ).\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF from < upto.\nAPPEND LINES OF items FROM from + 1 TO upto TO result->items.\nENDIF.\n")
+		method("slice2", "view_materialize( ).\nDATA from TYPE i.\nDATA upto TYPE i.\nfrom = p0.\nupto = p1.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF upto < 0.\nupto = lines( items ) + upto.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF upto > lines( items ).\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF from < upto.\nAPPEND LINES OF items FROM from + 1 TO upto TO result->items.\nENDIF.\n")
 		line("METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice1", "DATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0 OR from >= lines( items ).\nCREATE OBJECT result.\nRETURN.\nENDIF.\nCREATE OBJECT result.\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\n")
+		method("splice1", "view_materialize( ).\nDATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from >= lines( items ).\nCREATE OBJECT result.\nRETURN.\nENDIF.\nCREATE OBJECT result.\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\n")
+		line("METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
+		method("splice1_view", "DATA base TYPE REF TO "+name+".\nDATA from TYPE i.\nDATA upto TYPE i.\nIF p0 <> 1.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\nIF view_bound = abap_true.\nbase = view_base.\nfrom = view_from.\nupto = view_to.\nELSE.\nfrom = 0.\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF upto - from <= 1.\nRETURN.\nENDIF.\nIF view_bound = abap_false.\nCREATE OBJECT base.\nbase->items = items.\nCLEAR items.\nENDIF.\nresult->view_bound = abap_true.\nresult->view_base = base.\nresult->view_from = from + 1.\nresult->view_to = upto.\nview_bound = abap_true.\nview_base = base.\nview_from = from.\nview_to = from + 1.\n")
 		line("METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
+		method("splice2", "view_materialize( ).\nDATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
+		method("splice3", "view_materialize( ).\nDATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
 		line("METHODS pop RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
 		if t.Args[0].IsRef() {
-			method("pop", "IF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
+			method("pop", "view_materialize( ).\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		} else {
-			method("pop", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
+			method("pop", "view_materialize( ).\nDATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		}
 		line("METHODS indexOf IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
 		if t.Args[0].Kind == hir.String {
-			method("indexOf", "DATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
+			method("indexOf", "view_materialize( ).\nDATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
 		} else {
-			method("indexOf", "DATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
+			method("indexOf", "view_materialize( ).\nDATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
 		}
 		line("METHODS includes IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE abap_bool.")
-		method("includes", "READ TABLE items WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		method("includes", "view_materialize( ).\nREAD TABLE items WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
 		if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
 			line("METHODS join IMPORTING p0 TYPE " + e.typ(hir.T(hir.Optional, hir.T(hir.String))) + " RETURNING VALUE(result) TYPE string.")
 		}
 		if t.Args[0].Kind == hir.String {
-			method("join", "DATA row TYPE "+elem+".\nLOOP AT items INTO row.\nIF result IS INITIAL AND sy-tabix = 1.\nresult = row.\nELSE.\nIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value row INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` row INTO result RESPECTING BLANKS.\nENDIF.\nENDIF.\nENDLOOP.\n")
+			method("join", "view_materialize( ).\nIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
 		} else if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
-			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
+			method("join", "view_materialize( ).\nDATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		}
 		line("METHODS get IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		code := "IF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\n"
 		if t.Args[0].IsRef() {
-			code += "result = val.\n"
+			code := "view_materialize( ).\nIF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\nresult = val.\nENDIF.\n"
+			method("get", code)
 		} else {
-			code += "result = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\n"
+			code := "view_materialize( ).\nIF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\nresult = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\nENDIF.\n"
+			method("get", code)
 		}
-		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
 		key := e.typ(t.Args[0])
 		value := hir.T(hir.Bool)

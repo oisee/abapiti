@@ -52,8 +52,8 @@ func (r *Registry) Lookup(key Key, span, location string) (Entry, bool, error) {
 	if !ok {
 		return Entry{}, false, nil
 	}
-	if Fingerprint(span) != e.SHA256 {
-		return Entry{}, true, fmt.Errorf("override %s is stale: source changed at %s", e.ID, location)
+	if got := Fingerprint(span); got != e.SHA256 {
+		return Entry{}, true, fmt.Errorf("override %s is stale: source changed at %s (got %s, want %s)", e.ID, location, got, e.SHA256)
 	}
 	return e, true, nil
 }
