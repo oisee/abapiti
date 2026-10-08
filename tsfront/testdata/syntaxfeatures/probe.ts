@@ -35,6 +35,21 @@ abstract class SiblingBase { public abstract tag(): string; }
 class Sibling1 extends SiblingBase { public tag(): string { return "s1"; } }
 class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } }
 type Meta = {[key: string]: number};
+interface INodeLike { kindOf(): string; }
+abstract class Holder<T extends INodeLike> implements INodeLike {
+  protected readonly kids: T[] = [];
+  public abstract kindOf(): string;
+  public firstKid(): T | undefined { return this.kids[0]; }
+}
+class TNode implements INodeLike { public kindOf(): string { return "t"; } public concat(): string { return "T"; } }
+class ENode extends Holder<ENode | TNode> {
+  public constructor(depth: number, flag: boolean) {
+    super();
+    if (depth > 0) { this.kids.push(flag ? new ENode(depth - 1, flag) : new TNode()); }
+  }
+  public kindOf(): string { return "e"; }
+  public concat(): string { return "E"; }
+}
 export class Probe {
   private static readonly cache: Map<string, number> = new Map();
   private static pending: string | undefined = undefined;
@@ -119,7 +134,9 @@ export class Probe {
     const evolving = [];
     evolving.push(...names.slice(0, 1));
     evolving.push("tail");
-    const parts: string[] = [evolving.join("+"),
+    const root = new ENode(1, flag);
+    const viewed = (root.firstKid()?.concat() ?? "none") + (root.firstKid()?.kindOf() ?? "") + (new ENode(0, flag).firstKid()?.concat() ?? "none");
+    const parts: string[] = [evolving.join("+"), viewed,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,

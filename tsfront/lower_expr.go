@@ -994,6 +994,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: method.Result, Name: name, X: recv, Args: args}
 		}
+		if method == nil && recv.Type.Kind == hir.InterfaceRef {
+			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
+				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
+				if !ok {
+					return nil
+				}
+				l.diagf(n, "note-union-view", "%s is common to the receiver's union classes but not to %s", name, recv.Type.Name)
+				cast := &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: recv}
+				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
+			}
+		}
 		x, handled := l.libraryCall(n, name, recv)
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
@@ -2214,4 +2225,40 @@ func isConditionOnly(n *ast.Node) bool {
 		return p.AsPrefixUnaryExpression().Operator == ast.KindExclamationToken
 	}
 	return false
+}
+
+// unionViewFor: the checker's receiver type is a union of classes (undefined
+// aside) whose lowered common supertype lacks the member; the synthesized
+// union view carries it when every class declares it compatibly.
+func (l *lowerer) unionViewFor(x *ast.Node, name string) (hir.Type, *hir.Method, bool) {
+	t := l.ck.GetTypeAtLocation(x)
+	if t == nil || t.Flags()&checker.TypeFlagsUnion == 0 {
+		return hir.Type{}, nil, false
+	}
+	parts := []hir.Type{}
+	for _, c := range t.Types() {
+		if c.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull) != 0 {
+			continue
+		}
+		pt := l.mapCheckerType(x, c)
+		if pt.Kind != hir.ClassRef {
+			return hir.Type{}, nil, false
+		}
+		parts = append(parts, pt)
+	}
+	view, ok := l.unionInterface(x, parts)
+	if !ok {
+		return hir.Type{}, nil, false
+	}
+	for _, iface := range l.out.Interfaces {
+		if iface.Name != view.Name {
+			continue
+		}
+		for _, m := range iface.Methods {
+			if m.Name == name {
+				return view, m, true
+			}
+		}
+	}
+	return hir.Type{}, nil, false
 }
