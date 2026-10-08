@@ -35,4 +35,14 @@ export class Probe {
     const t = s.splice(1);
     return s.length + "|" + t.length + "|" + s[0];
   }
+  public static negative(): string {
+    const s = ["A", "B", "C", "D"];
+    const t = s.splice(1);
+    t.splice(-1, 1);
+    const u = ["A"];
+    const v = u.splice(-2);
+    const w = ["A", "B", "C"];
+    w.splice(-2, 1, "X");
+    return t.join("") + "|" + u.length + v.join("") + "|" + w.join("");
+  }
 }
