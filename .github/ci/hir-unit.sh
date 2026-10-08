@@ -9,6 +9,7 @@ rm -rf "$gen/TestFixtures" "$gen/Test750Semantics"
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
+node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
   for suite in TestFixtures Test750Semantics; do

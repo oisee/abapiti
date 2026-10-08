@@ -50,6 +50,45 @@ jobs:
             ~/.npm
           key: osgo-${{ runner.os }}-${{ steps.pin.outputs.ref }}
 
+      - name: Set up the pinned open-steamgate checkout
+        run: |
+          set -euo pipefail
+          .github/ci/osgo-unit.sh "$RUNNER_TEMP/osgo" setup
+          mkdir -p .osg-pin-inputs
+          cp "$RUNNER_TEMP/osgo/open-steamgate/libs.lock.json" .osg-pin-inputs/
+          cp "$RUNNER_TEMP/osgo/open-steamgate/tools/osd-ci-transpiler-build.sh" .osg-pin-inputs/osd-ci-transpiler-build.sh
+
+      - name: Where the pinned transpiler lives
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/osgo/open-steamgate"
+          node tools/osd-lock.mjs github-env >> "$GITHUB_ENV"
+          echo "TRANSPILER=$RUNNER_TEMP/transpiler" >> "$GITHUB_ENV"
+
+      - name: Restore the pinned transpiler build
+        id: transpiler_cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/transpiler
+          key: transpiler-v1-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('.osg-pin-inputs/libs.lock.json') }}-${{ hashFiles('.osg-pin-inputs/osd-ci-transpiler-build.sh') }}
+
+      - name: Build the transpiler this tree is pinned to
+        if: steps.transpiler_cache.outputs.cache-hit != 'true'
+        run: |
+          cd "$RUNNER_TEMP/osgo/open-steamgate"
+          bash tools/osd-ci-transpiler-build.sh build
+
+      - name: Verify and link the pinned transpiler
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/osgo/open-steamgate"
+          bash tools/osd-ci-transpiler-build.sh verify
+          node tools/osd-link.mjs transpiler packages/transpiler
+          node tools/osd-link.mjs transpiler-cli packages/cli
+          node tools/osd-link.mjs runtime packages/runtime
+          node tools/osd-link.mjs core packages/transpiler/node_modules/@abaplint/core
+          node tools/osd-transpiler.mjs
+
       - name: Run the generated classes on osgo
         run: .github/ci/osgo-unit.sh "$RUNNER_TEMP/osgo"
 

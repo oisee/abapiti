@@ -3,7 +3,7 @@
 # runtime) straight from the files: no ADT, no activation. open-steamgate is
 # checked out at the commit pinned in .github/ci/osgo.ref.
 #
-#   .github/ci/osgo-unit.sh <workdir>
+#   .github/ci/osgo-unit.sh <workdir> [setup]
 #
 # Exit 0 when every test passed except NOT_COMPILED rows matching a known osgo
 # gap (osgo-known-gaps.txt); 1 for any other non-passing row; 4 for setup,
@@ -11,7 +11,8 @@
 # Needs Node 22+; Go 1.26 is fetched through GOTOOLCHAIN.
 set -euo pipefail
 
-work=${1:?usage: osgo-unit.sh <workdir>}
+work=${1:?usage: osgo-unit.sh <workdir> [setup]}
+action=${2:-run}
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 ref=$(tr -d '[:space:]' < "$here/osgo.ref")
@@ -26,6 +27,11 @@ work=$(cd "$work" && pwd)
 osg="$work/open-steamgate"
 gen="$work/gen"
 
+case "$action" in
+  setup|run) ;;
+  *) echo "osgo-unit: unknown action: $action" >&2; exit 4 ;;
+esac
+
 if [ ! -d "$osg/.git" ]; then
   git init -q "$osg"
   git -C "$osg" remote add origin https://github.com/oisee/open-steamgate.git
@@ -35,8 +41,28 @@ git -C "$osg" checkout -q --detach FETCH_HEAD
 [ "$(git -C "$osg" rev-parse HEAD)" = "$ref" ] || { echo "osgo-unit: checkout is not $ref" >&2; exit 4; }
 echo "osgo-unit: open-steamgate $ref" >&2
 
-(cd "$osg" && npm ci --no-audit --no-fund && node tools/osd-libs.mjs --sync && node tools/osd-fetch.mjs) > "$work/setup.log" 2>&1 ||
-  { cat "$work/setup.log" >&2; exit 4; }
+if [ "$action" = setup ]; then
+  (
+    cd "$osg" &&
+      npm ci --no-audit --no-fund &&
+      node tools/osd-libs.mjs --sync &&
+      node tools/osd-fetch.mjs
+  ) > "$work/setup.log" 2>&1 || { cat "$work/setup.log" >&2; exit 4; }
+  touch "$work/setup.done.$ref"
+  exit 0
+fi
+
+if [ ! -f "$work/setup.done.$ref" ]; then
+  (
+    cd "$osg" &&
+      npm ci --no-audit --no-fund &&
+      node tools/osd-libs.mjs --sync &&
+      node tools/osd-fetch.mjs
+  ) > "$work/setup.log" 2>&1 || { cat "$work/setup.log" >&2; exit 4; }
+  touch "$work/setup.done.$ref"
+fi
+
+node "$here/osg-transpiler.mjs" "$osg"
 
 rm -rf "$gen"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1) > "$work/generate.log" 2>&1 ||
