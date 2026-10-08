@@ -1258,6 +1258,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "clock.telemetry":
+		b.e.telemetryRuntime()
+		b.line(n + " = " + b.e.name("runtime.telemetry") + "=>now( ).")
+		return
 	case "object.classOf":
 		b.e.descriptors = true
 		if x.X.Type.Kind == hir.Optional {

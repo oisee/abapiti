@@ -575,3 +575,44 @@ ENDMETHOD.
 ENDCLASS.
 `
 }
+
+// telemetryRuntime accumulates signed i microsecond readings through rollover.
+// Float arithmetic avoids overflowing i when subtracting opposite signs. It
+// is telemetry only; no issue or deterministic observation depends on it.
+func (e *emitter) telemetryRuntime() {
+	id := "runtime.telemetry"
+	if e.types[id] {
+		return
+	}
+	e.types[id] = true
+	name := e.name(id)
+	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PRIVATE.
+PUBLIC SECTION.
+CLASS-METHODS now RETURNING VALUE(result) TYPE f.
+PROTECTED SECTION.
+PRIVATE SECTION.
+CLASS-DATA initialized TYPE abap_bool.
+CLASS-DATA previous TYPE i.
+CLASS-DATA elapsed TYPE f.
+ENDCLASS.
+CLASS ` + name + ` IMPLEMENTATION.
+METHOD now.
+DATA reading TYPE i.
+DATA delta TYPE f.
+GET RUN TIME FIELD reading.
+IF initialized = abap_false.
+initialized = abap_true.
+previous = reading.
+ELSE.
+delta = CONV f( reading ) - CONV f( previous ).
+IF delta < 0.
+delta = delta + 4294967296.
+ENDIF.
+elapsed = elapsed + delta.
+previous = reading.
+ENDIF.
+result = trunc( elapsed / 1000 ).
+ENDMETHOD.
+ENDCLASS.
+`
+}

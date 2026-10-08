@@ -20,3 +20,11 @@ export function compareDocumentedDivergences(expected, actual) {
  }
  return checked;
 }
+
+// Addendum 5: these values never influence issues and are outside equality.
+// Object/dependency counts in the inventory are deterministic and still compared.
+export const nondeterministicObservations = Object.freeze([
+ Object.freeze({name:'ABAPParser.parse Date.now / parse runtimes', reason:'nondeterministic, not compared'}),
+ Object.freeze({name:'RulesRunner.runRules Date.now / rule runtimes', reason:'nondeterministic, not compared'}),
+ Object.freeze({name:'times, durations and counters of elapsed work', reason:'nondeterministic, not compared'}),
+]);

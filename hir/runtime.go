@@ -12,6 +12,7 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"clock.telemetry":   {Number, 0, false},
 	"number.remainder2": {Number, 0, false},
 	"number.index":      {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
@@ -62,6 +63,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
+	case "clock.telemetry":
+		return nil, T(Number), true
 	case "string.length", "array.length", "map.size", "set.size":
 		return nil, i, true
 	case "string.concat":

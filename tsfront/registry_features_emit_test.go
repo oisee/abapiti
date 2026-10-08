@@ -37,7 +37,11 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
+	registry, err := overrides.New(overrides.Entry{ID: "feature-clock", Key: overrides.Key{File: "probe.ts", Symbol: "Probe.clockProbe", Kind: "KindMethodDeclaration"}, SHA256: "aa5a066d26b27ecfcd6ad94f2ae867a7511ee608acf870dbbff45b39d404be96", Rationale: "Addendum 5 telemetry contract", Expressions: map[string]func() *hir.Expr{"Date.now()": overrides.TelemetryClock}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, registry, coverage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +80,7 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	line("PRIVATE SECTION.")
 	line("METHODS observations FOR TESTING.")
 	line("METHODS trap FOR TESTING.")
+	line("METHODS clock FOR TESTING.")
 	line("ENDCLASS.")
 	line("CLASS ltcl_features IMPLEMENTATION.")
 	line("METHOD observations.")
@@ -101,6 +106,17 @@ func TestEmitRegistryFeatures(t *testing.T) {
 		line("CALL METHOD %s=>%s EXPORTING %s = raw %s = needle %s = n %s = flag RECEIVING result = actual.", class, names.Get("member.run"), names.Get("param.raw"), names.Get("param.needle"), names.Get("param.n"), names.Get("param.flag"))
 		line("cl_abap_unit_assert=>assert_equals( act = actual exp = expected msg = `feature case %d` ).", i+1)
 	}
+	line("ENDMETHOD.")
+	line("METHOD clock.")
+	line("DATA first TYPE f.")
+	line("DATA current TYPE f.")
+	line("first = %s=>%s( ).", class, names.Get("member.clockProbe"))
+	line("cl_abap_unit_assert=>assert_true( act = xsdbool( first >= 0 AND first = trunc( first ) ) ).")
+	line("DO 100 TIMES.")
+	line("current = %s=>%s( ).", class, names.Get("member.clockProbe"))
+	line("cl_abap_unit_assert=>assert_true( act = xsdbool( current >= first AND current = trunc( current ) ) ).")
+	line("first = current.")
+	line("ENDDO.")
 	line("ENDMETHOD.")
 	line("METHOD trap.")
 	line("DATA actual TYPE f.")

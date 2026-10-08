@@ -5,6 +5,7 @@ export class Probe implements AsyncProbe {
   private static calls: number = 0;
   private static next(): number { this.calls++; return 1; }
   private static onlyUndefined() { return undefined; }
+  public static clockProbe(): number { return Date.now(); }
   public static run(raw: string, needle: string, n: number, flag: boolean): string {
     const probe = new Probe();
     if (!(probe instanceof Probe)) { throw new Error("constructor identity"); }
