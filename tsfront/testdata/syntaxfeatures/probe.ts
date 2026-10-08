@@ -33,7 +33,7 @@ class Trivial {
 type Data = {qualifiedName?: string, derived?: boolean, ddic?: string};
 abstract class SiblingBase { public abstract tag(): string; }
 class Sibling1 extends SiblingBase { public tag(): string { return "s1"; } }
-class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } }
+class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } public only2(): string { return "only2"; } }
 type Meta = {[key: string]: number};
 interface INodeLike { kindOf(): string; }
 abstract class Holder<T extends INodeLike> implements INodeLike {
@@ -67,6 +67,7 @@ export class Probe {
     if (Array.isArray(v)) { let s = 0; for (const n of v) { s += n; } return `arr:${s}`; }
     return `str:${v}`;
   }
+  private static base(x: SiblingBase): SiblingBase { return x; }
   public run(raw: string, needle: string, n: number, flag: boolean): string {
     const scope = new Scope();
     scope.add(new ClassDef("zcl_" + raw));
@@ -136,7 +137,9 @@ export class Probe {
     evolving.push("tail");
     const root = new ENode(1, flag);
     const viewed = (root.firstKid()?.concat() ?? "none") + (root.firstKid()?.kindOf() ?? "") + (new ENode(0, flag).firstKid()?.concat() ?? "none");
-    const parts: string[] = [evolving.join("+"), viewed,
+    const downcast = Probe.base(sib) instanceof Sibling2 ? (Probe.base(sib) as Sibling2).only2() : "not2";
+    const typed = `${typeof counter === "boolean"}/${typeof n === "number"}/${typeof flag === "string"}/${typeof sib !== "number"}`;
+    const parts: string[] = [evolving.join("+"), viewed, downcast, typed,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
