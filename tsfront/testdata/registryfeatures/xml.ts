@@ -15,9 +15,10 @@ export class XMLProbe {
     const list: any = flag ? ["a"] : "s";
     const key: any = flag ? "ab" : 1;
     let upper = typeof key === "string" ? key.toUpperCase() : "n";
-    const doc: any = XMLProbe.parse(flag ? "<a><ID>S</ID><KEY>k1</KEY></a>" : "<a><ID>S</ID><KEY><b>x</b></KEY></a>");
+    const doc: any = XMLProbe.parse(flag ? "<a><ID>S</ID><KEY>k1</KEY><LEN>12x</LEN></a>" : "<a><ID>S</ID><KEY><b>x</b></KEY></a>");
     const row: any = doc?.a;
     if (row?.ID === "S" && typeof row.KEY === "string") { upper += row.KEY.toUpperCase(); } else { upper += "-"; }
+    upper += row.LEN === undefined ? "none" : `${parseInt(row.LEN, 10)}`;
     const r = /a.c/i;
     const g = new RegExp("x/y", "gi");
     let hits = "";
