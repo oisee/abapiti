@@ -18,7 +18,7 @@ type unionView struct {
 func (l *lowerer) unionInterface(n *ast.Node, parts []hir.Type) (hir.Type, bool) {
 	names := []string{}
 	for _, p := range parts {
-		if p.Kind != hir.ClassRef {
+		if p.Kind != hir.ClassRef && p.Kind != hir.InterfaceRef {
 			return hir.Type{}, false
 		}
 		if strings.HasPrefix(p.Name, "shape.") || strings.HasPrefix(p.Name, "tuple.") {
@@ -55,6 +55,17 @@ func (l *lowerer) unionInterface(n *ast.Node, parts []hir.Type) (hir.Type, bool)
 
 func (l *lowerer) unionMethods(t hir.Type) map[string]*hir.Method {
 	result := map[string]*hir.Method{}
+	if t.Kind == hir.InterfaceRef {
+		for _, iface := range l.out.Interfaces {
+			if iface.Name == t.Name {
+				for _, method := range iface.Methods {
+					result[method.Name] = method
+				}
+				return result
+			}
+		}
+		return result
+	}
 	for name := t.Name; name != ""; {
 		var c *hir.Class
 		for _, x := range l.out.Classes {
@@ -105,6 +116,22 @@ func (l *lowerer) completeUnionInterfaces() {
 	sort.Strings(keys)
 	for _, key := range keys {
 		view := l.unions[key]
+		// ABAP uses nominal interfaces. Every concrete implementation of a
+		// constituent interface must implement the synthesized common view.
+		for _, part := range view.parts {
+			if part.Kind != hir.InterfaceRef {
+				continue
+			}
+			for _, class := range l.out.Classes {
+				implements := l.covariants[class.Name][part.Name]
+				for _, name := range class.Implements {
+					implements = implements || name == part.Name
+				}
+				if implements {
+					l.recordImplements(hir.Ref(class.Name), hir.Type{Kind: hir.InterfaceRef, Name: view.iface.Name})
+				}
+			}
+		}
 		view.iface.Methods = nil
 		sets := []map[string]*hir.Method{}
 		for _, p := range view.parts {

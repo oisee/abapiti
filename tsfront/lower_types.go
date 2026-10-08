@@ -44,6 +44,11 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.T(hir.String)
 	case ast.KindBooleanKeyword:
 		return hir.T(hir.Bool)
+	case ast.KindTypePredicate:
+		if n.AsTypePredicateNode().AssertsModifier != nil {
+			return hir.T(hir.Void)
+		}
+		return hir.T(hir.Bool)
 	case ast.KindObjectKeyword:
 		return hir.Ref(hir.RootObject)
 	case ast.KindVoidKeyword:

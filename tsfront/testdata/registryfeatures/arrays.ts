@@ -1,5 +1,14 @@
-export class Item {
+export interface Named { getName(): string; left(): boolean; }
+export interface OtherNamed { getName(): string; right(): boolean; }
+export class OtherItem implements OtherNamed {
   constructor(public name: string) {}
+  public getName(): string { return this.name; }
+  public right(): boolean { return true; }
+}
+export class Item implements Named {
+  constructor(public name: string) {}
+  public getName(): string { return this.name; }
+  public left(): boolean { return true; }
 }
 export class ArrayProbe {
   private static map = new Map<string, number>();
@@ -12,6 +21,14 @@ export class ArrayProbe {
     return `${before}/${ArrayProbe.map.size}/${ArrayProbe.map.get("key")}/${ArrayProbe.values.size}`;
   }
   private static visits = 0;
+  private static readUnion(value: Named | OtherNamed): string { return value.getName(); }
+  private static isItem(value: Named | OtherNamed): value is Named { return value instanceof Item; }
+  public static unionViews(): string {
+    const left: Named = new Item("left");
+    const right: OtherNamed = new OtherItem("right");
+    const alias: Named | OtherNamed = left;
+    return `${ArrayProbe.readUnion(left)}/${ArrayProbe.readUnion(right)}/${alias === left}/${ArrayProbe.isItem(left)}/${ArrayProbe.isItem(right)}`;
+  }
   private static appendDuringFind(item: Item, index: number, array: Item[]): boolean {
     ArrayProbe.visits++;
     if (index === 0) { array.push(new Item("appended")); }

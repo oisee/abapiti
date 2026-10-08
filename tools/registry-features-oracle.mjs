@@ -23,7 +23,7 @@ const arrayFile=resolve('tsfront/testdata/registryfeatures/arrays.ts');
 const arrayCompiled=ts.transpileModule(readFileSync(arrayFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
 const arrayModule={exports:{}};
 new Function('exports','module',arrayCompiled)(arrayModule.exports,arrayModule);
-writeFileSync('tsfront/testdata/registryfeatures/arrays-oracle.json',JSON.stringify({shift:arrayModule.exports.ArrayProbe.shift(),optionalIndex:arrayModule.exports.ArrayProbe.optionalIndex(),staticCollections:arrayModule.exports.ArrayProbe.staticCollections(),find:arrayModule.exports.ArrayProbe.find()},null,2)+'\n');
+writeFileSync('tsfront/testdata/registryfeatures/arrays-oracle.json',JSON.stringify({shift:arrayModule.exports.ArrayProbe.shift(),optionalIndex:arrayModule.exports.ArrayProbe.optionalIndex(),staticCollections:arrayModule.exports.ArrayProbe.staticCollections(),find:arrayModule.exports.ArrayProbe.find(),unionViews:arrayModule.exports.ArrayProbe.unionViews()},null,2)+'\n');
 
 const iteratorFile=resolve('tsfront/testdata/registryfeatures/iterators.ts');
 const iteratorCompiled=ts.transpileModule(readFileSync(iteratorFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
