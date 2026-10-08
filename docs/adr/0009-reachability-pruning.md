@@ -1,6 +1,6 @@
 # 0009 — Source-pinned workload reachability
 
-Status: proposed (provenance, body and declaration pruning implemented; Registry acceptance blocked by the observation boundary below).
+Status: proposed (provenance, body and declaration pruning implemented; Registry acceptance pending).
 
 ## Context
 
@@ -13,9 +13,9 @@ that an API cannot be called on a different input.
 
 Collect function-level V8 coverage from a fresh, verified original upstream
 build. Record per-span positive execution provenance as `DEPLOYMENT` (the north-star
-check), `NEGATIVE` (the six negative variants), and `UPSTREAM` (original upstream
+check), `NEGATIVE` (the six negative variants), `OBSERVATION` (the complete Registry oracle inventory/config/dumps and negative observations), and `UPSTREAM` (original upstream
 rule and ABAP syntax tests). Schema 2 keeps `executed` as the informational union
-of all three; pruning roots are **DEPLOYMENT ∪ NEGATIVE only**. UPSTREAM-only
+of all four; pruning roots are **DEPLOYMENT ∪ NEGATIVE ∪ OBSERVATION**. UPSTREAM-only
 spans trap just like unexecuted spans. In particular `Registry.parseAsync` is
 UPSTREAM-only and must use an opaque async signature with a trapped body.
 That signature implementation is pending.
@@ -33,7 +33,7 @@ spans. Store UTF-8 byte offsets so tsgo and the collector use the same coordinat
 system. Validate all selected spans before lowering, including executed spans;
 a changed or missing span fails loudly instead of falling back to generic code.
 
-A body without DEPLOYMENT or NEGATIVE execution lowers to `hir.Trap`. The ABAP emitter raises a
+A body without DEPLOYMENT, NEGATIVE or OBSERVATION execution lowers to `hir.Trap`. The ABAP emitter raises a
 dedicated `cx_no_check` subclass with a `source_location` attribute containing
 the TS file and line. It is distinct from the exceptions used for translated TS
 payloads, so a translated catch cannot silently consume an excluded execution.
@@ -53,7 +53,7 @@ constructor. In particular, dropping exported classes before resolving
 The opt-in Registry deployment adds fingerprinted factory selection for
 CLAS/INTF/PROG/TYPE/XSLT, trapping other types and the old reflective map builder.
 Replacement dependencies are explicit in the override registry. The graph roots
-DEPLOYMENT/NEGATIVE-executed and unmapped callable declarations plus module
+DEPLOYMENT/NEGATIVE/OBSERVATION-executed and unmapped callable declarations plus module
 initializers, follows resolved signature (including inferred returns), heritage,
 namespace and class-value references, and skips excluded bodies. Type-only
 classes retain signatures and trapped constructors, without evaluating their
@@ -61,22 +61,26 @@ initializers. The source AST is kept intact for checker queries. Only retained
 statements enter lowering. Report selected file/declaration counts separately
 from the original pinned static closure.
 
-## Observed acceptance conflict
+## Observation workloads and input validation
 
-The required round-1 inventory oracle calls `getDescription()` for every object.
-Fresh schema-2 evidence excludes all five object handlers' description methods;
-`Class` and `Interface` are UPSTREAM-only, and `Program`, `TypePool` and
-`Transformation` are unexecuted in the collected classes of workload. Following
-the chosen policy therefore makes the required inventory throw on its first
-object at `src/objects/program.ts:27`, where the original returns
-`abapGit (standalone version)`. The same failure occurs on a one-file Program
-inventory. The compiler's located trap agrees with an independent fresh-original
-JS policy experiment. The explicit five-type factory alone preserves all 188
-original inventory entries.
+Anything the north-star check or our acceptance tests execute is a root. The
+collector runs the same exported oracle used for comparisons against the same
+fresh build under OBSERVATION coverage. Description extraction and the negative
+oracle cases therefore contribute roots, while upstream-only APIs remain trapped.
+Every recorded input/config/negative-variant fingerprint is validated against
+independently supplied current workload paths before any pruning. Added, removed,
+changed or unbound inputs fail loudly. Function identity requires a unique source
+range and declaration kind; ambiguous mappings are omitted and stay live.
 
-This is a conflict between the executed check workloads and required observation
-APIs, not an async policy question. No observation-only span is promoted to a
-root without a coordinator decision; remaining ABI/runtime work stops here.
+## Strict JSON acceptance conflict
+
+Decision 1 requires JSON5-only syntax to raise. The required oracle's `json5`
+negative observation instead returns a resolved `v702` configuration for comments,
+unquoted keys, single-quoted strings and trailing commas. Fresh OBSERVATION
+execution reproduces this result. Strict JSON parsing raises for the same bytes,
+so the required negative observation cannot remain equal under that decision.
+The original differential remains intact; no strict JSON adapter is substituted
+until this acceptance conflict is resolved.
 
 ## Consequences
 
@@ -91,6 +95,8 @@ Reproduction:
 
 ```sh
 node tools/registry-coverage.mjs "$OUT" "$INPUT" "$DEPS_SRC" "$CONFIG" "$NEGATIVES" "$UPSTREAM"
-REGISTRY_CLOSURE="$CLOSURE" REGISTRY_REACHABILITY="$OUT/reachability.json" \
+REGISTRY_INPUT="$INPUT" REGISTRY_DEPENDENCIES="$DEPS_SRC" \
+  REGISTRY_CONFIG="$CONFIG" REGISTRY_NEGATIVES="$NEGATIVES" \
+  REGISTRY_CLOSURE="$CLOSURE" REGISTRY_REACHABILITY="$OUT/reachability.json" \
   ABAPITI_TEST_OUT="$DIAGNOSTICS" go test ./tsfront -run '^TestRegistryClosureGate$' -v
 ```

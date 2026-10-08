@@ -6,9 +6,10 @@ import {createRequire} from "node:module";
 import {createHash} from "node:crypto";
 import {execFileSync} from "node:child_process";
 import {buildUpstream, upstreamPin} from "./statements-upstream.mjs";
+import {pathToFileURL} from "node:url";
 import {statementsDump} from "./statements-dump.mjs";
 
-const [inputDir, depsDir, configPath, outputDir, upstream] = process.argv.slice(2);
+export function observeRegistry(inputDir, depsDir, configPath, outputDir, upstream, suppliedBuild) {
 if (!outputDir) throw new Error("usage: registry-oracle.mjs input-dir deps-src config.json output-dir [upstream]");
 const sha = s => createHash("sha256").update(s).digest("hex");
 // Sort record keys only. Array/file/child order remains observable.
@@ -39,7 +40,7 @@ const depsPin = execFileSync("git", ["-C", depsDir, "rev-parse", "HEAD"], {encod
 if (depsPin !== "d003df932d11177c98d41c32d729d40368b23fc1") throw new Error(`unexpected deps pin ${depsPin}`);
 if (execFileSync("git", ["-C", depsDir, "status", "--porcelain", "--untracked-files=all"], {encoding:"utf8"}).trim()) throw new Error("deps checkout is dirty");
 if (dependencies.length !== 360) throw new Error(`expected 360 deps files, found ${dependencies.length}`);
-const {core, dispose} = buildUpstream(upstream);
+const {core, dispose} = suppliedBuild ?? buildUpstream(upstream);
 try {
  const require = createRequire(import.meta.url);
  const {Registry} = require(core + "/registry.js");
@@ -156,3 +157,6 @@ try {
  writeFileSync(join(outputDir,"checksums.json"),JSON.stringify({inventory:sha(canonical(objects)),config:sha(canonical(resolved)),dumps:sha(canonical(dumps)),negative:sha(canonical(negative))},null,2)+"\n");
  console.error(JSON.stringify({...manifest,main:manifest.main.length,dependencies:manifest.dependencies.length,timing}));
 } finally { dispose(); }
+
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) observeRegistry(...process.argv.slice(2));

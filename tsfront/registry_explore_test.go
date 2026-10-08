@@ -72,7 +72,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		if readErr != nil {
 			t.Fatal(readErr)
 		}
-		coverage = &Reachability{}
+		coverage = &Reachability{CurrentInputs: &CoverageInputs{InputDir: os.Getenv("REGISTRY_INPUT"), DependenciesDir: os.Getenv("REGISTRY_DEPENDENCIES"), ConfigPath: os.Getenv("REGISTRY_CONFIG"), NegativesPath: os.Getenv("REGISTRY_NEGATIVES")}}
 		if err := json.Unmarshal(data, coverage); err != nil {
 			t.Fatal(err)
 		}

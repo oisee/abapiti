@@ -192,6 +192,11 @@ export class Consumer { build(unused: OnlyType): LiveValue { return new LiveValu
 	if liveValue == nil || liveValue.Ctor == nil || liveValue.Ctor.Body == nil || strings.Contains(hir.Dump(&hir.Program{Classes: []*hir.Class{liveValue}}), "trap") {
 		t.Fatal("runtime initializer was trapped", dump)
 	}
+	coverage.Spans[1].Workloads = []string{"OBSERVATION"}
+	_, diags, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
+	if err != nil || !hasBlocking(diags) {
+		t.Fatal("observation body did not remain live", err)
+	}
 	coverage.Spans[1].Workloads = []string{"NEGATIVE"}
 	_, diags, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
 	if err != nil {
@@ -208,5 +213,66 @@ export class Consumer { build(unused: OnlyType): LiveValue { return new LiveValu
 	coverage.Spans[1].Executed = false
 	if _, _, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage); err == nil {
 		t.Fatal("inconsistent union execution accepted")
+	}
+}
+
+func TestCoverageWorkloadInputsValidatedBeforePruning(t *testing.T) {
+	dir := t.TempDir()
+	input, deps := filepath.Join(dir, "input"), filepath.Join(dir, "deps")
+	for _, path := range []string{input, deps} {
+		if err := os.Mkdir(path, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	paths := map[string]string{"input/probe.abap": filepath.Join(input, "probe.abap"), "dependencies/dep.abap": filepath.Join(deps, "dep.abap"), "config.json": filepath.Join(dir, "config.json"), "negative-issues.json": filepath.Join(dir, "negative.json")}
+	coverage := &Reachability{Schema: 2, Workloads: []string{"north-star"}, CurrentInputs: &CoverageInputs{InputDir: input, DependenciesDir: deps, ConfigPath: paths["config.json"], NegativesPath: paths["negative-issues.json"]}}
+	for name, path := range paths {
+		if err := os.WriteFile(path, []byte(name), 0600); err != nil {
+			t.Fatal(err)
+		}
+		coverage.Inputs = append(coverage.Inputs, struct {
+			File   string `json:"file"`
+			SHA256 string `json:"sha256"`
+		}{name, overrides.Fingerprint(name)})
+	}
+	config := filepath.Join(dir, "tsconfig.json")
+	if err := os.WriteFile(config, []byte(`{"files":["probe.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "probe.ts"), []byte(`export class Probe { run(): number { return 1; } }`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	p, err := Load(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lower := func() error { _, _, err := p.LowerWithReachability([]string{"probe.ts"}, nil, coverage); return err }
+	if err := lower(); err != nil {
+		t.Fatal(err)
+	}
+	for name, path := range paths {
+		if err := os.WriteFile(path, []byte("changed"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := lower(); err == nil || !strings.Contains(err.Error(), "stale") {
+			t.Fatalf("changed input %s was accepted: %v", name, err)
+		}
+		if err := os.WriteFile(path, []byte(name), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	extra := filepath.Join(input, "extra.abap")
+	if err := os.WriteFile(extra, []byte("added"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := lower(); err == nil {
+		t.Fatal("added input accepted")
+	}
+	if err := os.Remove(extra); err != nil {
+		t.Fatal(err)
+	}
+	coverage.CurrentInputs = nil
+	if err := lower(); err == nil {
+		t.Fatal("unbound inputs accepted")
 	}
 }
