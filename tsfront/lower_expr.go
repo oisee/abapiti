@@ -1747,6 +1747,9 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return l.typeofCompare(n, operand.AsTypeOfExpression().Expression, literal.Text(), negated)
 		}
 	}
+	if x, ok := l.declaredMethodUndefinedCompare(n, b, negated); ok {
+		return x
+	}
 	leftUndef := l.isUndefinedType(b.Left)
 	rightUndef := l.isUndefinedType(b.Right)
 	if leftUndef && rightUndef {
@@ -2137,4 +2140,38 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	l.diagf(at, "unsupported-expr", "string coercion of %s requires JavaScript ToPrimitive", x.Type)
 	return nil
+}
+
+// declaredMethodUndefinedCompare: `obj.m === undefined` where m is a method
+// declared without `?` on every declaration of its symbol is constant false
+// (true for !==). The receiver is still evaluated for its effects.
+func (l *lowerer) declaredMethodUndefinedCompare(n *ast.Node, b *ast.BinaryExpression, negated bool) (*hir.Expr, bool) {
+	access := b.Left
+	if !isUndefinedKeyword(b.Right) {
+		if !isUndefinedKeyword(b.Left) {
+			return nil, false
+		}
+		access = b.Right
+	}
+	if access.Kind != ast.KindPropertyAccessExpression {
+		return nil, false
+	}
+	sym := l.ck.GetSymbolAtLocation(access.AsPropertyAccessExpression().Name())
+	if sym == nil || len(sym.Declarations) == 0 {
+		return nil, false
+	}
+	for _, d := range sym.Declarations {
+		if d.Kind != ast.KindMethodDeclaration && d.Kind != ast.KindMethodSignature {
+			return nil, false
+		}
+		if d.PostfixToken() != nil && d.PostfixToken().Kind == ast.KindQuestionToken {
+			return nil, false
+		}
+	}
+	recv := l.expr(access.AsPropertyAccessExpression().Expression)
+	if recv == nil {
+		return nil, true
+	}
+	l.diagf(n, "note-declared-method", "a declared method is never undefined")
+	return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: recv}), Y: hir.L(hir.T(hir.Bool), negated)}, true
 }
