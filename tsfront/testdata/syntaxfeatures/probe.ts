@@ -60,10 +60,11 @@ export class Probe {
     const missing = scope.find("nope");
     const names = scope.all().map(d => { const upper = d.getName().toUpperCase(); return upper + ":" + d.kind(); });
     const idx = scope.all().findIndex(d => d.kind() === "INTF");
-    const allNamed = scope.all().every(d => d.getName().length > 0);
+    const allNamed = !scope.all().some(d => !(d.getName().length > 0));
     const flat = [["x", "y"], ["z"]].flatMap(a => a);
     let seen = "";
-    scope.all().forEach((d, i) => { seen += `${i}${d.kind()}`; });
+    let ix = 0;
+    for (const d of scope.all()) { seen += `${ix}${d.kind()}`; ix++; }
     const queue = ["q1", "q2", "q3"];
     const first = queue.shift();
     queue.unshift("q0");

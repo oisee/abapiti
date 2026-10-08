@@ -371,6 +371,11 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]
 		return l.rtOp(op, x, dst)
 	}
+	// A present-only use of an optional primitive (TypeScript already typed
+	// it as the base): checked narrowing, absent raises.
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(dst) && !dst.IsRef() && dst.Kind != hir.Optional && dst.Kind != hir.Dynamic {
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
+	}
 	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) {
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
 	}
