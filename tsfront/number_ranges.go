@@ -292,6 +292,17 @@ func joinNumbers(a, b map[string]numberInterval) map[string]numberInterval {
 	for k, v := range b {
 		r[k] = joinNumber(r[k], v)
 	}
+	// A field fact known on one branch only is not a fact: drop it so reads
+	// fall back to the field summary (unknown unless tracked).
+	for k := range r {
+		if len(k) > 0 && (k[0] == '@' || k[0] == '$') {
+			_, inA := a[k]
+			_, inB := b[k]
+			if inA != inB {
+				delete(r, k)
+			}
+		}
+	}
 	return r
 }
 func sameNumbers(a, b map[string]numberInterval) bool {

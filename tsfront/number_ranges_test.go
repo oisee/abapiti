@@ -806,3 +806,26 @@ get():string {return this.raw.charAt(this.start);}
 		}
 	}
 }
+
+// Critic round 3 (PR #48): a field fact set on one branch only must not
+// survive the join; inherited and static fields stay binary64 here.
+func TestNumberRangeOneSidedFieldFact(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `
+export class Base {protected n=0.5;}
+export class Derived extends Base {
+ run(flag:boolean):number {if(flag){this.n=0;} const observed=this.n; return observed;}
+}
+class State {static n=0.5;}
+export class Probe {
+ run(flag:boolean):number {if(flag){State.n=0;} const observed=State.n; return observed;}
+}`}, []string{"probe.ts"})
+	for _, suffix := range []string{".Derived", ".Probe"} {
+		m := rangeClass(t, p, suffix).Methods[0]
+		if got := rangeLocals(m)["observed"]; got != hir.Number {
+			t.Fatalf("%s: one-sided field fact survived the join: %s", suffix, got)
+		}
+	}
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
