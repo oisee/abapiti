@@ -319,6 +319,23 @@ func (v *verifier) accepts(dst, src Type) bool {
 	}
 	return false
 }
+// crossCastable reports whether a checked cast between a class and an
+// interface can succeed: some lowered class is a subtype of both (the
+// emitter routes such casts through the object root and `?=` raises when
+// the run-time object is neither).
+func (v *verifier) crossCastable(base, target Type) bool {
+	if base.Kind == target.Kind || !(base.Kind == ClassRef || base.Kind == InterfaceRef) || !(target.Kind == ClassRef || target.Kind == InterfaceRef) {
+		return false
+	}
+	for _, c := range v.classes {
+		ref := Ref(c.Name)
+		if v.accepts(base, ref) && v.accepts(target, ref) {
+			return true
+		}
+	}
+	return false
+}
+
 func (v *verifier) body(c *Class, m *Method) {
 	if m.Abstract {
 		if m.Body != nil {
@@ -738,7 +755,7 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		if target.Kind == Optional {
 			target = target.Args[0]
 		}
-		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || !v.accepts(base, target)) {
+		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || (!v.accepts(base, target) && !v.crossCastable(base, target))) {
 			v.fail(e.Node, "invalid narrowing "+a.String()+" to "+t.String())
 		}
 	case ClassOf:
@@ -809,7 +826,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		eq(t, T(Dynamic))
 		args(nil)
 	case "dynamic.asRef":
-		if a.Kind != Dynamic || !ref(t) {
+		if a.Kind != Dynamic || !(ref(t) || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet) {
 			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")
 		}
 		args(nil)

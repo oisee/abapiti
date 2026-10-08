@@ -53,6 +53,14 @@ func (e *emitter) runtime(t hir.Type) {
 		} else {
 			method("pop", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		}
+		line("METHODS shift RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
+		if t.Args[0].IsRef() {
+			method("shift", "IF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO result.\nDELETE items INDEX 1.\nENDIF.\n")
+		} else {
+			method("shift", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX 1.\nENDIF.\n")
+		}
+		line("METHODS unshift IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
+		method("unshift", "INSERT p0 INTO items INDEX 1.\nresult = lines( items ).\n")
 		line("METHODS indexOf IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
 		if t.Args[0].Kind == hir.String {
 			method("indexOf", "DATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
@@ -115,6 +123,12 @@ func (e *emitter) runtime(t hir.Type) {
 		if t.Kind == hir.OrderedSet {
 			line("METHODS copy IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 			method("copy", "CREATE OBJECT result.\nAPPEND LINES OF p0->entries TO result->entries.\n")
+			line("METHODS delete IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
+			method("delete", "DELETE entries WHERE k = p0.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		}
+		if t.Kind == hir.OrderedMap {
+			line("METHODS values RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, value)) + ".")
+			method("values", "result = NEW #( ).\nLOOP AT entries INTO DATA(vrow).\nAPPEND vrow-v TO result->items.\nENDLOOP.\n")
 		}
 		op = "values"
 		if t.Kind == hir.OrderedMap {

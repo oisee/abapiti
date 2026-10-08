@@ -31,6 +31,11 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"array.splice3": {Array, 3, true}, "array.pop": {Array, 0, true},
 	"array.indexOf": {Array, 1, false}, "array.includes": {Array, 1, false},
 	"array.join":    {Array, 1, false},
+	"array.shift":   {Array, 0, true}, "array.unshift": {Array, 1, true},
+	"set.delete":    {OrderedSet, 1, true}, "map.values": {OrderedMap, 0, false},
+	"string.at": {String, 1, false}, "string.parseInt10": {String, 0, false},
+	"string.replaceFirst": {String, 2, false},
+	"string.slice": {String, 2, false}, "string.localeCompareNames": {String, 1, false},
 	"record.delete": {OrderedMap, 1, true},
 	"map.set":       {OrderedMap, 2, true}, "map.get": {OrderedMap, 1, false}, "map.has": {OrderedMap, 1, false}, "map.size": {OrderedMap, 0, false},
 	"set.add": {OrderedSet, 1, true}, "set.has": {OrderedSet, 1, false}, "set.size": {OrderedSet, 0, false},
@@ -118,8 +123,28 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{i, i}, t, true
 	case "array.splice3":
 		return []Type{i, i, t.Args[0]}, t, true
-	case "array.pop":
+	case "array.pop", "array.shift":
 		return nil, T(Optional, t.Args[0]), true
+	case "array.unshift":
+		return []Type{t.Args[0]}, i, true
+	case "set.delete":
+		return []Type{t.Args[0]}, b, true
+	case "map.values":
+		return nil, T(Array, t.Args[1]), true
+	case "string.at":
+		// Absent when the index is out of range (JavaScript s[i] === undefined).
+		return []Type{i}, T(Optional, T(String)), true
+	case "string.parseInt10":
+		// Radix-10 parseInt; absent stands for NaN (no digits).
+		return nil, T(Optional, T(Number)), true
+	case "string.replaceFirst":
+		return []Type{T(String), T(String)}, T(String), true
+	case "string.slice":
+		return []Type{i, i}, T(String), true
+	case "string.localeCompareNames":
+		// ICU root collation restricted to the object-name domain
+		// [_/0-9A-Z]; any other code unit raises.
+		return []Type{T(String)}, i, true
 	case "array.indexOf":
 		return []Type{t.Args[0]}, i, true
 	case "array.includes":
