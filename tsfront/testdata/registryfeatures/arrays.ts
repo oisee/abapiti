@@ -2,6 +2,15 @@ export class Item {
   constructor(public name: string) {}
 }
 export class ArrayProbe {
+  private static map = new Map<string, number>();
+  private static values = new Set<string>();
+  public static staticCollections(): string {
+    const before = ArrayProbe.map.size;
+    ArrayProbe.map.set("key", 11);
+    ArrayProbe.values.add("value");
+    ArrayProbe.values.add("value");
+    return `${before}/${ArrayProbe.map.size}/${ArrayProbe.map.get("key")}/${ArrayProbe.values.size}`;
+  }
   private static visits = 0;
   private static index(): number { ArrayProbe.visits++; return 0; }
   public static optionalIndex(): string {

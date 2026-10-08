@@ -43,6 +43,16 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	switch recv.Type.Kind {
+	case hir.ClassRef:
+		if arg.Kind == ast.KindStringLiteral {
+			for c := l.classByName(recv.Type.Name); c != nil; c = l.classByName(c.Super) {
+				for _, field := range c.Fields {
+					if !field.Static && field.Name == arg.Text() {
+						return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: field.Name, Type: field.Type, X: recv}
+					}
+				}
+			}
+		}
 	case hir.OrderedMap:
 		k := l.expr(arg)
 		if k == nil {

@@ -82,6 +82,14 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return true
 	case ast.KindNewExpression:
+		// Empty standard collections allocate no observable module/class state.
+		// isNewCollection intentionally selects only literal-population lowering.
+		if expr := n.Expression(); expr != nil && expr.Kind == ast.KindIdentifier && len(n.Arguments()) == 0 {
+			sym := l.resolve(expr)
+			if l.librarySymbol(sym) && l.classOf(sym) == nil && (sym.Name == "Map" || sym.Name == "Set" || sym.Name == "Array") {
+				return true
+			}
+		}
 		if !l.isNewCollection(n) {
 			return false
 		}

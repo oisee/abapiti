@@ -33,7 +33,7 @@ export class JSONProbe {
     else { syntax.ambigiousVoids = [...new Set(syntax.ambigiousVoids)]; }
     if (global.skipIncludesWithoutMain === undefined) { global.skipIncludesWithoutMain = false; }
     if (global.errorOnDuplicateFilenames === undefined) { global.errorOnDuplicateFilenames = false; }
-    return `${global.files}/${syntax.version}/${syntax.errorNamespace}/${syntax.globalConstants.join(",")}/${syntax.ambigiousVoids.join(",")}/${syntax.globalMacros.length}/${global.skipIncludesWithoutMain}/${global.errorOnDuplicateFilenames}/${config.rules.unknown_rule}/${config.targetRules === null}`;
+    return `${global.files}/${syntax.version}/${syntax.errorNamespace}/${syntax.globalConstants.join(",")}/${syntax.ambigiousVoids.join(",")}/${syntax.globalMacros.length}/${global.skipIncludesWithoutMain}/${global.errorOnDuplicateFilenames}/${config["rules"].unknown_rule}/${config["targetRules"] === null}`;
   }
   public static observe(text: string): string {
     const value: any = JSONProbe.parse(text);

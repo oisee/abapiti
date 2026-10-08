@@ -1,8 +1,6 @@
 package tsfront
 
 import (
-	"strings"
-
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
@@ -13,8 +11,21 @@ func (l *lowerer) librarySymbol(sym *ast.Symbol) bool {
 	if sym == nil {
 		return false
 	}
-	f := l.fileOfSymbol(sym)
-	return f != nil && strings.Contains(f.FileName(), "/lib.") && strings.HasSuffix(f.FileName(), ".d.ts")
+	if l.file != nil && l.classesByName[l.file.FileName()+" "+sym.Name] != nil {
+		return false
+	}
+	if len(sym.Declarations) == 0 {
+		return false
+	}
+	// Global user declarations can merge with a library symbol. Checking only
+	// its first declaration would mistake a user constructor for the builtin.
+	for _, declaration := range sym.Declarations {
+		f := ast.GetSourceFileOfNode(declaration)
+		if f == nil || !l.prog.prog.IsSourceFileDefaultLibrary(f.Path()) {
+			return false
+		}
+	}
+	return true
 }
 
 func (l *lowerer) opaquePromise() string {
