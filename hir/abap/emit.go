@@ -467,6 +467,14 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 	clone.Result = e.emittedMethod(c, slot).Result
 	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}}
 	for j, p := range impl.Params {
+		inherited := slot.Params[j]
+		// A required primitive cannot represent undefined passed through the
+		// inherited optional slot. Reading only ->value would silently replace
+		// undefined with an initial primitive (or dereference an unbound ref).
+		if inherited.Type.Kind == hir.Optional && !inherited.Type.Args[0].IsRef() && p.Type.Kind != hir.Optional {
+			e.err = fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name)
+			return ""
+		}
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
 		op := " = "

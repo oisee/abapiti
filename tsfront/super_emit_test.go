@@ -12,11 +12,66 @@ import (
 )
 
 // Scan ABAP tokens rather than lines: wrapping must not hide a SUPER call.
+// Template text is opaque, but embedded expressions can contain real calls
+// and nested templates. Keep quoted literals opaque inside expressions too.
+func superGuardCode(source string) string {
+	var code strings.Builder
+	i := 0
+	var scan func(bool)
+	scan = func(expression bool) {
+		for i < len(source) {
+			ch := source[i]
+			i++
+			switch ch {
+			case '}':
+				if expression {
+					code.WriteByte(' ')
+					return
+				}
+				code.WriteByte(ch)
+			case '\'', '`':
+				code.WriteByte(ch)
+				for i < len(source) {
+					c := source[i]
+					i++
+					code.WriteByte(c)
+					if c == ch {
+						if i < len(source) && source[i] == ch {
+							code.WriteByte(source[i])
+							i++
+						} else {
+							break
+						}
+					}
+				}
+			case '|':
+				code.WriteByte(' ')
+				for i < len(source) {
+					c := source[i]
+					i++
+					if c == '\\' && i < len(source) {
+						i++
+					} else if c == '{' {
+						scan(true)
+					} else if c == '|' {
+						break
+					}
+				}
+				code.WriteByte(' ')
+			default:
+				code.WriteByte(ch)
+			}
+		}
+	}
+	scan(false)
+	return code.String()
+}
+
 func superMethodViolations(files map[string]string) []string {
 	tokens := regexp.MustCompile("(?i)'(?:''|[^'])*'|`(?:``|[^`])*`|[a-z_][a-z_0-9~]*|->|[.]")
 	var violations []string
 	for file, source := range files {
-		words := tokens.FindAllString(strings.ToLower(source), -1)
+		words := tokens.FindAllString(strings.ToLower(superGuardCode(source)), -1)
 		method := ""
 		for i, word := range words {
 			if word == "method" && (i == 0 || words[i-1] == ".") && i+1 < len(words) {
@@ -43,6 +98,33 @@ func TestSuperSameMethodGuard(t *testing.T) {
 	if bad := superMethodViolations(map[string]string{"bad": "METHOD m. super->\nx( ). ENDMETHOD."}); len(bad) != 1 {
 		t.Fatal(bad)
 	}
+	for _, source := range []string{
+		`METHOD m. text = |. METHOD x.|. super->x( ). ENDMETHOD.`,
+		`METHOD m. text = |\| \{ \} . METHOD x.|. super->x( ). ENDMETHOD.`,
+		`METHOD m. text = |text { super->x( ) }|. ENDMETHOD.`,
+		`METHOD m. text = |text { |nested { super->x( ) }| }|. ENDMETHOD.`,
+		`METHOD m. text = |text { '}' } . METHOD x.|. super->x( ). ENDMETHOD.`,
+	} {
+		if bad := superMethodViolations(map[string]string{"bad": source}); len(bad) != 1 || bad[0] != "bad: METHOD m calls super->x" {
+			t.Fatalf("%s: %v", source, bad)
+		}
+	}
+	assertSuperSameMethod(t, map[string]string{"ok": `METHOD m. text = |super->x( ) \| \{ \} { super->m( ) } { |nested super->x( )| }|. ENDMETHOD.`})
+}
+
+func TestOptionalPrimitiveSuperOverrideRejected(t *testing.T) {
+	for _, primitive := range []string{"number", "string", "boolean"} {
+		t.Run(primitive, func(t *testing.T) {
+			prog := lowerStatementsProbe(t, map[string]string{"probe.ts": fmt.Sprintf(`
+ export class Base { f(x?: %s): Base { return this; } }
+ export class Child extends Base { f(x: %s): Child { super.f(x); return this; } }
+ `, primitive, primitive)}, []string{"probe.ts"})
+			files, _, err := abap.EmitNamed(prog)
+			if err == nil || !strings.Contains(err.Error(), "narrowing an inherited optional primitive cannot preserve undefined") || len(files) != 0 {
+				t.Fatalf("expected blocking optional primitive diagnostic with no output, got %v (%d files)", err, len(files))
+			}
+		})
+	}
 }
 func TestCovariantSuperOverride(t *testing.T) {
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": `
@@ -51,10 +133,22 @@ func TestCovariantSuperOverride(t *testing.T) {
  export class Grandchild extends Child { set(x: Base): Grandchild { super.set(x); return this; } }
  export class VoidBase { set(x: Base): void {} }
  export class VoidChild extends VoidBase { set(x: Base): VoidChild { super.set(x); return this; } }
+ export class OptionalBase {
+  value: number = 99;
+  set(x?: number): OptionalBase { this.value = x === undefined ? -1 : x; return this; }
+ }
+ export class OptionalChild extends OptionalBase {
+  set(x?: number): OptionalChild { super.set(x); return this; }
+ }
  export class Probe { static run(): boolean {
   const g = new Grandchild(); const b: Base = g; const x = new Base();
   const v = new VoidChild();
-  return g instanceof Child && b.set(x) === g && g.set(x) === g && v.set(x) === v;
+  const o = new OptionalChild(); const optionalBase: OptionalBase = o;
+  const omitted = optionalBase.set() === o && o.value === -1;
+  const zero = o.set(0) === o && o.value === 0;
+  const supplied = optionalBase.set(42) === o && o.value === 42;
+  const explicit = optionalBase.set(undefined) === o && o.value === -1;
+  return g instanceof Child && b.set(x) === g && g.set(x) === g && v.set(x) === v && omitted && zero && supplied && explicit;
  } }
  `}, []string{"probe.ts"})
 	files, names, err := abap.EmitNamed(prog)
