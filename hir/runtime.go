@@ -13,6 +13,7 @@ type RuntimeSpec struct {
 
 var RuntimeSpecs = map[string]RuntimeSpec{
 	"xml.parseSubset":      {String, 0, false},
+	"json.parseSubset":     {String, 0, false},
 	"dynamic.isNullish":    {Dynamic, 0, false},
 	"dynamic.get":          {Dynamic, 1, false},
 	"dynamic.put":          {Dynamic, 2, true},
@@ -70,7 +71,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
-	case "xml.parseSubset", "dynamic.null":
+	case "xml.parseSubset", "json.parseSubset", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.get":
 		return []Type{T(String)}, T(Dynamic), true

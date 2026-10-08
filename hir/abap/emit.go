@@ -1264,6 +1264,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "json.parseSubset":
+		b.e.jsonSubsetRuntime()
+		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		return
 	case "xml.parseSubset":
 		b.e.xmlSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.xmlSubset") + "=>parse( " + a + " ).")
