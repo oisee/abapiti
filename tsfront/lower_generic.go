@@ -9,6 +9,9 @@ import (
 // the declaration signature; a separate method records the checker signature.
 // The ABAP emitter places inherited bodies in their redefinition slots.
 func (l *lowerer) eraseGenericOverrides() {
+	if l.bridgeTargets == nil {
+		l.bridgeTargets = map[*hir.Method]*hir.Method{}
+	}
 	classes := map[string]*hir.Class{}
 	for _, c := range l.classes {
 		classes[c.Name] = c
@@ -62,6 +65,7 @@ func (l *lowerer) eraseGenericOverrides() {
 			name := m.Name
 			m.Name += "_instantiated_" + c.Name
 			bridge := &hir.Method{Node: m.Node, Name: name, Virtual: true, Result: slot.Result}
+			l.bridgeTargets[bridge] = m
 			args := []*hir.Expr{}
 			for j, p := range slot.Params {
 				bridge.Params = append(bridge.Params, p)
@@ -82,6 +86,7 @@ func (l *lowerer) eraseGenericOverrides() {
 				// for fluent calls whose result is used by class receivers.
 				value := &hir.Method{Node: m.Node, Name: name + "_value", Virtual: true, Result: hir.Ref(hir.RootObject), Params: append([]hir.Param(nil), bridge.Params...), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: call})}
 				c.Methods = append(c.Methods, value)
+				l.bridgeTargets[value] = m
 			}
 			if slot.Result.Kind == hir.Void {
 				bridge.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: call})
@@ -93,5 +98,31 @@ func (l *lowerer) eraseGenericOverrides() {
 	}
 	for _, c := range l.out.Classes {
 		visit(c)
+	}
+}
+
+// Excluded implementations must raise their located coverage trap through
+// every erased entry slot. Their parameter casts cannot be reached in JS and
+// must not turn a coverage trap into a different cast failure in ABAP.
+func (l *lowerer) propagateBridgeTraps() {
+	visited := map[*hir.Method]bool{}
+	var visit func(*hir.Method)
+	visit = func(bridge *hir.Method) {
+		if visited[bridge] {
+			return
+		}
+		visited[bridge] = true
+		target := l.bridgeTargets[bridge]
+		if target == nil {
+			return
+		}
+		visit(target)
+		if target.Body != nil && target.Body.Kind == hir.Block && len(target.Body.List) == 1 && target.Body.List[0].Kind == hir.Trap {
+			trap := *target.Body.List[0]
+			bridge.Body = hir.B(&trap)
+		}
+	}
+	for bridge := range l.bridgeTargets {
+		visit(bridge)
 	}
 }

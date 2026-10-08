@@ -1,7 +1,12 @@
 enum Phase { First = "same", Second = "same", Last = "last" }
 enum Visibility { Private = 1, Protected, Public, Alias = 1 }
 interface AsyncProbe { parseAsync(): Promise<Probe>; }
+interface BridgeAPI { dead(value: any): string; }
+export class ExcludedBridge implements BridgeAPI {
+  public dead(value: Probe): string { return "original body"; }
+}
 export class Probe implements AsyncProbe {
+  public static createBridge(): BridgeAPI { return new ExcludedBridge(); }
   private static calls: number = 0;
   private static next(): number { this.calls++; return 1; }
   private static onlyUndefined() { return undefined; }

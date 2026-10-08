@@ -253,6 +253,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	}
 	l.completeUnionInterfaces()
 	l.covariantImplements()
+	l.propagateBridgeTraps()
 	return l.out, l.diags, nil
 }
 
@@ -298,6 +299,7 @@ type lowerer struct {
 	unions          map[string]*unionView
 	abiReady        bool
 	ifaceClassBases map[string]string
+	bridgeTargets   map[*hir.Method]*hir.Method
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
