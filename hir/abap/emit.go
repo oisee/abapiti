@@ -1133,6 +1133,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	if x.X.Type.Kind == hir.String && strings.HasPrefix(x.Op, "string.") {
+		if x.Op == "string.compareRegistryKey" || x.Op == "string.compareObjectName" {
+			b.e.orderingSubsetRuntime()
+			method := "rule_key"
+			if x.Op == "string.compareObjectName" {
+				method = "object_name"
+			}
+			b.line(n + " = " + b.e.name("runtime.orderingSubset") + "=>" + method + "( p0 = " + a + " p1 = " + args[0] + " ).")
+			return
+		}
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
 		// ABAP strlen and sections count UTF-16 code units, like JavaScript.

@@ -211,3 +211,23 @@ original-TS differential covers primitive find, empty/nonempty every, current
 slot replacement, alias observation, index/array parameters, and optional
 receiver laziness on both runtimes. Generalize later with an explicit sparse
 slot/presence and callback control-flow ABI.
+
+### Source-pinned stable ordering (TASK3 Addenda 4/4b)
+
+`Config.getDefault` sorts by pure metadata keys in `[a-z0-9_]`;
+`FindGlobalDefinitions.run` sorts pure stored uppercase names in `[A-Z0-9_/]`.
+Explicit root weights are `_0123456789abcdefghijklmnopqrstuvwxyz` and
+`_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`. Unsupported characters raise
+`RegistryOrderingSubsetError` with a nonempty explanation. The scope/oracle/
+comparator lists `ordering_domain` as an expected loud divergence.
+
+`Class.getSequencedFiles` copies its file array, then orders by the original four
+pure filename suffix keys; unrecognized suffixes keep the original `-1` key.
+Stable insertion preserves equal-key order and reference identity. These are
+fingerprinted adapters, not a general comparator ABI: metadata is freshly
+constructed pure data whose key is read immediately, and names/filenames are
+stored-string getters. Comparator argument reads keep their left-to-right order.
+The differential checks duplicate-key stability, array aliasing, element
+identity, namespace/punctuation ordering, copy isolation, unknown suffixes, and
+outside-domain failure on both runtimes. Node comparison checked all pairs of
+strings through length two in both domains (1,979,649 and 2,199,289 pairs).

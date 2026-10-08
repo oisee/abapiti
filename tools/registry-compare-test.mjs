@@ -12,7 +12,7 @@ export function fixture() {
  config:{config:{global:{files:"src/*"},syntax:{version:"v702"},rules:{}},release:{name:'v702',ordinal:2},language:'Normal',rules:[]},
  dumps:[{filename:'zprobe.prog.abap',tokens:2,statements:1,structures:1,issues:0,lexerSHA256:hash,statementsSHA256:hash,structuresSHA256:hash,registered:true}],
  negative:{
- duplicate_default:{outcome:'throw',error:'Error',message:'probe'},duplicate_strict:{outcome:'throw',error:'Error',message:'probe'},missing_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_config:{outcome:'throw',error:'SyntaxError',message:'probe'},json5:{outcome:'return',value:{global:{files:'src/*'},syntax:{version:'v702'},rules:{}}},case_sensitivity:{outcome:'throw',error:'Error',message:'probe'},dependency_replaced:{outcome:'throw',error:'Error',message:'probe'},include:{outcome:'throw',error:'Error',message:'probe'}},
+ ordering_domain:{outcome:'return',value:['a','é']},duplicate_default:{outcome:'throw',error:'Error',message:'probe'},duplicate_strict:{outcome:'throw',error:'Error',message:'probe'},missing_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_config:{outcome:'throw',error:'SyntaxError',message:'probe'},json5:{outcome:'return',value:{global:{files:'src/*'},syntax:{version:'v702'},rules:{}}},case_sensitivity:{outcome:'throw',error:'Error',message:'probe'},dependency_replaced:{outcome:'throw',error:'Error',message:'probe'},include:{outcome:'throw',error:'Error',message:'probe'}},
  inventory:[{name:'IF_HTTP_CLIENT',type:'INTF',dependency:true,files:['if_http_client.intf.abap'],xml:null,description:null}]
  };
 }
@@ -65,6 +65,7 @@ test('documented subset divergences require the specified loud failures', () => 
   original.negative.malformed_xml={outcome:'return',value:original.inventory};
   write(root,original);
   const translated=structuredClone(original);
+  translated.negative.ordering_domain={outcome:'throw',error:'RegistryOrderingSubsetError',message:'outside ASCII domain'};
   translated.negative.json5={outcome:'throw',error:'RegistryJSONSubsetError',message:'JSON5-only syntax'};
   translated.negative.malformed_config={outcome:'throw',error:'RegistryJSONSubsetError',message:'invalid JSON'};
   translated.negative.malformed_xml={outcome:'throw',error:'RegistryXMLSubsetError',message:'mismatched end tag'};
@@ -72,9 +73,9 @@ test('documented subset divergences require the specified loud failures', () => 
   assert.equal(compareDirectories(root,candidate).verdict,'MISMATCH');
   const result=compareDirectories(root,candidate,{translated:true});
   assert.equal(result.verdict,'OK');
-  assert.equal(result.divergences.length,3);
+  assert.equal(result.divergences.length,4);
   assert(result.divergences.every(d=>d.pass && d.reason));
-  for (const name of ['json5','malformed_config','malformed_xml']) {
+  for (const name of ['json5','malformed_config','malformed_xml','ordering_domain']) {
    for (const bad of [original.negative[name],{outcome:'throw',error:'Error',message:'unrelated failure'},
     {...translated.negative[name],message:''}]) {
     const mutant=structuredClone(translated);mutant.negative[name]=bad;write(candidate,mutant);

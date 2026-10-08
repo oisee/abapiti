@@ -12,17 +12,19 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
-	"xml.parseSubset":      {String, 0, false},
-	"json.parseSubset":     {String, 0, false},
-	"dynamic.isNullish":    {Dynamic, 0, false},
-	"dynamic.get":          {Dynamic, 1, false},
-	"dynamic.put":          {Dynamic, 2, true},
-	"dynamic.strictEquals": {Dynamic, 1, false},
-	"dynamic.asBoolean":    {Dynamic, 0, false},
-	"dynamic.null":         {Number, 0, false},
-	"clock.telemetry":      {Number, 0, false},
-	"number.remainder2":    {Number, 0, false},
-	"number.index":         {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
+	"xml.parseSubset":           {String, 0, false},
+	"json.parseSubset":          {String, 0, false},
+	"string.compareRegistryKey": {String, 1, false},
+	"string.compareObjectName":  {String, 1, false},
+	"dynamic.isNullish":         {Dynamic, 0, false},
+	"dynamic.get":               {Dynamic, 1, false},
+	"dynamic.put":               {Dynamic, 2, true},
+	"dynamic.strictEquals":      {Dynamic, 1, false},
+	"dynamic.asBoolean":         {Dynamic, 0, false},
+	"dynamic.null":              {Number, 0, false},
+	"clock.telemetry":           {Number, 0, false},
+	"number.remainder2":         {Number, 0, false},
+	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
 	"string.charAt": {String, 1, false}, "string.substr": {String, 2, false},
@@ -89,6 +91,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "string.concat":
 		return []Type{T(String)}, T(String), true
+	case "string.compareRegistryKey", "string.compareObjectName":
+		return []Type{T(String)}, i, true
 	case "string.substring":
 		return []Type{i, i}, T(String), true
 	case "string.charCodeAt":

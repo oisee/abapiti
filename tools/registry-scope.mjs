@@ -2,6 +2,7 @@
 // These are expectations, not omissions: a translated run must raise the
 // specified exception with a nonempty explanation. All other fields compare.
 export const documentedDivergences = Object.freeze([
+ Object.freeze({name:'ordering_domain', exception:'RegistryOrderingSubsetError', original:'return', reason:'ICU-root adapter supports rule keys [a-z0-9_] and uppercase object names [A-Z0-9_/]; other characters raise'}),
  Object.freeze({name:'json5', exception:'RegistryJSONSubsetError', original:'return', reason:'strict JSON adapter rejects comments, unquoted keys, single quotes and trailing commas'}),
  Object.freeze({name:'malformed_config', exception:'RegistryJSONSubsetError', original:'throw', reason:'invalid JSON raises the adapter exception rather than JSON5-specific syntax diagnostics'}),
  Object.freeze({name:'malformed_xml', exception:'RegistryXMLSubsetError', original:'return', reason:'mismatched XML end tags are outside the supported fast-xml-parser subset'}),
@@ -27,4 +28,9 @@ export const nondeterministicObservations = Object.freeze([
  Object.freeze({name:'ABAPParser.parse Date.now / parse runtimes', reason:'nondeterministic, not compared'}),
  Object.freeze({name:'RulesRunner.runRules Date.now / rule runtimes', reason:'nondeterministic, not compared'}),
  Object.freeze({name:'times, durations and counters of elapsed work', reason:'nondeterministic, not compared'}),
+]);
+
+export const orderingDomains = Object.freeze([
+ Object.freeze({name:'rule keys', alphabet:'_0123456789abcdefghijklmnopqrstuvwxyz', pattern:'^[a-z0-9_]*$'}),
+ Object.freeze({name:'uppercase object names', alphabet:'_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', pattern:'^[A-Z0-9_/]*$'}),
 ]);

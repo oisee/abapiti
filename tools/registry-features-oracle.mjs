@@ -38,3 +38,8 @@ new Function('exports','module',jsonCompiled)(jsonModule.exports,jsonModule);
 jsonModule.exports.JSONProbe.config=JSON.parse;
 const configCases=[{global:{files:'/src/**/*.abap'},syntax:{version:'v702',errorNamespace:'^Z',globalConstants:['B','A','B'],ambigiousVoids:['Z','Z']},rules:{unknown_rule:false},targetRules:null,extra:{retained:[1,true,null]}},{global:{files:'x',skipIncludesWithoutMain:true,errorOnDuplicateFilenames:true},syntax:{errorNamespace:'^Y'},rules:{}}];
 writeFileSync('tsfront/testdata/registryfeatures/config-oracle.json',JSON.stringify(configCases.map(input=>({input:JSON.stringify(input),expected:jsonModule.exports.JSONProbe.defaults(JSON.stringify(input))})),null,2)+'\n');
+
+const sortCompiled=ts.transpileModule(readFileSync('tsfront/testdata/registryfeatures/sorts.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const sortModule={exports:{}};
+new Function('exports','module',sortCompiled)(sortModule.exports,sortModule);
+writeFileSync('tsfront/testdata/registryfeatures/sorts-oracle.json',JSON.stringify({ruleKeys:sortModule.exports.SortProbe.ruleKeys(),objectNames:sortModule.exports.SortProbe.objectNames(),fileSequence:sortModule.exports.SortProbe.fileSequence(),ordering_domain:{outcome:'return',value:sortModule.exports.SortProbe.rejected()}},null,2)+'\n');

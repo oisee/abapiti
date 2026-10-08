@@ -55,7 +55,7 @@ export function validateObservations(o) {
  for (const r of c.rules) if (!record(r) || !text(r.key) || !record(r.config)) fail('rules');
  if (!Array.isArray(o.dumps) || !o.dumps.length || o.dumps.length !== m.abapFiles || o.dumps.filter(d=>d.registered).length !== m.registeredABAPFiles) fail('dump counts');
  for (const d of o.dumps) if (!record(d) || !text(d.filename) || !['tokens','statements','structures','issues'].every(k=>count(d[k])) || !['lexerSHA256','statementsSHA256','structuresSHA256'].every(k=>hash(d[k])) || typeof d.registered !== 'boolean') fail('dump entry');
- const names=['duplicate_default','duplicate_strict','missing_xml','malformed_xml','malformed_config','json5','case_sensitivity','dependency_replaced','include'];
+ const names=['duplicate_default','duplicate_strict','missing_xml','malformed_xml','malformed_config','json5','case_sensitivity','dependency_replaced','include','ordering_domain'];
  if (!record(o.negative) || names.some(k=>!Object.hasOwn(o.negative,k))) fail('negative observations');
  for (const [key,n] of Object.entries(o.negative)) {
   if (!record(n) || (n.outcome === 'return' ? !Object.hasOwn(n,'value') : n.outcome !== 'throw' || !text(n.error) || typeof n.message !== 'string')) fail('negative outcome');

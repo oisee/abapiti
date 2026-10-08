@@ -124,6 +124,7 @@ try {
  capture("missing_xml", () => inventory(small([f("zmissing.prog.abap","REPORT zmissing.")])));
  capture("malformed_xml", () => inventory(small([f("zbroken.prog.xml","<abapGit><broken></abapGit>"),f("zbroken.prog.abap","REPORT zbroken.")])));
  capture("malformed_config", () => new Config("{syntax:").get());
+ capture("ordering_domain", () => ["é", "a"].sort((a,b) => a.localeCompare(b)));
  capture("json5", () => new Config("{ // comment\n syntax: { version: 'v702', }, rules: {}, }").get());
  capture("case_sensitivity", () => {
   const r = small([f("ZCASE.PROG.ABAP","REPORT zcase.")]);
