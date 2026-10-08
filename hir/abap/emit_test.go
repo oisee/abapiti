@@ -203,6 +203,11 @@ func TestGlobalClassDefinitions(t *testing.T) {
 		actual.WriteString(name + "\n" + definitions[name] + "\n")
 	}
 	path := filepath.Join("testdata", "global_definitions_v750.txt")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, []byte(actual.String()), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	gold, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -538,5 +543,91 @@ func Test750Syntax(t *testing.T) {
 	}
 	if !strings.Contains(a, "IS INSTANCE OF") || !strings.Contains(a, "VALUE abap_bool( )") || strings.Contains(a, "narrowed ?=") {
 		t.Fatal("default syntax or helper regression")
+	}
+}
+
+func TestSequenceYieldScope(t *testing.T) {
+	seq := &hir.Expr{Kind: hir.Seq, Type: i32, Stmt: hir.B(decl("captured", i32, lit(7))), Y: local("captured", i32)}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Sequence", Methods: []*hir.Method{method("run", i32, hir.B(ret(seq)))}}}}
+	files, err := Emit(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, source := range files {
+		if strings.Contains(source, " = .") {
+			t.Fatalf("%s: lost sequence local", name)
+		}
+	}
+}
+
+func TestDescriptorAncestryStaysInShard(t *testing.T) {
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Alpha"}, {Name: "Beta", Super: "Alpha"}}}
+	e := &emitter{p: p, names: hir.NewNames(), descCount: map[string]int{}}
+	parent, _ := e.descriptorShard("Alpha")
+	child, _ := e.descriptorShard("Beta")
+	if parent != child {
+		t.Fatal("inheritance descriptors cross module initialization boundaries")
+	}
+}
+
+func TestSizedArrayAllocatesBeforeFilling(t *testing.T) {
+	array := hir.T(hir.Array, i32)
+	value := newObj(array)
+	value.Args = []*hir.Expr{lit(3)}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Sized", Methods: []*hir.Method{method("run", i32, hir.B(ret(rt("array.length", value, i32))))}}}}
+	files, names, err := EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := files[names.Get("Sized")+".clas.abap"]
+	at := strings.Index(source, "APPEND ")
+	if at < 0 || !strings.Contains(source[:at], "CREATE OBJECT") {
+		t.Fatal("sized array fills an unallocated container")
+	}
+}
+
+func TestStaticInitializationWaitsForUse(t *testing.T) {
+	init := method("class_constructor", hir.T(hir.Void), hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32}, Y: lit(7)}))
+	init.Static = true
+	run := method("run", i32, hir.B(ret(&hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32})))
+	run.Static = true
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Registry", Fields: []hir.Field{{Name: "value", Type: i32, Static: true}}, Methods: []*hir.Method{init, run}}}}
+	files, names, err := EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := files[names.Get("Registry")+".clas.abap"]
+	if strings.Contains(source, "METHOD class_constructor.") || !strings.Contains(source, "CALL METHOD "+names.Get("Registry")+"=>"+names.Get("builtin.initialize.Registry")) {
+		t.Fatal("static initializer must be guarded and called on use")
+	}
+}
+
+func TestDynamicStringBoxReachesBoxEmitter(t *testing.T) {
+	boxed := rt("dynamic.of", hir.L(str, "word"), hir.T(hir.Dynamic))
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Box", Methods: []*hir.Method{method("run", hir.T(hir.Dynamic), hir.B(ret(boxed)))}}}}
+	files, names, err := EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := files[names.Get("Box")+".clas.abap"]
+	if !strings.Contains(source, "->sval = ") || !strings.Contains(source, "=>tag_string") {
+		t.Fatal("string receiver swallowed dynamic.of")
+	}
+}
+
+func TestClassValueFactoryExposesZeroArgumentClasses(t *testing.T) {
+	ctor := method("constructor", hir.T(hir.Void), hir.B())
+	ctor.Params = []hir.Param{{Name: "required", Type: i32}}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Available", Methods: []*hir.Method{method("type", hir.T(hir.ClassValue), hir.B(ret(&hir.Expr{Kind: hir.ClassOf, Owner: "Available", Type: hir.T(hir.ClassValue)})))}}, {Name: "Requires", Ctor: ctor}}}
+	files, names, err := EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := files[names.Get("runtime.classvalue.factory")+".clas.abap"]
+	if !strings.Contains(source, "CREATE OBJECT result TYPE "+names.Get("Available")+".") {
+		t.Fatal("zero-argument class invisible to closure discovery")
+	}
+	if strings.Contains(source, "CREATE OBJECT result TYPE "+names.Get("Requires")+".") {
+		t.Fatal("required constructor exposed as zero-argument factory branch")
 	}
 }

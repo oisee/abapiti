@@ -18,7 +18,11 @@ const (
 	Array        Kind = "array"
 	OrderedMap   Kind = "map"
 	OrderedSet   Kind = "set"
-	Void         Kind = "void"
+	RegExp       Kind = "regexp"
+	// Dynamic is a tagged union value (string, class value or object
+	// reference in one variable): JavaScript `typeof` dispatch works on it.
+	Dynamic Kind = "dynamic"
+	Void    Kind = "void"
 )
 
 // Type describes meaning, never a target spelling. Number is binary64 and
@@ -47,7 +51,7 @@ func (t Type) String() string {
 }
 func (t Type) Equal(u Type) bool { return t.String() == u.String() }
 func (t Type) IsRef() bool {
-	return t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet
+	return t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet || t.Kind == RegExp || t.Kind == Dynamic || t.Kind == ClassValue
 }
 
 type Node struct {
@@ -81,6 +85,9 @@ type Field struct {
 type Param struct {
 	Name string
 	Type Type
+	// Variadic marks the trailing `...rest` parameter: callers may pass any
+	// number of extra arguments, collected into this array.
+	Variadic bool
 }
 type Method struct {
 	Node
@@ -113,7 +120,14 @@ const (
 	IsUndefined ExprKind = "undefined"
 	ToBoolean   ExprKind = "boolean"
 	Narrow      ExprKind = "narrow"
+	Cast        ExprKind = "cast"
 	RuntimeOp   ExprKind = "runtime"
+	// ClassOf is the class value of a statically known class (a descriptor
+	// reference at run time).
+	ClassOf ExprKind = "classof"
+	// Seq runs X (a Block) for its effect, then yields Y: the front end's
+	// home for statements that must precede an expression (inlined loops).
+	Seq ExprKind = "seq"
 )
 
 type Expr struct {
@@ -124,6 +138,7 @@ type Expr struct {
 	Value           any // nil denotes undefined; primitive Optional literals denote present values
 	X, Y, Z         *Expr
 	Args            []*Expr
+	Stmt            *Stmt // Seq: the statements evaluated before Y
 }
 type StmtKind string
 

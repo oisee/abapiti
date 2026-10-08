@@ -9,6 +9,7 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"github.com/oisee/abapiti/internal/tsgo/scanner"
+	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // LowerDiagnostic is one finding of the lowering. Categories starting with
@@ -32,7 +33,12 @@ func (d LowerDiagnostic) String() string { return d.Category + " " + d.Loc + ": 
 // result reports unsupported constructs and policy notes. Files should be
 // passed in a deterministic order; declaration order in the HIR follows it.
 func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error) {
+	return p.LowerWithOverrides(files, overrides.Abaplint())
+}
+
+func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registry) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
+		overrides:     map[*ast.Node]overrides.Entry{},
 		prog:          p,
 		implicitCtors: map[*hir.Class]bool{},
 		out:           &hir.Program{},
@@ -49,6 +55,15 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 		fieldsBy:      map[string]hir.Field{},
 		modvarsByName: map[string]modvarRef{},
 		synthsByName:  map[string]*hir.Class{},
+		enums:         map[string]map[string]string{},
+		nsNeeded:      map[string]bool{},
+		views:         map[string]*hir.Interface{},
+		ifaceNodes:    map[string]*ast.Node{},
+		funcsBy:       map[string]funcRef{},
+		covariants:    map[string]map[string]bool{},
+	}
+	if err := l.validateOverrides(files, registry); err != nil {
+		return nil, nil, err
 	}
 	for _, name := range files {
 		f, ok := p.File(name)
@@ -61,15 +76,40 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 		l.registerFile(f)
 		done()
 	}
-	// Module values first: the purity whitelist excludes class dependencies.
+	// Namespace modules used as values need their export map; module-level
+	// functions and enums are registered before any body references them.
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		l.lowerModule(f)
+		l.scanModuleUse(f)
 		done()
 	}
-	// Signatures before bodies, so bodies resolve every member.
+	// Allocate namespace fields before any module body can reference them.
+	for _, name := range files {
+		f, _ := p.File(name)
+		if l.nsNeeded[f.FileName()] {
+			mod := l.moduleClassOf(f)
+			mod.Fields = append(mod.Fields, hir.Field{Name: "ns", Static: true, Type: hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))})
+		}
+	}
+	// Method interfaces before class signatures: inferred implementations and
+	// union views must see the same interface identity in every file.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range f.Statements.Nodes {
+			if stmt.Kind == ast.KindInterfaceDeclaration && !l.isDataInterface(stmt) {
+				if i := l.ifaceOf(stmt.Symbol()); i != nil {
+					l.interfaceSignatures(stmt, i)
+				}
+			}
+		}
+		done()
+	}
+	// Signatures before module values and bodies: module-level functions
+	// (lowered with the modules) call into classes.
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
@@ -97,6 +137,96 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 	for _, c := range l.out.Classes {
 		inherit(c)
 	}
+	l.eraseGenericOverrides()
+	l.abiReady = true
+	l.completeUnionInterfaces()
+	l.covariantImplements()
+	l.eraseGenericOverrides()
+	// Register all module function signatures before lowering any function body.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, fn := range f.Statements.Nodes {
+			if fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil {
+				continue
+			}
+			mod := l.moduleClassOf(f)
+			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Result: hir.T(hir.Void)}
+			l.class, l.method = mod, hm
+			if e, ok := l.overrides[fn]; ok && e.Method != nil {
+				hm = e.Method()
+				hm.Node = l.node(fn)
+				l.diagf(fn, "note-override", "%s: %s", e.ID, e.Rationale)
+			} else {
+				l.signature(fn, hm)
+			}
+			mod.Methods = append(mod.Methods, hm)
+			l.funcsBy[f.FileName()+" "+hm.Name] = funcRef{owner: mod.Name, method: hm.Name}
+			l.methodsBy[mod.Name+"."+hm.Name] = hm
+		}
+		done()
+	}
+	// Register module-variable signatures before any module function body.
+	// Bodies may refer to imported values whose initializers occur later.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range f.Statements.Nodes {
+			if stmt.Kind != ast.KindVariableStatement {
+				continue
+			}
+			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+				if d.Name() == nil || d.Name().Kind != ast.KindIdentifier {
+					continue
+				}
+				before := len(l.diags)
+				var typ hir.Type
+				if d.Type() != nil {
+					typ = l.mapTypeNode(d.Type())
+				} else if d.Initializer() != nil && d.Initializer().Kind == ast.KindSatisfiesExpression {
+					typ = l.mapTypeNode(d.Initializer().Type())
+				} else {
+					typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+				}
+				valid := typ.Kind != hir.Void && !hasBlocking(l.diags[before:])
+				l.diags = l.diags[:before]
+				if !valid {
+					continue
+				}
+				mod := l.moduleClassOf(f)
+				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true})
+				l.modvars[d.Symbol()] = d.Name().Text()
+				l.modvarsByName[f.FileName()+" "+d.Name().Text()] = modvarRef{owner: mod.Name, field: d.Name().Text()}
+			}
+		}
+		done()
+	}
+	// Module values after signatures: module functions call class members.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		l.lowerModule2(f)
+		done()
+	}
+	// Namespace modules outside the lowered file list still need their
+	// (possibly empty) export map: nothing in them is lowered, but code
+	// iterates them.
+	for name := range l.nsNeeded {
+		f, ok := p.File(name)
+		if !ok {
+			continue
+		}
+		if l.modules[f] != nil {
+			continue
+		}
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		l.lowerModule2(f)
+		done()
+	}
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
@@ -104,30 +234,60 @@ func (p *Program) Lower(files []string) (*hir.Program, []LowerDiagnostic, error)
 		l.bodiesFile(f)
 		done()
 	}
+	l.completeUnionInterfaces()
+	l.covariantImplements()
 	return l.out, l.diags, nil
 }
 
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	prog          *Program
-	ck            *checker.Checker
-	file          *ast.SourceFile
-	out           *hir.Program
-	diags         []LowerDiagnostic
-	classes       map[*ast.Symbol]*hir.Class
-	ifaces        map[*ast.Symbol]*hir.Interface
-	methods       map[*ast.Symbol]*hir.Method
-	fields        map[*ast.Symbol]hir.Field
-	synths        map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
-	modules       map[*ast.SourceFile]*hir.Class
-	modvars       map[*ast.Symbol]string // module variable symbol -> field name
-	scope         []map[string]hir.Type
-	class         *hir.Class  // class whose member is being lowered
-	method        *hir.Method // method being lowered
+	overrides map[*ast.Node]overrides.Entry
+	prog      *Program
+	ck        *checker.Checker
+	file      *ast.SourceFile
+	out       *hir.Program
+	diags     []LowerDiagnostic
+	classes   map[*ast.Symbol]*hir.Class
+	ifaces    map[*ast.Symbol]*hir.Interface
+	methods   map[*ast.Symbol]*hir.Method
+	fields    map[*ast.Symbol]hir.Field
+	synths    map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
+	modules   map[*ast.SourceFile]*hir.Class
+	modvars   map[*ast.Symbol]string // module variable symbol -> field name
+	scope     []map[string]hir.Type
+	class     *hir.Class  // class whose member is being lowered
+	method    *hir.Method // method being lowered
+	serial    int
+	hint      hir.Type // contextual type for undefined literals
+
+	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
+	pend []*hir.Stmt
+	// enums maps "file name" + " " + enum name -> member -> string value.
+	enums map[string]map[string]string
+	// nsNeeded marks module files that are imported as a namespace and used
+	// as a value; they get an export map in their module class.
+	nsNeeded map[string]bool
+	// views holds lazily grown cast-view interfaces for non-lowered classes.
+	views    map[string]*hir.Interface
+	unions   map[string]*unionView
+	abiReady bool
+	// ifaceNodes maps interface names to their declarations (for checker
+	// queries about interface types).
+	ifaceNodes map[string]*ast.Node
+	// funcsBy registers module-level functions (by owner file + name).
+	funcsBy map[string]funcRef
+	// covariants records implicit "class implements interface" edges that the
+	// structural conversion discovered (owner class -> interface name).
+	covariants map[string]map[string]bool
+	// localFns are the arrow functions lifted to methods in the current
+	// method body, by local name; pendingFns are the ones not lifted yet.
+	localFns   map[string]*localFn
+	pendingFns map[string]*ast.Node
+	// replacements rebind one identifier node during an optional-chain
+	// rewrite ([node, replacement] pairs).
+	replacements  [][2]any
 	implicitCtors map[*hir.Class]bool
-	serial        int
-	hint          hir.Type // contextual type for undefined literals
 
 	// The per-file checkers hand out distinct symbol pointers for the same
 	// cross-file declaration, so every registry also has a by-name view keyed
@@ -142,7 +302,22 @@ type lowerer struct {
 	synthsByName  map[string]*hir.Class
 }
 
-// classOf resolves a class symbol through both registries.
+// funcRef names the module class and static method of a module function.
+type funcRef struct {
+	owner, method string
+}
+
+// localFn is one arrow function lifted to a private method: its captures are
+// passed as leading parameters (they are immutable locals).
+type localFn struct {
+	method   *hir.Method
+	captures []string // local names, in declaration order
+	owner    *hir.Class
+}
+
+// classOf resolves a class symbol through both registries. The by-name
+// fallback is scoped to the declaring file: TypeScript files are namespaces,
+// and abaplint has Plus the token and Plus the combinator.
 func (l *lowerer) classOf(sym *ast.Symbol) *hir.Class {
 	if sym == nil {
 		return nil
@@ -150,41 +325,58 @@ func (l *lowerer) classOf(sym *ast.Symbol) *hir.Class {
 	if c, ok := l.classes[sym]; ok {
 		return c
 	}
-	if sym.Parent == nil {
-		if c, ok := l.classesByName[sym.Name]; ok {
+	if f := l.fileOfSymbol(sym); f != nil {
+		if c, ok := l.classesByName[f.FileName()+" "+sym.Name]; ok {
 			return c
 		}
 	}
-	return l.classesByName[sym.Name]
+	return nil
 }
 
 // ifaceOf resolves an interface symbol through both registries.
 func (l *lowerer) ifaceOf(sym *ast.Symbol) *hir.Interface {
+	if sym == nil {
+		return nil
+	}
 	if i, ok := l.ifaces[sym]; ok {
 		return i
 	}
-	return l.ifacesByName[sym.Name]
+	if f := l.fileOfSymbol(sym); f != nil {
+		return l.ifacesByName[f.FileName()+" "+sym.Name]
+	}
+	return nil
 }
 
 // methodOf resolves a member symbol through both registries.
 func (l *lowerer) methodOf(sym *ast.Symbol) *hir.Method {
+	if sym == nil {
+		return nil
+	}
 	if m, ok := l.methods[sym]; ok {
 		return m
 	}
 	if sym.Parent != nil {
-		return l.methodsBy[sym.Parent.Name+"."+sym.Name]
+		if f := l.fileOfSymbol(sym.Parent); f != nil {
+			key := f.FileName() + " " + sym.Parent.Name + "." + sym.Name
+			return l.methodsBy[key]
+		}
 	}
 	return nil
 }
 
 // fieldOf resolves a field symbol through both registries.
 func (l *lowerer) fieldOf(sym *ast.Symbol) (hir.Field, bool) {
+	if sym == nil {
+		return hir.Field{}, false
+	}
 	if f, ok := l.fields[sym]; ok {
 		return f, true
 	}
 	if sym.Parent != nil {
-		if f, ok := l.fieldsBy[sym.Parent.Name+"."+sym.Name]; ok {
-			return f, true
+		if f := l.fileOfSymbol(sym.Parent); f != nil {
+			if fd, ok := l.fieldsBy[f.FileName()+" "+sym.Parent.Name+"."+sym.Name]; ok {
+				return fd, true
+			}
 		}
 	}
 	return hir.Field{}, false
@@ -205,18 +397,41 @@ func (l *lowerer) modvarOf(sym *ast.Symbol) (string, string, bool) {
 			return mod.Name, name, true
 		}
 	}
-	if r, ok := l.modvarsByName[l.file.FileName()+" "+sym.Name]; ok {
-		return r.owner, r.field, true
+	if f := l.fileOfSymbol(sym); f != nil {
+		if r, ok := l.modvarsByName[f.FileName()+" "+sym.Name]; ok {
+			return r.owner, r.field, true
+		}
+	}
+	// The symbol may carry no declaration in this checker's view; a module
+	// variable name that is unique across all lowered files resolves
+	// unambiguously by name.
+	var found modvarRef
+	count := 0
+	suffix := " " + sym.Name
+	for key, r := range l.modvarsByName {
+		if len(key) > len(suffix) && key[len(key)-len(suffix):] == suffix {
+			found = r
+			count++
+		}
+	}
+	if count == 1 {
+		return found.owner, found.field, true
 	}
 	return "", "", false
 }
 
 // synthOf resolves an object-shape alias symbol through both registries.
 func (l *lowerer) synthOf(sym *ast.Symbol) *hir.Class {
+	if sym == nil {
+		return nil
+	}
 	if c, ok := l.synths[sym]; ok {
 		return c
 	}
-	return l.synthsByName[sym.Name]
+	if f := l.fileOfSymbol(sym); f != nil {
+		return l.synthsByName[f.FileName()+" "+sym.Name]
+	}
+	return nil
 }
 
 func (l *lowerer) diagf(n *ast.Node, category, format string, args ...any) {
@@ -253,11 +468,20 @@ func (l *lowerer) qualifiedName(f *ast.SourceFile, name string) string {
 	return rel + "." + name
 }
 
-// resolve returns the symbol at node with import aliases resolved.
+// resolve returns the symbol at node with import aliases resolved. Property
+// accesses on interface-typed receivers can resolve without a parent through
+// the checker pool; the member name node carries the full symbol.
 func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
+	}
+	if sym.Parent == nil && n != nil && n.Kind == ast.KindPropertyAccessExpression {
+		if name := n.Name(); name != nil {
+			if ns := l.ck.GetSymbolAtLocation(name); ns != nil && ns.Parent != nil {
+				sym = ns
+			}
+		}
 	}
 	if sym.Flags&ast.SymbolFlagsAlias != 0 {
 		if target, ok := l.ck.ResolveAlias(sym); ok {
@@ -273,71 +497,37 @@ func (l *lowerer) registerFile(f *ast.SourceFile) {
 		case ast.KindClassDeclaration:
 			if name := stmt.Name(); name != nil && stmt.Symbol() != nil {
 				c := &hir.Class{Node: l.node(stmt), Name: l.qualifiedName(f, name.Text())}
-				if old, ok := l.classesByName[name.Text()]; ok && old != c {
+				key := f.FileName() + " " + name.Text()
+				if old, ok := l.classesByName[key]; ok && old != c {
 					l.diagf(stmt, "unsupported-decl", "duplicate class name %s", name.Text())
 					continue
 				}
 				l.classes[stmt.Symbol()] = c
-				l.classesByName[name.Text()] = c
+				l.classesByName[key] = c
 				l.out.Classes = append(l.out.Classes, c)
 			}
 		case ast.KindInterfaceDeclaration:
+			if l.isDataInterface(stmt) && stmt.Name() != nil && stmt.Symbol() != nil {
+				c := &hir.Class{Node: l.node(stmt), Name: l.qualifiedName(f, stmt.Name().Text())}
+				l.classes[stmt.Symbol()] = c
+				l.classesByName[f.FileName()+" "+stmt.Name().Text()] = c
+				l.out.Classes = append(l.out.Classes, c)
+				continue
+			}
 			if name := stmt.Name(); name != nil && stmt.Symbol() != nil {
 				i := &hir.Interface{Node: l.node(stmt), Name: l.qualifiedName(f, name.Text())}
-				if old, ok := l.ifacesByName[name.Text()]; ok && old != i {
+				key := f.FileName() + " " + name.Text()
+				if old, ok := l.ifacesByName[key]; ok && old != i {
 					l.diagf(stmt, "unsupported-decl", "duplicate interface name %s", name.Text())
 					continue
 				}
 				l.ifaces[stmt.Symbol()] = i
-				l.ifacesByName[name.Text()] = i
+				l.ifacesByName[key] = i
+				l.ifaceNodes[i.Name] = stmt
 				l.out.Interfaces = append(l.out.Interfaces, i)
 			}
 		}
 	}
-}
-
-func (l *lowerer) lowerModule(f *ast.SourceFile) {
-	var decls []*ast.Node
-	for _, stmt := range f.Statements.Nodes {
-		if stmt.Kind != ast.KindVariableStatement {
-			switch stmt.Kind {
-			case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
-			default:
-				l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
-			}
-			continue
-		}
-		list := stmt.AsVariableStatement().DeclarationList
-		if list == nil || list.Kind != ast.KindVariableDeclarationList {
-			continue
-		}
-		if list.Flags&ast.NodeFlagsConst == 0 {
-			l.diagf(stmt, "unsupported-top-level", "only const initializers are supported at module scope")
-		}
-		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
-			if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Symbol() != nil {
-				decls = append(decls, d)
-			} else {
-				l.diagf(d, "unsupported-top-level", "module bindings require a simple identifier")
-			}
-		}
-	}
-	if len(decls) == 0 {
-		return
-	}
-	qname := l.qualifiedName(f, "module")
-	mod := &hir.Class{Node: hir.Node{ID: l.nextID(), Source: qname}, Name: qname}
-	init := &hir.Method{Node: hir.Node{ID: l.nextID(), Source: qname}, Name: "class_constructor", Static: true, Result: hir.T(hir.Void)}
-	l.class = mod
-	l.method = init
-	l.modules[f] = mod // before the initializers, which reference earlier fields
-	l.out.Classes = append(l.out.Classes, mod)
-	body := []*hir.Stmt{}
-	for _, d := range decls {
-		body = append(body, l.moduleVar(d, mod)...)
-	}
-	init.Body = hir.B(body...)
-	mod.Methods = append(mod.Methods, init)
 }
 
 // moduleVar lowers one module-level const/let into a static field plus the
@@ -347,11 +537,8 @@ func (l *lowerer) lowerModule(f *ast.SourceFile) {
 func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	name := d.Name().Text()
 	init := d.Initializer()
-	if init == nil {
-		l.diagf(d, "unsupported-top-level", "module const requires an initializer")
-		return nil
-	}
-	if !l.pureInitializer(init, nil, map[*ast.Node]bool{}) {
+	sym := d.Symbol()
+	if init != nil && !l.moduleInitializer(init) {
 		l.diagf(init, "unsupported-static-init", "module initializer is not provably pure and order-independent")
 		return nil
 	}
@@ -360,7 +547,16 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	switch {
 	case d.Type() != nil:
 		typ = l.mapTypeNode(d.Type())
-		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, l.expr(init), typ)}
+		if typ.Kind == hir.Void {
+			return nil
+		}
+		l.hint = typ
+		x := l.expr(init)
+		l.hint = hir.Type{}
+		if x == nil {
+			return nil
+		}
+		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, x, typ)}
 	case l.isNewCollection(init):
 		var expr *hir.Expr
 		stmts, expr = l.collectionInit(init)
@@ -370,14 +566,41 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		typ = expr.Type
 		stmts = append(stmts, l.assignStatic(mod, d, name, expr, typ))
 	default:
+		// Node-based type queries are valid across the checker pool;
+		// symbol-based ones are not (types do not mix between checkers).
+		mapped := l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if mapped.Kind == hir.Void && sym != nil {
+			before := len(l.diags)
+			mapped = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))
+			if len(l.diags) != before {
+				l.diags = l.diags[:before]
+				mapped = hir.T(hir.Void)
+			}
+		}
+		if mapped.Kind == hir.Void {
+			return nil
+		}
+		typ = mapped
+		l.hint = typ
 		expr := l.expr(init)
+		l.hint = hir.Type{}
 		if expr == nil {
 			return nil
 		}
 		typ = expr.Type
 		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, expr, typ)}
 	}
-	mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true})
+	found := false
+	for i := range mod.Fields {
+		if mod.Fields[i].Name == name {
+			mod.Fields[i].Type = typ
+			found = true
+			break
+		}
+	}
+	if !found {
+		mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: name, Type: typ, Static: true})
+	}
 	l.modvars[d.Symbol()] = name
 	l.modvarsByName[l.file.FileName()+" "+name] = modvarRef{owner: mod.Name, field: name}
 	return stmts
@@ -411,7 +634,13 @@ func (l *lowerer) isNewCollection(n *ast.Node) bool {
 	if declFile == nil || !l.prog.prog.IsSourceFileDefaultLibrary(declFile.Path()) {
 		return false
 	}
-	return sym.Name == "Set" || sym.Name == "Map" || sym.Name == "Array"
+	if sym.Name != "Set" && sym.Name != "Map" && sym.Name != "Array" {
+		return false
+	}
+	// Only the array-literal initializers go through collectionInit; empty
+	// collections and copies are handled by newExpression.
+	args := n.Arguments()
+	return len(args) == 1 && args[0].Kind == ast.KindArrayLiteralExpression
 }
 
 // collectionInit lowers `new Set<T>([...])` in a statement context into a
@@ -470,7 +699,13 @@ func (l *lowerer) collectionInit(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
 func (l *lowerer) typeArgAt(n *ast.Node, i int) (hir.Type, bool) {
 	targs := n.TypeArguments()
 	if len(targs) <= i {
-		l.diagf(n, "unsupported-new", "missing explicit type argument")
+		before := len(l.diags)
+		mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		if !hasBlocking(l.diags[before:]) && i < len(mapped.Args) {
+			return mapped.Args[i], true
+		}
+		l.diags = l.diags[:before]
+		l.diagf(n, "unsupported-new", "missing explicit or inferable type argument")
 		return hir.Type{}, false
 	}
 	return l.mapTypeNode(targs[i]), true

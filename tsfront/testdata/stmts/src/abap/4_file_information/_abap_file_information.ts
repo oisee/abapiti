@@ -1,0 +1,135 @@
+import {Identifier} from "./_identifier";
+import {Visibility} from "./visibility";
+
+// Only helper functions to get data from single file, no type information
+
+export enum AttributeLevel {
+  Instance = "instance",
+  Static = "static",
+  Constant = "constant",
+}
+
+export enum MethodParameterDirection {
+  Importing = "importing",
+  Exporting = "exporting",
+  Changing = "changing",
+  Returning = "returning",
+}
+
+export interface InfoAttribute {
+  name: string,
+  identifier: Identifier,
+  level: AttributeLevel,
+  readOnly: boolean,
+  visibility: Visibility,
+}
+
+export interface InfoMethodParameter {
+  name: string,
+  identifier: Identifier,
+  direction: MethodParameterDirection,
+}
+
+export interface InfoMethodDefinition {
+  name: string,
+  identifier: Identifier,
+// todo, level, Instance or Static
+  isRedefinition: boolean,
+  isEventHandler: boolean,
+  isForTesting: boolean,
+  isAbstract: boolean,
+  isFinal: boolean,
+  /** "DEFAULT IGNORE", 7.40 SP08: an implementing class need not implement this method,
+   * and a call of it on an unimplemented method does nothing */
+  isDefaultIgnore: boolean,
+  /** "DEFAULT FAIL", 7.40 SP08: an implementing class need not implement this method,
+   * and a call of it raises CX_SY_DYN_CALL_ILLEGAL_METHOD */
+  isDefaultFail: boolean,
+  visibility: Visibility,
+  parameters: InfoMethodParameter[],
+  exceptions: string[],
+}
+
+export interface InfoInterfaceDefinition {
+  name: string,
+  identifier: Identifier;
+  isLocal: boolean;
+  isGlobal: boolean;
+  interfaces: readonly InfoImplementing[];
+  methods: readonly InfoMethodDefinition[];
+  aliases: readonly InfoAlias[],
+  constants: readonly InfoConstant[],
+  attributes: readonly InfoAttribute[];
+}
+
+export interface InfoConstant {
+  identifier: Identifier;
+  name: string,
+  typeName: string,
+  visibility: Visibility,
+  value: string
+}
+
+export interface InfoAlias {
+  name: string,
+  identifier: Identifier;
+  visibility: Visibility,
+  component: string
+}
+
+export interface InfoImplementing {
+  name: string,
+  partial: boolean,
+  allAbstract: boolean,
+  abstractMethods: string[],
+  finalMethods: string[],
+}
+
+export enum Duration {
+  short = "SHORT",
+  medium = "MEDIUM",
+  long = "LONG",
+}
+
+export enum RiskLevel {
+  harmless = "HARMLESS",
+  critical = "CRITICAL",
+  dangerous = "DANGEROUS",
+}
+
+export interface InfoClassDefinition extends InfoInterfaceDefinition {
+  superClassName: string | undefined;
+  isAbstract: boolean;
+  isFinal: boolean;
+  interfaces: readonly InfoImplementing[];
+  isForTesting: boolean;
+  duration: Duration | undefined,
+  riskLevel: RiskLevel | undefined,
+  isSharedMemory: boolean;
+  /** name of the BDEF from "FOR BEHAVIOR OF", undefined if not a behavior pool */
+  behaviorDefinitionName: string | undefined;
+}
+
+export interface InfoClassImplementation {
+  name: string,
+  identifier: Identifier;
+  methods: readonly Identifier[];
+}
+
+export interface InfoFormDefinition {
+  name: string,
+  identifier: Identifier;
+}
+
+export interface IABAPFileInformation {
+  listInterfaceDefinitions(): readonly InfoInterfaceDefinition[];
+  getInterfaceDefinitionByName(name: string): InfoInterfaceDefinition | undefined;
+
+  listClassDefinitions(): readonly InfoClassDefinition[];
+  getClassDefinitionByName(name: string): InfoClassDefinition | undefined;
+
+  listFormDefinitions(): readonly InfoFormDefinition[];
+
+  listClassImplementations(): readonly InfoClassImplementation[];
+  getClassImplementationByName(name: string): InfoClassImplementation | undefined;
+}

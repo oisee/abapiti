@@ -1,0 +1,25 @@
+import {IStatement} from "./_statement";
+import {verNotLang, str, seq, opt, per, altPrio} from "../combi";
+import {Source} from "../expressions";
+import {LanguageVersion} from "../../../version";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class Search implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const starting = seq("STARTING AT", Source);
+    const ending = seq("ENDING AT", Source);
+    const mark = str("AND MARK");
+
+    const mode = altPrio("IN BYTE MODE", "IN CHARACTER MODE");
+
+    const ret = seq("SEARCH",
+                    Source,
+                    "FOR",
+                    Source,
+                    opt(per(mode, starting, ending, mark)));
+
+    return verNotLang(LanguageVersion.Cloud, ret);
+  }
+
+}

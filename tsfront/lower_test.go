@@ -70,13 +70,13 @@ func TestLowerLexerClosure(t *testing.T) {
 		}
 	}
 	// The closure must lower completely: only policy notes and the one
-	// skipped debug method are allowed.
+	// pinned debug-method exclusion are allowed.
 	want := map[string]int{
-		"skipped-computed-name": 1, // [Symbol.for("debug.description")] in AbstractToken
-		"note-number-binary64":  40,
-		"note-optional-param":   1,
-		"note-regex-mapped":     1,
-		"note-union-base":       1,
+		"note-override":        1, // fingerprinted debugDescription trap in AbstractToken
+		"note-number-binary64": 40,
+		"note-optional-param":  1,
+		"note-regex-mapped":    1,
+		"note-union-base":      1,
 	}
 	if !reflect.DeepEqual(byCategory, want) {
 		t.Errorf("diagnostic categories %v, want %v", byCategory, want)

@@ -1,0 +1,57 @@
+import {IStatement} from "./_statement";
+import {verNotLang, seq, alt, per, opt} from "../combi";
+import {Source} from "../expressions";
+import {LanguageVersion} from "../../../version";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class NewPage implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const line = seq("LINE-SIZE", Source);
+    const print = seq("PRINT", alt("OFF", "ON"));
+    const parameters = seq("PARAMETERS", Source);
+    const destination = seq("DESTINATION", Source);
+    const archive = seq("ARCHIVE PARAMETERS", Source);
+    const lineCount = seq("LINE-COUNT", Source);
+    const coverText = seq("COVER TEXT", Source);
+    const coverPage = seq("SAP COVER PAGE", Source);
+    const immediately = seq("IMMEDIATELY", Source);
+    const copies = seq("COPIES", Source);
+    const keep = seq("KEEP IN SPOOL", Source);
+    const layout = seq("LAYOUT", Source);
+    const listAuth = seq("LIST AUTHORITY", Source);
+    const department = seq("DEPARTMENT", Source);
+    const receiver = seq("RECEIVER", Source);
+    const dataset = seq("LIST DATASET", Source);
+    const name = seq("LIST NAME", Source);
+    const newList = seq("NEW LIST IDENTIFICATION", Source);
+
+    const ret = seq("NEW-PAGE",
+                    opt(per(print,
+                            alt("NO-TITLE", "WITH-TITLE"),
+                            alt("NO-HEADING", "WITH-HEADING"),
+                            "NO DIALOG",
+                            "NO-TOPOFPAGE",
+                            parameters,
+                            listAuth,
+                            immediately,
+                            dataset,
+                            coverPage,
+                            newList,
+                            keep,
+                            department,
+                            name,
+                            layout,
+                            destination,
+                            receiver,
+                            copies,
+                            coverText,
+                            archive,
+                            "NEW-SECTION",
+                            lineCount,
+                            line)));
+
+    return verNotLang(LanguageVersion.Cloud, ret);
+  }
+
+}

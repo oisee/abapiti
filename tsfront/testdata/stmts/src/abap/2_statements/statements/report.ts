@@ -1,0 +1,25 @@
+import {IStatement} from "./_statement";
+import {verNotLang, str, seq, opt, per, tok, alt} from "../combi";
+import {Integer, MessageClass, Field, ReportName} from "../expressions";
+import {LanguageVersion} from "../../../version";
+import {ParenLeft, ParenRight, ParenRightW} from "../../1_lexer/tokens";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class Report implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const more = seq(tok(ParenLeft), Integer, alt(tok(ParenRightW), tok(ParenRight)));
+    const heading = str("NO STANDARD PAGE HEADING");
+    const size = seq("LINE-SIZE", Integer);
+    const count = seq("LINE-COUNT", Integer, opt(more));
+    const message = seq("MESSAGE-ID", MessageClass);
+    const database = seq("USING DATABASE", Field);
+
+    const ret = seq("REPORT",
+                    opt(ReportName),
+                    opt(per(heading, size, count, database, message)));
+
+    return verNotLang(LanguageVersion.Cloud, ret);
+  }
+
+}

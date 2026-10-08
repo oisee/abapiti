@@ -3,6 +3,8 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 )
 
 // Statement lowering. l.scope holds the declared type of every local in
@@ -28,6 +30,9 @@ func (l *lowerer) lookup(n string) (hir.Type, bool) {
 }
 
 func (l *lowerer) block(n *ast.Node) *hir.Stmt {
+	if e, ok := l.overrides[n]; ok && e.Body != nil {
+		return e.Body()
+	}
 	l.push()
 	s := l.stmt(n)
 	l.pop()
@@ -56,6 +61,15 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 }
 
 func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
+	for parent := n.Parent; parent != nil; parent = parent.Parent {
+		if e, ok := l.overrides[parent]; ok && len(e.Statements) > 0 {
+			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+			if build := e.Statements[span]; build != nil {
+				l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
+				return build()
+			}
+		}
+	}
 	switch n.Kind {
 	case ast.KindBlock:
 		l.push()
@@ -100,16 +114,31 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		if x == nil {
 			return nil
 		}
-		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: x}
+		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
 		return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
 	case ast.KindContinueStatement:
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
 	case ast.KindEmptyStatement:
 		return nil
-	case ast.KindThrowStatement, ast.KindTryStatement, ast.KindSwitchStatement, ast.KindForInStatement, ast.KindDoStatement, ast.KindLabeledStatement:
-		l.diagf(n, "unsupported-statement", "%s is not lowered", n.Kind.String())
-		return nil
+	case ast.KindThrowStatement:
+		t := n.AsThrowStatement()
+		if t.Expression == nil {
+			l.diagf(n, "unsupported-statement", "rethrow without an expression")
+			return nil
+		}
+		l.hint = hir.Type{}
+		x := l.expr(t.Expression)
+		if x == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.Throw, Node: l.node(n), X: x}
+	case ast.KindTryStatement:
+		return l.tryStatement(n)
+	case ast.KindSwitchStatement:
+		return l.switchStatement(n)
+	case ast.KindForInStatement:
+		return l.forInStatement(n)
 	}
 	l.diagf(n, "unsupported-statement", "%s is not lowered", n.Kind.String())
 	return nil
@@ -133,6 +162,9 @@ func (l *lowerer) scopeBlock(n *ast.Node) *hir.Stmt {
 // declaration itself lands in the enclosing scope, never in a nested block.
 // Destructuring is rejected.
 func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
+	if d.Name() != nil && (d.Name().Kind == ast.KindObjectBindingPattern || d.Name().Kind == ast.KindArrayBindingPattern) {
+		return l.destructureDecl(d)
+	}
 	if d.Name() == nil || d.Name().Kind != ast.KindIdentifier || d.Symbol() == nil {
 		l.diagf(d, "unsupported-binding", "variable declaration with a binding pattern")
 		return nil
@@ -140,10 +172,21 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	name := d.Name().Text()
 	sym := d.Symbol()
 	init := d.Initializer()
+	if init != nil && (init.Kind == ast.KindArrowFunction || init.Kind == ast.KindFunctionExpression) {
+		if _, lifted := l.pendingFns[name]; lifted {
+			// Lifted to a method; calls resolve through localFns.
+			l.declare(name, hir.T(hir.Void))
+			return nil
+		}
+	}
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	var x *hir.Expr
 	switch {
+	case init != nil && (d.Type() == nil || d.Type().Kind == ast.KindAnyKeyword) && l.isNamespaceValue(init):
+		x, _ = l.namespaceRef(init)
+		typ = x.Type
+		l.diagf(d, "note-any-namespace-alias", "namespace alias retains its registry type")
 	case init != nil && l.isNewCollection(init):
 		var expr *hir.Expr
 		stmts, expr = l.collectionInit(init)
@@ -152,14 +195,18 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 		typ = expr.Type
 		x = expr
-	case init != nil && init.Kind == ast.KindArrayLiteralExpression:
-		var expr *hir.Expr
-		stmts, expr = l.arrayLiteral(init)
-		if expr == nil || expr.Kind != hir.Local {
+	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
+		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if typ.Kind == hir.Void {
 			return nil
 		}
-		typ = expr.Type
-		x = expr
+		l.hint = typ
+		x = l.expr(init)
+		l.hint = hir.Type{}
+		if x == nil {
+			return nil
+		}
+		typ = x.Type
 	default:
 		switch {
 		case d.Type() != nil:
@@ -175,6 +222,20 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if typ.Kind == hir.Void {
 			return nil
 		}
+		if typ.Kind != hir.Optional && init != nil {
+			// An initializer that may be undefined makes the local optional.
+			if it := l.ck.GetTypeAtLocation(init); it != nil && it.IsUnion() {
+				optional := false
+				for _, c := range it.AsUnionOrIntersectionType().Types() {
+					if c.Flags()&checker.TypeFlagsUndefined != 0 {
+						optional = true
+					}
+				}
+				if optional {
+					typ = hir.T(hir.Optional, typ)
+				}
+			}
+		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.
 			l.hint = typ
@@ -182,6 +243,15 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			l.hint = hir.Type{}
 			if x == nil {
 				return nil
+			}
+			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
+				typ = x.Type
+			}
+			// An initializer that yields an optional (map lookups, optional
+			// chains) makes the local optional even when the declared type
+			// does not spell it out.
+			if x.Type.Kind == hir.Optional && typ.Kind != hir.Optional {
+				typ = x.Type
 			}
 		}
 	}
@@ -225,6 +295,20 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 	if n == nil {
 		return nil
 	}
+	if n.Kind == ast.KindPostfixUnaryExpression {
+		u := n.AsPostfixUnaryExpression()
+		if u.Operator == ast.KindPlusPlusToken || u.Operator == ast.KindMinusMinusToken {
+			target := l.assignTarget(u.Operand)
+			if target == nil {
+				return nil
+			}
+			op := "+"
+			if u.Operator == ast.KindMinusMinusToken {
+				op = "-"
+			}
+			return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: target.Type, Op: op, X: target, Y: hir.L(target.Type, 1)}}
+		}
+	}
 	if n.Kind == ast.KindBinaryExpression {
 		b := n.AsBinaryExpression()
 		switch b.OperatorToken.Kind {
@@ -240,7 +324,7 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 			// `x += s` on strings concatenates.
 			if l.ck.GetTypeAtLocation(b.Left).IsStringLike() {
 				return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
-					Y: l.rtOp("string.concat", target, hir.T(hir.String), l.expr(b.Right))}
+					Y: l.rtOp("string.concat", l.expr(b.Left), hir.T(hir.String), l.expr(b.Right))}
 			}
 			return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
 				Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: target.Type,
@@ -259,22 +343,54 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 	if target == nil {
 		return nil
 	}
+	if target.Kind == hir.RuntimeOp && target.Op == "map.set" {
+		// m[k] = v lowers to map.set(m, k, v).
+		l.hint = target.X.Type.Args[1]
+		v := l.expr(rhs)
+		l.hint = hir.Type{}
+		if v == nil {
+			return nil
+		}
+		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], v)
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: set}
+	}
 	l.hint = target.Type
 	x := l.expr(rhs)
 	l.hint = hir.Type{}
 	if x == nil {
 		return nil
 	}
+	x = l.coerce(x, target.Type)
 	return &hir.Stmt{Kind: hir.Assign, Node: l.node(at), X: target, Y: x}
 }
 
-// assignTarget lowers the left side of an assignment: locals, `this.x` fields
-// and static fields.
+// assignTarget lowers the left side of an assignment: locals, `this.x`
+// fields, static fields, map slots and array indexes (including a field of
+// an indexed element).
 func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 	if lhs == nil {
 		return nil
 	}
 	switch lhs.Kind {
+	case ast.KindElementAccessExpression:
+		e := lhs.AsElementAccessExpression()
+		recv := l.expr(e.Expression)
+		if recv == nil {
+			return nil
+		}
+		arg := l.expr(e.ArgumentExpression)
+		if arg == nil {
+			return nil
+		}
+		switch recv.Type.Kind {
+		case hir.OrderedMap:
+			return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "map.set", Type: recv.Type,
+				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
+		case hir.Array:
+			return &hir.Expr{Kind: hir.IndexGet, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(arg)}
+		}
+		l.diagf(lhs, "unsupported-assignment", "element assignment on %s is not lowered", recv.Type.Kind)
+		return nil
 	case ast.KindIdentifier:
 		name := lhs.Text()
 		if t, ok := l.lookup(name); ok {
@@ -301,17 +417,13 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		f, hasField := l.fieldOf(sym)
 		if sym != nil && hasField {
 			if f.Static {
-				var owner *hir.Class
+				owner := l.classOf(sym.Parent)
 				if p.Expression.Kind == ast.KindThisKeyword {
 					owner = l.class
-				} else {
-					owner = l.classOf(l.resolve(p.Expression))
 				}
 				if owner != nil {
 					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(lhs), Owner: owner.Name, Name: f.Name, Type: f.Type}
 				}
-				l.diagf(lhs, "unsupported-expr", "static field receiver is not a class")
-				return nil
 			}
 			if p.Expression.Kind == ast.KindThisKeyword {
 				return &hir.Expr{Kind: hir.FieldGet, Node: l.node(lhs), Name: f.Name, Type: f.Type, X: l.this(l.class)}
@@ -372,17 +484,49 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		return nil
 	}
 	decls := f.Initializer.AsVariableDeclarationList().Declarations.Nodes
-	if len(decls) != 1 || decls[0].Name() == nil || decls[0].Name().Kind != ast.KindIdentifier || decls[0].Symbol() == nil {
-		l.diagf(n, "unsupported-statement", "for-of needs a single identifier binding")
+	if len(decls) != 1 || decls[0].Name() == nil {
+		l.diagf(n, "unsupported-statement", "for-of needs a single binding")
 		return nil
 	}
-	name := decls[0].Name().Text()
-	elem := l.mapCheckerType(decls[0], l.ck.GetTypeOfSymbol(decls[0].Symbol()))
+	var elemT *checker.Type
+	if sym := decls[0].Symbol(); sym != nil {
+		elemT = l.ck.GetTypeOfSymbol(sym)
+	}
+	if elemT == nil {
+		elemT = l.ck.GetTypeAtLocation(decls[0])
+	}
+	if elemT == nil {
+		l.diagf(n, "unsupported-statement", "for-of binding without a type")
+		return nil
+	}
+	elem := l.mapCheckerType(decls[0], elemT)
 	x := l.expr(f.Expression)
-	if x == nil || elem.Kind == hir.Void {
+	if x == nil {
+		return nil
+	}
+	if x.Type.Kind == hir.Array {
+		elem = x.Type.Args[0]
+	}
+	if elem.Kind == hir.Void {
 		return nil
 	}
 	l.push()
+	if decls[0].Name().Kind != ast.KindIdentifier {
+		// A destructuring binding: loop over a fresh name, then declare the
+		// pattern's fields from it.
+		l.serial++
+		name := "f" + itoa(l.serial)
+		l.destructurePattern(decls[0].Name(), hir.V(name, elem))
+		body := l.scopeBlock(f.Statement)
+		l.pop()
+		// The pattern's field declarations were appended to the prelude;
+		// splice them into the loop body head.
+		pre := l.pend
+		l.pend = nil
+		return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: elem, X: x,
+			Body: hir.B(append(pre, body)...)}
+	}
+	name := decls[0].Name().Text()
 	l.declare(name, elem)
 	body := l.scopeBlock(f.Statement)
 	l.pop()
@@ -420,3 +564,5 @@ func (l *lowerer) fileOfSymbol(sym *ast.Symbol) *ast.SourceFile {
 	}
 	return ast.GetSourceFileOfNode(decl)
 }
+
+func (l *lowerer) isNamespaceValue(n *ast.Node) bool { _, ok := l.namespaceRef(n); return ok }

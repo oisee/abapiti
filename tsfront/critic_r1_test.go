@@ -28,7 +28,7 @@ func lowerProbe(t *testing.T, dir string) (*hir.Program, []LowerDiagnostic) {
 // regression coverage rather than rebuilt from the implementation.
 func TestCriticR1Diagnostics(t *testing.T) {
 	for name, category := range map[string]string{
-		"default": "unsupported-param-default", "default_required": "unsupported-param-default", "before_super_this": "unsupported-before-super", "radix": "unsupported-call",
+		"before_super_this": "unsupported-before-super", "radix": "unsupported-call",
 		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
 		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
 		"unproven_as": "unsupported-assertion", "super_reorder": "unsupported-top-level",
@@ -50,7 +50,7 @@ func TestCriticR1Diagnostics(t *testing.T) {
 }
 
 func TestCriticR1Accepted(t *testing.T) {
-	for _, name := range []string{"implicit_init", "static_init", "super_preserved", "optional_downcast", "unicode_mode", "overflow", "inherited_init", "static_order", "number_semantics", "proven_as", "regex_literals", "unicode_upper", "supplementary", "unicode_codes", "unicode_trim"} {
+	for _, name := range []string{"default", "default_required", "implicit_init", "static_init", "super_preserved", "optional_downcast", "unicode_mode", "overflow", "inherited_init", "static_order", "number_semantics", "proven_as", "regex_literals", "unicode_upper", "supplementary", "unicode_codes", "unicode_trim"} {
 		t.Run(name, func(t *testing.T) {
 			prog, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", name))
 			for _, d := range diags {
@@ -78,6 +78,10 @@ func TestCriticR1Accepted(t *testing.T) {
 			// Each emitted probe carries a runtime oracle independent of HIR shape.
 			var check string
 			switch name {
+			case "default":
+				check = "DATA boxed TYPE " + strings.TrimPrefix("REF TO "+names.Get("runtime.optional<number>"), "") + ".\nboxed = obj->" + names.Get("member.caller") + "( ).\nactual = boxed->value.\nexpected = 7."
+			case "default_required":
+				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = 7."
 			case "implicit_init":
 				check = "actual = obj->" + names.Get("member.run") + "( ).\nexpected = 7."
 			case "static_init":
