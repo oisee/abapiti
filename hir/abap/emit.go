@@ -1290,11 +1290,18 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			tag = "tag_string"
 		} else if x.X.Type.Kind == hir.ClassValue {
 			tag = "tag_class"
+		} else if x.X.Type.Kind == hir.Number {
+			tag = "tag_number"
+		} else if !x.X.Type.IsRef() {
+			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", x.X.Type)
+			return
 		}
 		b.line("CREATE OBJECT " + n + ".")
 		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
 		if x.X.Type.Kind == hir.String {
 			b.line(n + "->sval = " + a + ".")
+		} else if x.X.Type.Kind == hir.Number {
+			b.line(n + "->nval = " + a + ".")
 		} else if x.X.Type.Kind == hir.ClassValue {
 			b.line(n + "->cval = " + a + ".")
 		} else {
@@ -1303,9 +1310,20 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + "->oval = " + conv + ".")
 		}
 		return
-	case "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+	case "dynamic.typeof", "dynamic.toString":
+		b.line("IF " + a + " IS BOUND.")
+		method := "type_of"
+		if x.Op == "dynamic.toString" {
+			method = "to_string"
+		}
+		b.line(n + " = " + a + "->" + method + "( ).")
+		b.line("ELSE.")
+		b.line(n + " = `undefined`.")
+		b.line("ENDIF.")
+		return
+	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
 		// The box methods use snake_case ABAP names.
-		op := map[string]string{"dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
+		op := map[string]string{"dynamic.isNumber": "is_number", "dynamic.asNumber": "as_number", "dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
 		target := n
 		if x.Op == "dynamic.asRef" {
 			target = b.temp(hir.Ref(hir.RootObject))

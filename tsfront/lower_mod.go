@@ -2,12 +2,15 @@ package tsfront
 
 import (
 	"context"
+	"math"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/jsnum"
 )
 
 // Module-level lowering for phase 2: namespace export maps (a module used as
@@ -103,18 +106,39 @@ func (l *lowerer) registerEnum(f *ast.SourceFile, n *ast.Node) {
 		return
 	}
 	members := map[string]string{}
+	numbers := map[string]float64{}
 	for _, m := range e.Members.Nodes {
 		if m.Name() == nil {
 			continue
 		}
-		init := m.Initializer()
-		if init == nil || init.Kind != ast.KindStringLiteral {
-			// Non-string-literal members (numbers, computed) are not lowered.
+		value := l.ck.GetConstantValue(m)
+		switch v := value.(type) {
+		case string:
+			members[m.Name().Text()] = v
+		case jsnum.Number:
+			numeric := float64(v)
+			// Canonical nonnegative integer reverse keys sort ahead of member
+			// names in JS Object.keys/values. Other numeric domains block.
+			if numeric < 0 || numeric >= 4294967295 || math.Trunc(numeric) != numeric {
+				l.diagf(m, "unsupported-enum", "numeric enum reverse key is outside the supported integer domain")
+				return
+			}
+			numbers[m.Name().Text()] = numeric
+		default:
+			l.diagf(m, "unsupported-enum", "enum member must have a constant value")
 			return
 		}
-		members[m.Name().Text()] = init.Text()
 	}
-	l.enums[f.FileName()+" "+n.Name().Text()] = members
+	key := f.FileName() + " " + n.Name().Text()
+	if len(members) > 0 && len(numbers) > 0 {
+		l.diagf(n, "unsupported-enum", "heterogeneous enum namespace is not lowered")
+		return
+	}
+	if len(numbers) > 0 {
+		l.enumNumbers[key] = numbers
+	} else {
+		l.enums[key] = members
+	}
 }
 
 // enumOf resolves the member table for an enum symbol.
@@ -196,7 +220,7 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindEnumDeclaration:
-			if l.enumOf(stmt.Symbol()) != nil {
+			if l.enumOf(stmt.Symbol()) != nil || l.numericEnumOf(stmt.Symbol()) != nil {
 				enums = true
 			}
 		case ast.KindFunctionDeclaration:
@@ -222,7 +246,7 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		body = append(body, l.nsMapInit(f, mod)...)
 	}
 	if enums {
-		body = append(body, l.enumArraysInit(f, mod)...)
+		body = append(body, l.enumNamespacesInit(f, mod)...)
 	}
 	if vars {
 		l.lowerModuleVars(f, mod, &body)
@@ -273,9 +297,8 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	return out
 }
 
-// enumArraysInit creates one static string array per enum holding the member
-// values in declaration order, for Object.values(E).
-func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
+// enumNamespacesInit creates each string enum object in declaration order.
+func (l *lowerer) enumNamespacesInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	var out []*hir.Stmt
 	names := make([]string, 0)
 	for key := range l.enums {
@@ -286,11 +309,10 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 	sort.Strings(names)
 	for _, name := range names {
 		members := l.enums[f.FileName()+" "+name]
-		field := name + "_values"
-		typ := hir.T(hir.Array, hir.T(hir.String))
-		mod.Fields = append(mod.Fields, hir.Field{Node: hir.Node{ID: l.nextID(), Source: name}, Name: field, Type: typ, Static: true})
-		decl := l.assignStatic(mod, f.AsNode(), field, &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: name}, Type: typ}, typ)
-		out = append(out, decl)
+		mapType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.String))
+		mapField := name + "_namespace"
+		mod.Fields = append(mod.Fields, hir.Field{Name: mapField, Type: mapType, Static: true})
+		out = append(out, l.assignStatic(mod, f.AsNode(), mapField, &hir.Expr{Kind: hir.New, Type: mapType}, mapType))
 		// declaration order of the enum members
 		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind != ast.KindEnumDeclaration || stmt.Name() == nil || stmt.Name().Text() != name {
@@ -304,10 +326,43 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 				if !ok {
 					continue
 				}
-				out = append(out, &hir.Stmt{Kind: hir.ExprStmt, Node: hir.Node{ID: l.nextID(), Source: name},
-					X: l.rtOp("array.push", &hir.Expr{Kind: hir.StaticGet, Node: hir.Node{ID: l.nextID(), Source: name}, Owner: mod.Name, Name: field, Type: typ}, hir.T(hir.I32),
-						&hir.Expr{Kind: hir.Lit, Node: hir.Node{ID: l.nextID(), Source: name}, Type: hir.T(hir.String), Value: v})})
+				out = append(out, &hir.Stmt{Kind: hir.ExprStmt,
+					X: l.rtOp("map.set", &hir.Expr{Kind: hir.StaticGet, Owner: mod.Name, Name: mapField, Type: mapType}, mapType,
+						hir.L(hir.T(hir.String), m.Name().Text()), hir.L(hir.T(hir.String), v))})
 			}
+		}
+	}
+	for _, stmt := range l.statementNodes(f) {
+		if stmt.Kind != ast.KindEnumDeclaration {
+			continue
+		}
+		members := l.numericEnumOf(stmt.Symbol())
+		if members == nil {
+			continue
+		}
+		field := stmt.Name().Text() + "_namespace"
+		typ := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+		mod.Fields = append(mod.Fields, hir.Field{Name: field, Type: typ, Static: true})
+		out = append(out, l.assignStatic(mod, stmt, field, &hir.Expr{Kind: hir.New, Type: typ}, typ))
+		reverse := map[float64]string{}
+		for _, m := range stmt.AsEnumDeclaration().Members.Nodes {
+			reverse[members[m.Name().Text()]] = m.Name().Text()
+		}
+		var keys []float64
+		for k := range reverse {
+			keys = append(keys, k)
+		}
+		sort.Float64s(keys)
+		add := func(key string, value *hir.Expr) {
+			out = append(out, &hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("map.set",
+				&hir.Expr{Kind: hir.StaticGet, Owner: mod.Name, Name: field, Type: typ}, typ,
+				hir.L(hir.T(hir.String), key), l.rtOp("dynamic.of", value, hir.T(hir.Dynamic)))})
+		}
+		for _, k := range keys {
+			add(strconv.FormatFloat(k, 'f', 0, 64), hir.L(hir.T(hir.String), reverse[k]))
+		}
+		for _, m := range stmt.AsEnumDeclaration().Members.Nodes {
+			add(m.Name().Text(), hir.L(hir.T(hir.Number), members[m.Name().Text()]))
 		}
 	}
 	return out
@@ -352,26 +407,37 @@ func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 	}
 }
 
-// enumValuesField returns the module static holding Object.values(E).
-func (l *lowerer) enumValuesField(sym *ast.Symbol) (string, string, bool) {
-	f := l.fileOfSymbol(sym)
-	if f == nil {
-		return "", "", false
-	}
-	if mod := l.modules[f]; mod != nil {
-		name := sym.Name + "_values"
-		for _, fd := range mod.Fields {
-			if fd.Name == name && fd.Static {
-				return mod.Name, name, true
-			}
-		}
-	}
-	return "", "", false
-}
-
 func relName(name string) string {
 	if i := strings.LastIndex(name, string(filepath.Separator)); i >= 0 {
 		return name[i+1:]
 	}
 	return name
+}
+
+// String enums are objects when used as values: computed lookup and
+// Object.keys must retain keys and declaration order, including duplicate values.
+func (l *lowerer) enumNamespace(n *ast.Node) (*hir.Expr, bool) {
+	sym := l.resolve(n)
+	if sym == nil || (l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil) {
+		return nil, false
+	}
+	f := l.fileOfSymbol(sym)
+	if mod := l.modules[f]; mod != nil {
+		valueType := hir.T(hir.String)
+		if l.numericEnumOf(sym) != nil {
+			valueType = hir.T(hir.Dynamic)
+		}
+		return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: mod.Name,
+			Name: sym.Name + "_namespace", Type: hir.T(hir.OrderedMap, hir.T(hir.String), valueType)}, true
+	}
+	return nil, false
+}
+
+func (l *lowerer) numericEnumOf(sym *ast.Symbol) map[string]float64 {
+	if sym != nil {
+		if f := l.fileOfSymbol(sym); f != nil {
+			return l.enumNumbers[f.FileName()+" "+sym.Name]
+		}
+	}
+	return nil
 }

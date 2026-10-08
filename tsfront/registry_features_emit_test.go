@@ -28,8 +28,11 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	// The observed run body is deliberately OBSERVATION-only, so this
 	// differential also fails if pruning omits the acceptance workload.
 	runStart := strings.Index(text, "public static run(")
-	runEnd := strings.LastIndex(text[:start], "}") + 1
+	runEnd := strings.LastIndex(text[:strings.Index(text, "public async parseAsync")], "}") + 1
 	coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: runStart, End: runEnd, Kind: "MethodDeclaration", Line: strings.Count(text[:runStart], "\n") + 1, SHA256: overrides.Fingerprint(text[runStart:runEnd]), Executed: true, Workloads: []string{"OBSERVATION"}})
+	asyncStart := strings.Index(text, "public async parseAsync")
+	asyncEnd := strings.Index(text[asyncStart:], "}") + asyncStart + 1
+	coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: asyncStart, End: asyncEnd, Kind: "MethodDeclaration", Line: strings.Count(text[:asyncStart], "\n") + 1, SHA256: overrides.Fingerprint(text[asyncStart:asyncEnd]), Executed: true, Workloads: []string{"UPSTREAM"}})
 	p, err := Load(filepath.Join(dir, "tsconfig.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -107,6 +110,15 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	line("CATCH %s INTO DATA(failure).", names.Get("exception.unexecuted"))
 	line("caught = abap_true.")
 	line("cl_abap_unit_assert=>assert_equals( act = failure->source_location exp = `probe.ts:%d` ).", coverage.Spans[0].Line)
+	line("ENDTRY.")
+	line("cl_abap_unit_assert=>assert_equals( act = caught exp = abap_true ).")
+	line("CLEAR caught.")
+	line("TRY.")
+	line("DATA(probe) = NEW %s( ).", class)
+	line("probe->%s( ).", names.Get("member.parseAsync"))
+	line("CATCH %s INTO failure.", names.Get("exception.unexecuted"))
+	line("caught = abap_true.")
+	line("cl_abap_unit_assert=>assert_equals( act = failure->source_location exp = `probe.ts:%d` ).", coverage.Spans[2].Line)
 	line("ENDTRY.")
 	line("cl_abap_unit_assert=>assert_equals( act = caught exp = abap_true ).")
 	line("ENDMETHOD.")

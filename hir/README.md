@@ -21,7 +21,14 @@ code units on the SAP kernel (verified on 7.58), OSG-JS and pinned osgo, like
 JavaScript. The osgo pin fixes runtime gap 026 for supplementary input.
 Primitive optionals use specialized immutable boxes with value and has members;
 reference optionals use an initial reference. Primitive optional equality compares
-presence and, when present, the contained value. There is no null type in this phase.
+presence and, when present, the contained value. Null is blocking until its distinct tagged representation is implemented.
+String coercion of primitive optionals evaluates the operand once and emits
+`undefined` for absence. Optional relational coercions remain blocking.
+String enum namespaces preserve member order and produce fresh values snapshots.
+Numeric enums support nonnegative integer values below 4294967295, including
+reverse mappings with canonical integer keys first. Their mixed namespace values
+use tagged string/number boxes; other numeric domains and heterogeneous enums
+are blocking.
 Arrays, maps, and sets are reference objects, preserving aliasing. Maps and sets
 use linear lookup in an insertion-ordered table; updating a key preserves its
 position, and reference keys compare identity. `map.keys` and `set.values` return

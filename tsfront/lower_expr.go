@@ -164,6 +164,12 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if l.acceptsType(typ, x.Type) {
 		return x
 	}
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && typ.Kind != hir.Optional {
+		x = &hir.Expr{Kind: hir.Narrow, Type: hir.T(hir.Dynamic), X: x}
+	}
+	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.Number {
+		return l.rtOp("dynamic.asNumber", x, typ)
+	}
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.String {
 		return l.rtOp("dynamic.asString", x, typ)
 	}
@@ -205,11 +211,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindTrueKeyword:
 		return hir.L(hir.T(hir.Bool), true)
 	case ast.KindNullKeyword:
-		// `null` is the absent value (there is no null in the HIR).
-		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
-			return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: l.hint}
-		}
-		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, hir.Ref(hir.RootObject))}
+		l.diagf(n, "unsupported-null", "null requires a distinct tagged value")
+		return nil
 	case ast.KindFalseKeyword:
 		return hir.L(hir.T(hir.Bool), false)
 	case ast.KindTypeOfExpression:
@@ -483,6 +486,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, ok := l.enumNamespace(n); ok {
+		return x
 	}
 	if x, ok := l.classValueRef(n); ok {
 		return x
@@ -1204,6 +1210,33 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			return l.rtOp("classvalue.new", cv, result)
 		}
 	}
+	// Context supplies the element types of an empty collection before
+	// trying explicit arguments (which otherwise diagnose missing arguments).
+	if sym != nil && l.librarySymbol(sym) && len(n.Arguments()) == 0 && len(n.TypeArguments()) == 0 {
+		kind := hir.Void
+		switch sym.Name {
+		case "Set":
+			kind = hir.OrderedSet
+		case "Map":
+			kind = hir.OrderedMap
+		case "Array":
+			kind = hir.Array
+		}
+		if kind != hir.Void {
+			typ := l.hint
+			if typ.Kind == hir.Optional {
+				typ = typ.Args[0]
+			}
+			if typ.Kind != kind {
+				if context := l.ck.GetContextualType(n, 0); context != nil {
+					typ = l.mapCheckerType(n, context)
+				}
+			}
+			if typ.Kind == kind {
+				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
+			}
+		}
+	}
 	// Empty library collections: new Set<T>(), new Map<K,V>().
 	if t := n.Expression(); t != nil && t.Kind == ast.KindIdentifier && len(n.Arguments()) == 0 {
 		switch t.Text() {
@@ -1349,6 +1382,10 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil || y == nil {
 			return nil
 		}
+		if x.Type.Kind == hir.Optional || y.Type.Kind == hir.Optional {
+			l.diagf(n, "unsupported-optional-comparison", "relational comparison requires JavaScript primitive coercion")
+			return nil
+		}
 		cop := map[ast.Kind]string{
 			ast.KindLessThanToken: "<", ast.KindLessThanEqualsToken: "<=",
 			ast.KindGreaterThanToken: ">", ast.KindGreaterThanEqualsToken: ">="}[op]
@@ -1359,15 +1396,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if x == nil || y == nil {
 				return nil
 			}
-			if x.Type.Kind == hir.Number {
-				x = l.rtOp("number.toString", x, hir.T(hir.String))
-			} else if x.Type.Kind == hir.I32 {
-				x = l.rtOp("i32.toString", x, hir.T(hir.String))
-			}
-			if y.Type.Kind == hir.Number {
-				y = l.rtOp("number.toString", y, hir.T(hir.String))
-			} else if y.Type.Kind == hir.I32 {
-				y = l.rtOp("i32.toString", y, hir.T(hir.String))
+			x, y = l.primitiveString(n, x), l.primitiveString(n, y)
+			if x == nil || y == nil {
+				return nil
 			}
 			return l.rtOp("string.concat", x, hir.T(hir.String), y)
 		}
@@ -1763,16 +1794,8 @@ func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 		if part == nil {
 			return nil
 		}
-		switch part.Type.Kind {
-		case hir.String:
-		case hir.Number:
-			part = l.rtOp("number.toString", part, hir.T(hir.String))
-		case hir.I32:
-			part = l.rtOp("i32.toString", part, hir.T(hir.String))
-		case hir.Bool:
-			part = &hir.Expr{Kind: hir.Conditional, Node: part.Node, Type: hir.T(hir.String), X: part, Y: hir.L(hir.T(hir.String), "true"), Z: hir.L(hir.T(hir.String), "false")}
-		default:
-			l.diagf(span, "unsupported-expr", "template substitution of %s requires JavaScript string coercion", part.Type)
+		part = l.primitiveString(span, part)
+		if part == nil {
 			return nil
 		}
 		tail := l.expr(span.AsTemplateSpan().Literal)
@@ -1782,4 +1805,39 @@ func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 		result = l.rtOp("string.concat", l.rtOp("string.concat", result, hir.T(hir.String), part), hir.T(hir.String), tail)
 	}
 	return result
+}
+
+// ToString for supported primitive values. Preserve evaluation at the operand
+// position, even when an optional needs both a presence test and a payload read.
+func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
+	s := hir.T(hir.String)
+	switch x.Type.Kind {
+	case hir.String:
+		return x
+	case hir.Number:
+		return l.rtOp("number.toString", x, s)
+	case hir.I32:
+		return l.rtOp("i32.toString", x, s)
+	case hir.Bool:
+		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
+	case hir.Dynamic:
+		return l.rtOp("dynamic.toString", x, s)
+	case hir.Optional:
+		if x.Type.Args[0].IsRef() {
+			break
+		}
+		saved := l.pend
+		l.pend = nil
+		v := l.tempInit(at, x.Type, x)
+		pre := l.pend
+		l.pend = saved
+		payload := l.primitiveString(at, &hir.Expr{Kind: hir.Narrow, Type: x.Type.Args[0], X: v})
+		if payload == nil {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Seq, Type: s, Stmt: hir.B(pre...), Y: &hir.Expr{Kind: hir.Conditional, Type: s,
+			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: v}, Y: hir.L(s, "undefined"), Z: payload}}
+	}
+	l.diagf(at, "unsupported-expr", "string coercion of %s requires JavaScript ToPrimitive", x.Type)
+	return nil
 }

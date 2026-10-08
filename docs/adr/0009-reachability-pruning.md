@@ -18,7 +18,8 @@ rule and ABAP syntax tests). Schema 2 keeps `executed` as the informational unio
 of all four; pruning roots are **DEPLOYMENT ∪ NEGATIVE ∪ OBSERVATION**. UPSTREAM-only
 spans trap just like unexecuted spans. In particular `Registry.parseAsync` is
 UPSTREAM-only and must use an opaque async signature with a trapped body.
-That signature implementation is pending.
+Promise signatures now use an opaque nominal ABI. Only coverage-trapped async
+bodies can emit; live async bodies remain blocking.
 Schema 1 remains supported for older callers, with its original union policy;
 the Registry workload must use schema 2.
 Map functions through the fresh compiler's source maps to named TypeScript
@@ -72,15 +73,17 @@ independently supplied current workload paths before any pruning. Added, removed
 changed or unbound inputs fail loudly. Function identity requires a unique source
 range and declaration kind; ambiguous mappings are omitted and stay live.
 
-## Strict JSON acceptance conflict
+## Supported subset
 
-Decision 1 requires JSON5-only syntax to raise. The required oracle's `json5`
-negative observation instead returns a resolved `v702` configuration for comments,
-unquoted keys, single-quoted strings and trailing commas. Fresh OBSERVATION
-execution reproduces this result. Strict JSON parsing raises for the same bytes,
-so the required negative observation cannot remain equal under that decision.
-The original differential remains intact; no strict JSON adapter is substituted
-until this acceptance conflict is resolved.
+Strict JSON is the chosen adapter contract. The north-star config is strict JSON.
+JSON5-only syntax, object types outside CLAS/INTF/PROG/TYPE/XSLT, XML outside the
+supported fast-xml-parser subset, and async APIs must raise loudly. The oracle
+must retain the original outcomes, and the translation comparator must expect
+these exceptions as explicit documented divergences, each with a reason. A
+missing observation, successful translated return, or different exception is a
+failure. These cases do not authorize ignoring an in-scope mismatch. Adapter
+and comparator integration remain pending; the earlier strict-JSON conflict
+is resolved by this scope rule.
 
 ## Consequences
 

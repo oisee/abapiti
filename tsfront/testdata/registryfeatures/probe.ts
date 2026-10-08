@@ -1,4 +1,7 @@
-export class Probe {
+enum Phase { First = "same", Second = "same", Last = "last" }
+enum Visibility { Private = 1, Protected, Public, Alias = 1 }
+interface AsyncProbe { parseAsync(): Promise<Probe>; }
+export class Probe implements AsyncProbe {
   public static run(raw: string, needle: string, n: number, flag: boolean): string {
     const probe = new Probe();
     if (!(probe instanceof Probe)) { throw new Error("constructor identity"); }
@@ -7,7 +10,21 @@ export class Probe {
     const removed = delete values["first"];
     const absent = delete values["missing"];
     values["third"] = 3;
-    return ` first ${raw}\n${n}/${flag} last |${raw.includes(needle)}|${removed}/${absent}|${Object.keys(alias).join(",")}`;
+    const emptyMap: Map<string, number> = new Map();
+    const emptySet: Set<string> = new Set();
+    const emptyArray: string[] = [];
+    const snapshot = Object.values(Phase);
+    snapshot.reverse();
+    let numericValues = "";
+    for (const value of Object.values(Visibility)) {
+      numericValues += `${typeof value}:${value};`;
+    }
+    const phase: string = flag ? "Last" : "missing";
+    const optional: number | undefined = flag ? 0 : undefined;
+    const equalZero = optional === 0;
+    const unequalZero = optional !== 0;
+    return ` first ${raw}\n${n}/${flag} last |${raw.includes(needle)}|${removed}/${absent}|${Object.keys(alias).join(",")}|${Object.keys(Phase).join(",")}/${Phase[phase]}/${Object.values(Phase).join(",")}|${emptyMap.size}/${emptySet.size}/${emptyArray.length}|${equalZero}/${unequalZero}|${optional}|${Object.keys(Visibility).join(",")}/${Visibility.Private}/${Visibility[Visibility.Public]}/${numericValues}`;
   }
+  public async parseAsync(): Promise<Probe> { return this; }
   public static dead(): number { return new Date().getTime(); }
 }

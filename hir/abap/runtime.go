@@ -161,6 +161,7 @@ func (e *emitter) support() {
 		e.regexpRuntime()
 	}
 	if e.dynamicUsed {
+		e.classvalueRuntime()
 		e.dynamicRuntime()
 	}
 }
@@ -487,11 +488,16 @@ func (e *emitter) dynamicRuntime() {
 	name := e.name(id)
 	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3.
+CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3, tag_number TYPE i VALUE 4.
 DATA tag TYPE i.
 DATA sval TYPE string.
+DATA nval TYPE f.
 DATA cval TYPE REF TO ` + e.name("runtime.classvalue") + `.
 DATA oval TYPE REF TO object.
+METHODS is_number RETURNING VALUE(result) TYPE abap_bool.
+METHODS as_number RETURNING VALUE(result) TYPE f.
+METHODS type_of RETURNING VALUE(result) TYPE string.
+METHODS to_string RETURNING VALUE(result) TYPE string.
 METHODS is_string RETURNING VALUE(result) TYPE abap_bool.
 METHODS is_function RETURNING VALUE(result) TYPE abap_bool.
 METHODS as_string RETURNING VALUE(result) TYPE string.
@@ -501,6 +507,43 @@ PROTECTED SECTION.
 PRIVATE SECTION.
 ENDCLASS.
 CLASS ` + name + ` IMPLEMENTATION.
+METHOD is_number.
+result = xsdbool( tag = tag_number ).
+ENDMETHOD.
+METHOD as_number.
+IF tag <> tag_number.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
+result = nval.
+ENDMETHOD.
+METHOD type_of.
+CASE tag.
+WHEN tag_string.
+result = ` + "`string`" + `.
+WHEN tag_number.
+result = ` + "`number`" + `.
+WHEN tag_class.
+result = ` + "`function`" + `.
+WHEN tag_ref.
+result = ` + "`object`" + `.
+WHEN OTHERS.
+result = ` + "`undefined`" + `.
+ENDCASE.
+ENDMETHOD.
+METHOD to_string.
+DATA integer TYPE int8.
+IF tag = tag_string.
+result = sval.
+ELSEIF tag = tag_number.
+IF nval <> trunc( nval ) OR nval > '9007199254740991' OR nval < '-9007199254740991'.
+RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
+integer = nval.
+result = |{ integer }|.
+ELSE.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
+ENDMETHOD.
 METHOD is_string.
 IF tag = tag_string.
   result = abap_true.
@@ -512,12 +555,21 @@ IF tag = tag_class.
 ENDIF.
 ENDMETHOD.
 METHOD as_string.
+IF tag <> tag_string.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = sval.
 ENDMETHOD.
 METHOD as_classvalue.
+IF tag <> tag_class.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = cval.
 ENDMETHOD.
 METHOD as_ref.
+IF tag <> tag_ref.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = oval.
 ENDMETHOD.
 ENDCLASS.

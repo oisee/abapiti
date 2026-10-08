@@ -27,6 +27,10 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	if e, ok := l.overrides[fn]; ok && e.Method != nil {
 		return hm
 	}
+	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+		l.diagf(fn, "unsupported-async", "async body must be excluded by validated workload coverage")
+		return nil
+	}
 	if l.methodFailed(hm) {
 		return nil
 	}

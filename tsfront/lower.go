@@ -61,6 +61,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		modvarsByName: map[string]modvarRef{},
 		synthsByName:  map[string]*hir.Class{},
 		enums:         map[string]map[string]string{},
+		enumNumbers:   map[string]map[string]float64{},
 		nsNeeded:      map[string]bool{},
 		views:         map[string]*hir.Interface{},
 		ifaceNodes:    map[string]*ast.Node{},
@@ -286,7 +287,8 @@ type lowerer struct {
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt
 	// enums maps "file name" + " " + enum name -> member -> string value.
-	enums map[string]map[string]string
+	enums       map[string]map[string]string
+	enumNumbers map[string]map[string]float64
 	// nsNeeded marks module files that are imported as a namespace and used
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool

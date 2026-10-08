@@ -40,6 +40,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"classvalue.name": {ClassValue, 0, false},
 	"classvalue.has":  {ClassValue, 1, false},
 	"regexp.test":     {RegExp, 1, false}, "regexp.source": {RegExp, 0, false},
+	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
 }
@@ -89,6 +90,12 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "number.remainder2", "number.fromI32":
 		return nil, T(Number), true
+	case "dynamic.asNumber":
+		return nil, T(Number), true
+	case "dynamic.typeof", "dynamic.toString":
+		return nil, T(String), true
+	case "dynamic.isNumber":
+		return nil, b, true
 	case "number.toString", "i32.toString":
 		return nil, T(String), true
 	case "array.push":

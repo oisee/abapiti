@@ -45,6 +45,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		if k == nil {
 			return nil
 		}
+		if recv.Type.Args[0].Kind == hir.String && k.Type.Kind == hir.Number {
+			k = l.primitiveString(n, k)
+		}
 		return l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), k)
 	case hir.Array:
 		k := l.expr(arg)
@@ -65,6 +68,11 @@ func (l *lowerer) enumMember(n *ast.Node, p *ast.PropertyAccessExpression) (*hir
 	sym := l.resolve(n.Expression())
 	if sym == nil {
 		return nil, false
+	}
+	if members := l.numericEnumOf(sym); members != nil && p.Name() != nil {
+		if value, ok := members[p.Name().Text()]; ok {
+			return hir.L(hir.T(hir.Number), value), true
+		}
 	}
 	members := l.enumOf(sym)
 	if members == nil {
@@ -142,8 +150,7 @@ func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 	case hir.ClassValue:
 		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: "function"}, true
 	case hir.Dynamic:
-		// typeof produces a string even when stored before comparison.
-		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.String), X: l.rtOp("dynamic.isString", x, hir.T(hir.Bool)), Y: hir.L(hir.T(hir.String), "string"), Z: &hir.Expr{Kind: hir.Conditional, Type: hir.T(hir.String), X: l.rtOp("dynamic.isFunction", x, hir.T(hir.Bool)), Y: hir.L(hir.T(hir.String), "function"), Z: hir.L(hir.T(hir.String), "object")}}, true
+		return l.rtOp("dynamic.typeof", x, hir.T(hir.String)), true
 	}
 	l.diagf(n, "unsupported-expr", "typeof on %s is not lowered", x.Type.Kind)
 	return nil, false
@@ -158,11 +165,7 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 	var test *hir.Expr
 	switch e.Type.Kind {
 	case hir.Dynamic:
-		op := "dynamic.isString"
-		if want == "function" {
-			op = "dynamic.isFunction"
-		}
-		test = l.rtOp(op, e, hir.T(hir.Bool))
+		test = &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", e, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
 	case hir.Optional:
 		if e.Type.Args[0].Kind != hir.ClassValue || want != "function" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type)
@@ -280,15 +283,7 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		if len(args) != 1 {
 			return nil, false
 		}
-		// Object.values(enum): the enum's value array.
-		if args[0].Kind == ast.KindIdentifier {
-			if sym := l.resolve(args[0]); sym != nil {
-				if owner, field, ok := l.enumValuesField(sym); ok {
-					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: owner, Name: field,
-						Type: hir.T(hir.Array, hir.T(hir.String))}, true
-				}
-			}
-		}
+
 		x := l.expr(args[0])
 		if x != nil && x.Type.Kind == hir.OrderedMap {
 			typ := hir.T(hir.Array, x.Type.Args[1])

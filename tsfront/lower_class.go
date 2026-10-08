@@ -571,6 +571,10 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	if e, ok := l.overrides[m]; ok && e.Method != nil {
 		return
 	}
+	if m.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+		l.diagf(m, "unsupported-async", "async body must be excluded by validated workload coverage")
+		return
+	}
 	if m.Body() == nil {
 		return
 	}

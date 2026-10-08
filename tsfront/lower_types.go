@@ -50,7 +50,11 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		optional := false
 		var parts []hir.Type
 		for _, u := range n.AsUnionTypeNode().Types.Nodes {
-			if u.Kind == ast.KindUndefinedKeyword || u.Kind == ast.KindNullKeyword || isNullLiteralType(u) {
+			if u.Kind == ast.KindNullKeyword || isNullLiteralType(u) {
+				l.diagf(u, "unsupported-null", "null requires a distinct tagged value")
+				return hir.T(hir.Void)
+			}
+			if u.Kind == ast.KindUndefinedKeyword {
 				optional = true
 				continue
 			}
@@ -58,7 +62,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		}
 		return l.union(n, parts, optional)
 	case ast.KindNullKeyword:
-		// `T | null` is `T | undefined` here (there is no null in the HIR).
+		l.diagf(n, "unsupported-null", "null requires a distinct tagged value")
 		return hir.T(hir.Void)
 	case ast.KindLiteralType:
 		return l.mapTypeNodeViaChecker(n)
@@ -114,6 +118,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return l.mapTypeNode(targs[i])
 	}
 	switch name {
+	case "Promise":
+		if l.librarySymbol(sym) {
+			return hir.Ref(l.opaquePromise())
+		}
 	case "Set":
 		return hir.T(hir.OrderedSet, arg(0))
 	case "ReadonlySet":
@@ -135,6 +143,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	case "Error":
 		l.diagf(n, "note-builtin-error-ref", "Error lowered to builtin.Error")
 		return hir.Ref(l.builtinError())
+	}
+	if sym != nil && l.numericEnumOf(sym) != nil {
+		return hir.T(hir.Number)
 	}
 	// String enums lower to their string values.
 	if sym != nil && l.enumOf(sym) != nil {
@@ -300,7 +311,11 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		optional := false
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
-			if c.Flags()&checker.TypeFlagsUndefined != 0 || c.Flags()&checker.TypeFlagsNull != 0 {
+			if c.Flags()&checker.TypeFlagsNull != 0 {
+				l.diagf(n, "unsupported-null", "null requires a distinct tagged value")
+				return hir.T(hir.Void)
+			}
+			if c.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
 				continue
 			}
@@ -389,6 +404,11 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			l.diagf(n, "note-class-value-type", "constructor type lowered as a class value")
 			return hir.T(hir.ClassValue)
 		}
+		// Promises carry only an opaque ABI. No fulfillment, await or async
+		// body is translated; coverage traps are the only callable producers.
+		if t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
+			return hir.Ref(l.opaquePromise())
+		}
 		// Array and library-collection reference types.
 		if l.ck.IsArrayType(t) || (t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlySet" || t.Symbol().Name == "ReadonlyMap")) {
 			var checkArgs [](*checker.Type)
@@ -449,9 +469,12 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			if t.Symbol().Name == "Object" && t.Symbol().ValueDeclaration == nil {
 				return hir.Ref(hir.RootObject)
 			}
+			if l.numericEnumOf(t.Symbol()) != nil && !t.IsClass() {
+				return hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+			}
 			if l.enumOf(t.Symbol()) != nil && !t.IsClass() {
-				l.diagf(n, "note-enum-string", "enum type %s lowered as string", t.Symbol().Name)
-				return hir.T(hir.String)
+				l.diagf(n, "note-enum-namespace", "enum value %s lowered as a namespace object", t.Symbol().Name)
+				return hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.String))
 			}
 			if c := l.classOf(t.Symbol()); c != nil {
 				return hir.Ref(c.Name)

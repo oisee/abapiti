@@ -417,7 +417,7 @@ func TestStatementsOptionalAccessAndTupleRest(t *testing.T) {
 	}
 }
 
-func TestStatementsEnumValuesInitializesStatic(t *testing.T) {
+func TestStatementsEnumNamespaceInitializesStatic(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"enum.ts": `export enum E {One="one", Two="two"} export class Probe {static run():number {return Object.values(E).length;}}`}, []string{"enum.ts"})
 	found := false
 	for _, c := range p.Classes {
@@ -426,14 +426,14 @@ func TestStatementsEnumValuesInitializesStatic(t *testing.T) {
 				continue
 			}
 			for _, s := range m.Body.List {
-				if s.Kind == hir.Assign && s.X.Kind == hir.StaticGet && s.X.Name == "E_values" {
+				if s.Kind == hir.Assign && s.X.Kind == hir.StaticGet && s.X.Name == "E_namespace" {
 					found = true
 				}
 			}
 		}
 	}
 	if !found {
-		t.Fatal("enum values array was never assigned to its static field")
+		t.Fatal("enum namespace was never assigned to its static field")
 	}
 }
 
