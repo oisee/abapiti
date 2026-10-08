@@ -329,6 +329,9 @@ type lowerer struct {
 	// widenedLets: let symbols whose HIR type is the common base of their
 	// assignments; the checker's narrower view of them is not applied.
 	widenedLets map[*ast.Symbol]bool
+	// guards: locals proven present by an enclosing definedness guard
+	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
+	guards map[*ast.Symbol]hir.Type
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	continueAsBreak map[*ast.Node]bool

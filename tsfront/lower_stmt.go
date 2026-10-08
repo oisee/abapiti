@@ -44,6 +44,17 @@ func (l *lowerer) block(n *ast.Node) *hir.Stmt {
 // stmts lowers one statement to a list: variable statements contribute their
 // declarations to the enclosing scope, everything else is a single entry.
 func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
+	saved := l.pend
+	l.pend = nil
+	out := l.stmtsOwn(n)
+	pre := l.pend
+	l.pend = saved
+	return append(pre, out...)
+}
+
+// stmtsOwn lowers the statement; preludes its lowering leaves at statement
+// level (a checked conversion of a returned or assigned value) precede it.
+func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
@@ -112,7 +123,11 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			}
 			return live
 		}
-		s.Body = l.scopeBlock(ifs.ThenStatement)
+		if sym, typ, ok := l.definedGuard(ifs.Expression); ok {
+			s.Body = l.withGuardStmt(sym, typ, func() *hir.Stmt { return l.scopeBlock(ifs.ThenStatement) })
+		} else {
+			s.Body = l.scopeBlock(ifs.ThenStatement)
+		}
 		if ifs.ElseStatement != nil {
 			s.Else = l.scopeBlock(ifs.ElseStatement)
 		}
@@ -183,8 +198,15 @@ func (l *lowerer) scopeBlock(n *ast.Node) *hir.Stmt {
 		return l.stmt(n) // stmt(Block) manages the scope itself
 	}
 	l.push()
+	saved := l.pend
+	l.pend = nil
 	s := l.stmt(n)
+	pre := l.pend
+	l.pend = saved
 	l.pop()
+	if len(pre) > 0 && s != nil {
+		return hir.B(append(pre, s)...)
+	}
 	return s
 }
 
@@ -231,6 +253,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if typ.Kind == hir.Void {
 
 			return nil
+		}
+		if evolved, ok := l.evolvedArrayType(d, typ); ok {
+			typ = evolved
 		}
 		l.hint = typ
 		x = l.expr(init)
@@ -458,6 +483,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		}
 		switch recv.Type.Kind {
 		case hir.OrderedMap:
+			if recv.Type.Args[0].Kind == hir.String && arg.Type.Kind == hir.Number {
+				arg = l.primitiveString(lhs, arg)
+			}
 			return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "map.set", Type: recv.Type,
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
 		case hir.Array:
