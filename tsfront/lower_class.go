@@ -757,6 +757,11 @@ func (l *lowerer) declaredFieldType(c *hir.Class, name string) hir.Type {
 }
 
 func (l *lowerer) this(c *hir.Class) *hir.Expr {
+	if l.thisOverride != nil {
+		cp := *l.thisOverride
+		cp.Node = hir.Node{ID: l.nextID(), Source: l.thisOverride.Source}
+		return &cp
+	}
 	return &hir.Expr{Kind: hir.This, Node: hir.Node{ID: l.nextID(), Source: l.method.Source}, Type: hir.Ref(c.Name)}
 }
 

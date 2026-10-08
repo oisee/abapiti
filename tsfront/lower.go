@@ -322,6 +322,8 @@ type lowerer struct {
 	// shapeLike marks data-interface classes: plain objects that an
 	// anonymous shape with the same fields may reuse.
 	shapeLike map[string]bool
+	// thisOverride replaces `this` while a closure body is lowered.
+	thisOverride *hir.Expr
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	continueAsBreak map[*ast.Node]bool

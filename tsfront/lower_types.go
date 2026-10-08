@@ -434,6 +434,10 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			l.diagf(n, "note-class-value-type", "constructor type lowered as a class value")
 			return hir.T(hir.ClassValue)
 		}
+		if l.isThunkType(t) {
+			l.diagf(n, "note-thunk-type", "parameterless void function type lowered as the closure thunk interface")
+			return l.thunkType()
+		}
 		// Promises carry only an opaque ABI. No fulfillment, await or async
 		// body is translated; coverage traps are the only callable producers.
 		if t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
@@ -552,6 +556,10 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 		var ft hir.Type
 		if pt != nil && pt.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) != 0 {
 			ft = hir.T(hir.Optional, hir.Ref(hir.RootObject))
+		} else if l.isNeverArray(pt) {
+			// An empty literal's never[]: matches any array field of a
+			// reused shape; it never defines a shape of its own.
+			ft = hir.T(hir.Array, hir.T(hir.Void))
 		} else {
 			ft = l.mapCheckerType(n, pt)
 		}
@@ -571,20 +579,38 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 		if (!strings.HasPrefix(c.Name, "shape.") && !l.shapeLike[c.Name]) || len(c.Fields) != len(fields) || c.Ctor == nil {
 			continue
 		}
+		// The checker lists properties in its own order: match by name.
 		same := true
-		for j, f := range fields {
-			a, b := f.Type, c.Fields[j].Type
+		for _, f := range fields {
+			var existing *hir.Field
+			for k := range c.Fields {
+				if c.Fields[k].Name == f.Name {
+					existing = &c.Fields[k]
+				}
+			}
+			if existing == nil {
+				same = false
+				break
+			}
+			a, b := f.Type, existing.Type
 			if a.Kind == hir.Optional && a.Args[0].IsRef() {
 				a = a.Args[0]
 			}
 			if b.Kind == hir.Optional && b.Args[0].IsRef() {
 				b = b.Args[0]
 			}
-			same = same && f.Name == c.Fields[j].Name && a.Equal(b)
+			if a.Kind == hir.Array && a.Args[0].Kind == hir.Void && b.Kind == hir.Array {
+				a = b
+			}
+			same = same && a.Equal(b)
 		}
 		if same {
-			for j, p := range props {
-				l.fields[p] = c.Fields[j]
+			for _, p := range props {
+				for k := range c.Fields {
+					if c.Fields[k].Name == p.Name {
+						l.fields[p] = c.Fields[k]
+					}
+				}
 			}
 			return c
 		}
@@ -617,6 +643,9 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 				if b.Kind == hir.Optional && b.Args[0].IsRef() {
 					b = b.Args[0]
 				}
+				if a.Kind == hir.Array && a.Args[0].Kind == hir.Void && (b.Kind == hir.Array || (b.Kind == hir.Optional && b.Args[0].Kind == hir.Array)) {
+					a = b
+				}
 				if !a.Equal(b) && !(b.Kind == hir.Optional && b.Args[0].Equal(a)) {
 					ok = false
 				}
@@ -638,6 +667,12 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			}
 			l.diagf(n, "note-shape-subset", "anonymous shape lowered as the data interface %s with absent extra fields", c.Name)
 			return c
+		}
+	}
+	for _, f := range fields {
+		if f.Type.Kind == hir.Array && f.Type.Args[0].Kind == hir.Void {
+			l.diagf(n, "unsupported-type", "object literal with an empty array field %s matches no declared shape (%s)", f.Name, identity.String())
+			return nil
 		}
 	}
 	c := &hir.Class{Node: l.node(n), Name: key}

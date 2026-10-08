@@ -1,0 +1,125 @@
+// Original-JS oracle fixture for the syntax-closure lowerings. The expected
+// strings in oracle.json come from running this file with the pinned upstream
+// TypeScript compiler; the ABAP side is tsgo -> HIR -> ABAP of the same file.
+class Named {
+  constructor(private readonly name: string) {}
+  public getName(): string { return this.name; }
+}
+interface IDef extends Named { kind(): string; }
+interface IClassDef extends IDef { isFinal(): boolean; }
+class ClassDef extends Named implements IClassDef {
+  public kind(): string { return "CLAS"; }
+  public isFinal(): boolean { return false; }
+}
+class IntfDef extends Named implements IDef {
+  public kind(): string { return "INTF"; }
+}
+class Scope {
+  private readonly defs: (ClassDef | IntfDef)[] = [];
+  public add(def: ClassDef | IntfDef): void { this.defs.push(def); }
+  public find(name: string): IClassDef | IDef | undefined {
+    return this.defs.find(d => d.getName() === name);
+  }
+  public all(): IDef[] { return [...this.defs]; }
+}
+class Counter {
+  public row = 0;
+  public next(): number { return this.row++; }
+}
+class Trivial {
+  public readonly value: number;
+  constructor(value: number) { this.value = value; }
+}
+type Data = {qualifiedName?: string, derived?: boolean, ddic?: string};
+class Sibling1 { public tag(): string { return "s1"; } }
+class Sibling2 { public tag(): string { return "s2"; } }
+type Meta = {[key: string]: number};
+export class Probe {
+  private static readonly cache: Map<string, number> = new Map();
+  private static pending: string | undefined = undefined;
+  private static readonly seed: Trivial = new Trivial(5);
+  private static readonly table: {[name: string]: number} = {"a": 1, "b": 2};
+  private counter = 0;
+  private readonly deferred: (() => void)[] = [];
+  private log: string[] = [];
+  private note(text: string): void { this.log.push(text); }
+  private static unrelated(x: Named): string {
+    if (x instanceof Counter) { return "impossible"; }
+    return x.getName();
+  }
+  private static tagged(v: string | number[]): string {
+    if (Array.isArray(v)) { let s = 0; for (const n of v) { s += n; } return `arr:${s}`; }
+    return `str:${v}`;
+  }
+  public run(raw: string, needle: string, n: number, flag: boolean): string {
+    const scope = new Scope();
+    scope.add(new ClassDef("zcl_" + raw));
+    scope.add(new IntfDef("zif_" + raw));
+    const found = scope.find("zcl_" + raw);
+    const missing = scope.find("nope");
+    const names = scope.all().map(d => { const upper = d.getName().toUpperCase(); return upper + ":" + d.kind(); });
+    const idx = scope.all().findIndex(d => d.kind() === "INTF");
+    const allNamed = scope.all().every(d => d.getName().length > 0);
+    const flat = [["x", "y"], ["z"]].flatMap(a => a);
+    let seen = "";
+    scope.all().forEach((d, i) => { seen += `${i}${d.kind()}`; });
+    const queue = ["q1", "q2", "q3"];
+    const first = queue.shift();
+    queue.unshift("q0");
+    const set = new Set(["b", "a", "b", "c"]);
+    set.delete("c");
+    const union = [...set, ...Array.from(set.values())];
+    const parsed = parseInt(" 42abc", 10) + parseInt("-7", 10) + parseInt("+3", 10);
+    const nan = isNaN(parsed);
+    const big = Number.MAX_SAFE_INTEGER;
+    const sliced = raw.slice(1, -1) + "|" + raw.slice(-2) + "|" + raw.slice(5);
+    const ch = raw[0] === undefined ? "none" : raw[0];
+    const far = raw[99] === undefined ? "none" : raw[99];
+    const replaced = (raw + needle + raw).replace(needle, "_");
+    const sorted = ["Z_A", "A/B", "A_B", "A0", "A", "9X", "/X"].sort((a, b) => a.localeCompare(b));
+    const counter = new Counter();
+    const before = counter.next();
+    const after = counter.row;
+    let skipped = 0;
+    for (let i = 0; i < 6; i++) { if (i % 2 === 0) { continue; } skipped += i; }
+    const meta: Meta | undefined = flag ? {k1: 1, k2: 2} : undefined;
+    let keys = "";
+    for (const k in meta) { keys += k; }
+    let text: string | undefined = flag ? raw : undefined;
+    let chained = "";
+    while (text !== undefined) { chained = text?.toUpperCase(); text = undefined; }
+    let fin = "";
+    try { fin += "a"; } finally { fin += "b"; }
+    let sw = "";
+    switch (needle) { case "b": sw = "B"; break; case "x": sw = "X"; break; default: sw = "D"; break; }
+    const shadow = raw;
+    let inner = "";
+    { const shadow = needle; inner = shadow; }
+    const data: Data = {qualifiedName: "q", derived: true, ddic: "d"};
+    const {derived, ...rest} = data;
+    const restName = rest.qualifiedName ?? "none";
+    let sib = new Sibling1();
+    if (flag) { sib = new Sibling2(); }
+    const tagged = Probe.tagged(flag ? [1, 2, 3] : raw);
+    let errText = "";
+    try { throw new Error(raw); } catch (e) { errText = e.toString(); }
+    let emptyErr = "";
+    try { throw new Error(""); } catch (e) { emptyErr = e.toString(); }
+    const self = this;
+    const captured = needle;
+    this.deferred.push(() => { self.note(captured + "!"); });
+    this.deferred.push(() => { this.counter++; });
+    for (const d of this.deferred) { d(); }
+    const prim: string = raw;
+    const primUndef = prim === undefined;
+    const missingPending = Probe.pending === undefined;
+    const seed = Probe.seed.value + (Probe.table["b"] ?? 0) + Probe.cache.size;
+    return [
+      found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
+      names.join(","), idx, allNamed, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
+      parsed, nan, big, sliced, ch, far, replaced, sorted.join(" "), before, after, skipped, keys,
+      chained, fin, sw, shadow + inner, restName, derived, sib.tag(), tagged, errText, emptyErr,
+      this.log.join(";"), this.counter, primUndef, missingPending, seed, Probe.unrelated(new ClassDef("u")), n, flag,
+    ].join("|");
+  }
+}

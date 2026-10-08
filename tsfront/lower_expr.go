@@ -462,6 +462,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			return l.optionalChain(n)
 		}
 		return l.elementAccess(n)
+	case ast.KindArrowFunction, ast.KindFunctionExpression:
+		return l.closureValue(n)
 	}
 	l.diagf(n, "unsupported-expr", "%s is not lowered", n.Kind.String())
 	return nil
@@ -915,6 +917,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
+		return x
+	}
+	if x, ok := l.thunkCall(n, callee); ok {
 		return x
 	}
 	if x, ok := l.globalCall(n, callee); ok {
