@@ -455,7 +455,7 @@ func (b *body) expr(x *hir.Expr) string {
 		if e.options.OsgoInstanceOfFallback {
 			b.line(n + " = " + e.osgoInstanceHelper(x.Owner) + "=>test( " + a + " ).")
 		} else {
-			b.line(n + " = xsdbool( " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
+			b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 		}
 	case hir.IsUndefined:
 		a := b.expr(x.X)
