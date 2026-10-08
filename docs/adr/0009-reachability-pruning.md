@@ -137,3 +137,29 @@ monotonic duration clock, not an epoch clock. General Date remains unsupported.
 Tests require integer, nonnegative, nondecreasing readings on both runtimes.
 Times, durations and elapsed-work counters are listed in registry-scope.mjs as
 nondeterministic, not compared; inventory/dependency counts remain compared.
+
+Addendum 4's generator replacements are source-pinned snapshots rather than a
+library-wide `Generator`/`Iterable` erasure. `Registry.getObjects` snapshots the
+outer name keys and inner type keys, retaining the same object references and
+order. `getObjectsByType` does the same for the selected type, including an empty
+result for an absent type. The reached consumers enumerate immediately: object
+counts, filename lookup, dirtiness/config invalidation, parsing, global definition
+and macro discovery, include graph collection, DDIC/rule lookup, and the oracle's
+inventory/dump extraction. Registry membership mutations occur during input
+loading and between complete checks. The parser, syntax, macro and definition
+consumers mutate object contents/reference indexes, not Registry membership.
+The downport rule's edits load a distinct high-version Registry; rename and
+unsupported proxy APIs are not reached by the accepted workload. The dependency
+flag mutation happens between complete observations, so each new snapshot reads
+the current state. None of these consumers retains a yielded iterator across a
+membership mutation. Other iterator APIs remain blocking.
+
+`MethodDefinitions.getAll` snapshots its private `all` map. Only construction's
+parse/add methods populate that map; the reached method-name, inheritance,
+implementation and parameter checks read it after construction. `getFiles` is
+unreached and retains a located coverage trap, with an array-shaped opaque
+signature solely for ABI verification. Fingerprinted interface result signatures
+and the two RulesRunner parameter annotations agree with these replacements;
+changing an unrelated Generator/Iterable annotation does not enable lowering.
+The shared RulesRunner span pins both its clock expressions and its reviewed
+parameter annotation. Every adaptation remains override debt to generalise later.

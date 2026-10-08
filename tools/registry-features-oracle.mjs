@@ -24,3 +24,9 @@ const arrayCompiled=ts.transpileModule(readFileSync(arrayFile,'utf8'),{compilerO
 const arrayModule={exports:{}};
 new Function('exports','module',arrayCompiled)(arrayModule.exports,arrayModule);
 writeFileSync('tsfront/testdata/registryfeatures/arrays-oracle.json',JSON.stringify({shift:arrayModule.exports.ArrayProbe.shift(),optionalIndex:arrayModule.exports.ArrayProbe.optionalIndex()},null,2)+'\n');
+
+const iteratorFile=resolve('tsfront/testdata/registryfeatures/iterators.ts');
+const iteratorCompiled=ts.transpileModule(readFileSync(iteratorFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const iteratorModule={exports:{}};
+new Function('exports','module',iteratorCompiled)(iteratorModule.exports,iteratorModule);
+writeFileSync('tsfront/testdata/registryfeatures/iterators-oracle.json',JSON.stringify({run:iteratorModule.exports.IteratorProbe.run()},null,2)+'\n');

@@ -11,6 +11,14 @@ import (
 )
 
 type Key struct{ File, Symbol, Kind string }
+
+// Patterns groups reviewed adaptations under one enclosing source fingerprint.
+// Annotation changes are never inferred from a library type name globally.
+type Patterns struct {
+	Expressions map[string]func() *hir.Expr
+	Statements  map[string]func() *hir.Stmt
+	Annotations map[string]hir.Type
+}
 type Entry struct {
 	ID        string
 	Key       Key
@@ -27,6 +35,7 @@ type Entry struct {
 	Body        func() *hir.Stmt
 	Method      func() *hir.Method
 	Expressions map[string]func() *hir.Expr
+	Patterns    *Patterns
 }
 type Registry struct{ entries map[Key]Entry }
 
@@ -72,6 +81,9 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0) {
+		n++
+	}
 	if e.Result != nil {
 		n++
 	}

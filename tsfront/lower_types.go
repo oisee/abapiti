@@ -9,6 +9,7 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"github.com/oisee/abapiti/internal/tsgo/jsnum"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 	"math"
 )
 
@@ -21,6 +22,15 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	for parent := n; parent != nil; parent = parent.Parent {
+		if entry, ok := l.overrides[parent]; ok && entry.Patterns != nil {
+			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+			if typ, ok := entry.Patterns.Annotations[span]; ok {
+				l.diagf(n, "note-override", "%s: %s", entry.ID, entry.Rationale)
+				return typ
+			}
+		}
+	}
 	t := l.ck.GetTypeFromTypeNode(n)
 	if t == nil {
 		l.diagf(n, "unsupported-type", "no checker type for annotation")

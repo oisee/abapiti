@@ -78,9 +78,13 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	} else {
 		if n != nil {
 			for parent := n.Parent; parent != nil; parent = parent.Parent {
-				if e, ok := l.overrides[parent]; ok && e.Expressions != nil {
+				if e, ok := l.overrides[parent]; ok {
+					patterns := e.Expressions
+					if e.Patterns != nil {
+						patterns = e.Patterns.Expressions
+					}
 					span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
-					if build := e.Expressions[span]; build != nil {
+					if build := patterns[span]; build != nil {
 						x = build()
 						x.Node = l.node(n)
 						break

@@ -62,9 +62,13 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 
 func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	for parent := n.Parent; parent != nil; parent = parent.Parent {
-		if e, ok := l.overrides[parent]; ok && len(e.Statements) > 0 {
+		if e, ok := l.overrides[parent]; ok {
+			patterns := e.Statements
+			if e.Patterns != nil {
+				patterns = e.Patterns.Statements
+			}
 			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
-			if build := e.Statements[span]; build != nil {
+			if build := patterns[span]; build != nil {
 				l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
 				return build()
 			}
@@ -377,6 +381,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		recv := l.expr(e.Expression)
 		if recv == nil {
 			return nil
+		}
+		if recv.Type.Kind == hir.Optional {
+			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv}
 		}
 		arg := l.expr(e.ArgumentExpression)
 		if arg == nil {
