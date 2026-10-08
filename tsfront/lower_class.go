@@ -308,7 +308,14 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	}
 	static := m.ModifierFlags()&ast.ModifierFlagsStatic != 0
 	var typ hir.Type
+	overridden := false
+	if e, ok := l.overrides[m.Parent]; ok && e.Types[name].Kind != "" {
+		typ = e.Types[name]
+		overridden = true
+		l.diagf(m, "note-override", "%s: %s", e.ID, e.Rationale)
+	}
 	switch {
+	case overridden:
 	case m.Type() != nil:
 		typ = l.mapTypeNode(m.Type())
 	case m.Initializer() != nil:
@@ -458,6 +465,9 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 			// assigned in the body prologue (applyDefaults).
 			typ = hir.T(hir.Optional, typ)
 			l.diagf(p, "note-default-param", "parameter %s with a default lowered as Optional", name)
+		}
+		if t, ok := l.paramTypeOverride(node, hm.Name, name); ok {
+			typ = t
 		}
 		hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ})
 		checked[len(hm.Params)-1] = true

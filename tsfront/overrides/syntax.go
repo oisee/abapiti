@@ -31,5 +31,10 @@ func Syntax() []Entry {
 			return &hir.Method{Name: "get", Static: true, Result: ref, Params: []hir.Param{{Name: "voided", Type: opt}, {Name: "qualifiedName", Type: opt}},
 				Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.New, Type: ref, Args: []*hir.Expr{hir.V("voided", opt), hir.V("qualifiedName", opt)}}})}
 		}},
+		// Tech debt (fable, registry HIR gate): declared types where the
+		// checker infers an untyped collection or an anonymous shape.
+		{ID: "abaplint-indent-global-classes", Key: Key{"src/pretty_printer/indent.ts", "Indent", "KindClassDeclaration"}, SHA256: "74e398937b3cc07c2d189c2cc8ea0d8d70def8c8f4caf89fbb3c279658214fca", Rationale: "`new Set()` infers Set<unknown>; the only members added and tested are upper-cased class names (strings)", Types: map[string]hir.Type{"globalClasses": hir.T(hir.OrderedSet, hir.T(hir.String))}},
+		{ID: "abaplint-method-source-find-top-children", Key: Key{"src/abap/5_syntax/expressions/method_source.ts", "MethodSource", "KindClassDeclaration"}, SHA256: "6781f3039cf6c46c519d9c795245e8cae0e74f53a4dbfe651136fab35300aa52", Rationale: "findTop's `children: any[]` only receives node.getChildren().slice() (INode[]); an untyped array cannot alias a typed one", Types: map[string]hir.Type{"findTop.children": hir.T(hir.Array, hir.Type{Kind: hir.InterfaceRef, Name: "src/abap/nodes/_inode.ts.INode"})}},
+		{ID: "abaplint-ddic-lookup-ddls-result", Key: Key{"src/ddic.ts", "DDIC.lookupDDLS", "KindMethodDeclaration"}, SHA256: "482a897a928b5ac4eec9cd583f30a918286e0430e4f6292e0ed04104d1e31207", Rationale: "the inferred anonymous {type, object} result is structurally ILookupResult, which every caller returns; HIR shapes are nominal", Result: func() hir.Type { return hir.T(hir.Optional, hir.Ref("src/ddic.ts.ILookupResult")) }},
 	}
 }
