@@ -12,6 +12,20 @@ ABAP runs: on a real kernel, on open-steamgate's Go runtime (osgo) and on
 OSG-JS. osgo then gets an ABAP parser and linter without Node and without a Go
 port, because it already runs ABAP.
 
+Acceptance test (Lars Hvam Petersen, 2026-10-08): the translated abaplint fully
+checks abapGit's standalone report
+([zabapgit_standalone.prog.abap](https://raw.githubusercontent.com/abapGit/build/main/zabapgit_standalone.prog.abap),
+about 159,000 lines) on the ABAP stack in at most 5 minutes (10 acceptable),
+with issues identical to Node abaplint at the same version and configuration.
+It must finish; earlier attempts through a JavaScript engine in ABAP did not.
+Node needs 29 seconds for that check, so the budget is about ten times Node.
+
+The same classes should also run on ABAP Cloud (Steampunk, public S/4HANA
+Cloud). Then abapGit could lint before a commit inside any system, without Node,
+which fits abapGit's "Road to the Cloud" (one codeline on every stack,
+[abapGit#7880](https://github.com/abapGit/abapGit/issues/7880)). The generator
+already avoids `CALL FUNCTION` and SAP GUI; a static gate keeps it that way.
+
 We do not need all of TypeScript, only the subset these two code bases use, and
 we measured which one (below). The measurement covers the packages' own
 sources; their npm dependencies (`json5`, `fast-xml-parser`,
@@ -118,7 +132,10 @@ tsgo Program + checker  →  typed object HIR  →  normalisation  →  ABAP leg
 ## How it is verified
 
 1. **Static gate on every build:** abaplint at `v750` (`check_syntax`) plus our generation rules
-   on the generated code.
+   on the generated code, using the newest abaplint rather than the one the runtimes pin (2.120.70
+   rejects `SUPER->` to a different method, which the kernel refuses and 2.120.59 accepted).
+   A second, advisory gate checks the translated code (not test harnesses or benchmark loaders)
+   at `syntax.version = Cloud`; it becomes blocking once it is clean.
 2. **Differential runs on a corpus:** the same ABAP sources go through the
    original TypeScript (Node) and the generated ABAP; outputs are compared as
    JSON (tokens, statements, structures, findings). Generated ABAP runs on osgo
