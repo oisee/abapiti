@@ -35,8 +35,14 @@ func (l *lowerer) eraseGenericOverrides() {
 				}
 			}
 		}
-		if base != nil {
-			for _, m := range base.Methods {
+		// Inherited virtual slots through the whole chain; the nearest
+		// declaration wins (an intermediate abstract class may redeclare).
+		var chain []*hir.Class
+		for b := base; b != nil; b = classes[b.Super] {
+			chain = append(chain, b)
+		}
+		for i := len(chain) - 1; i >= 0; i-- {
+			for _, m := range chain[i].Methods {
 				if m.Virtual {
 					slots[m.Name] = m
 				}
@@ -81,6 +87,10 @@ func (l *lowerer) eraseGenericOverrides() {
 				if actual.Type.Kind == hir.Optional && actual.Type.Args[0].Equal(p.Type) {
 					// The implementation accepts absence too: widen, never check.
 					x = &hir.Expr{Kind: hir.Conditional, Type: actual.Type, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: actual.Type}}
+				} else if p.Type.Kind == hir.Dynamic && unboxOp(actual.Type) != "" {
+					// An erased `any` slot into the implementation's type: the
+					// checked unboxing raises for another payload.
+					x = l.rtOp(unboxOp(actual.Type), x, actual.Type)
 				} else if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
 					x = &hir.Expr{Kind: hir.Narrow, Type: actual.Type, X: x}
 				}
@@ -132,4 +142,21 @@ func (l *lowerer) propagateBridgeTraps() {
 	for bridge := range l.bridgeTargets {
 		visit(bridge)
 	}
+}
+
+// unboxOp names the checked unboxing of a tagged value into t.
+func unboxOp(t hir.Type) string {
+	switch t.Kind {
+	case hir.String:
+		return "dynamic.asString"
+	case hir.Number:
+		return "dynamic.asNumber"
+	case hir.Bool:
+		return "dynamic.asBoolean"
+	case hir.ClassValue:
+		return "dynamic.asClassValue"
+	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
+		return "dynamic.asRef"
+	}
+	return ""
 }

@@ -54,6 +54,25 @@ class ENode extends Holder<ENode | TNode> {
 interface IConfigured { getConfig(): void; }
 class RuleA implements IConfigured { public getConfig(): {level: number} { return {level: 3}; } }
 class RuleB implements IConfigured { public getConfig(): {level: number} { return {level: 5}; } }
+class XConf { constructor(public readonly level: number) {} }
+interface IConfigurable { setConfig(conf: any): void; getConfig(): void; }
+abstract class BaseRule implements IConfigurable {
+  public abstract setConfig(conf: any): void;
+  public abstract getConfig(): void;
+  public abstract describe(obj: ClassDef): string;
+  public abstract label(): string;
+  public run(obj: ClassDef): string { return this.describe(obj); }
+}
+abstract class MidRule extends BaseRule {
+  public abstract label(): string;
+}
+class RuleX extends MidRule {
+  private conf = new XConf(1);
+  public setConfig(conf: XConf): void { this.conf = conf; }
+  public getConfig(): XConf { return this.conf; }
+  public describe(obj: IDef): string { return obj.kind() + this.conf.level; }
+  public label(): string { return "x"; }
+}
 class Rel {
   private readonly brand = true;
   constructor(public readonly ordinal: number, public readonly name: string) {}
@@ -180,13 +199,17 @@ export class Probe {
     nested["m"]["1"] = nested["m"]["1"].filter(v => v !== needle);
     const filtered = nested["m"]["1"].join(",");
     const labeled = new Labeled(raw).label();
+    const rx = new RuleX();
+    const ic: IConfigurable = rx;
+    ic.setConfig(new XConf(4));
+    const forwarded = `${rx.getConfig().level}` + rx.run(new ClassDef("c")) + rx.describe(new IntfDef("i")) + rx.label();
     const parts: string[] = [labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
       chained, fin, sw, shadow + inner, restName, `${derived}`, sib.tag(), tagged, errText, emptyErr,
       this.log.join(";"), `${this.counter}`, `${primUndef}`, `${missingPending}`, `${seed}`, Probe.unrelated(new ClassDef("u")), `${n}`, `${flag}`,
-      recsKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys,
+      recsKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys, forwarded,
     ];
     return parts.join("|");
   }
