@@ -1032,8 +1032,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				lowered = append(lowered, x)
 			}
 			return l.rtOp("array.splice"+itoa(len(args)), recv, recv.Type, lowered...), true
-		case "pop":
-			return l.rtOp("array.pop", recv, hir.T(hir.Optional, recv.Type.Args[0])), true
+		case "pop", "shift":
+			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
 			return l.rtOp("array.indexOf", recv, i32, one()), true
 		case "includes":

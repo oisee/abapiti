@@ -1378,7 +1378,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
 	target := n
-	if (x.Op == "array.get" || x.Op == "array.pop") && x.X.Type.Args[0].IsRef() {
+	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && x.X.Type.Args[0].IsRef() {
 		target = b.temp(hir.Ref(hir.RootObject))
 	}
 	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"

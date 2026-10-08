@@ -367,7 +367,7 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]
 		return l.rtOp(op, x, dst)
 	}
-	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) && !dst.Args[0].IsRef() {
+	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) {
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
 	}
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
