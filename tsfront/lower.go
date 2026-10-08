@@ -531,6 +531,11 @@ func (l *lowerer) registerFile(f *ast.SourceFile) {
 				l.out.Classes = append(l.out.Classes, c)
 			}
 		case ast.KindInterfaceDeclaration:
+			// A pure index-signature interface has no nominal method/data
+			// slots. Its checker type already lowers to the ordered-map ABI.
+			if members := stmt.Members(); len(members) == 1 && members[0].Kind == ast.KindIndexSignature && stmt.AsInterfaceDeclaration().HeritageClauses == nil {
+				continue
+			}
 			if l.isDataInterface(stmt) && stmt.Name() != nil && stmt.Symbol() != nil {
 				c := &hir.Class{Node: l.node(stmt), Name: l.qualifiedName(f, stmt.Name().Text())}
 				l.classes[stmt.Symbol()] = c

@@ -3,5 +3,6 @@
   "optionalIndex": "true/7/11/true/1/1",
   "staticCollections": "0/1/11/1",
   "find": "true/true/2/3/true/2/true",
-  "unionViews": "left/right/true/true/false"
+  "unionViews": "left/right/true/true/false",
+  "namedRecord": "0/11/true/first,second,third"
 }

@@ -1,5 +1,6 @@
 export interface Named { getName(): string; left(): boolean; }
 export interface OtherNamed { getName(): string; right(): boolean; }
+export interface NumberRecord { [name: string]: number; }
 export class OtherItem implements OtherNamed {
   constructor(public name: string) {}
   public getName(): string { return this.name; }
@@ -11,6 +12,13 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  public static namedRecord(): string {
+    const values: NumberRecord = {first: 0, second: 7};
+    const alias = values;
+    alias["third"] = 11;
+    const missing = values["missing"];
+    return `${values["first"]}/${values["third"]}/${missing === undefined}/${Object.keys(values).join(",")}`;
+  }
   private static map = new Map<string, number>();
   private static values = new Set<string>();
   public static staticCollections(): string {
