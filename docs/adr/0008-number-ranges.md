@@ -1,4 +1,4 @@
-# 0007. Proven integer storage during TS lowering
+# 0008. Proven integer storage during TS lowering
 
 Status: implemented conservatively.
 
