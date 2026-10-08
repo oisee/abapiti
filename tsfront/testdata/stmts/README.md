@@ -41,3 +41,25 @@ compiles and fails at 27/64 cases and 574/926 statement trees.
 After rebasing onto PR #45, both runtimes use the same default native ABAP 7.50
 output. The CI runtime pin is 7e729432 (the full commit is recorded in
 .github/ci/osgo.ref); no separate compatibility output is generated.
+
+Phase 3 extends the lowering selection to all 59 structure kinds, their
+combinators, StructureParser, Issue and Severity. Sources under src/ remain
+verbatim at the same pin. The added adaptations in overrides/structures.go
+pin the anonymous/named result shape and the truthiness-only filename regex.
+STRUCTURES_EMIT=1 emits the structure closure and 192-case differential suite:
+the original 64 statement cases, 114 inputs extracted as literals from pinned
+upstream structure tests, and 14 supplemental cases. The original Node tree
+oracle covers every structure kind and checks statement reference identity,
+child order/count, issue locations/messages and SHA-256 of the complete dump.
+
+    node tools/structures-corpus.mjs tsfront/testdata/structurescorpus
+    node tools/structures-oracle.mjs tsfront/testdata/structurescorpus/cases.json tsfront/testdata/structurescorpus/dumps.json
+    STRUCTURES_EMIT=1 ABAPITI_TEST_OUT=/tmp/structures go test ./tsfront -run '^TestEmitStructuresClosure$' -v
+
+STRUCTURES_MUTATE=1 skips the closing IF Sequence element in the emitted acceptance
+mutant. Use a separate ABAPITI_TEST_OUT directory; its unit suite must fail.
+STRUCTURES_BENCH=<dir> additionally reads benchmark.json and benchmark-dumps.json
+and emits ZCL_PHASE3_BENCHMARK plus report ZPHASE3_STRUCTURES_BENCH. The benchmark
+uses staged lexer/statement/structure calls, GET RUN TIME, counts and all three
+original Node SHA-256 dumps. Packaging with tools/structures-a4h.mjs copies the
+generated production ABAP unchanged into an abapGit layout with objects.txt.

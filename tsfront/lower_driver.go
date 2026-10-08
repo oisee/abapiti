@@ -121,12 +121,12 @@ func abapTemplate(s string) string {
 // variable. Every line stays far below the 255-byte limit.
 func abapStringBuild(varname, ch, value string) []string {
 	var out []string
-	for value != "" {
-		r := []rune(value)
+	r := []rune(value)
+	for len(r) > 0 {
 		if r[0] < 32 || r[0] == 127 {
-			out = append(out, fmt.Sprintf("ch = cl_abap_conv_in_ce=>uccpi( %d ).", r[0]))
-			out = append(out, fmt.Sprintf("CONCATENATE %s ch INTO %s RESPECTING BLANKS.", varname, varname))
-			value = string(r[1:])
+			out = append(out, fmt.Sprintf("%s = cl_abap_conv_in_ce=>uccpi( %d ).", ch, r[0]))
+			out = append(out, fmt.Sprintf("CONCATENATE %s %s INTO %s RESPECTING BLANKS.", varname, ch, varname))
+			r = r[1:]
 			continue
 		}
 		k, size := 0, 0
@@ -135,11 +135,11 @@ func abapStringBuild(varname, ch, value string) []string {
 			k++
 		}
 		if k == 0 {
-			k = 1 // a single long rune still fits one line
+			k = 1
 		}
 		chunk := strings.ReplaceAll(string(r[:k]), "`", "``")
 		out = append(out, fmt.Sprintf("CONCATENATE %s `%s` INTO %s RESPECTING BLANKS.", varname, chunk, varname))
-		value = string(r[k:])
+		r = r[k:]
 	}
 	return out
 }

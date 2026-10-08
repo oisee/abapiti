@@ -354,8 +354,29 @@ func returns(s *Stmt) bool {
 		}
 	case If, Try:
 		return returns(s.Body) && returns(s.Else)
+	case While:
+		return s.X != nil && s.X.Kind == Lit && s.X.Value == true && !exitsLoop(s.Body)
 	}
 	return false
+}
+
+// A literal infinite loop cannot fall through unless its body can break it.
+func exitsLoop(s *Stmt) bool {
+	if s == nil {
+		return false
+	}
+	if s.Kind == Break {
+		return true
+	}
+	if s.Kind == While || s.Kind == ForEach {
+		return false
+	}
+	for _, child := range s.List {
+		if exitsLoop(child) {
+			return true
+		}
+	}
+	return exitsLoop(s.Body) || exitsLoop(s.Else)
 }
 func clone(env map[string]Type) map[string]Type {
 	r := map[string]Type{}
