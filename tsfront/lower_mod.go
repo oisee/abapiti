@@ -274,6 +274,7 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 // ClassValue> with one entry per exported lowered class, in export order.
 func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	typ := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))
+	l.ensureNamespaceField(mod, typ)
 	decl := l.assignStatic(mod, f.AsNode(), "ns", &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: mod.Name}, Type: typ}, typ)
 	out := []*hir.Stmt{decl}
 	skipped := 0

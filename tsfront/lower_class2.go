@@ -371,6 +371,15 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]
 		return l.rtOp(op, x, dst)
 	}
+	if x.Type.Kind == hir.Dynamic && (dst.Kind == hir.ClassRef || dst.Kind == hir.InterfaceRef || dst.Kind == hir.Array || dst.Kind == hir.OrderedMap || dst.Kind == hir.OrderedSet) {
+		// TypeScript typed the tagged value as the reference: the checked
+		// unboxing raises for any other payload.
+		return l.rtOp("dynamic.asRef", x, dst)
+	}
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
+		// TypeScript typed the tagged value as the primitive: absence raises.
+		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
+	}
 	// A present-only use of an optional primitive (TypeScript already typed
 	// it as the base): checked narrowing, absent raises.
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(dst) && !dst.IsRef() && dst.Kind != hir.Optional && dst.Kind != hir.Dynamic {

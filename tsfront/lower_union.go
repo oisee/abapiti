@@ -202,6 +202,7 @@ func (l *lowerer) completeUnionInterfaces() {
 				params = append([]hir.Param(nil), long...)
 			}
 			if same {
+				l.renameUnionParams(view.parts, name, params)
 				cp := *m
 				cp.Abstract = false
 				cp.Body = nil

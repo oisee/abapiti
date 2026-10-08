@@ -48,6 +48,10 @@ func (l *lowerer) eraseGenericOverrides() {
 			if slot == nil || m.Static || len(slot.Params) < len(m.Params) {
 				continue
 			}
+			if m.Result.Kind == hir.Optional && m.Result.Args[0].Kind == hir.Dynamic && slot.Result.Kind == hir.Optional {
+				// `getSuperClass(): undefined` implements an optional slot.
+				m.Result = slot.Result
+			}
 			same := m.Result.Equal(slot.Result) && len(slot.Params) == len(m.Params)
 			for j := range m.Params {
 				same = same && m.Params[j].Type.Equal(slot.Params[j].Type) && m.Params[j].Name == slot.Params[j].Name
@@ -74,7 +78,10 @@ func (l *lowerer) eraseGenericOverrides() {
 				}
 				actual := m.Params[j]
 				x := hir.V(p.Name, p.Type)
-				if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
+				if actual.Type.Kind == hir.Optional && actual.Type.Args[0].Equal(p.Type) {
+					// The implementation accepts absence too: widen, never check.
+					x = &hir.Expr{Kind: hir.Conditional, Type: actual.Type, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: actual.Type}}
+				} else if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
 					x = &hir.Expr{Kind: hir.Narrow, Type: actual.Type, X: x}
 				}
 				args = append(args, x)

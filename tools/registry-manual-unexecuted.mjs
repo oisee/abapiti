@@ -15,7 +15,12 @@ for (const w of ['DEPLOYMENT', 'NEGATIVE', 'OBSERVATION']) for (const f of readd
   const m = /\/build\/src\/(.*)\.js$/.exec(s.url);
   if (!m) continue;
   const key = 'src/' + m[1] + '.ts';
-  const ran = s.functions.slice(1).filter(fn => fn.ranges[0].count > 0).length;
+  // tsc's CommonJS interop helpers (and the anonymous IIFE wrapping one)
+  // run at import; they are emitted code, not source functions.
+  const helper = fn => /^(__importStar|__importDefault|__createBinding|__setModuleDefault|__exportStar|ownKeys)$/.test(fn.functionName);
+  const helpers = s.functions.filter(helper).map(fn => fn.ranges[0].startOffset);
+  const wrapsHelper = fn => fn.functionName === '' && helpers.some(o => o > fn.ranges[0].startOffset && o < fn.ranges[0].endOffset);
+  const ran = s.functions.slice(1).filter(fn => fn.ranges[0].count > 0 && !helper(fn) && !wrapsHelper(fn)).length;
   executed.set(key, (executed.get(key) ?? 0) + ran);
 }
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

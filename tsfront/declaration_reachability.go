@@ -179,6 +179,11 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 					}
 				}
 			}
+			if c.Kind == ast.KindPropertyAccessExpression {
+				for _, decl := range l.namespaceMemberDeclarations(c) {
+					keep(decl, valueReference)
+				}
+			}
 			if c.Body() != nil && (c.Kind == ast.KindMethodDeclaration || c.Kind == ast.KindFunctionDeclaration || c.Kind == ast.KindGetAccessor || c.Kind == ast.KindSetAccessor) {
 				if signature := ck.GetSignatureFromDeclaration(c); signature != nil {
 					typeEdges(ck.GetReturnTypeOfSignature(signature))

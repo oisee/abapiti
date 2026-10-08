@@ -27854,6 +27854,216 @@
       ]
     },
     {
+      "file": "src/lsp/_edit.ts",
+      "start": 131,
+      "end": 582,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapEdits",
+      "line": 5,
+      "sha256": "da82bb8e5ec7ca4199dd2a4b9ac868ad3ec0126439d5ea564088ffb40b46b21b",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_edit.ts",
+      "start": 586,
+      "end": 839,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapEdit",
+      "line": 18,
+      "sha256": "9b169051349076bc1f201e421891da618cfa6c51c06f7cc3746be05739ea8e98",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_edit.ts",
+      "start": 843,
+      "end": 1240,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapText",
+      "line": 26,
+      "sha256": "7f6eb281dd9aeb48a4bf5aa24f9f3d7349d6b4b5a9e9c8fce59750e978633f05",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 1733,
+      "end": 7925,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.lookup",
+      "line": 39,
+      "sha256": "39ff59b2ec33007434b00243f39be6df7b0d79a9d727ba354664e7c33f15b662",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 7977,
+      "end": 9273,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.dumpType",
+      "line": 205,
+      "sha256": "5f48926c1dcb707df746eb446a8248947b6fb511dc2986eff48e7be3f50f0fbd",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 9277,
+      "end": 10837,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.referenceHover",
+      "line": 238,
+      "sha256": "34e8bd618ccee9d802d982f055859fb583f3c06e02e022b69d85c84744897a29",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 10841,
+      "end": 11240,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.hoverMethod",
+      "line": 279,
+      "sha256": "92021b5aff6324d0e63d0d024d98535470c17877962e934765ae8e80cba8976c",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 11244,
+      "end": 11554,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.visibilityToString",
+      "line": 292,
+      "sha256": "956be0f3f2cca0a54eb69d0a717fbf29fd9ea3bd5d052ebf35d4732b7aff817a",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 11558,
+      "end": 12765,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.methodParameters",
+      "line": 305,
+      "sha256": "56532977a462f448bb2d8bba5df5aa65eff20d0fc2d9b5af4a731db5dfdaf022",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 12769,
+      "end": 13025,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.singleParameter",
+      "line": 355,
+      "sha256": "54b4a4b8e6a80f527114246bfe0b336c3de689e52545bd18e03c3df29d23776e",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13029,
+      "end": 13447,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.searchReferences",
+      "line": 363,
+      "sha256": "beb0447eed89a7142144c6b2a164189066b700f4f5f7001eae13f683cae54021",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13451,
+      "end": 13618,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.ABAPFileResult",
+      "line": 380,
+      "sha256": "04b99cf2e059c4a142c1a76c3c4a4993a8044b42f12f33a4b8baf8d4be94862e",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13622,
+      "end": 14937,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findMethodDefinition",
+      "line": 387,
+      "sha256": "f2b81b9145b01d95472fc36e9d33ab2a4ba0a5894303947ffeea52951dbe6205",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 14941,
+      "end": 15543,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findFunctionModule",
+      "line": 422,
+      "sha256": "7da29a577afb62add3a8fe7bb81c90e2cf95082e06a5f8de869907ef1fec771a",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 15547,
+      "end": 16278,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findInclude",
+      "line": 442,
+      "sha256": "cb366a7524196c9acb345675bbc7e69d4df745b56ba53f5b33563e98f8206ba4",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 680,
+      "end": 1179,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.getABAPFile",
+      "line": 21,
+      "sha256": "52e6d5ee1abd9d463c607c2a9160c85a25aca83aae4dc7449fa4233546251d07",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1183,
+      "end": 1430,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.tokenToRange",
+      "line": 41,
+      "sha256": "faa6d6c0a0f6fd4bd3d962c87016d18ba10cb41e3160f828ca91426667269edf",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1434,
+      "end": 1571,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.positionToLS",
+      "line": 49,
+      "sha256": "46104e779255a6f845e7bd0f6afdc7cef3f4d622da9245b60fb841d23dc6e222",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1575,
+      "end": 1772,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.identiferToLocation",
+      "line": 53,
+      "sha256": "86d98ebaedd507205d76d63767a8be4b0d3c2f8c84ed13e5069bdf27cc9bf3f2",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1776,
+      "end": 2451,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.findCursor",
+      "line": 60,
+      "sha256": "96dff9ced7b84d2427a9b4ee67ee7b3c3950c95dc6b74038e89cc6b0315456c3",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 2455,
+      "end": 3141,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.buildStack",
+      "line": 82,
+      "sha256": "c694c058ffebd0fab27b59166ad6bc5cfee2d86c88ee586207994db256835d68",
+      "executed": false
+    },
+    {
       "file": "src/lsp/code_actions.ts",
       "start": 460,
       "end": 1965,
@@ -28568,6 +28778,36 @@
       "sha256": "5745c78227fb6b08ea49fa270e25f487edbcc2831b94df626ca832544c6164a3",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/lsp/semantic.ts",
+      "start": 930,
+      "end": 1029,
+      "kind": "Constructor",
+      "symbol": "SemanticHighlighting",
+      "line": 27,
+      "sha256": "a782b9bcca0668b7aecc183aa2428309b89f3a39d178b18be52a4c156d764298",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/semantic.ts",
+      "start": 1033,
+      "end": 1450,
+      "kind": "MethodDeclaration",
+      "symbol": "SemanticHighlighting.semanticTokensLegend",
+      "line": 32,
+      "sha256": "1217620fc9a7ba1eaffefab41a5832c4859940cae97d399acc0c213ecd6edbb4",
+      "executed": false
+    },
+    {
+      "file": "src/lsp/semantic.ts",
+      "start": 1454,
+      "end": 2094,
+      "kind": "MethodDeclaration",
+      "symbol": "SemanticHighlighting.initLegend",
+      "line": 42,
+      "sha256": "dfe4658985a8adade52de3112b84b1163cab44030db951660d8081cf11e46194",
+      "executed": false
     },
     {
       "file": "src/lsp/semantic.ts",

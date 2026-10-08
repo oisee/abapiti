@@ -44,6 +44,17 @@ func (l *lowerer) block(n *ast.Node) *hir.Stmt {
 // stmts lowers one statement to a list: variable statements contribute their
 // declarations to the enclosing scope, everything else is a single entry.
 func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
+	saved := l.pend
+	l.pend = nil
+	out := l.stmtsOwn(n)
+	pre := l.pend
+	l.pend = saved
+	return append(pre, out...)
+}
+
+// stmtsOwn lowers the statement; preludes its lowering leaves at statement
+// level (a checked conversion of a returned or assigned value) precede it.
+func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
@@ -112,7 +123,11 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			}
 			return live
 		}
-		s.Body = l.scopeBlock(ifs.ThenStatement)
+		if sym, typ, ok := l.definedGuard(ifs.Expression); ok {
+			s.Body = l.withGuardStmt(sym, typ, func() *hir.Stmt { return l.scopeBlock(ifs.ThenStatement) })
+		} else {
+			s.Body = l.scopeBlock(ifs.ThenStatement)
+		}
 		if ifs.ElseStatement != nil {
 			s.Else = l.scopeBlock(ifs.ElseStatement)
 		}
@@ -138,6 +153,7 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		if x == nil {
 			return nil
 		}
+		x = l.presentValue(r.Expression, x, l.method.Result)
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
 		if flag, ok := l.breakViaFlag[n]; ok {
@@ -183,8 +199,15 @@ func (l *lowerer) scopeBlock(n *ast.Node) *hir.Stmt {
 		return l.stmt(n) // stmt(Block) manages the scope itself
 	}
 	l.push()
+	saved := l.pend
+	l.pend = nil
 	s := l.stmt(n)
+	pre := l.pend
+	l.pend = saved
 	l.pop()
+	if len(pre) > 0 && s != nil {
+		return hir.B(append(pre, s)...)
+	}
 	return s
 }
 
@@ -228,15 +251,12 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
-		if len(init.AsArrayLiteralExpression().Elements.Nodes) == 0 && typ.Kind == hir.Array && typ.Args[0].Kind == hir.Dynamic {
-			if evolved, ok := l.evolvedArrayType(d, sym); ok {
-				l.diagf(d, "note-evolving-array", "empty array literal takes its evolved type %s", evolved)
-				typ = evolved
-			}
-		}
 		if typ.Kind == hir.Void {
 
 			return nil
+		}
+		if evolved, ok := l.evolvedArrayType(d, typ); ok {
+			typ = evolved
 		}
 		l.hint = typ
 		x = l.expr(init)
@@ -297,6 +317,11 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				return nil
 			}
 			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
+				typ = x.Type
+			}
+			if d.Type() == nil && l.shapeAliasOf(typ, x.Type) {
+				// The checker infers an anonymous shape for a call whose
+				// lowered result is the declared data interface.
 				typ = x.Type
 			}
 			// An initializer that yields an optional (map lookups, optional
@@ -464,6 +489,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		}
 		switch recv.Type.Kind {
 		case hir.OrderedMap:
+			if recv.Type.Args[0].Kind == hir.String && arg.Type.Kind == hir.Number {
+				arg = l.primitiveString(lhs, arg)
+			}
 			return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "map.set", Type: recv.Type,
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
 		case hir.Array:
@@ -584,6 +612,9 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if x == nil {
 		return nil
 	}
+	if x.Type.Kind == hir.OrderedSet {
+		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
+	}
 	if x.Type.Kind == hir.Array {
 		elem = x.Type.Args[0]
 	}
@@ -671,34 +702,4 @@ func (l *lowerer) isHostProcessCall(n *ast.Node) bool {
 		}
 	}
 	return true
-}
-
-// evolvedArrayType: `const x = []` without an annotation is an evolving
-// any[] whose element type the checker settles at each later reference. The
-// type at the last reference in the enclosing function is the evolved one.
-func (l *lowerer) evolvedArrayType(d *ast.Node, sym *ast.Symbol) (hir.Type, bool) {
-	fn := d.Parent
-	for fn != nil && !ast.IsFunctionLike(fn) && fn.Kind != ast.KindSourceFile {
-		fn = fn.Parent
-	}
-	if fn == nil {
-		return hir.Type{}, false
-	}
-	var last *ast.Node
-	var walk func(*ast.Node)
-	walk = func(x *ast.Node) {
-		if x.Kind == ast.KindIdentifier && x != d.Name() && l.ck.GetSymbolAtLocation(x) == sym {
-			last = x
-		}
-		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
-	}
-	walk(fn)
-	if last == nil {
-		return hir.Type{}, false
-	}
-	t := l.mapCheckerType(d, l.ck.GetTypeAtLocation(last))
-	if t.Kind != hir.Array || t.Args[0].Kind == hir.Dynamic {
-		return hir.Type{}, false
-	}
-	return t, true
 }

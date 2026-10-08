@@ -109,21 +109,6 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 			mod.Fields = append(mod.Fields, hir.Field{Name: "ns", Static: true, Type: hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))})
 		}
 	}
-	// Method interfaces before class signatures: inferred implementations and
-	// union views must see the same interface identity in every file.
-	for _, name := range files {
-		f, _ := p.File(name)
-		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
-		l.file, l.ck = f, ck
-		for _, stmt := range l.statementNodes(f) {
-			if stmt.Kind == ast.KindInterfaceDeclaration && !l.isDataInterface(stmt) {
-				if i := l.ifaceOf(stmt.Symbol()); i != nil {
-					l.interfaceSignatures(stmt, i)
-				}
-			}
-		}
-		done()
-	}
 	// Data interfaces before class signatures: anonymous shapes with the
 	// same fields reuse them instead of synthesizing a second class.
 	for _, name := range files {
@@ -134,6 +119,21 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 			if stmt.Kind == ast.KindInterfaceDeclaration && l.isDataInterface(stmt) {
 				if c := l.classOf(stmt.Symbol()); c != nil && c.Ctor == nil {
 					l.dataInterfaceClass(stmt, &hir.Interface{Node: c.Node, Name: c.Name})
+				}
+			}
+		}
+		done()
+	}
+	// Method interfaces before class signatures: inferred implementations and
+	// union views must see the same interface identity in every file.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range l.statementNodes(f) {
+			if stmt.Kind == ast.KindInterfaceDeclaration && !l.isDataInterface(stmt) {
+				if i := l.ifaceOf(stmt.Symbol()); i != nil {
+					l.interfaceSignatures(stmt, i)
 				}
 			}
 		}
@@ -329,6 +329,9 @@ type lowerer struct {
 	// widenedLets: let symbols whose HIR type is the common base of their
 	// assignments; the checker's narrower view of them is not applied.
 	widenedLets map[*ast.Symbol]bool
+	// guards: locals proven present by an enclosing definedness guard
+	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
+	guards map[*ast.Symbol]hir.Type
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	continueAsBreak map[*ast.Node]bool

@@ -548,6 +548,7 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) 
 			if a == nil {
 				return nil, false
 			}
+			a = l.presentValue(args[i], a, p.Type)
 			out = append(out, l.coerce(a, p.Type))
 			continue
 		}

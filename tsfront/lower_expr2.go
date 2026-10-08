@@ -557,6 +557,7 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 			if v == nil {
 				return nil
 			}
+			v = l.presentValue(value, v, valT)
 			l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p),
 				X: l.rtOp("map.set", m, typ, keyExpr, l.coerce(v, valT))})
 		default:
