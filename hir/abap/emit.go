@@ -934,6 +934,12 @@ func (b *body) codeUnit(target, ch string) {
 
 func (b *body) truth(n, a string, t hir.Type) {
 	test := a + " IS NOT INITIAL"
+	if t.Kind == hir.Dynamic {
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->truth( ).")
+		b.line("ENDIF.")
+		return
+	}
 	if t.Kind == hir.String {
 		test = "strlen( " + a + " ) > 0"
 	}
@@ -952,7 +958,7 @@ func (b *body) stringLit(n, s string) {
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 {
+		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -965,7 +971,7 @@ func (b *body) stringLit(n, s string) {
 		}
 		k := 0
 		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && size+len(string(r[k]))*2 <= 120 {
+		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && size+len(string(r[k]))*2 <= 120 {
 			size += len(string(r[k])) * 2
 			k++
 		}
@@ -1258,6 +1264,45 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "xml.parseSubset":
+		b.e.xmlSubsetRuntime()
+		b.line(n + " = " + b.e.name("runtime.xmlSubset") + "=>parse( " + a + " ).")
+		return
+	case "dynamic.isNullish":
+		b.line("IF " + a + " IS NOT BOUND.")
+		b.line(n + " = abap_true.")
+		b.line("ELSE.")
+		b.line(n + " = xsdbool( " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null ).")
+		b.line("ENDIF.")
+		return
+	case "dynamic.null":
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null.")
+		return
+	case "dynamic.get", "dynamic.put", "dynamic.strictEquals", "dynamic.asBoolean":
+		if x.Op == "dynamic.strictEquals" {
+			b.line("IF " + a + " IS NOT BOUND.")
+			b.line(n + " = xsdbool( " + args[0] + " IS NOT BOUND ).")
+			b.line("ELSE.")
+			b.line(n + " = " + a + "->strict_equals( " + args[0] + " ).")
+			b.line("ENDIF.")
+			return
+		}
+		method := map[string]string{"dynamic.get": "get", "dynamic.put": "put", "dynamic.asBoolean": "as_boolean"}[x.Op]
+		params := []string{}
+		for i, arg := range args {
+			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
+		}
+		if x.Type.Kind == hir.Void {
+			b.line("CALL METHOD " + a + "->" + method + " EXPORTING " + strings.Join(params, " ") + ".")
+		} else {
+			call := "CALL METHOD " + a + "->" + method
+			if len(params) > 0 {
+				call += " EXPORTING " + strings.Join(params, " ")
+			}
+			b.line(call + " RECEIVING result = " + n + ".")
+		}
+		return
 	case "clock.telemetry":
 		b.e.telemetryRuntime()
 		b.line(n + " = " + b.e.name("runtime.telemetry") + "=>now( ).")
@@ -1289,30 +1334,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " ?= " + obj + ".")
 		return
 	case "dynamic.of":
-		tag := "tag_ref"
-		if x.X.Type.Kind == hir.String {
-			tag = "tag_string"
-		} else if x.X.Type.Kind == hir.ClassValue {
-			tag = "tag_class"
-		} else if x.X.Type.Kind == hir.Number {
-			tag = "tag_number"
-		} else if !x.X.Type.IsRef() {
-			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", x.X.Type)
-			return
-		}
-		b.line("CREATE OBJECT " + n + ".")
-		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
-		if x.X.Type.Kind == hir.String {
-			b.line(n + "->sval = " + a + ".")
-		} else if x.X.Type.Kind == hir.Number {
-			b.line(n + "->nval = " + a + ".")
-		} else if x.X.Type.Kind == hir.ClassValue {
-			b.line(n + "->cval = " + a + ".")
-		} else {
-			conv := b.rawTemp("REF TO object")
-			b.line(conv + " = " + a + ".")
-			b.line(n + "->oval = " + conv + ".")
-		}
+		b.boxDynamic(n, a, x.X.Type)
 		return
 	case "dynamic.typeof", "dynamic.toString":
 		b.line("IF " + a + " IS BOUND.")
@@ -1527,4 +1549,58 @@ func wrap(src string) (string, error) {
 		out.WriteString(line + "\n")
 	}
 	return out.String(), nil
+}
+
+// boxDynamic preserves identity and absence instead of boxing the ABI wrapper
+// itself. Objects already represented as graph nodes flow through unchanged.
+func (b *body) boxDynamic(n, a string, t hir.Type) {
+	if t.Kind == hir.Dynamic {
+		b.line(n + " = " + a + ".")
+		return
+	}
+	if t.Kind == hir.Optional {
+		test := a + " IS BOUND"
+		base := t.Args[0]
+		if !base.IsRef() {
+			test += " AND " + a + "->has = abap_true"
+		}
+		b.line("IF " + test + ".")
+		if !base.IsRef() {
+			a += "->value"
+		}
+		b.boxDynamic(n, a, base)
+		b.line("ENDIF.")
+		return
+	}
+	if t.IsRef() {
+		b.line("IF " + a + " IS BOUND.")
+	}
+	tag := "tag_ref"
+	field := "oval"
+	switch t.Kind {
+	case hir.String:
+		tag, field = "tag_string", "sval"
+	case hir.Number, hir.I32:
+		tag, field = "tag_number", "nval"
+	case hir.Bool:
+		tag, field = "tag_boolean", "bval"
+	case hir.ClassValue:
+		tag, field = "tag_class", "cval"
+	default:
+		if !t.IsRef() {
+			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", t)
+			return
+		}
+	}
+	b.line("CREATE OBJECT " + n + ".")
+	b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
+	if field == "oval" {
+		converted := b.rawTemp("REF TO object")
+		b.line(converted + " = " + a + ".")
+		a = converted
+	}
+	b.line(n + "->" + field + " = " + a + ".")
+	if t.IsRef() {
+		b.line("ENDIF.")
+	}
 }

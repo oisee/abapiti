@@ -31,5 +31,6 @@ func RegistryDeployment() []Entry {
 			return &hir.Method{Name: "buildObjectMap", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.Trap, Name: "src/artifacts_objects.ts:20"})}
 		}},
 	}
-	return append(entries, registryClocks()...)
+	entries = append(entries, registryClocks()...)
+	return append(entries, registryXML()...)
 }

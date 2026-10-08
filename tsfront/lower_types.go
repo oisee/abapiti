@@ -53,8 +53,8 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		var parts []hir.Type
 		for _, u := range n.AsUnionTypeNode().Types.Nodes {
 			if u.Kind == ast.KindNullKeyword || isNullLiteralType(u) {
-				l.diagf(u, "unsupported-null", "null requires a distinct tagged value")
-				return hir.T(hir.Void)
+				parts = append(parts, hir.T(hir.Dynamic))
+				continue
 			}
 			if u.Kind == ast.KindUndefinedKeyword {
 				optional = true
@@ -64,8 +64,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		}
 		return l.union(n, parts, optional)
 	case ast.KindNullKeyword:
-		l.diagf(n, "unsupported-null", "null requires a distinct tagged value")
-		return hir.T(hir.Void)
+		return hir.T(hir.Dynamic)
 	case ast.KindLiteralType:
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindTupleType:
@@ -314,8 +313,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
 			if c.Flags()&checker.TypeFlagsNull != 0 {
-				l.diagf(n, "unsupported-null", "null requires a distinct tagged value")
-				return hir.T(hir.Void)
+				parts = append(parts, hir.T(hir.Dynamic))
+				continue
 			}
 			if c.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
@@ -363,8 +362,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		}
 		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case flags&checker.TypeFlagsNull != 0:
-		l.diagf(n, "unsupported-type", "null without an optional context")
-		return hir.T(hir.Void)
+		return hir.T(hir.Dynamic)
 	case flags&checker.TypeFlagsObject != 0:
 		if t.IsTupleType() {
 			// Tuple elements are the numeric properties of the type; the
@@ -506,8 +504,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	case flags&checker.TypeFlagsNonPrimitive != 0:
 		return hir.Ref(hir.RootObject)
 	case flags&checker.TypeFlagsAny != 0 || flags&checker.TypeFlagsUnknown != 0:
-		l.diagf(n, "note-any-object", "any/unknown lowered as the object root")
-		return hir.Ref(hir.RootObject)
+		l.diagf(n, "note-any-dynamic", "any/unknown lowered as a tagged JS value")
+		return hir.T(hir.Dynamic)
 	}
 	l.diagf(n, "unsupported-type", "checker type %s is not lowered", l.ck.TypeToString(t))
 	return hir.T(hir.Void)

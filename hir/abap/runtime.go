@@ -494,6 +494,7 @@ DATA sval TYPE string.
 DATA nval TYPE f.
 DATA cval TYPE REF TO ` + e.name("runtime.classvalue") + `.
 DATA oval TYPE REF TO object.
+` + dynamicGraphDefinition(name) + `
 METHODS is_number RETURNING VALUE(result) TYPE abap_bool.
 METHODS as_number RETURNING VALUE(result) TYPE f.
 METHODS type_of RETURNING VALUE(result) TYPE string.
@@ -524,7 +525,9 @@ WHEN tag_number.
 result = ` + "`number`" + `.
 WHEN tag_class.
 result = ` + "`function`" + `.
-WHEN tag_ref.
+WHEN tag_boolean.
+result = ` + "`boolean`" + `.
+WHEN tag_ref OR tag_object OR tag_array OR tag_null.
 result = ` + "`object`" + `.
 WHEN OTHERS.
 result = ` + "`undefined`" + `.
@@ -534,6 +537,14 @@ METHOD to_string.
 DATA integer TYPE int8.
 IF tag = tag_string.
 result = sval.
+ELSEIF tag = tag_boolean.
+IF bval = abap_true.
+result = ` + "`true`" + `.
+ELSE.
+result = ` + "`false`" + `.
+ENDIF.
+ELSEIF tag = tag_null.
+result = ` + "`null`" + `.
 ELSEIF tag = tag_number.
 IF nval <> trunc( nval ) OR nval > '9007199254740991' OR nval < '-9007199254740991'.
 RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
@@ -572,6 +583,7 @@ RAISE EXCEPTION TYPE cx_sy_move_cast_error.
 ENDIF.
 result = oval.
 ENDMETHOD.
+` + dynamicGraphImplementation(name) + `
 ENDCLASS.
 `
 }

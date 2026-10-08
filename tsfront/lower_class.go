@@ -380,6 +380,9 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 		} else if ps := p.Symbol(); ps != nil {
 			typ = l.mapCheckerType(p, l.ck.GetTypeOfSymbol(ps))
 		}
+		if p.QuestionToken() != nil && typ.Kind != hir.Optional {
+			typ = hir.T(hir.Optional, typ)
+		}
 		f := hir.Field{Node: l.node(p), Name: name, Type: typ}
 		c.Fields = append(c.Fields, f)
 		if ps := p.Symbol(); ps != nil {

@@ -12,9 +12,16 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
-	"clock.telemetry":   {Number, 0, false},
-	"number.remainder2": {Number, 0, false},
-	"number.index":      {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
+	"xml.parseSubset":      {String, 0, false},
+	"dynamic.isNullish":    {Dynamic, 0, false},
+	"dynamic.get":          {Dynamic, 1, false},
+	"dynamic.put":          {Dynamic, 2, true},
+	"dynamic.strictEquals": {Dynamic, 1, false},
+	"dynamic.asBoolean":    {Dynamic, 0, false},
+	"dynamic.null":         {Number, 0, false},
+	"clock.telemetry":      {Number, 0, false},
+	"number.remainder2":    {Number, 0, false},
+	"number.index":         {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
 	"string.charAt": {String, 1, false}, "string.substr": {String, 2, false},
@@ -63,6 +70,16 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
+	case "xml.parseSubset", "dynamic.null":
+		return nil, T(Dynamic), true
+	case "dynamic.get":
+		return []Type{T(String)}, T(Dynamic), true
+	case "dynamic.put":
+		return []Type{T(String), T(Dynamic)}, T(Void), true
+	case "dynamic.strictEquals":
+		return []Type{T(Dynamic)}, T(Bool), true
+	case "dynamic.isNullish", "dynamic.asBoolean":
+		return nil, T(Bool), true
 	case "clock.telemetry":
 		return nil, T(Number), true
 	case "string.length", "array.length", "map.size", "set.size":

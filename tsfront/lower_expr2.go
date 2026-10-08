@@ -56,8 +56,14 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		}
 		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
 	case hir.Dynamic:
-		l.diagf(n, "unsupported-expr", "element access on a dynamic value is not lowered")
-		return nil
+		k := l.expr(arg)
+		if k == nil {
+			return nil
+		}
+		if k.Type.Kind != hir.String {
+			k = l.primitiveString(n, k)
+		}
+		return l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), k)
 	}
 	l.diagf(n, "unsupported-expr", "element access on %s is not lowered", recv.Type.Kind)
 	return nil
@@ -586,6 +592,9 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: rv}
+	if elem.Kind == hir.Dynamic {
+		test = l.rtOp("dynamic.isNullish", l.coerce(rv, hir.T(hir.Dynamic)), hir.T(hir.Bool))
+	}
 	if value.Type.Kind == hir.Void {
 		body := append(pre, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: value})
 		return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: test}, Body: hir.B(body...)}), Y: hir.L(hir.T(hir.Bool), false)}

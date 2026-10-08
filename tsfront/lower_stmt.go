@@ -255,7 +255,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 		}
 	}
-	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
+	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: l.coerce(x, typ)}
 	l.declare(name, typ)
 	return append(stmts, decl)
 }

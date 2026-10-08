@@ -1,8 +1,10 @@
 package tsfront
 
 import (
+	"github.com/oisee/abapiti/hir"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,14 +36,17 @@ func TestNullCannotMasqueradeAsUndefined(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true},"files":["input.ts"]}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "input.ts"), []byte(`export class Probe { run(): string { const value: number | null = null; return String(value); } }`), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "input.ts"), []byte(`export class Probe { run(): boolean { const value: number | null = null; return value === undefined; } }`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	_, diags := lowerProbe(t, dir)
-	for _, d := range diags {
-		if d.Category == "unsupported-null" {
-			return
-		}
+	prog, diags := lowerProbe(t, dir)
+	if hasBlocking(diags) {
+		t.Fatal(diags)
 	}
-	t.Fatalf("null was silently mapped to undefined: %v", diags)
+	if errs := hir.Verify(prog); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if !strings.Contains(hir.Dump(prog), "dynamic.null") {
+		t.Fatal("null lost its distinct tag", hir.Dump(prog))
+	}
 }

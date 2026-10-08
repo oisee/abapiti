@@ -103,3 +103,37 @@ REGISTRY_INPUT="$INPUT" REGISTRY_DEPENDENCIES="$DEPS_SRC" \
   REGISTRY_CLOSURE="$CLOSURE" REGISTRY_REACHABILITY="$OUT/reachability.json" \
   ABAPITI_TEST_OUT="$DIAGNOSTICS" go test ./tsfront -run '^TestRegistryClosureGate$' -v
 ```
+
+## Round 3 adapter and telemetry continuation
+
+Named namespace property accesses follow the resolved member edge; only a
+namespace used as a value retains all exports. Dynamic/computed/reflection
+uses remain conservative. No source declaration or coverage span is rewritten.
+
+The XML boundary is a source-fingerprinted replacement of
+`AbstractObject.parseRaw2`, sharing its HIR builder with the differential
+fixture. Missing XML returns undefined. The ABAP runtime adapter preserves
+strings, ordered object entries, arrays, empty values, repeated children,
+namespace names, XML declarations, whitespace text, and the pinned parser's
+CR/CRLF and document-root text behavior. Attributes are ignored. The supported
+XML grammar has ordinary start/end/self-closing tags with quoted attributes,
+`?xml` declarations, and amp/lt/gt/quot/apos entities. DTDs, comments, CDATA,
+other processing instructions, numeric/unknown entities, malformed nesting or
+headers, and prototype-sensitive names raise `RegistryXMLSubsetError`.
+
+Tagged graph nodes distinguish undefined (an initial reference) from null,
+strings, booleans, numbers, objects and arrays. Primitive truthiness, strict
+comparison, optional/nullish access and boxing preserve those distinctions.
+Opaque boxed native references retain identity and have explicit unboxing;
+graph property access does not silently pretend those references are parsed
+JSON/XML objects. Loose tagged coercion remains blocking. This XML adapter is
+not a strict JSON/config adapter or a completed Registry translation.
+
+Addendum 5 classifies parser/rule times as telemetry. Fingerprinted Date.now
+sites use a shared GET RUN TIME helper accumulating microseconds and returning
+truncated milliseconds. Signed-i rollover is accumulated in binary64; readings
+must be separated by less than one full microsecond-counter cycle. This is a
+monotonic duration clock, not an epoch clock. General Date remains unsupported.
+Tests require integer, nonnegative, nondecreasing readings on both runtimes.
+Times, durations and elapsed-work counters are listed in registry-scope.mjs as
+nondeterministic, not compared; inventory/dependency counts remain compared.
