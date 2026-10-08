@@ -117,9 +117,10 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
           insert_members( set_name ).
         ENDLOOP.
         result = abap_true.
-      CATCH cx_root.
+      CATCH cx_root INTO DATA(error).
         ROLLBACK WORK.
         CLEAR result.
+        WRITE / error->get_text( ).
     ENDTRY.
     write_summaries( ).
     GET RUN TIME FIELD finished.
@@ -136,7 +137,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
       RAISE EXCEPTION TYPE cx_sy_itab_line_not_found.
     ENDIF.
     READ DATASET iv_path INTO archive.
-    IF sy-subrc <> 0.
+    IF xstrlen( archive ) = 0.
       CLOSE DATASET iv_path.
       RAISE EXCEPTION TYPE cx_sy_itab_line_not_found.
     ENDIF.
