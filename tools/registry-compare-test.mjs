@@ -3,20 +3,45 @@ import {mkdtempSync, writeFileSync, rmSync} from "node:fs";
 import {join} from "node:path";
 import {tmpdir} from "node:os";
 import {test} from "node:test";
-import {compareDirectories, firstDifference} from "./registry-compare.mjs";
+import {compareDirectories, firstDifference, validateObservations} from "./registry-compare.mjs";
 
+const hash='a'.repeat(64);
+export function fixture() {
+ return {
+ manifest:{upstreamPin:'a'.repeat(40),depsPin:'b'.repeat(40),configSHA256:hash,main:[{filename:'zprobe.prog.abap',bytes:14,sha256:hash}],dependencies:[],types:{INTF:1},objectCount:{total:1,normal:1,dependencies:0},abapFiles:1,registeredABAPFiles:1},
+ config:{config:{global:{files:"src/*"},syntax:{version:"v702"},rules:{}},release:{name:'v702',ordinal:2},language:'Normal',rules:[]},
+ dumps:[{filename:'zprobe.prog.abap',tokens:2,statements:1,structures:1,issues:0,lexerSHA256:hash,statementsSHA256:hash,structuresSHA256:hash,registered:true}],
+ negative:{
+ duplicate_default:{outcome:'throw',error:'Error',message:'probe'},duplicate_strict:{outcome:'throw',error:'Error',message:'probe'},missing_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_xml:{outcome:'throw',error:'Error',message:'probe'},malformed_config:{outcome:'throw',error:'SyntaxError',message:'probe'},json5:{outcome:'return',value:{global:{files:'src/*'},syntax:{version:'v702'},rules:{}}},case_sensitivity:{outcome:'throw',error:'Error',message:'probe'},dependency_replaced:{outcome:'throw',error:'Error',message:'probe'},include:{outcome:'throw',error:'Error',message:'probe'}},
+ inventory:[{name:'IF_HTTP_CLIENT',type:'INTF',dependency:true,files:['if_http_client.intf.abap'],xml:null,description:null}]
+ };
+}
+function write(dir,data) {for(const [name,value] of Object.entries(data)) writeFileSync(join(dir,name+'.json'),JSON.stringify(value));}
+test('empty or incomplete equal observations fail',()=>{
+ const root=mkdtempSync(join(tmpdir(),'registry-empty-'));
+ try {
+  write(root,Object.fromEntries(['manifest','inventory','config','dumps','negative'].map(k=>[k,{}])));
+  assert.throws(()=>compareDirectories(root,root),/incomplete/);
+  for(const key of ['manifest','inventory','config','dumps','negative']) {
+   const data=fixture(); data[key]=key==='inventory'||key==='dumps'?[]:{};
+   assert.throws(()=>validateObservations(data),/incomplete/);
+  }
+  const data=fixture();delete data.inventory[0].dependency;
+  assert.throws(()=>validateObservations(data),/incomplete/);
+ } finally {rmSync(root,{recursive:true,force:true});}
+});
 test("dependency flag mutation fails even with unchanged supplied hashes", () => {
  const root = mkdtempSync(join(tmpdir(),"registry-compare-"));
  try {
-  const original = {name:"IF_HTTP_CLIENT",type:"INTF",dependency:true,files:["if_http_client.intf.abap"],xml:null};
-  for (const name of ["manifest","config","dumps","negative"]) writeFileSync(join(root,name+".json"),"{}\n");
+  const original = {description:null,name:"IF_HTTP_CLIENT",type:"INTF",dependency:true,files:["if_http_client.intf.abap"],xml:null};
+  write(root,fixture());
   writeFileSync(join(root,"inventory.json"),JSON.stringify([original]));
   assert.equal(compareDirectories(root,root).verdict,"OK");
   assert.deepEqual(firstDifference([original],[{...original,dependency:false}]),{path:"$[0].dependency",expected:true,actual:false});
   // The full directory comparison also reads the mutated observations.
   const candidate = mkdtempSync(join(tmpdir(),"registry-mutant-"));
   try {
-   for (const name of ["manifest","config","dumps","negative"]) writeFileSync(join(candidate,name+".json"),"{}\n");
+   write(candidate,fixture());
    writeFileSync(join(candidate,"inventory.json"),JSON.stringify([{...original,dependency:false}]));
    writeFileSync(join(candidate,"checksums.json"),"{}\n");
    const result = compareDirectories(root,candidate);
