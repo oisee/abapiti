@@ -646,3 +646,23 @@ func TestRootObjectTemporary(t *testing.T) {
 		}
 	}
 }
+
+// A void sequence at statement level (a call's prelude) emits its statements
+// only; it is not a call (the first full Registry emission produced
+// `z__…=>z_member__…( )` from one).
+func TestVoidSequenceStatement(t *testing.T) {
+	call := &hir.Expr{Kind: hir.DirectCall, Owner: "voidseq", Name: "g", Type: hir.T(hir.Void)}
+	seq := &hir.Expr{Kind: hir.Seq, Type: hir.T(hir.Void), Stmt: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: str, X: hir.L(str, "kept")}), Y: call}
+	f := method("f", hir.T(hir.Void), &hir.Stmt{Kind: hir.ExprStmt, X: seq})
+	g := method("g", hir.T(hir.Void), hir.B())
+	f.Static, g.Static = true, true
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "voidseq", Methods: []*hir.Method{f, g}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range files {
+		if strings.Contains(src, "z__e3b0c44298fc1c") || !strings.Contains(src, "kept") || strings.Count(src, "=>") != 1 {
+			t.Fatalf("void sequence emitted as an empty call, lost, or its call dropped:\n%s", src)
+		}
+	}
+}

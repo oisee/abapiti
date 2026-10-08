@@ -220,6 +220,13 @@ export class ArrayProbe {
     const first = refs.shift();
     const second = refs.shift();
     const none = refs.shift();
-    return `${zero}/${large}/${decimal === -2.5}/${missing === undefined}/${nums.length}/${alias.length}|${blank}/${x}/${absent === undefined}|${no}/${yes}/${undef === undefined}|${first === a}/${second === b}/${none === undefined}/${refs.length}`;
+    const maybe: (string | undefined)[] = ["m", undefined, "z", "q"];
+    const m = maybe.shift();
+    const hole = maybe.shift();
+    const q = maybe.pop();
+    const at = maybe[0];
+    const past = maybe[5];
+    const opts = `${m}/${hole === undefined}/${q}/${at}/${past === undefined}/${maybe.length}`;
+    return `${opts}|${zero}/${large}/${decimal === -2.5}/${missing === undefined}/${nums.length}/${alias.length}|${blank}/${x}/${absent === undefined}|${no}/${yes}/${undef === undefined}|${first === a}/${second === b}/${none === undefined}/${refs.length}`;
   }
 }
