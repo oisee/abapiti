@@ -528,6 +528,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		v.fail(m.Node, "missing expression")
 		return T(Void)
 	}
+	if e.CheckIntegerOverflow && !(e.Type.Kind == I64 && (e.Kind == Binary && (e.Op == "+" || e.Op == "-" || e.Op == "*") || e.Kind == Unary && e.Op == "-")) {
+		v.fail(e.Node, "invalid checked integer arithmetic")
+	}
 	v.typ(e.Node, e.Type)
 	t := e.Type
 	check := func(x *Expr) Type { return v.expr(c, m, x, env) }

@@ -146,14 +146,15 @@ func TestLowerLexerClosure(t *testing.T) {
 		t.Fatalf("corpus tokens: %d, want 4663", total)
 	}
 	params := DriverParams{
-		Class:      names.Get("harness/lexer_dump.ts.LexerDump"),
-		Dump:       names.Get("member.dump"),
-		TokenCount: names.Get("member.tokenCount"),
-		Virtual:    names.Get("member.virtualProbe"),
-		Diff:       names.Get("member.firstDiff"),
-		Raw:        names.Get("param.raw"),
-		A:          names.Get("param.a"),
-		B:          names.Get("param.b"),
+		IntegerNumbers: os.Getenv("ABAPITI_ASSUME_INT") == "1",
+		Class:          names.Get("harness/lexer_dump.ts.LexerDump"),
+		Dump:           names.Get("member.dump"),
+		TokenCount:     names.Get("member.tokenCount"),
+		Virtual:        names.Get("member.virtualProbe"),
+		Diff:           names.Get("member.firstDiff"),
+		Raw:            names.Get("param.raw"),
+		A:              names.Get("param.a"),
+		B:              names.Get("param.b"),
 	}
 	test := LexerTestClass(cases, params)
 	for _, line := range strings.Split(test, "\n") {

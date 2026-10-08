@@ -14,3 +14,4 @@ rewritten after it is accepted; a later record supersedes it and says so.
 | [0007](0007-verification-order.md) | Verification: static gate, differential corpus on osgo and OSG-JS, A4H after every phase | 2026-10-07 |
 | [0008](0008-number-ranges.md) | Proven integer storage (I32/I64) during TS lowering; division and unproven values stay binary64 | 2026-10-08 |
 | [0009](0009-reachability-pruning.md) | Proposed: source-pinned workload pruning with provenance and a reference graph; DEPLOYMENT/NEGATIVE/OBSERVATION roots | 2026-10-08 |
+| [0010](0010-assume-integer-calculations.md) | Explicit integer arithmetic mode, pinned float exceptions and checked boundaries | 2026-10-08 |

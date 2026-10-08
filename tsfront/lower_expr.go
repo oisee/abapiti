@@ -82,6 +82,14 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) expr(n *ast.Node) *hir.Expr {
+	if l.integerOptions.AssumeOnlyIntegerCalculations {
+		if arg := l.integerNumberIdentity(n); arg != nil {
+			return l.expr(arg)
+		}
+	}
+	if l.integerOptions.AssumeOnlyIntegerCalculations && !l.checkIntegerExpression(n) {
+		return nil
+	}
 	for i := len(l.replacements) - 1; i >= 0; i-- {
 		if l.replacements[i][0] == n {
 			x, ok := l.replacements[i][1].(*hir.Expr)
@@ -289,7 +297,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindTrueKeyword:
 		return hir.L(hir.T(hir.Bool), true)
 	case ast.KindNullKeyword:
-		return l.rtOp("dynamic.null", hir.L(hir.T(hir.Number), 0), hir.T(hir.Dynamic))
+		return l.rtOp("dynamic.null", hir.L(hir.T(hir.I32), 0), hir.T(hir.Dynamic))
 	case ast.KindFalseKeyword:
 		return hir.L(hir.T(hir.Bool), false)
 	case ast.KindTypeOfExpression:
@@ -571,6 +579,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) numericLiteral(n *ast.Node, typ hir.Type, sign float64) *hir.Expr {
+	located := l.integerOptions.AssumeOnlyIntegerCalculations && integerHazard(n) != ""
+	if located && !l.checkIntegerExpression(n) {
+		return nil
+	}
 	text := strings.ReplaceAll(n.Text(), "_", "")
 	v, err := strconv.ParseFloat(text, 64)
 	if err != nil {
@@ -583,7 +595,11 @@ func (l *lowerer) numericLiteral(n *ast.Node, typ hir.Type, sign float64) *hir.E
 		return nil
 	}
 	l.checkNumberLiteral(n, v*sign)
-	return hir.L(typ, v*sign)
+	x := hir.L(typ, v*sign)
+	if located {
+		x.Node = l.node(n)
+	}
+	return x
 }
 
 // identifier lowers a reference by resolving its symbol: locals and

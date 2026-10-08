@@ -525,7 +525,12 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 	case ast.KindIdentifier:
 		name := lhs.Text()
 		if _, ok := l.lookup(name); ok {
-			return l.identifier(lhs)
+			// A guard narrows reads only; the assignment writes the variable.
+			target := l.identifier(lhs)
+			for target != nil && target.Kind == hir.Narrow && target.X != nil && target.X.Kind == hir.Local {
+				target = target.X
+			}
+			return target
 		}
 		if sym := l.resolve(lhs); sym != nil {
 			if owner, fieldName, ok := l.modvarOf(sym); ok {

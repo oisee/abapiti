@@ -140,6 +140,9 @@ const (
 type IntegerRange struct{ Min, Max int64 }
 
 type Expr struct {
+	// CheckIntegerOverflow requires a JS safe-integer range check after I64 arithmetic.
+	// ABAP raises natively; this also enforces the contract in bigint runtimes.
+	CheckIntegerOverflow bool
 	Node
 	Kind            ExprKind
 	Type            Type

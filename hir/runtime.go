@@ -21,8 +21,10 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
 	"dynamic.asBoolean":         {Dynamic, 0, false},
-	"dynamic.null":              {Number, 0, false},
+	"dynamic.null":              {I32, 0, false},
 	"clock.telemetry":           {Number, 0, false},
+	"i64.toString":              {I64, 0, false},
+	"i64.remainder2":            {I64, 0, false},
 	"number.remainder2":         {Number, 0, false},
 	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
@@ -130,6 +132,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(RegExp), T(String)}, T(String), true
 	case "number.index":
 		return nil, i, true
+	case "i64.remainder2":
+		return nil, T(I64), true
 	case "number.remainder2", "number.fromI32":
 		return nil, T(Number), true
 	case "dynamic.asNumber":
@@ -138,7 +142,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(String), true
 	case "dynamic.isNumber":
 		return nil, b, true
-	case "number.toString", "i32.toString":
+	case "number.toString", "i32.toString", "i64.toString":
 		return nil, T(String), true
 	case "array.push", "array.unshift":
 		return []Type{t.Args[0]}, i, true

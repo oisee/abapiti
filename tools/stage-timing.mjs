@@ -45,7 +45,7 @@ const original = readFileSync(join(generated,harnessFile),'utf8');
 const originalOwner = original.match(/CLASS (\w+) DEFINITION/)[1];
 const owner = 'zcl_stage_driver';
 const [,dump,raw] = original.match(/CLASS-METHODS (\w+) IMPORTING (\w+) TYPE string RETURNING/);
-const attrs = [...original.matchAll(/CLASS-DATA (\w+) TYPE f\./g)].map(m=>m[1]);
+const attrs = [...original.matchAll(/CLASS-DATA (\w+) TYPE (?:f|i|int8)\./g)].map(m=>m[1]);
 const dumpBody = original.slice(original.indexOf(`METHOD ${dump}.`),original.indexOf('ENDMETHOD.',original.indexOf(`METHOD ${dump}.`))+10);
 const calls = [...dumpBody.matchAll(/^t\d+ = t\d+->z_member_run_\w+\( .* \)\.$/gm)].map(m=>m[0]);
 if(calls.length!==2 || attrs.length!==2) throw new Error('unsupported stage layout');

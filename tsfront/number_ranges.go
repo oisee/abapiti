@@ -1132,7 +1132,7 @@ func (l *lowerer) inferNumberRanges() {
 			p.current = info
 			p.rewriteStmt(m.Body, env, info)
 			walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
-				if e.Kind == hir.NumericMinMax && e.Type.Kind == hir.Number {
+				if !l.integerOptions.AssumeOnlyIntegerCalculations && e.Kind == hir.NumericMinMax && e.Type.Kind == hir.Number {
 					l.diags = append(l.diags, LowerDiagnostic{Category: "unsupported-number", Loc: e.Source, Message: "Math.min/max requires proven integers in this phase; exceptional numbers and signed zero need runtime support"})
 				}
 				if e.Kind == hir.Binary && e.Op == "%" && e.Type.Kind == hir.Number {

@@ -3,6 +3,7 @@ package tsfront
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -42,33 +43,53 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 	return p.lowerWithPolicy(files, registry, nil)
 }
 
+// LowerOptions makes the integer input contract explicit. Exceptions are source pinned.
+type LowerOptions struct {
+	AssumeOnlyIntegerCalculations bool
+	IntegerExceptions             []IntegerException
+}
+
+func (p *Program) LowerWithOptions(files []string, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
+	return p.lowerWithOptions(files, overrides.Abaplint(), nil, options)
+}
+
 func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, coverage *Reachability) (*hir.Program, []LowerDiagnostic, error) {
+	return p.lowerWithOptions(files, registry, coverage, LowerOptions{AssumeOnlyIntegerCalculations: os.Getenv("ABAPITI_ASSUME_INT") == "1"})
+}
+
+func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
-		unexecuted:    map[*ast.Node]string{},
-		overrides:     map[*ast.Node]overrides.Entry{},
-		prog:          p,
-		implicitCtors: map[*hir.Class]bool{},
-		out:           &hir.Program{},
-		classes:       map[*ast.Symbol]*hir.Class{},
-		ifaces:        map[*ast.Symbol]*hir.Interface{},
-		methods:       map[*ast.Symbol]*hir.Method{},
-		fields:        map[*ast.Symbol]hir.Field{},
-		synths:        map[*ast.Symbol]*hir.Class{},
-		modules:       map[*ast.SourceFile]*hir.Class{},
-		modvars:       map[*ast.Symbol]string{},
-		classesByName: map[string]*hir.Class{},
-		ifacesByName:  map[string]*hir.Interface{},
-		methodsBy:     map[string]*hir.Method{},
-		fieldsBy:      map[string]hir.Field{},
-		modvarsByName: map[string]modvarRef{},
-		synthsByName:  map[string]*hir.Class{},
-		enums:         map[string]map[string]string{},
-		enumNumbers:   map[string]map[string]float64{},
-		nsNeeded:      map[string]bool{},
-		views:         map[string]*hir.Interface{},
-		ifaceNodes:    map[string]*ast.Node{},
-		funcsBy:       map[string]funcRef{},
-		covariants:    map[string]map[string]bool{},
+		integerOptions:    options,
+		integerExceptions: map[*ast.Node]IntegerException{},
+		floatSites:        map[string]bool{},
+		unexecuted:        map[*ast.Node]string{},
+		overrides:         map[*ast.Node]overrides.Entry{},
+		prog:              p,
+		implicitCtors:     map[*hir.Class]bool{},
+		out:               &hir.Program{},
+		classes:           map[*ast.Symbol]*hir.Class{},
+		ifaces:            map[*ast.Symbol]*hir.Interface{},
+		methods:           map[*ast.Symbol]*hir.Method{},
+		fields:            map[*ast.Symbol]hir.Field{},
+		synths:            map[*ast.Symbol]*hir.Class{},
+		modules:           map[*ast.SourceFile]*hir.Class{},
+		modvars:           map[*ast.Symbol]string{},
+		classesByName:     map[string]*hir.Class{},
+		ifacesByName:      map[string]*hir.Interface{},
+		methodsBy:         map[string]*hir.Method{},
+		fieldsBy:          map[string]hir.Field{},
+		modvarsByName:     map[string]modvarRef{},
+		synthsByName:      map[string]*hir.Class{},
+		enums:             map[string]map[string]string{},
+		enumNumbers:       map[string]map[string]float64{},
+		nsNeeded:          map[string]bool{},
+		views:             map[string]*hir.Interface{},
+		ifaceNodes:        map[string]*ast.Node{},
+		funcsBy:           map[string]funcRef{},
+		covariants:        map[string]map[string]bool{},
+	}
+	if err := l.validateIntegerExceptions(files); err != nil {
+		return nil, nil, err
 	}
 	if err := l.validateReachability(files, coverage); err != nil {
 		return nil, nil, err
@@ -278,33 +299,39 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	l.covariantImplements()
 	l.propagateBridgeTraps()
 	l.inferNumberRanges()
+	if options.AssumeOnlyIntegerCalculations {
+		l.assumeIntegerTypes()
+	}
 	return l.out, l.diags, nil
 }
 
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	retained   map[*ast.Node]bool
-	typeOnly   map[*ast.Node]bool
-	unexecuted map[*ast.Node]string
-	overrides  map[*ast.Node]overrides.Entry
-	prog       *Program
-	ck         *checker.Checker
-	file       *ast.SourceFile
-	out        *hir.Program
-	diags      []LowerDiagnostic
-	classes    map[*ast.Symbol]*hir.Class
-	ifaces     map[*ast.Symbol]*hir.Interface
-	methods    map[*ast.Symbol]*hir.Method
-	fields     map[*ast.Symbol]hir.Field
-	synths     map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
-	modules    map[*ast.SourceFile]*hir.Class
-	modvars    map[*ast.Symbol]string // module variable symbol -> field name
-	scope      []map[string]hir.Type
-	class      *hir.Class  // class whose member is being lowered
-	method     *hir.Method // method being lowered
-	serial     int
-	hint       hir.Type // contextual type for undefined literals
+	integerOptions    LowerOptions
+	integerExceptions map[*ast.Node]IntegerException
+	floatSites        map[string]bool
+	retained          map[*ast.Node]bool
+	typeOnly          map[*ast.Node]bool
+	unexecuted        map[*ast.Node]string
+	overrides         map[*ast.Node]overrides.Entry
+	prog              *Program
+	ck                *checker.Checker
+	file              *ast.SourceFile
+	out               *hir.Program
+	diags             []LowerDiagnostic
+	classes           map[*ast.Symbol]*hir.Class
+	ifaces            map[*ast.Symbol]*hir.Interface
+	methods           map[*ast.Symbol]*hir.Method
+	fields            map[*ast.Symbol]hir.Field
+	synths            map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
+	modules           map[*ast.SourceFile]*hir.Class
+	modvars           map[*ast.Symbol]string // module variable symbol -> field name
+	scope             []map[string]hir.Type
+	class             *hir.Class  // class whose member is being lowered
+	method            *hir.Method // method being lowered
+	serial            int
+	hint              hir.Type // contextual type for undefined literals
 	// Anonymous checker graphs may contain cycles without a nominal reference
 	// to stop structural expansion. Reject those instead of overflowing the
 	// Go stack. Entries live only for the current recursive mapping call.

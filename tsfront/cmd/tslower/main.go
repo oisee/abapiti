@@ -33,6 +33,8 @@ func main() {
 	tsconfig := flag.String("tsconfig", "tsconfig.json", "path to the project's tsconfig.json")
 	out := flag.String("out", "", "directory to write the emitted ABAP to (default: no files written)")
 	corpus := flag.String("corpus", "", "directory with cases.json/tokens.json; generates the differential unit test")
+	assumeInteger := flag.Bool("assume-only-integer-calculations", os.Getenv("ABAPITI_ASSUME_INT") == "1", "explicit integer number contract: unknown number becomes int8")
+	exceptionPath := flag.String("integer-exceptions", "", "JSON fingerprinted integer exception list")
 	jsonOut := flag.Bool("json", false, "write the report as JSON")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: tslower [-tsconfig path] [-out dir] [-corpus dir] [-json] file...\n")
@@ -48,7 +50,22 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	prog, diags, err := program.Lower(flag.Args())
+	options := tsfront.LowerOptions{AssumeOnlyIntegerCalculations: *assumeInteger}
+	if *exceptionPath != "" {
+		if !*assumeInteger {
+			fatal(fmt.Errorf("integer exceptions require integer mode"))
+		}
+		raw, err := os.ReadFile(*exceptionPath)
+		if err != nil {
+			fatal(err)
+		}
+		decoder := json.NewDecoder(strings.NewReader(string(raw)))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&options.IntegerExceptions); err != nil {
+			fatal(err)
+		}
+	}
+	prog, diags, err := program.LowerWithOptions(flag.Args(), options)
 	if err != nil {
 		fatal(err)
 	}
@@ -78,6 +95,23 @@ func main() {
 		byCategory[d.Category]++
 		if len(examples[d.Category]) < 2 {
 			examples[d.Category] = append(examples[d.Category], d.String())
+		}
+	}
+	if *assumeInteger {
+		sites := []string{}
+		for _, d := range diags {
+			if d.Category == "assume-integer" || d.Category == "note-integer-exception" {
+				sites = append(sites, d.String())
+			}
+		}
+		report["integerExceptionSites"] = sites
+		if !*jsonOut {
+			for _, site := range sites {
+				fmt.Println(site)
+			}
+			if len(sites) == 0 {
+				fmt.Println("integer exceptions: 0 sites")
+			}
 		}
 	}
 	report["numberSites"] = numberSites
@@ -130,14 +164,15 @@ func main() {
 					fatal(err)
 				}
 				params := tsfront.DriverParams{
-					Class:      names.Get("harness/lexer_dump.ts.LexerDump"),
-					Dump:       names.Get("member.dump"),
-					TokenCount: names.Get("member.tokenCount"),
-					Virtual:    names.Get("member.virtualProbe"),
-					Diff:       names.Get("member.firstDiff"),
-					Raw:        names.Get("param.raw"),
-					A:          names.Get("param.a"),
-					B:          names.Get("param.b"),
+					IntegerNumbers: *assumeInteger,
+					Class:          names.Get("harness/lexer_dump.ts.LexerDump"),
+					Dump:           names.Get("member.dump"),
+					TokenCount:     names.Get("member.tokenCount"),
+					Virtual:        names.Get("member.virtualProbe"),
+					Diff:           names.Get("member.firstDiff"),
+					Raw:            names.Get("param.raw"),
+					A:              names.Get("param.a"),
+					B:              names.Get("param.b"),
 				}
 				files[params.Class+".clas.testclasses.abap"] = tsfront.LexerTestClass(cases, params)
 				report["corpusCases"] = len(cases)
