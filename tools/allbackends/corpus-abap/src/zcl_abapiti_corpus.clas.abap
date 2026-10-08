@@ -43,7 +43,10 @@ PRIVATE SECTION.
     TYPES sha256 TYPE c LENGTH 64.
   TYPES END OF ty_expected.
   TYPES ty_expected_hash TYPE HASHED TABLE OF ty_expected WITH UNIQUE KEY path.
-  TYPES ty_zip_entity TYPE cl_abap_zip=>entity.
+  TYPES BEGIN OF ty_zip_entity.
+    TYPES name TYPE string.
+    TYPES content TYPE xstring.
+  TYPES END OF ty_zip_entity.
   TYPES BEGIN OF ty_zip.
     TYPES expected TYPE ty_expected_hash.
     TYPES plain TYPE ty_paths.
@@ -62,7 +65,7 @@ PRIVATE SECTION.
   CLASS-METHODS read_zip IMPORTING iv_path TYPE clike RAISING cx_static_check.
   CLASS-METHODS parse_manifests RAISING cx_static_check.
   CLASS-METHODS validate_members RAISING cx_static_check.
-  CLASS-METHODS add_member IMPORTING entity TYPE cl_abap_zip=>entity set_id TYPE clike member_name TYPE string idx TYPE i.
+  CLASS-METHODS add_member IMPORTING entity TYPE ty_zip_entity set_id TYPE clike member_name TYPE string idx TYPE i.
   CLASS-METHODS member_hash IMPORTING content TYPE xstring RETURNING VALUE(result) TYPE ty_hash.
   CLASS-METHODS expected_hash IMPORTING path TYPE string RETURNING VALUE(result) TYPE ty_hash.
   CLASS-METHODS bump_mismatch IMPORTING set_id TYPE clike.
@@ -107,7 +110,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
           DELETE FROM (table_name) WHERE setname = 'ZABAPGIT' OR setname = 'DEPS' OR setname = 'CORPUS' OR setname = 'SETS'.
           COMMIT WORK.
         ELSE.
-          SELECT COUNT(*) FROM (table_name) INTO @DATA(old_count) WHERE setname = 'ZABAPGIT' OR setname = 'DEPS' OR setname = 'CORPUS' OR setname = 'SETS'.
+          SELECT COUNT(*) FROM (table_name) WHERE setname = 'ZABAPGIT' OR setname = 'DEPS' OR setname = 'CORPUS' OR setname = 'SETS' INTO @DATA(old_count).
           IF old_count > 0.
             RETURN.
           ENDIF.
@@ -294,7 +297,7 @@ CLASS zcl_abapiti_corpus IMPLEMENTATION.
     FIELD-SYMBOLS <entities> TYPE ANY TABLE.
     FIELD-SYMBOLS <entity> TYPE any.
     FIELD-SYMBOLS <name> TYPE any.
-    ASSIGN zip_archive->('ENTITIES') TO <entities>.
+    ASSIGN zip_archive->('FILES') TO <entities>.
     IF sy-subrc <> 0.
       bump_mismatch( 'UNKNOWN' ).
       RETURN.
