@@ -153,6 +153,7 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		if x == nil {
 			return nil
 		}
+		x = l.presentValue(r.Expression, x, l.method.Result)
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
 		if flag, ok := l.breakViaFlag[n]; ok {
@@ -316,6 +317,11 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				return nil
 			}
 			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
+				typ = x.Type
+			}
+			if d.Type() == nil && l.shapeAliasOf(typ, x.Type) {
+				// The checker infers an anonymous shape for a call whose
+				// lowered result is the declared data interface.
 				typ = x.Type
 			}
 			// An initializer that yields an optional (map lookups, optional
@@ -605,6 +611,9 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	x := l.expr(f.Expression)
 	if x == nil {
 		return nil
+	}
+	if x.Type.Kind == hir.OrderedSet {
+		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
 	}
 	if x.Type.Kind == hir.Array {
 		elem = x.Type.Args[0]

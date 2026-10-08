@@ -48,6 +48,10 @@ func (l *lowerer) eraseGenericOverrides() {
 			if slot == nil || m.Static || len(slot.Params) < len(m.Params) {
 				continue
 			}
+			if m.Result.Kind == hir.Optional && m.Result.Args[0].Kind == hir.Dynamic && slot.Result.Kind == hir.Optional {
+				// `getSuperClass(): undefined` implements an optional slot.
+				m.Result = slot.Result
+			}
 			same := m.Result.Equal(slot.Result) && len(slot.Params) == len(m.Params)
 			for j := range m.Params {
 				same = same && m.Params[j].Type.Equal(slot.Params[j].Type) && m.Params[j].Name == slot.Params[j].Name
