@@ -10,7 +10,7 @@ import {buildUpstream, verifyUpstream, upstreamPin} from './statements-upstream.
 const hash = text => createHash('sha256').update(text).digest('hex');
 const args = process.argv.slice(2);
 if (args[0] === '--worker') {
- const [, core, input, deps, config, negatives] = args;
+ const [, core, input, deps, config, negatives, workload] = args;
  const a = createRequire(import.meta.url)(join(core, 'index.js'));
  const cfg = readFileSync(config, 'utf8');
  const files = [];
@@ -18,7 +18,7 @@ if (args[0] === '--worker') {
  walk(deps);
  const main = readdirSync(input).sort().map(n => [n,readFileSync(join(input,n),'utf8')]);
  const variants = JSON.parse(readFileSync(negatives,'utf8'));
- for (const variant of [null,...variants]) {
+ for (const variant of workload === 'DEPLOYMENT' ? [null] : variants) {
   const reg = new a.Registry(new a.Config(cfg));
   for (const [name,text] of main) reg.addFile(new a.MemoryFile(variant && name.endsWith('.abap') ? variant.filename : name,text+(variant && name.endsWith('.abap') ? variant.edit : '')));
   for (const [name,text] of files) reg.addDependency(new a.MemoryFile(name,text));
@@ -31,22 +31,23 @@ if (args[0] === '--worker') {
  if (!negatives) throw new Error('usage: registry-coverage.mjs out-dir input-dir deps-src config negatives [upstream]');
  const out = resolve(outArg), upstream = resolve(upstreamArg);
  mkdirSync(out); mkdirSync(join(out,'v8'));
+ for (const workload of ['DEPLOYMENT','NEGATIVE','UPSTREAM']) mkdirSync(join(out,'v8',workload));
  const ts = createRequire(import.meta.url)(verifyUpstream(upstream));
  const require = createRequire(join(upstream,'packages/core/package.json'));
  const {SourceMapConsumer} = require('source-map');
  const build = buildUpstream(upstream);
  try {
-  const env = {...process.env,NODE_V8_COVERAGE:join(out,'v8')};
-  execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--worker',build.core,resolve(input),resolve(deps),resolve(config),resolve(negatives)],{env,stdio:'inherit',timeout:1800000});
+  const environment = workload => ({...process.env,NODE_V8_COVERAGE:join(out,'v8',workload)});
+  for (const workload of ['DEPLOYMENT','NEGATIVE']) execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--worker',build.core,resolve(input),resolve(deps),resolve(config),resolve(negatives),workload],{env:environment(workload),stdio:'inherit',timeout:1800000});
   const testRoot = join(build.core,'../test');
   const tests = ['check_syntax','unknown_types','implement_methods','superclass_final','parser_error','allowed_object_naming'].map(n=>join(testRoot,'rules',n+'.js'));
   function testFiles(dir) { return readdirSync(dir).sort().flatMap(n=>statSync(join(dir,n)).isDirectory()?testFiles(join(dir,n)):n.endsWith('.js')?[join(dir,n)]:[]); }
   tests.push(...testFiles(join(testRoot,'abap/syntax')));
-  execFileSync(process.execPath,[require.resolve('mocha/bin/mocha.js'),'--timeout','1000000','--reporter','dot',...tests],{env,stdio:'inherit',timeout:1800000});
-  // Union root function counts across every worker/test. Nested block counts do
+  execFileSync(process.execPath,[require.resolve('mocha/bin/mocha.js'),'--timeout','1000000','--reporter','dot',...tests],{env:environment('UPSTREAM'),stdio:'inherit',timeout:1800000});
+  // Keep root function execution provenance for each workload class. Nested block counts do
   // not decide whether a function was called. Unmapped bodies remain live.
   const evidence = new Map();
-  for (const file of readdirSync(join(out,'v8')).sort()) for (const script of JSON.parse(readFileSync(join(out,'v8',file),'utf8')).result) {
+  for (const workload of ['DEPLOYMENT','NEGATIVE','UPSTREAM']) for (const file of readdirSync(join(out,'v8',workload)).sort()) for (const script of JSON.parse(readFileSync(join(out,'v8',workload,file),'utf8')).result) {
    if (!script.url.startsWith('file:')) continue;
    const path = fileURLToPath(script.url);
    if (!path.startsWith(build.core+'/') || !path.endsWith('.js')) continue;
@@ -73,7 +74,7 @@ if (args[0] === '--worker') {
     const start = n.getStart(sf), end = n.end, key = rel+':'+start;
     const prev = evidence.get(key);
     const symbol = ts.isMethodDeclaration(n) || ts.isGetAccessor(n) || ts.isSetAccessor(n) ? n.parent.name?.text+'.'+name : name;
-    evidence.set(key,{file:'src/'+rel,start:Buffer.byteLength(source.slice(0,start)),end:Buffer.byteLength(source.slice(0,end)),kind:ts.isConstructorDeclaration(n)?'Constructor':ts.SyntaxKind[n.kind],symbol,line:sf.getLineAndCharacterOfPosition(start).line+1,sha256:hash(source.slice(start,end)),executed:!!r.count || !!prev?.executed});
+    evidence.set(key,{file:'src/'+rel,start:Buffer.byteLength(source.slice(0,start)),end:Buffer.byteLength(source.slice(0,end)),kind:ts.isConstructorDeclaration(n)?'Constructor':ts.SyntaxKind[n.kind],symbol,line:sf.getLineAndCharacterOfPosition(start).line+1,sha256:hash(source.slice(start,end)),executed:!!r.count || !!prev?.executed,workloads:[...new Set([...(prev?.workloads ?? []),...(r.count ? [workload] : [])])]});
    }
   }
   const spans = [...evidence.values()].sort((a,b)=>(a.file<b.file?-1:a.file>b.file?1:0)||a.start-b.start);
@@ -81,7 +82,7 @@ if (args[0] === '--worker') {
   function fingerprint(dir,prefix) { for(const n of readdirSync(dir).sort()) {const p=join(dir,n);if(statSync(p).isDirectory())fingerprint(p,prefix+n+'/');else inputs.push({file:prefix+n,sha256:hash(readFileSync(p))});} }
   fingerprint(resolve(input),'input/'); fingerprint(resolve(deps),'dependencies/');
   inputs.push({file:'config.json',sha256:hash(readFileSync(config))},{file:'negative-issues.json',sha256:hash(readFileSync(negatives))});
-  const manifest={schema:1,upstreamPin,workloads:['north-star',...JSON.parse(readFileSync(negatives,'utf8')).map(v=>v.target),'six-rule-unit-tests','abap-syntax-unit-tests'],inputs,spans};
+  const manifest={schema:2,upstreamPin,workloads:['north-star',...JSON.parse(readFileSync(negatives,'utf8')).map(v=>v.target),'six-rule-unit-tests','abap-syntax-unit-tests'],inputs,spans};
   writeFileSync(join(out,'reachability.json'),JSON.stringify(manifest,null,2)+'\n');
   console.log(JSON.stringify({mapped:spans.length,executed:spans.filter(s=>s.executed).length,traps:spans.filter(s=>!s.executed).length}));
  } finally { build.dispose(); }

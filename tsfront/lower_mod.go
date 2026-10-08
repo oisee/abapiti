@@ -20,7 +20,7 @@ import (
 // string enum declarations. It runs before lowerModule so the module classes
 // know which parts to build.
 func (l *lowerer) scanModuleUse(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindImportDeclaration:
 			d := stmt.AsImportDeclaration()
@@ -72,7 +72,7 @@ func (l *lowerer) namespaceUsedAsValue(f *ast.SourceFile, alias string) bool {
 		skip := inImport || n.Kind == ast.KindImportDeclaration
 		n.ForEachChild(func(c *ast.Node) bool { walk(c, skip); return false })
 	}
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		walk(stmt, stmt.Kind == ast.KindImportDeclaration)
 	}
 	return found
@@ -133,7 +133,7 @@ func (l *lowerer) enumOf(sym *ast.Symbol) map[string]string {
 // local declarations contribute in place.
 func (l *lowerer) nsExportOrder(f *ast.SourceFile) []string {
 	var out []string
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindExportDeclaration:
 			d := stmt.AsExportDeclaration()
@@ -193,7 +193,7 @@ func (l *lowerer) moduleClassOf(f *ast.SourceFile) *hir.Class {
 func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 	needNS := l.nsNeeded[f.FileName()]
 	var enums, funcs, vars bool
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindEnumDeclaration:
 			if l.enumOf(stmt.Symbol()) != nil {
@@ -292,7 +292,7 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 		decl := l.assignStatic(mod, f.AsNode(), field, &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: name}, Type: typ}, typ)
 		out = append(out, decl)
 		// declaration order of the enum members
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind != ast.KindEnumDeclaration || stmt.Name() == nil || stmt.Name().Text() != name {
 				continue
 			}
@@ -315,7 +315,7 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 
 // lowerModuleVars lowers the plain module variables (phase-1 moduleVar).
 func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hir.Stmt) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 {
 			l.diagf(stmt, "unsupported-top-level", "mutable module variables are not lowered")
 			continue
@@ -338,7 +338,7 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 // moduleFunctions lowers module-level function declarations to static
 // methods of the module class.
 func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil {
 			continue
 		}

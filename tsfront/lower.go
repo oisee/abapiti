@@ -73,6 +73,13 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	if err := l.validateOverrides(files, registry); err != nil {
 		return nil, nil, err
 	}
+	if coverage != nil && coverage.Schema == 2 {
+		var err error
+		files, err = l.pruneDeclarations(files)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	for _, name := range files {
 		f, ok := p.File(name)
 		if !ok {
@@ -107,7 +114,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind == ast.KindInterfaceDeclaration && !l.isDataInterface(stmt) {
 				if i := l.ifaceOf(stmt.Symbol()); i != nil {
 					l.interfaceSignatures(stmt, i)
@@ -155,7 +162,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, fn := range f.Statements.Nodes {
+		for _, fn := range l.statementNodes(f) {
 			if fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil {
 				continue
 			}
@@ -181,7 +188,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind != ast.KindVariableStatement {
 				continue
 			}
@@ -250,6 +257,8 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	retained   map[*ast.Node]bool
+	typeOnly   map[*ast.Node]bool
 	unexecuted map[*ast.Node]string
 	overrides  map[*ast.Node]overrides.Entry
 	prog       *Program
@@ -505,7 +514,7 @@ func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
 }
 
 func (l *lowerer) registerFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindClassDeclaration:
 			if name := stmt.Name(); name != nil && stmt.Symbol() != nil {

@@ -24,19 +24,21 @@ type Reachability struct {
 	Spans []CoverageSpan `json:"spans"`
 }
 type CoverageSpan struct {
-	File     string `json:"file"`
-	Start    int    `json:"start"`
-	End      int    `json:"end"`
-	Kind     string `json:"kind"`
-	Symbol   string `json:"symbol"`
-	Line     int    `json:"line"`
-	SHA256   string `json:"sha256"`
-	Executed bool   `json:"executed"`
+	File      string   `json:"file"`
+	Start     int      `json:"start"`
+	End       int      `json:"end"`
+	Kind      string   `json:"kind"`
+	Symbol    string   `json:"symbol"`
+	Line      int      `json:"line"`
+	SHA256    string   `json:"sha256"`
+	Executed  bool     `json:"executed"`
+	Workloads []string `json:"workloads,omitempty"`
 }
 
-// LowerWithReachability preserves all declarations and their ABI. Unexecuted
-// bodies raise a dedicated exception before evaluating defaults or body code.
-// Coverage does not authorize dropping imports or reflective factories.
+// LowerWithReachability validates coverage before lowering. Schema 1 keeps all
+// declarations; schema 2 prunes through a conservative declaration graph.
+// Excluded bodies trap before defaults or body code. Reflective replacements
+// require a separate fingerprinted override.
 func (p *Program) LowerWithReachability(files []string, registry *overrides.Registry, coverage *Reachability) (*hir.Program, []LowerDiagnostic, error) {
 	return p.lowerWithPolicy(files, registry, coverage)
 }
@@ -45,7 +47,7 @@ func (l *lowerer) validateReachability(files []string, coverage *Reachability) e
 	if coverage == nil {
 		return nil
 	}
-	if coverage.Schema != 1 || len(coverage.Workloads) == 0 {
+	if (coverage.Schema != 1 && coverage.Schema != 2) || len(coverage.Workloads) == 0 {
 		return fmt.Errorf("invalid reachability manifest")
 	}
 	byFile := map[string][]CoverageSpan{}
@@ -54,6 +56,20 @@ func (l *lowerer) validateReachability(files []string, coverage *Reachability) e
 		key := fmt.Sprintf("%s:%d", span.File, span.Start)
 		if seen[key] || span.Start < 0 || span.End <= span.Start || len(span.SHA256) != 64 || strings.HasPrefix(span.File, "../") || filepath.IsAbs(span.File) {
 			return fmt.Errorf("invalid coverage span %s", key)
+		}
+		if coverage.Schema == 2 {
+			positive := false
+			provenance := map[string]bool{}
+			for _, workload := range span.Workloads {
+				if (workload != "DEPLOYMENT" && workload != "NEGATIVE" && workload != "UPSTREAM") || provenance[workload] {
+					return fmt.Errorf("invalid coverage provenance at %s", key)
+				}
+				provenance[workload] = true
+				positive = true
+			}
+			if positive != span.Executed {
+				return fmt.Errorf("inconsistent coverage provenance at %s", key)
+			}
 		}
 		seen[key] = true
 		byFile[span.File] = append(byFile[span.File], span)
@@ -95,7 +111,14 @@ func (l *lowerer) validateReachability(files []string, coverage *Reachability) e
 			if n == nil || span.Line != line || n.Body() == nil || n.End() != span.End || n.Kind.String() != "Kind"+span.Kind || span.End > len(f.Text()) || overrides.Fingerprint(f.Text()[span.Start:span.End]) != span.SHA256 {
 				return fmt.Errorf("coverage is stale at %s:%d", rel, span.Line)
 			}
-			if !span.Executed {
+			live := span.Executed
+			if coverage.Schema == 2 {
+				live = false
+				for _, workload := range span.Workloads {
+					live = live || workload == "DEPLOYMENT" || workload == "NEGATIVE"
+				}
+			}
+			if !live {
 				l.unexecuted[n] = fmt.Sprintf("%s:%d", rel, span.Line)
 			}
 		}
@@ -112,6 +135,6 @@ func (l *lowerer) trapUnexecuted(n *ast.Node, hm *hir.Method) bool {
 		return false
 	}
 	hm.Body = hir.B(&hir.Stmt{Node: l.node(n), Kind: hir.Trap, Name: location})
-	l.diagf(n, "note-reachability", "unexecuted coverage body traps at %s", location)
+	l.diagf(n, "note-reachability", "excluded coverage body traps at %s", location)
 	return true
 }

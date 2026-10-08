@@ -24,7 +24,7 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	text := string(source)
 	start := strings.Index(text, "public static dead()")
 	end := strings.Index(text[start:], "}") + start + 1
-	coverage := &Reachability{Schema: 1, Workloads: []string{"feature-unit"}, Spans: []CoverageSpan{{File: "probe.ts", Start: start, End: end, Kind: "MethodDeclaration", Line: strings.Count(text[:start], "\n") + 1, SHA256: overrides.Fingerprint(text[start:end])}}}
+	coverage := &Reachability{Schema: 2, Workloads: []string{"feature-unit"}, Spans: []CoverageSpan{{File: "probe.ts", Start: start, End: end, Kind: "MethodDeclaration", Line: strings.Count(text[:start], "\n") + 1, SHA256: overrides.Fingerprint(text[start:end]), Executed: true, Workloads: []string{"UPSTREAM"}}}}
 	p, err := Load(filepath.Join(dir, "tsconfig.json"))
 	if err != nil {
 		t.Fatal(err)

@@ -16,6 +16,8 @@ type Entry struct {
 	Key       Key
 	SHA256    string
 	Rationale string
+	// References name declarations introduced by a replacement rather than its source.
+	References []Key
 	// Exactly one builder is provided. Builders must return fresh nodes.
 	Result      func() hir.Type
 	Types       map[string]hir.Type

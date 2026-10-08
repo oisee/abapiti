@@ -119,3 +119,94 @@ func TestTemplateInterpolation(t *testing.T) {
 		}
 	}
 }
+
+// An upstream-only unsupported body contributes neither an execution root
+// nor body dependencies, but its ABI remains when the class is reached.
+func TestWorkloadProvenanceAndDeclarationGraph(t *testing.T) {
+	dir := t.TempDir()
+	config := filepath.Join(dir, "tsconfig.json")
+	source := `export interface Shape { value: string; }
+export class Probe {
+ live(): Shape { return {value: "ok"}; }
+ dead(): number { return new Date().getTime(); }
+}
+export class Removed { dead(): number { return new Date().getTime(); } }
+export class OnlyType { value: string = "hidden"; }
+export class LiveValue { value: string = "constructed"; }
+export class Consumer { build(unused: OnlyType): LiveValue { return new LiveValue(); } }`
+	if err := os.WriteFile(config, []byte(`{"compilerOptions":{"strict":true},"files":["probe.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "probe.ts"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	coverage := &Reachability{Schema: 2, Workloads: []string{"deployment", "upstream"}}
+	for _, body := range []string{`live(): Shape { return {value: "ok"}; }`, `dead(): number { return new Date().getTime(); }`} {
+		offset := 0
+		for {
+			index := strings.Index(source[offset:], body)
+			if index < 0 {
+				break
+			}
+			start := offset + index
+			workload := "UPSTREAM"
+			if strings.HasPrefix(body, "live") {
+				workload = "DEPLOYMENT"
+			}
+			coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: start, End: start + len(body), Kind: "MethodDeclaration", Line: strings.Count(source[:start], "\n") + 1, SHA256: overrides.Fingerprint(body), Executed: true, Workloads: []string{workload}})
+			offset = start + len(body)
+		}
+	}
+	p, err := Load(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range diags {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Fatal(d)
+		}
+	}
+	if errs := hir.Verify(prog); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	dump := hir.Dump(prog)
+	if strings.Contains(dump, "Removed") || !strings.Contains(dump, "Shape") || !strings.Contains(dump, "trap probe.ts:4") {
+		t.Fatal(dump)
+	}
+	var onlyType, liveValue *hir.Class
+	for _, c := range prog.Classes {
+		if strings.HasSuffix(c.Name, ".OnlyType") {
+			onlyType = c
+		}
+		if strings.HasSuffix(c.Name, ".LiveValue") {
+			liveValue = c
+		}
+	}
+	if onlyType == nil || onlyType.Ctor == nil || onlyType.Ctor.Body == nil || onlyType.Ctor.Body.List[0].Kind != hir.Trap {
+		t.Fatal("type-only constructor must trap", dump)
+	}
+	if liveValue == nil || liveValue.Ctor == nil || liveValue.Ctor.Body == nil || strings.Contains(hir.Dump(&hir.Program{Classes: []*hir.Class{liveValue}}), "trap") {
+		t.Fatal("runtime initializer was trapped", dump)
+	}
+	coverage.Spans[1].Workloads = []string{"NEGATIVE"}
+	_, diags, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasBlocking(diags) {
+		t.Fatal("negative executed body was trapped")
+	}
+	coverage.Spans[1].Workloads = []string{"INVALID"}
+	if _, _, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage); err == nil {
+		t.Fatal("unknown workload class accepted")
+	}
+	coverage.Spans[1].Workloads = []string{"UPSTREAM"}
+	coverage.Spans[1].Executed = false
+	if _, _, err = p.LowerWithReachability([]string{"probe.ts"}, nil, coverage); err == nil {
+		t.Fatal("inconsistent union execution accepted")
+	}
+}

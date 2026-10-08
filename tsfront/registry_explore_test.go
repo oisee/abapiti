@@ -61,6 +61,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		}
 		entries = append(entries, e)
 	}
+	entries = append(entries, overrides.RegistryDeployment()...)
 	registry, err := overrides.New(entries...)
 	if err != nil {
 		t.Fatal(err)
@@ -85,6 +86,9 @@ func TestRegistryClosureGate(t *testing.T) {
 	}
 	var blocking []LowerDiagnostic
 	for _, d := range diags {
+		if d.Category == "note-declaration-reachability" {
+			t.Log(d.Message)
+		}
 		if !strings.HasPrefix(d.Category, "note-") {
 			blocking = append(blocking, d)
 		}
@@ -99,6 +103,21 @@ func TestRegistryClosureGate(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(out, "registry-blocking.json"), append(data, '\n'), 0644); err != nil {
+			t.Fatal(err)
+		}
+		var trapEvidence []struct{ Class, Method, Location string }
+		for _, c := range prog.Classes {
+			for _, m := range c.Methods {
+				if m.Body != nil && m.Body.Kind == hir.Block && len(m.Body.List) == 1 && m.Body.List[0].Kind == hir.Trap {
+					trapEvidence = append(trapEvidence, struct{ Class, Method, Location string }{c.Name, m.Name, m.Body.List[0].Name})
+				}
+			}
+		}
+		traps, err := json.MarshalIndent(trapEvidence, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(out, "registry-traps.json"), append(traps, '\n'), 0644); err != nil {
 			t.Fatal(err)
 		}
 		var lines []string

@@ -12,7 +12,7 @@ import (
 // bodies, so any body can resolve members of any class.
 
 func (l *lowerer) signaturesFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindClassDeclaration:
 			if c, ok := l.classes[stmt.Symbol()]; ok {
@@ -196,7 +196,7 @@ func (l *lowerer) baseConstructorOf(name string) *hir.Method {
 }
 
 func (l *lowerer) bodiesFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind != ast.KindClassDeclaration {
 			continue
 		}
@@ -217,7 +217,14 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 				l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
 			}
 		}
-		l.lowerImplicitInitializers(stmt, c)
+		if l.typeOnly[stmt] {
+			if c.Ctor == nil {
+				c.Ctor = &hir.Method{Node: l.node(stmt), Name: "constructor", Result: hir.T(hir.Void)}
+			}
+			c.Ctor.Body = hir.B(&hir.Stmt{Node: l.node(stmt), Kind: hir.Trap, Name: l.typeOnlyLocation(stmt)})
+		} else {
+			l.lowerImplicitInitializers(stmt, c)
+		}
 	}
 }
 
