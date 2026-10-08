@@ -287,6 +287,11 @@ func (l *lowerer) freeLocals(fn *ast.Node) []string {
 						assigned[b.Left.Text()] = true
 					}
 				}
+				// Property/index assignment evaluates its receiver too; capturing
+				// that reference does not assign the local binding itself.
+				if b.Left.Kind != ast.KindIdentifier {
+					walk(b.Left, inFn)
+				}
 				walk(b.Right, inFn)
 				return
 			}

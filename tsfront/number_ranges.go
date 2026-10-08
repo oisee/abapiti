@@ -170,14 +170,36 @@ func (p *numberPass) field(e *hir.Expr) string {
 	if e == nil {
 		return ""
 	}
-	if e.Kind == hir.StaticGet {
-		return e.Owner + "." + e.Name
-	}
+	owner := e.Owner
 	if e.Kind == hir.FieldGet && e.X != nil {
-		return e.X.Type.Name + "." + e.Name
+		owner = e.X.Type.Name
+	} else if e.Kind != hir.StaticGet {
+		return ""
 	}
-	return ""
+	// An inherited receiver writes the declaring class's storage, so its write
+	// must participate in the same summary used by reads through the base type.
+	for name := owner; name != ""; {
+		found := false
+		for _, c := range p.prog.Classes {
+			if c.Name != name {
+				continue
+			}
+			for _, f := range c.Fields {
+				if f.Name == e.Name {
+					return c.Name + "." + e.Name
+				}
+			}
+			name = c.Super
+			found = true
+			break
+		}
+		if !found {
+			break
+		}
+	}
+	return owner + "." + e.Name
 }
+
 func (p *numberPass) resolve(e *hir.Expr) *hir.Method {
 	owner := e.Owner
 	if e.Kind == hir.New {
@@ -599,6 +621,11 @@ func (p *numberPass) peek(e *hir.Expr, env map[string]numberInterval) numberInte
 	return numberTop
 }
 func (p *numberPass) recordWrite(e *hir.Expr, r numberInterval, env map[string]numberInterval) {
+	// An indirect receiver may alias this (including through a parameter).
+	// Drop local field refinements; whole-program summaries include the write.
+	if e != nil && e.Kind == hir.FieldGet && (e.X == nil || e.X.Kind != hir.This) {
+		p.invalidateFields(env)
+	}
 	key := rangeKey(e)
 	if key != "" {
 		env[key] = r
@@ -882,6 +909,7 @@ func walkNumberExpr(e *hir.Expr, stmt func(*hir.Stmt), expr func(*hir.Expr)) {
 	walkNumberStmt(e.Stmt, stmt, expr)
 }
 func (l *lowerer) inferNumberRanges() {
+	l.distinguishNumberLocals()
 	l.checkIndexFieldBoundaries()
 	p := &numberPass{prog: l.out, methods: map[*hir.Method]*numberMethod{}, fields: map[string]numberInterval{}, fixed: map[string]numberInterval{}, immutable: map[string]bool{}}
 	for _, c := range l.out.Classes {

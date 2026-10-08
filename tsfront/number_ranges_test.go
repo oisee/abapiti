@@ -10,6 +10,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
 func rangeClass(t *testing.T, p *hir.Program, suffix string) *hir.Class {
@@ -404,9 +405,211 @@ func TestNumberBoundaryAliasDoesNotCaptureExistingLocal(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "number.index", Type: hir.T(hir.I32), X: field()}},
 	)}
 	c := &hir.Class{Name: "Probe", Fields: []hir.Field{{Name: "start", Type: hir.T(hir.Number), Private: true}}, Methods: []*hir.Method{m}, Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.Assign, X: field(), Y: hir.L(hir.T(hir.Number), 0)})}}
-	l := &lowerer{out: &hir.Program{Classes: []*hir.Class{c}}}
+	symbol := &ast.Symbol{}
+	l := &lowerer{out: &hir.Program{Classes: []*hir.Class{c}}, localSymbols: map[*hir.Expr]*ast.Symbol{write.Y: symbol}, paramSymbols: map[*hir.Method]map[string]*ast.Symbol{m: {"offset": symbol}}}
 	l.checkIndexFieldBoundaries()
 	if m.Body.List[0].Name == "range_param_1" || write.Y.Name != m.Body.List[0].Name {
 		t.Fatal("checked alias captured the user's local instead of the public parameter")
+	}
+}
+
+func TestNumberRangeIndirectFieldWrites(t *testing.T) {
+	for _, value := range []string{"2147483648", "0.5"} {
+		for _, receiver := range []string{"alias", "other"} {
+			t.Run(value+"/"+receiver, func(t *testing.T) {
+				p := lowerStatementsProbe(t, map[string]string{"probe.ts": fmt.Sprintf(`
+export class Probe {
+ private n=0;
+ run(other:Probe):number {this.n=0; const alias=this; %s.n=%s; const observed=this.n; return observed;}
+}`, receiver, value)}, []string{"probe.ts"})
+				m := rangeClass(t, p, ".Probe").Methods[0]
+				want := hir.I64
+				if value == "0.5" {
+					want = hir.Number
+				}
+				if got := rangeLocals(m)["observed"]; got != want {
+					t.Fatalf("stale alias field proof: %s, want %s", got, want)
+				}
+				if _, err := abap.Emit(p); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
+func TestNumberBoundaryShadowedParameter(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `
+export class Probe {
+ private start=0;
+ private raw="abc";
+ add(offset:number):number {this.start=offset; {const offset=7; return offset;}}
+ get():string {return this.raw.charAt(this.start);}
+}`}, []string{"probe.ts"})
+	m := rangeClass(t, p, ".Probe").Methods[0]
+	var returned *hir.Expr
+	var shadow *hir.Stmt
+	walkNumberStmt(m.Body, func(s *hir.Stmt) {
+		if s.Kind == hir.VarDecl && s.X != nil && s.X.Kind == hir.Lit {
+			shadow = s
+		}
+		if s.Kind == hir.Return {
+			returned = unwrapNumber(s.X)
+		}
+	}, func(e *hir.Expr) {})
+	for returned != nil && returned.Kind == hir.NumericConvert {
+		returned = returned.X
+	}
+	if returned == nil || returned.Kind != hir.Local || shadow == nil || returned.Name != shadow.Name || strings.HasPrefix(returned.Name, "range_param_") {
+		t.Fatalf("shadowed return captured checked parameter: %+v", returned)
+	}
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberRangeFieldEffectsThroughCallsAndClosures(t *testing.T) {
+	for _, change := range []string{
+		`const alias=this; alias.change();`,
+		`other.change();`,
+		`const mutate=()=>{this.n=0.5;}; mutate();`,
+		`const alias=this; const mutate=()=>{alias.n=0.5;}; mutate();`,
+	} {
+		t.Run(change, func(t *testing.T) {
+			p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+private n=0;
+private change():void {this.n=0.5;}
+run(other:Probe):number {this.n=0; ` + change + ` const observed=this.n;return observed;}
+}`}, []string{"probe.ts"})
+			for _, m := range rangeClass(t, p, ".Probe").Methods {
+				if m.Name == "run" && rangeLocals(m)["observed"] != hir.Number {
+					t.Fatal("call retained stale field fact")
+				}
+			}
+			if _, err := abap.Emit(p); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestNumberRangeInheritedAliasWrite(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+private n=0;
+run(other:Derived):number {this.n=0;other.n=0.5;const observed=this.n;return observed;}
+}
+export class Derived extends Probe {}`}, []string{"probe.ts"})
+	m := rangeClass(t, p, ".Probe").Methods[0]
+	if rangeLocals(m)["observed"] != hir.Number {
+		t.Fatal("inherited alias write missed declaring-class summary")
+	}
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberBoundaryShadowedAssignment(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+private start=0;
+private raw="abc";
+add(offset:number):number {this.start=offset;{let offset=7;offset=8;}return offset;}
+get():string {return this.raw.charAt(this.start);}
+}`}, []string{"probe.ts"})
+	m := rangeClass(t, p, ".Probe").Methods[0]
+	checked := false
+	walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+		if e.Kind == hir.CheckedNumericConvert {
+			checked = true
+		}
+	})
+	if !checked {
+		t.Fatal("shadowed assignment treated as parameter mutation")
+	}
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberBoundaryAssignedParameter(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+private start=0;
+private raw="abc";
+add(offset:number):number {this.start=offset;offset=0.5;return offset;}
+get():string {return this.raw.charAt(this.start);}
+}`}, []string{"probe.ts"})
+	m := rangeClass(t, p, ".Probe").Methods[0]
+	walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+		if e.Kind == hir.CheckedNumericConvert {
+			t.Fatal("mutated parameter acquired a checked alias")
+		}
+	})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNumberRangeShadowedClosureCapture(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {
+run(n:number):number {{const n=7;const read=()=>n;return read();}}
+}`}, []string{"probe.ts"})
+	var m *hir.Method
+	for _, candidate := range rangeClass(t, p, ".Probe").Methods {
+		if candidate.Name == "run" {
+			m = candidate
+		}
+	}
+	walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+		if e.Kind != hir.VirtualCall || !strings.HasPrefix(e.Name, "fn_") {
+			return
+		}
+		if len(e.Args) != 1 {
+			t.Fatal("missing capture")
+		}
+		arg := e.Args[0]
+		for arg.Kind == hir.NumericConvert {
+			arg = arg.X
+		}
+		if arg.Kind != hir.Local || arg.Name == "n" {
+			t.Fatalf("shadowed closure captured outer parameter: %+v", arg)
+		}
+	})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// This fixture exercises observable results on both ABAP runtimes when exported.
+func TestNumberFix1Semantics(t *testing.T) {
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `
+export class Overflow {private n=0;run():number {this.n=0;const alias=this;alias.n=2147483648;return this.n;}}
+export class Fraction {private n=0;run():number {this.n=0;const alias=this;alias.n=0.5;return this.n;}}
+export class Shadow {private start=0;private raw="abc";add(offset:number):number {this.start=offset;{const offset=7;return offset;}}get():string {return this.raw.charAt(this.start);}}
+`}, []string{"probe.ts"})
+	files, names, err := abap.EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source strings.Builder
+	source.WriteString("CLASS ltcl_fix1 DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS semantics FOR TESTING.\nENDCLASS.\nCLASS ltcl_fix1 IMPLEMENTATION.\nMETHOD semantics.\nDATA actual TYPE f.\nDATA expected TYPE f.\n")
+	for i, probe := range []struct{ name, value, method, args string }{
+		{"Overflow", "2147483648", "run", ""},
+		{"Fraction", "0.5", "run", ""},
+		{"Shadow", "7", "add", names.Get("param.offset") + " = CONV f( 3 )"},
+	} {
+		class := names.Get(rangeClass(t, p, "."+probe.name).Name)
+		fmt.Fprintf(&source, "DATA(ref%d) = NEW %s( ).\ncl_abap_unit_assert=>assert_equals( act = xsdbool( ref%d IS INSTANCE OF %s ) exp = abap_true ).\nactual = ref%d->%s( %s ).\nexpected = '%s'.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\n", i, class, i, class, i, names.Get("member."+probe.method), probe.args, probe.value)
+	}
+	source.WriteString("ENDMETHOD.\nENDCLASS.\n")
+	class := names.Get(rangeClass(t, p, ".Overflow").Name)
+	files[class+".clas.testclasses.abap"] = source.String()
+	if out := os.Getenv("ABAPITI_FIX1_OUT"); out != "" {
+		if err := os.MkdirAll(out, 0755); err != nil {
+			t.Fatal(err)
+		}
+		for name, source := range files {
+			if err := os.WriteFile(filepath.Join(out, name), []byte(source), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }

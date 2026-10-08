@@ -389,6 +389,10 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 // signature fills params and result of hm from the checker's signature.
 func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 	sig := l.ck.GetSignatureFromDeclaration(node)
+	if l.paramSymbols == nil {
+		l.paramSymbols = map[*hir.Method]map[string]*ast.Symbol{}
+	}
+	l.paramSymbols[hm] = map[string]*ast.Symbol{}
 	checked := map[int]bool{}
 	for i, p := range node.Parameters() {
 		if ast.IsThisParameter(p) {
@@ -401,6 +405,7 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 			l.diagf(p, "unsupported-param", "parameter with a binding pattern")
 			name = "p" + itoa(i)
 		}
+		l.paramSymbols[hm][name] = l.ck.GetSymbolAtLocation(p.Name())
 		var typ hir.Type
 		switch {
 		case p.Type() != nil:

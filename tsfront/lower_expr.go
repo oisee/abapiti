@@ -459,6 +459,10 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if t, ok := l.lookup(name); ok {
 		x := hir.V(name, t)
 		x.Node = l.node(n)
+		if l.localSymbols == nil {
+			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+		}
+		l.localSymbols[x] = l.ck.GetSymbolAtLocation(n)
 		return x
 	}
 	sym := l.resolve(n)

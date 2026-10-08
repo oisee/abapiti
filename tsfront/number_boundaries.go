@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
 // Public number parameters normally remain unconstrained binary64. The task's
@@ -43,7 +44,7 @@ func (l *lowerer) checkIndexFieldBoundaries() {
 				if s.Kind != hir.Assign || s.X == nil || s.X.Kind != hir.FieldGet || s.X.X == nil || s.X.X.Kind != hir.This || !indexFields[s.X.Name] {
 					return
 				}
-				terms, ok := indexFieldTerms(s.Y)
+				terms, ok := l.indexFieldTerms(s.Y)
 				if !ok {
 					bad[s.X.Name] = true
 					return
@@ -57,7 +58,7 @@ func (l *lowerer) checkIndexFieldBoundaries() {
 					}
 					numericParam := false
 					for _, param := range m.Params {
-						if param.Name == term.param && param.Type.Kind == hir.Number && !m.Internal {
+						if param.Name == term.param && term.symbol != nil && l.paramSymbols[m][param.Name] == term.symbol && param.Type.Kind == hir.Number && !m.Internal {
 							numericParam = true
 						}
 					}
@@ -122,12 +123,12 @@ func (l *lowerer) checkIndexFieldBoundaries() {
 					l.serial++
 					alias = fmt.Sprintf("range_param_%d", l.serial)
 				}
-				if indexParamAssigned(m.Body, param.Name) {
+				if l.indexParamAssigned(m.Body, l.paramSymbols[m][param.Name]) {
 					continue
 				}
 				originalBody := m.Body
 				walkNumberStmt(originalBody, func(s *hir.Stmt) {}, func(e *hir.Expr) {
-					if e.Kind == hir.Local && e.Name == param.Name {
+					if e.Kind == hir.Local && l.localSymbols[e] != nil && l.localSymbols[e] == l.paramSymbols[m][param.Name] {
 						e.Name = alias
 					}
 				})
@@ -143,10 +144,11 @@ func (l *lowerer) checkIndexFieldBoundaries() {
 
 type indexFieldTerm struct {
 	param  string
+	symbol *ast.Symbol
 	offset int64
 }
 
-func indexFieldTerms(e *hir.Expr) ([]indexFieldTerm, bool) {
+func (l *lowerer) indexFieldTerms(e *hir.Expr) ([]indexFieldTerm, bool) {
 	e = unwrapNumber(e)
 	if e == nil {
 		return nil, false
@@ -158,19 +160,19 @@ func indexFieldTerms(e *hir.Expr) ([]indexFieldTerm, bool) {
 			return []indexFieldTerm{{offset: r.lo}}, true
 		}
 	case hir.Local:
-		return []indexFieldTerm{{param: e.Name}}, true
+		return []indexFieldTerm{{param: e.Name, symbol: l.localSymbols[e]}}, true
 	case hir.Conditional:
-		a, ok := indexFieldTerms(e.Y)
+		a, ok := l.indexFieldTerms(e.Y)
 		if !ok {
 			return nil, false
 		}
-		b, ok := indexFieldTerms(e.Z)
+		b, ok := l.indexFieldTerms(e.Z)
 		return append(a, b...), ok
 	case hir.Binary:
 		if e.Op != "+" && e.Op != "-" {
 			return nil, false
 		}
-		left, ok := indexFieldTerms(e.X)
+		left, ok := l.indexFieldTerms(e.X)
 		right := numericLiteral(e.Y)
 		if !ok || right.state != 1 {
 			return nil, false
@@ -190,12 +192,139 @@ func indexFieldTerms(e *hir.Expr) ([]indexFieldTerm, bool) {
 	return nil, false
 }
 
-func indexParamAssigned(body *hir.Stmt, name string) bool {
+func (l *lowerer) indexParamAssigned(body *hir.Stmt, symbol *ast.Symbol) bool {
 	assigned := false
 	walkNumberStmt(body, func(s *hir.Stmt) {
-		if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.Local && s.X.Name == name {
+		if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.Local && symbol != nil && l.localSymbols[s.X] == symbol {
 			assigned = true
 		}
 	}, func(e *hir.Expr) {})
 	return assigned
+}
+
+// HIR requires distinct local names. Normalize source shadowing by checker
+// binding before name-keyed range analysis, leaving synthetic locals alone.
+func (l *lowerer) distinguishNumberLocals() {
+	for _, c := range l.out.Classes {
+		for _, m := range numberMethods(c) {
+			used := map[string]bool{}
+			for _, param := range m.Params {
+				used[param.Name] = true
+			}
+			walkNumberStmt(m.Body, func(s *hir.Stmt) {
+				if s.Name != "" {
+					used[s.Name] = true
+				}
+			}, func(e *hir.Expr) {
+				if e.Kind == hir.Local {
+					used[e.Name] = true
+				}
+			})
+			seen := map[string]bool{}
+			for _, param := range m.Params {
+				seen[param.Name] = true
+			}
+			renamed := map[*ast.Symbol]string{}
+			originalNames := map[*hir.Stmt]string{}
+			walkNumberStmt(m.Body, func(s *hir.Stmt) {
+				if s.Kind != hir.VarDecl {
+					return
+				}
+				name := s.Name
+				originalNames[s] = name
+				symbol := l.declSymbols[s]
+				if seen[name] && symbol != nil {
+					for {
+						l.serial++
+						s.Name = fmt.Sprintf("range_local_%d", l.serial)
+						if !used[s.Name] {
+							break
+						}
+					}
+					used[s.Name] = true
+					renamed[symbol] = s.Name
+				}
+				seen[name] = true
+			}, func(e *hir.Expr) {})
+			walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+				if name := renamed[l.localSymbols[e]]; e.Kind == hir.Local && name != "" {
+					e.Name = name
+				}
+			})
+			// Lowering also synthesizes local reads (for example lifted capture
+			// arguments) without a source symbol. Bind those reads in their HIR scope.
+			l.renameSyntheticNumberLocals(m.Body, originalNames, map[string]string{})
+		}
+	}
+}
+
+func (l *lowerer) renameSyntheticNumberLocals(body *hir.Stmt, original map[*hir.Stmt]string, env map[string]string) {
+	var expr func(*hir.Expr, map[string]string)
+	var stmt func(*hir.Stmt, map[string]string)
+	clone := func(env map[string]string) map[string]string {
+		out := map[string]string{}
+		for k, v := range env {
+			out[k] = v
+		}
+		return out
+	}
+	expr = func(e *hir.Expr, env map[string]string) {
+		if e == nil {
+			return
+		}
+		if e.Kind == hir.Local && l.localSymbols[e] == nil {
+			if name := env[e.Name]; name != "" {
+				e.Name = name
+			}
+		}
+		if e.Kind == hir.Seq {
+			scope := clone(env)
+			if e.Stmt != nil {
+				for _, s := range e.Stmt.List {
+					stmt(s, scope)
+				}
+			}
+			expr(e.Y, scope)
+			return
+		}
+		expr(e.X, env)
+		expr(e.Y, env)
+		expr(e.Z, env)
+		for _, a := range e.Args {
+			expr(a, env)
+		}
+	}
+	stmt = func(s *hir.Stmt, env map[string]string) {
+		if s == nil {
+			return
+		}
+		if s.Kind == hir.Block {
+			scope := clone(env)
+			for _, child := range s.List {
+				stmt(child, scope)
+			}
+			return
+		}
+		expr(s.X, env)
+		expr(s.Y, env)
+		if s.Kind == hir.VarDecl {
+			name := original[s]
+			if name == "" {
+				name = s.Name
+			}
+			env[name] = s.Name
+		}
+		if s.Kind == hir.ForEach {
+			scope := clone(env)
+			scope[s.Name] = s.Name
+			stmt(s.Body, scope)
+			return
+		}
+		stmt(s.Body, env)
+		stmt(s.Else, env)
+		for _, child := range s.List {
+			stmt(child, env)
+		}
+	}
+	stmt(body, env)
 }
