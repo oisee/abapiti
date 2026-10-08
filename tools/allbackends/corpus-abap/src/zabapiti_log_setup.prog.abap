@@ -18,3 +18,6 @@ START-OF-SELECTION.
   MODIFY balsubt FROM TABLE subts.
   COMMIT WORK.
   WRITE / 'ZABAPITI log object ready'.
+  DATA(log) = zcl_abapiti_log=>start( subobject = 'CHECK' extnumber = 'setup smoke test' ).
+  log->info( 'logging works' ).
+  WRITE / |smoke run { log->runid }|.
