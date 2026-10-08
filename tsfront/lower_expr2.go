@@ -34,6 +34,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 	if recv == nil {
 		return nil
 	}
+	if recv.Type.Kind == hir.Optional {
+		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+	}
 	arg := e.ArgumentExpression
 	if arg == nil {
 		l.diagf(n, "unsupported-expr", "element access without an argument")

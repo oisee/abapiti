@@ -53,11 +53,11 @@ func TestEmitRegistryArrays(t *testing.T) {
 	}
 	class := names.Get("arrays.ts.ArrayProbe")
 	driver := "CLASS ltcl_arrays DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\n"
-	for _, method := range []string{"shift"} {
+	for _, method := range []string{"shift", "optionalIndex"} {
 		driver += fmt.Sprintf("METHODS %s FOR TESTING.\n", method)
 	}
 	driver += "ENDCLASS.\nCLASS ltcl_arrays IMPLEMENTATION.\n"
-	for _, method := range []string{"shift"} {
+	for _, method := range []string{"shift", "optionalIndex"} {
 		expected, ok := oracle[method]
 		if !ok {
 			t.Fatal("missing original observation", method)

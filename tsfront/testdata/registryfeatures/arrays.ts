@@ -2,6 +2,19 @@ export class Item {
   constructor(public name: string) {}
 }
 export class ArrayProbe {
+  private static visits = 0;
+  private static index(): number { ArrayProbe.visits++; return 0; }
+  public static optionalIndex(): string {
+    ArrayProbe.visits = 0;
+    const missing: number[] | undefined = undefined;
+    const absent = missing?.[ArrayProbe.index()];
+    const present: number[] | undefined = [7];
+    const value = present?.[ArrayProbe.index()];
+    const map: {[key: string]: number} | undefined = {key: 11};
+    const entry = map!["key"];
+    const missingEntry = map!["missing"];
+    return `${absent === undefined}/${value}/${entry}/${missingEntry === undefined}/${ArrayProbe.visits}/${present!.length}`;
+  }
   public static shift(): string {
     const nums: number[] = [0, 9007199254740991, -2.5];
     const alias = nums;

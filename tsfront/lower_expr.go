@@ -123,6 +123,19 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 		(n.Kind == ast.KindPropertyAccessExpression && n.AsPropertyAccessExpression().QuestionDotToken != nil) {
 		return x
 	}
+	// An index signature does not prove that a particular key exists. Keep
+	// lookup absence even when noUncheckedIndexedAccess is disabled upstream.
+	if x.Type.Kind == hir.Optional && n.Kind == ast.KindElementAccessExpression {
+		return x
+	}
+	if x.Type.Kind == hir.Optional && n.Kind == ast.KindIdentifier && !x.Type.Args[0].IsRef() {
+		if sym := l.resolve(n); sym != nil {
+			declared := l.ck.GetTypeOfSymbol(sym)
+			if declared != nil && !declared.IsUnion() && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindVariableDeclaration {
+				return x
+			}
+		}
+	}
 	t := l.ck.GetTypeAtLocation(n)
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return x
@@ -545,6 +558,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		if recv == nil {
 			return nil
 		}
+		if recv.Type.Kind == hir.Optional {
+			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+		}
 		return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: recv}
 	}
 	// A static field of a lowered class: ClassName.member.
@@ -577,6 +593,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			recv = &hir.Expr{Kind: hir.Narrow, Type: base, X: recv}
 		}
 		return l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), n.Name().Text()))
+	}
+	if recv.Type.Kind == hir.Optional && (base.Kind == hir.Array || base.Kind == hir.OrderedMap || base.Kind == hir.OrderedSet || base.Kind == hir.String) {
+		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: recv}
 	}
 	if base.Kind == hir.ClassRef {
 		for c := l.classByName(base.Name); c != nil; c = l.classByName(c.Super) {
@@ -1929,7 +1948,7 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 	case hir.Dynamic:
 		return l.rtOp("dynamic.toString", x, s)
 	case hir.Optional:
-		if x.Type.Args[0].IsRef() {
+		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break
 		}
 		saved := l.pend

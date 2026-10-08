@@ -356,6 +356,10 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic && !x.Type.Equal(dst) {
+		boxed := l.coerce(x, hir.T(hir.Dynamic))
+		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: boxed, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
+	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.Optional && dst.Args[0].Kind != hir.Dynamic {
 		base := dst.Args[0]
 		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
