@@ -74,7 +74,7 @@ func TestAbaplintStarPrioritySentinel(t *testing.T) {
 		t.Fatal(ok, err)
 	}
 	value := entry.Expressions["Number.MAX_SAFE_INTEGER"]()
-	if value.Type.Kind != hir.I32 || value.Value != 2147483647 {
+	if value.Type.Kind != hir.Number || value.Value != 2147483647 {
 		t.Fatal(value)
 	}
 	changed := strings.Replace(source[start:end], "best = p.remainingLength()", "best = p.remainingLength() + 1", 1)
@@ -117,7 +117,7 @@ func TestRun3Overrides(t *testing.T) {
 				}
 			case entry.Statements != nil:
 				for _, build := range entry.Statements {
-					if build().List[0].Kind != hir.Throw {
+					if build().List[0].Kind != hir.If || build().List[0].Body.List[0].Kind != hir.Throw {
 						t.Fatal("external include must trap")
 					}
 				}

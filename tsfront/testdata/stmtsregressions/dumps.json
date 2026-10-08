@@ -1,0 +1,8 @@
+[
+ {
+  "name": "include_without_registry",
+  "dump": "1\nInclude|-|1:1|1:13|TIdentifier[INCLUDE],EIncludeName(TIdentifier[zfoo]),TPunctuation[.]",
+  "tokens": 3,
+  "statements": 1
+ }
+]

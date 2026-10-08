@@ -667,12 +667,54 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if recv == nil {
 				return nil
 			}
-			_ = recv
-			args, ok := l.callArgs(n, n.Arguments(), hm.Params)
+			// Ordinary calls must use the erased virtual slot. The specialized
+			// implementation name is reserved for its bridge and super calls.
+			slot := hm
+			if original, _, specialized := strings.Cut(hm.Name, "_instantiated_"); specialized {
+				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
+					if m := l.methodsBy[c.Name+"."+original]; m != nil && m.Name == original {
+						slot = m
+						break
+					}
+					for _, m := range c.Methods {
+						if m.Name == original {
+							slot = m
+							break
+						}
+					}
+					if slot != hm {
+						break
+					}
+				}
+				if slot == hm {
+					l.diagf(n, "unsupported-generic-dispatch", "erased virtual slot %s is unavailable", original)
+					return nil
+				}
+			}
+			if slot.Result.Kind == hir.Void && hm.Result.IsRef() {
+				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
+					found := false
+					for _, m := range c.Methods {
+						if m.Name == slot.Name+"_value" {
+							slot = m
+							found = true
+							break
+						}
+					}
+					if found {
+						break
+					}
+				}
+			}
+			args, ok := l.callArgs(n, n.Arguments(), slot.Params)
 			if !ok {
 				return nil
 			}
-			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: hm.Name, Type: hm.Result, X: recv, Args: args}
+			call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: slot.Name, Type: slot.Result, X: recv, Args: args}
+			if !slot.Result.Equal(hm.Result) && hm.Result.Kind != hir.Void {
+				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hm.Result, X: call}
+			}
+			return call
 		}
 		// A receiver of a vendored but not-lowered class goes through a cast
 		// view interface grown for exactly this member.

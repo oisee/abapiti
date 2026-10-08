@@ -4,7 +4,7 @@ are copied verbatim; LICENSE.abaplint contains the upstream MIT notice.
 The harness/ directory belongs to abapiti.
 
 Regenerate the corpus oracle with tools/statements-oracle.mjs against the
-original upstream build. STMTS_EXPLORE=1 runs the diagnostic inventory;
+clean original upstream checkout at the pinned commit. The oracle checks the Git pin, tracked-source cleanliness and locked TypeScript version, then compiles into a disposable directory before loading any JavaScript. STMTS_EXPLORE=1 runs the diagnostic inventory;
 STMTS_EXPLORE=1 STMTS_GATE=1 additionally requires complete lowering and
 verified HIR. The lowering gate passes with zero blocking diagnostics and zero HIR
 errors. ABAPITI_TEST_OUT exports the HIR and full diagnostic/verification
@@ -23,3 +23,8 @@ The independent oracle covers 5,229 tokens and 926 statements.
 Run 3 result: all 64 cases and all 926 statement trees match the independent
 upstream oracle on both OSG-JS and osgo at runtime pin
 ad3d1e87cd3c3545b32dd4ba2ddeceb25708f05f. All 5,229 token counts match.
+
+The emitted harness also runs the separately stored `stmtsregressions` oracle for
+`INCLUDE zfoo.` without a registry, preserving the 64-case baseline counts.
+Lifted-function parameter defaults are a blocking diagnostic until a faithful
+capture-aware default prologue is available; they cannot pass the strict gate.

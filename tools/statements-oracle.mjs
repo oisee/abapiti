@@ -8,20 +8,20 @@
 // with tree nodes `T<TokenClass>[str]` and `E<ExpressionClass>(children...)`.
 // Rows and columns are 0-based, as the lexer reports them.
 //
-//   node statements-oracle.mjs <cases.json> <out.json> [abaplint-core-build]
+//   node statements-oracle.mjs <cases.json> <out.json> [upstream-checkout]
 //
-// Nothing is installed into the abaplint checkout; the existing build output
-// is loaded through createRequire.
+// A clean checkout at the upstream pin is rebuilt in isolation before imports.
 import {readFileSync, writeFileSync} from "node:fs";
 import {createRequire} from "node:module";
-import {resolve} from "node:path";
+import {buildUpstream} from "./statements-upstream.mjs";
 
 const [casesPath, outPath, coreArg] = process.argv.slice(2);
 if (!casesPath || !outPath) {
-  console.error("usage: node statements-oracle.mjs <cases.json> <out.json> [abaplint-core-build]");
+  console.error("usage: node statements-oracle.mjs <cases.json> <out.json> [upstream-checkout]");
   process.exit(2);
 }
-const core = resolve(coreArg || "/home/alice/dev/abaplint/packages/core/build/src");
+const {core, dispose} = buildUpstream(coreArg);
+process.on("exit", dispose);
 const require = createRequire(import.meta.url);
 const {Lexer} = require(core + "/abap/1_lexer/lexer.js");
 const {StatementParser} = require(core + "/abap/2_statements/statement_parser.js");

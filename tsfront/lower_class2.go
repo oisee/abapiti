@@ -223,14 +223,12 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	return lf
 }
 
-// applyFnDefaults prepends default assignments for lifted-function
-// parameters (they are Optional in the HIR).
+// Lifted defaults are rejected until their capture offsets and evaluation
+// order can be represented faithfully in a prologue.
 func (l *lowerer) applyFnDefaults(params []*ast.ParameterDeclarationNode, m *hir.Method) {
-	// The signature lowering marks optional params; defaults inside lifted
-	// functions are rare (none in the closure) and are skipped with a note.
-	for i, p := range params {
-		if p.Initializer() != nil && i < len(m.Params) {
-			l.diagf(p, "note-default-skipped", "default of lifted function parameter %s is not applied", p.Name().Text())
+	for _, p := range params {
+		if p.Initializer() != nil {
+			l.diagf(p, "unsupported-lifted-default", "default of lifted function parameter %s is not lowered", p.Name().Text())
 		}
 	}
 }

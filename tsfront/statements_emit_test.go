@@ -29,6 +29,12 @@ func TestEmitStatementsClosure(t *testing.T) {
 	}
 	params := DriverParams{Class: names.Get("harness/statements_dump.ts.StatementsDump"), Dump: names.Get("member.dump"), Diff: names.Get("member.firstDiff"), Raw: names.Get("param.raw"), A: names.Get("param.a"), B: names.Get("param.b")}
 	files[params.Class+".clas.testclasses.abap"] = StatementsTestClass(cases, params, names.Get("member.lastTokens"), names.Get("member.lastStatements"))
+	regressions, err := LoadStatementsCorpus(filepath.Join("testdata", "stmtsregressions"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	extra := StatementsTestClass(regressions, params, names.Get("member.lastTokens"), names.Get("member.lastStatements"))
+	files[params.Class+".clas.testclasses.abap"] += strings.ReplaceAll(extra, "ltcl_statements_diff", "ltcl_statements_regressions")
 	lines, bytes := 0, 0
 	for name, source := range files {
 		lines += strings.Count(source, "\n")

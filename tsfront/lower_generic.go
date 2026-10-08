@@ -84,6 +84,13 @@ func (l *lowerer) eraseGenericOverrides() {
 				args = append(args, x)
 			}
 			call := &hir.Expr{Kind: hir.VirtualCall, Name: m.Name, Type: m.Result, X: &hir.Expr{Kind: hir.This, Type: hir.Ref(c.Name)}, Args: args}
+			if slot.Result.Kind == hir.Void && m.Result.IsRef() {
+				// TypeScript permits a value-returning implementation of a
+				// void interface method. Keep a stable virtual value slot too,
+				// for fluent calls whose result is used by class receivers.
+				value := &hir.Method{Node: m.Node, Name: name + "_value", Virtual: true, Result: hir.Ref(hir.RootObject), Params: append([]hir.Param(nil), bridge.Params...), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: call})}
+				c.Methods = append(c.Methods, value)
+			}
 			if slot.Result.Kind == hir.Void {
 				bridge.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: call})
 			} else {
