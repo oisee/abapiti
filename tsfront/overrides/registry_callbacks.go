@@ -30,5 +30,8 @@ func registryDenseCallbacks() []Entry {
 		{ID: "abaplint-dense-callback-ImplementMethods.findInterfaceMethods", Key: Key{"src/rules/implement_methods.ts", "ImplementMethods.findInterfaceMethods", "KindMethodDeclaration"}, SHA256: "0ec78c773de189e9727adb08e7ce66b15f807764b56f1aa9661521a15c14b746", Rationale: "source-pinned dense arrays and stable membership: inline callback only reads receiver or replaces current slot; pushes affect a distinct stack/result; generalise later", Patterns: &Patterns{DenseCallbacks: map[string]bool{
 			"sup.methods.forEach(m => {\n          methods.push({objectName: sup.name, method: m});\n        })": true,
 		}}},
+		{ID: "abaplint-dense-callback-Catch.runSyntax", Key: Key{"src/abap/5_syntax/statements/catch.ts", "Catch.runSyntax", "KindMethodDeclaration"}, SHA256: "4f8f21e98eeeae98acd365c4d6892e14e5209123787172b31c288c6a3882bf31", Rationale: "classNames is Array.from of a Set<string>: dense and not mutated; the callback only reads the scope, so an absent result means no element matched", Patterns: &Patterns{DenseCallbacks: map[string]bool{
+			"classNames.find(name => input.scope.findClassDefinition(name) === undefined)": true,
+		}}},
 	}
 }
