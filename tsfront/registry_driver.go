@@ -1,7 +1,6 @@
 package tsfront
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -17,7 +16,8 @@ type RegistryFile struct {
 // RegistryRunClass emits harness code, not a transformation of upstream
 // code: it feeds the files to the translated harness/registry_run.ts, runs
 // it with the given config and compares the printed issues with the Node
-// oracle's SHA-256. Inputs are base64 literals split into small methods.
+// oracle's SHA-256. Inputs are string literals (control characters by code
+// point) split into small methods; no base64, which pinned osgo lacks.
 func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string, wantIssues int, names *hir.Names) string {
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
@@ -25,7 +25,7 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 	var parts []part
 	var calls []string
 	chunk := func(text string) []int {
-		input := abapStringBuild("raw", "ch", base64.StdEncoding.EncodeToString([]byte(text)))
+		input := abapStringBuild("raw", "ch", text)
 		var ids []int
 		for start := 0; start < len(input); {
 			end := min(start+400, len(input))
@@ -44,7 +44,6 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 		for _, id := range ids {
 			calls = append(calls, fmt.Sprintf("CALL METHOD input_%04d CHANGING raw = raw.", id))
 		}
-		calls = append(calls, "raw = cl_http_utility=>decode_base64( raw ).")
 	}
 	for _, f := range files {
 		load(chunk(f.Raw))
