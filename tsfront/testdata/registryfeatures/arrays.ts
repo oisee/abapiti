@@ -23,6 +23,21 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  public static continueUpdates(): string {
+    let visits = 0;
+    let updates = 0;
+    let index = 0;
+    for (; index < 4; index = ArrayProbe.nextIndex(index, updates++)) {
+      if (index === 1) { continue; }
+      let inner = 0;
+      while (inner < 2) { inner++; if (inner === 1) { continue; } visits++; }
+      for (const value of [0, 1]) { if (value === 0) { continue; } visits++; }
+      for (let nested = 0; nested < 2; nested++) { if (nested === 0) { continue; } visits++; }
+      visits++;
+    }
+    return `${index}/${updates}/${visits}`;
+  }
+  private static nextIndex(index: number, updates: number): number { return index + 1; }
   private static postCounter = 11;
   private static receiverCalls = 0;
   private static indexCalls = 0;

@@ -259,3 +259,11 @@ the checker-typed forwarding bridge now passes initial ABI fillers. The moved
 slot body is that same implementation and has no binding for these arguments;
 it cannot observe their value. Rest/arguments semantics are not erased by this
 change. Base-view calls still evaluate and pass their actual arguments normally.
+
+Classic for-loop continues execute the update before rechecking the condition.
+The lowering rewrites only continues owned by that loop and stops at nested
+while/foreach loops (including already-lowered nested classic for loops). Breaks
+and returns retain their abrupt completion behavior. Labelled continues remain
+blocking; finally was already blocking. Original/translated differential covers
+update side effects and nested while, for-of and classic-for ownership on both
+runtimes (10/10 array observations, zero v750 issues).

@@ -122,6 +122,10 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindBreakStatement:
 		return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
 	case ast.KindContinueStatement:
+		if n.AsContinueStatement().Label != nil {
+			l.diagf(n, "unsupported-statement", "labelled continue is not lowered")
+			return nil
+		}
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
 	case ast.KindEmptyStatement:
 		return nil
@@ -461,8 +465,8 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 }
 
 // forStatement lowers a classic for loop into initializer statements plus a
-// while loop whose body ends with the update. `continue` inside a loop with
-// an update would skip it, so that combination is rejected.
+// while loop whose body ends with the update. A continue targeting this loop
+// executes the update before jumping back to the condition.
 func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	f := n.AsForStatement()
 	out := []*hir.Stmt{}
@@ -479,17 +483,17 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	if f.Condition != nil {
 		cond = l.condition(f.Condition)
 	}
-	if f.Incrementor != nil && l.containsContinue(f.Statement) {
-		l.diagf(n, "unsupported-statement", "continue in a for loop with an update is not lowered")
-		return nil
-	}
 	l.push()
 	body := []*hir.Stmt{}
 	if f.Statement != nil {
 		body = append(body, l.scopeBlock(f.Statement))
 	}
 	if f.Incrementor != nil {
-		body = append(body, l.expressionStatement(f.Incrementor))
+		update := l.expressionStatement(f.Incrementor)
+		for i, statement := range body {
+			body[i] = continueWithUpdate(statement, update)
+		}
+		body = append(body, update)
 	}
 	l.pop()
 	out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)})
@@ -552,24 +556,25 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: elem, X: x, Body: body}
 }
 
-func (l *lowerer) containsContinue(n *ast.Node) bool {
-	found := false
-	var walk func(*ast.Node)
-	walk = func(x *ast.Node) {
-		if x == nil || found {
-			return
-		}
-		if x.Kind == ast.KindContinueStatement {
-			found = true
-			return
-		}
-		if x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionDeclaration {
-			return
-		}
-		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+// Nested loops own their continues; do not descend into their bodies.
+func continueWithUpdate(statement, update *hir.Stmt) *hir.Stmt {
+	if statement == nil || update == nil {
+		return statement
 	}
-	walk(n)
-	return found
+	switch statement.Kind {
+	case hir.Continue:
+		return hir.B(update, statement)
+	case hir.While, hir.ForEach:
+		return statement
+	}
+	clone := *statement
+	clone.Body = continueWithUpdate(statement.Body, update)
+	clone.Else = continueWithUpdate(statement.Else, update)
+	clone.List = make([]*hir.Stmt, len(statement.List))
+	for i, child := range statement.List {
+		clone.List[i] = continueWithUpdate(child, update)
+	}
+	return &clone
 }
 
 // fileOfSymbol locates the source file that declares a module symbol.
