@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -49,6 +50,11 @@ func TestRegistryClosureGate(t *testing.T) {
 			t.Fatalf("changed pinned source: %s", source.File)
 		}
 		files = append(files, source.File)
+	}
+	// The deployment harness (a copy placed in the closure next to src/)
+	// joins the lowered files when the run driver is requested.
+	if h := os.Getenv("REGISTRY_HARNESS"); h != "" {
+		files = append(files, h)
 	}
 	p, err := Load(filepath.Join(dir, "tsconfig.json"))
 	if err != nil {
@@ -154,7 +160,7 @@ func TestRegistryClosureGate(t *testing.T) {
 	}
 	// Passing lowering is not acceptance by itself: exercise the actual ABAP
 	// backend and preserve the complete emission for lint and differential work.
-	emitted, _, err := abap.EmitNamed(prog)
+	emitted, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +172,44 @@ func TestRegistryClosureGate(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(out, name), []byte(contents), 0644); err != nil {
 				t.Fatal(err)
 			}
+		}
+	}
+	if want := os.Getenv("REGISTRY_RUN_SHA"); want != "" {
+		out := os.Getenv("ABAPITI_TEST_OUT")
+		var inputs []RegistryFile
+		for _, root := range []struct {
+			dir string
+			dep bool
+		}{{os.Getenv("REGISTRY_INPUT"), false}, {os.Getenv("REGISTRY_DEPENDENCIES"), true}} {
+			var names []string
+			if err := filepath.WalkDir(root.dir, func(path string, d os.DirEntry, err error) error {
+				if err == nil && !d.IsDir() {
+					names = append(names, path)
+				}
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			sort.Strings(names)
+			for _, path := range names {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rel, _ := filepath.Rel(root.dir, path)
+				inputs = append(inputs, RegistryFile{Name: filepath.ToSlash(rel), Raw: string(data), Dependency: root.dep})
+			}
+		}
+		config, err := os.ReadFile(os.Getenv("REGISTRY_CONFIG"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		class := "zcl_abapiti_registry_run"
+		if err := os.WriteFile(filepath.Join(out, class+".clas.abap"), []byte(RegistryRunClass(class, inputs, string(config), want, 0, names)), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(out, class+".clas.testclasses.abap"), []byte(RegistryRunTest(class)), 0644); err != nil {
+			t.Fatal(err)
 		}
 	}
 	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
