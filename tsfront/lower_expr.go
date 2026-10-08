@@ -300,13 +300,31 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			if u.Operator == ast.KindMinusMinusToken {
 				op = "-"
 			}
-			x := l.expr(u.Operand)
-			if x == nil || x.Kind != hir.Local {
-				l.diagf(n, "unsupported-expr", "postfix %s needs a local operand", op)
+			target := l.assignTarget(u.Operand)
+			if target == nil {
 				return nil
 			}
-			one := hir.L(x.Type, 1)
-			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: one}
+			if target.Type.Kind != hir.Number && target.Type.Kind != hir.I32 {
+				l.diagf(n, "unsupported-expr", "postfix %s needs a native numeric operand", op)
+				return nil
+			}
+			// Preserve the reference before reading its value. A receiver or index
+			// may call user code and must execute once, before the read/write.
+			switch target.Kind {
+			case hir.FieldGet:
+				target.X = l.tempInit(n, target.X.Type, target.X)
+			case hir.IndexGet:
+				target.X = l.tempInit(n, target.X.Type, target.X)
+				target.Y = l.tempInit(n, target.Y.Type, target.Y)
+			case hir.Local, hir.StaticGet:
+			default:
+				l.diagf(n, "unsupported-expr", "postfix %s target is not lowered", op)
+				return nil
+			}
+			previous := l.tempInit(n, target.Type, target)
+			l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
+				Y: &hir.Expr{Kind: hir.Binary, Type: target.Type, Op: op, X: previous, Y: hir.L(target.Type, 1)}})
+			return previous
 		}
 		l.diagf(n, "unsupported-expr", "postfix %s is not lowered", u.Operator.String())
 		return nil

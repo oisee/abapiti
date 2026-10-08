@@ -23,6 +23,23 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static postCounter = 11;
+  private static receiverCalls = 0;
+  private static indexCalls = 0;
+  private static absent: string | undefined = undefined;
+  private static nullValue: string | null = null;
+  private static numbers(values: number[]): number[] { ArrayProbe.receiverCalls++; return values; }
+  private static postIndex(): number { ArrayProbe.indexCalls++; return 0; }
+  public static postfix(): string {
+    let local = 3;
+    const before = local++;
+    const previous = ArrayProbe.postCounter--;
+    const values: number[] = [7];
+    const indexed = ArrayProbe.numbers(values)[ArrayProbe.postIndex()]++;
+    const pair = local++ + local++;
+    return `${before}/${local}/${previous}/${ArrayProbe.postCounter}/${indexed}/${values[0]}/${ArrayProbe.receiverCalls}/${ArrayProbe.indexCalls}/${pair}/${ArrayProbe.absent === undefined}/${ArrayProbe.nullValue === null}`;
+  }
+
   private static optionalItems(): Item[] | undefined { return undefined; }
   public static denseCallbacks(): string {
     const texts: string[] = ["", "b", "a"];

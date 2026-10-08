@@ -231,3 +231,14 @@ The differential checks duplicate-key stability, array aliasing, element
 identity, namespace/punctuation ordering, copy isolation, unknown suffixes, and
 outside-domain failure on both runtimes. Node comparison checked all pairs of
 strings through length two in both domains (1,979,649 and 2,199,289 pairs).
+
+Expression postfix updates now capture the previous native numeric value, write
+its increment/decrement, and return the previous value. Field receivers and
+array receivers/indexes are evaluated once before that read/write. This is needed
+by deterministic BuiltIn identifiers; those are not telemetry exclusions. The
+independent original fixture covers local/static/index updates, two updates in
+one binary expression, receiver/index call counts, and undefined/null static
+initialization. Both runtimes pass all nine array observations. Non-numeric and
+record-map postfix targets remain blocked. Builtin undefined and null constants
+are pure static initializers; shadowed identifiers still require the ordinary
+constant/purity proof.

@@ -16,7 +16,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 	defer delete(visiting, n)
 	pure := func(x *ast.Node) bool { return l.pureInitializer(x, owner, visiting) }
 	switch n.Kind {
-	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword:
+	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword, ast.KindNullKeyword:
 		return true
 	case ast.KindParenthesizedExpression:
 		return pure(n.Expression())
@@ -41,6 +41,9 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		return pure(c.Condition) && pure(c.WhenTrue) && pure(c.WhenFalse)
 	case ast.KindIdentifier:
 		sym := l.resolve(n)
+		if sym != nil && sym.Name == "undefined" && sym.ValueDeclaration == nil {
+			return true
+		}
 		if sym == nil || sym.ValueDeclaration == nil {
 			return false
 		}
