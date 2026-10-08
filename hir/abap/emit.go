@@ -584,6 +584,20 @@ func (b *body) expr(x *hir.Expr) string {
 			b.runtimeOp(x, "")
 			return ""
 		}
+		if x.Kind == hir.Seq {
+			// A void sequence: its statements, then its (void) value if any.
+			old := b.locals
+			b.locals = map[string]string{}
+			for k, v := range old {
+				b.locals[k] = v
+			}
+			for _, stmt := range x.Stmt.List {
+				b.stmt(stmt)
+			}
+			b.expr(x.Y)
+			b.locals = old
+			return ""
+		}
 		b.call(x, "")
 		return ""
 	}
