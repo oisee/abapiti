@@ -202,8 +202,9 @@ func TestEmitRegistryXML(t *testing.T) {
 	// must raise the XML subset exception rather than yielding partial metadata.
 	var b strings.Builder
 	fmt.Fprintf(&b, "CLASS ltcl_reject DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS rejects FOR TESTING.\nMETHODS tagged FOR TESTING.\nENDCLASS.\nCLASS ltcl_reject IMPLEMENTATION.\nMETHOD rejects.\nDATA caught TYPE abap_bool.\nDATA value TYPE REF TO %s.\n", dynamic)
+	fmt.Fprintf(&b, "DATA failure TYPE REF TO %s.\nDATA message TYPE string.\n", names.Get("exception.RegistryXMLSubsetError"))
 	for _, text := range []string{"<a></b>", "<a>&unknown;</a>", "<a><![CDATA[x]]></a>", "<!DOCTYPE a><a/>"} {
-		fmt.Fprintf(&b, "CLEAR caught.\nTRY.\nvalue = %s=>%s( `%s` ).\nCATCH %s.\ncaught = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", class, names.Get("member.parse"), text, names.Get("exception.RegistryXMLSubsetError"))
+		fmt.Fprintf(&b, "CLEAR caught.\nTRY.\nvalue = %s=>%s( `%s` ).\nCATCH %s INTO failure.\ncaught = abap_true.\nmessage = failure->get_text( ).\ncl_abap_unit_assert=>assert_true( xsdbool( strlen( message ) > 0 ) ).\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", class, names.Get("member.parse"), text, names.Get("exception.RegistryXMLSubsetError"))
 	}
 	// Include the structural lint canaries without affecting parser production.
 	fmt.Fprintf(&b, "DATA(probe) = NEW %s( ).\ncl_abap_unit_assert=>assert_true( xsdbool( probe IS INSTANCE OF %s ) ).\nENDMETHOD.\nENDCLASS.\n", class, class)

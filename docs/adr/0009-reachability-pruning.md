@@ -291,3 +291,9 @@ be invalid. The source tests provide the constituent proof; the runtime cast
 retains the nominal check. Absent and unrelated base instances take the original
 negative branch. Both runtimes pass all 12 array observations (24 files, zero
 v750 issues); this removes 39 more HIR failures without changing verification.
+
+Strict JSON and XML subset exceptions now override get_text with a nonempty
+explanation. Their rejection drivers verify both the exact exception class and
+nonempty message on both pinned runtimes, as required by the documented divergence
+comparator. All existing JSON/config graphs and all 188 XML inventory observations
+remain equal (JSON 8/8, XML 190/190; v750 zero issues on 43/384 files).

@@ -15,7 +15,7 @@ func (e *emitter) xmlSubsetRuntime() {
 	e.dynamicRuntime()
 	name, dynamic := e.name(id), e.name("runtime.dynamic")
 	exception := e.name("exception.RegistryXMLSubsetError")
-	e.files[exception+".clas.abap"] = "CLASS " + exception + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + exception + " IMPLEMENTATION.\nENDCLASS.\n"
+	e.files[exception+".clas.abap"] = "CLASS " + exception + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nMETHODS get_text REDEFINITION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + exception + " IMPLEMENTATION.\nMETHOD get_text.\nresult = `input is outside the reviewed abapGit XML subset`.\nENDMETHOD.\nENDCLASS.\n"
 	code := `CLASS $P DEFINITION PUBLIC CREATE PRIVATE.
 PUBLIC SECTION.
 CLASS-METHODS parse IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO $D.

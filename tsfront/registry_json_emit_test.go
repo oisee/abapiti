@@ -173,8 +173,9 @@ func TestEmitRegistryJSON(t *testing.T) {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "CLASS ltcl_contract DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS rejects FOR TESTING.\nENDCLASS.\nCLASS ltcl_contract IMPLEMENTATION.\nMETHOD rejects.\nDATA caught TYPE abap_bool.\nDATA value TYPE REF TO %s.\n", dynamic)
+	fmt.Fprintf(&b, "DATA failure TYPE REF TO %s.\nDATA message TYPE string.\n", names.Get("exception.RegistryJSONSubsetError"))
 	for _, input := range []string{``, `{"x":1,}`, `[1,]`, `{x:1}`, `{'x':1}`, `/*comment*/{}`, `{"x":NaN}`, `{"x":Infinity}`, `{"x":0x10}`, `{"x":01}`, `{"x":+1}`, `{"x":.5}`, `{"x":1.}`, `{"x":"\x41"}`, `{"x":true} extra`, `{"x":"unterminated}`, `[1 2]`} {
-		fmt.Fprintf(&b, "CLEAR caught.\nTRY.\nvalue = %s=>%s( `%s` ).\nCATCH %s.\ncaught = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", class, names.Get("member.parse"), input, names.Get("exception.RegistryJSONSubsetError"))
+		fmt.Fprintf(&b, "CLEAR caught.\nTRY.\nvalue = %s=>%s( `%s` ).\nCATCH %s INTO failure.\ncaught = abap_true.\nmessage = failure->get_text( ).\ncl_abap_unit_assert=>assert_true( xsdbool( strlen( message ) > 0 ) ).\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", class, names.Get("member.parse"), input, names.Get("exception.RegistryJSONSubsetError"))
 	}
 	fmt.Fprintf(&b, "DATA(probe) = NEW %s( ).\ncl_abap_unit_assert=>assert_true( xsdbool( probe IS INSTANCE OF %s ) ).\nENDMETHOD.\nENDCLASS.\n", class, class)
 	files[class+".clas.testclasses.abap"] = b.String()
