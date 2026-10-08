@@ -183,3 +183,31 @@ Config constructor constant/void deduplication now uses these operations. Compon
 differentials check the original config graph, unknown-field retention and ordinary
 TypeScript defaulting consumers on both runtimes. Full Registry acceptance remains
 strictly gated on emission and its inventory/config/dump and mutation comparisons.
+
+### Source-pinned dense callback adapters (TASK3 Addendum 4b)
+
+Eight enclosing-method fingerprints permit only the listed exact callback calls.
+This is an adapter mechanism, not a general sparse-array callback ABI. The
+compiler still blocks unpinned `forEach`, `every`, and primitive-array `find`.
+
+- `TypeUtils.listAllInterfaces`: implementing lists are constructor-populated
+  dense arrays. Each callback only pushes a name into the separate `stack`.
+- `ABAPFile.getTokens`: lexer token arrays are dense; the callback reads a token
+  and pushes into a separate filtered result.
+- `CheckSyntax.run`: the cached issues array is dense. Each callback reads the
+  current issue, updates its data, and replaces only its current index with the
+  original TypeScript `new Issue(data)`; length and membership order stay fixed.
+- `ImplementMethods.findInterfaceMethods`: information-parser method arrays are
+  dense; the callback appends to the distinct `methods` result array.
+- `Select.buildStructureType`, `Select.buildTableType`, `SQLIn.isRangeRow`, and
+  `Loop.runSyntax`: dense field/component/comparison arrays are read by the
+  callback; regex/component lookups and string comparisons do not mutate them.
+
+The adapter captures length, reads the live current slot, preserves aliases and
+object references, and preserves `undefined` as the `forEach` result. Optional
+receiver chains guard all callback effects. Block callbacks containing a return
+remain unsupported rather than returning from the containing method. The
+original-TS differential covers primitive find, empty/nonempty every, current
+slot replacement, alias observation, index/array parameters, and optional
+receiver laziness on both runtimes. Generalize later with an explicit sparse
+slot/presence and callback control-flow ABI.

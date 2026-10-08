@@ -5,5 +5,6 @@
   "find": "true/true/2/3/true/2/true",
   "unionViews": "left/right/true/true/false",
   "namedRecord": "0/11/true/first,second,third",
-  "interfaceHeritage": "token/own/own/token/token/true"
+  "interfaceHeritage": "token/own/own/token/token/true",
+  "denseCallbacks": "true/true/false/true/7/1/8/true/ab/x/0"
 }

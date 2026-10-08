@@ -21,6 +21,12 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	elem := recv.Type.Args[0]
 	switch name {
 	case "map", "filter", "some", "reduce", "find":
+	case "forEach", "every":
+		if !l.pinnedDenseCallback(n) {
+			l.diagf(n, "unsupported-call", "%s needs a source-pinned dense/stable receiver proof", name)
+			return nil, true
+		}
+		return l.denseCallbackLoop(n, name, recv, args), true
 	default:
 		return nil, false
 	}
@@ -37,6 +43,9 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return nil, true
 	}
 	if name == "find" && !elem.IsRef() {
+		if l.pinnedDenseCallback(n) {
+			return l.denseCallbackLoop(n, name, recv, args), true
+		}
 		l.diagf(n, "unsupported-call", "find on primitive arrays needs an absence-preserving callback ABI")
 		return nil, true
 	}

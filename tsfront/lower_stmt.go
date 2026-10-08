@@ -202,6 +202,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
 		if typ.Kind == hir.Void {
+
 			return nil
 		}
 		l.hint = typ
@@ -224,6 +225,17 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			return nil
 		}
 		if typ.Kind == hir.Void {
+			// A source-pinned intrinsic can expose an evaluated undefined
+			// result even though its library signature is void. Ordinary void
+			// implementations may return values: never erase their initializer.
+			if init != nil {
+				x = l.expr(init)
+				if x != nil && x.Type.Equal(hir.T(hir.Optional, hir.T(hir.Dynamic))) {
+					l.declare(name, x.Type)
+					return []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: x.Type, X: x}}
+				}
+			}
+			l.diagf(d, "unsupported-binding", "void local requires a value-preserving result ABI")
 			return nil
 		}
 		if typ.Kind != hir.Optional && init != nil {

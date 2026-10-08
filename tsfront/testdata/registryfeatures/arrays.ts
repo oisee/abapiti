@@ -23,6 +23,30 @@ export class Item implements Named {
   public left(): boolean { return true; }
 }
 export class ArrayProbe {
+  private static optionalItems(): Item[] | undefined { return undefined; }
+  public static denseCallbacks(): string {
+    const texts: string[] = ["", "b", "a"];
+    const found = texts.find(text => text === "");
+    const missing = texts.find(text => text === "missing");
+    const every = texts.every(text => text.length > 0);
+    const empty: string[] = [];
+    const emptyEvery = empty.every(text => text.length > 0);
+    const numbers: number[] = [0, 7];
+    let sum = 0;
+    const result = numbers.forEach((value, index, array) => {
+      sum += value;
+      array[index] = value + 1;
+    });
+    const refs: Item[] = [new Item("a"), new Item("b")];
+    let names = "";
+    refs.forEach((item, index, array) => {
+      if (index === 0) { array[index] = new Item("x"); }
+      names += item.name;
+    });
+    let visits = 0;
+    ArrayProbe.optionalItems()?.forEach(item => visits++);
+    return `${found === ""}/${missing === undefined}/${every}/${emptyEvery}/${sum}/${numbers[0]}/${numbers[1]}/${result === undefined}/${names}/${refs[0].name}/${visits}`;
+  }
   private static baseToken(value: IdentityBase): string { return value.getToken(); }
   private static childToken(value: ChildView): string { return value.getToken(); }
   public static interfaceHeritage(): string {

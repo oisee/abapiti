@@ -18,6 +18,9 @@ type Patterns struct {
 	Expressions map[string]func() *hir.Expr
 	Statements  map[string]func() *hir.Stmt
 	Annotations map[string]hir.Type
+	// DenseCallbacks certifies these exact calls: dense receiver and callback
+	// does not change its membership. No general sparse-array ABI is claimed.
+	DenseCallbacks map[string]bool
 }
 type Entry struct {
 	ID        string
@@ -81,7 +84,7 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
-	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0) {
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0) {
 		n++
 	}
 	if e.Result != nil {
