@@ -1168,7 +1168,11 @@ func (b *body) call(x *hir.Expr, n string) {
 		m = e.p.Constructor(owner)
 		member = "constructor"
 	}
-	if x.Kind == hir.SuperCall && member != b.implemented {
+	if x.Kind == hir.SuperCall && member != b.implemented && !e.overriddenBelow(b.c.Name, callName) {
+		// No class from here down redefines the member: virtual dispatch on
+		// me reaches exactly the inherited implementation super names.
+		recv = "me->"
+	} else if x.Kind == hir.SuperCall && member != b.implemented {
 		e.err = fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name)
 		return
 	}
@@ -1830,4 +1834,25 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	if t.IsRef() {
 		b.line("ENDIF.")
 	}
+}
+
+// overriddenBelow reports whether class or any of its subclasses declares
+// method name itself.
+func (e *emitter) overriddenBelow(class, name string) bool {
+	for _, c := range e.p.Classes {
+		for k := c; k != nil; k = e.classBy(k.Super) {
+			if k.Name == class {
+				for _, m := range c.Methods {
+					if m.Name == name || strings.HasPrefix(m.Name, name+"_instantiated_") {
+						return true
+					}
+				}
+				break
+			}
+			if k.Super == "" {
+				break
+			}
+		}
+	}
+	return false
 }

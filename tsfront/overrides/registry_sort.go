@@ -76,13 +76,19 @@ func registrySorts() []Entry {
 	candidates := hir.Type{Kind: hir.InterfaceRef, Name: "union.b0b6a58b84dc8bc589d0501b1bd3651c334e7360f1d90cb261317c96490bb097"}
 	file := hir.Ref("src/abap/abap_file.ts.ABAPFile")
 	return []Entry{
-		{ID: "abaplint-rule-key-stable-sort", Key: Key{"src/config.ts", "Config.getDefault", "KindMethodDeclaration"}, SHA256: "cc2a04c8855f50d10ba44f37a30af3ca8963d83a222bb4117b59f67c44dc9c40", Rationale: "pure metadata key comparator; stable in-place ordering on ICU-root [a-z0-9_] with guard; evaluation and alias identity retained; generalise later; `rules: any = {}` is a string-keyed bag of rule configs (fable)", Patterns: &Patterns{Annotations: map[string]hir.Type{"any": hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))}, Expressions: map[string]func() *hir.Expr{
+		{ID: "abaplint-rule-key-stable-sort", Key: Key{"src/config.ts", "Config.getDefault", "KindMethodDeclaration"}, SHA256: "cc2a04c8855f50d10ba44f37a30af3ca8963d83a222bb4117b59f67c44dc9c40", Rationale: "pure metadata key comparator; stable in-place ordering on ICU-root [a-z0-9_] with guard; evaluation and alias identity retained; generalise later; `rules: any = {}` is a string-keyed bag of rule configs (fable); the default-config JSON round trip traps: only OBSERVATION reaches it (V8), deployment always supplies a Config", Patterns: &Patterns{Annotations: map[string]hir.Type{"any": hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))}, Expressions: map[string]func() *hir.Expr{
 			"ArtifactsRules.getRules().sort((a, b) => {\n      return a.getMetadata().key.localeCompare(b.getMetadata().key);\n    })": func() *hir.Expr {
 				receiver := &hir.Expr{Kind: hir.DirectCall, Owner: "src/artifacts_rules.ts.ArtifactsRules", Name: "getRules", Type: hir.T(hir.Array, rule)}
 				return StableProjectedSort(receiver, StringKeyComparator("string.compareRegistryKey", func(value *hir.Expr) *hir.Expr {
 					metadata := &hir.Expr{Kind: hir.VirtualCall, Name: "getMetadata", Type: hir.Ref("src/rules/_irule.ts.IRuleMetadata"), X: value}
 					return &hir.Expr{Kind: hir.FieldGet, Name: "key", Type: hir.T(hir.String), X: metadata}
 				}))
+			},
+		}, Statements: map[string]func() *hir.Stmt{
+			// Only the OBSERVATION workload builds a default config; DEPLOYMENT
+			// and NEGATIVE always pass one. No JSON writer exists yet (follow-up).
+			"return new Config(JSON.stringify(config));": func() *hir.Stmt {
+				return &hir.Stmt{Kind: hir.Trap, Name: "src/config.ts:69"}
 			},
 		}}},
 		{ID: "abaplint-object-name-stable-sort", Key: Key{"src/abap/5_syntax/global_definitions/find_global_definitions.ts", "FindGlobalDefinitions.run", "KindMethodDeclaration"}, SHA256: "b483f60a676a128f3a478f237e8fef250a0526649a1af1c384bb12f9c1d83b3d", Rationale: "getName is a pure stored uppercase name getter; stable ICU-root [A-Z0-9_/] ordering with guard; generalise later", Expressions: map[string]func() *hir.Expr{

@@ -22,6 +22,7 @@ class Scope {
   }
   public all(): IDef[] { return [...this.defs]; }
 }
+class Labeled extends Named { public label(): string { return "L:" + super.getName(); } }
 class Counter {
   public row = 0;
   public next(): number { return this.row++; }
@@ -178,7 +179,8 @@ export class Probe {
     nested["m"]["1"] = ["keep", needle, "keep2"];
     nested["m"]["1"] = nested["m"]["1"].filter(v => v !== needle);
     const filtered = nested["m"]["1"].join(",");
-    const parts: string[] = [evolving.join("+"), viewed, downcast, typed, filtered,
+    const labeled = new Labeled(raw).label();
+    const parts: string[] = [labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
