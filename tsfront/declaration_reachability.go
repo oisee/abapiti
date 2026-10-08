@@ -161,7 +161,11 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 					for _, decl := range sym.Declarations {
 						keep(decl, valueReference)
 					}
-					if sym.Flags&ast.SymbolFlagsModule != 0 {
+					// A statically named namespace property has its own resolved
+					// symbol edge. Only first-class namespace values need every
+					// export (reflection, computed keys, passing the namespace).
+					namedAccess := c.Parent != nil && c.Parent.Kind == ast.KindPropertyAccessExpression && c.Parent.Expression() == c
+					if sym.Flags&ast.SymbolFlagsModule != 0 && !namedAccess {
 						for _, export := range ck.GetExportsOfModule(sym) {
 							if export.Flags&ast.SymbolFlagsAlias != 0 {
 								if target, ok := ck.ResolveAlias(export); ok {

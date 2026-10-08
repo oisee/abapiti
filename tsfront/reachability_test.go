@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,5 +275,43 @@ func TestCoverageWorkloadInputsValidatedBeforePruning(t *testing.T) {
 	coverage.CurrentInputs = nil
 	if err := lower(); err == nil {
 		t.Fatal("unbound inputs accepted")
+	}
+}
+
+// Named namespace references retain exactly the resolved export; using a
+// namespace as a value must conservatively retain its whole export inventory.
+func TestDeclarationGraphNamespaceEdges(t *testing.T) {
+	for _, reflective := range []bool{false, true} {
+		t.Run(fmt.Sprint(reflective), func(t *testing.T) {
+			dir := t.TempDir()
+			members := `export class Wanted { static value(): number { return 1; } }
+export class Unused { static dead(): number { return new Date().getTime(); } }`
+			use := `import * as NS from "./members";
+export function run(): number { return NS.Wanted.value(); }`
+			if reflective {
+				use = `import * as NS from "./members";
+export function run(): number { const all = NS; return all.Wanted.value(); }`
+			}
+			for name, text := range map[string]string{"members.ts": members, "use.ts": use, "tsconfig.json": `{"compilerOptions":{"strict":true},"files":["members.ts","use.ts"]}`} {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			body := `static dead(): number { return new Date().getTime(); }`
+			start := strings.Index(members, body)
+			coverage := &Reachability{Schema: 2, Workloads: []string{"deployment"}, Spans: []CoverageSpan{{File: "members.ts", Start: start, End: start + len(body), Kind: "MethodDeclaration", Line: 2, SHA256: overrides.Fingerprint(body), Executed: true, Workloads: []string{"UPSTREAM"}}}}
+			p, err := Load(filepath.Join(dir, "tsconfig.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			prog, _, err := p.LowerWithReachability([]string{"members.ts", "use.ts"}, nil, coverage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dump := hir.Dump(prog)
+			if !strings.Contains(dump, "Wanted") || strings.Contains(dump, "Unused") != reflective {
+				t.Fatal(dump)
+			}
+		})
 	}
 }
