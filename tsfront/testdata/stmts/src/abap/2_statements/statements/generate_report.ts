@@ -1,0 +1,33 @@
+import {IStatement} from "./_statement";
+import {verNotLang, str, seq, opt, per} from "../combi";
+import {Target, Source} from "../expressions";
+import {LanguageVersion} from "../../../version";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class GenerateReport implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+
+    const without = str("WITHOUT SELECTION-SCREEN");
+    const message = seq("MESSAGE", Target);
+    const include = seq("INCLUDE", Target);
+    const line = seq("LINE", Target);
+    const word = seq("WORD", Target);
+    const offset = seq("OFFSET", Target);
+    const headers = str("WITH PRECOMPILED HEADERS");
+    const test = str("WITH TEST CODE");
+    const messageid = seq("MESSAGE-ID", Target);
+    const trace = seq("TRACE-FILE", Target);
+    const shortdumpid = seq("SHORTDUMP-ID", Target);
+    const directory = seq("DIRECTORY ENTRY", Target);
+
+    const options = per(without, message, include, trace, line, word, offset, headers, test, messageid, shortdumpid, directory);
+
+    const ret = seq("GENERATE REPORT",
+                    Source,
+                    opt(options));
+
+    return verNotLang(LanguageVersion.Cloud, ret);
+  }
+
+}

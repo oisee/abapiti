@@ -1,0 +1,18 @@
+import {seq, ver, Expression, alt, starPrio, altPrio, tok, optPrio, stopBefore, AlsoIn} from "../combi";
+import {SQLAsName, SQLField, SQLFieldName, Dynamic} from ".";
+import {Release} from "../../../version";
+import {IStatementRunnable} from "../statement_runnable";
+import {ParenLeftW, WParenRight, WParenRightW} from "../../1_lexer/tokens";
+
+export class SQLFieldList extends Expression {
+  public getRunnable(): IStatementRunnable {
+    const as = seq("AS", SQLAsName);
+    const commaParenField = seq(tok(ParenLeftW), SQLFieldName, altPrio(tok(WParenRightW), tok(WParenRight)), optPrio(as));
+    const nev = ver(Release.v740sp05, starPrio(seq(",", altPrio(SQLField, commaParenField))), {also: AlsoIn.OpenABAP});
+    const old = starPrio(seq(stopBefore("UP", "TO"), SQLField));
+
+    return altPrio("*",
+                   Dynamic,
+                   seq(SQLField, alt(nev, old)));
+  }
+}

@@ -1,0 +1,27 @@
+import {IStatement} from "./_statement";
+import {seq, alt, per, verNotLang} from "../combi";
+import {Target, Dynamic, NamespaceSimpleName, CallTransformationParameters, CallTransformationOptions, SimpleSource3} from "../expressions";
+import {LanguageVersion} from "../../../version";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class CallTransformation implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const options = seq("OPTIONS", CallTransformationOptions);
+
+    const parameters = seq("PARAMETERS", CallTransformationParameters);
+    const objects = seq("OBJECTS", CallTransformationParameters);
+
+    const source2 = seq("XML", SimpleSource3);
+    const source = seq("SOURCE", alt(CallTransformationParameters, source2));
+
+    const result2 = seq("XML", Target);
+    const result = seq("RESULT", alt(CallTransformationParameters, result2));
+
+    const call = seq("CALL TRANSFORMATION",
+                     alt(NamespaceSimpleName, Dynamic),
+                     per(options, parameters, objects, source, result));
+    return verNotLang(LanguageVersion.KeyUser, call);
+  }
+
+}

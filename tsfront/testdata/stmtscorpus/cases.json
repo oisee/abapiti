@@ -1,0 +1,258 @@
+[
+ {
+  "name": "empty",
+  "abap": ""
+ },
+ {
+  "name": "single_dot",
+  "abap": "."
+ },
+ {
+  "name": "two_tokens_backtick_pragma",
+  "abap": "`foo` \"#EC NOTEXT"
+ },
+ {
+  "name": "two_tokens_no_space",
+  "abap": "`foo`\"#EC NOTEXT"
+ },
+ {
+  "name": "arrow_whitespace",
+  "abap": ") ->text"
+ },
+ {
+  "name": "string_template_braces",
+  "abap": "|{ sdf }|"
+ },
+ {
+  "name": "string_template_text",
+  "abap": "|{ sdf }sdf|"
+ },
+ {
+  "name": "string_template_error",
+  "abap": "|{sdf }|"
+ },
+ {
+  "name": "string_template_error2",
+  "abap": "|{ sdf}|"
+ },
+ {
+  "name": "two_comments_same_column",
+  "abap": "\n \" hello\n \" world"
+ },
+ {
+  "name": "write_string",
+  "abap": "WRITE 'hello'."
+ },
+ {
+  "name": "comment_star",
+  "abap": "* star comment\nWRITE 'x'."
+ },
+ {
+  "name": "comment_quote_trailing",
+  "abap": "WRITE \" trailing comment\n"
+ },
+ {
+  "name": "colon_chain",
+  "abap": "WRITE: 'a', 'b'."
+ },
+ {
+  "name": "colon_chain_multiline",
+  "abap": "DATA: foo TYPE i,\n      bar TYPE string.\n"
+ },
+ {
+  "name": "field_symbols",
+  "abap": "FIELD-SYMBOLS: <fs> TYPE any.\nASSIGN <fs> TO FIELD-SYMBOL(<other>).\n"
+ },
+ {
+  "name": "dashes_and_comp",
+  "abap": "ls_foo-bar = ls_baz~qux( )."
+ },
+ {
+  "name": "instance_arrow",
+  "abap": "lo_obj->method( iv_arg = 1 )."
+ },
+ {
+  "name": "static_arrow",
+  "abap": "lcl_class=>static_method( )."
+ },
+ {
+  "name": "arrow_variants",
+  "abap": "a->b=>c->d."
+ },
+ {
+  "name": "parens_brackets",
+  "abap": "x = ( 1 + 2 ) * [ 3 ]."
+ },
+ {
+  "name": "paren_w",
+  "abap": "call( )  (  )."
+ },
+ {
+  "name": "numbers",
+  "abap": "a = 1.\nb = 1.5.\nc = 2e5.\nd = -3.\ne = 12345678901234567890."
+ },
+ {
+  "name": "punctuation",
+  "abap": "a, b. c; d: e"
+ },
+ {
+  "name": "pragmas",
+  "abap": "DATA lo TYPE i ##NEEDED.\nWRITE 'x' ##NO_TEXT."
+ },
+ {
+  "name": "ping_string",
+  "abap": "x = `backtick string`."
+ },
+ {
+  "name": "ping_escaped",
+  "abap": "x = `foo``bar`."
+ },
+ {
+  "name": "escaped_quote",
+  "abap": "x = 'it''s'."
+ },
+ {
+  "name": "template_nested",
+  "abap": "x = |a { |inner| } b|."
+ },
+ {
+  "name": "template_multiline",
+  "abap": "x = |line1\nline2|."
+ },
+ {
+  "name": "macro_definition",
+  "abap": "DEFINE _foo.\n  WRITE &1.\nEND-OF-DEFINITION.\n_foo 'bar'.\n"
+ },
+ {
+  "name": "whitespace_mixed",
+  "abap": "\tWRITE\t'x'\t.\n\n\n  WRITE  'y'.\n"
+ },
+ {
+  "name": "crlf",
+  "abap": "WRITE 'a'.\r\nWRITE 'b'.\r\n"
+ },
+ {
+  "name": "concat_expression",
+  "abap": "x = |a| && |b| && 'c'."
+ },
+ {
+  "name": "at_data",
+  "abap": "DATA @lv_foo TYPE i.\n@lv_foo = 1."
+ },
+ {
+  "name": "sql_host",
+  "abap": "SELECT * FROM mara INTO TABLE @DATA(lt_mara) WHERE matnr = @lv_matnr."
+ },
+ {
+  "name": "string_then_comment",
+  "abap": "'str' \"comment\n"
+ },
+ {
+  "name": "star_no_newline_before",
+  "abap": "* first line\n* second\nx = 1."
+ },
+ {
+  "name": "long_identifier",
+  "abap": "a_very_long_identifier_name_that_goes_on = 1."
+ },
+ {
+  "name": "unicode_bmp",
+  "abap": "WRITE 'äöü€—'."
+ },
+ {
+  "name": "template_brace_in_text",
+  "abap": "x = |a{ b }c|."
+ },
+ {
+  "name": "real_wasm_compiler",
+  "abap": "*&---------------------------------------------------------------------*\n*& Report ZWASM_COMPILER\n*& Interactive WASM-to-ABAP compiler\n*& Load .wasm binary → parse → compile → execute / save\n*&---------------------------------------------------------------------*\nREPORT zwasm_compiler.\n\n*----------------------------------------------------------------------*\n* Selection Screen\n*----------------------------------------------------------------------*\nSELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE sc_src.\n  PARAMETERS: p_file  RADIOBUTTON GROUP src DEFAULT 'X',\n              p_smw0  RADIOBUTTON GROUP src,\n              p_hex   RADIOBUTTON GROUP src.\n  PARAMETERS: p_fname TYPE string LOWER CASE VISIBLE LENGTH 60.\n  PARAMETERS: p_smw0n TYPE c LENGTH 40 LOWER CASE.\n  PARAMETERS: p_hexin TYPE string LOWER CASE VISIBLE LENGTH 60.\nSELECTION-SCREEN END OF BLOCK b1.\n\nSELECTION-SCREEN BEGIN OF BLOCK b2 WITH FRAME TITLE sc_exe.\n  PARAMETERS: p_temp  RADIOBUTTON GROUP gen DEFAULT 'X',\n              p_perm  RADIOBUTTON GROUP gen.\n  PARAMETERS: p_prog  TYPE c LENGTH 30 DEFAULT 'ZWASM_GEN'.\n  PARAMETERS: p_split AS CHECKBOX DEFAULT ' '.\n  PARAMETERS: p_maxln TYPE i DEFAULT 5000.\n  SELECTION-SCREEN SKIP.\n  PARAMETERS: p_exec  AS CHECKBOX DEFAULT 'X'.\n  PARAMETERS: p_func  TYPE c LENGTH 30 LOWER CASE DEFAULT 'add'.\n  PARAMETERS: p_arg0  TYPE i DEFAULT 2.\n  PARAMETERS: p_arg1  TYPE i DEFAULT 3.\nSELECTION-SCREEN END OF BLOCK b2.\n\nSELECTION-SCREEN BEGIN OF BLOCK b3 WITH FRAME TITLE sc_out.\n  PARAMETERS: p_show  AS CHECKBOX DEFAULT 'X'.\n  PARAMETERS: p_class AS CHECKBOX DEFAULT ' '.\n  PARAMETERS: p_clsnm TYPE c LENGTH 30 DEFAULT 'ZCL_WASM_OUT'.\nSELECTION-SCREEN END OF BLOCK b3.\n\nINITIALIZATION.\n  sc_src = 'WASM Source'.\n  sc_exe = 'Generation & Execution'.\n  sc_out = 'Output'.\n  %_p_temp_%_app_%-text = 'Temporary (GENERATE POOL)'.\n  %_p_perm_%_app_%-text = 'Persistent program (INSERT REPORT)'.\n  %_p_prog_%_app_%-text = 'Program name'.\n  %_p_split_%_app_%-text = 'Split to INCLUDEs'.\n  %_p_maxln_%_app_%-text = 'Max lines per include'.\n  %_p_class_%_app_%-text = 'Generate CLASS wrapper'.\n  %_p_clsnm_%_app_%-text = 'Class name'.\n\n*----------------------------------------------------------------------*\n* File dialog\n*----------------------------------------------------------------------*\nAT SELECTION-SCREEN ON VALUE-REQUEST FOR p_fname.\n  DATA: lt_filetable TYPE filetable,\n        lv_rc        TYPE i.\n  cl_gui_frontend_services=>file_open_dialog(\n    EXPORTING\n      window_title  = 'Select WASM binary'\n      file_filter   = 'WASM files (*.wasm)|*.wasm|All (*.*)|*.*'\n    CHANGING\n      file_table    = lt_filetable\n      rc            = lv_rc\n    EXCEPTIONS OTHERS = 1 ).\n  IF lv_rc > 0.\n    READ TABLE lt_filetable INDEX 1 INTO p_fname.\n  ENDIF.\n\n*----------------------------------------------------------------------*\n* Main\n*----------------------------------------------------------------------*\nSTART-OF-SELECTION.\n\n  DATA: lv_wasm TYPE xstring.\n\n  \" ── Load WASM ──\n  IF p_file = abap_true.\n    IF p_fname IS INITIAL. WRITE: / 'ERROR: No file.'. RETURN. ENDIF.\n    DATA: lt_data TYPE STANDARD TABLE OF x255, lv_flen TYPE i.\n    cl_gui_frontend_services=>gui_upload(\n      EXPORTING filename = p_fname filetype = 'BIN'\n      IMPORTING filelength = lv_flen\n      CHANGING  data_tab = lt_data\n      EXCEPTIONS OTHERS = 1 ).\n    IF sy-subrc <> 0. WRITE: / 'Upload failed:', sy-subrc. RETURN. ENDIF.\n    CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'\n      EXPORTING input_length = lv_flen\n      IMPORTING buffer = lv_wasm\n      TABLES binary_tab = lt_data.\n\n  ELSEIF p_smw0 = abap_true.\n    IF p_smw0n IS INITIAL. WRITE: / 'ERROR: No SMW0 name.'. RETURN. ENDIF.\n    DATA: lt_mime TYPE STANDARD TABLE OF w3mime, lv_size TYPE i.\n    CALL FUNCTION 'SAP_READ_BINARY_RESOURCE'\n      EXPORTING key = p_smw0n\n      IMPORTING size = lv_size\n      TABLES data = lt_mime\n      EXCEPTIONS OTHERS = 1.\n    IF sy-subrc <> 0. WRITE: / 'SMW0 read failed:', p_smw0n. RETURN. ENDIF.\n    CALL FUNCTION 'SCMS_BINARY_TO_XSTRING'\n      EXPORTING input_length = lv_size\n      IMPORTING buffer = lv_wasm\n      TABLES binary_tab = lt_mime.\n\n  ELSEIF p_hex = abap_true.\n    IF p_hexin IS INITIAL. WRITE: / 'ERROR: No hex.'. RETURN. ENDIF.\n    lv_wasm = p_hexin.\n  ENDIF.\n\n  IF xstrlen( lv_wasm ) < 8. WRITE: / 'ERROR: Too small:', xstrlen( lv_wasm ). RETURN. ENDIF.\n\n  WRITE: / '── WASM Binary ──'.\n  WRITE: / 'Size:', xstrlen( lv_wasm ), 'bytes'.\n  ULINE.\n\n  \" ── Parse ──\n  DATA(lo_mod) = NEW zcl_wasm_module( ).\n  TRY.\n      lo_mod->parse( lv_wasm ).\n    CATCH cx_root INTO DATA(lx_parse).\n      WRITE: / 'PARSE ERROR:', lx_parse->get_text( ). RETURN.\n  ENDTRY.\n\n  WRITE: / '── Module Summary ──'.\n  WRITE: / lo_mod->summary( ).\n  ULINE.\n\n  WRITE: / '── Exports ──'.\n  LOOP AT lo_mod->mt_exports INTO DATA(ls_exp).\n    DATA(lv_ekind) = ||.\n    CASE ls_exp-kind.\n      WHEN 0. lv_ekind = 'func'.\n      WHEN 1. lv_ekind = 'table'.\n      WHEN 2. lv_ekind = 'memory'.\n      WHEN 3. lv_ekind = 'global'.\n    ENDCASE.\n    WRITE: / '  ', lv_ekind, ls_exp-name, 'index:', ls_exp-index.\n  ENDLOOP.\n  ULINE.\n\n  \" ── Compile ──\n  DATA(lv_progname) = CONV string( p_prog ).\n  CONDENSE lv_progname.\n  TRANSLATE lv_progname TO UPPER CASE.\n\n  DATA(lv_abap) = NEW zcl_wasm_codegen( )->compile(\n    io_module = lo_mod\n    iv_name   = lv_progname ).\n\n  DATA: lt_code TYPE STANDARD TABLE OF string WITH DEFAULT KEY.\n  SPLIT lv_abap AT cl_abap_char_utilities=>newline INTO TABLE lt_code.\n\n  WRITE: / '── Compiled ABAP ──'.\n  WRITE: / 'Lines:', lines( lt_code ).\n\n  IF p_show = abap_true.\n    ULINE.\n    WRITE: / '── Generated Source ──'.\n    DATA(lv_lineno) = 0.\n    LOOP AT lt_code INTO DATA(lv_line).\n      lv_lineno = lv_lineno + 1.\n      WRITE: / lv_lineno, lv_line.\n    ENDLOOP.\n    ULINE.\n  ENDIF.\n\n  \" ── Class wrapper ──\n  IF p_class = abap_true.\n    DATA(lv_wasm_hex) = CONV string( lv_wasm ).\n    DATA(lv_clsname) = CONV string( p_clsnm ).\n    CONDENSE lv_clsname.\n    TRANSLATE lv_clsname TO UPPER CASE.\n\n    DATA(lv_cls_src) = ||.\n    IF p_perm = abap_true.\n      \" Static: class points to persistent program\n      lv_cls_src = NEW zcl_wasm_codegen( )->compile_class(\n        io_module    = lo_mod\n        iv_classname = lv_clsname\n        iv_program   = lv_progname ).\n    ELSE.\n      \" Dynamic: self-contained with embedded WASM\n      lv_cls_src = NEW zcl_wasm_codegen( )->compile_class(\n        io_module    = lo_mod\n        iv_classname = lv_clsname\n        iv_wasm_hex  = lv_wasm_hex ).\n    ENDIF.\n\n    ULINE.\n    WRITE: / '── CLASS Wrapper ──'.\n    WRITE: / 'Class:', lv_clsname.\n    DATA: lt_cls_lines TYPE STANDARD TABLE OF string.\n    SPLIT lv_cls_src AT cl_abap_char_utilities=>newline INTO TABLE lt_cls_lines.\n    WRITE: / 'Lines:', lines( lt_cls_lines ).\n    ULINE.\n    DATA(lv_cln) = 0.\n    LOOP AT lt_cls_lines INTO DATA(lv_cl).\n      lv_cln = lv_cln + 1.\n      WRITE: / lv_cln, lv_cl.\n    ENDLOOP.\n    ULINE.\n    WRITE: / 'Usage:'.\n    WRITE: / '  DATA(lo) = NEW', lv_clsname, '( ).'.\n    LOOP AT lo_mod->mt_exports INTO DATA(ls_ex2) WHERE kind = 0.\n      DATA(lv_ename) = ls_ex2-name.\n      TRANSLATE lv_ename TO UPPER CASE.\n      WRITE: / '  lo->', lv_ename, '( ... )'.\n    ENDLOOP.\n    ULINE.\n  ENDIF.\n\n  \" ── Generate / Save ──\n  DATA lv_target_prog TYPE string.\n\n  IF p_temp = abap_true.\n    \" Temporary subroutine pool\n    WRITE: / '── Temporary Generation ──'.\n    DATA lv_msg TYPE string.\n    GENERATE SUBROUTINE POOL lt_code NAME lv_target_prog MESSAGE lv_msg.\n    IF sy-subrc <> 0.\n      WRITE: / 'GENERATE failed:', sy-subrc, lv_msg. RETURN.\n    ENDIF.\n    WRITE: / 'Generated temporary program:', lv_target_prog.\n\n  ELSE.\n    \" Persistent program via INSERT REPORT\n    WRITE: / '── Persistent Program ──'.\n    DATA(lv_repname) = CONV syrepid( lv_progname ).\n\n    DATA lv_gen_msg TYPE string.\n\n    IF p_split = abap_true.\n      \" Split into INCLUDEs\n      DATA(lt_includes) = NEW zcl_wasm_codegen( )->split_to_includes(\n        iv_source    = lv_abap\n        iv_name      = lv_progname\n        iv_max_lines = p_maxln ).\n\n      \" Pass 1: INSERT all includes (includes first, main last)\n      DATA(lv_main_idx) = 0.\n      DATA(lv_inc_idx) = 0.\n      LOOP AT lt_includes INTO DATA(ls_inc).\n        lv_inc_idx = sy-tabix.\n        DATA(lv_iname) = CONV syrepid( ls_inc-name ).\n        DATA: lt_isrc TYPE STANDARD TABLE OF string.\n        SPLIT ls_inc-source AT cl_abap_char_utilities=>newline INTO TABLE lt_isrc.\n        \" Check for long lines\n        DATA(lv_ok) = abap_true.\n        LOOP AT lt_isrc INTO DATA(lv_ichk).\n          IF strlen( lv_ichk ) > 255.\n            WRITE: / 'LONG LINE in', lv_iname, 'line', sy-tabix, 'len=', strlen( lv_ichk ).\n            lv_ok = abap_false.\n          ENDIF.\n        ENDLOOP.\n        IF lv_ok = abap_false. CONTINUE. ENDIF.\n        \" Main program = type 'S' (subroutine pool), includes = type 'I'\n        IF lv_inc_idx = 1.\n          INSERT REPORT lv_iname FROM lt_isrc PROGRAM TYPE 'S'.\n        ELSE.\n          INSERT REPORT lv_iname FROM lt_isrc PROGRAM TYPE 'I'.\n        ENDIF.\n        IF sy-subrc = 0.\n          WRITE: / 'INSERT OK:', lv_iname, '(', lines( lt_isrc ), 'lines )'.\n        ELSE.\n          WRITE: / 'INSERT failed:', lv_iname.\n        ENDIF.\n        IF lv_inc_idx = 1. lv_main_idx = 1. ENDIF.\n      ENDLOOP.\n      \" Pass 2: GENERATE only the main program (compiles all includes)\n      IF lv_main_idx > 0.\n        READ TABLE lt_includes INDEX 1 INTO ls_inc.\n        DATA(lv_mname) = CONV syrepid( ls_inc-name ).\n        GENERATE REPORT lv_mname MESSAGE lv_gen_msg.\n        IF sy-subrc = 0.\n          WRITE: / 'Activated:', lv_mname.\n        ELSE.\n          WRITE: / 'Activation failed:', lv_mname, lv_gen_msg.\n        ENDIF.\n      ENDIF.\n    ELSE.\n      \" Single program — check for long lines first\n      DATA: lv_long_cnt TYPE i.\n      LOOP AT lt_code INTO DATA(lv_chk).\n        IF strlen( lv_chk ) > 255.\n          lv_long_cnt = lv_long_cnt + 1.\n          IF lv_long_cnt <= 10.\n            WRITE: / 'LINE', sy-tabix, 'len=', strlen( lv_chk ), lv_chk(80), '...'.\n          ENDIF.\n        ENDIF.\n      ENDLOOP.\n      IF lv_long_cnt > 0.\n        WRITE: / 'Total lines > 255:', lv_long_cnt, '— fix codegen or use Split'.\n        RETURN.\n      ENDIF.\n      INSERT REPORT lv_repname FROM lt_code.\n      GENERATE REPORT lv_repname MESSAGE lv_gen_msg.\n      IF sy-subrc <> 0.\n        WRITE: / 'Failed:', sy-subrc, lv_gen_msg. RETURN.\n      ENDIF.\n      WRITE: / 'Saved + activated:', lv_repname.\n    ENDIF.\n\n    WRITE: / 'Call via: PERFORM <func> IN PROGRAM', lv_repname.\n    lv_target_prog = lv_repname.\n\n    \" Also save wrapper program if class checkbox is set\n    IF p_class = abap_true AND lv_cls_src IS NOT INITIAL.\n      DATA(lv_wrap_name) = CONV syrepid( lv_progname && '_WRAP' ).\n      DATA: lt_wrap_code TYPE STANDARD TABLE OF string.\n      SPLIT lv_cls_src AT cl_abap_char_utilities=>newline INTO TABLE lt_wrap_code.\n\n      INSERT REPORT lv_wrap_name FROM lt_wrap_code.\n      IF sy-subrc = 0.\n        GENERATE REPORT lv_wrap_name MESSAGE lv_gen_msg.\n        IF sy-subrc = 0.\n          WRITE: / 'Wrapper program created:', lv_wrap_name.\n        ELSE.\n          WRITE: / 'Wrapper activation failed:', sy-subrc, lv_gen_msg.\n        ENDIF.\n      ELSE.\n        WRITE: / 'INSERT REPORT wrapper failed:', sy-subrc.\n      ENDIF.\n    ENDIF.\n  ENDIF.\n\n  \" ── Execute ──\n  IF p_exec = abap_true AND lv_target_prog IS NOT INITIAL.\n    WRITE: / '── Execution ──'.\n\n    DATA: lv_result TYPE i.\n    DATA(lv_func) = CONV string( p_func ).\n    CONDENSE lv_func.\n    TRANSLATE lv_func TO UPPER CASE.\n    WRITE: / 'Calling:', lv_func, 'with args:', p_arg0, p_arg1.\n\n    TRY.\n        PERFORM (lv_func) IN PROGRAM (lv_target_prog)\n          USING p_arg0 p_arg1\n          CHANGING lv_result.\n      CATCH cx_root INTO DATA(lx_exec).\n        WRITE: / 'EXECUTION ERROR:', lx_exec->get_text( ). RETURN.\n    ENDTRY.\n\n    WRITE: / '════════════════════'.\n    WRITE: / 'RESULT:', lv_result.\n    WRITE: / '════════════════════'.\n  ENDIF.\n"
+ },
+ {
+  "name": "real_bench_mem",
+  "abap": "* Memory-model benchmark for ABAPiti's WASM linear memory (little-endian).\n* Three models behind one dispatch, so the dispatch cost is equal:\n*   A  xstring; writes through REPLACE SECTION ... IN BYTE MODE (today's\n*      generated code), reads by offset\n*   B  STANDARD TABLE OF x LENGTH 4096 (16 rows per WASM page); writes in\n*      place through a field symbol: <row>+off(n) = ...\n*   C  as B, but i32 goes through ASSIGN ... CASTING TYPE i. On a kernel\n*      this dumps (ASSIGN_BASE_WRONG_ALIGNMENT: x has 1-byte alignment),\n*      even at offset 0; kept only to measure emulators\n* Workloads: W1 byte fill + byte sum, W2 aligned i32 store + load sum,\n* W3 unaligned i32 across row boundaries, W4 recursion (fib).\n* Correctness: the ABAP Unit test class. Timings: run as a console app\n* (if_oo_adt_classrun) or call run( ) and read the result table.\n* ABAP 7.02 syntax, ASCII.\nCLASS zcl_abapiti_bench_mem DEFINITION PUBLIC FINAL CREATE PUBLIC.\n  PUBLIC SECTION.\n    INTERFACES if_oo_adt_classrun.\n\n    TYPES: BEGIN OF ty_result,\n             model    TYPE c LENGTH 1,\n             pages    TYPE i,\n             workload TYPE c LENGTH 2,\n             checksum TYPE p LENGTH 16 DECIMALS 0,\n             micros   TYPE i,\n             error    TYPE string,\n           END OF ty_result,\n           ty_results TYPE STANDARD TABLE OF ty_result WITH DEFAULT KEY.\n\n    CONSTANTS: gc_page TYPE i VALUE 65536,\n               gc_row  TYPE i VALUE 4096.\n\n    METHODS constructor IMPORTING iv_model TYPE c DEFAULT 'B' iv_pages TYPE i DEFAULT 1.\n    METHODS st_i32 IMPORTING iv_addr TYPE i iv_val TYPE i.\n    METHODS ld_i32 IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.\n    METHODS st_8 IMPORTING iv_addr TYPE i iv_val TYPE i.\n    METHODS ld_8u IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.\n    METHODS fib IMPORTING iv_n TYPE i RETURNING VALUE(rv) TYPE i.\n\n    METHODS w1_bytes IMPORTING iv_n TYPE i RETURNING VALUE(rv) TYPE ty_result-checksum.\n    METHODS w2_i32 IMPORTING iv_n TYPE i RETURNING VALUE(rv) TYPE ty_result-checksum.\n    METHODS w3_unaligned IMPORTING iv_n TYPE i RETURNING VALUE(rv) TYPE ty_result-checksum.\n    METHODS w5_sweep RETURNING VALUE(rv) TYPE ty_result-checksum.\n    METHODS pages RETURNING VALUE(rv) TYPE i.\n\n* One model at one size: W0 allocation, W1-W3, W5 sweep over all of it.\n    CLASS-METHODS run_one IMPORTING iv_model TYPE c iv_pages TYPE i\n      RETURNING VALUE(rt) TYPE ty_results.\n    CLASS-METHODS run IMPORTING iv_models TYPE string DEFAULT 'ABC'\n                                iv_pages  TYPE i DEFAULT 1\n      RETURNING VALUE(rt) TYPE ty_results.\n\n  PRIVATE SECTION.\n    TYPES ty_row TYPE x LENGTH 4096.\n    TYPES ty_x4 TYPE x LENGTH 4.\n    DATA mv_model TYPE c LENGTH 1.\n    DATA mv_pages TYPE i.\n    DATA mv_mem TYPE xstring.\n    DATA mt_mem TYPE STANDARD TABLE OF ty_row WITH DEFAULT KEY.\n\n    METHODS swap4 IMPORTING iv_in TYPE ty_x4 RETURNING VALUE(rv) TYPE ty_x4.\n    CLASS-METHODS measure IMPORTING iv_model TYPE c iv_workload TYPE c\n                                    iv_pages TYPE i\n      RETURNING VALUE(rs) TYPE ty_result.\nENDCLASS.\n\nCLASS zcl_abapiti_bench_mem IMPLEMENTATION.\n\n  METHOD constructor.\n    DATA lv_chunk TYPE x LENGTH 256.\n    DATA lv_rows TYPE i.\n    mv_model = iv_model.\n    mv_pages = iv_pages.\n    IF mv_model = 'A'.\n      DO iv_pages * 256 TIMES.\n        CONCATENATE mv_mem lv_chunk INTO mv_mem IN BYTE MODE.\n      ENDDO.\n    ELSE.\n      lv_rows = iv_pages * 16.\n      DO lv_rows TIMES.\n        APPEND INITIAL LINE TO mt_mem.\n      ENDDO.\n    ENDIF.\n  ENDMETHOD.\n\n  METHOD swap4.\n    rv+0(1) = iv_in+3(1).\n    rv+1(1) = iv_in+2(1).\n    rv+2(1) = iv_in+1(1).\n    rv+3(1) = iv_in+0(1).\n  ENDMETHOD.\n\n  METHOD st_i32.\n    DATA lv_b TYPE x LENGTH 1.\n    DATA lv_v TYPE i.\n    DATA lv_be TYPE x LENGTH 4.\n    DATA lv_le TYPE x LENGTH 4.\n    DATA lv_row TYPE i.\n    DATA lv_off TYPE i.\n    FIELD-SYMBOLS <ls_row> TYPE ty_row.\n    FIELD-SYMBOLS <lv_i> TYPE i.\n    CASE mv_model.\n      WHEN 'A'.\n        lv_be = iv_val.\n        lv_le = swap4( lv_be ).\n        REPLACE SECTION OFFSET iv_addr LENGTH 4 OF mv_mem WITH lv_le IN BYTE MODE.\n      WHEN OTHERS.\n        lv_row = iv_addr DIV gc_row + 1.\n        lv_off = iv_addr MOD gc_row.\n        IF lv_off > gc_row - 4.\n* Crosses a row boundary: byte by byte.\n          lv_be = iv_val.\n          lv_le = swap4( lv_be ).\n          DO 4 TIMES.\n            lv_off = sy-index - 1.\n            lv_b = lv_le+lv_off(1).\n            lv_v = lv_b.\n            st_8( iv_addr = iv_addr + lv_off iv_val = lv_v ).\n          ENDDO.\n          RETURN.\n        ENDIF.\n        READ TABLE mt_mem INDEX lv_row ASSIGNING <ls_row>.\n        IF mv_model = 'C' AND lv_off MOD 4 = 0.\n          ASSIGN <ls_row>+lv_off(4) TO <lv_i> CASTING.\n          <lv_i> = iv_val.\n        ELSE.\n          lv_be = iv_val.\n          <ls_row>+lv_off(4) = swap4( lv_be ).\n        ENDIF.\n    ENDCASE.\n  ENDMETHOD.\n\n  METHOD ld_i32.\n    DATA lv_le TYPE x LENGTH 4.\n    DATA lv_be TYPE x LENGTH 4.\n    DATA lv_row TYPE i.\n    DATA lv_off TYPE i.\n    FIELD-SYMBOLS <ls_row> TYPE ty_row.\n    FIELD-SYMBOLS <lv_i> TYPE i.\n    CASE mv_model.\n      WHEN 'A'.\n        lv_le = mv_mem+iv_addr(4).\n      WHEN OTHERS.\n        lv_row = iv_addr DIV gc_row + 1.\n        lv_off = iv_addr MOD gc_row.\n        IF lv_off > gc_row - 4.\n          lv_le+0(1) = ld_8u( iv_addr ).\n          lv_le+1(1) = ld_8u( iv_addr + 1 ).\n          lv_le+2(1) = ld_8u( iv_addr + 2 ).\n          lv_le+3(1) = ld_8u( iv_addr + 3 ).\n        ELSE.\n          READ TABLE mt_mem INDEX lv_row ASSIGNING <ls_row>.\n          IF mv_model = 'C' AND lv_off MOD 4 = 0.\n            ASSIGN <ls_row>+lv_off(4) TO <lv_i> CASTING.\n            rv = <lv_i>.\n            RETURN.\n          ENDIF.\n          lv_le = <ls_row>+lv_off(4).\n        ENDIF.\n    ENDCASE.\n    lv_be = swap4( lv_le ).\n    rv = lv_be.\n  ENDMETHOD.\n\n  METHOD st_8.\n    DATA lv_b TYPE x LENGTH 1.\n    DATA lv_row TYPE i.\n    DATA lv_off TYPE i.\n    FIELD-SYMBOLS <ls_row> TYPE ty_row.\n    lv_b = iv_val.\n    IF mv_model = 'A'.\n      REPLACE SECTION OFFSET iv_addr LENGTH 1 OF mv_mem WITH lv_b IN BYTE MODE.\n    ELSE.\n      lv_row = iv_addr DIV gc_row + 1.\n      lv_off = iv_addr MOD gc_row.\n      READ TABLE mt_mem INDEX lv_row ASSIGNING <ls_row>.\n      <ls_row>+lv_off(1) = lv_b.\n    ENDIF.\n  ENDMETHOD.\n\n  METHOD ld_8u.\n    DATA lv_b TYPE x LENGTH 1.\n    DATA lv_row TYPE i.\n    DATA lv_off TYPE i.\n    FIELD-SYMBOLS <ls_row> TYPE ty_row.\n    IF mv_model = 'A'.\n      lv_b = mv_mem+iv_addr(1).\n    ELSE.\n      lv_row = iv_addr DIV gc_row + 1.\n      lv_off = iv_addr MOD gc_row.\n      READ TABLE mt_mem INDEX lv_row ASSIGNING <ls_row>.\n      lv_b = <ls_row>+lv_off(1).\n    ENDIF.\n    rv = lv_b.\n  ENDMETHOD.\n\n  METHOD fib.\n    IF iv_n < 2.\n      rv = iv_n.\n    ELSE.\n      rv = fib( iv_n - 1 ) + fib( iv_n - 2 ).\n    ENDIF.\n  ENDMETHOD.\n\n  METHOD w1_bytes.\n* store8 (k MOD 251) at k, then sum load8_u.\n    DATA lv_k TYPE i.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      st_8( iv_addr = lv_k iv_val = lv_k MOD 251 ).\n    ENDDO.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      rv = rv + ld_8u( lv_k ).\n    ENDDO.\n  ENDMETHOD.\n\n  METHOD w2_i32.\n* i32.store (7k+1) at 4k, then sum i32.load.\n    DATA lv_k TYPE i.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      st_i32( iv_addr = lv_k * 4 iv_val = lv_k * 7 + 1 ).\n    ENDDO.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      rv = rv + ld_i32( lv_k * 4 ).\n    ENDDO.\n  ENDMETHOD.\n\n  METHOD w3_unaligned.\n* i32.store (k+1000) at 4k+1, crossing a row boundary every 1024 stores\n* in models B and C; then sum i32.load at the same addresses.\n    DATA lv_k TYPE i.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      st_i32( iv_addr = lv_k * 4 + 1 iv_val = lv_k + 1000 ).\n    ENDDO.\n    DO iv_n TIMES.\n      lv_k = sy-index - 1.\n      rv = rv + ld_i32( lv_k * 4 + 1 ).\n    ENDDO.\n  ENDMETHOD.\n\n  METHOD pages.\n    rv = mv_pages.\n  ENDMETHOD.\n\n  METHOD w5_sweep.\n* One i32.store (k+1) at the start of every 4096-byte block of the whole\n* memory, then sum the loads: sum = n(n+1)/2 with n = pages * 16.\n    DATA lv_n TYPE i.\n    DATA lv_k TYPE i.\n    lv_n = mv_pages * 16.\n    DO lv_n TIMES.\n      lv_k = sy-index - 1.\n      st_i32( iv_addr = lv_k * gc_row iv_val = lv_k + 1 ).\n    ENDDO.\n    DO lv_n TIMES.\n      lv_k = sy-index - 1.\n      rv = rv + ld_i32( lv_k * gc_row ).\n    ENDDO.\n  ENDMETHOD.\n\n  METHOD run_one.\n    APPEND measure( iv_model = iv_model iv_workload = 'W0' iv_pages = iv_pages ) TO rt.\n    APPEND measure( iv_model = iv_model iv_workload = 'W1' iv_pages = iv_pages ) TO rt.\n    APPEND measure( iv_model = iv_model iv_workload = 'W2' iv_pages = iv_pages ) TO rt.\n    APPEND measure( iv_model = iv_model iv_workload = 'W3' iv_pages = iv_pages ) TO rt.\n    APPEND measure( iv_model = iv_model iv_workload = 'W5' iv_pages = iv_pages ) TO rt.\n  ENDMETHOD.\n\n  METHOD measure.\n    DATA lo TYPE REF TO zcl_abapiti_bench_mem.\n    DATA lv_t0 TYPE i.\n    DATA lv_t1 TYPE i.\n    DATA lx TYPE REF TO cx_root.\n    rs-model = iv_model.\n    rs-pages = iv_pages.\n    rs-workload = iv_workload.\n    TRY.\n        IF iv_workload = 'W0'.\n          GET RUN TIME FIELD lv_t0.\n          CREATE OBJECT lo EXPORTING iv_model = iv_model iv_pages = iv_pages.\n          GET RUN TIME FIELD lv_t1.\n          rs-micros = lv_t1 - lv_t0.\n          rs-checksum = lo->pages( ).\n          RETURN.\n        ENDIF.\n        CREATE OBJECT lo EXPORTING iv_model = iv_model iv_pages = iv_pages.\n        GET RUN TIME FIELD lv_t0.\n        CASE iv_workload.\n          WHEN 'W1'. rs-checksum = lo->w1_bytes( 16384 ).\n          WHEN 'W2'. rs-checksum = lo->w2_i32( 4096 ).\n          WHEN 'W3'. rs-checksum = lo->w3_unaligned( 2048 ).\n          WHEN 'W4'. rs-checksum = lo->fib( 20 ).\n          WHEN 'W5'. rs-checksum = lo->w5_sweep( ).\n        ENDCASE.\n        GET RUN TIME FIELD lv_t1.\n        rs-micros = lv_t1 - lv_t0.\n      CATCH cx_root INTO lx.\n        rs-error = lx->get_text( ).\n    ENDTRY.\n  ENDMETHOD.\n\n  METHOD run.\n    DATA lv_i TYPE i.\n    DATA lv_model TYPE c LENGTH 1.\n    DATA ls TYPE ty_result.\n    DO strlen( iv_models ) TIMES.\n      lv_i = sy-index - 1.\n      lv_model = iv_models+lv_i(1).\n      ls = measure( iv_model = lv_model iv_workload = 'W1' iv_pages = iv_pages ). APPEND ls TO rt.\n      ls = measure( iv_model = lv_model iv_workload = 'W2' iv_pages = iv_pages ). APPEND ls TO rt.\n      ls = measure( iv_model = lv_model iv_workload = 'W3' iv_pages = iv_pages ). APPEND ls TO rt.\n    ENDDO.\n  ENDMETHOD.\n\n  METHOD if_oo_adt_classrun~main.\n    DATA lt TYPE ty_results.\n    DATA ls TYPE ty_result.\n    DATA lv_line TYPE string.\n    DATA lv_sum TYPE string.\n    DATA lv_us TYPE string.\n    DATA lv_pg TYPE string.\n* The same operations on a growing memory: model A copies the whole\n* xstring on every write, so its cost should grow with the size.\n* Model C is left out: on a kernel ASSIGN ... CASTING TYPE i from an x\n* row dumps (ASSIGN_BASE_WRONG_ALIGNMENT, A4H 2026-10-02). A only up to\n* 16 pages here, because on OSD every write copies the whole xstring;\n* call run_one( ) for larger sizes on a kernel.\n    APPEND LINES OF run_one( iv_model = 'A' iv_pages = 1 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'A' iv_pages = 4 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'A' iv_pages = 16 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'B' iv_pages = 1 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'B' iv_pages = 16 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'B' iv_pages = 256 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'B' iv_pages = 1024 ) TO lt.\n    APPEND LINES OF run_one( iv_model = 'B' iv_pages = 8192 ) TO lt.\n    APPEND measure( iv_model = 'B' iv_workload = 'W4' iv_pages = 1 ) TO lt.\n    out->write( 'model pages workload micros checksum error' ).\n    LOOP AT lt INTO ls.\n      lv_sum = ls-checksum.\n      lv_us = ls-micros.\n      lv_pg = ls-pages.\n      CONCATENATE ls-model lv_pg ls-workload lv_us lv_sum ls-error INTO lv_line SEPARATED BY space.\n      out->write( lv_line ).\n    ENDLOOP.\n  ENDMETHOD.\n\nENDCLASS.\n"
+ },
+ {
+  "name": "real_abapgit",
+  "abap": "CLASS zcl_abapgit_http_agent DEFINITION\n  PUBLIC\n  FINAL\n  CREATE PUBLIC .\n\n  PUBLIC SECTION.\n    INTERFACES zif_abapgit_http_agent .\n\n    CLASS-METHODS create\n      RETURNING\n        VALUE(ri_instance) TYPE REF TO zif_abapgit_http_agent .\n\n    METHODS constructor.\n\n  PROTECTED SECTION.\n  PRIVATE SECTION.\n\n    DATA mo_global_headers TYPE REF TO zcl_abapgit_string_map.\n\n    CLASS-METHODS attach_payload\n      IMPORTING\n        ii_request TYPE REF TO if_http_request\n        iv_payload TYPE any\n      RAISING\n        zcx_abapgit_exception.\n\nENDCLASS.\n\n\n\nCLASS ZCL_ABAPGIT_HTTP_AGENT IMPLEMENTATION.\n\n\n  METHOD attach_payload.\n\n    DATA lo_type TYPE REF TO cl_abap_typedescr.\n    lo_type = cl_abap_typedescr=>describe_by_data( iv_payload ).\n\n    IF lo_type->type_kind = cl_abap_typedescr=>typekind_xstring.\n      ii_request->set_data( iv_payload ).\n\n    ELSEIF lo_type->type_kind = cl_abap_typedescr=>typekind_string.\n      ii_request->set_cdata( iv_payload ).\n\n    ELSE.\n      zcx_abapgit_exception=>raise( |Unexpected payload type { lo_type->absolute_name }| ).\n    ENDIF.\n\n  ENDMETHOD.\n\n\n  METHOD constructor.\n\n    CREATE OBJECT mo_global_headers.\n\n  ENDMETHOD.\n\n\n  METHOD create.\n\n    CREATE OBJECT ri_instance TYPE zcl_abapgit_http_agent.\n\n  ENDMETHOD.\n\n\n  METHOD zif_abapgit_http_agent~global_headers.\n\n    ro_global_headers = mo_global_headers.\n\n  ENDMETHOD.\n\n\n  METHOD zif_abapgit_http_agent~request.\n\n    DATA li_client TYPE REF TO if_http_client.\n    DATA lo_proxy_configuration TYPE REF TO zcl_abapgit_proxy_config.\n    DATA lv_code TYPE i.\n    DATA lv_message TYPE string.\n    FIELD-SYMBOLS <ls_entry> LIKE LINE OF io_query->mt_entries.\n\n    CREATE OBJECT lo_proxy_configuration.\n\n    cl_http_client=>create_by_url(\n      EXPORTING\n        url           = iv_url\n        ssl_id        = zcl_abapgit_exit=>get_instance( )->get_ssl_id( )\n        proxy_host    = lo_proxy_configuration->get_proxy_url( iv_url )\n        proxy_service = lo_proxy_configuration->get_proxy_port( iv_url )\n      IMPORTING\n        client = li_client ).\n\n    li_client->request->set_version( if_http_request=>co_protocol_version_1_1 ).\n    li_client->request->set_method( iv_method ).\n\n    IF io_query IS BOUND.\n      LOOP AT io_query->mt_entries ASSIGNING <ls_entry>.\n        li_client->request->set_form_field(\n          name  = <ls_entry>-k\n          value = <ls_entry>-v ).\n      ENDLOOP.\n    ENDIF.\n\n    LOOP AT mo_global_headers->mt_entries ASSIGNING <ls_entry>.\n      li_client->request->set_header_field(\n        name  = to_lower( <ls_entry>-k )\n        value = <ls_entry>-v ).\n    ENDLOOP.\n\n    IF io_headers IS BOUND.\n      LOOP AT io_headers->mt_entries ASSIGNING <ls_entry>.\n        li_client->request->set_header_field(\n          name  = to_lower( <ls_entry>-k )\n          value = <ls_entry>-v ).\n      ENDLOOP.\n    ENDIF.\n\n    IF iv_method = zif_abapgit_http_agent=>c_methods-post\n      OR iv_method = zif_abapgit_http_agent=>c_methods-put\n      OR iv_method = zif_abapgit_http_agent=>c_methods-patch.\n      attach_payload(\n        ii_request = li_client->request\n        iv_payload = iv_payload ).\n    ENDIF.\n\n    li_client->send(\n      EXCEPTIONS\n        http_communication_failure = 1\n        http_invalid_state         = 2\n        http_processing_failed     = 3\n        http_invalid_timeout       = 4\n        OTHERS                     = 5 ).\n    IF sy-subrc = 0.\n      li_client->receive(\n        EXCEPTIONS\n          http_communication_failure = 1\n          http_invalid_state         = 2\n          http_processing_failed     = 3\n          OTHERS                     = 4 ).\n    ENDIF.\n\n    IF sy-subrc <> 0.\n      li_client->get_last_error(\n        IMPORTING\n          code    = lv_code\n          message = lv_message ).\n      zcx_abapgit_exception=>raise( |HTTP error: [{ lv_code }] { lv_message }| ).\n    ENDIF.\n\n    ri_response = lcl_http_response=>create( li_client ).\n\n  ENDMETHOD.\nENDCLASS.\n"
+ },
+ {
+  "name": "stmt_data",
+  "abap": "\nDATA lv_foo TYPE i.\nDATA lv_bar TYPE string VALUE 'bar'.\nDATA: BEGIN OF ls_str,\n  name TYPE string,\n  count TYPE i,\nEND OF ls_str.\n"
+ },
+ {
+  "name": "stmt_write",
+  "abap": "\nWRITE: / 'hello' INTENSIFIED OFF NO-GAP,\n       / lv_foo LEFT-JUSTIFIED NO-ZERO NO-SIGN\n       USING NO EDIT MASK\n       TO lv_target\n       AS LINE\n       DD/MM/YY\n       EXPONENT lv_e\n       COLOR COL_HEADING INVERSE ON.\n"
+ },
+ {
+  "name": "stmt_move",
+  "abap": "\nlv_x = lv_a + lv_b.\nlv_x = lv_a * 2 - lv_b.\nlv_x += 1.\nlv_x /= 2.\nlv_y &&= lv_z.\nMOVE EXACT lv_a TO lv_b.\nMOVE lv_a TO lv_b PERCENTAGE 50.\nlv_obj ?= lv_super.\n"
+ },
+ {
+  "name": "stmt_if",
+  "abap": "\nIF lv_x = 1 AND lv_y IS NOT INITIAL.\n  WRITE 'one'.\nELSEIF lv_x BETWEEN 1 AND 5 OR NOT ( lv_y IS BOUND ).\n  WRITE 'range'.\nELSE.\n  WRITE 'other'.\nENDIF.\n"
+ },
+ {
+  "name": "stmt_class_def",
+  "abap": "\nCLASS lcl_base DEFINITION ABSTRACT.\nENDCLASS.\nCLASS lcl_test DEFINITION\n  INHERITING FROM lcl_base\n  FINAL\n  CREATE PUBLIC\n  FOR TESTING\n  RISK LEVEL HARMLESS\n  DURATION SHORT\n  SHARED MEMORY ENABLED.\n  PUBLIC SECTION.\n    CLASS-DATA gv_x TYPE i.\n    METHODS meth IMPORTING iv_i TYPE i OPTIONAL EXPORTING ev_o TYPE string.\nENDCLASS.\n"
+ },
+ {
+  "name": "stmt_colon_chain",
+  "abap": "\nDATA: a TYPE i,\n      b TYPE string,\n      c TYPE i VALUE 3.\nWRITE: / a, / b, / c.\nCLEAR: a, b.\n"
+ },
+ {
+  "name": "stmt_define_macro",
+  "abap": "\nDEFINE write_line.\n  WRITE: / &1.\nEND-OF-DEFINITION.\nwrite_line 'x'.\nwrite_line 'y'.\n"
+ },
+ {
+  "name": "stmt_pragma",
+  "abap": "\nDATA lv_i TYPE i ##NEEDED.\nWRITE lv_i ##SUBSTITUTE_OK##.\n"
+ },
+ {
+  "name": "stmt_exec_sql",
+  "abap": "\nEXEC SQL.\n  SELECT name INTO :lv_name FROM users WHERE id = :lv_id\nENDEXEC.\n"
+ },
+ {
+  "name": "stmt_amdp",
+  "abap": "\nCLASS lcl_db DEFINITION.\n  PUBLIC SECTION.\n    METHODS get_data\n      BY DATABASE PROCEDURE FOR HDB LANGUAGE SQLSCRIPT\n      OPTIONS READ-ONLY\n      USING t1.\nENDCLASS.\n"
+ },
+ {
+  "name": "stmt_select_single",
+  "abap": "\nDATA ls_user TYPE usr02.\nSELECT SINGLE * FROM usr02 INTO ls_user WHERE bname = 'X'.\n"
+ },
+ {
+  "name": "stmt_select_loop",
+  "abap": "\nDATA lt TYPE TABLE OF usr02.\nDATA ls LIKE LINE OF lt.\nSELECT * FROM usr02 INTO TABLE lt UP TO 10 ROWS.\nSELECT * FROM usr02 INTO ls WHERE mandt = 100.\n  WRITE ls-bname.\nENDSELECT.\nSELECT COUNT( * ) FROM usr02.\n"
+ },
+ {
+  "name": "stmt_select_count_agg",
+  "abap": "\nDATA lv_cnt TYPE i.\nSELECT COUNT( * ) INTO lv_cnt FROM mara.\nSELECT bname COUNT( * ) FROM usr02 GROUP BY bname.\n"
+ },
+ {
+  "name": "stmt_with_cte",
+  "abap": "\nWITH +cte AS ( SELECT * FROM usr02 )\nSELECT * FROM +cte INTO TABLE @DATA(lt_users).\n"
+ },
+ {
+  "name": "stmt_lazy_unknown",
+  "abap": "\nWRITE 'no period'\nWRITE 'next statement'.\nlv_missing = 1 + 2.\n"
+ },
+ {
+  "name": "stmt_empty_punct",
+  "abap": "\n..\nWRITE 'x'..\n.\n"
+ },
+ {
+  "name": "stmt_comments",
+  "abap": "\n* full line comment\nWRITE 'x'. \" trailing comment\n\" another\nWRITE 'y'.\n"
+ },
+ {
+  "name": "stmt_types_fieldsymbols",
+  "abap": "\nTYPES: BEGIN OF ty_s,\n  a TYPE i,\n  b TYPE string,\nEND OF ty_s.\nTYPES ty_t TYPE STANDARD TABLE OF ty_s WITH DEFAULT KEY.\nFIELD-SYMBOLS <fs> TYPE ty_s.\nASSIGN ls_str TO <fs>.\nUNASSIGN <fs>.\n"
+ },
+ {
+  "name": "stmt_raise_call",
+  "abap": "\nRAISE EXCEPTION TYPE cx_static_check EXPORTING textid = 'X'.\nCALL METHOD lo_obj->( 'DYN_METH' ).\nCALL FUNCTION 'RFC_PING'.\nPERFORM do_something USING lv_x.\n"
+ },
+ {
+  "name": "stmt_misc",
+  "abap": "\nCONCATENATE lv_a lv_b INTO lv_c SEPARATED BY space RESPECTING BLANKS.\nSPLIT lv_c AT ':' INTO TABLE lt_parts.\nCONDENSE lv_c.\nSORT lt BY a DESCENDING AS TEXT.\nLOOP AT lt INTO ls WHERE a > 1.\n  CONTINUE.\nENDLOOP.\nRETURN.\n"
+ }
+]

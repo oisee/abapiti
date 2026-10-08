@@ -1,0 +1,24 @@
+import {IStatement} from "./_statement";
+import {opt, optPrio, per, seq, ver, AlsoIn, verNotLang} from "../combi";
+import {NamespaceSimpleName, Target} from "../expressions";
+import {IStatementRunnable} from "../statement_runnable";
+import {Release, LanguageVersion} from "../../../version";
+
+export class CommitEntities implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+
+    const failed = seq("FAILED", Target);
+    const reported = seq("REPORTED", Target);
+
+    const responses = seq("RESPONSES", failed, reported);
+
+    const s = seq("COMMIT ENTITIES",
+                  optPrio("IN SIMULATION MODE"),
+                  opt(responses),
+                  opt(seq("RESPONSE OF", NamespaceSimpleName, per(failed, reported))));
+
+    return verNotLang(LanguageVersion.KeyUser, ver(Release.v754, s, {also: AlsoIn.OpenABAP}));
+  }
+
+}

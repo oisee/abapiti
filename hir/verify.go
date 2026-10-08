@@ -173,14 +173,21 @@ func (v *verifier) fail(n Node, s string) { v.errors = append(v.errors, Error{n,
 // emitted as ABAP's CLASS-METHODS class_constructor and runs implicitly.
 const classConstructor = "class_constructor"
 
+// RootObject names the TypeScript `object` root: a ClassRef to it accepts
+// every reference value and is emitted as ABAP's REF TO object.
+var RootObject = "builtin.object"
+
 func (v *verifier) typ(n Node, t Type) {
 	arity := 0
 	switch t.Kind {
 	case Bool, Number, I32, I64, String, Void:
-	case ClassRef, ClassValue:
-		if v.classes[t.Name] == nil {
+	case ClassRef:
+		if t.Name != RootObject && v.classes[t.Name] == nil {
 			v.fail(n, "unresolved class "+t.Name)
 		}
+	case ClassValue, RegExp, Dynamic:
+		// Value types without arguments: class descriptors, compiled regexes,
+		// tagged union boxes.
 	case InterfaceRef:
 		if v.interfaces[t.Name] == nil {
 			v.fail(n, "unresolved interface "+t.Name)
@@ -207,7 +214,7 @@ func (v *verifier) typ(n Node, t Type) {
 	}
 	if t.Kind == OrderedMap || t.Kind == OrderedSet {
 		k := t.Args[0]
-		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef {
+		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue {
 			v.fail(n, "unsupported collection key "+k.String())
 		}
 	}
@@ -270,7 +277,33 @@ func (v *verifier) accepts(dst, src Type) bool {
 		return true
 	}
 	if dst.Kind == Optional && len(dst.Args) == 1 {
+		if src.Kind == Optional {
+			return v.accepts(dst.Args[0], src.Args[0])
+		}
 		return v.accepts(dst.Args[0], src)
+	}
+	// The TS `object` root accepts every reference value.
+	if dst.Kind == ClassRef && dst.Name == RootObject && (src.IsRef() || src.Kind == Optional) {
+		return true
+	}
+	// Arrays are covariant like TypeScript's: the aliasing (mutating through
+	// the wider view) is JavaScript's semantics and is preserved by not
+	// copying.
+	if dst.Kind == Array && src.Kind == Array && len(dst.Args) == 1 && len(src.Args) == 1 {
+		return v.accepts(dst.Args[0], src.Args[0])
+	}
+	if dst.Kind == InterfaceRef && src.Kind == InterfaceRef {
+		d, s := v.interfaces[dst.Name], v.interfaces[src.Name]
+		if d == nil || s == nil {
+			return false
+		}
+		for _, m := range d.Methods {
+			other := v.method(src.Name, m.Name)
+			if other == nil || !sameSignature(m, other) {
+				return false
+			}
+		}
+		return true
 	}
 	if src.Kind == ClassRef {
 		for c := v.classes[src.Name]; c != nil; c = v.classes[c.Super] {
@@ -428,7 +461,7 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		for i, x := range e.Args {
 			a := check(x)
 			if i < len(params) && !v.accepts(params[i], a) {
-				v.fail(e.Node, "call argument type mismatch")
+				v.fail(e.Node, "call argument type mismatch: "+params[i].String()+" <- "+a.String()+" in "+string(e.Kind)+" "+e.Owner+"."+e.Name)
 			}
 		}
 	}
@@ -575,8 +608,25 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 				}
 				args(ps)
 			}
-		} else if t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet {
+		} else if t.Kind == Array {
+			// Either a fresh empty array or new Array<T>(n) with n initial
+			// (still-undefined) slots.
+			if len(e.Args) == 1 {
+				if check(e.Args[0]).Kind != I32 {
+					v.fail(e.Node, "array size must be i32")
+				}
+			} else {
+				args(nil)
+			}
+		} else if t.Kind == OrderedMap || t.Kind == OrderedSet {
 			args(nil)
+		} else if t.Kind == RegExp {
+			// new RegExp(pattern[, flags]): the flags may be omitted.
+			if len(e.Args) == 1 {
+				eq(check(e.Args[0]), T(String))
+			} else {
+				args([]Type{T(String), T(String)})
+			}
 		} else {
 			v.fail(e.Node, "unsupported allocation")
 		}
@@ -624,14 +674,25 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 	case InstanceOf:
 		a := check(e.X)
 		eq(t, T(Bool))
+		if e.Y != nil {
+			// A dynamic class-value operand: the descriptor chain is walked
+			// at run time.
+			if a.Kind != ClassRef && a.Kind != InterfaceRef && a.Kind != Optional && a.Kind != Dynamic {
+				v.fail(e.Node, "instanceof on non-object")
+			}
+			if check(e.Y).Kind != ClassValue {
+				v.fail(e.Node, "instanceof needs a class value operand")
+			}
+			break
+		}
 		if (a.Kind != ClassRef && a.Kind != InterfaceRef && a.Kind != Optional) || v.classes[e.Owner] == nil {
 			v.fail(e.Node, "invalid instanceof")
 		}
 	case IsUndefined:
 		a := check(e.X)
 		eq(t, T(Bool))
-		if a.Kind != Optional {
-			v.fail(e.Node, "undefined test needs optional")
+		if a.Kind != Optional && !a.IsRef() {
+			v.fail(e.Node, "undefined test needs optional or reference")
 		}
 	case ToBoolean:
 		a := check(e.X)
@@ -648,17 +709,45 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		if base.Kind == Optional {
 			base = base.Args[0]
 		}
-		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !v.accepts(base, t) {
+		target := t
+		if target.Kind == Optional {
+			target = target.Args[0]
+		}
+		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || !v.accepts(base, target)) {
 			v.fail(e.Node, "invalid narrowing "+a.String()+" to "+t.String())
 		}
+	case ClassOf:
+		if v.classes[e.Owner] == nil {
+			v.fail(e.Node, "classof unresolved class "+e.Owner)
+		}
+		eq(t, T(ClassValue))
+	case Cast:
+		// An unchecked view (TypeScript `as`): the front end records no proof;
+		// a wrong view raises at run time instead of aliasing the wrong type.
+		a := check(e.X)
+		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !a.IsRef() {
+			v.fail(e.Node, "invalid cast "+a.String()+" to "+t.String())
+		}
+	case Seq:
+		if e.Stmt == nil || e.Stmt.Kind != Block {
+			v.fail(e.Node, "seq requires a block")
+		}
+		scope := clone(env)
+		if e.Stmt != nil && e.Stmt.Kind == Block {
+			for _, stmt := range e.Stmt.List {
+				v.stmt(c, m, stmt, scope, 0)
+			}
+		}
+		eq(t, v.expr(c, m, e.Y, scope))
 	case RuntimeOp:
 		a := check(e.X)
-		if len(v.errors) > 0 && len(a.Args) == 0 && a.Kind != String {
+		if SpecialOps[e.Op] {
+			v.specialOp(e, a, check, args, eq, t)
 			break
 		}
 		ps, r, ok := RuntimeSignature(e.Op, a)
 		if !ok {
-			v.fail(e.Node, "unsupported runtime op "+e.Op)
+			v.fail(e.Node, "unsupported runtime op "+e.Op+" on "+a.String())
 		} else {
 			eq(t, r)
 			args(ps)
@@ -669,3 +758,44 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 	return t
 }
 func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind == I64 }
+
+// specialOp verifies the ops whose typing rules depend on more than the
+// receiver kind: boxed dynamic values, class values and their factories.
+func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
+	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
+	switch e.Op {
+	case "object.classOf":
+		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
+			v.fail(e.Node, "classof needs an object receiver")
+		}
+		eq(t, T(ClassValue))
+	case "classvalue.new":
+		if a.Kind != ClassValue {
+			v.fail(e.Node, "classvalue.new needs a class value")
+		}
+		if !ref(t) {
+			v.fail(e.Node, "classvalue.new needs a reference result")
+		}
+		args(nil)
+	case "dynamic.of":
+		if a.Kind == Void {
+			v.fail(e.Node, "void box")
+		}
+		eq(t, T(Dynamic))
+		args(nil)
+	case "dynamic.asRef":
+		if a.Kind != Dynamic || !ref(t) {
+			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")
+		}
+		args(nil)
+	case "regexp.new":
+		eq(t, T(RegExp))
+		if len(e.Args) == 1 {
+			eq(check(e.Args[0]), T(String))
+		} else {
+			args([]Type{T(String), T(String)})
+		}
+	default:
+		v.fail(e.Node, "unknown special op "+e.Op)
+	}
+}

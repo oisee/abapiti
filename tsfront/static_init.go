@@ -54,6 +54,15 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return pure(d.Initializer())
 	case ast.KindPropertyAccessExpression:
+		if l.enumOf(l.resolve(n.Expression())) != nil {
+			return true
+		}
+		if recv := l.resolve(n.Expression()); recv != nil && recv.ValueDeclaration != nil {
+			d := recv.ValueDeclaration
+			if d.Kind == ast.KindVariableDeclaration && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst != 0 && d.Parent.Parent != nil && d.Parent.Parent.Parent != nil && d.Parent.Parent.Parent.Kind == ast.KindSourceFile {
+				return l.moduleInitializer(d.Initializer())
+			}
+		}
 		sym := l.resolve(n.Name())
 		if sym == nil || sym.ValueDeclaration == nil || owner == nil {
 			return false
@@ -106,4 +115,25 @@ func hasLoneSurrogate(s string) bool {
 		s = s[size:]
 	}
 	return false
+}
+
+// Module factory calls used by descriptor registries may allocate objects, but
+// must not observe a class static whose ABAP initialization is lazy.
+func (l *lowerer) moduleInitializer(n *ast.Node) bool {
+	safe := true
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil {
+			return
+		}
+		if x.Kind == ast.KindPropertyAccessExpression {
+			p := x.AsPropertyAccessExpression()
+			if l.classOf(l.resolve(p.Expression)) != nil {
+				safe = false
+			}
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(n)
+	return safe
 }

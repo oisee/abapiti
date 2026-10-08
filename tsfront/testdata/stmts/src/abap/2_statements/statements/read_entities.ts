@@ -1,0 +1,40 @@
+import {IStatement} from "./_statement";
+import {seq, ver, tok, plus, alt, optPrio, opt, per, AlsoIn} from "../combi";
+import {EMLEntityPath, EntityAssociation, NamespaceSimpleName, SimpleName, Source, Target} from "../expressions";
+import {IStatementRunnable} from "../statement_runnable";
+import {Release} from "../../../version";
+import {WParenLeftW, WParenRightW} from "../../1_lexer/tokens";
+
+export class ReadEntities implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const from = seq("FROM", Source);
+    const fields = seq("FIELDS", tok(WParenLeftW), plus(SimpleName), tok(WParenRightW), "WITH", Source);
+    const all = seq("ALL FIELDS WITH", Source);
+    const result = seq("RESULT", Target);
+    const failed = seq("FAILED", Target);
+    const reported = seq("REPORTED", Target);
+
+    const execute = seq("EXECUTE", SimpleName, from);
+
+    const foo = seq(opt(seq("BY", EMLEntityPath)),
+                    alt(fields, from, all, execute),
+                    optPrio(result));
+
+    const entity = seq("ENTITY", NamespaceSimpleName,
+                       plus(foo));
+
+    const s = seq("ENTITIES OF", NamespaceSimpleName,
+                  opt("IN LOCAL MODE"),
+                  plus(entity),
+                  optPrio(seq("LINK", Target)),
+                  optPrio(per(failed, reported)));
+
+    const byall = seq("BY", EMLEntityPath, all);
+    const by = seq("BY", EMLEntityPath, fields);
+    const sub = seq(alt(all, fields, from, by, byall), result);
+    const single = seq("ENTITY", opt("IN LOCAL MODE"), alt(NamespaceSimpleName, EntityAssociation), plus(sub), optPrio(failed), optPrio(reported));
+    return ver(Release.v754, seq("READ", alt(s, single)), {also: AlsoIn.OpenABAP});
+  }
+
+}

@@ -1,8 +1,11 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
 
 // Class and interface lowering: two passes per file, signatures before
@@ -14,13 +17,178 @@ func (l *lowerer) signaturesFile(f *ast.SourceFile) {
 		case ast.KindClassDeclaration:
 			if c, ok := l.classes[stmt.Symbol()]; ok {
 				l.classSignatures(stmt, c)
+				l.synthesizeDerivedCtor(c)
 			}
 		case ast.KindInterfaceDeclaration:
-			if i, ok := l.ifaces[stmt.Symbol()]; ok {
+			if l.isDataInterface(stmt) {
+				c := l.classOf(stmt.Symbol())
+				if c != nil {
+					l.dataInterfaceClass(stmt, &hir.Interface{Node: c.Node, Name: c.Name})
+				}
+				continue
+			}
+			i, ok := l.ifaces[stmt.Symbol()]
+			if !ok {
+				continue
+			}
+			if l.isDataInterface(stmt) {
+				l.dataInterfaceClass(stmt, i)
+				continue
+			}
+			if len(i.Methods) == 0 {
 				l.interfaceSignatures(stmt, i)
 			}
 		}
 	}
+}
+
+// isDataInterface reports whether the interface has a property member: those
+// lower to synthesized shape classes (constructed like object literals).
+func (l *lowerer) isDataInterface(node *ast.Node) bool {
+	for _, m := range node.Members() {
+		if m.Kind == ast.KindPropertySignature || m.Kind == ast.KindPropertyDeclaration {
+			return true
+		}
+	}
+	return false
+}
+
+// dataInterfaceClass converts a registered interface with data members into
+// a synthesized class with a constructing ctor.
+func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
+	sym := node.Symbol()
+	// Remove the interface from the registries.
+	delete(l.ifaces, sym)
+	delete(l.ifacesByName, l.file.FileName()+" "+sym.Name)
+	for k, x := range l.out.Interfaces {
+		if x == i {
+			l.out.Interfaces = append(l.out.Interfaces[:k], l.out.Interfaces[k+1:]...)
+			break
+		}
+	}
+	c := l.classOf(sym)
+	if c == nil {
+		c = &hir.Class{Node: i.Node, Name: i.Name}
+		l.out.Classes = append(l.out.Classes, c)
+	}
+	if c.Ctor != nil {
+		return
+	}
+	ctor := &hir.Method{Node: i.Node, Name: "constructor", Result: hir.T(hir.Void)}
+	c.Ctor = ctor
+	var list []*hir.Stmt
+	if heritage := node.AsInterfaceDeclaration().HeritageClauses; heritage != nil {
+		for _, clause := range heritage.Nodes {
+			for _, baseNode := range clause.AsHeritageClause().Types.Nodes {
+				sym := l.resolve(baseNode.Expression())
+				if sym == nil {
+					continue
+				}
+				base := l.classOf(sym)
+				if base != nil && base.Ctor == nil && len(sym.Declarations) > 0 && sym.Declarations[0].Kind == ast.KindInterfaceDeclaration {
+					decl := sym.Declarations[0]
+					saved := l.file
+					l.file = ast.GetSourceFileOfNode(decl)
+					l.dataInterfaceClass(decl, &hir.Interface{Node: base.Node, Name: base.Name})
+					l.file = saved
+				}
+				if base == nil {
+					base = l.synthFromAlias(baseNode, sym)
+				}
+				if base == nil {
+					l.diagf(baseNode, "unsupported-type", "data-interface base is not a shape")
+					continue
+				}
+				for _, field := range base.Fields {
+					field.Node = l.node(node)
+					c.Fields = append(c.Fields, field)
+					ctor.Params = append(ctor.Params, hir.Param{Name: field.Name, Type: field.Type})
+					list = append(list, &hir.Stmt{Kind: hir.Assign, Node: l.node(node), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(node), Name: field.Name, Type: field.Type, X: &hir.Expr{Kind: hir.This, Node: l.node(node), Type: hir.Ref(c.Name)}}, Y: hir.V(field.Name, field.Type)})
+				}
+			}
+		}
+	}
+	for _, m := range node.Members() {
+		if m.Kind != ast.KindPropertySignature && m.Kind != ast.KindPropertyDeclaration {
+			l.diagf(m, "skipped-interface-member", "data interface %s: member %s is skipped", i.Name, m.Name().Text())
+			continue
+		}
+		name := m.Name().Text()
+		var ft hir.Type
+		before := len(l.diags)
+		if e, ok := l.overrides[node]; ok && e.Types[m.Name().Text()].Kind != "" {
+			ft = e.Types[m.Name().Text()]
+			l.diagf(m, "note-override", "%s: %s", e.ID, e.Rationale)
+		} else if m.Type() != nil {
+			ft = l.mapTypeNode(m.Type())
+		} else if ms := m.Symbol(); ms != nil {
+			ft = l.mapCheckerType(m, l.ck.GetTypeOfSymbol(ms))
+		}
+		if hasBlocking(l.diags[before:]) || ft.Kind == hir.Void {
+			l.diags = l.diags[:before]
+			l.diagf(m, "skipped-interface-member", "data interface %s: member %s has unlowered types", i.Name, name)
+			continue
+		}
+		if m.QuestionToken() != nil && ft.Kind != hir.Optional {
+			ft = hir.T(hir.Optional, ft)
+		}
+		c.Fields = append(c.Fields, hir.Field{Node: l.node(m), Name: name, Type: ft})
+		ctor.Params = append(ctor.Params, hir.Param{Name: name, Type: ft})
+		list = append(list, &hir.Stmt{Kind: hir.Assign, Node: l.node(m),
+			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(m), Name: name, Type: ft,
+				X: &hir.Expr{Kind: hir.This, Node: l.node(m), Type: hir.Ref(c.Name)}},
+			Y: hir.V(name, ft)})
+		if ms := m.Symbol(); ms != nil {
+			l.fields[ms] = hir.Field{Node: l.node(m), Name: name, Type: ft}
+		}
+	}
+	ctor.Body = hir.B(list...)
+	c.Ctor = ctor
+	l.classesByName[l.file.FileName()+" "+sym.Name] = c
+	l.diagf(node, "note-data-interface", "interface %s with data members lowered to a shape class", i.Name)
+}
+
+// synthesizeDerivedCtor gives a derived class without its own constructor a
+// constructor forwarding to the base (TS synthesizes (...args) => super(...args)).
+func (l *lowerer) synthesizeDerivedCtor(c *hir.Class) {
+	if c.Ctor != nil || c.Super == "" {
+		return
+	}
+	base := l.baseConstructorOf(c.Super)
+	if base == nil {
+		return
+	}
+	params := []hir.Param{}
+	args := []*hir.Expr{}
+	for _, p := range base.Params {
+		params = append(params, hir.Param{Name: p.Name, Type: p.Type})
+		args = append(args, hir.V(p.Name, p.Type))
+	}
+	c.Ctor = &hir.Method{Node: c.Node, Name: "constructor", Params: params, Result: hir.T(hir.Void),
+		Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: c.Node,
+			X: &hir.Expr{Kind: hir.SuperCall, Node: c.Node, Name: "constructor", Type: hir.T(hir.Void), Args: args}})}
+}
+
+// baseConstructorOf resolves the nearest lowered constructor of a class
+// chain by name.
+func (l *lowerer) baseConstructorOf(name string) *hir.Method {
+	for name != "" {
+		var found *hir.Class
+		for _, c := range l.out.Classes {
+			if c.Name == name {
+				found = c
+				break
+			}
+		}
+		if found == nil {
+			return nil
+		}
+		if found.Ctor != nil {
+			return found.Ctor
+		}
+		name = found.Super
+	}
+	return nil
 }
 
 func (l *lowerer) bodiesFile(f *ast.SourceFile) {
@@ -50,6 +218,7 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 }
 
 func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
+	l.class = c
 	c.Abstract = node.ModifierFlags()&ast.ModifierFlagsAbstract != 0
 	if heritage := node.ClassLikeData().HeritageClauses; heritage != nil {
 		for _, clauseNode := range heritage.Nodes {
@@ -67,6 +236,10 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 				case clause.Token == ast.KindExtendsKeyword:
 					base := l.classOf(sym)
 					if base == nil {
+						if sym != nil && sym.Name == "Error" && l.classOf(sym) == nil {
+							c.Super = l.builtinError()
+							continue
+						}
 						l.diagf(expr, "unsupported-heritage", "superclass %s is not a lowered class", expr.Text())
 						continue
 					}
@@ -134,12 +307,17 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 			typ = hir.T(hir.Void)
 		}
 	}
+	if m.QuestionToken() != nil && typ.Kind != hir.Optional {
+		typ = hir.T(hir.Optional, typ)
+	}
 	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static}
 	c.Fields = append(c.Fields, f)
 	if sym := m.Symbol(); sym != nil {
 		l.fields[sym] = f
 		if sym.Parent != nil {
-			l.fieldsBy[sym.Parent.Name+"."+name] = f
+			if pf := l.fileOfSymbol(sym.Parent); pf != nil {
+				l.fieldsBy[pf.FileName()+" "+sym.Parent.Name+"."+name] = f
+			}
 		}
 	}
 }
@@ -153,12 +331,20 @@ func (l *lowerer) methodSignature(m *ast.Node, c *hir.Class) {
 	hm.Static = m.ModifierFlags()&ast.ModifierFlagsStatic != 0
 	hm.Abstract = m.ModifierFlags()&ast.ModifierFlagsAbstract != 0
 	hm.Virtual = !hm.Static
-	l.signature(m, hm)
+	if e, ok := l.overrides[m]; ok && e.Method != nil {
+		hm = e.Method()
+		hm.Node = l.node(m)
+		l.diagf(m, "note-override", "%s: %s", e.ID, e.Rationale)
+	} else {
+		l.signature(m, hm)
+	}
 	c.Methods = append(c.Methods, hm)
 	if sym := m.Symbol(); sym != nil {
 		l.methods[sym] = hm
 		if sym.Parent != nil {
-			l.methodsBy[sym.Parent.Name+"."+name] = hm
+			if pf := l.fileOfSymbol(sym.Parent); pf != nil {
+				l.methodsBy[pf.FileName()+" "+sym.Parent.Name+"."+name] = hm
+			}
 		}
 	}
 }
@@ -188,7 +374,9 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 		if ps := p.Symbol(); ps != nil {
 			l.fields[ps] = f
 			if ps.Parent != nil {
-				l.fieldsBy[ps.Parent.Name+"."+name] = f
+				if pf := l.fileOfSymbol(ps.Parent); pf != nil {
+					l.fieldsBy[pf.FileName()+" "+ps.Parent.Name+"."+name] = f
+				}
 			}
 		}
 	}
@@ -199,9 +387,6 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 	sig := l.ck.GetSignatureFromDeclaration(node)
 	checked := map[int]bool{}
 	for i, p := range node.Parameters() {
-		if p.Initializer() != nil {
-			l.diagf(p, "unsupported-param-default", "parameter defaults are not lowered")
-		}
 		if ast.IsThisParameter(p) {
 			continue
 		}
@@ -227,9 +412,29 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 		default:
 			typ = hir.T(hir.Void)
 		}
-		if p.QuestionToken() != nil && typ.Kind != hir.Optional {
+		q := false
+		if qt := p.QuestionToken(); qt != nil {
+			q = true
+		}
+		if q && typ.Kind != hir.Optional {
 			l.diagf(p, "note-optional-param", "optional parameter %s lowered as a required Optional", name)
 			typ = hir.T(hir.Optional, typ)
+		}
+		if d3 := p.AsParameterDeclaration(); d3 != nil && d3.DotDotDotToken != nil {
+			if typ.Kind != hir.Array {
+				l.diagf(p, "unsupported-param", "variadic parameter %s without an array type", name)
+				typ = hir.T(hir.Array, typ)
+			}
+			l.diagf(p, "note-variadic", "variadic parameter %s lowered as a trailing array", name)
+			hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ, Variadic: true})
+			checked[len(hm.Params)-1] = true
+			continue
+		}
+		if p.Initializer() != nil && typ.Kind != hir.Optional {
+			// A default value makes the parameter optional; the default is
+			// assigned in the body prologue (applyDefaults).
+			typ = hir.T(hir.Optional, typ)
+			l.diagf(p, "note-default-param", "parameter %s with a default lowered as Optional", name)
 		}
 		hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ})
 		checked[len(hm.Params)-1] = true
@@ -237,7 +442,27 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 	if node.Type() != nil {
 		hm.Result = l.mapTypeNode(node.Type())
 	} else if sig != nil {
-		hm.Result = l.mapCheckerType(node, l.ck.GetReturnTypeOfSignature(sig))
+		result := l.ck.GetReturnTypeOfSignature(sig)
+		inferred := false
+		if result != nil && l.ck.IsArrayType(result) {
+			if index := l.ck.GetIndexInfoOfType(result, l.ck.GetNumberType()); index != nil && index.ValueType().Flags()&checker.TypeFlagsNever != 0 && l.class != nil {
+				for _, name := range l.class.Implements {
+					for _, iface := range l.out.Interfaces {
+						if iface.Name == name {
+							for _, m := range iface.Methods {
+								if m.Name == hm.Name {
+									hm.Result = m.Result
+									inferred = true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if !inferred {
+			hm.Result = l.mapCheckerType(node, result)
+		}
 	} else {
 		hm.Result = hir.T(hir.Void)
 	}
@@ -247,9 +472,14 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 }
 
 func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
+	if e, ok := l.overrides[node]; ok && e.Interface != nil {
+		i.Methods = e.Interface().Methods
+		l.diagf(node, "note-override", "%s: %s", e.ID, e.Rationale)
+		return
+	}
 	for _, m := range node.Members() {
 		if m.Kind != ast.KindMethodDeclaration && m.Kind != ast.KindMethodSignature {
-			l.diagf(m, "unsupported-member", "interface %s has a non-method member", i.Name)
+			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, m.Name().Text())
 			continue
 		}
 		name, ok := l.memberName(m, nil)
@@ -257,20 +487,43 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 			continue
 		}
 		hm := &hir.Method{Node: l.node(m), Name: name, Virtual: true}
+		before := len(l.diags)
 		l.signature(m, hm)
+		if l.methodFailed(hm) || hasBlocking(l.diags[before:]) {
+			// Members whose types do not map stay out of the lowered
+			// interface; nothing calls them in the lowered set.
+			l.diags = append(l.diags[:before], LowerDiagnostic{Category: "skipped-interface-member",
+				Loc: l.locOf(m), Message: "interface " + i.Name + ": member " + name + " has unlowered types"})
+			continue
+		}
 		i.Methods = append(i.Methods, hm)
 		if sym := m.Symbol(); sym != nil {
 			l.methods[sym] = hm
 			if sym.Parent != nil {
-				l.methodsBy[sym.Parent.Name+"."+name] = hm
+				if pf := l.fileOfSymbol(sym.Parent); pf != nil {
+					l.methodsBy[pf.FileName()+" "+sym.Parent.Name+"."+name] = hm
+				}
 			}
 		}
 	}
 }
 
+// hasBlocking reports whether any diagnostic is not a policy note.
+func hasBlocking(ds []LowerDiagnostic) bool {
+	for _, d := range ds {
+		if !strings.HasPrefix(d.Category, "note-") {
+			return true
+		}
+	}
+	return false
+}
+
 // memberName returns the lowered name of a member; computed property names
 // (Symbol.for(...)) are reported and skipped.
 func (l *lowerer) memberName(m *ast.Node, c *hir.Class) (string, bool) {
+	if e, ok := l.overrides[m]; ok && e.Method != nil {
+		return e.Method().Name, true
+	}
 	name := m.Name()
 	if name == nil {
 		return "", false
@@ -289,6 +542,9 @@ func (l *lowerer) memberName(m *ast.Node, c *hir.Class) (string, bool) {
 // lowerMethodBody lowers the body of one method (skipping what the signature
 // pass rejected).
 func (l *lowerer) lowerMethodBody(m *ast.Node) {
+	if e, ok := l.overrides[m]; ok && e.Method != nil {
+		return
+	}
 	hm := l.methodOfNode(m)
 	if hm == nil {
 		return
@@ -301,7 +557,14 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	for _, p := range hm.Params {
 		l.declare(p.Name, p.Type)
 	}
-	hm.Body = l.block(m.Body())
+	defaults := l.applyDefaults(m, hm)
+	restore := l.withLocalFns(m.Body())
+	body := l.block(m.Body())
+	restore()
+	if len(defaults) > 0 {
+		body = hir.B(append(defaults, body)...)
+	}
+	hm.Body = body
 	l.pop()
 }
 
@@ -315,7 +578,7 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 	for _, p := range hm.Params {
 		l.declare(p.Name, p.Type)
 	}
-	stmts := []*hir.Stmt{}
+	stmts := l.applyDefaults(m, hm)
 	var afterSuper []*ast.Node
 	seenSuper := false
 	for _, s := range m.Body().AsBlock().Statements.Nodes {
@@ -464,9 +727,11 @@ func (l *lowerer) superConstructorCall(s *ast.Node) []*hir.Stmt {
 	call := s.Expression()
 	base := l.baseConstructor()
 	if base == nil {
-		if len(call.Arguments()) > 0 {
-			l.diagf(call, "unsupported-super", "super arguments without a lowered base constructor")
+		if len(call.Arguments()) == 0 {
+			// The base's implicit zero-argument constructor: nothing to run.
+			return nil
 		}
+		l.diagf(call, "unsupported-super", "super constructor call without a lowered base constructor")
 		return nil
 	}
 	args, ok := l.callArgs(call, call.Arguments(), base.Params)

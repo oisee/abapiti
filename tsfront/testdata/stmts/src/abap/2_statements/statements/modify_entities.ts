@@ -1,0 +1,62 @@
+import {IStatement} from "./_statement";
+import {alt, altPrio, opt, optPrio, per, plus, plusPrio, seq, ver, AlsoIn} from "../combi";
+import {EMLEntityPath, EntityAssociation, NamespaceSimpleName, SimpleName, Source, Target} from "../expressions";
+import {IStatementRunnable} from "../statement_runnable";
+import {Release} from "../../../version";
+
+export class ModifyEntities implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const withh = seq("WITH", Source);
+    const fieldsWith = seq("FIELDS (", plus(SimpleName), ")", withh);
+    const by = seq("BY", EMLEntityPath);
+    const relating = seq("RELATING TO", NamespaceSimpleName, "BY", NamespaceSimpleName);
+
+    const execute = seq("EXECUTE", NamespaceSimpleName, "FROM", Source);
+    const create = seq("CREATE", opt(by), "FROM", Source, opt(relating));
+    const updateFrom = seq("UPDATE FROM", Source, opt(relating));
+    const deleteFrom = seq("DELETE FROM", Source);
+    const updateFields = seq("UPDATE", fieldsWith);
+    const updateSetFields = seq("UPDATE SET FIELDS WITH", Source);
+
+    const operation = alt(
+      updateSetFields,
+      seq("CREATE SET FIELDS WITH", Source),
+      updateFields,
+      deleteFrom,
+      updateFrom,
+      create,
+      execute,
+      seq("CREATE", opt(by), optPrio("AUTO FILL CID"), altPrio(withh, fieldsWith)));
+
+    const failed = seq("FAILED", Target);
+    const result = seq("RESULT", Target);
+    const mapped = seq("MAPPED", Target);
+    const reported = seq("REPORTED", Target);
+
+    const end = optPrio(per(failed,
+                            result,
+                            mapped,
+                            reported));
+
+    const entities = seq(optPrio("AUGMENTING"), "ENTITIES OF", NamespaceSimpleName,
+                         opt("IN LOCAL MODE"),
+                         plusPrio(seq("ENTITY", NamespaceSimpleName, plus(operation))));
+
+    const dynamic = seq("ENTITIES",
+                        optPrio(altPrio("IN LOCAL MODE", seq(opt("FORWARDING"), "PRIVILEGED"))),
+                        "OPERATIONS", Source);
+
+    const create2 = seq("CREATE", fieldsWith, opt(seq("CREATE BY", EMLEntityPath, fieldsWith)));
+    const create3 = seq("CREATE BY", EMLEntityPath, fieldsWith);
+    const create4 = seq("CREATE FROM", Source, plus(seq("CREATE BY", EMLEntityPath, "FROM", Source)));
+
+    const entity = seq("ENTITY",
+                       opt("IN LOCAL MODE"),
+                       alt(NamespaceSimpleName, EntityAssociation),
+                       alt(execute, create, updateFields, deleteFrom, updateSetFields, updateFrom, create2, create3, create4));
+
+    return ver(Release.v754, seq("MODIFY", alt(entities, dynamic, entity), end), {also: AlsoIn.OpenABAP});
+  }
+
+}

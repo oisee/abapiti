@@ -142,3 +142,45 @@ remains outstanding.
 Dynamic charCodeAt and trim decode UTF-16LE bytes directly (low + high * 256),
 avoiding the pinned library's erroneous high-byte * 255 implementation on
 OSG-JS. Direct euro-code and Unicode whitespace regressions cover this path.
+
+The statement-parser branch contains experimental ClassValue descriptor,
+Dynamic, RegExp, Cast and Seq machinery. Seq evaluates its prelude in a local
+scope shared with its result expression; declarations do not escape that
+scope. Optional primitive Narrow unwraps its box; optional reference Narrow
+uses a checked cast when its underlying reference type changes. These changes
+preserve the existing fixture and lexer gates, but the complete statement-parser
+HIR still fails verification. Run `STMTS_EXPLORE=1 STMTS_GATE=1 go test ./tsfront
+-run TestLowerStatementsClosureExploratory -v` before treating that translation
+as executable. RegExp, namespace export maps, structural shapes, dynamic calls
+and closure lifting are not yet a validated general TypeScript contract.
+
+Erased generic members retain the constraint signature in their virtual and
+interface slots. Specialized implementations use forwarding bridges when their
+signatures differ. The TypeScript checker proves the instantiated type at each
+use site; Narrow records that view, including covariant reference arrays. Such
+arrays share one ABAP object table and cast elements on reads, preserving identity
+and mutation through all views. Verification still checks the erased signature
+and the direction of every narrowing.
+
+In ABAP, inherited override bodies occupy the REDEFINITION slot; specialized
+variants forward through `me->` and use checked downcasts for their results.
+A void inheritance slot with reference-returning overrides gains an object
+result in emitted ABAP, while void callers and interface wrappers discard it.
+`super.m()` is emitted only inside that same method (or a constructor's
+`super()` call); cross-method super calls produce a blocking emission diagnostic.
+
+The ABAP emitter initializes translated static registries through guarded
+class-specific methods on first use. This follows ABAP static initialization
+while avoiding OSG-JS module-import constructors calling unregistered modules.
+Descriptor singletons are grouped by inheritance root, allocated before their
+ancestry links, and exposed through a common descriptor interface for root
+object references. Dynamic factories uppercase the ABAP class name and explicitly
+name known zero-argument classes for runtime closure discovery.
+Constructor defaults run before the constructor body, and Optional constructor
+parameters can be omitted by a checker-proven no-argument class-value call.
+
+Regex lowering expands shorthands within character classes without nesting
+brackets. Bounded negative lookahead for a first literal character is expressed
+through a restricted first class; anchored whole-word exclusions become a
+separate rejection match. Both test and replace preserve these exclusions, and
+the public source string retains the original pattern.

@@ -1,0 +1,44 @@
+import {IStatement} from "./_statement";
+import {seq, alt, opt, per, altPrio} from "../combi";
+import {Target, Source, FindType} from "../expressions";
+import {IStatementRunnable} from "../statement_runnable";
+
+export class Replace implements IStatement {
+
+  public getMatcher(): IStatementRunnable {
+    const length = seq("LENGTH", Source);
+    const offset = seq("OFFSET", Source);
+
+    const section = seq(opt("IN"),
+                        "SECTION",
+                        per(offset, length),
+                        "OF",
+                        Target);
+
+    const source = seq(opt("OF"), FindType, Source);
+
+    const cas = altPrio("IGNORING CASE", "RESPECTING CASE");
+
+    const repl = seq("REPLACEMENT COUNT", Target);
+    const replo = seq("REPLACEMENT OFFSET", Target);
+    const repll = seq("REPLACEMENT LENGTH", Target);
+    const repli = seq("REPLACEMENT LINE", Target);
+
+    const occ = altPrio("ALL OCCURRENCES",
+                        "ALL OCCURENCES",
+                        "FIRST OCCURENCE",
+                        "FIRST OCCURRENCE");
+
+    const mode = alt("IN CHARACTER MODE",
+                     "IN BYTE MODE");
+
+    const wit = seq("WITH", Source);
+    const into = seq("INTO", Target);
+
+    return seq("REPLACE",
+               per(section, seq(opt(occ), source)),
+               opt(seq("IN", opt("TABLE"), Target)),
+               opt(per(wit, into, cas, mode, repl, replo, repll, repli, length)));
+  }
+
+}

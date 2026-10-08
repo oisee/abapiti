@@ -12,11 +12,18 @@ import (
 )
 
 type emitter struct {
-	p     *hir.Program
-	names *hir.Names
-	files map[string]string
-	types map[string]bool
-	err   error
+	p          *hir.Program
+	names      *hir.Names
+	files      map[string]string
+	types      map[string]bool
+	err        error
+	valueSlots map[string]bool
+	// Usage gates keep the emitted file set of programs that do not use the
+	// phase-2 machinery unchanged.
+	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	descIndex                                       map[string]descRef
+	descOrder                                       map[string][]string
+	descCount                                       map[string]int
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -30,12 +37,21 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
-	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}}
+	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
+	e.scanUsage()
+	e.promoteValueSlots()
+	if e.descriptors {
+		n := e.name("runtime.described")
+		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
+	}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
 		fmt.Fprintf(&b, "INTERFACE %s PUBLIC.\n", e.name(i.Name))
 		for _, m := range i.Methods {
 			b.WriteString(e.signature(m, false))
+		}
+		if e.descriptors {
+			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("builtin.classOf"), e.name("runtime.classvalue"))
 		}
 		b.WriteString("ENDINTERFACE.\n")
 		e.files[e.name(i.Name)+".intf.abap"] = b.String()
@@ -43,6 +59,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	for _, c := range p.Classes {
 		e.class(c)
 	}
+	e.support()
 	for file, src := range e.files {
 		out, err := wrap(src)
 		if err != nil {
@@ -76,7 +93,17 @@ func (e *emitter) method(c *hir.Class, n string) (*hir.Method, *hir.Class) {
 	}
 	return nil, nil
 }
+
+// Reference arrays share one object table. Typed views cast elements when read,
+// preserving the array object and mutations across covariant/generic views.
+func arrayStorage(t hir.Type) hir.Type {
+	if t.Kind == hir.Array && len(t.Args) == 1 && t.Args[0].IsRef() {
+		return hir.T(hir.Array, hir.Ref(hir.RootObject))
+	}
+	return t
+}
 func (e *emitter) typ(t hir.Type) string {
+	t = arrayStorage(t)
 	switch t.Kind {
 	case hir.Bool:
 		return "abap_bool"
@@ -88,8 +115,25 @@ func (e *emitter) typ(t hir.Type) string {
 		return "int8"
 	case hir.String:
 		return "string"
-	case hir.ClassRef, hir.InterfaceRef:
+	case hir.ClassRef:
+		if t.Name == hir.RootObject {
+			return "REF TO object"
+		}
+		if t.Name == "builtin.Error" {
+			e.errorUsed = true
+		}
 		return "REF TO " + e.name(t.Name)
+	case hir.InterfaceRef:
+		return "REF TO " + e.name(t.Name)
+	case hir.ClassValue:
+		e.descriptors = true
+		return "REF TO " + e.name("runtime.classvalue")
+	case hir.RegExp:
+		e.regexpUsed = true
+		return "REF TO " + e.name("runtime.regexp")
+	case hir.Dynamic:
+		e.dynamicUsed = true
+		return "REF TO " + e.name("runtime.dynamic")
 	case hir.Optional:
 		if t.Args[0].IsRef() {
 			return e.typ(t.Args[0])
@@ -122,6 +166,9 @@ func (e *emitter) signature(m *hir.Method, ctor bool) string {
 		s += " IMPORTING"
 		for _, p := range m.Params {
 			s += " " + e.param(p.Name) + " TYPE " + e.typ(p.Type)
+			if ctor && p.Type.Kind == hir.Optional {
+				s += " OPTIONAL"
+			}
 		}
 	}
 	if m.Result.Kind != hir.Void {
@@ -129,6 +176,157 @@ func (e *emitter) signature(m *hir.Method, ctor bool) string {
 	}
 	return s + ".\n"
 }
+
+// scanUsage pre-sets the phase-2 gates so the hidden classOf method is
+// present in every class whenever descriptors could be needed.
+func (e *emitter) scanUsage() {
+	need := false
+	var walk func(x *hir.Expr)
+	walk = func(x *hir.Expr) {
+		if x == nil {
+			return
+		}
+		if x.Kind == hir.ClassOf || x.Type.Kind == hir.ClassValue {
+			need = true
+		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "object.classOf" || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
+			need = true
+		}
+		if x.Kind == hir.InstanceOf && x.Y != nil {
+			need = true
+		}
+		if x.Type.Kind == hir.RegExp {
+			e.regexpUsed = true
+		}
+		if x.Type.Kind == hir.Dynamic {
+			e.dynamicUsed = true
+		}
+		walk(x.X)
+		walk(x.Y)
+		walk(x.Z)
+		for _, a := range x.Args {
+			walk(a)
+		}
+	}
+	for _, c := range e.p.Classes {
+		if c.Ctor != nil && c.Ctor.Body != nil {
+			e.walkStmt(c.Ctor.Body, walk)
+		}
+		for _, m := range c.Methods {
+			if m.Body != nil {
+				e.walkStmt(m.Body, walk)
+			}
+		}
+	}
+	if need {
+		e.descriptors = true
+	}
+}
+
+func (e *emitter) walkStmt(s *hir.Stmt, walk func(*hir.Expr)) {
+	if s == nil {
+		return
+	}
+	walk(s.X)
+	walk(s.Y)
+	e.walkStmt(s.Body, walk)
+	e.walkStmt(s.Else, walk)
+	for _, x := range s.List {
+		e.walkStmt(x, walk)
+	}
+}
+
+// slotKey identifies the first declaration of an inherited virtual slot.
+func (e *emitter) slotKey(c *hir.Class, name string) string {
+	owner := c
+	for base := e.classBy(c.Super); base != nil; base = e.classBy(base.Super) {
+		if _, found := e.method(base, name); found != nil {
+			owner = found
+		}
+	}
+	return owner.Name + "." + name
+}
+
+// TS permits a value-returning override of a void method. ABAP needs one
+// return signature for the entire inheritance slot so the redefinition can
+// retain that value. Void callers and interface wrappers still discard it.
+func (e *emitter) promoteValueSlots() {
+	e.valueSlots = map[string]bool{}
+	for _, c := range e.p.Classes {
+		for _, m := range c.Methods {
+			original, _, specialized := strings.Cut(m.Name, "_instantiated_")
+			if !specialized || !m.Result.IsRef() {
+				continue
+			}
+			slot, _ := e.method(c, original)
+			base, _ := e.method(e.classBy(c.Super), original)
+			if slot != nil && base != nil && slot.Result.Kind == hir.Void {
+				e.valueSlots[e.slotKey(c, original)] = true
+			}
+		}
+	}
+}
+func (e *emitter) emittedMethod(c *hir.Class, m *hir.Method) *hir.Method {
+	if m.Result.Kind != hir.Void || !e.valueSlots[e.slotKey(c, m.Name)] {
+		return m
+	}
+	clone := *m
+	clone.Result = hir.Ref(hir.RootObject)
+	return &clone
+}
+
+// overrideBody finds the checker-typed implementation behind an erased slot.
+// ABAP requires SUPER->m to occur in METHOD m, so the implementation body
+// belongs to the inherited slot; the checker-typed variant forwards to it.
+func (e *emitter) overrideBody(c *hir.Class, slot *hir.Method) *hir.Method {
+	if base, _ := e.method(e.classBy(c.Super), slot.Name); base == nil {
+		return nil
+	}
+	for _, m := range c.Methods {
+		if m.Name == slot.Name+"_instantiated_"+c.Name {
+			return m
+		}
+	}
+	return nil
+}
+
+func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
+	slot = e.emittedMethod(c, slot)
+	b := &body{e: e, c: c, m: m, implemented: e.member(m.Name), locals: map[string]string{}}
+	for _, p := range m.Params {
+		n := b.temp(p.Type)
+		b.locals[p.Name] = n
+		b.line(n + " = " + e.param(p.Name) + ".")
+	}
+	args := []string{}
+	for j, p := range slot.Params {
+		if j >= len(m.Params) {
+			e.err = fmt.Errorf("class %s method %s: specialized super override omits inherited parameters", c.Name, slot.Name)
+			return ""
+		}
+		actual := m.Params[j]
+		args = append(args, e.param(p.Name)+" = "+b.value(hir.V(actual.Name, actual.Type), p.Type))
+	}
+	call := "me->" + e.member(slot.Name) + "( " + strings.Join(args, " ") + " )"
+	if m.Result.Kind == hir.Void {
+		b.line(call + ".")
+	} else {
+		if slot.Result.Kind == hir.Void {
+			e.err = fmt.Errorf("class %s method %s: value-returning override of void superclass slot is unsupported", c.Name, slot.Name)
+			return ""
+		}
+		result := b.temp(slot.Result)
+		b.line(result + " = " + call + ".")
+		op := " = "
+		if !m.Result.Equal(slot.Result) {
+			op = " ?= "
+		}
+		b.line("result" + op + result + ".")
+	}
+	b.line("RETURN.")
+	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+}
+
 func (e *emitter) class(c *hir.Class) {
 	var b strings.Builder
 	s := "CLASS " + e.name(c.Name) + " DEFINITION PUBLIC"
@@ -155,14 +353,22 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" && m.Static {
-			b.WriteString("CLASS-METHODS class_constructor.\n")
+			fmt.Fprintf(&b, "CLASS-DATA %s TYPE abap_bool.\nCLASS-METHODS %s.\n", e.name("builtin.initialized."+c.Name), e.name("builtin.initialize."+c.Name))
 			continue
 		}
 		base, _ := e.method(e.classBy(c.Super), m.Name)
 		if base != nil {
 			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.member(m.Name))
 		} else {
-			b.WriteString(e.signature(m, false))
+			b.WriteString(e.signature(e.emittedMethod(c, m), false))
+		}
+	}
+	if e.descriptors {
+		if c.Super != "" {
+			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.name("builtin.classOf"))
+		} else {
+			fmt.Fprintf(&b, "INTERFACES %s.\n", e.name("runtime.described"))
+			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("builtin.classOf"), e.name("runtime.classvalue"))
 		}
 	}
 	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
@@ -175,14 +381,35 @@ func (e *emitter) class(c *hir.Class) {
 		}
 		name := e.member(m.Name)
 		if m.Name == "class_constructor" && m.Static {
-			name = "class_constructor"
+			name = e.name("builtin.initialize." + c.Name)
 		}
-		b.WriteString(e.body(c, m, name))
+		if impl := e.overrideBody(c, m); impl != nil {
+			b.WriteString(e.overrideImplementation(c, impl, m))
+		} else if original, _, specialized := strings.Cut(m.Name, "_instantiated_"); specialized {
+			slot, _ := e.method(c, original)
+			if slot != nil && e.overrideBody(c, slot) == m {
+				b.WriteString(e.narrowedBridge(c, m, slot))
+			} else {
+				b.WriteString(e.body(c, m, name))
+			}
+		} else {
+			b.WriteString(e.body(c, m, name))
+		}
+	}
+	if e.descriptors {
+		name := e.name("builtin.classOf")
+		if c.Super == "" {
+			fmt.Fprintf(&b, "METHOD %s~%s.\nresult = me->%s( ).\nENDMETHOD.\n", e.name("runtime.described"), name, name)
+		}
+		fmt.Fprintf(&b, "METHOD %s.\nresult = %s.\nENDMETHOD.\n", name, e.descriptorOf(c.Name))
 	}
 	for _, n := range c.Implements {
 		for _, i := range e.p.Interfaces {
 			if i.Name != n {
 				continue
+			}
+			if e.descriptors {
+				fmt.Fprintf(&b, "METHOD %s~%s.\nresult = me->%s( ).\nENDMETHOD.\n", e.name(n), e.name("builtin.classOf"), e.name("builtin.classOf"))
 			}
 			for _, m := range i.Methods {
 				fmt.Fprintf(&b, "METHOD %s~%s.\n", e.name(n), e.member(m.Name))
@@ -207,6 +434,7 @@ type body struct {
 	e                            *emitter
 	c                            *hir.Class
 	m                            *hir.Method
+	implemented                  string
 	code                         strings.Builder
 	locals                       map[string]string
 	serial                       int
@@ -214,7 +442,17 @@ type body struct {
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
-	b := &body{e: e, c: c, m: m, locals: map[string]string{}}
+	m = e.emittedMethod(c, m)
+	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
+	if m.Name == "class_constructor" && m.Static {
+		flag := e.name("builtin.initialized." + c.Name)
+		b.line("IF " + flag + " = abap_true.")
+		b.line("RETURN.")
+		b.line("ENDIF.")
+		b.line(flag + " = abap_true.")
+	} else if m.Static || m.Name == "constructor" {
+		b.initialize(c.Name)
+	}
 	for _, p := range m.Params {
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
@@ -224,12 +462,52 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	return "METHOD " + name + ".\n" + b.code.String() + "ENDMETHOD.\n"
 }
 
+func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) string {
+	clone := *impl
+	clone.Result = e.emittedMethod(c, slot).Result
+	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}}
+	for j, p := range impl.Params {
+		inherited := slot.Params[j]
+		// A required primitive cannot represent undefined passed through the
+		// inherited optional slot. Reading only ->value would silently replace
+		// undefined with an initial primitive (or dereference an unbound ref).
+		if inherited.Type.Kind == hir.Optional && !inherited.Type.Args[0].IsRef() && p.Type.Kind != hir.Optional {
+			e.err = fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name)
+			return ""
+		}
+		n := b.temp(p.Type)
+		b.locals[p.Name] = n
+		op := " = "
+		if e.typ(p.Type) != e.typ(slot.Params[j].Type) && p.Type.IsRef() {
+			op = " ?= "
+		}
+		b.line(n + op + e.param(slot.Params[j].Name) + ".")
+	}
+	b.stmt(impl.Body)
+	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+}
+
+// Explicit lazy initialization avoids eager module constructors calling a
+// registry module before the runtime has registered all translated classes.
+func (b *body) initialize(owner string) {
+	c := b.e.classBy(owner)
+	if c == nil {
+		return
+	}
+	for _, m := range c.Methods {
+		if m.Name == "class_constructor" && m.Static {
+			b.line("CALL METHOD " + b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + ".")
+			return
+		}
+	}
+}
+
 // Temporaries are initialized at their evaluation point, including each loop
 // iteration. Fold an immediately following assignment into its declaration;
 // explicit conversions retain the HIR type rather than ABAP literal inference.
 func (b *body) line(s string) {
 	prefix := b.lastName + " = "
-	if b.lastInit != "" && strings.HasPrefix(s, prefix) {
+	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) {
 		code := b.code.String()
 		b.code.Reset()
 		b.code.WriteString(strings.TrimSuffix(code, b.lastInit))
@@ -268,6 +546,11 @@ func (b *body) rawTemp(typ string) string {
 	return n
 }
 func (b *body) convert(value string, src, dst hir.Type) string {
+	if src.Kind == hir.InterfaceRef && dst.Kind == hir.InterfaceRef && !src.Equal(dst) {
+		n := b.temp(dst)
+		b.line(n + " ?= " + value + ".")
+		return n
+	}
 	if dst.Kind == hir.Optional && src.Kind != hir.Optional && !dst.Args[0].IsRef() {
 		n := b.temp(dst)
 		b.line(n + " = NEW #( ).")
@@ -339,12 +622,66 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.FieldGet:
 		b.line(n + " = " + b.expr(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
+		b.initialize(x.Owner)
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		b.line(i + " = " + i + " + 1.")
-		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + n + ".")
+		row := n
+		if t.IsRef() {
+			row = b.temp(hir.Ref(hir.RootObject))
+		}
+		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
+		if row != n {
+			b.line(n + " ?= " + row + ".")
+		}
 	case hir.New:
+		if t.Kind == hir.Array {
+			// new Array<T>(n): n still-undefined slots.
+			b.line("CREATE OBJECT " + n + ".")
+			if len(x.Args) == 1 {
+				cnt := b.expr(x.Args[0])
+				row := b.temp(arrayStorage(t).Args[0])
+				b.line("CLEAR " + row + ".")
+				b.line("WHILE " + cnt + " > 0.")
+				b.line("APPEND " + row + " TO " + n + "->items.")
+				b.line(cnt + " = " + cnt + " - 1.")
+				b.line("ENDWHILE.")
+			}
+			break
+		}
+		if t.Kind == hir.RegExp {
+			e.regexpUsed = true
+			original := b.value(x.Args[0], hir.T(hir.String))
+			pattern, reject := original, ""
+			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok {
+				translated, excluded := regexPattern(raw)
+				if translated != raw || excluded != "" {
+					pattern = b.temp(hir.T(hir.String))
+					b.stringLit(pattern, translated)
+					if excluded != "" {
+						reject = b.temp(hir.T(hir.String))
+						b.stringLit(reject, excluded)
+					}
+				}
+			}
+			s := "CREATE OBJECT " + n + " TYPE " + e.name("runtime.regexp")
+			s += " EXPORTING pattern = " + pattern
+			if len(x.Args) > 1 {
+				s += " flags = " + b.value(x.Args[1], hir.T(hir.String))
+			} else {
+				s += " flags = ``"
+			}
+			if reject != "" {
+				s += " excluded_pattern = " + reject
+			}
+			b.line(s + ".")
+			if pattern != original {
+				b.line(n + "->source = " + original + ".")
+			}
+			break
+		}
+		b.initialize(t.Name)
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
@@ -457,23 +794,65 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("ENDIF.")
 	case hir.InstanceOf:
 		a := b.expr(x.X)
+		if x.Y != nil {
+			// A dynamic class-value operand: walk the descriptor chain.
+			cv := b.expr(x.Y)
+			d := b.temp(hir.T(hir.ClassValue))
+			b.line("IF " + a + " IS BOUND.")
+			if x.X.Type.Name == hir.RootObject {
+				ref := b.rawTemp("REF TO " + e.name("runtime.described"))
+				b.line(ref + " ?= " + a + ".")
+				a = ref
+			}
+			b.line(d + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
+			b.line("WHILE " + d + " IS BOUND.")
+			b.line("IF " + d + " = " + cv + ".")
+			b.line(n + " = abap_true.")
+			b.line("EXIT.")
+			b.line("ENDIF.")
+			b.line(d + " = " + d + "->parent.")
+			b.line("ENDWHILE.")
+			b.line("ENDIF.")
+			break
+		}
 		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
+	case hir.ClassOf:
+		e.descriptors = true
+		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
+	case hir.Cast:
+		a := b.expr(x.X)
+		b.line(n + " ?= " + a + ".")
+	case hir.Seq:
+		old := b.locals
+		b.locals = map[string]string{}
+		for k, v := range old {
+			b.locals[k] = v
+		}
+		for _, stmt := range x.Stmt.List {
+			b.stmt(stmt)
+		}
+		b.line(n + " = " + b.expr(x.Y) + ".")
+		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
-		underlying := x.X.Type
-		if underlying.Kind == hir.Optional {
-			underlying = underlying.Args[0]
+		if x.X.Type.Kind == hir.Optional {
+			base := x.X.Type.Args[0]
+			if !base.IsRef() {
+				a += "->value"
+			}
+			if base.Equal(x.Type) {
+				b.line(n + " = " + a + ".")
+			} else {
+				b.line(n + " ?= " + a + ".")
+			}
+		} else {
+			b.line(n + " ?= " + a + ".")
 		}
-		op := "?="
-		if underlying.Equal(t) {
-			op = "="
-		}
-		b.line(n + " " + op + " " + a + ".")
 	case hir.IsUndefined:
 		a := b.expr(x.X)
 		b.line("IF " + a + " IS INITIAL.")
 		b.line(n + " = abap_true.")
-		if !x.X.Type.Args[0].IsRef() {
+		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			b.line("ELSEIF " + a + "->has = abap_false.")
 			b.line(n + " = abap_true.")
 		}
@@ -646,11 +1025,24 @@ func (b *body) call(x *hir.Expr, n string) {
 	} else {
 		recv = e.name(owner) + "=>"
 	}
-	m, _ = e.method(e.classBy(owner), x.Name)
-	member := e.member(x.Name)
+	callName := x.Name
+	if x.Kind == hir.SuperCall {
+		if original, _, specialized := strings.Cut(callName, "_instantiated_"); specialized {
+			callName = original
+		}
+	}
+	m, _ = e.method(e.classBy(owner), callName)
+	if m != nil {
+		m = e.emittedMethod(e.classBy(owner), m)
+	}
+	member := e.member(callName)
 	if x.Kind == hir.SuperCall && x.Name == "constructor" {
 		m = e.p.Constructor(owner)
 		member = "constructor"
+	}
+	if x.Kind == hir.SuperCall && member != b.implemented {
+		e.err = fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name)
+		return
 	}
 	if m == nil {
 		for _, i := range e.p.Interfaces {
@@ -668,11 +1060,18 @@ func (b *body) call(x *hir.Expr, n string) {
 	for i, a := range x.Args {
 		args = append(args, e.param(m.Params[i].Name)+" = "+b.value(a, m.Params[i].Type))
 	}
+	target := n
+	if x.Kind == hir.SuperCall && n != "" && !x.Type.Equal(m.Result) {
+		target = b.temp(m.Result)
+	}
 	s := recv + member + "( " + strings.Join(args, " ") + " )"
 	if n != "" {
-		s = n + " = " + s
+		s = target + " = " + s
 	}
 	b.line(s + ".")
+	if target != n {
+		b.line(n + " ?= " + target + ".")
+	}
 }
 func (b *body) runtimeOp(x *hir.Expr, n string) {
 	a := b.expr(x.X)
@@ -720,7 +1119,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = |{ " + integer + " }|.")
 		return
 	}
-	if x.X.Type.Kind == hir.String {
+	if x.X.Type.Kind == hir.String && strings.HasPrefix(x.Op, "string.") {
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
 		// ABAP strlen and sections count UTF-16 code units, like JavaScript.
@@ -814,6 +1213,36 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 				b.line("REPLACE ALL OCCURRENCES OF `" + mapping[0] + "` IN " + n + " WITH `" + mapping[1] + "`.")
 			}
 			b.line("TRANSLATE " + n + " TO UPPER CASE.")
+		case "string.toLowerCase":
+			b.line(n + " = " + a + ".")
+			b.line("TRANSLATE " + n + " TO LOWER CASE.")
+		case "string.startsWith", "string.endsWith":
+			count := b.temp(hir.T(hir.I32))
+			offset := b.temp(hir.T(hir.I32))
+			section := b.temp(hir.T(hir.String))
+			b.line(count + " = strlen( " + args[0] + " ).")
+			b.line("IF " + count + " = 0.")
+			b.line(n + " = abap_true.")
+			b.line("ELSEIF " + count + " <= " + length + ".")
+			b.line(offset + " = 0.")
+			if x.Op == "string.endsWith" {
+				b.line(offset + " = " + length + " - " + count + ".")
+			}
+			b.line(section + " = " + a + "+" + offset + "(" + count + ").")
+			b.line("IF " + section + " = " + args[0] + ".")
+			b.line(n + " = abap_true.")
+			b.line("ENDIF.")
+			b.line("ENDIF.")
+		case "string.indexOf":
+			b.line("FIND " + args[0] + " IN " + a + " MATCH OFFSET " + n + ".")
+			b.line("IF sy-subrc <> 0.")
+			b.line(n + " = -1.")
+			b.line("ENDIF.")
+		case "string.split":
+			b.line("CREATE OBJECT " + n + ".")
+			b.line("SPLIT " + a + " AT " + args[0] + " INTO TABLE " + n + "->items.")
+		case "string.replaceRegex":
+			b.line("CALL METHOD " + args[0] + "->replace EXPORTING p0 = " + a + " p1 = " + args[1] + " RECEIVING result = " + n + ".")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
@@ -825,16 +1254,85 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = |{ " + a + " }|.")
 		return
 	}
+	switch x.Op {
+	case "object.classOf":
+		b.e.descriptors = true
+		if x.X.Type.Kind == hir.Optional {
+			b.line("IF " + a + " IS BOUND.")
+			b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
+			b.line("ENDIF.")
+			return
+		}
+		if x.X.Type.Kind == hir.ClassRef && x.X.Type.Name == hir.RootObject {
+			b.e.err = fmt.Errorf("node %d (%s): classOf on the object root is not emitted", x.ID, x.Source)
+			return
+		}
+		b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
+		return
+	case "classvalue.name":
+		b.line(n + " = " + a + "->name.")
+		return
+	case "classvalue.has":
+		b.line("CALL METHOD " + a + "->has EXPORTING p0 = " + args[0] + " RECEIVING result = " + n + ".")
+		return
+	case "classvalue.new":
+		b.e.descriptors = true
+		obj := b.rawTemp("REF TO object")
+		b.line("CALL METHOD " + b.e.name("runtime.classvalue.factory") + "=>new EXPORTING p0 = " + a + " RECEIVING result = " + obj + ".")
+		b.line(n + " ?= " + obj + ".")
+		return
+	case "dynamic.of":
+		tag := "tag_ref"
+		if x.X.Type.Kind == hir.String {
+			tag = "tag_string"
+		} else if x.X.Type.Kind == hir.ClassValue {
+			tag = "tag_class"
+		}
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
+		if x.X.Type.Kind == hir.String {
+			b.line(n + "->sval = " + a + ".")
+		} else if x.X.Type.Kind == hir.ClassValue {
+			b.line(n + "->cval = " + a + ".")
+		} else {
+			conv := b.rawTemp("REF TO object")
+			b.line(conv + " = " + a + ".")
+			b.line(n + "->oval = " + conv + ".")
+		}
+		return
+	case "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+		// The box methods use snake_case ABAP names.
+		op := map[string]string{"dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
+		target := n
+		if x.Op == "dynamic.asRef" {
+			target = b.temp(hir.Ref(hir.RootObject))
+		}
+		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
+		if target != n {
+			b.line(n + " ?= " + target + ".")
+		}
+		return
+	case "regexp.source":
+		b.line(n + " = " + a + "->source.")
+		return
+	}
 	op := strings.Split(x.Op, ".")[1]
 	params := []string{}
 	for i, arg := range args {
 		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
+	target := n
+	if (x.Op == "array.get" || x.Op == "array.pop") && x.X.Type.Args[0].IsRef() {
+		target = b.temp(hir.Ref(hir.RootObject))
+	}
 	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"
-	if n != "" {
-		s = n + " = " + s
+	if target != "" {
+		s = target + " = " + s
 	}
 	b.line(s + ".")
+	if target != n {
+		b.line(n + " ?= " + target + ".")
+	}
 }
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
@@ -866,11 +1364,17 @@ func (b *body) stmt(s *hir.Stmt) {
 		case hir.FieldGet:
 			target = b.expr(s.X.X) + "->" + e.member(s.X.Name)
 		case hir.StaticGet:
+			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
 		case hir.IndexGet:
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
 			b.line(i + " = " + i + " + 1.")
+			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
+			b.line("CLEAR " + row + ".")
+			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
+			b.line("APPEND " + row + " TO " + a + "->items.")
+			b.line("ENDWHILE.")
 			b.line("MODIFY " + a + "->items FROM " + v + " INDEX " + i + ".")
 			return
 		}
@@ -899,7 +1403,14 @@ func (b *body) stmt(s *hir.Stmt) {
 		n := b.temp(s.Type)
 		old, ok := b.locals[s.Name]
 		b.locals[s.Name] = n
-		b.line("LOOP AT " + a + "->items INTO " + n + ".")
+		row := n
+		if s.Type.IsRef() {
+			row = b.temp(hir.Ref(hir.RootObject))
+		}
+		b.line("LOOP AT " + a + "->items INTO " + row + ".")
+		if row != n {
+			b.line(n + " ?= " + row + ".")
+		}
 		b.stmt(s.Body)
 		b.line("ENDLOOP.")
 		if ok {
@@ -912,7 +1423,7 @@ func (b *body) stmt(s *hir.Stmt) {
 	case hir.Continue:
 		b.line("CONTINUE.")
 	case hir.Return:
-		if s.X != nil && b.m.Result.Kind == hir.Void {
+		if s.X != nil && (b.m.Result.Kind == hir.Void || s.X.Type.Kind == hir.Void) {
 			b.expr(s.X)
 		} else if s.X != nil {
 			b.line("result = " + b.value(s.X, b.m.Result) + ".")

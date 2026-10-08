@@ -8,7 +8,7 @@ import (
 func TestVerifier(t *testing.T) {
 	i := T(I32)
 	good := func() *Program {
-		return &Program{Classes: []*Class{{Name: "C", Methods: []*Method{{Name: "f", Params: []Param{{"a", i}}, Result: i, Body: B(&Stmt{Kind: Return, X: V("a", i)})}}}}}
+		return &Program{Classes: []*Class{{Name: "C", Methods: []*Method{{Name: "f", Params: []Param{{Name: "a", Type: i}}, Result: i, Body: B(&Stmt{Kind: Return, X: V("a", i)})}}}}}
 	}
 	cases := []struct {
 		name   string

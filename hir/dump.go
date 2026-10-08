@@ -149,8 +149,17 @@ func dumpExpr(e *Expr) string {
 		s = "if " + dumpExpr(e.X) + " then " + dumpExpr(e.Y) + " else " + dumpExpr(e.Z)
 	case InstanceOf:
 		s = dumpExpr(e.X) + " instanceof " + e.Owner
+		if e.Y != nil {
+			s = dumpExpr(e.X) + " instanceof " + dumpExpr(e.Y)
+		}
 	case Narrow:
 		s = "narrow " + dumpExpr(e.X) + " to " + e.Type.String()
+	case Cast:
+		s = "cast " + dumpExpr(e.X) + " to " + e.Type.String()
+	case ClassOf:
+		s = "classof " + e.Owner
+	case Seq:
+		s = "seq " + dumpExpr(e.Y)
 	case RuntimeOp:
 		s = e.Op + "(" + dumpExpr(e.X)
 		if a != "" {
