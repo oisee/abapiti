@@ -1129,14 +1129,12 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 		}
 	case hir.Dynamic:
-		// A checker-narrowed string (typeof x === "string" on an any) reads the
-		// box's string and dispatches as a string method.
-		if n.Expression().Kind != ast.KindPropertyAccessExpression {
-			break
-		}
-		if t := l.ck.GetTypeAtLocation(n.Expression().AsPropertyAccessExpression().Expression); t != nil && t.Flags()&checker.TypeFlagsStringLike != 0 && t.Flags()&checker.TypeFlagsUnion == 0 {
-			l.diagf(n, "note-dynamic-string", "string method on a checker-narrowed dynamic string")
-			return l.libraryCall(n, name, l.rtOp("dynamic.asString", recv, str))
+		// A string method on a tagged value reads the box's string; any other
+		// tag fails loudly where JavaScript raises a TypeError (boxed graphs
+		// carry no functions).
+		if x, ok := l.libraryCall(n, name, l.rtOp("dynamic.asString", recv, str)); x != nil {
+			l.diagf(n, "note-dynamic-string", "string method on a dynamic value reads the boxed string")
+			return x, ok
 		}
 	case hir.Array:
 		switch name {

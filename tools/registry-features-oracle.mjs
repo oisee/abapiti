@@ -5,6 +5,7 @@ import {resolve} from 'node:path';
 import {verifyUpstream} from './statements-upstream.mjs';
 const require=createRequire(import.meta.url);
 const ts=require(verifyUpstream(process.argv[2] ?? '/home/alice/dev/abaplint'));
+const {XMLParser}=createRequire(resolve(process.argv[2] ?? '/home/alice/dev/abaplint','packages/core/package.json'))('fast-xml-parser');
 const file=resolve('tsfront/testdata/registryfeatures/probe.ts');
 const compiled=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
 const module={exports:{}};
@@ -17,6 +18,7 @@ const xmlFile=resolve('tsfront/testdata/registryfeatures/xml.ts');
 const xmlCompiled=ts.transpileModule(readFileSync(xmlFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
 const xmlModule={exports:{}};
 new Function('exports','module',xmlCompiled)(xmlModule.exports,xmlModule);
+xmlModule.exports.XMLProbe.parse=text=>new XMLParser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(text);
 writeFileSync('tsfront/testdata/registryfeatures/tagged-oracle.json',JSON.stringify([true,false].map(flag=>({flag,expected:xmlModule.exports.XMLProbe.tagged(flag)})),null,2)+'\n');
 
 const arrayFile=resolve('tsfront/testdata/registryfeatures/arrays.ts');
