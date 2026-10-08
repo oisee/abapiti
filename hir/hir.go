@@ -140,6 +140,9 @@ const (
 type IntegerRange struct{ Min, Max int64 }
 
 type Expr struct {
+	// CheckIntegerOverflow requires an explicit int8 range check after arithmetic.
+	// ABAP raises natively; this also enforces the contract in bigint runtimes.
+	CheckIntegerOverflow bool
 	Node
 	Kind            ExprKind
 	Type            Type
