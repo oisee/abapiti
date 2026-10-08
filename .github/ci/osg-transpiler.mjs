@@ -1,5 +1,5 @@
 import {spawn} from "node:child_process";
-import {closeSync, mkdtempSync, openSync, readFileSync, rmSync} from "node:fs";
+import {closeSync, lstatSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
@@ -14,15 +14,71 @@ export function pinnedTranspilerRef(osg) {
 export function parseTranspilerDescription(description, expectedRef) {
   const line = description.split("\n")[0] ?? "";
   const pinned = line.match(/^transpiler: the pinned build of \S+ ([0-9a-f]{8,40}) \(libs\.lock\.json\)/);
-  const local = line.match(/^transpiler: a LOCAL BUILD, .*\((?:HEAD )?([0-9a-f]{8,40})(?:, uncommitted changes)?\)?(?:,|$)/);
+  const local = line.match(/^transpiler: a LOCAL BUILD, (.+?) \((?:HEAD )?([0-9a-f]{8,40})(?:, uncommitted changes)?\)/);
   if (!pinned && !local) return null;
-  const commit = (pinned ?? local)[1];
+  const commit = pinned ? pinned[1] : local[2];
   const clean = !line.includes(", uncommitted changes");
-  return {commit, clean, matches: clean && expectedRef.startsWith(commit) && commit.length >= 8};
+  return {commit, clean, where: local?.[1], matches: expectedRef.startsWith(commit) && commit.length >= 8};
+}
+
+export function parseRuntimeDescription(description, expectedRef) {
+  const line = description.split("\n")[1] ?? "";
+  if (line.startsWith("runtime: none installed at ")) return {kind: "missing"};
+  if (line.startsWith("runtime: @abaplint/runtime ")) return {kind: "published"};
+  const local = line.match(/^runtime: a LOCAL BUILD, (.+?) \((?:HEAD )?([0-9a-f]{8,40})(?:, uncommitted changes)?\)/);
+  if (!local) return {kind: "invalid"};
+  return {
+    kind: "linked",
+    where: local[1],
+    clean: !line.includes(", uncommitted changes"),
+    matches: expectedRef.startsWith(local[2]) && local[2].length >= 8,
+  };
+}
+
+async function git(directory, ...args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", ["-C", directory, ...args], {stdio: ["ignore", "pipe", "inherit"]});
+    let stdout = "";
+    child.stdout.on("data", chunk => stdout += chunk);
+    child.on("error", reject);
+    child.on("close", status => {
+      if (status === 0) resolve(stdout);
+      else reject(new Error(`git ${args.join(" ")} failed with exit ${status}`));
+    });
+  });
+}
+
+export async function assertPinnedBuild(build, expectedRef) {
+  const commit = (await git(build, "rev-parse", "HEAD")).trim();
+  if (commit !== expectedRef) throw new Error(`pinned transpiler checkout is ${commit}, expected ${expectedRef}`);
+  const status = await git(build, "status", "--porcelain=v1", "--untracked-files=all");
+  const summary = await git(build, "diff", "--summary");
+  const content = await git(build, "diff", "--numstat");
+  if (status !== " M packages/cli/abap_transpile\n" ||
+      summary !== " mode change 100644 => 100755 packages/cli/abap_transpile\n" ||
+      content !== "0\t0\tpackages/cli/abap_transpile\n") {
+    throw new Error(`pinned transpiler checkout must have only the build's CLI executable-bit change:\n${status}${summary}${content}`);
+  }
+}
+
+export function assertLinkedPackages(osg, build) {
+  const links = [
+    ["transpiler", join(build, "packages/transpiler")],
+    ["transpiler-cli", join(build, "packages/cli")],
+    ["runtime", join(build, "packages/runtime")],
+    ["core", join(build, "packages/transpiler/node_modules/@abaplint/core")],
+  ];
+  for (const [name, target] of links) {
+    const link = join(osg, "node_modules/@abaplint", name);
+    if (!lstatSync(link, {throwIfNoEntry: false})?.isSymbolicLink() || realpathSync(link) !== realpathSync(target)) {
+      throw new Error(`@abaplint/${name} is not linked to the pinned transpiler build`);
+    }
+  }
 }
 
 export async function assertPinnedTranspiler(osg, env = process.env) {
-  const expected = pinnedTranspilerRef(osg);
+  const lock = JSON.parse(readFileSync(join(osg, "libs.lock.json"), "utf8"));
+  const expected = lock.transpiler.ref;
   const run = (args, options = {}) => new Promise((resolve, reject) => {
     const child = spawn("npm", args, {cwd: osg, env, ...options});
     child.on("error", reject);
@@ -56,11 +112,27 @@ export async function assertPinnedTranspiler(osg, env = process.env) {
     rmSync(directory, {recursive: true, force: true});
   }
   const found = parseTranspilerDescription(description, expected);
-  if (!found?.matches) {
+  const runtime = parseRuntimeDescription(description, expected);
+  const transpilerBuild = found?.where && realpathSync(join(found.where, "../.."));
+  const runtimeBuild = runtime?.where && realpathSync(join(runtime.where, "../.."));
+  if (!found?.matches || !runtime?.matches || !transpilerBuild || transpilerBuild !== runtimeBuild) {
     console.error(description);
-    throw new Error(`OSG-JS must use the pinned transpiler ${expected}, not a published or different local build`);
+    throw new Error(`OSG-JS must use the pinned transpiler and runtime ${expected}, not published, missing, or different local builds`);
   }
-  console.log(`OSG-JS transpiler: pinned ${found.commit} (expected ${expected})`);
+  const buildDirectory = transpilerBuild ?? (env.TRANSPILER && realpathSync(env.TRANSPILER));
+  await assertPinnedBuild(buildDirectory, expected);
+  assertLinkedPackages(osg, buildDirectory);
+  const status = await new Promise((resolve, reject) => {
+    const child = spawn("bash", ["tools/osd-ci-transpiler-build.sh", "verify"], {
+      cwd: osg,
+      env: {...env, TRANSPILER: buildDirectory, OSD_TRANSPILER_REPO: lock.transpiler.repo, OSD_TRANSPILER_REF: expected},
+      stdio: "inherit",
+    });
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+  if (status !== 0) throw new Error("OSG's pinned transpiler build verification failed");
+  console.log(`OSG-JS transpiler and runtime: pinned ${expected}`);
   return expected;
 }
 

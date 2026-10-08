@@ -1,19 +1,24 @@
 // Run only the clean CI pin. Mutations reproduce critic-r1's false passes.
-import {execFileSync, spawnSync} from "node:child_process";
+import {execFile, execFileSync, spawn} from "node:child_process";
 import {cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync} from "node:fs";
 import {join, resolve} from "node:path";
 import {assertPinnedTranspiler} from "./osg-transpiler.mjs";
 const [workArg] = process.argv.slice(2);
-if (!workArg) throw new Error("usage: lexer-unit.mjs <osgo workdir>");
+if (!workArg) {
+  console.error("usage: lexer-unit.mjs <osgo workdir>");
+  process.exit(4);
+}
+async function main() {
 const work = resolve(workArg);
 const osg = join(work, "open-steamgate");
 const root = resolve(import.meta.dirname, "../..");
 const pin = readFileSync(join(root,".github/ci/osgo.ref"),"utf8").trim();
-function clean() {
-  if (execFileSync("git",["rev-parse","HEAD"],{cwd:osg,encoding:"utf8"}).trim() !== pin ||
-      execFileSync("git",["status","--porcelain","--untracked-files=all"],{cwd:osg,encoding:"utf8"}).trim()) throw new Error("runtime must be clean at CI pin");
+async function clean() {
+  const git = (...args) => new Promise((resolve, reject) => execFile("git", args, {cwd:osg}, (error, stdout) => error ? reject(error) : resolve(stdout)));
+  if ((await git("rev-parse","HEAD")).trim() !== pin ||
+      (await git("status","--porcelain","--untracked-files=all")).trim()) throw new Error("runtime must be clean at CI pin");
 }
-clean();
+await clean();
 await assertPinnedTranspiler(osg);
 const gen = join(work,"lexer-r1");
 rmSync(gen,{recursive:true,force:true});
@@ -21,14 +26,21 @@ execFileSync("go",["test","./tsfront","-run","TestLowerLexerClosure|TestCriticR1
  cwd:root,env:{...process.env, ABAPITI_TEST_OUT:gen},stdio:"inherit"
 });
 execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),gen,osg],{stdio:"inherit"});
-function run(runtime, dir, label, pass, tests = 1) {
-  const result = spawnSync("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
-    cwd:osg,encoding:"utf8",maxBuffer:64*1024*1024,
-    env:{...process.env,GOTOOLCHAIN:"go1.26.0",GOFLAGS:"-buildvcs=false"}
+async function run(runtime, dir, label, pass, tests = 1) {
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
+      cwd:osg,
+      env:{...process.env,GOTOOLCHAIN:"go1.26.0",GOFLAGS:"-buildvcs=false"}
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", chunk => stdout += chunk);
+    child.stderr.on("data", chunk => stderr += chunk);
+    child.on("error", reject);
+    child.on("close", status => resolve({status, stdout, stderr}));
   });
   writeFileSync(join(work,`lexer-r1-${runtime}-${label}.json`),result.stdout || "");
   writeFileSync(join(work,`lexer-r1-${runtime}-${label}.err`),result.stderr || "");
-  if(result.error) throw result.error;
   const d=JSON.parse(result.stdout), t=d.totals;
   if (!d.rows || t.tests !== tests || d.rows.length !== tests || t.error || t.not_compiled || d.overrides?.length) throw new Error(`${runtime} ${label}: invalid runtime report`);
   if (pass ? result.status !== 0 || t.success !== tests || d.rows.some(r=>r.status!=="SUCCESS") : result.status !== 1 || t.failure !== tests || d.rows.some(r=>r.status!=="FAILURE")) throw new Error(`${runtime} ${label}: unexpected verdict`);
@@ -56,12 +68,18 @@ for (const runtime of ["osgo","osgjs"]) {
   return s.slice(0,blocks[1])+s.slice(blocks[2]);
  });
  const count=mutation("token-count",s=>s.replace(/(=>\S+ exp = )1( msg = msg )/,"$1999$2"));
- run(runtime,corpus,"baseline",true);
- run(runtime,early,"early",false);
- run(runtime,skip,"skip",false);
- run(runtime,count,"token-count",false);
+ await run(runtime,corpus,"baseline",true);
+ await run(runtime,early,"early",false);
+ await run(runtime,skip,"skip",false);
+ await run(runtime,count,"token-count",false);
  for (const probe of readdirSync(join(corpus,"critic-r1"))) {
-  run(runtime,join(corpus,"critic-r1",probe),probe,true);
+  await run(runtime,join(corpus,"critic-r1",probe),probe,true);
  }
 }
-clean();
+await clean();
+}
+
+await main().catch(error => {
+  console.error(`lexer-unit: ${error.message}`);
+  process.exit(4);
+});
