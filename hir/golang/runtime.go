@@ -350,6 +350,11 @@ func numberString(x float64) jsString {
 
 type array[T any] struct{ Items []T }
 
+func (a *array[T]) reserve(n int) {
+ if a==nil||n<=cap(a.Items) {return}
+ items:=make([]T,len(a.Items),n);copy(items,a.Items);a.Items=items
+}
+
 // Capacity is not observable in HIR. Geometric growth reduces copying and
 // allocation for large reference arrays while keeping every array independent.
 func (a *array[T]) push(v T) int32 {
