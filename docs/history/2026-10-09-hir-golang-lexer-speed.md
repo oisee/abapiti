@@ -224,3 +224,25 @@ non-ASCII 255/256/65535 check to the existing classifier semantic edge test.
 Full uncached guard green. Default Go .472/.453/.133, Node .373/.339/.124;
 400 Go .568/.474/.120, Node .358/.328/.133. This range proof is suitable for a
 general HIR rewrite (including ABAP); the specialized classifier is Go-only.
+
+R4.9 (E, separate experiment): canonical single-byte ASCII strings, with a
+marker plus UTF-16LE fallback, preserve value equality and ordered-map keys.
+ASCII sections extracted from wide strings are normalized; mixed concat,
+JSON/XML/regex slicing and casing preserve code-unit semantics. Added targeted
+mixed-section equality/concat, replacement and unaligned wide-search checks.
+The full guard exposed XML's remaining byte slices; after converting them to
+unit slices, all guards passed. Existing internal raw-string concatenations in
+semantic tests became representation-aware concat calls, preserving assertions.
+Default Go .540/.462/.125, Node .347/.355/.125; 400 Go .565/.447/.130,
+Node .384/.348/.167. This is solely a Go string representation experiment.
+
+**Abandoned after measurement.** Sampled allocations increased ~392 -> 433 MB:
+fromUTF16 normalization adds 36.56 MB (24 MB from replaceAll/concat and 12 MB
+from sections). wasm_compiler has 105 non-ASCII units, forcing the UTF-16
+fallback for its source, while the other two sources are ASCII. CPU: process
+11.35%, add 9.93%, classifier 5.67%, substring 2.13%, wide-tag tests 2.13% flat.
+The compact representation does not show a speed win over R4.8; its extra
+branches and normalization are not justified. Its experiment commit will be
+followed by restoration of UTF-16 storage. An override with freshly trained
+PGO was also noisy (.725/.766/.171 default, .722/.564/.169 at 400) and did not
+establish a robust win; it was not used to replace the round's default profile.

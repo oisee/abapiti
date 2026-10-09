@@ -596,6 +596,12 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		v := b.expr(x.Y)
 		code = "(" + a + " " + x.Op + " " + v + ")"
+		if t.Kind == hir.String && x.Op == "+" {
+			code = a + ".concat(" + v + ")"
+		}
+		if x.X.Type.Kind == hir.String && (x.Op == "<" || x.Op == "<=" || x.Op == ">" || x.Op == ">=") {
+			code = "(compareStringStorage(" + a + "," + v + ") " + x.Op + " 0)"
+		}
 		if x.Op == "==" || x.Op == "!=" {
 			if x.X.Type.IsRef() || x.X.Type.Kind == hir.Optional && x.X.Type.Args[0].IsRef() {
 				code = "equal(" + a + "," + v + ")"

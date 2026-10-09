@@ -105,7 +105,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "string.length":
 		code = a + ".length()"
 	case "string.concat":
-		code = a + "+" + args[0]
+		code = a + ".concat(" + args[0] + ")"
 	case "string.substring":
 		code = a + ".substring(" + strings.Join(args, ",") + ")"
 	case "string.charCodeAt":
