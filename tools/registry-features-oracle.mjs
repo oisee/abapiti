@@ -5,6 +5,7 @@ import {resolve} from 'node:path';
 import {verifyUpstream} from './statements-upstream.mjs';
 const require=createRequire(import.meta.url);
 const ts=require(verifyUpstream(process.argv[2] ?? '/home/alice/dev/abaplint'));
+const {XMLParser}=createRequire(resolve(process.argv[2] ?? '/home/alice/dev/abaplint','packages/core/package.json'))('fast-xml-parser');
 const file=resolve('tsfront/testdata/registryfeatures/probe.ts');
 const compiled=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
 const module={exports:{}};
@@ -12,3 +13,35 @@ new Function('exports','module',compiled)(module.exports,module);
 const inputs=[['abc','b',7,true],['abc','x',-3,false],['','',0,false],['a  ',' ',42,true],['€😀','😀',9007199254740991,true],['a\n\t`|','\t',-9007199254740991,false]];
 const cases=inputs.map(([raw,needle,n,flag])=>({raw,needle,n,flag,expected:module.exports.Probe.run(raw,needle,n,flag)}));
 writeFileSync('tsfront/testdata/registryfeatures/oracle.json',JSON.stringify(cases,null,2)+'\n');
+
+const xmlFile=resolve('tsfront/testdata/registryfeatures/xml.ts');
+const xmlCompiled=ts.transpileModule(readFileSync(xmlFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const xmlModule={exports:{}};
+new Function('exports','module',xmlCompiled)(xmlModule.exports,xmlModule);
+xmlModule.exports.XMLProbe.parse=text=>new XMLParser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(text);
+writeFileSync('tsfront/testdata/registryfeatures/tagged-oracle.json',JSON.stringify([true,false].map(flag=>({flag,expected:xmlModule.exports.XMLProbe.tagged(flag)})),null,2)+'\n');
+
+const arrayFile=resolve('tsfront/testdata/registryfeatures/arrays.ts');
+const arrayCompiled=ts.transpileModule(readFileSync(arrayFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const arrayModule={exports:{}};
+new Function('exports','module',arrayCompiled)(arrayModule.exports,arrayModule);
+writeFileSync('tsfront/testdata/registryfeatures/arrays-oracle.json',JSON.stringify({shift:arrayModule.exports.ArrayProbe.shift(),optionalIndex:arrayModule.exports.ArrayProbe.optionalIndex(),staticCollections:arrayModule.exports.ArrayProbe.staticCollections(),find:arrayModule.exports.ArrayProbe.find(),unionViews:arrayModule.exports.ArrayProbe.unionViews(),namedRecord:arrayModule.exports.ArrayProbe.namedRecord(),interfaceHeritage:arrayModule.exports.ArrayProbe.interfaceHeritage(),denseCallbacks:arrayModule.exports.ArrayProbe.denseCallbacks(),postfix:arrayModule.exports.ArrayProbe.postfix(),continueUpdates:arrayModule.exports.ArrayProbe.continueUpdates(),sliceAndUnshift:arrayModule.exports.ArrayProbe.sliceAndUnshift(),brandedOptional:arrayModule.exports.ArrayProbe.brandedOptional(),indentation:arrayModule.exports.ArrayProbe.indentation(),matchTests:arrayModule.exports.ArrayProbe.matchTests()},null,2)+'\n');
+
+const iteratorFile=resolve('tsfront/testdata/registryfeatures/iterators.ts');
+const iteratorCompiled=ts.transpileModule(readFileSync(iteratorFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const iteratorModule={exports:{}};
+new Function('exports','module',iteratorCompiled)(iteratorModule.exports,iteratorModule);
+writeFileSync('tsfront/testdata/registryfeatures/iterators-oracle.json',JSON.stringify({run:iteratorModule.exports.IteratorProbe.run()},null,2)+'\n');
+
+const jsonFile=resolve('tsfront/testdata/registryfeatures/json.ts');
+const jsonCompiled=ts.transpileModule(readFileSync(jsonFile,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const jsonModule={exports:{}};
+new Function('exports','module',jsonCompiled)(jsonModule.exports,jsonModule);
+jsonModule.exports.JSONProbe.config=JSON.parse;
+const configCases=[{global:{files:'/src/**/*.abap'},syntax:{version:'v702',errorNamespace:'^Z',globalConstants:['B','A','B'],ambigiousVoids:['Z','Z']},rules:{unknown_rule:false},targetRules:null,extra:{retained:[1,true,null]}},{global:{files:'x',skipIncludesWithoutMain:true,errorOnDuplicateFilenames:true},syntax:{errorNamespace:'^Y'},rules:{}}];
+writeFileSync('tsfront/testdata/registryfeatures/config-oracle.json',JSON.stringify(configCases.map(input=>({input:JSON.stringify(input),expected:jsonModule.exports.JSONProbe.defaults(JSON.stringify(input))})),null,2)+'\n');
+
+const sortCompiled=ts.transpileModule(readFileSync('tsfront/testdata/registryfeatures/sorts.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
+const sortModule={exports:{}};
+new Function('exports','module',sortCompiled)(sortModule.exports,sortModule);
+writeFileSync('tsfront/testdata/registryfeatures/sorts-oracle.json',JSON.stringify({ruleKeys:sortModule.exports.SortProbe.ruleKeys(),objectNames:sortModule.exports.SortProbe.objectNames(),fileSequence:sortModule.exports.SortProbe.fileSequence(),ordering_domain:{outcome:'return',value:sortModule.exports.SortProbe.rejected()}},null,2)+'\n');

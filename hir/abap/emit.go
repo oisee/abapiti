@@ -13,18 +13,24 @@ import (
 )
 
 type emitter struct {
-	p          *hir.Program
-	names      *hir.Names
-	files      map[string]string
-	types      map[string]bool
-	err        error
-	valueSlots map[string]bool
+	p            *hir.Program
+	names        *hir.Names
+	files        map[string]string
+	types        map[string]bool
+	err          error
+	valueSlots   map[string]bool
+	materialized map[string]bool
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
 	descCount                                       map[string]int
+
+	// codeUnits lists the classes whose bodies read UTF-16 code units through
+	// a converter they create once and keep in a private CLASS-DATA.
+	codeUnits map[string]bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -61,6 +67,10 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		e.class(c)
 	}
 	e.support()
+	e.markArrays()
+	if castTrace {
+		e.traceCasts()
+	}
 	for file, src := range e.files {
 		out, err := wrap(src)
 		if err != nil {
@@ -196,6 +206,9 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.InstanceOf && x.Y != nil {
 			need = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
+			e.materializer(x.Type)
+		}
 		if x.Type.Kind == hir.RegExp {
 			e.regexpUsed = true
 		}
@@ -302,8 +315,11 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 	args := []string{}
 	for j, p := range slot.Params {
 		if j >= len(m.Params) {
-			e.err = fmt.Errorf("class %s method %s: specialized super override omits inherited parameters", c.Name, slot.Name)
-			return ""
+			// This implementation declares no binding for the trailing argument.
+			// The inherited slot body is this same implementation; it cannot
+			// observe the ABI filler (JS arguments/rest are not erased here).
+			args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
+			continue
 		}
 		actual := m.Params[j]
 		args = append(args, e.param(p.Name)+" = "+b.value(hir.V(actual.Name, actual.Type), p.Type))
@@ -339,6 +355,9 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
+	if e.materialized[c.Name] {
+		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
+	}
 	for _, i := range c.Implements {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
 	}
@@ -349,7 +368,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 		fmt.Fprintf(&b, "%s %s TYPE %s.\n", kw, e.member(f.Name), e.typ(f.Type))
 	}
-	if c.Ctor != nil {
+	if c.Ctor != nil && !e.wideShape(c) {
 		b.WriteString(e.signature(c.Ctor, true))
 	}
 	for _, m := range c.Methods {
@@ -358,6 +377,11 @@ func (e *emitter) class(c *hir.Class) {
 			continue
 		}
 		base, _ := e.method(e.classBy(c.Super), m.Name)
+		if base != nil && m.Abstract {
+			// An abstract redeclaration of an inherited (abstract) method adds
+			// nothing ABAP can express.
+			continue
+		}
 		if base != nil {
 			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.member(m.Name))
 		} else {
@@ -373,7 +397,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
-	if c.Ctor != nil {
+	if c.Ctor != nil && !e.wideShape(c) {
 		b.WriteString(e.body(c, c.Ctor, "constructor"))
 	}
 	for _, m := range c.Methods {
@@ -385,10 +409,14 @@ func (e *emitter) class(c *hir.Class) {
 			name = e.name("builtin.initialize." + c.Name)
 		}
 		if impl := e.overrideBody(c, m); impl != nil {
-			b.WriteString(e.overrideImplementation(c, impl, m))
+			if e.forwardsToImplementation(impl, m) {
+				b.WriteString(e.slotForwarder(c, m, impl))
+			} else {
+				b.WriteString(e.overrideImplementation(c, impl, m))
+			}
 		} else if original, _, specialized := strings.Cut(m.Name, "_instantiated_"); specialized {
 			slot, _ := e.method(c, original)
-			if slot != nil && e.overrideBody(c, slot) == m {
+			if slot != nil && e.overrideBody(c, slot) == m && !e.forwardsToImplementation(m, slot) {
 				b.WriteString(e.narrowedBridge(c, m, slot))
 			} else {
 				b.WriteString(e.body(c, m, name))
@@ -428,7 +456,11 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	b.WriteString("ENDCLASS.\n")
-	e.files[e.name(c.Name)+".clas.abap"] = b.String()
+	out := b.String()
+	if e.codeUnits[c.Name] {
+		out = strings.Replace(out, "PRIVATE SECTION.\nENDCLASS.\n", "PRIVATE SECTION.\nCLASS-DATA "+e.name("builtin.codeUnit."+c.Name)+" TYPE REF TO cl_abap_conv_out_ce.\nENDCLASS.\n", 1)
+	}
+	e.files[e.name(c.Name)+".clas.abap"] = out
 }
 
 type body struct {
@@ -457,6 +489,11 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	} else if m.Static || m.Name == "constructor" {
 		b.initialize(c.Name)
 	}
+	if name == "constructor" && !m.Static && e.needsImplicitSuper(c, m) {
+		// TypeScript's implicit super() precedes field initializers; ABAP
+		// refuses any access to ME before SUPER->CONSTRUCTOR (A4H, 2026-10-09).
+		b.line("super->constructor( ).")
+	}
 	for _, p := range m.Params {
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
@@ -481,11 +518,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 		}
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
-		op := " = "
-		if e.typ(p.Type) != e.typ(slot.Params[j].Type) && p.Type.IsRef() {
-			op = " ?= "
-		}
-		b.line(n + op + e.param(slot.Params[j].Name) + ".")
+		b.line(n + " = " + b.convert(e.param(slot.Params[j].Name), slot.Params[j].Type, p.Type) + ".")
 	}
 	b.stmt(impl.Body)
 	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
@@ -500,7 +533,11 @@ func (b *body) initialize(owner string) {
 	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" && m.Static {
+			// The initializer returns at once when its flag is set; testing the
+			// flag here saves a method call on every static access (A4H profile).
+			b.line("IF " + b.e.name(owner) + "=>" + b.e.name("builtin.initialized."+c.Name) + " = abap_false.")
 			b.line("CALL METHOD " + b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + ".")
+			b.line("ENDIF.")
 			return
 		}
 	}
@@ -550,10 +587,40 @@ func (b *body) rawTemp(typ string) string {
 	return n
 }
 func (b *body) convert(value string, src, dst hir.Type) string {
+	if src.Equal(dst) {
+		return value
+	}
+	if dst.Kind == hir.Dynamic {
+		// A typed value into an erased `any` slot: box it.
+		n := b.temp(dst)
+		b.boxDynamic(n, value, src)
+		return n
+	}
+	if src.Kind == hir.Dynamic && (dst.IsRef() || dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool || dst.Kind == hir.ClassValue) {
+		// An erased `any` into the implementation's type: checked unboxing.
+		return b.unbox(value, dst)
+	}
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.InterfaceRef && !src.Equal(dst) {
 		n := b.temp(dst)
 		b.line(n + " ?= " + value + ".")
 		return n
+	}
+	if (src.IsRef() || (src.Kind == hir.Optional && src.Args[0].IsRef())) && (dst.IsRef() || (dst.Kind == hir.Optional && dst.Args[0].IsRef())) {
+		from, to := src, dst
+		if from.Kind == hir.Optional {
+			from = from.Args[0]
+		}
+		if to.Kind == hir.Optional {
+			to = to.Args[0]
+		}
+		if (from.Kind == hir.ClassRef || from.Kind == hir.InterfaceRef) && (to.Kind == hir.ClassRef || to.Kind == hir.InterfaceRef) && !b.e.upcast(from, to) {
+			// A checked cast through the object root (class/interface relation unknown statically).
+			root := b.rawTemp("REF TO object")
+			b.line(root + " = " + value + ".")
+			n := b.temp(dst)
+			b.line(n + " ?= " + root + ".")
+			return n
+		}
 	}
 	if dst.Kind == hir.Optional && src.Kind != hir.Optional && !dst.Args[0].IsRef() {
 		n := b.temp(dst)
@@ -564,6 +631,20 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 	}
 	return value
 }
+
+// receiver evaluates an object operand of a member access. `this` typed as
+// the emitted class or one of its ancestors is me itself: the copy into a
+// temporary would only be a same-type or upcast assignment.
+func (b *body) receiver(x *hir.Expr) string {
+	if x.Kind == hir.This && x.Type.Kind == hir.ClassRef && x.Type.Name != hir.RootObject {
+		for c := b.c; c != nil; c = b.e.classBy(c.Super) {
+			if c.Name == x.Type.Name {
+				return "me"
+			}
+		}
+	}
+	return b.expr(x)
+}
 func (b *body) value(x *hir.Expr, dst hir.Type) string { return b.convert(b.expr(x), x.Type, dst) }
 func (b *body) expr(x *hir.Expr) string {
 	if x == nil {
@@ -571,6 +652,25 @@ func (b *body) expr(x *hir.Expr) string {
 	}
 	e, t := b.e, x.Type
 	if t.Kind == hir.Void {
+		if x.Kind == hir.RuntimeOp {
+			// A void runtime operation at statement level (dynamic.put).
+			b.runtimeOp(x, "")
+			return ""
+		}
+		if x.Kind == hir.Seq {
+			// A void sequence: its statements, then its (void) value if any.
+			old := b.locals
+			b.locals = map[string]string{}
+			for k, v := range old {
+				b.locals[k] = v
+			}
+			for _, stmt := range x.Stmt.List {
+				b.stmt(stmt)
+			}
+			b.expr(x.Y)
+			b.locals = old
+			return ""
+		}
 		b.call(x, "")
 		return ""
 	}
@@ -651,32 +751,22 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.This:
 		b.line(n + " = me.")
 	case hir.FieldGet:
-		b.line(n + " = " + b.expr(x.X) + "->" + e.member(x.Name) + ".")
+		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
 		b.initialize(x.Owner)
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
-		a, i := b.expr(x.X), b.expr(x.Y)
-		b.line(i + " = " + i + " + 1.")
-		base := b.temp(x.X.Type)
-		index := b.temp(hir.T(hir.I32))
-		b.line("CLEAR " + base + ".")
-		b.line("IF " + a + "->view_bound = abap_true.")
-		b.line("IF " + i + " >= 1 AND " + i + " <= " + a + "->view_to - " + a + "->view_from.")
-		b.line(base + " = " + a + "->view_base.")
-		b.line(index + " = " + a + "->view_from + " + i + ".")
-		b.line("ENDIF.")
-		b.line("ELSE.")
-		b.line(base + " = " + a + ".")
-		b.line(index + " = " + i + ".")
-		b.line("ENDIF.")
+		a := b.expr(x.X)
+		i, constant := tableIndex(x.Y)
+		if !constant {
+			i = b.expr(x.Y)
+			b.line(i + " = " + i + " + 1.")
+		}
 		row := n
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
 		}
-		b.line("IF " + base + " IS BOUND.")
-		b.line("READ TABLE " + base + "->items INDEX " + index + " INTO " + row + ".")
-		b.line("ENDIF.")
+		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
 			b.line(n + " ?= " + row + ".")
 		}
@@ -727,6 +817,24 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 		b.initialize(t.Name)
+		if c := e.classBy(t.Name); c != nil && e.wideShape(c) {
+			// A wide shape has no constructor: its fields are set one by one.
+			values := make([]string, len(x.Args))
+			for i, a := range x.Args {
+				field := c.Ctor.Body.List[i].X.Type
+				if a.Type.Kind == hir.Optional && !a.Type.Equal(field) && c.Ctor.Body.List[i].Y.Kind == hir.Narrow {
+					// The constructor narrowed (checked) the optional parameter.
+					values[i] = b.expr(&hir.Expr{Kind: hir.Narrow, Node: a.Node, Type: field, X: a})
+				} else {
+					values[i] = b.value(a, field)
+				}
+			}
+			b.line(n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( ).")
+			for i := range values {
+				b.line(n + "->" + e.member(c.Ctor.Params[i].Name) + " = " + values[i] + ".")
+			}
+			break
+		}
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
@@ -866,6 +974,20 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("ENDIF.")
 			break
 		}
+		if e.isInterface(x.Owner) {
+			// A checked cast decides interface membership on every runtime
+			// (OSG-JS IS INSTANCE OF ignores interfaces: inbox 039).
+			probe := b.rawTemp("REF TO " + e.name(x.Owner))
+			b.line(n + " = abap_false.")
+			b.line("IF " + a + " IS BOUND.")
+			b.line("TRY.")
+			b.line(probe + " ?= " + a + ".")
+			b.line(n + " = abap_true.")
+			b.line("CATCH cx_sy_move_cast_error.")
+			b.line("ENDTRY.")
+			b.line("ENDIF.")
+			break
+		}
 		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 	case hir.ClassOf:
 		e.descriptors = true
@@ -886,6 +1008,35 @@ func (b *body) expr(x *hir.Expr) string {
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
+		source := x.X.Type
+		if source.Kind == hir.Optional {
+			source = source.Args[0]
+		}
+		target := x.Type
+		if target.Kind == hir.Optional {
+			target = target.Args[0]
+		}
+		if source.Kind == hir.Array && target.Kind == hir.Array && source.Args[0].Kind == hir.Optional && !source.Args[0].Args[0].IsRef() && source.Args[0].Args[0].Equal(target.Args[0]) {
+			// (T | undefined)[] narrowed to T[] (a type-predicate filter): a
+			// distinct array class, so the elements are copied unwrapped.
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("CREATE OBJECT " + n + ".")
+			b.line("LOOP AT " + a + "->items INTO DATA(" + row + ").")
+			b.line("IF " + row + " IS NOT BOUND OR " + row + "->has = abap_false.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_move_cast_error.")
+			b.line("ENDIF.")
+			b.line("APPEND " + row + "->value TO " + n + "->items.")
+			b.line("ENDLOOP.")
+			break
+		}
+		if (source.Kind == hir.ClassRef && target.Kind == hir.InterfaceRef) || (source.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef) {
+			// A class/interface cross cast: widen to the object root first so
+			// the checked `?=` is valid whatever the static relation.
+			root := b.temp(hir.Ref(hir.RootObject))
+			b.line(root + " = " + a + ".")
+			a = root
+		}
 		if x.X.Type.Kind == hir.Optional {
 			base := x.X.Type.Args[0]
 			if !base.IsRef() {
@@ -968,23 +1119,140 @@ func (b *body) trimLoop(a, lo, hi string, leading bool) {
 
 // codeUnit reads one UTF-16 unit directly. The pinned library's uccpi
 // uses high-byte * 255 on OSG-JS; that is not a correct Unicode code point.
+// parseInt10 implements JavaScript parseInt(s, 10): leading ECMAScript white
+// space is skipped, an optional sign is read, then decimal digits up to the
+// first non-digit. No digit at all yields the absent box (NaN).
+func (b *body) parseInt10(n, a, length string) {
+	lo := b.temp(hir.T(hir.I32))
+	hi := b.temp(hir.T(hir.I32))
+	b.line(lo + " = 0.")
+	b.line(hi + " = " + length + ".")
+	b.trimLoop(a, lo, hi, true)
+	sign := b.temp(hir.T(hir.Number))
+	value := b.temp(hir.T(hir.Number))
+	digits := b.temp(hir.T(hir.I32))
+	ch := b.temp(hir.T(hir.String))
+	b.line(sign + " = 1.")
+	b.line(value + " = 0.")
+	b.line(digits + " = 0.")
+	b.line("IF " + lo + " < " + hi + ".")
+	b.line(ch + " = " + a + "+" + lo + "(1).")
+	b.line("IF " + ch + " = '-'.")
+	b.line(sign + " = -1.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ELSEIF " + ch + " = '+'.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ENDIF.")
+	b.line("ENDIF.")
+	b.line("WHILE " + lo + " < " + hi + ".")
+	b.line(ch + " = " + a + "+" + lo + "(1).")
+	b.line("IF " + ch + " CA '0123456789' AND " + ch + " <> ` `.")
+	b.line(value + " = " + value + " * 10 + ( " + ch + " ).")
+	b.line(digits + " = " + digits + " + 1.")
+	b.line(lo + " = " + lo + " + 1.")
+	b.line("ELSE.")
+	b.line("EXIT.")
+	b.line("ENDIF.")
+	b.line("ENDWHILE.")
+	b.line("IF " + digits + " = 0.")
+	b.line("CLEAR " + n + ".")
+	b.line("ELSE.")
+	b.line(n + " = NEW #( ).")
+	b.line(n + "->has = abap_true.")
+	b.line(n + "->value = " + sign + " * " + value + ".")
+	b.line("ENDIF.")
+}
+
+// localeCompareNames implements a.localeCompare(b) for strings over the
+// ABAP object-name alphabet. ICU root collation orders these code units as
+// "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" (verified against Node's
+// Intl.Collator); a shorter prefix sorts first. Any other code unit in
+// either operand raises cx_sy_range_out_of_bounds instead of guessing.
+func (b *body) localeCompareNames(n, a, other, length string) {
+	const alphabet = "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	rank := func(s, out string) {
+		b.line("IF " + s + " = ``.")
+		b.line(out + " = -1.")
+		b.line("ELSE.")
+		b.line("FIND " + s + " IN `" + alphabet + "` MATCH OFFSET " + out + ".")
+		b.line("IF sy-subrc <> 0.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line("ENDIF.")
+	}
+	olen := b.temp(hir.T(hir.I32))
+	idx := b.temp(hir.T(hir.I32))
+	ca := b.temp(hir.T(hir.String))
+	cb := b.temp(hir.T(hir.String))
+	ra := b.temp(hir.T(hir.I32))
+	rb := b.temp(hir.T(hir.I32))
+	b.line(olen + " = strlen( " + other + " ).")
+	b.line(idx + " = 0.")
+	b.line(n + " = 0.")
+	b.line("WHILE " + n + " = 0 AND ( " + idx + " < " + length + " OR " + idx + " < " + olen + " ).")
+	b.line("CLEAR " + ca + ".")
+	b.line("CLEAR " + cb + ".")
+	b.line("IF " + idx + " < " + length + ".")
+	b.line(ca + " = " + a + "+" + idx + "(1).")
+	b.line("ENDIF.")
+	b.line("IF " + idx + " < " + olen + ".")
+	b.line(cb + " = " + other + "+" + idx + "(1).")
+	b.line("ENDIF.")
+	rank(ca, ra)
+	rank(cb, rb)
+	b.line("IF " + ra + " < " + rb + ".")
+	b.line(n + " = -1.")
+	b.line("ELSEIF " + ra + " > " + rb + ".")
+	b.line(n + " = 1.")
+	b.line("ENDIF.")
+	b.line(idx + " = " + idx + " + 1.")
+	b.line("ENDWHILE.")
+}
+
 func (b *body) codeUnit(target, ch string) {
-	conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
+	unit := b.rawTemp("c LENGTH 1")
 	bytes := b.rawTemp("xstring")
 	low := b.rawTemp("x LENGTH 1")
 	high := b.rawTemp("x LENGTH 1")
 	highInt := b.temp(hir.T(hir.I32))
-	b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+	// uccpi is exact below 255 on every runtime; OSG-JS computes high * 255,
+	// so only results from 255 up need the converter (A4H profile: one
+	// CONVERT per lexer character).
+	b.line(unit + " = " + ch + ".")
+	b.line(target + " = cl_abap_conv_out_ce=>uccpi( " + unit + " ).")
+	b.line("IF " + target + " >= 255.")
+	var conv string
+	if b.c != nil {
+		// Creating a converter per call dominated the lexer on A4H (one per character).
+		if b.e.codeUnits == nil {
+			b.e.codeUnits = map[string]bool{}
+		}
+		b.e.codeUnits[b.c.Name] = true
+		conv = b.e.name("builtin.codeUnit." + b.c.Name)
+		b.line("IF " + conv + " IS NOT BOUND.")
+		b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+		b.line("ENDIF.")
+	} else {
+		conv = b.rawTemp("REF TO cl_abap_conv_out_ce")
+		b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+	}
 	b.line(conv + "->convert( EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + " ).")
 	b.line(low + " = " + bytes + "(1).")
 	b.line(high + " = " + bytes + "+1(1).")
 	b.line(target + " = " + low + ".")
 	b.line(highInt + " = " + high + ".")
 	b.line(target + " = " + target + " + " + highInt + " * 256.")
+	b.line("ENDIF.")
 }
 
 func (b *body) truth(n, a string, t hir.Type) {
 	test := a + " IS NOT INITIAL"
+	if t.Kind == hir.Dynamic {
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->truth( ).")
+		b.line("ENDIF.")
+		return
+	}
 	if t.Kind == hir.String {
 		test = "strlen( " + a + " ) > 0"
 	}
@@ -1003,7 +1271,7 @@ func (b *body) stringLit(n, s string) {
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 {
+		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -1016,13 +1284,19 @@ func (b *body) stringLit(n, s string) {
 		}
 		k := 0
 		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && size+len(string(r[k]))*2 <= 120 {
+		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && size+len(string(r[k]))*2 <= 120 {
 			size += len(string(r[k])) * 2
 			k++
 		}
 		chunk := string(r[:k])
 		s = string(r[k:])
 		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
+		if strings.Contains(chunk, "\\") {
+			// abaplint's lexer misreads an escaped backslash before an
+			// escaped template delimiter (open-steamgate inbox 040); a
+			// backquoted literal has no escapes and keeps trailing blanks.
+			literal = "`" + strings.ReplaceAll(chunk, "`", "``") + "`"
+		}
 		if first {
 			b.line(n + " = " + literal + ".")
 		} else {
@@ -1071,7 +1345,7 @@ func (b *body) call(x *hir.Expr, n string) {
 		owner = b.c.Super
 		recv = "super->"
 	} else if x.X != nil {
-		recv = b.expr(x.X) + "->"
+		recv = b.receiver(x.X) + "->"
 		owner = x.X.Type.Name
 	} else {
 		recv = e.name(owner) + "=>"
@@ -1091,7 +1365,11 @@ func (b *body) call(x *hir.Expr, n string) {
 		m = e.p.Constructor(owner)
 		member = "constructor"
 	}
-	if x.Kind == hir.SuperCall && member != b.implemented {
+	if x.Kind == hir.SuperCall && member != b.implemented && !e.overriddenBelow(b.c.Name, callName) {
+		// No class from here down redefines the member: virtual dispatch on
+		// me reaches exactly the inherited implementation super names.
+		recv = "me->"
+	} else if x.Kind == hir.SuperCall && member != b.implemented {
 		e.err = fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name)
 		return
 	}
@@ -1124,7 +1402,61 @@ func (b *body) call(x *hir.Expr, n string) {
 		b.line(n + " ?= " + target + ".")
 	}
 }
+
+// literalIndex is the integer value of an index expression that is a numeric
+// literal holding an exact integer within i32 (directly or via number.index).
+func literalIndex(x *hir.Expr) (int64, bool) {
+	if x == nil {
+		return 0, false
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "number.index" {
+		x = x.X
+		if x == nil || x.Type.Kind != hir.Number {
+			return 0, false
+		}
+	} else if x.Type.Kind != hir.I32 {
+		return 0, false
+	}
+	if x.Kind != hir.Lit || x.Value == nil {
+		return 0, false
+	}
+	var k int64
+	switch v := x.Value.(type) {
+	case float64:
+		if v != math.Trunc(v) || v < -2147483648 || v > 2147483647 {
+			return 0, false
+		}
+		k = int64(v)
+	default:
+		// Plain decimal digits only; anything else keeps the generic path.
+		parsed, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 64)
+		if err != nil {
+			return 0, false
+		}
+		k = parsed
+	}
+	if k < -2147483648 || k > 2147483647 {
+		return 0, false
+	}
+	return k, true
+}
+
+// tableIndex is the constant 1-based table index of a literal JavaScript
+// index, when its +1 cannot overflow i.
+func tableIndex(x *hir.Expr) (string, bool) {
+	k, ok := literalIndex(x)
+	if !ok || k < 0 || k >= 2147483647 {
+		return "", false
+	}
+	return strconv.FormatInt(k+1, 10), true
+}
+
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if k, ok := literalIndex(x); ok {
+		// A literal index needs neither the f temporary nor saturation.
+		b.line(n + " = " + strconv.FormatInt(k, 10) + ".")
+		return
+	}
 	a := b.expr(x.X)
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
@@ -1179,6 +1511,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	if x.X.Type.Kind == hir.String && strings.HasPrefix(x.Op, "string.") {
+		if x.Op == "string.compareRegistryKey" || x.Op == "string.compareObjectName" {
+			b.e.orderingSubsetRuntime()
+			method := "rule_key"
+			if x.Op == "string.compareObjectName" {
+				method = "object_name"
+			}
+			b.line(n + " = " + b.e.name("runtime.orderingSubset") + "=>" + method + "( p0 = " + a + " p1 = " + args[0] + " ).")
+			return
+		}
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
 		// ABAP strlen and sections count UTF-16 code units, like JavaScript.
@@ -1189,6 +1530,34 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + length + ".")
 		case "string.concat":
 			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
+		case "string.slice":
+			lo, hi := args[0], args[1]
+			for _, v := range []string{lo, hi} {
+				b.line("IF " + v + " < 0.")
+				b.line(v + " = " + length + " + " + v + ".")
+				b.line("ENDIF.")
+				b.line(v + " = COND i( WHEN " + v + " < 0 THEN 0 WHEN " + v + " > " + length + " THEN " + length + " ELSE " + v + " ).")
+			}
+			b.line("IF " + hi + " > " + lo + ".")
+			b.line(length + " = " + hi + " - " + lo + ".")
+			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
+			b.line("ELSE.")
+			b.line("CLEAR " + n + ".")
+			b.line("ENDIF.")
+		case "string.repeatIndent":
+			// The enclosing source certificate proves non-negative integer indentation.
+			// The helper remains fail-closed if called without that domain proof.
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " > 2147483647 OR " + args[0] + " <> trunc( " + args[0] + " ).")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			index := b.temp(hir.T(hir.I32))
+			b.line(index + " = 0.")
+			b.line("CLEAR " + n + ".")
+			b.line("WHILE " + index + " < " + args[0] + ".")
+			b.line(n + " = |{ " + n + " }{ " + a + " }|.")
+			b.line(index + " = " + index + " + 1.")
+			b.line("ENDWHILE.")
+
 		case "string.substring":
 			// JavaScript substring clamps both indices into [0, length] and
 			// swaps them when start is past end. Indices count UTF-16 units.
@@ -1308,6 +1677,28 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+		case "string.replaceFirst":
+			// JavaScript replace with a string pattern: the first occurrence
+			// only; an empty needle inserts before the first code unit.
+			b.line(n + " = " + a + ".")
+			b.line("IF " + args[0] + " = ``.")
+			b.line(n + " = |{ " + args[1] + " }{ " + a + " }|.")
+			b.line("ELSE.")
+			b.line("REPLACE FIRST OCCURRENCE OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+			b.line("ENDIF.")
+		case "string.at":
+			// s[i]: absent outside [0, length), otherwise one UTF-16 unit.
+			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
+			b.line("CLEAR " + n + ".")
+			b.line("ELSE.")
+			b.line(n + " = NEW #( ).")
+			b.line(n + "->has = abap_true.")
+			b.line(n + "->value = " + a + "+" + args[0] + "(1).")
+			b.line("ENDIF.")
+		case "string.parseInt10", "string.parseInt10i64":
+			b.parseInt10(n, a, length)
+		case "string.localeCompareNames":
+			b.localeCompareNames(n, a, args[0], length)
 		}
 		return
 	}
@@ -1317,6 +1708,56 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "dynamic.materialize":
+		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
+		return
+	case "json.parseSubset":
+		b.e.jsonSubsetRuntime()
+		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		return
+	case "xml.parseSubset":
+		b.e.xmlSubsetRuntime()
+		b.line(n + " = " + b.e.name("runtime.xmlSubset") + "=>parse( " + a + " ).")
+		return
+	case "dynamic.isNullish":
+		b.line("IF " + a + " IS NOT BOUND.")
+		b.line(n + " = abap_true.")
+		b.line("ELSE.")
+		b.line(n + " = xsdbool( " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null ).")
+		b.line("ENDIF.")
+		return
+	case "dynamic.null":
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null.")
+		return
+	case "dynamic.get", "dynamic.put", "dynamic.strictEquals", "dynamic.asBoolean":
+		if x.Op == "dynamic.strictEquals" {
+			b.line("IF " + a + " IS NOT BOUND.")
+			b.line(n + " = xsdbool( " + args[0] + " IS NOT BOUND ).")
+			b.line("ELSE.")
+			b.line(n + " = " + a + "->strict_equals( " + args[0] + " ).")
+			b.line("ENDIF.")
+			return
+		}
+		method := map[string]string{"dynamic.get": "get", "dynamic.put": "put", "dynamic.asBoolean": "as_boolean"}[x.Op]
+		params := []string{}
+		for i, arg := range args {
+			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
+		}
+		if x.Type.Kind == hir.Void {
+			b.line("CALL METHOD " + a + "->" + method + " EXPORTING " + strings.Join(params, " ") + ".")
+		} else {
+			call := "CALL METHOD " + a + "->" + method
+			if len(params) > 0 {
+				call += " EXPORTING " + strings.Join(params, " ")
+			}
+			b.line(call + " RECEIVING result = " + n + ".")
+		}
+		return
+	case "clock.telemetry":
+		b.e.telemetryRuntime()
+		b.line(n + " = " + b.e.name("runtime.telemetry") + "=>now( ).")
+		return
 	case "object.classOf":
 		b.e.descriptors = true
 		if x.X.Type.Kind == hir.Optional {
@@ -1344,38 +1785,126 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " ?= " + obj + ".")
 		return
 	case "dynamic.of":
-		tag := "tag_ref"
-		if x.X.Type.Kind == hir.String {
-			tag = "tag_string"
-		} else if x.X.Type.Kind == hir.ClassValue {
-			tag = "tag_class"
+		if x.X.Kind == hir.StaticGet && strings.HasSuffix(x.X.Name, "_namespace") && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
+			// An enum namespace is immutable: boxing it as a plain object (a
+			// snapshot of its entries) reads like the JavaScript object does.
+			dyn := b.e.name("runtime.dynamic")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			v := b.temp(hir.T(hir.Dynamic))
+			b.line("CREATE OBJECT " + n + ".")
+			b.line(n + "->tag = " + dyn + "=>tag_object.")
+			b.line("LOOP AT " + a + "->entries INTO DATA(" + row + ").")
+			b.boxDynamic(v, row+"-v", x.X.Type.Args[1])
+			b.line("APPEND VALUE #( k = " + row + "-k v = " + v + " ) TO " + n + "->entries.")
+			b.line("ENDLOOP.")
+			return
 		}
-		b.line("CREATE OBJECT " + n + ".")
-		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
-		if x.X.Type.Kind == hir.String {
-			b.line(n + "->sval = " + a + ".")
-		} else if x.X.Type.Kind == hir.ClassValue {
-			b.line(n + "->cval = " + a + ".")
-		} else {
-			conv := b.rawTemp("REF TO object")
-			b.line(conv + " = " + a + ".")
-			b.line(n + "->oval = " + conv + ".")
-		}
+		b.boxDynamic(n, a, x.X.Type)
 		return
-	case "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+	case "dynamic.typeof", "dynamic.toString":
+		b.line("IF " + a + " IS BOUND.")
+		method := "type_of"
+		if x.Op == "dynamic.toString" {
+			method = "to_string"
+		}
+		b.line(n + " = " + a + "->" + method + "( ).")
+		b.line("ELSE.")
+		b.line(n + " = `undefined`.")
+		b.line("ENDIF.")
+		return
+	case "dynamic.isArray":
+		// An unbound box is undefined, which is not an array.
+		b.line(n + " = abap_false.")
+		b.line("IF " + a + " IS BOUND.")
+		b.e.isArrayUsed = true
+		b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array.")
+		b.line(n + " = abap_true.")
+		b.line("ELSEIF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS BOUND.")
+		mark := b.rawTemp("REF TO " + b.e.name("runtime.arraymark"))
+		b.line("TRY.")
+		b.line(mark + " ?= " + a + "->oval.")
+		b.line(n + " = abap_true.")
+		b.line("CATCH cx_sy_move_cast_error.")
+		b.line("ENDTRY.")
+		b.line("ENDIF.")
+		b.line("ENDIF.")
+		return
+	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
 		// The box methods use snake_case ABAP names.
-		op := map[string]string{"dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
+		op := map[string]string{"dynamic.isNumber": "is_number", "dynamic.asNumber": "as_number", "dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
 		target := n
 		if x.Op == "dynamic.asRef" {
 			target = b.temp(hir.Ref(hir.RootObject))
 		}
+		record := x.Op == "dynamic.asRef" && x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String
+		if record {
+			// A record read from a tagged object graph (an any-typed {} bag):
+			// copy its entries into the record map; a boxed map stays itself.
+			b.line("IF " + a + " IS BOUND AND " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object.")
+			b.line("CREATE OBJECT " + n + ".")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("LOOP AT " + a + "->entries INTO DATA(" + row + ").")
+			v := row + "-v"
+			if x.Type.Args[1].Kind != hir.Dynamic {
+				box := b.temp(hir.T(hir.Dynamic))
+				b.line(box + " = " + row + "-v.")
+				v = b.unbox(box, x.Type.Args[1])
+			}
+			b.line(n + "->set( p0 = " + row + "-k p1 = " + v + " ).")
+			b.line("ENDLOOP.")
+			b.line("ELSE.")
+		}
 		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
-		if target != n {
+		if record && x.Type.Args[1].Kind != hir.Dynamic {
+			// A boxed map<string, any> bag stands for the narrower record too.
+			bagType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+			bag := b.temp(bagType)
+			b.line("TRY.")
 			b.line(n + " ?= " + target + ".")
+			b.line("CATCH cx_sy_move_cast_error.")
+			b.line(bag + " ?= " + target + ".")
+			b.line("CREATE OBJECT " + n + ".")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("LOOP AT " + bag + "->entries INTO DATA(" + row + ").")
+			box := b.temp(hir.T(hir.Dynamic))
+			b.line(box + " = " + row + "-v.")
+			b.line(n + "->set( p0 = " + row + "-k p1 = " + b.unbox(box, x.Type.Args[1]) + " ).")
+			b.line("ENDLOOP.")
+			b.line("ENDTRY.")
+		} else if target != n {
+			b.line(n + " ?= " + target + ".")
+		}
+		if record {
+			b.line("ENDIF.")
 		}
 		return
 	case "regexp.source":
 		b.line(n + " = " + a + "->source.")
+		return
+	case "regexp.toString":
+		// JavaScript prints the flags in canonical order: g before i.
+		b.line(n + " = |/{ " + a + "->source }/|.")
+		b.line("IF " + a + "->global = abap_true.")
+		b.line(n + " = " + n + " && `g`.")
+		b.line("ENDIF.")
+		b.line("IF " + a + "->ignore_case = abap_true.")
+		b.line(n + " = " + n + " && `i`.")
+		b.line("ENDIF.")
+		return
+	}
+	switch x.Op {
+	case "array.length":
+		// The items table is public: lines( ) saves a method call per access.
+		b.line(n + " = lines( " + a + "->items ).")
+		return
+	case "array.push":
+		b.line("APPEND " + args[0] + " TO " + a + "->items.")
+		if n != "" {
+			b.line(n + " = lines( " + a + "->items ).")
+		}
 		return
 	}
 	if x.Op == "record.delete" {
@@ -1389,7 +1918,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 	}
 	target := n
-	if (x.Op == "array.get" || x.Op == "array.pop") && x.X.Type.Args[0].IsRef() {
+	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift") && (x.X.Type.Args[0].IsRef() || (x.X.Type.Args[0].Kind == hir.Optional && x.X.Type.Args[0].Args[0].IsRef())) {
 		target = b.temp(hir.Ref(hir.RootObject))
 	}
 	s := a + "->" + op + "( " + strings.Join(params, " ") + " )"
@@ -1404,6 +1933,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
 		return
+	}
+	if castTrace && s.Node.Source != "" {
+		b.code.WriteString("*@src " + s.Node.Source + "\n")
+		b.lastInit = ""
 	}
 	e := b.e
 	switch s.Kind {
@@ -1429,15 +1962,20 @@ func (b *body) stmt(s *hir.Stmt) {
 		case hir.Local:
 			target = b.locals[s.X.Name]
 		case hir.FieldGet:
-			target = b.expr(s.X.X) + "->" + e.member(s.X.Name)
+			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
 		case hir.StaticGet:
 			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
 		case hir.IndexGet:
-			a, i := b.expr(s.X.X), b.expr(s.X.Y)
+			a := b.expr(s.X.X)
+			i, constant := tableIndex(s.X.Y)
+			if !constant {
+				i = b.expr(s.X.Y)
+			}
 			v := b.value(s.Y, s.X.Type)
-			b.line(i + " = " + i + " + 1.")
-			b.line(a + "->view_materialize( ).")
+			if !constant {
+				b.line(i + " = " + i + " + 1.")
+			}
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
 			b.line("CLEAR " + row + ".")
 			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
@@ -1448,6 +1986,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line(target + " = " + b.value(s.Y, s.X.Type) + ".")
 	case hir.ExprStmt:
+		if s.X.Kind == hir.RuntimeOp && s.X.Op == "array.push" {
+			// The new length is unused.
+			b.runtimeOp(s.X, "")
+			return
+		}
 		b.expr(s.X)
 	case hir.If:
 		a := b.expr(s.X)
@@ -1474,9 +2017,6 @@ func (b *body) stmt(s *hir.Stmt) {
 		row := n
 		if s.Type.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
-		}
-		if s.X.Type.Kind == hir.Array {
-			b.line(a + "->view_materialize( ).")
 		}
 		b.line("LOOP AT " + a + "->items INTO " + row + ".")
 		if row != n {
@@ -1514,6 +2054,18 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line(n + " = NEW #( ).")
 		b.line(n + "->payload = " + v + ".")
 		b.line("RAISE EXCEPTION " + n + ".")
+	case hir.Finally:
+		// Normal completion runs the finally block after the TRY; anything
+		// leaving the body is caught, the block runs, and the same exception
+		// object is raised again.
+		n := b.rawTemp("REF TO cx_root")
+		b.line("TRY.")
+		b.stmt(s.Body)
+		b.line("CATCH cx_root INTO " + n + ".")
+		b.stmt(s.Else)
+		b.line("RAISE EXCEPTION " + n + ".")
+		b.line("ENDTRY.")
+		b.stmt(s.Else)
 	case hir.Try:
 		name := e.exception(s.Type)
 		n := b.rawTemp("REF TO " + name)
@@ -1568,6 +2120,143 @@ func wrap(src string) (string, error) {
 		out.WriteString(line + "\n")
 	}
 	return out.String(), nil
+}
+
+// boxDynamic preserves identity and absence instead of boxing the ABI wrapper
+// itself. Objects already represented as graph nodes flow through unchanged.
+func (b *body) boxDynamic(n, a string, t hir.Type) {
+	if t.Kind == hir.Dynamic {
+		b.line(n + " = " + a + ".")
+		return
+	}
+	if t.Kind == hir.Optional {
+		test := a + " IS BOUND"
+		base := t.Args[0]
+		if !base.IsRef() {
+			test += " AND " + a + "->has = abap_true"
+		}
+		b.line("IF " + test + ".")
+		if !base.IsRef() {
+			a += "->value"
+		}
+		b.boxDynamic(n, a, base)
+		b.line("ENDIF.")
+		return
+	}
+	if t.IsRef() {
+		b.line("IF " + a + " IS BOUND.")
+	}
+	tag := "tag_ref"
+	field := "oval"
+	switch t.Kind {
+	case hir.String:
+		tag, field = "tag_string", "sval"
+	case hir.Number, hir.I32:
+		tag, field = "tag_number", "nval"
+	case hir.Bool:
+		tag, field = "tag_boolean", "bval"
+	case hir.ClassValue:
+		tag, field = "tag_class", "cval"
+	default:
+		if !t.IsRef() {
+			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", t)
+			return
+		}
+	}
+	b.line("CREATE OBJECT " + n + ".")
+	b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")
+	if field == "oval" {
+		converted := b.rawTemp("REF TO object")
+		b.line(converted + " = " + a + ".")
+		a = converted
+	}
+	b.line(n + "->" + field + " = " + a + ".")
+	if t.IsRef() {
+		b.line("ENDIF.")
+	}
+}
+
+// overriddenBelow reports whether class or any of its subclasses declares
+// method name itself.
+func (e *emitter) overriddenBelow(class, name string) bool {
+	for _, c := range e.p.Classes {
+		for k := c; k != nil; k = e.classBy(k.Super) {
+			if k.Name == class {
+				for _, m := range c.Methods {
+					if m.Name == name || strings.HasPrefix(m.Name, name+"_instantiated_") {
+						return true
+					}
+				}
+				break
+			}
+			if k.Super == "" {
+				break
+			}
+		}
+	}
+	return false
+}
+
+// wideShape: a class whose constructor would exceed the kernel's statement
+// length (hundreds of parameters, e.g. the all-rules config shape) and whose
+// constructor body only copies each parameter into the same-named field.
+// Such a class is emitted without a constructor; NEW sets the fields.
+func (e *emitter) wideShape(c *hir.Class) bool {
+	if c.Ctor == nil || len(c.Ctor.Params) <= 40 || c.Super != "" || c.Ctor.Body == nil {
+		return false
+	}
+	if len(c.Ctor.Body.List) != len(c.Ctor.Params) {
+		return false
+	}
+	for i, s := range c.Ctor.Body.List {
+		p := c.Ctor.Params[i]
+		y := s.Y
+		if y != nil && y.Kind == hir.Narrow {
+			y = y.X
+		}
+		if s.Kind != hir.Assign || s.X == nil || y == nil || s.X.Kind != hir.FieldGet || s.X.Name != p.Name || y.Kind != hir.Local || y.Name != p.Name {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *emitter) isInterface(name string) bool {
+	for _, i := range e.p.Interfaces {
+		if i.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// needsImplicitSuper: a subclass constructor without its own super call,
+// below an ancestor constructor (explicit or implicit) that takes no required
+// parameters.
+func (e *emitter) needsImplicitSuper(c *hir.Class, m *hir.Method) bool {
+	if c.Super == "" {
+		return false
+	}
+	// ABAP demands the call whenever there is a superclass, even one whose
+	// constructor is implicit (no HIR constructor up the chain).
+	parent := e.p.Constructor(c.Super)
+	if parent == nil {
+		parent = &hir.Method{}
+	}
+	for _, p := range parent.Params {
+		if p.Type.Kind != hir.Optional {
+			return false
+		}
+	}
+	called := false
+	if m.Body != nil {
+		e.walkStmt(m.Body, func(x *hir.Expr) {
+			if x != nil && x.Kind == hir.SuperCall && x.Name == "constructor" {
+				called = true
+			}
+		})
+	}
+	return !called
 }
 
 // Numeric bounds are constants declared once per method, never rebuilt on a

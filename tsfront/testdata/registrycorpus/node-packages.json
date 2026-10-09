@@ -1,0 +1,86 @@
+[
+  {
+    "name": "fast-xml-parser",
+    "version": "5.10.1",
+    "resolved": "https://registry.npmjs.org/fast-xml-parser/-/fast-xml-parser-5.10.1.tgz",
+    "integrity": "sha512-IEMIf7298kXuZSRFoGfMYrl7is8LpavODgbNz1cwIudv7KwVFnuU+UsMporfq6PD6aXSlawZlARiA3UywCTfMw==",
+    "files": [
+      {
+        "file": "LICENSE",
+        "sha256": "7883225d5e84a6bbb9b170c3d891b4bf6d6259cee869c86bd86381a927071745"
+      },
+      {
+        "file": "lib/fxp.d.cts",
+        "sha256": "7239bc0a6efdff93e662ca974248286aab408e0b56328436db220a5b8931e24d"
+      },
+      {
+        "file": "package.json",
+        "sha256": "53e4b3e13a35b737af8b966853e7abb83113f9590ee1cc6a0f2a49f6d011e761"
+      },
+      {
+        "file": "src/fxp.d.ts",
+        "sha256": "ceaf212c9e857b10ef860d7b0ae9e009432f82b9522d3c2c45df88f71ad978b9"
+      }
+    ]
+  },
+  {
+    "name": "json5",
+    "version": "2.2.3",
+    "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
+    "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
+    "files": [
+      {
+        "file": "LICENSE.md",
+        "sha256": "53e59feb13058722d977c699eb0407c7bce2f93c949b681bbd2ff31698535927"
+      },
+      {
+        "file": "lib/index.d.ts",
+        "sha256": "ab7b7a15a5d73eb0cfc2b973e580f357f07492bff6608669d7e899e2d49ac9a3"
+      },
+      {
+        "file": "lib/parse.d.ts",
+        "sha256": "88a3a6f8c2a1640d8d5fd30d8d86462f8babd86a1e52fab0e8b7f7c141fb348e"
+      },
+      {
+        "file": "lib/stringify.d.ts",
+        "sha256": "345f76c854da724803c96f727a3f9c75e26cf95c6e7b8c1064dbc4e7727b74e6"
+      },
+      {
+        "file": "lib/unicode.d.ts",
+        "sha256": "92401612f9208bf2d2aece86e6dfe826b545bc24dda8420a2f34b14389830390"
+      },
+      {
+        "file": "lib/util.d.ts",
+        "sha256": "794bc714d05ebdd3402654603bdba578ffa08b1e51ec3fbba5397cbf49c05d07"
+      },
+      {
+        "file": "package.json",
+        "sha256": "1927c4592e3811cf9b8c86e568df1c41a373b628b4b322f88872395ef87e2ba5"
+      }
+    ]
+  },
+  {
+    "name": "vscode-languageserver-types",
+    "version": "3.18.0",
+    "resolved": "https://registry.npmjs.org/vscode-languageserver-types/-/vscode-languageserver-types-3.18.0.tgz",
+    "integrity": "sha512-8TsGPNMIMiiBdkORgRSvLjuiEIiAFtO+KssmYWxQ+uSVvlf7RjK8YKCOjPzZ+YA04jXEV7+7LvkSmHkhpNS99g==",
+    "files": [
+      {
+        "file": "License.txt",
+        "sha256": "ec9ee83580841e8eb687aca9867f221503809ba6426c7f876ede17d91b9fcfd0"
+      },
+      {
+        "file": "lib/esm/main.d.ts",
+        "sha256": "af4f042e8a99eb6f9a48411042e9633486f1eb058d9e1c769c9836cd05464489"
+      },
+      {
+        "file": "lib/umd/main.d.ts",
+        "sha256": "af4f042e8a99eb6f9a48411042e9633486f1eb058d9e1c769c9836cd05464489"
+      },
+      {
+        "file": "package.json",
+        "sha256": "2208009da06b474e443e0bd2ec1196787cded00cc1ed854c03fab5a1f67e6f29"
+      }
+    ]
+  }
+]

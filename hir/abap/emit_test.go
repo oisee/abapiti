@@ -646,3 +646,111 @@ func TestRootObjectTemporary(t *testing.T) {
 		}
 	}
 }
+
+// A void sequence at statement level (a call's prelude) emits its statements
+// only; it is not a call (the first full Registry emission produced
+// `z__…=>z_member__…( )` from one).
+func TestVoidSequenceStatement(t *testing.T) {
+	call := &hir.Expr{Kind: hir.DirectCall, Owner: "voidseq", Name: "g", Type: hir.T(hir.Void)}
+	seq := &hir.Expr{Kind: hir.Seq, Type: hir.T(hir.Void), Stmt: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: str, X: hir.L(str, "kept")}), Y: call}
+	f := method("f", hir.T(hir.Void), &hir.Stmt{Kind: hir.ExprStmt, X: seq})
+	g := method("g", hir.T(hir.Void), hir.B())
+	f.Static, g.Static = true, true
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "voidseq", Methods: []*hir.Method{f, g}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range files {
+		if strings.Contains(src, "z__e3b0c44298fc1c") || !strings.Contains(src, "kept") || strings.Count(src, "=>") != 1 {
+			t.Fatalf("void sequence emitted as an empty call, lost, or its call dropped:\n%s", src)
+		}
+	}
+}
+
+// A shape with hundreds of fields once produced a 31,619-character
+// `METHODS constructor IMPORTING …` that the kernel refused (statement too
+// long, A4H 2026-10-09). Wide copy-only constructors are dropped; NEW sets
+// the fields one statement each.
+func TestWideShapeHasNoConstructor(t *testing.T) {
+	c := &hir.Class{Name: "shape.wide", Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}}
+	opt := hir.T(hir.Optional, str)
+	var args []*hir.Expr
+	for i := 0; i < 60; i++ {
+		f := fmt.Sprintf("field%02d", i)
+		c.Fields = append(c.Fields, hir.Field{Name: f, Type: str})
+		c.Ctor.Params = append(c.Ctor.Params, hir.Param{Name: f, Type: opt})
+		c.Ctor.Body.List = append(c.Ctor.Body.List, &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, Name: f, Type: str, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("shape.wide")}}, Y: &hir.Expr{Kind: hir.Narrow, Type: str, X: hir.V(f, opt)}})
+		args = append(args, &hir.Expr{Kind: hir.Lit, Type: opt, Value: f})
+	}
+	m := method("f", hir.Ref("shape.wide"), ret(&hir.Expr{Kind: hir.New, Type: hir.Ref("shape.wide"), Args: args}))
+	m.Static = true
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{c, {Name: "user", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, src := range files {
+		if strings.Contains(src, "METHODS constructor IMPORTING") && strings.Contains(name, "shape") {
+			t.Fatalf("%s still has the wide constructor", name)
+		}
+		for _, stmt := range strings.Split(src, ".\n") {
+			if len(stmt) > 2000 {
+				t.Fatalf("%s: statement of %d characters", name, len(stmt))
+			}
+		}
+	}
+}
+
+// instanceof against an interface is a checked cast, not IS INSTANCE OF
+// (OSG-JS ignores interfaces there: open-steamgate inbox 039).
+func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
+	iface := &hir.Interface{Name: "marker"}
+	obj := hir.Ref(hir.RootObject)
+	m := method("f", hir.T(hir.Bool), ret(&hir.Expr{Kind: hir.InstanceOf, Type: hir.T(hir.Bool), Owner: "marker", X: hir.V("o", obj)}))
+	m.Static = true
+	m.Params = []hir.Param{{Name: "o", Type: obj}}
+	files, err := Emit(&hir.Program{Interfaces: []*hir.Interface{iface}, Classes: []*hir.Class{{Name: "probe", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, src := range files {
+		if strings.HasSuffix(name, ".clas.abap") && (strings.Contains(src, "IS INSTANCE OF") || !strings.Contains(src, "CATCH cx_sy_move_cast_error")) {
+			t.Fatalf("%s:\n%s", name, src)
+		}
+	}
+}
+
+// Kernel-profile shortcuts: push/length on the public items table, constant
+// indices for integer literals, and me for a this receiver of the own class.
+func TestEmitterShortcuts(t *testing.T) {
+	arr := hir.T(hir.Array, i32)
+	al := local("a", arr)
+	num := hir.T(hir.Number)
+	index := func(v any) *hir.Expr {
+		return &hir.Expr{Kind: hir.RuntimeOp, Op: "number.index", Type: i32, X: hir.L(num, v)}
+	}
+	this := &hir.Expr{Kind: hir.This, Type: hir.Ref("Short")}
+	field := &hir.Expr{Kind: hir.FieldGet, Type: i32, X: this, Name: "n"}
+	m := method("run", i32, hir.B(
+		decl("a", arr, newObj(arr)), run(rt("array.push", al, i32, lit(4))),
+		decl("len", i32, rt("array.push", al, i32, lit(5))),
+		&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: index(2)}, Y: lit(6)},
+		&hir.Stmt{Kind: hir.Assign, X: field, Y: &hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: index(1)}},
+		decl("big", i32, index(2147483647)),
+		ret(binary("+", field, rt("array.length", al, i32), i32))))
+	c := &hir.Class{Name: "Short", Fields: []hir.Field{{Name: "n", Type: i32}}, Methods: []*hir.Method{m}}
+	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{c}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := files[names.Get("Short")+".clas.abap"]
+	for _, want := range []string{"APPEND t", "INDEX 3.", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("missing %q:\n%s", want, src)
+		}
+	}
+	for _, bad := range []string{"->push(", "->length(", "( me )", "trunc(", "+ 1."} {
+		if strings.Contains(src, bad) {
+			t.Errorf("unexpected %q:\n%s", bad, src)
+		}
+	}
+}

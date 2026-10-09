@@ -128,14 +128,14 @@ func abapStringBuild(varname, ch, value string) []string {
 	var out []string
 	r := []rune(value)
 	for len(r) > 0 {
-		if r[0] < 32 || r[0] == 127 {
+		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff {
 			out = append(out, fmt.Sprintf("%s = cl_abap_conv_in_ce=>uccpi( %d ).", ch, r[0]))
 			out = append(out, fmt.Sprintf("CONCATENATE %s %s INTO %s RESPECTING BLANKS.", varname, ch, varname))
 			r = r[1:]
 			continue
 		}
 		k, size := 0, 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && size+len(string(r[k]))*2 <= 120 {
+		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && size+len(string(r[k]))*2 <= 120 {
 			size += len(string(r[k])) * 2
 			k++
 		}

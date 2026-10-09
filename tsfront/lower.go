@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
@@ -79,6 +81,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		modvarsByName:     map[string]modvarRef{},
 		synthsByName:      map[string]*hir.Class{},
 		enums:             map[string]map[string]string{},
+		enumNumbers:       map[string]map[string]float64{},
 		nsNeeded:          map[string]bool{},
 		views:             map[string]*hir.Interface{},
 		ifaceNodes:        map[string]*ast.Node{},
@@ -93,6 +96,13 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if err := l.validateOverrides(files, registry); err != nil {
 		return nil, nil, err
+	}
+	if coverage != nil && coverage.Schema == 2 {
+		var err error
+		files, err = l.pruneDeclarations(files)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	for _, name := range files {
 		f, ok := p.File(name)
@@ -122,13 +132,28 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			mod.Fields = append(mod.Fields, hir.Field{Name: "ns", Static: true, Type: hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))})
 		}
 	}
+	// Data interfaces before class signatures: anonymous shapes with the
+	// same fields reuse them instead of synthesizing a second class.
+	for _, name := range files {
+		f, _ := p.File(name)
+		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+		l.file, l.ck = f, ck
+		for _, stmt := range l.statementNodes(f) {
+			if stmt.Kind == ast.KindInterfaceDeclaration && l.isDataInterface(stmt) {
+				if c := l.classOf(stmt.Symbol()); c != nil && c.Ctor == nil {
+					l.dataInterfaceClass(stmt, &hir.Interface{Node: c.Node, Name: c.Name})
+				}
+			}
+		}
+		done()
+	}
 	// Method interfaces before class signatures: inferred implementations and
 	// union views must see the same interface identity in every file.
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind == ast.KindInterfaceDeclaration && !l.isDataInterface(stmt) {
 				if i := l.ifaceOf(stmt.Symbol()); i != nil {
 					l.interfaceSignatures(stmt, i)
@@ -166,17 +191,20 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	for _, c := range l.out.Classes {
 		inherit(c)
 	}
+	l.completeInterfaceHeritage()
+	l.completeIfaceClassHeritage()
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
 	l.covariantImplements()
 	l.eraseGenericOverrides()
+	l.completeInterfaceValueSlots()
 	// Register all module function signatures before lowering any function body.
 	for _, name := range files {
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, fn := range f.Statements.Nodes {
+		for _, fn := range l.statementNodes(f) {
 			if fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil {
 				continue
 			}
@@ -202,7 +230,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		f, _ := p.File(name)
 		ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind != ast.KindVariableStatement {
 				continue
 			}
@@ -242,12 +270,16 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	// Namespace modules outside the lowered file list still need their
 	// (possibly empty) export map: nothing in them is lowered, but code
-	// iterates them.
+	// iterates them. Name order: module classes and their descriptors are
+	// emitted in creation order, so map order would make the output vary.
+	var needed []*ast.SourceFile
 	for name := range l.nsNeeded {
-		f, ok := p.File(name)
-		if !ok {
-			continue
+		if f, ok := p.File(name); ok {
+			needed = append(needed, f)
 		}
+	}
+	sort.Slice(needed, func(i, j int) bool { return l.relFile(needed[i]) < l.relFile(needed[j]) })
+	for _, f := range needed {
 		if l.modules[f] != nil {
 			continue
 		}
@@ -265,6 +297,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	l.completeUnionInterfaces()
 	l.covariantImplements()
+	l.propagateBridgeTraps()
 	l.inferNumberRanges()
 	if options.AssumeOnlyIntegerCalculations {
 		l.assumeIntegerTypes()
@@ -278,6 +311,8 @@ type lowerer struct {
 	integerOptions    LowerOptions
 	integerExceptions map[*ast.Node]IntegerException
 	floatSites        map[string]bool
+	retained          map[*ast.Node]bool
+	typeOnly          map[*ast.Node]bool
 	unexecuted        map[*ast.Node]string
 	overrides         map[*ast.Node]overrides.Entry
 	prog              *Program
@@ -305,7 +340,8 @@ type lowerer struct {
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt
 	// enums maps "file name" + " " + enum name -> member -> string value.
-	enums map[string]map[string]string
+	enums       map[string]map[string]string
+	enumNumbers map[string]map[string]float64
 	// nsNeeded marks module files that are imported as a namespace and used
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool
@@ -313,6 +349,29 @@ type lowerer struct {
 	views    map[string]*hir.Interface
 	unions   map[string]*unionView
 	abiReady bool
+	// Interface heritage (lower_iface_heritage.go).
+	ifaceDone       map[*hir.Interface]bool
+	ifaceBases      map[*hir.Interface][]*hir.Interface
+	ifaceClassBases []ifaceClassBase
+	// ifaceClassBaseNames: lowered interface name -> class names it extends
+	// (directly or through base interfaces).
+	ifaceClassBaseNames map[string][]string
+	// shapeLike marks data-interface classes: plain objects that an
+	// anonymous shape with the same fields may reuse.
+	shapeLike map[string]bool
+	// thisOverride replaces `this` while a closure body is lowered.
+	thisOverride *hir.Expr
+	// widenedLets: let symbols whose HIR type is the common base of their
+	// assignments; the checker's narrower view of them is not applied.
+	widenedLets map[*ast.Symbol]bool
+	// guards: locals proven present by an enclosing definedness guard
+	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
+	guards map[*ast.Symbol]hir.Type
+	// `continue`/`break` statements rewritten inside a for loop with an
+	// update expression (lower_syntax.go).
+	breakViaFlag     map[*ast.Node]*hir.Expr
+	ifaceClassBaseOf map[string]string
+	bridgeTargets    map[*hir.Method]*hir.Method
 	// ifaceNodes maps interface names to their declarations (for checker
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
@@ -340,6 +399,7 @@ type lowerer struct {
 	methodsBy     map[string]*hir.Method
 	fieldsBy      map[string]hir.Field
 	modvarsByName map[string]modvarRef // current file + var name -> module field
+	constReads    map[*ast.Symbol]bool // module constants read anywhere in the program
 	synthsByName  map[string]*hir.Class
 
 	// Retain checker binding identity for post-lowering boundary rewrites.
@@ -514,11 +574,39 @@ func (l *lowerer) locOf(n *ast.Node) string {
 // qualifiedName builds the stable identity of a declaration: the file path
 // relative to the tsconfig directory plus the declaration name.
 func (l *lowerer) qualifiedName(f *ast.SourceFile, name string) string {
+	return l.relFile(f) + "." + name
+}
+
+// relFile is f's path relative to the tsconfig directory, with forward
+// slashes. A package that resolves outside that directory (a symlinked
+// node_modules) is named from its node_modules segment: generated names and
+// locations never depend on where the project or its packages live.
+func (l *lowerer) relFile(f *ast.SourceFile) string {
 	rel, err := filepath.Rel(l.prog.configDir, f.FileName())
 	if err != nil {
-		rel = f.FileName()
+		return f.FileName()
 	}
-	return rel + "." + name
+	rel = filepath.ToSlash(rel)
+	if strings.HasPrefix(rel, "../") {
+		if i := strings.Index(rel, "/node_modules/"); i >= 0 {
+			rel = rel[i+1:]
+		}
+	}
+	return rel
+}
+
+// trapLocation is the location a trap reports at run time: relative
+// "file:line:col", like the reachability traps.
+func (l *lowerer) trapLocation(n *ast.Node) string {
+	if l.file == nil {
+		return "<unknown>"
+	}
+	pos := 0
+	if n != nil {
+		pos = scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/)
+	}
+	line, col := lineCol(l.file, pos)
+	return fmt.Sprintf("%s:%d:%d", l.relFile(l.file), line, col)
 }
 
 // resolve returns the symbol at node with import aliases resolved. Property
@@ -545,7 +633,7 @@ func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
 }
 
 func (l *lowerer) registerFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindClassDeclaration:
 			if name := stmt.Name(); name != nil && stmt.Symbol() != nil {
@@ -560,6 +648,11 @@ func (l *lowerer) registerFile(f *ast.SourceFile) {
 				l.out.Classes = append(l.out.Classes, c)
 			}
 		case ast.KindInterfaceDeclaration:
+			// A pure index-signature interface has no nominal method/data
+			// slots. Its checker type already lowers to the ordered-map ABI.
+			if members := stmt.Members(); len(members) == 1 && members[0].Kind == ast.KindIndexSignature && stmt.AsInterfaceDeclaration().HeritageClauses == nil {
+				continue
+			}
 			if l.isDataInterface(stmt) && stmt.Name() != nil && stmt.Symbol() != nil {
 				c := &hir.Class{Node: l.node(stmt), Name: l.qualifiedName(f, stmt.Name().Text())}
 				l.classes[stmt.Symbol()] = c

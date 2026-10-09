@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 	"github.com/oisee/abapiti/internal/tsgo/stringutil"
 )
 
@@ -16,7 +17,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 	defer delete(visiting, n)
 	pure := func(x *ast.Node) bool { return l.pureInitializer(x, owner, visiting) }
 	switch n.Kind {
-	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword:
+	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword, ast.KindNullKeyword:
 		return true
 	case ast.KindParenthesizedExpression:
 		return pure(n.Expression())
@@ -40,7 +41,13 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		c := n.AsConditionalExpression()
 		return pure(c.Condition) && pure(c.WhenTrue) && pure(c.WhenFalse)
 	case ast.KindIdentifier:
+		if l.pureSyntaxInitializer(n, owner, visiting) {
+			return true
+		}
 		sym := l.resolve(n)
+		if sym != nil && sym.Name == "undefined" && sym.ValueDeclaration == nil {
+			return true
+		}
 		if sym == nil || sym.ValueDeclaration == nil {
 			return false
 		}
@@ -73,7 +80,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return l.pureInitializer(d.Initializer(), d, visiting)
 	case ast.KindObjectLiteralExpression:
-		return len(n.AsObjectLiteralExpression().Properties.Nodes) == 0
+		return len(n.AsObjectLiteralExpression().Properties.Nodes) == 0 || l.pureSyntaxInitializer(n, owner, visiting)
 	case ast.KindArrayLiteralExpression:
 		for _, el := range n.AsArrayLiteralExpression().Elements.Nodes {
 			if !pure(el) {
@@ -82,8 +89,16 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return true
 	case ast.KindNewExpression:
+		// Empty standard collections allocate no observable module/class state.
+		// isNewCollection intentionally selects only literal-population lowering.
+		if expr := n.Expression(); expr != nil && expr.Kind == ast.KindIdentifier && len(n.Arguments()) == 0 {
+			sym := l.resolve(expr)
+			if l.librarySymbol(sym) && l.classOf(sym) == nil && (sym.Name == "Map" || sym.Name == "Set" || sym.Name == "Array") {
+				return true
+			}
+		}
 		if !l.isNewCollection(n) {
-			return false
+			return l.pureSyntaxInitializer(n, owner, visiting)
 		}
 		for _, arg := range n.Arguments() {
 			if !pure(arg) {
@@ -92,7 +107,7 @@ func (l *lowerer) pureInitializer(n, owner *ast.Node, visiting map[*ast.Node]boo
 		}
 		return true
 	}
-	return false
+	return l.pureSyntaxInitializer(n, owner, visiting)
 }
 
 // Inspect scanner strings as JS code units, before Go's rune decoding can
@@ -138,4 +153,17 @@ func (l *lowerer) moduleInitializer(n *ast.Node) bool {
 	}
 	walk(n)
 	return safe
+}
+
+// These certificates are source-fingerprinted, including constructor dependencies.
+// They do not authorize other allocations in the same class.
+func (l *lowerer) pinnedStaticInitializer(n *ast.Node) bool {
+	text := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+	for parent := n; parent != nil; parent = parent.Parent {
+		if e, ok := l.overrides[parent]; ok && e.Patterns != nil && e.Patterns.StaticInitializers[text] {
+			l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
+			return true
+		}
+	}
+	return false
 }

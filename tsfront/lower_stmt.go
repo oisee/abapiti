@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -42,6 +44,17 @@ func (l *lowerer) block(n *ast.Node) *hir.Stmt {
 // stmts lowers one statement to a list: variable statements contribute their
 // declarations to the enclosing scope, everything else is a single entry.
 func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
+	saved := l.pend
+	l.pend = nil
+	out := l.stmtsOwn(n)
+	pre := l.pend
+	l.pend = saved
+	return append(pre, out...)
+}
+
+// stmtsOwn lowers the statement; preludes its lowering leaves at statement
+// level (a checked conversion of a returned or assigned value) precede it.
+func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
@@ -62,9 +75,13 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 
 func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	for parent := n.Parent; parent != nil; parent = parent.Parent {
-		if e, ok := l.overrides[parent]; ok && len(e.Statements) > 0 {
+		if e, ok := l.overrides[parent]; ok {
+			patterns := e.Statements
+			if e.Patterns != nil {
+				patterns = e.Patterns.Statements
+			}
 			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
-			if build := e.Statements[span]; build != nil {
+			if build := patterns[span]; build != nil {
 				l.diagf(n, "note-override", "%s: %s", e.ID, e.Rationale)
 				return build()
 			}
@@ -91,7 +108,26 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindIfStatement:
 		ifs := n.AsIfStatement()
 		s := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.condition(ifs.Expression)}
-		s.Body = l.scopeBlock(ifs.ThenStatement)
+		if value, ok := constantBool(s.X); ok {
+			// A branch the constant condition never selects is dead code in
+			// JavaScript too; it is not lowered.
+			l.diagf(n, "note-dead-branch", "if with a constant condition keeps only the live branch")
+			var live *hir.Stmt
+			if value {
+				live = l.scopeBlock(ifs.ThenStatement)
+			} else if ifs.ElseStatement != nil {
+				live = l.scopeBlock(ifs.ElseStatement)
+			}
+			if s.X.Kind == hir.Seq {
+				return hir.B(s.X.Stmt, live)
+			}
+			return live
+		}
+		if sym, typ, ok := l.definedGuard(ifs.Expression); ok {
+			s.Body = l.withGuardStmt(sym, typ, func() *hir.Stmt { return l.scopeBlock(ifs.ThenStatement) })
+		} else {
+			s.Body = l.scopeBlock(ifs.ThenStatement)
+		}
 		if ifs.ElseStatement != nil {
 			s.Else = l.scopeBlock(ifs.ElseStatement)
 		}
@@ -105,7 +141,10 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		return l.forOfStatement(n)
 	case ast.KindReturnStatement:
 		r := n.AsReturnStatement()
-		if r.Expression == nil {
+		if r.Expression == nil || (l.method != nil && l.method.Result.Kind == hir.Void && isUndefinedKeyword(r.Expression)) {
+			if l.method != nil && l.method.Result.Kind == hir.Optional {
+				return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: &hir.Expr{Kind: hir.Lit, Type: l.method.Result}}
+			}
 			return &hir.Stmt{Kind: hir.Return, Node: l.node(n)}
 		}
 		l.hint = l.method.Result
@@ -114,10 +153,18 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		if x == nil {
 			return nil
 		}
+		x = l.presentValue(r.Expression, x, l.method.Result)
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
+		if flag, ok := l.breakViaFlag[n]; ok {
+			return hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: flag, Y: hir.L(hir.T(hir.Bool), true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})
+		}
 		return &hir.Stmt{Kind: hir.Break, Node: l.node(n)}
 	case ast.KindContinueStatement:
+		if n.AsContinueStatement().Label != nil {
+			l.diagf(n, "unsupported-statement", "labelled continue is not lowered")
+			return nil
+		}
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
 	case ast.KindEmptyStatement:
 		return nil
@@ -152,8 +199,15 @@ func (l *lowerer) scopeBlock(n *ast.Node) *hir.Stmt {
 		return l.stmt(n) // stmt(Block) manages the scope itself
 	}
 	l.push()
+	saved := l.pend
+	l.pend = nil
 	s := l.stmt(n)
+	pre := l.pend
+	l.pend = saved
 	l.pop()
+	if len(pre) > 0 && s != nil {
+		return hir.B(append(pre, s)...)
+	}
 	return s
 }
 
@@ -198,7 +252,11 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
 		if typ.Kind == hir.Void {
+
 			return nil
+		}
+		if evolved, ok := l.evolvedArrayType(d, typ); ok {
+			typ = evolved
 		}
 		l.hint = typ
 		x = l.expr(init)
@@ -220,6 +278,17 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			return nil
 		}
 		if typ.Kind == hir.Void {
+			// A source-pinned intrinsic can expose an evaluated undefined
+			// result even though its library signature is void. Ordinary void
+			// implementations may return values: never erase their initializer.
+			if init != nil {
+				x = l.expr(init)
+				if x != nil && x.Type.Equal(hir.T(hir.Optional, hir.T(hir.Dynamic))) {
+					l.declare(name, x.Type)
+					return []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: x.Type, X: x}}
+				}
+			}
+			l.diagf(d, "unsupported-binding", "void local requires a value-preserving result ABI")
 			return nil
 		}
 		if typ.Kind != hir.Optional && init != nil {
@@ -236,6 +305,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				}
 			}
 		}
+		if d.Type() == nil && init != nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst == 0 {
+			typ = l.widenLet(d, sym, typ)
+		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.
 			l.hint = typ
@@ -247,6 +319,11 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
 				typ = x.Type
 			}
+			if d.Type() == nil && l.shapeAliasOf(typ, x.Type) {
+				// The checker infers an anonymous shape for a call whose
+				// lowered result is the declared data interface.
+				typ = x.Type
+			}
 			// An initializer that yields an optional (map lookups, optional
 			// chains) makes the local optional even when the declared type
 			// does not spell it out.
@@ -254,6 +331,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				typ = x.Type
 			}
 		}
+	}
+	if x != nil {
+		x = l.coerce(x, typ)
 	}
 	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
 	if l.declSymbols == nil {
@@ -299,6 +379,12 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 	if n == nil {
 		return nil
 	}
+	if l.isHostProcessCall(n) {
+		// Node host I/O (process.stderr.write in performance output): no ABAP
+		// equivalent; reaching it raises with the TypeScript location.
+		l.diagf(n, "note-host-process", "process host call traps when reached")
+		return &hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n)}
+	}
 	if n.Kind == ast.KindPostfixUnaryExpression {
 		u := n.AsPostfixUnaryExpression()
 		if u.Operator == ast.KindPlusPlusToken || u.Operator == ast.KindMinusMinusToken {
@@ -318,6 +404,22 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 		switch b.OperatorToken.Kind {
 		case ast.KindEqualsToken:
 			return l.assignment(n, b.Left, b.Right)
+		case ast.KindQuestionQuestionEqualsToken:
+			// a ??= b: assign only while a is absent; b is evaluated only then.
+			target := l.assignTarget(b.Left)
+			if target == nil {
+				return nil
+			}
+			if !(target.Kind == hir.Local || target.Kind == hir.FieldGet && target.X != nil && target.X.Kind == hir.This) || !(target.Type.Kind == hir.Optional || target.Type.IsRef()) {
+				l.diagf(n, "unsupported-expr", "??= needs an optional local or this field")
+				return nil
+			}
+			value := l.expr(b.Right)
+			if value == nil {
+				return nil
+			}
+			return &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: target},
+				Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: l.coerce(value, target.Type)})}
 		case ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 			op := map[ast.Kind]string{
 				ast.KindPlusEqualsToken: "+", ast.KindMinusEqualsToken: "-", ast.KindAsteriskEqualsToken: "*"}[b.OperatorToken.Kind]
@@ -347,6 +449,17 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 	if target == nil {
 		return nil
 	}
+	if target.Kind == hir.RuntimeOp && target.Op == "dynamic.put" {
+		// box[k] = v on a tagged record.
+		l.hint = hir.T(hir.Dynamic)
+		v := l.expr(rhs)
+		l.hint = hir.Type{}
+		if v == nil {
+			return nil
+		}
+		put := l.rtOp("dynamic.put", target.X, hir.T(hir.Void), target.Args[0], l.coerce(v, hir.T(hir.Dynamic)))
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: put}
+	}
 	if target.Kind == hir.RuntimeOp && target.Op == "map.set" {
 		// m[k] = v lowers to map.set(m, k, v).
 		l.hint = target.X.Type.Args[1]
@@ -355,7 +468,7 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 		if v == nil {
 			return nil
 		}
-		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], v)
+		set := l.rtOp("map.set", target.X, target.X.Type, target.Args[0], l.coerce(v, target.X.Type.Args[1]))
 		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: set}
 	}
 	l.hint = target.Type
@@ -382,23 +495,42 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		if recv == nil {
 			return nil
 		}
+		if recv.Type.Kind == hir.Optional {
+			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv}
+		}
 		arg := l.expr(e.ArgumentExpression)
 		if arg == nil {
 			return nil
 		}
 		switch recv.Type.Kind {
 		case hir.OrderedMap:
+			if recv.Type.Args[0].Kind == hir.String && arg.Type.Kind == hir.Number {
+				arg = l.primitiveString(lhs, arg)
+			}
 			return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "map.set", Type: recv.Type,
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
 		case hir.Array:
 			return &hir.Expr{Kind: hir.IndexGet, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(arg)}
+		case hir.Dynamic:
+			if arg.Type.Kind == hir.Number {
+				arg = l.primitiveString(lhs, arg)
+			}
+			if arg.Type.Kind == hir.String {
+				return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "dynamic.put", Type: hir.T(hir.Void),
+					X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
+			}
 		}
 		l.diagf(lhs, "unsupported-assignment", "element assignment on %s is not lowered", recv.Type.Kind)
 		return nil
 	case ast.KindIdentifier:
 		name := lhs.Text()
 		if _, ok := l.lookup(name); ok {
-			return l.identifier(lhs)
+			// A guard narrows reads only; the assignment writes the variable.
+			target := l.identifier(lhs)
+			for target != nil && target.Kind == hir.Narrow && target.X != nil && target.X.Kind == hir.Local {
+				target = target.X
+			}
+			return target
 		}
 		if sym := l.resolve(lhs); sym != nil {
 			if owner, fieldName, ok := l.modvarOf(sym); ok {
@@ -446,8 +578,8 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 }
 
 // forStatement lowers a classic for loop into initializer statements plus a
-// while loop whose body ends with the update. `continue` inside a loop with
-// an update would skip it, so that combination is rejected.
+// while loop whose body ends with the update. A continue targeting this loop
+// executes the update before jumping back to the condition.
 func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	f := n.AsForStatement()
 	out := []*hir.Stmt{}
@@ -464,17 +596,17 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	if f.Condition != nil {
 		cond = l.condition(f.Condition)
 	}
-	if f.Incrementor != nil && l.containsContinue(f.Statement) {
-		l.diagf(n, "unsupported-statement", "continue in a for loop with an update is not lowered")
-		return nil
-	}
 	l.push()
 	body := []*hir.Stmt{}
 	if f.Statement != nil {
 		body = append(body, l.scopeBlock(f.Statement))
 	}
 	if f.Incrementor != nil {
-		body = append(body, l.expressionStatement(f.Incrementor))
+		update := l.expressionStatement(f.Incrementor)
+		for i, statement := range body {
+			body[i] = continueWithUpdate(statement, update)
+		}
+		body = append(body, update)
 	}
 	l.pop()
 	out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)})
@@ -508,6 +640,9 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if x == nil {
 		return nil
 	}
+	if x.Type.Kind == hir.OrderedSet {
+		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
+	}
 	if x.Type.Kind == hir.Array {
 		elem = x.Type.Args[0]
 	}
@@ -537,24 +672,25 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: elem, X: x, Body: body}
 }
 
-func (l *lowerer) containsContinue(n *ast.Node) bool {
-	found := false
-	var walk func(*ast.Node)
-	walk = func(x *ast.Node) {
-		if x == nil || found {
-			return
-		}
-		if x.Kind == ast.KindContinueStatement {
-			found = true
-			return
-		}
-		if x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionDeclaration {
-			return
-		}
-		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+// Nested loops own their continues; do not descend into their bodies.
+func continueWithUpdate(statement, update *hir.Stmt) *hir.Stmt {
+	if statement == nil || update == nil {
+		return statement
 	}
-	walk(n)
-	return found
+	switch statement.Kind {
+	case hir.Continue:
+		return hir.B(update, statement)
+	case hir.While, hir.ForEach:
+		return statement
+	}
+	clone := *statement
+	clone.Body = continueWithUpdate(statement.Body, update)
+	clone.Else = continueWithUpdate(statement.Else, update)
+	clone.List = make([]*hir.Stmt, len(statement.List))
+	for i, child := range statement.List {
+		clone.List[i] = continueWithUpdate(child, update)
+	}
+	return &clone
 }
 
 // fileOfSymbol locates the source file that declares a module symbol.
@@ -570,3 +706,28 @@ func (l *lowerer) fileOfSymbol(sym *ast.Symbol) *ast.SourceFile {
 }
 
 func (l *lowerer) isNamespaceValue(n *ast.Node) bool { _, ok := l.namespaceRef(n); return ok }
+
+// isHostProcessCall: a call statement whose callee chain is rooted at the
+// Node global `process` (declared outside the translated sources).
+func (l *lowerer) isHostProcessCall(n *ast.Node) bool {
+	if n.Kind != ast.KindCallExpression {
+		return false
+	}
+	x := n.AsCallExpression().Expression
+	for x != nil && x.Kind == ast.KindPropertyAccessExpression {
+		x = x.AsPropertyAccessExpression().Expression
+	}
+	if x == nil || x.Kind != ast.KindIdentifier || x.Text() != "process" {
+		return false
+	}
+	sym := l.resolve(x)
+	if sym == nil {
+		return true
+	}
+	for _, d := range sym.Declarations {
+		if f := ast.GetSourceFileOfNode(d); f != nil && !strings.HasSuffix(f.FileName(), ".d.ts") {
+			return false
+		}
+	}
+	return true
+}

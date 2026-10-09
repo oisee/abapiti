@@ -1,0 +1,12 @@
+{
+  "ruleKeys": "true/true/underscore,proto,digit,second,first,punctuation,",
+  "objectNames": "namespace,underscore,slash,digit,z,",
+  "fileSequence": "test/unknown1,unknown2,def1,def2,imp,main,test,",
+  "ordering_domain": {
+    "outcome": "return",
+    "value": [
+      "a",
+      "é"
+    ]
+  }
+}

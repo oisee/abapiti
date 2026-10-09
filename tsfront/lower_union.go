@@ -18,7 +18,7 @@ type unionView struct {
 func (l *lowerer) unionInterface(n *ast.Node, parts []hir.Type) (hir.Type, bool) {
 	names := []string{}
 	for _, p := range parts {
-		if p.Kind != hir.ClassRef {
+		if p.Kind != hir.ClassRef && p.Kind != hir.InterfaceRef {
 			return hir.Type{}, false
 		}
 		if strings.HasPrefix(p.Name, "shape.") || strings.HasPrefix(p.Name, "tuple.") {
@@ -55,6 +55,17 @@ func (l *lowerer) unionInterface(n *ast.Node, parts []hir.Type) (hir.Type, bool)
 
 func (l *lowerer) unionMethods(t hir.Type) map[string]*hir.Method {
 	result := map[string]*hir.Method{}
+	if t.Kind == hir.InterfaceRef {
+		for _, iface := range l.out.Interfaces {
+			if iface.Name == t.Name {
+				for _, method := range iface.Methods {
+					result[method.Name] = method
+				}
+				return result
+			}
+		}
+		return result
+	}
 	for name := t.Name; name != ""; {
 		var c *hir.Class
 		for _, x := range l.out.Classes {
@@ -105,6 +116,28 @@ func (l *lowerer) completeUnionInterfaces() {
 	sort.Strings(keys)
 	for _, key := range keys {
 		view := l.unions[key]
+		if l.ifaceClassBaseOf != nil {
+			delete(l.ifaceClassBaseOf, view.iface.Name)
+			if base := l.commonBrandedClass(view.parts); base != "" {
+				l.ifaceClassBaseOf[view.iface.Name] = base
+			}
+		}
+		// ABAP uses nominal interfaces. Every concrete implementation of a
+		// constituent interface must implement the synthesized common view.
+		for _, part := range view.parts {
+			if part.Kind != hir.InterfaceRef {
+				continue
+			}
+			for _, class := range l.out.Classes {
+				implements := l.covariants[class.Name][part.Name]
+				for _, name := range class.Implements {
+					implements = implements || name == part.Name
+				}
+				if implements {
+					l.recordImplements(hir.Ref(class.Name), hir.Type{Kind: hir.InterfaceRef, Name: view.iface.Name})
+				}
+			}
+		}
 		view.iface.Methods = nil
 		sets := []map[string]*hir.Method{}
 		for _, p := range view.parts {
@@ -124,35 +157,96 @@ func (l *lowerer) completeUnionInterfaces() {
 				continue
 			}
 			same := true
+			result := m.Result
+			params := append([]hir.Param(nil), m.Params...)
 			for _, set := range sets[1:] {
 				other := set[name]
-				if other == nil || !other.Result.Equal(m.Result) {
+				if other == nil {
 					same = false
 					break
 				}
-				short, long := m, other
-				if len(short.Params) > len(long.Params) {
+				// Results may differ covariantly: the view returns the
+				// wider type; a forwarder can return a subtype into it.
+				switch {
+				case other.Result.Equal(result):
+				case l.acceptsType(result, other.Result):
+				case l.acceptsType(other.Result, result):
+					result = other.Result
+				default:
+					same = false
+				}
+				if !same {
+					break
+				}
+				short, long := params, other.Params
+				if len(short) > len(long) {
 					short, long = long, short
 				}
-				for j, p := range short.Params {
-					if !p.Type.Equal(long.Params[j].Type) {
+				for j, p := range short {
+					// A parameter must be accepted by every constituent: keep
+					// the narrower type.
+					switch {
+					case p.Type.Equal(long[j].Type):
+					case l.acceptsType(long[j].Type, p.Type):
+						long[j] = hir.Param{Name: long[j].Name, Type: p.Type, Variadic: long[j].Variadic}
+					case l.acceptsType(p.Type, long[j].Type):
+					default:
 						same = false
 					}
 				}
-				for _, p := range long.Params[len(short.Params):] {
+				for _, p := range long[len(short):] {
 					if p.Type.Kind != hir.Optional {
 						same = false
 					}
 				}
-				m = long
+				params = append([]hir.Param(nil), long...)
 			}
 			if same {
+				l.renameUnionParams(view.parts, name, params)
 				cp := *m
 				cp.Abstract = false
 				cp.Body = nil
-				cp.Params = append([]hir.Param(nil), m.Params...)
+				cp.Result = result
+				cp.Params = params
 				view.iface.Methods = append(view.iface.Methods, &cp)
 			}
 		}
 	}
+}
+
+// Structural public members alone do not prove a native class identity. Every
+// constituent must carry the same private/protected instance class brand.
+func (l *lowerer) commonBrandedClass(parts []hir.Type) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	baseName := func(part hir.Type) string {
+		if part.Kind == hir.ClassRef {
+			return part.Name
+		}
+		if part.Kind == hir.InterfaceRef {
+			return l.ifaceClassBaseOf[part.Name]
+		}
+		return ""
+	}
+	for candidate := l.classByName(baseName(parts[0])); candidate != nil; candidate = l.classByName(candidate.Super) {
+		if !l.classHasNominalBrand(candidate.Name) {
+			continue
+		}
+		common := true
+		for _, part := range parts[1:] {
+			found := false
+			for class := l.classByName(baseName(part)); class != nil; class = l.classByName(class.Super) {
+				if class.Name == candidate.Name {
+					found = true
+					break
+				}
+			}
+			common = common && found
+		}
+		if common {
+			return candidate.Name
+		}
+	}
+	return ""
 }

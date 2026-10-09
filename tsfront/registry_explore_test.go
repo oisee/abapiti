@@ -1,16 +1,12 @@
 package tsfront
 
 import (
-	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // This is a strict diagnostic gate, not a passing Registry implementation.
@@ -21,47 +17,24 @@ func TestRegistryClosureGate(t *testing.T) {
 	if dir == "" {
 		t.Skip("set REGISTRY_CLOSURE to a materialized pinned upstream closure")
 	}
-	var manifest struct {
-		Pin     string `json:"upstreamPin"`
-		Sources []struct {
-			File   string `json:"file"`
-			SHA256 string `json:"sha256"`
-		} `json:"sources"`
-	}
 	raw, err := os.ReadFile(filepath.Join(dir, "closure.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal(raw, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	if manifest.Pin != "577f875ebec44cfaf64841cfe71c8ab8dc32622e" || len(manifest.Sources) == 0 {
-		t.Fatal("Registry closure must name the original upstream pin and contain sources")
-	}
-	var files []string
-	for _, source := range manifest.Sources {
-		raw, err := os.ReadFile(filepath.Join(dir, source.File))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if fmt.Sprintf("%x", sha256.Sum256(raw)) != source.SHA256 {
-			t.Fatalf("changed pinned source: %s", source.File)
-		}
-		files = append(files, source.File)
-	}
-	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	manifest, err := ParseRegistryClosure(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var entries []overrides.Entry
-	for _, e := range overrides.Abaplint().Inventory() {
-		switch e.ID {
-		case "abaplint-registry-scope", "abaplint-external-include", "abaplint-registry-input-progress":
-			continue
-		}
-		entries = append(entries, e)
+	if err := manifest.Verify(dir); err != nil {
+		t.Fatal(err)
 	}
-	registry, err := overrides.New(entries...)
+	files := manifest.Files()
+	// The deployment harness (a copy placed in the closure next to src/)
+	// joins the lowered files when the run driver is requested.
+	if h := os.Getenv("REGISTRY_HARNESS"); h != "" {
+		files = append(files, h)
+	}
+	registry, err := RegistryOverrides()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,46 +44,117 @@ func TestRegistryClosureGate(t *testing.T) {
 		if readErr != nil {
 			t.Fatal(readErr)
 		}
-		coverage = &Reachability{}
-		if err := json.Unmarshal(data, coverage); err != nil {
+		coverage, err = ParseReachability(data, &CoverageInputs{InputDir: os.Getenv("REGISTRY_INPUT"), DependenciesDir: os.Getenv("REGISTRY_DEPENDENCIES"), ConfigPath: os.Getenv("REGISTRY_CONFIG"), NegativesPath: os.Getenv("REGISTRY_NEGATIVES")})
+		if err != nil {
 			t.Fatal(err)
 		}
-		if coverage.UpstreamPin != manifest.Pin {
-			t.Fatal("coverage upstream pin mismatch")
-		}
 	}
-	prog, diags, err := p.LowerWithReachability(files, registry, coverage)
+	lowering, err := LowerRegistry(dir, files, registry, coverage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var blocking []LowerDiagnostic
-	for _, d := range diags {
-		if !strings.HasPrefix(d.Category, "note-") {
-			blocking = append(blocking, d)
-		}
+	for _, note := range lowering.Notes {
+		t.Log(note)
 	}
-	verification := hir.Verify(prog)
+	for _, e := range lowering.TrappedBases {
+		t.Error(e)
+	}
 	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}
-		data, err := json.MarshalIndent(blocking, "", "  ")
+		evidence, err := lowering.Evidence(os.Getenv("ABAPITI_TEST_DUMP") != "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(out, "registry-blocking.json"), append(data, '\n'), 0644); err != nil {
-			t.Fatal(err)
-		}
-		var lines []string
-		for _, v := range verification {
-			lines = append(lines, v.Error())
-		}
-		if err := os.WriteFile(filepath.Join(out, "registry-verify.txt"), []byte(strings.Join(lines, "\n")), 0644); err != nil {
-			t.Fatal(err)
+		for name, data := range evidence {
+			if err := os.WriteFile(filepath.Join(out, name), data, 0644); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	t.Logf("%d files, %d classes, %d interfaces, %d blocking diagnostics, %d HIR errors", len(files), len(prog.Classes), len(prog.Interfaces), len(blocking), len(verification))
-	if len(blocking) != 0 || len(verification) != 0 {
+	prog := lowering.Prog
+	t.Logf("%d files, %d classes, %d interfaces, %d blocking diagnostics, %d HIR errors", len(files), len(prog.Classes), len(prog.Interfaces), len(lowering.Blocking), len(lowering.Verification))
+	if len(lowering.Blocking) != 0 || len(lowering.Verification) != 0 {
 		t.Fatalf("Registry closure is not translatable; do not emit partial output")
 	}
+	// Passing lowering is not acceptance by itself: exercise the actual ABAP
+	// backend and preserve the complete emission for lint and differential work.
+	emitted, names, err := lowering.Emit()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+		for name, contents := range emitted {
+			if err := os.WriteFile(filepath.Join(out, name), []byte(contents), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if want := os.Getenv("REGISTRY_RUN_SHA"); want != "" {
+		out := os.Getenv("ABAPITI_TEST_OUT")
+		inputs, err := ReadRegistryInputs(envOr("REGISTRY_RUN_INPUT", "REGISTRY_INPUT"), envOr("REGISTRY_RUN_DEPENDENCIES", "REGISTRY_DEPENDENCIES"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		config, err := os.ReadFile(os.Getenv("REGISTRY_CONFIG"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		class := "zcl_abapiti_registry_run"
+		if err := os.WriteFile(filepath.Join(out, class+".clas.abap"), []byte(RegistryRunClass(class, inputs, string(config), want, 0, names)), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(out, class+".clas.testclasses.abap"), []byte(RegistryRunTest(class, traceTrap(names))), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if os.Getenv("REGISTRY_RUN_CORPUS") != "" {
+			a4h := "zcl_abapiti_registry_a4h"
+			var negative *RegistryNegative
+			if path := os.Getenv("REGISTRY_RUN_NEGATIVE"); path != "" {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				negative = &RegistryNegative{}
+				if err := json.Unmarshal(data, negative); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.WriteFile(filepath.Join(out, a4h+".clas.abap"), []byte(RegistryRunCorpusClass(a4h, want, negative, names)), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(out, "zabapiti_registry_run.prog.abap"), []byte(RegistryRunReport("zabapiti_registry_run", a4h, false)), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if negative != nil {
+				if err := os.WriteFile(filepath.Join(out, "zabapiti_registry_neg.prog.abap"), []byte(RegistryRunReport("zabapiti_registry_neg", a4h, true)), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" && os.Getenv("REGISTRY_CLI") != "" {
+		if err := os.WriteFile(filepath.Join(out, "zabaplint.prog.abap"), []byte(RegistryCLIReport("zabaplint", names)), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
+}
+
+// envOr reads the first variable, falling back to the second: the run
+// driver may take other inputs than the coverage workload.
+func envOr(primary, fallback string) string {
+	if v := os.Getenv(primary); v != "" {
+		return v
+	}
+	return os.Getenv(fallback)
+}
+
+// traceTrap names the trap exception the cast-trace emission raises.
+func traceTrap(names *hir.Names) string {
+	if os.Getenv("ABAPITI_CAST_TRACE") == "" {
+		return ""
+	}
+	return names.Get("exception.unexecuted")
 }

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "CGenericType",
+    "identity": true,
+    "instance": true,
+    "text": "```c```",
+    "generic": true
+  },
+  {
+    "name": "CLikeType",
+    "identity": true,
+    "instance": true,
+    "text": "```clike```",
+    "generic": true
+  },
+  {
+    "name": "PGenericType",
+    "identity": true,
+    "instance": true,
+    "text": "```p```",
+    "generic": true
+  },
+  {
+    "name": "SimpleType",
+    "identity": true,
+    "instance": true,
+    "text": "```simple```",
+    "generic": true
+  },
+  {
+    "name": "XGenericType",
+    "identity": true,
+    "instance": true,
+    "text": "```x```",
+    "generic": true
+  }
+]

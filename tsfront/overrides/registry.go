@@ -11,11 +11,34 @@ import (
 )
 
 type Key struct{ File, Symbol, Kind string }
+
+// Patterns groups reviewed adaptations under one enclosing source fingerprint.
+// Annotation changes are never inferred from a library type name globally.
+type Patterns struct {
+	Expressions map[string]func() *hir.Expr
+	Statements  map[string]func() *hir.Stmt
+	Annotations map[string]hir.Type
+	// DenseCallbacks certifies these exact calls: dense receiver and callback
+	// does not change its membership. No general sparse-array ABI is claimed.
+	DenseCallbacks map[string]bool
+	// MatchTests certifies that these match results are only consumed as a null test or truth value.
+	MatchTests map[string]bool
+	// StaticInitializers names reviewed allocations whose eager/lazy timing is unobservable.
+	StaticInitializers map[string]bool
+	// CheckedCasts certifies these exact `x as Sub` assertions as nominal
+	// downcasts the source has already proven (an enclosing instanceof of the
+	// same pure expression); they lower to ABAP's checked ?=.
+	CheckedCasts map[string]bool
+	// SourceGuard pins a dependency used in an adapter safety proof.
+	SourceGuard bool
+}
 type Entry struct {
 	ID        string
 	Key       Key
 	SHA256    string
 	Rationale string
+	// References name declarations introduced by a replacement rather than its source.
+	References []Key
 	// Exactly one builder is provided. Builders must return fresh nodes.
 	Result      func() hir.Type
 	Types       map[string]hir.Type
@@ -25,6 +48,10 @@ type Entry struct {
 	Body        func() *hir.Stmt
 	Method      func() *hir.Method
 	Expressions map[string]func() *hir.Expr
+	Patterns    *Patterns
+	// Assume names a property the lowering may take for granted at the
+	// target ("pure-static-initializer"); the source is still lowered.
+	Assume string
 }
 type Registry struct{ entries map[Key]Entry }
 
@@ -70,6 +97,9 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.CheckedCasts) > 0 || len(e.Patterns.MatchTests) > 0 || len(e.Patterns.StaticInitializers) > 0 || e.Patterns.SourceGuard) {
+		n++
+	}
 	if e.Result != nil {
 		n++
 	}
@@ -92,6 +122,9 @@ func builderCount(e Entry) int {
 		n++
 	}
 	if len(e.Expressions) > 0 {
+		n++
+	}
+	if e.Assume != "" {
 		n++
 	}
 	return n

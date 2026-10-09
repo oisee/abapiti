@@ -2,12 +2,15 @@ package tsfront
 
 import (
 	"context"
+	"math"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/jsnum"
 )
 
 // Module-level lowering for phase 2: namespace export maps (a module used as
@@ -20,7 +23,7 @@ import (
 // string enum declarations. It runs before lowerModule so the module classes
 // know which parts to build.
 func (l *lowerer) scanModuleUse(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindImportDeclaration:
 			d := stmt.AsImportDeclaration()
@@ -72,7 +75,7 @@ func (l *lowerer) namespaceUsedAsValue(f *ast.SourceFile, alias string) bool {
 		skip := inImport || n.Kind == ast.KindImportDeclaration
 		n.ForEachChild(func(c *ast.Node) bool { walk(c, skip); return false })
 	}
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		walk(stmt, stmt.Kind == ast.KindImportDeclaration)
 	}
 	return found
@@ -103,18 +106,39 @@ func (l *lowerer) registerEnum(f *ast.SourceFile, n *ast.Node) {
 		return
 	}
 	members := map[string]string{}
+	numbers := map[string]float64{}
 	for _, m := range e.Members.Nodes {
 		if m.Name() == nil {
 			continue
 		}
-		init := m.Initializer()
-		if init == nil || init.Kind != ast.KindStringLiteral {
-			// Non-string-literal members (numbers, computed) are not lowered.
+		value := l.ck.GetConstantValue(m)
+		switch v := value.(type) {
+		case string:
+			members[m.Name().Text()] = v
+		case jsnum.Number:
+			numeric := float64(v)
+			// Canonical nonnegative integer reverse keys sort ahead of member
+			// names in JS Object.keys/values. Other numeric domains block.
+			if numeric < 0 || numeric >= 4294967295 || math.Trunc(numeric) != numeric {
+				l.diagf(m, "unsupported-enum", "numeric enum reverse key is outside the supported integer domain")
+				return
+			}
+			numbers[m.Name().Text()] = numeric
+		default:
+			l.diagf(m, "unsupported-enum", "enum member must have a constant value")
 			return
 		}
-		members[m.Name().Text()] = init.Text()
 	}
-	l.enums[f.FileName()+" "+n.Name().Text()] = members
+	key := f.FileName() + " " + n.Name().Text()
+	if len(members) > 0 && len(numbers) > 0 {
+		l.diagf(n, "unsupported-enum", "heterogeneous enum namespace is not lowered")
+		return
+	}
+	if len(numbers) > 0 {
+		l.enumNumbers[key] = numbers
+	} else {
+		l.enums[key] = members
+	}
 }
 
 // enumOf resolves the member table for an enum symbol.
@@ -133,7 +157,7 @@ func (l *lowerer) enumOf(sym *ast.Symbol) map[string]string {
 // local declarations contribute in place.
 func (l *lowerer) nsExportOrder(f *ast.SourceFile) []string {
 	var out []string
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindExportDeclaration:
 			d := stmt.AsExportDeclaration()
@@ -193,10 +217,10 @@ func (l *lowerer) moduleClassOf(f *ast.SourceFile) *hir.Class {
 func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 	needNS := l.nsNeeded[f.FileName()]
 	var enums, funcs, vars bool
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindEnumDeclaration:
-			if l.enumOf(stmt.Symbol()) != nil {
+			if l.enumOf(stmt.Symbol()) != nil || l.numericEnumOf(stmt.Symbol()) != nil {
 				enums = true
 			}
 		case ast.KindFunctionDeclaration:
@@ -204,6 +228,12 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 				funcs = true
 			}
 		case ast.KindVariableStatement:
+			vars = true
+		case ast.KindIfStatement, ast.KindExpressionStatement:
+			if !l.moduleInitializer(stmt) {
+				l.diagf(stmt, "unsupported-top-level", "top-level %s observes class statics and is not lowered", stmt.Kind.String())
+				continue
+			}
 			vars = true
 		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
@@ -222,13 +252,16 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		body = append(body, l.nsMapInit(f, mod)...)
 	}
 	if enums {
-		body = append(body, l.enumArraysInit(f, mod)...)
+		body = append(body, l.enumNamespacesInit(f, mod)...)
 	}
 	if vars {
 		l.lowerModuleVars(f, mod, &body)
 	}
 	if funcs {
 		l.moduleFunctions(f, mod)
+	}
+	if vars {
+		body = append(body, l.moduleStatements(f)...)
 	}
 	if len(body) > 0 || funcs {
 		init.Body = hir.B(body...)
@@ -241,9 +274,10 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 // ClassValue> with one entry per exported lowered class, in export order.
 func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	typ := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))
+	l.ensureNamespaceField(mod, typ)
 	decl := l.assignStatic(mod, f.AsNode(), "ns", &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: mod.Name}, Type: typ}, typ)
 	out := []*hir.Stmt{decl}
-	skipped := 0
+	skipped := []string{}
 	for _, name := range l.nsExportOrder(f) {
 		var c *hir.Class
 		for _, sym := range l.ck.GetExportsOfModule(f.Symbol) {
@@ -259,7 +293,7 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 			break
 		}
 		if c == nil {
-			skipped++
+			skipped = append(skipped, name)
 			continue
 		}
 		out = append(out, &hir.Stmt{Kind: hir.ExprStmt, Node: hir.Node{ID: l.nextID(), Source: mod.Name},
@@ -267,15 +301,18 @@ func (l *lowerer) nsMapInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 				&hir.Expr{Kind: hir.Lit, Node: hir.Node{ID: l.nextID(), Source: mod.Name}, Type: hir.T(hir.String), Value: name},
 				&hir.Expr{Kind: hir.ClassOf, Node: hir.Node{ID: l.nextID(), Source: c.Node.Source}, Owner: c.Name, Type: hir.T(hir.ClassValue)})})
 	}
-	if skipped > 0 {
-		l.diagf(f.Statements.Nodes[0], "unsupported-namespace-export", "%s: %d exports cannot be represented by the class-value namespace map", relName(f.FileName()), skipped)
+	if len(skipped) > 0 && !l.namespaceReadsAny(f, skipped) {
+		l.diagf(f.Statements.Nodes[0], "note-namespace-export-unread", "%s: non-class exports %s are never read through a namespace", relName(f.FileName()), strings.Join(skipped, ", "))
+		return out
+	}
+	if len(skipped) > 0 {
+		l.diagf(f.Statements.Nodes[0], "unsupported-namespace-export", "%s: %d exports cannot be represented by the class-value namespace map: %s", relName(f.FileName()), len(skipped), strings.Join(skipped, ", "))
 	}
 	return out
 }
 
-// enumArraysInit creates one static string array per enum holding the member
-// values in declaration order, for Object.values(E).
-func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
+// enumNamespacesInit creates each string enum object in declaration order.
+func (l *lowerer) enumNamespacesInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt {
 	var out []*hir.Stmt
 	names := make([]string, 0)
 	for key := range l.enums {
@@ -286,13 +323,12 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 	sort.Strings(names)
 	for _, name := range names {
 		members := l.enums[f.FileName()+" "+name]
-		field := name + "_values"
-		typ := hir.T(hir.Array, hir.T(hir.String))
-		mod.Fields = append(mod.Fields, hir.Field{Node: hir.Node{ID: l.nextID(), Source: name}, Name: field, Type: typ, Static: true})
-		decl := l.assignStatic(mod, f.AsNode(), field, &hir.Expr{Kind: hir.New, Node: hir.Node{ID: l.nextID(), Source: name}, Type: typ}, typ)
-		out = append(out, decl)
+		mapType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.String))
+		mapField := name + "_namespace"
+		mod.Fields = append(mod.Fields, hir.Field{Name: mapField, Type: mapType, Static: true})
+		out = append(out, l.assignStatic(mod, f.AsNode(), mapField, &hir.Expr{Kind: hir.New, Type: mapType}, mapType))
 		// declaration order of the enum members
-		for _, stmt := range f.Statements.Nodes {
+		for _, stmt := range l.statementNodes(f) {
 			if stmt.Kind != ast.KindEnumDeclaration || stmt.Name() == nil || stmt.Name().Text() != name {
 				continue
 			}
@@ -304,10 +340,43 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 				if !ok {
 					continue
 				}
-				out = append(out, &hir.Stmt{Kind: hir.ExprStmt, Node: hir.Node{ID: l.nextID(), Source: name},
-					X: l.rtOp("array.push", &hir.Expr{Kind: hir.StaticGet, Node: hir.Node{ID: l.nextID(), Source: name}, Owner: mod.Name, Name: field, Type: typ}, hir.T(hir.I32),
-						&hir.Expr{Kind: hir.Lit, Node: hir.Node{ID: l.nextID(), Source: name}, Type: hir.T(hir.String), Value: v})})
+				out = append(out, &hir.Stmt{Kind: hir.ExprStmt,
+					X: l.rtOp("map.set", &hir.Expr{Kind: hir.StaticGet, Owner: mod.Name, Name: mapField, Type: mapType}, mapType,
+						hir.L(hir.T(hir.String), m.Name().Text()), hir.L(hir.T(hir.String), v))})
 			}
+		}
+	}
+	for _, stmt := range l.statementNodes(f) {
+		if stmt.Kind != ast.KindEnumDeclaration {
+			continue
+		}
+		members := l.numericEnumOf(stmt.Symbol())
+		if members == nil {
+			continue
+		}
+		field := stmt.Name().Text() + "_namespace"
+		typ := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+		mod.Fields = append(mod.Fields, hir.Field{Name: field, Type: typ, Static: true})
+		out = append(out, l.assignStatic(mod, stmt, field, &hir.Expr{Kind: hir.New, Type: typ}, typ))
+		reverse := map[float64]string{}
+		for _, m := range stmt.AsEnumDeclaration().Members.Nodes {
+			reverse[members[m.Name().Text()]] = m.Name().Text()
+		}
+		var keys []float64
+		for k := range reverse {
+			keys = append(keys, k)
+		}
+		sort.Float64s(keys)
+		add := func(key string, value *hir.Expr) {
+			out = append(out, &hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("map.set",
+				&hir.Expr{Kind: hir.StaticGet, Owner: mod.Name, Name: field, Type: typ}, typ,
+				hir.L(hir.T(hir.String), key), l.rtOp("dynamic.of", value, hir.T(hir.Dynamic)))})
+		}
+		for _, k := range keys {
+			add(strconv.FormatFloat(k, 'f', 0, 64), hir.L(hir.T(hir.String), reverse[k]))
+		}
+		for _, m := range stmt.AsEnumDeclaration().Members.Nodes {
+			add(m.Name().Text(), hir.L(hir.T(hir.Number), members[m.Name().Text()]))
 		}
 	}
 	return out
@@ -315,7 +384,7 @@ func (l *lowerer) enumArraysInit(f *ast.SourceFile, mod *hir.Class) []*hir.Stmt 
 
 // lowerModuleVars lowers the plain module variables (phase-1 moduleVar).
 func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hir.Stmt) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 {
 			l.diagf(stmt, "unsupported-top-level", "mutable module variables are not lowered")
 			continue
@@ -329,6 +398,10 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 		}
 		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
 			if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Symbol() != nil {
+				if trivialInitializer(d.Initializer()) && !l.moduleConstRead(d) {
+					l.diagf(d, "note-module-const-unread", "module constant %s is only re-exported, never read in the program", d.Name().Text())
+					continue
+				}
 				*body = append(*body, l.moduleVar(d, mod)...)
 			}
 		}
@@ -338,7 +411,7 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 // moduleFunctions lowers module-level function declarations to static
 // methods of the module class.
 func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil {
 			continue
 		}
@@ -352,26 +425,196 @@ func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 	}
 }
 
-// enumValuesField returns the module static holding Object.values(E).
-func (l *lowerer) enumValuesField(sym *ast.Symbol) (string, string, bool) {
-	f := l.fileOfSymbol(sym)
-	if f == nil {
-		return "", "", false
-	}
-	if mod := l.modules[f]; mod != nil {
-		name := sym.Name + "_values"
-		for _, fd := range mod.Fields {
-			if fd.Name == name && fd.Static {
-				return mod.Name, name, true
-			}
-		}
-	}
-	return "", "", false
-}
-
 func relName(name string) string {
 	if i := strings.LastIndex(name, string(filepath.Separator)); i >= 0 {
 		return name[i+1:]
 	}
 	return name
+}
+
+// String enums are objects when used as values: computed lookup and
+// Object.keys must retain keys and declaration order, including duplicate values.
+func (l *lowerer) enumNamespace(n *ast.Node) (*hir.Expr, bool) {
+	sym := l.resolve(n)
+	if sym == nil || (l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil) {
+		return nil, false
+	}
+	f := l.fileOfSymbol(sym)
+	if mod := l.modules[f]; mod != nil {
+		valueType := hir.T(hir.String)
+		if l.numericEnumOf(sym) != nil {
+			valueType = hir.T(hir.Dynamic)
+		}
+		return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: mod.Name,
+			Name: sym.Name + "_namespace", Type: hir.T(hir.OrderedMap, hir.T(hir.String), valueType)}, true
+	}
+	return nil, false
+}
+
+func (l *lowerer) numericEnumOf(sym *ast.Symbol) map[string]float64 {
+	if sym != nil {
+		if f := l.fileOfSymbol(sym); f != nil {
+			return l.enumNumbers[f.FileName()+" "+sym.Name]
+		}
+	}
+	return nil
+}
+
+// namespaceReadsAny reports whether any program file reads one of the named
+// exports of f as a member of a namespace (ns.name, ns["name"] aside: those
+// are dynamic and always counted as reads).
+func (l *lowerer) namespaceReadsAny(f *ast.SourceFile, names []string) bool {
+	want := map[*ast.Symbol]bool{}
+	wanted := map[string]bool{}
+	for _, sym := range l.ck.GetExportsOfModule(f.Symbol) {
+		for _, name := range names {
+			if sym.Name == name {
+				if sym.Flags&ast.SymbolFlagsAlias != 0 {
+					if target, ok := l.ck.ResolveAlias(sym); ok {
+						sym = target
+					}
+				}
+				want[sym] = true
+				wanted[name] = true
+			}
+		}
+	}
+	savedFile, savedCk := l.file, l.ck
+	defer func() { l.file, l.ck = savedFile, savedCk }()
+	for _, other := range l.prog.prog.SourceFiles() {
+		if other.IsDeclarationFile {
+			continue
+		}
+		ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), other)
+		found := false
+		var walk func(*ast.Node)
+		walk = func(n *ast.Node) {
+			if found || n == nil {
+				return
+			}
+			switch n.Kind {
+			case ast.KindPropertyAccessExpression:
+				if name := n.Name(); name != nil && wanted[name.Text()] {
+					if sym := ck.GetSymbolAtLocation(name); sym != nil {
+						if sym.Flags&ast.SymbolFlagsAlias != 0 {
+							if target, ok := ck.ResolveAlias(sym); ok {
+								sym = target
+							}
+						}
+						if want[sym] {
+							found = true
+							return
+						}
+					}
+				}
+			case ast.KindElementAccessExpression:
+				if x := n.AsElementAccessExpression().Expression; x != nil {
+					if sym := ck.GetSymbolAtLocation(x); sym != nil && sym.Flags&ast.SymbolFlagsAlias != 0 {
+						if target, ok := ck.ResolveAlias(sym); ok && target == f.Symbol {
+							found = true
+							return
+						}
+					}
+				}
+			}
+			n.ForEachChild(func(c *ast.Node) bool { walk(c); return found })
+		}
+		walk(other.AsNode())
+		done()
+		if found {
+			return true
+		}
+	}
+	return false
+}
+
+// moduleConstRead reports whether any program file reads the module constant
+// declared by d (an export specifier re-exporting it is not a read). The
+// identifier index is built once over all non-declaration files.
+func (l *lowerer) moduleConstRead(d *ast.Node) bool {
+	if l.constReads == nil {
+		l.constReads = map[*ast.Symbol]bool{}
+		names := map[string]bool{}
+		for _, f := range l.prog.prog.SourceFiles() {
+			if f.IsDeclarationFile {
+				continue
+			}
+			for _, stmt := range f.Statements.Nodes {
+				if stmt.Kind == ast.KindVariableStatement {
+					for _, v := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+						if v.Name() != nil && v.Name().Kind == ast.KindIdentifier {
+							names[v.Name().Text()] = true
+						}
+					}
+				}
+			}
+		}
+		savedFile, savedCk := l.file, l.ck
+		for _, f := range l.prog.prog.SourceFiles() {
+			if f.IsDeclarationFile {
+				continue
+			}
+			ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
+			var walk func(*ast.Node)
+			walk = func(n *ast.Node) {
+				declaring := n.Parent != nil && n.Parent.Kind == ast.KindVariableDeclaration && n.Parent.Name() == n
+				if n.Kind == ast.KindIdentifier && names[n.Text()] && n.Parent != nil && !declaring && n.Parent.Kind != ast.KindExportSpecifier && n.Parent.Kind != ast.KindImportSpecifier {
+					sym := ck.GetSymbolAtLocation(n)
+					if n.Parent.Kind == ast.KindShorthandPropertyAssignment {
+						sym = ck.GetShorthandAssignmentValueSymbol(n.Parent)
+					}
+					if sym != nil {
+						if sym.Flags&ast.SymbolFlagsAlias != 0 {
+							if target, ok := ck.ResolveAlias(sym); ok {
+								sym = target
+							}
+						}
+						l.constReads[sym] = true
+					}
+				}
+				n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+			}
+			walk(f.AsNode())
+			done()
+		}
+		l.file, l.ck = savedFile, savedCk
+	}
+	return l.constReads[d.Symbol()]
+}
+
+// trivialInitializer: evaluating the expression at import has no effect
+// (literals, identifiers, and object/array literals built from them), so a
+// never-read constant can be left out without changing module timing.
+func trivialInitializer(n *ast.Node) bool {
+	if n == nil {
+		return true
+	}
+	switch n.Kind {
+	case ast.KindStringLiteral, ast.KindNumericLiteral, ast.KindTrueKeyword, ast.KindFalseKeyword, ast.KindNullKeyword, ast.KindIdentifier, ast.KindNoSubstitutionTemplateLiteral:
+		return true
+	case ast.KindArrayLiteralExpression:
+		for _, e := range n.AsArrayLiteralExpression().Elements.Nodes {
+			if !trivialInitializer(e) {
+				return false
+			}
+		}
+		return true
+	case ast.KindObjectLiteralExpression:
+		for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+			switch p.Kind {
+			case ast.KindShorthandPropertyAssignment:
+			case ast.KindPropertyAssignment:
+				if p.Name() != nil && p.Name().Kind == ast.KindComputedPropertyName {
+					return false
+				}
+				if !trivialInitializer(p.Initializer()) {
+					return false
+				}
+			default:
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

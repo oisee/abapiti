@@ -21,7 +21,14 @@ code units on the SAP kernel (verified on 7.58), OSG-JS and pinned osgo, like
 JavaScript. The osgo pin fixes runtime gap 026 for supplementary input.
 Primitive optionals use specialized immutable boxes with value and has members;
 reference optionals use an initial reference. Primitive optional equality compares
-presence and, when present, the contained value. There is no null type in this phase.
+presence and, when present, the contained value. Null is blocking until its distinct tagged representation is implemented.
+String coercion of primitive optionals evaluates the operand once and emits
+`undefined` for absence. Optional relational coercions remain blocking.
+String enum namespaces preserve member order and produce fresh values snapshots.
+Numeric enums support nonnegative integer values below 4294967295, including
+reverse mappings with canonical integer keys first. Their mixed namespace values
+use tagged string/number boxes; other numeric domains and heterogeneous enums
+are blocking.
 Arrays, maps, and sets are reference objects, preserving aliasing. Maps and sets
 use linear lookup in an insertion-ordered table; updating a key preserves its
 position, and reference keys compare identity. `map.keys` and `set.values` return
@@ -110,11 +117,15 @@ Instance field initialization runs in declaration order in a constructor,
 including a synthesized constructor when absent. A synthesized derived
 constructor forwards its inherited parameters. Static fields and module consts
 initialize in declaration order in class_constructor only when a conservative
-syntax whitelist proves their initializers pure: literals, constant expressions
-over literals/module constants, literal collection elements, and construction of
-runtime collections from those elements. Calls to user code, user-class
-construction, assignments, and other effectful expressions produce blocking
-`unsupported-static-init` diagnostics with file:line:col. Class-static reads are
+syntax whitelist proves their initializers pure: literals, `undefined`, constant
+expressions over literals/module constants, literal collection elements, object
+literals of pure values, construction of runtime collections (empty or from
+those elements), and construction of lowered classes whose constructor chain
+only forwards pure or parameter values into own fields. Calls to user code,
+effectful constructors, assignments, and other effectful expressions produce
+blocking `unsupported-static-init` diagnostics with file:line:col; a
+fingerprinted `Assume: pure-static-initializer` override may vouch for one
+declaration. Class-static reads are
 limited to earlier pure fields of the same class; cross-class reads are rejected
 even if their initializers appear pure, because mutable statics may change before
 lazy initialization. This is not eager TypeScript module evaluation: purity makes

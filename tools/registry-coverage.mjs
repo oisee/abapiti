@@ -6,11 +6,17 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import {validateWorkload} from './registry-workload.mjs';
 import {buildUpstream, verifyUpstream, upstreamPin} from './statements-upstream.mjs';
 const hash = text => createHash('sha256').update(text).digest('hex');
+import {observeRegistry} from './registry-oracle.mjs';
+import {declarationCandidates} from './registry-coverage-identity.mjs';
 const args = process.argv.slice(2);
 if (args[0] === '--worker') {
- const [, core, input, deps, config, negatives] = args;
+ const [, core, input, deps, config, negatives, workload, observationOut] = args;
+ if (workload === 'OBSERVATION') {
+  observeRegistry(input,deps,config,observationOut,undefined,{core,dispose:()=>{}});
+ } else {
  const a = createRequire(import.meta.url)(join(core, 'index.js'));
  const cfg = readFileSync(config, 'utf8');
  const files = [];
@@ -18,39 +24,52 @@ if (args[0] === '--worker') {
  walk(deps);
  const main = readdirSync(input).sort().map(n => [n,readFileSync(join(input,n),'utf8')]);
  const variants = JSON.parse(readFileSync(negatives,'utf8'));
- for (const variant of [null,...variants]) {
+ for (const variant of workload === 'DEPLOYMENT' ? [null] : variants) {
   const reg = new a.Registry(new a.Config(cfg));
   for (const [name,text] of main) reg.addFile(new a.MemoryFile(variant && name.endsWith('.abap') ? variant.filename : name,text+(variant && name.endsWith('.abap') ? variant.edit : '')));
   for (const [name,text] of files) reg.addDependency(new a.MemoryFile(name,text));
   reg.parse(); const issues = reg.findIssues();
+  // read every field the deployment harness prints for an issue
+  for (const i of issues) [i.getKey(), i.getSeverity(), i.getFilename(), i.getStart().getRow(), i.getStart().getCol(), i.getEnd().getRow(), i.getEnd().getCol(), i.getMessage()].join('|');
   if (variant ? !issues.some(i=>i.getKey()===variant.target) : issues.length!==0) throw new Error('coverage workload failed: '+(variant?.target ?? 'north-star'));
   console.log(JSON.stringify({target:variant?.target ?? 'north-star', issues:issues.length}));
+ }
  }
 } else {
  const [outArg,input,deps,config,negatives,upstreamArg='/home/alice/dev/abaplint'] = args;
  if (!negatives) throw new Error('usage: registry-coverage.mjs out-dir input-dir deps-src config negatives [upstream]');
  const out = resolve(outArg), upstream = resolve(upstreamArg);
+ validateWorkload(input,deps,negatives);
  mkdirSync(out); mkdirSync(join(out,'v8'));
+ for (const workload of ['DEPLOYMENT','NEGATIVE','OBSERVATION','UPSTREAM']) mkdirSync(join(out,'v8',workload));
  const ts = createRequire(import.meta.url)(verifyUpstream(upstream));
  const require = createRequire(join(upstream,'packages/core/package.json'));
  const {SourceMapConsumer} = require('source-map');
  const build = buildUpstream(upstream);
  try {
-  const env = {...process.env,NODE_V8_COVERAGE:join(out,'v8')};
-  execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--worker',build.core,resolve(input),resolve(deps),resolve(config),resolve(negatives)],{env,stdio:'inherit',timeout:1800000});
+  const environment = workload => ({...process.env,NODE_V8_COVERAGE:join(out,'v8',workload)});
+  for (const workload of ['DEPLOYMENT','NEGATIVE']) execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--worker',build.core,resolve(input),resolve(deps),resolve(config),resolve(negatives),workload],{env:environment(workload),stdio:'inherit',timeout:1800000});
+  execFileSync(process.execPath,[fileURLToPath(import.meta.url),'--worker',build.core,resolve(input),resolve(deps),resolve(config),resolve(negatives),'OBSERVATION',join(out,'observations')],{env:environment('OBSERVATION'),stdio:'inherit',timeout:1800000});
   const testRoot = join(build.core,'../test');
   const tests = ['check_syntax','unknown_types','implement_methods','superclass_final','parser_error','allowed_object_naming'].map(n=>join(testRoot,'rules',n+'.js'));
   function testFiles(dir) { return readdirSync(dir).sort().flatMap(n=>statSync(join(dir,n)).isDirectory()?testFiles(join(dir,n)):n.endsWith('.js')?[join(dir,n)]:[]); }
   tests.push(...testFiles(join(testRoot,'abap/syntax')));
-  execFileSync(process.execPath,[require.resolve('mocha/bin/mocha.js'),'--timeout','1000000','--reporter','dot',...tests],{env,stdio:'inherit',timeout:1800000});
-  // Union root function counts across every worker/test. Nested block counts do
+  execFileSync(process.execPath,[require.resolve('mocha/bin/mocha.js'),'--timeout','1000000','--reporter','dot',...tests],{env:environment('UPSTREAM'),stdio:'inherit',timeout:1800000});
+  // Keep root function execution provenance for each workload class. Nested block counts do
   // not decide whether a function was called. Unmapped bodies remain live.
-  const evidence = new Map();
-  for (const file of readdirSync(join(out,'v8')).sort()) for (const script of JSON.parse(readFileSync(join(out,'v8',file),'utf8')).result) {
+  const evidence = new Map(), ambiguous = new Set();
+  for (const workload of ['DEPLOYMENT','NEGATIVE','OBSERVATION','UPSTREAM']) for (const file of readdirSync(join(out,'v8',workload)).sort()) for (const script of JSON.parse(readFileSync(join(out,'v8',workload,file),'utf8')).result) {
    if (!script.url.startsWith('file:')) continue;
    const path = fileURLToPath(script.url);
    if (!path.startsWith(build.core+'/') || !path.endsWith('.js')) continue;
    const raw = readFileSync(path,'utf8'), map = new SourceMapConsumer(JSON.parse(readFileSync(path+'.map','utf8')));
+   const generated = ts.createSourceFile(path,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+   const kinds = new Map();
+   function generatedVisit(n) {
+    if (ts.isClassDeclaration(n) || ts.isClassExpression(n)) kinds.set(n.getStart(generated),'Constructor');
+    else if (ts.isMethodDeclaration(n)||ts.isFunctionDeclaration(n)||ts.isGetAccessor(n)||ts.isSetAccessor(n)) kinds.set(n.getStart(generated),ts.SyntaxKind[n.kind]);
+    ts.forEachChild(n,generatedVisit);
+   } generatedVisit(generated);
    const offsets = [0]; for (let i=0;i<raw.length;i++) if (raw[i]==='\n') offsets.push(i+1);
    const mappings = []; map.eachMapping(m=>{if (m.originalLine != null) mappings.push({...m,offset:offsets[m.generatedLine-1]+m.generatedColumn});});
    const rel = relative(build.core,path).replace(/\.js$/,'.ts');
@@ -63,17 +82,18 @@ if (args[0] === '--worker') {
    } visit(sf);
    for (const fn of script.functions.slice(1)) {
     const r = fn.ranges[0];
-    const inside = mappings.filter(m=>m.offset>=r.startOffset && m.offset<r.endOffset);
-    if (!inside.length) continue;
-    const m = inside[0], pos = sf.getPositionOfLineAndCharacter(m.originalLine-1,m.originalColumn);
-    const n = candidates.find(n=>n.getStart(sf)<=pos && pos<n.body.getStart(sf));
-    if (!n) continue;
+    const matches = declarationCandidates(ts,sf,candidates,mappings,fn,kinds.get(r.startOffset));
+    if (matches.length !== 1) {
+     for (const n of matches) {const key=rel+':'+n.getStart(sf);ambiguous.add(key);evidence.delete(key);}
+     continue;
+    }
+    const n = matches[0];
     const name = ts.isConstructorDeclaration(n) ? n.parent.name?.text : n.name?.text;
-    if (fn.functionName !== name && !(ts.isConstructorDeclaration(n) && fn.functionName==='constructor')) continue;
     const start = n.getStart(sf), end = n.end, key = rel+':'+start;
+    if (ambiguous.has(key)) continue;
     const prev = evidence.get(key);
     const symbol = ts.isMethodDeclaration(n) || ts.isGetAccessor(n) || ts.isSetAccessor(n) ? n.parent.name?.text+'.'+name : name;
-    evidence.set(key,{file:'src/'+rel,start:Buffer.byteLength(source.slice(0,start)),end:Buffer.byteLength(source.slice(0,end)),kind:ts.isConstructorDeclaration(n)?'Constructor':ts.SyntaxKind[n.kind],symbol,line:sf.getLineAndCharacterOfPosition(start).line+1,sha256:hash(source.slice(start,end)),executed:!!r.count || !!prev?.executed});
+    evidence.set(key,{file:'src/'+rel,start:Buffer.byteLength(source.slice(0,start)),end:Buffer.byteLength(source.slice(0,end)),kind:ts.isConstructorDeclaration(n)?'Constructor':ts.SyntaxKind[n.kind],symbol,line:sf.getLineAndCharacterOfPosition(start).line+1,sha256:hash(source.slice(start,end)),executed:!!r.count || !!prev?.executed,workloads:[...new Set([...(prev?.workloads ?? []),...(r.count ? [workload] : [])])]});
    }
   }
   const spans = [...evidence.values()].sort((a,b)=>(a.file<b.file?-1:a.file>b.file?1:0)||a.start-b.start);
@@ -81,7 +101,7 @@ if (args[0] === '--worker') {
   function fingerprint(dir,prefix) { for(const n of readdirSync(dir).sort()) {const p=join(dir,n);if(statSync(p).isDirectory())fingerprint(p,prefix+n+'/');else inputs.push({file:prefix+n,sha256:hash(readFileSync(p))});} }
   fingerprint(resolve(input),'input/'); fingerprint(resolve(deps),'dependencies/');
   inputs.push({file:'config.json',sha256:hash(readFileSync(config))},{file:'negative-issues.json',sha256:hash(readFileSync(negatives))});
-  const manifest={schema:1,upstreamPin,workloads:['north-star',...JSON.parse(readFileSync(negatives,'utf8')).map(v=>v.target),'six-rule-unit-tests','abap-syntax-unit-tests'],inputs,spans};
+  const manifest={schema:2,upstreamPin,workloads:['north-star',...JSON.parse(readFileSync(negatives,'utf8')).map(v=>v.target),'registry-oracle-observations','six-rule-unit-tests','abap-syntax-unit-tests'],inputs,spans};
   writeFileSync(join(out,'reachability.json'),JSON.stringify(manifest,null,2)+'\n');
   console.log(JSON.stringify({mapped:spans.length,executed:spans.filter(s=>s.executed).length,traps:spans.filter(s=>!s.executed).length}));
  } finally { build.dispose(); }

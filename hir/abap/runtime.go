@@ -25,68 +25,77 @@ func (e *emitter) runtime(t hir.Type) {
 	case hir.Array:
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
+		if t.Args[0].Kind == hir.Optional {
+			opt = t.Args[0]
+		}
 		line("TYPES items_type TYPE STANDARD TABLE OF " + elem + " WITH DEFAULT KEY.")
 		line("DATA items TYPE items_type.")
-		line("DATA view_bound TYPE abap_bool.")
-		line("DATA view_base TYPE REF TO " + name + ".")
-		line("DATA view_from TYPE i.")
-		line("DATA view_to TYPE i.")
-		line("METHODS view_length RETURNING VALUE(result) TYPE i.")
-		method("view_length", "IF view_bound = abap_true.\nresult = view_to - view_from.\nELSE.\nresult = lines( items ).\nENDIF.\n")
-		line("METHODS view_materialize.")
-		method("view_materialize", "DATA base TYPE REF TO "+name+".\nDATA rows TYPE items_type.\nIF view_bound = abap_true.\nbase = view_base.\nAPPEND LINES OF base->items FROM view_from + 1 TO view_to TO rows.\nitems = rows.\nCLEAR view_bound.\nCLEAR view_base.\nview_from = 0.\nview_to = 0.\nENDIF.\n")
 		line("METHODS reverse RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("reverse", "view_materialize( ).\nDATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
+		method("reverse", "DATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
 		line("METHODS push IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
-		method("push", "view_materialize( ).\nAPPEND p0 TO items.\nresult = lines( items ).\n")
+		method("push", "APPEND p0 TO items.\nresult = lines( items ).\n")
+		line("METHODS unshift IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
+		method("unshift", "INSERT p0 INTO items INDEX 1.\nresult = lines( items ).\n")
 		line("METHODS length RETURNING VALUE(result) TYPE i.")
-		method("length", "result = view_length( ).\n")
+		method("length", "result = lines( items ).\n")
 		line("METHODS concat IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("concat", "view_materialize( ).\np0->view_materialize( ).\nCREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\nAPPEND LINES OF p0->items TO result->items.\n")
+		method("concat", "CREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\nAPPEND LINES OF p0->items TO result->items.\n")
 		line("METHODS slice0 RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice0", "view_materialize( ).\nCREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\n")
+		method("slice0", "CREATE OBJECT result.\nAPPEND LINES OF items TO result->items.\n")
 		line("METHODS slice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice1", "view_materialize( ).\nDATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from < lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nENDIF.\n")
+		method("slice1", "DATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from < lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nENDIF.\n")
 		line("METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("slice2", "view_materialize( ).\nDATA from TYPE i.\nDATA upto TYPE i.\nfrom = p0.\nupto = p1.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF upto < 0.\nupto = lines( items ) + upto.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF upto > lines( items ).\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF from < upto.\nAPPEND LINES OF items FROM from + 1 TO upto TO result->items.\nENDIF.\n")
+		method("slice2", "DATA from TYPE i.\nDATA upto TYPE i.\nfrom = p0.\nupto = p1.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF upto < 0.\nupto = lines( items ) + upto.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF upto > lines( items ).\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF from < upto.\nAPPEND LINES OF items FROM from + 1 TO upto TO result->items.\nENDIF.\n")
 		line("METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice1", "view_materialize( ).\nDATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from >= lines( items ).\nCREATE OBJECT result.\nRETURN.\nENDIF.\nCREATE OBJECT result.\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\n")
+		// A short head moves the shared table to the result and copies only the
+		// head back; copying the tail made repeated splice(1) quadratic on A4H.
+		method("splice1", "DATA from TYPE i.\nDATA head TYPE items_type.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from >= lines( items ).\nRETURN.\nENDIF.\n"+
+			"IF from * 2 > lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\nRETURN.\nENDIF.\n"+
+			"IF from > 0.\nAPPEND LINES OF items FROM 1 TO from TO head.\nENDIF.\nresult->items = items.\nCLEAR items.\nIF from > 0.\nDELETE result->items FROM 1 TO from.\nENDIF.\nitems = head.\n")
 		line("METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice1_view", "DATA base TYPE REF TO "+name+".\nDATA from TYPE i.\nDATA upto TYPE i.\nIF p0 <> 1.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\nIF view_bound = abap_true.\nbase = view_base.\nfrom = view_from.\nupto = view_to.\nELSE.\nfrom = 0.\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF upto - from <= 1.\nRETURN.\nENDIF.\nIF view_bound = abap_false.\nCREATE OBJECT base.\nbase->items = items.\nCLEAR items.\nENDIF.\nresult->view_bound = abap_true.\nresult->view_base = base.\nresult->view_from = from + 1.\nresult->view_to = upto.\nview_bound = abap_true.\nview_base = base.\nview_from = from.\nview_to = from + 1.\n")
+		method("splice1_view", "result = splice1( p0 ).\n")
 		line("METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice2", "view_materialize( ).\nDATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
+		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice3", "view_materialize( ).\nDATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
+		method("splice3", "DATA from TYPE i.\nDATA cnt TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF from > lines( items ).\nfrom = lines( items ).\nENDIF.\nfrom = from + 1.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nAPPEND LINES OF items FROM from TO from + cnt - 1 TO result->items.\nDELETE items FROM from TO from + cnt - 1.\nENDIF.\nINSERT p2 INTO items INDEX from.\n")
+		// An optional element is itself the optional box pop/shift/get return.
+		refElem := t.Args[0].IsRef() || t.Args[0].Kind == hir.Optional
 		line("METHODS pop RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		if t.Args[0].IsRef() {
-			method("pop", "view_materialize( ).\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
+		if refElem {
+			method("pop", "IF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO result.\nDELETE items INDEX lines( items ).\nENDIF.\n")
 		} else {
-			method("pop", "view_materialize( ).\nDATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
+			method("pop", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX lines( items ) INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX lines( items ).\nENDIF.\n")
+		}
+		line("METHODS shift RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
+		if refElem {
+			method("shift", "IF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO result.\nDELETE items INDEX 1.\nENDIF.\n")
+		} else {
+			method("shift", "DATA v TYPE "+elem+".\nIF lines( items ) > 0.\nREAD TABLE items INDEX 1 INTO v.\nCREATE OBJECT result.\nresult->has = abap_true.\nresult->value = v.\nDELETE items INDEX 1.\nENDIF.\n")
 		}
 		line("METHODS indexOf IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
 		if t.Args[0].Kind == hir.String {
-			method("indexOf", "view_materialize( ).\nDATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
+			method("indexOf", "DATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
 		} else {
-			method("indexOf", "view_materialize( ).\nDATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
+			method("indexOf", "DATA row TYPE "+elem+".\nresult = -1.\nLOOP AT items INTO row.\nIF row = p0.\nresult = sy-tabix - 1.\nEXIT.\nENDIF.\nENDLOOP.\n")
 		}
 		line("METHODS includes IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE abap_bool.")
-		method("includes", "view_materialize( ).\nREAD TABLE items WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		method("includes", "READ TABLE items WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
 		if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
 			line("METHODS join IMPORTING p0 TYPE " + e.typ(hir.T(hir.Optional, hir.T(hir.String))) + " RETURNING VALUE(result) TYPE string.")
 		}
 		if t.Args[0].Kind == hir.String {
-			method("join", "view_materialize( ).\nIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
+			method("join", "IF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
 		} else if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
-			method("join", "view_materialize( ).\nDATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
+			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		}
 		line("METHODS get IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
-		if t.Args[0].IsRef() {
-			code := "view_materialize( ).\nIF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\nresult = val.\nENDIF.\n"
-			method("get", code)
+		code := "IF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\n"
+		if refElem {
+			code += "result = val.\n"
 		} else {
-			code := "view_materialize( ).\nIF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\nresult = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\nENDIF.\n"
-			method("get", code)
+			code += "result = NEW #( ).\nresult->has = abap_true.\nresult->value = val.\n"
 		}
+		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
 		key := e.typ(t.Args[0])
 		value := hir.T(hir.Bool)
@@ -123,8 +132,25 @@ func (e *emitter) runtime(t hir.Type) {
 			method("get", code+"ENDIF.\n")
 		}
 		if t.Kind == hir.OrderedSet {
+			line("METHODS fromArray IMPORTING p0 TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
+			code := "DATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
+			if t.Args[0].IsRef() {
+				code += "DATA native TYPE REF TO object.\nLOOP AT p0->items INTO native.\nrow ?= native.\n"
+			} else {
+				code += "LOOP AT p0->items INTO row.\n"
+			}
+			code += "ignored = add( row ).\nENDLOOP.\nresult = me.\n"
+			method("fromArray", code)
+		}
+		if t.Kind == hir.OrderedSet {
 			line("METHODS copy IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 			method("copy", "CREATE OBJECT result.\nAPPEND LINES OF p0->entries TO result->entries.\n")
+			line("METHODS delete IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
+			method("delete", "DELETE entries WHERE k = p0.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		}
+		if t.Kind == hir.OrderedMap {
+			line("METHODS values RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, value)) + ".")
+			method("values", "result = NEW #( ).\nLOOP AT entries INTO DATA(vrow).\nAPPEND vrow-v TO result->items.\nENDLOOP.\n")
 		}
 		op = "values"
 		if t.Kind == hir.OrderedMap {
@@ -171,6 +197,7 @@ func (e *emitter) support() {
 		e.regexpRuntime()
 	}
 	if e.dynamicUsed {
+		e.classvalueRuntime()
 		e.dynamicRuntime()
 	}
 }
@@ -365,6 +392,7 @@ DATA ignore_case TYPE abap_bool.
 DATA global TYPE abap_bool.
 METHODS constructor IMPORTING pattern TYPE string flags TYPE string excluded_pattern TYPE string OPTIONAL.
 METHODS test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
+METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
 METHODS replace IMPORTING p0 TYPE string p1 TYPE string RETURNING VALUE(result) TYPE string.
 PROTECTED SECTION.
 PRIVATE SECTION.
@@ -375,7 +403,35 @@ DATA i TYPE i.
 DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
-source = pattern.
+DATA escaped TYPE abap_bool.
+n = strlen( pattern ).
+WHILE i < n.
+  c = pattern+i(1).
+  IF escaped = abap_true.
+    escaped = abap_false.
+    source = source && c.
+  ELSEIF c = '\'.
+    escaped = abap_true.
+    source = source && c.
+  ELSEIF c = '/' AND in_class = abap_false.
+    source = source && '\/'.
+  ELSEIF c = cl_abap_char_utilities=>newline.
+    source = source && '\n'.
+  ELSE.
+    IF c = '['.
+      in_class = abap_true.
+    ELSEIF c = ']'.
+      in_class = abap_false.
+    ENDIF.
+    source = source && c.
+  ENDIF.
+  i = i + 1.
+ENDWHILE.
+IF source IS INITIAL.
+  source = '(?:)'.
+ENDIF.
+i = 0.
+in_class = abap_false.
 excluded = excluded_pattern.
 n = strlen( pattern ).
 WHILE i < n.
@@ -456,6 +512,26 @@ IF sy-subrc = 0.
   result = abap_true.
 ENDIF.
 ENDMETHOD.
+METHOD match_test.
+IF excluded IS NOT INITIAL.
+  IF ignore_case = abap_true.
+    FIND REGEX excluded IN p0 IGNORING CASE.
+  ELSE.
+    FIND REGEX excluded IN p0.
+  ENDIF.
+  IF sy-subrc = 0.
+    RETURN.
+  ENDIF.
+ENDIF.
+IF ignore_case = abap_true.
+  FIND REGEX posix IN p0 IGNORING CASE.
+ELSE.
+  FIND REGEX posix IN p0.
+ENDIF.
+IF sy-subrc = 0.
+  result = abap_true.
+ENDIF.
+ENDMETHOD.
 METHOD replace.
 result = p0.
 IF excluded IS NOT INITIAL.
@@ -497,11 +573,17 @@ func (e *emitter) dynamicRuntime() {
 	name := e.name(id)
 	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3.
+CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3, tag_number TYPE i VALUE 4.
 DATA tag TYPE i.
 DATA sval TYPE string.
+DATA nval TYPE f.
 DATA cval TYPE REF TO ` + e.name("runtime.classvalue") + `.
 DATA oval TYPE REF TO object.
+` + dynamicGraphDefinition(name) + `
+METHODS is_number RETURNING VALUE(result) TYPE abap_bool.
+METHODS as_number RETURNING VALUE(result) TYPE f.
+METHODS type_of RETURNING VALUE(result) TYPE string.
+METHODS to_string RETURNING VALUE(result) TYPE string.
 METHODS is_string RETURNING VALUE(result) TYPE abap_bool.
 METHODS is_function RETURNING VALUE(result) TYPE abap_bool.
 METHODS as_string RETURNING VALUE(result) TYPE string.
@@ -511,6 +593,53 @@ PROTECTED SECTION.
 PRIVATE SECTION.
 ENDCLASS.
 CLASS ` + name + ` IMPLEMENTATION.
+METHOD is_number.
+result = xsdbool( tag = tag_number ).
+ENDMETHOD.
+METHOD as_number.
+IF tag <> tag_number.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
+result = nval.
+ENDMETHOD.
+METHOD type_of.
+CASE tag.
+WHEN tag_string.
+result = ` + "`string`" + `.
+WHEN tag_number.
+result = ` + "`number`" + `.
+WHEN tag_class.
+result = ` + "`function`" + `.
+WHEN tag_boolean.
+result = ` + "`boolean`" + `.
+WHEN tag_ref OR tag_object OR tag_array OR tag_null.
+result = ` + "`object`" + `.
+WHEN OTHERS.
+result = ` + "`undefined`" + `.
+ENDCASE.
+ENDMETHOD.
+METHOD to_string.
+DATA integer TYPE int8.
+IF tag = tag_string.
+result = sval.
+ELSEIF tag = tag_boolean.
+IF bval = abap_true.
+result = ` + "`true`" + `.
+ELSE.
+result = ` + "`false`" + `.
+ENDIF.
+ELSEIF tag = tag_null.
+result = ` + "`null`" + `.
+ELSEIF tag = tag_number.
+IF nval <> trunc( nval ) OR nval > '9007199254740991' OR nval < '-9007199254740991'.
+RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
+integer = nval.
+result = |{ integer }|.
+ELSE.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
+ENDMETHOD.
 METHOD is_string.
 IF tag = tag_string.
   result = abap_true.
@@ -522,14 +651,87 @@ IF tag = tag_class.
 ENDIF.
 ENDMETHOD.
 METHOD as_string.
+IF tag <> tag_string.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = sval.
 ENDMETHOD.
 METHOD as_classvalue.
+IF tag <> tag_class.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = cval.
 ENDMETHOD.
 METHOD as_ref.
+IF tag <> tag_ref.
+RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
 result = oval.
+ENDMETHOD.
+` + dynamicGraphImplementation(name) + `
+ENDCLASS.
+`
+}
+
+// telemetryRuntime accumulates signed i microsecond readings through rollover.
+// Float arithmetic avoids overflowing i when subtracting opposite signs. It
+// is telemetry only; no issue or deterministic observation depends on it.
+func (e *emitter) telemetryRuntime() {
+	id := "runtime.telemetry"
+	if e.types[id] {
+		return
+	}
+	e.types[id] = true
+	name := e.name(id)
+	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PRIVATE.
+PUBLIC SECTION.
+CLASS-METHODS now RETURNING VALUE(result) TYPE f.
+PROTECTED SECTION.
+PRIVATE SECTION.
+CLASS-DATA initialized TYPE abap_bool.
+CLASS-DATA previous TYPE i.
+CLASS-DATA elapsed TYPE f.
+ENDCLASS.
+CLASS ` + name + ` IMPLEMENTATION.
+METHOD now.
+DATA reading TYPE i.
+DATA delta TYPE f.
+GET RUN TIME FIELD reading.
+IF initialized = abap_false.
+initialized = abap_true.
+previous = reading.
+ELSE.
+delta = CONV f( reading ) - CONV f( previous ).
+IF delta < 0.
+delta = delta + 4294967296.
+ENDIF.
+elapsed = elapsed + delta.
+previous = reading.
+ENDIF.
+result = trunc( elapsed / 1000 ).
 ENDMETHOD.
 ENDCLASS.
 `
+}
+
+// markArrays gives every emitted array class an empty marker interface when
+// Array.isArray on a dynamic value needs to recognise a boxed array. Programs
+// that do not ask keep their exact previous output.
+func (e *emitter) markArrays() {
+	if !e.isArrayUsed {
+		return
+	}
+	mark := e.name("runtime.arraymark")
+	e.files[mark+".intf.abap"] = "INTERFACE " + mark + " PUBLIC.\nENDINTERFACE.\n"
+	for id := range e.types {
+		if !strings.HasPrefix(id, "runtime."+string(hir.Array)+"<") {
+			continue
+		}
+		file := e.name(id) + ".clas.abap"
+		src, ok := e.files[file]
+		if !ok {
+			continue
+		}
+		e.files[file] = strings.Replace(src, "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
+	}
 }

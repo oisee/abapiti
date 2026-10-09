@@ -47,7 +47,28 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 			if b.OperatorToken.Kind == ast.KindBarBarToken {
 				op = "||"
 			}
-			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: l.condition(b.Left), Y: l.condition(b.Right)}
+			left := l.condition(b.Left)
+			if value, ok := constantBool(left); ok && value == (op == "||") {
+				// The right operand is never evaluated in JavaScript either.
+				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant left operand")
+				return left
+			}
+			var right *hir.Expr
+			if sym, typ, ok := l.definedGuard(b.Left); ok && op == "&&" {
+				right = l.withGuard(sym, typ, func() *hir.Expr { return l.condition(b.Right) })
+			} else {
+				right = l.condition(b.Right)
+			}
+			if left == nil || right == nil {
+				return nil
+			}
+			if value, ok := constantBool(right); ok && value == (op == "||") {
+				// `a && false` / `a || true`: a is still evaluated, the
+				// result is the constant.
+				l.diagf(n, "note-short-circuit-constant", "condition decided by a constant right operand")
+				return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: left}, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: right}), Y: hir.L(hir.T(hir.Bool), value)}
+			}
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: left, Y: right}
 		}
 	}
 	x := l.expr(n)
@@ -87,9 +108,13 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	} else {
 		if n != nil {
 			for parent := n.Parent; parent != nil; parent = parent.Parent {
-				if e, ok := l.overrides[parent]; ok && e.Expressions != nil {
+				if e, ok := l.overrides[parent]; ok {
+					patterns := e.Expressions
+					if e.Patterns != nil {
+						patterns = e.Patterns.Expressions
+					}
 					span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
-					if build := e.Expressions[span]; build != nil {
+					if build := patterns[span]; build != nil {
 						x = build()
 						x.Node = l.node(n)
 						break
@@ -119,9 +144,14 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
+		// The checker sees the declared sibling class; the local holds the
+		// common base and may carry any of the assigned classes.
+		return x
+	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}
@@ -131,6 +161,22 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 		(n.Kind == ast.KindCallExpression && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().AsPropertyAccessExpression().QuestionDotToken != nil) ||
 		(n.Kind == ast.KindPropertyAccessExpression && n.AsPropertyAccessExpression().QuestionDotToken != nil) {
 		return x
+	}
+	// An index signature does not prove that a particular key exists. Keep
+	// lookup absence even when noUncheckedIndexedAccess is disabled upstream.
+	keepAbsence := false
+	if x.Type.Kind == hir.Optional && n.Kind == ast.KindElementAccessExpression {
+		if !l.elementDeclaresAbsence(n) {
+			keepAbsence = true
+		}
+	}
+	if x.Type.Kind == hir.Optional && n.Kind == ast.KindIdentifier && !x.Type.Args[0].IsRef() {
+		if sym := l.resolve(n); sym != nil {
+			declared := l.ck.GetTypeOfSymbol(sym)
+			if declared != nil && !declared.IsUnion() && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindVariableDeclaration {
+				return x
+			}
+		}
 	}
 	t := l.ck.GetTypeAtLocation(n)
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
@@ -143,6 +189,14 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 		return x
 	}
 	l.diags = l.diags[:before]
+	if l.shapeAliasOf(typ, x.Type) {
+		// The checker's anonymous shape is a structural view of the local's
+		// data class: only presence can be narrowed.
+		if x.Type.Kind == hir.Optional && typ.Kind != hir.Optional {
+			return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+		}
+		return x
+	}
 	if x.Type.Kind == hir.ClassRef && typ.Kind == hir.ClassRef && strings.HasPrefix(typ.Name, "shape.") {
 		var a, b *hir.Class
 		for _, c := range l.out.Classes {
@@ -163,6 +217,9 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 			}
 		}
 	}
+	if keepAbsence && typ.Kind != hir.Optional {
+		typ = hir.T(hir.Optional, typ)
+	}
 	return l.narrowed(n, x, typ)
 }
 
@@ -173,14 +230,37 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if l.acceptsType(typ, x.Type) {
 		return x
 	}
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && typ.Kind != hir.Optional {
+		x = &hir.Expr{Kind: hir.Narrow, Type: hir.T(hir.Dynamic), X: x}
+	}
+	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.Bool {
+		return l.rtOp("dynamic.asBoolean", x, typ)
+	}
+	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.Number {
+		return l.rtOp("dynamic.asNumber", x, typ)
+	}
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.String {
 		return l.rtOp("dynamic.asString", x, typ)
 	}
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, typ)
 	}
-	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef) {
+	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || typ.Kind == hir.Array || typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
 		return l.rtOp("dynamic.asRef", x, typ)
+	}
+	if typ.Kind == hir.InterfaceRef && l.ifaceClassBaseOf[typ.Name] != "" {
+		base := x.Type
+		if base.Kind == hir.Optional {
+			base = base.Args[0]
+		}
+		if base.Kind == hir.ClassRef && l.acceptsType(base, hir.Ref(l.ifaceClassBaseOf[typ.Name])) {
+			if x.Type.Kind == hir.Optional {
+				x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: x}
+			}
+			// The checker proved the constituent union after the source tests.
+			// Its flat ABAP interface is a nominal view, not a HIR subclass.
+			return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: typ, X: x}
+		}
 	}
 	if (typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && typ.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], typ.Args[0])) || (typ.Kind == hir.Array && x.Type.Kind == hir.Array && l.acceptsType(x.Type, typ)) || typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || (x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Equal(typ)) {
 		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
@@ -191,6 +271,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	if n == nil {
 		return nil
+	}
+	if matched, ok := l.pinnedMatchTest(n); ok {
+		return matched
 	}
 	switch n.Kind {
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
@@ -214,11 +297,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindTrueKeyword:
 		return hir.L(hir.T(hir.Bool), true)
 	case ast.KindNullKeyword:
-		// `null` is the absent value (there is no null in the HIR).
-		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
-			return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: l.hint}
-		}
-		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, hir.Ref(hir.RootObject))}
+		return l.rtOp("dynamic.null", hir.L(hir.T(hir.I32), 0), hir.T(hir.Dynamic))
 	case ast.KindFalseKeyword:
 		return hir.L(hir.T(hir.Bool), false)
 	case ast.KindTypeOfExpression:
@@ -254,9 +333,23 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			l.diagf(n, "unsupported-expr", "delete on a Map does not remove its entries")
 			return nil
 		}
-		if receiver.Type.Kind != hir.OrderedMap || !receiver.Type.Args[0].Equal(key.Type) {
+		base := receiver.Type
+		if base.Kind == hir.Optional {
+			base = base.Args[0]
+		}
+		if base.Kind == hir.OrderedMap && base.Args[0].Kind == hir.String && key.Type.Kind == hir.Number {
+			key = l.primitiveString(n, key)
+		}
+		if base.Kind != hir.OrderedMap || !base.Args[0].Equal(key.Type) {
 			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
 			return nil
+		}
+		if receiver.Type.Kind == hir.Optional {
+			// `delete a[k]?.[m]` and `delete a[k][m]`: an absent record
+			// deletes nothing and the expression is true.
+			saved := l.tempInit(n, receiver.Type, receiver)
+			present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: saved}
+			return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: saved}, Y: hir.L(hir.T(hir.Bool), true), Z: l.rtOp("record.delete", present, hir.T(hir.Bool), key)}
 		}
 		return l.rtOp("record.delete", receiver, hir.T(hir.Bool), key)
 	case ast.KindThisKeyword:
@@ -287,21 +380,58 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			if u.Operator == ast.KindMinusMinusToken {
 				op = "-"
 			}
-			x := l.expr(u.Operand)
-			if x == nil || x.Kind != hir.Local {
-				l.diagf(n, "unsupported-expr", "postfix %s needs a local operand", op)
+			target := l.assignTarget(u.Operand)
+			if target == nil {
 				return nil
 			}
-			one := hir.L(x.Type, 1)
-			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: one}
+			if target.Type.Kind != hir.Number && target.Type.Kind != hir.I32 {
+				l.diagf(n, "unsupported-expr", "postfix %s needs a native numeric operand", op)
+				return nil
+			}
+			// Preserve the reference before reading its value. A receiver or index
+			// may call user code and must execute once, before the read/write.
+			switch target.Kind {
+			case hir.FieldGet:
+				target.X = l.tempInit(n, target.X.Type, target.X)
+			case hir.IndexGet:
+				target.X = l.tempInit(n, target.X.Type, target.X)
+				target.Y = l.tempInit(n, target.Y.Type, target.Y)
+			case hir.Local, hir.StaticGet:
+			default:
+				l.diagf(n, "unsupported-expr", "postfix %s target is not lowered", op)
+				return nil
+			}
+			previous := l.tempInit(n, target.Type, target)
+			l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
+				Y: &hir.Expr{Kind: hir.Binary, Type: target.Type, Op: op, X: previous, Y: hir.L(target.Type, 1)}})
+			return previous
 		}
 		l.diagf(n, "unsupported-expr", "postfix %s is not lowered", u.Operator.String())
 		return nil
 	case ast.KindConditionalExpression:
 		c := n.AsConditionalExpression()
 		x := l.condition(c.Condition)
+		if value, ok := constantBool(x); ok {
+			// The other branch is dead in JavaScript too; it is not lowered.
+			l.diagf(n, "note-dead-branch", "conditional with a constant condition keeps only the live branch")
+			branch := c.WhenFalse
+			if value {
+				branch = c.WhenTrue
+			}
+			live := l.expr(branch)
+			if live != nil && x.Kind == hir.Seq {
+				live = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: live.Type, Stmt: x.Stmt, Y: live}
+			}
+			return live
+		}
 		hint := l.hint
-		y, z := l.expr(c.WhenTrue), l.expr(c.WhenFalse)
+		if hint.Kind == hir.Void || hint.Kind == "" {
+			l.hint = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		}
+		branchHint := l.hint
+		y := l.expr(c.WhenTrue)
+		l.hint = branchHint
+		z := l.expr(c.WhenFalse)
 		l.hint = hint
 		if x == nil || y == nil || z == nil {
 			return nil
@@ -309,10 +439,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		result := y.Type
 		if !y.Type.Equal(z.Type) {
 			result = hint
-			if result.Kind == hir.Void {
+			if result.Kind == hir.Void || result.Kind == "" {
 				result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			}
-			if result.Kind == hir.Void {
+			if result.Kind == hir.Void || result.Kind == "" {
 				return nil
 			}
 		}
@@ -337,8 +467,16 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if len(els) == 0 {
 			if l.hint.Kind != hir.Array && l.hint.Kind != hir.OrderedSet {
 				if t := l.ck.GetContextualType(n, 0); t != nil {
+					if arr := l.singleArrayConstituent(t); arr != nil {
+						// A tagged (union) context: the one array constituent
+						// gives the element type; the value is boxed later.
+						t = arr
+					}
 					l.hint = l.mapCheckerType(n, t)
 				}
+			}
+			if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
+				l.hint = l.hint.Args[0]
 			}
 			if l.hint.Kind == hir.Array || l.hint.Kind == hir.OrderedSet {
 				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: l.hint}
@@ -401,6 +539,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
 				sv := l.expr(el.Expression())
+				if sv != nil && sv.Type.Kind == hir.OrderedSet {
+					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
+				}
 				if sv == nil || sv.Type.Kind != hir.Array {
 					l.diagf(el, "unsupported-array", "spread element needs an array")
 					return nil
@@ -426,10 +567,12 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
-		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil {
+		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil || n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
 		}
 		return l.elementAccess(n)
+	case ast.KindArrowFunction, ast.KindFunctionExpression:
+		return l.closureValue(n)
 	}
 	l.diagf(n, "unsupported-expr", "%s is not lowered", n.Kind.String())
 	return nil
@@ -478,7 +621,20 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		if l.localSymbols == nil {
 			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
 		}
-		l.localSymbols[x] = l.ck.GetSymbolAtLocation(n)
+		symbol := l.ck.GetSymbolAtLocation(n)
+		if n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment {
+			// {type} names the property; the value is the local variable,
+			// which the range pass may rename when it is shadowed.
+			if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+				symbol = value
+			}
+		}
+		l.localSymbols[x] = symbol
+		if t.Kind == hir.Optional && len(l.guards) > 0 {
+			if typ, guarded := l.guards[l.resolve(n)]; guarded && t.Args[0].Equal(typ) {
+				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
+			}
+		}
 		return x
 	}
 	sym := l.resolve(n)
@@ -490,8 +646,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
 			return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, l.hint.Args[0])}
 		}
-		l.diagf(n, "unsupported-expr", "undefined without an optional context")
-		return nil
+		return &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, hir.T(hir.Dynamic))}
 	}
 	if owner, fieldName, ok := l.modvarOf(sym); ok {
 		for _, mod := range l.out.Classes {
@@ -504,6 +659,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, ok := l.enumNamespace(n); ok {
+		return x
 	}
 	if x, ok := l.classValueRef(n); ok {
 		return x
@@ -518,12 +676,30 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	p := n.AsPropertyAccessExpression()
+	if x, ok := l.numberStatic(n, p); ok {
+		return x
+	}
 	if x, ok := l.classValueRef(n); ok {
 		return x
 	}
 	if x, ok := l.enumMember(n, p); ok {
 		return x
 	}
+	if x, ok := l.ambientLiteral(n); ok {
+		return x
+	}
+	if p.Expression.Kind == ast.KindIdentifier {
+		symbol := l.resolve(p.Expression)
+		if symbol != nil && symbol.Name == "Number" && l.librarySymbol(symbol) && l.classOf(symbol) == nil {
+			switch p.Name().Text() {
+			case "MAX_SAFE_INTEGER":
+				return hir.L(hir.T(hir.Number), float64(9007199254740991))
+			case "MIN_SAFE_INTEGER":
+				return hir.L(hir.T(hir.Number), float64(-9007199254740991))
+			}
+		}
+	}
+
 	sym := l.resolve(n)
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
@@ -549,6 +725,20 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		l.hint = oldHint
 		if recv == nil {
 			return nil
+		}
+		if recv.Type.Kind == hir.Optional {
+			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+		}
+		// The receiver's lowered class owns the field's type: the checker's
+		// property symbol may belong to a structural view of it.
+		if recv.Type.Kind == hir.ClassRef {
+			for c := l.classByName(recv.Type.Name); c != nil; c = l.classByName(c.Super) {
+				for _, cf := range c.Fields {
+					if cf.Name == f.Name && !cf.Static {
+						f = cf
+					}
+				}
+			}
 		}
 		return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: recv}
 	}
@@ -576,6 +766,15 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	base := recv.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
+	}
+	if base.Kind == hir.Dynamic {
+		if recv.Type.Kind == hir.Optional {
+			recv = &hir.Expr{Kind: hir.Narrow, Type: base, X: recv}
+		}
+		return l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), n.Name().Text()))
+	}
+	if recv.Type.Kind == hir.Optional && (base.Kind == hir.Array || base.Kind == hir.OrderedMap || base.Kind == hir.OrderedSet || base.Kind == hir.String) {
+		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: recv}
 	}
 	if base.Kind == hir.ClassRef {
 		for c := l.classByName(base.Name); c != nil; c = l.classByName(c.Super) {
@@ -718,11 +917,19 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 		// Array higher-order calls inline into loops before anything else.
-		if p.Expression != nil && p.QuestionDotToken == nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach") && !isGlobalObjectExpr(p.Expression) {
+		if p.Expression != nil && (name == "map" || name == "filter" || name == "some" || name == "every" || name == "reduce" || name == "forEach" || name == "find" || name == "findIndex" || name == "flatMap") && !isGlobalObjectExpr(p.Expression) {
 			outputHint := l.hint
 			l.hint = hir.Type{}
 			recvX := l.expr(p.Expression)
 			l.hint = outputHint
+			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array && ast.IsOptionalChain(n) {
+				return l.withLocal(p.Expression, recvX, func() *hir.Expr { return l.optionalChain(n) })
+			}
+			if recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// An index-signature read the checker types as present: a
+				// checked narrow raises where JavaScript would throw a TypeError.
+				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
+			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
 					return x
@@ -733,6 +940,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// Object.keys and friends (no lowered class is ever named Object).
 		if isGlobalObjectExpr(p.Expression) {
 			if x, ok := l.objectStatic(n, name); ok {
+				return x
+			}
+		}
+		if l.isGlobalArrayExpr(p.Expression) {
+			if x, ok := l.arrayStatic(n, name); ok {
 				return x
 			}
 		}
@@ -786,10 +998,14 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if recv == nil {
 				return nil
 			}
+			if recv.Type.Kind == hir.Optional && recv.Type.Args[0].IsRef() {
+				// The checker typed the receiver present (`if (map[k]) map[k].f()`).
+				recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recv.Type.Args[0], X: recv}
+			}
 			// Ordinary calls must use the erased virtual slot. The specialized
 			// implementation name is reserved for its bridge and super calls.
 			slot := hm
-			if original, _, specialized := strings.Cut(hm.Name, "_instantiated_"); specialized {
+			if original, _, specialized := strings.Cut(hm.Name, "_instantiated_"); specialized && !l.ownSpecialized(recv.Type, hm, original) {
 				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
 					if m := l.methodsBy[c.Name+"."+original]; m != nil && m.Name == original {
 						slot = m
@@ -810,7 +1026,14 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 					return nil
 				}
 			}
-			if slot.Result.Kind == hir.Void && hm.Result.IsRef() {
+			if slot.Result.Kind == hir.Void && recv.Type.Kind == hir.InterfaceRef && l.hint.Kind != "" && l.hint.Kind != hir.Void {
+				// `rules[key] = rule.getConfig()` through a void-declared
+				// interface slot: the implementations' value slot carries
+				// the object JavaScript returns.
+				if value := l.interfaceMethod(recv.Type.Name, slot.Name+"_value"); value != nil {
+					slot = value
+				}
+			} else if slot.Result.Kind == hir.Void && hm.Result.IsRef() {
 				for c := l.classesByQualifiedName(recv.Type.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
 					found := false
 					for _, m := range c.Methods {
@@ -897,10 +1120,27 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: method.Result, Name: name, X: recv, Args: args}
 		}
+		if recv.Type.Kind == hir.InterfaceRef {
+			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
+				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
+				if !ok {
+					return nil
+				}
+				l.diagf(n, "note-union-view", "%s is common to the receiver's union classes but not to %s", name, recv.Type.Name)
+				cast := &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: recv}
+				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
+			}
+		}
 		x, handled := l.libraryCall(n, name, recv)
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
+		return x
+	}
+	if x, ok := l.thunkCall(n, callee); ok {
+		return x
+	}
+	if x, ok := l.globalCall(n, callee); ok {
 		return x
 	}
 	l.diagf(n, "unsupported-call", "call to %s is not lowered", callee.Kind.String())
@@ -913,7 +1153,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		if len(args) != 1 {
 			return nil
 		}
-		return l.expr(args[0])
+		return l.presentValue(args[0], l.expr(args[0]), hir.Type{})
 	}
 	two := func() (*hir.Expr, *hir.Expr) {
 		if len(args) != 2 {
@@ -944,6 +1184,23 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("string.charAt", recv, str, one()), true
 		case "charCodeAt":
 			return l.rtOp("string.charCodeAt", recv, i32, one()), true
+		case "slice":
+			if len(args) > 2 {
+				return nil, false
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			start := hir.L(hir.T(hir.Number), 0)
+			if len(args) > 0 {
+				start = l.expr(args[0])
+			}
+			end := l.rtOp("string.length", recv, i32)
+			if len(args) > 1 {
+				end = l.expr(args[1])
+			}
+			if start == nil || end == nil {
+				return nil, true
+			}
+			return l.rtOp("string.slice", recv, str, start, end), true
 		case "substring":
 			if len(args) == 1 {
 				recv = l.tempInit(n, recv.Type, recv)
@@ -996,6 +1253,25 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		switch name {
 		case "test":
 			return l.rtOp("regexp.test", recv, boolT, one()), true
+		case "exec":
+			// Only the match's truthiness is read: exec and test advance a
+			// global regexp's lastIndex alike.
+			if isConditionOnly(n) {
+				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
+				return l.rtOp("regexp.test", recv, boolT, one()), true
+			}
+		case "toString":
+			if len(args) == 0 {
+				return l.rtOp("regexp.toString", recv, str), true
+			}
+		}
+	case hir.Dynamic:
+		// A string method on a tagged value reads the box's string; any other
+		// tag fails loudly where JavaScript raises a TypeError (boxed graphs
+		// carry no functions).
+		if x, ok := l.libraryCall(n, name, l.rtOp("dynamic.asString", recv, str)); x != nil {
+			l.diagf(n, "note-dynamic-string", "string method on a dynamic value reads the boxed string")
+			return x, ok
 		}
 	case hir.Array:
 		switch name {
@@ -1004,8 +1280,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, false
 			}
 			return l.rtOp("array.reverse", recv, recv.Type), true
-		case "push":
-			if len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
+		case "push", "unshift":
+			if name == "push" && len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
 				l.diagf(n, "note-spread-push", "push(...x) inlined into a loop")
 				return l.spreadPush(n, recv, args[0]), true
 			}
@@ -1019,7 +1295,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			if value == nil {
 				return nil, true
 			}
-			return l.rtOp("array.push", recv, i32, l.coerce(value, recv.Type.Args[0])), true
+			return l.rtOp("array."+name, recv, i32, l.coerce(value, recv.Type.Args[0])), true
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":
@@ -1047,8 +1323,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				lowered = append(lowered, x)
 			}
 			return l.rtOp("array.splice"+itoa(len(args)), recv, recv.Type, lowered...), true
-		case "pop":
-			return l.rtOp("array.pop", recv, hir.T(hir.Optional, recv.Type.Args[0])), true
+		case "pop", "shift":
+			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
 			return l.rtOp("array.indexOf", recv, i32, one()), true
 		case "includes":
@@ -1090,7 +1366,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("map.size", recv, i32), true
 		}
 	}
-	return nil, false
+	return l.syntaxLibraryCall(n, name, recv)
 }
 
 // replaceCall lowers s.replace(pattern, with): a RegExp (literal or
@@ -1135,6 +1411,14 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 			l.diagf(n, "note-regex-mapped", "string replace with literal %q mapped to replaceAll", needle)
 			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
+	}
+	if pat != nil && pat.Type.Kind == hir.String && (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$") {
+		if n.Expression().Name().Text() == "replace" {
+			l.diagf(n, "note-replace-first", "string replace with a dynamic string pattern replaces the first occurrence")
+			return l.rtOp("string.replaceFirst", recv, hir.T(hir.String), pat, with)
+		}
+		l.diagf(n, "note-replace-all", "replaceAll with a dynamic string pattern")
+		return l.rtOp("string.replaceAll", recv, hir.T(hir.String), pat, with)
 	}
 	l.diagf(n, "unsupported-regex", "replace with a non-literal pattern is not lowered")
 	return nil
@@ -1235,10 +1519,40 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		}
 		if cv != nil && cv.Type.Kind == hir.ClassValue && len(n.Arguments()) == 0 {
 			result := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			if result.Kind == hir.Dynamic {
+				result = hir.Ref(hir.RootObject)
+			}
 			if l.hint.Kind == hir.ClassRef || l.hint.Kind == hir.InterfaceRef {
 				result = l.hint
 			}
 			return l.rtOp("classvalue.new", cv, result)
+		}
+	}
+	// Context supplies the element types of an empty collection before
+	// trying explicit arguments (which otherwise diagnose missing arguments).
+	if sym != nil && l.librarySymbol(sym) && len(n.Arguments()) == 0 && len(n.TypeArguments()) == 0 {
+		kind := hir.Void
+		switch sym.Name {
+		case "Set":
+			kind = hir.OrderedSet
+		case "Map":
+			kind = hir.OrderedMap
+		case "Array":
+			kind = hir.Array
+		}
+		if kind != hir.Void {
+			typ := l.hint
+			if typ.Kind == hir.Optional {
+				typ = typ.Args[0]
+			}
+			if typ.Kind != kind {
+				if context := l.ck.GetContextualType(n, 0); context != nil {
+					typ = l.mapCheckerType(n, context)
+				}
+			}
+			if typ.Kind == kind {
+				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
+			}
 		}
 	}
 	// Empty library collections: new Set<T>(), new Map<K,V>().
@@ -1265,9 +1579,20 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		args := n.Arguments()
 		if len(args) == 1 {
 			a := l.expr(args[0])
+			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
+				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
+				fresh := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
+				return l.rtOp("set.fromArray", fresh, typ, a)
+			}
 			if a != nil && a.Type.Kind == hir.OrderedSet {
 				l.diagf(n, "note-set-copy", "new Set(set) lowered to a copy")
 				return l.rtOp("set.copy", a, a.Type, a)
+			}
+			if a != nil && a.Type.Kind == hir.Array {
+				return l.setFromArray(n, a)
+			}
+			if a != nil && a.Type.Kind == hir.Optional && a.Type.Args[0].Kind == hir.Array {
+				return l.setFromOptionalArray(n, a)
 			}
 		}
 	}
@@ -1349,22 +1674,42 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			x = l.tempInit(n, x.Type, x)
+			hint := l.hint
+			base := x.Type
+			if base.Kind == hir.Optional {
+				base = base.Args[0]
+			}
+			if base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0 {
+				l.hint = base
+			}
 			y := l.expr(b.Right)
+			l.hint = hint
 			if y == nil {
 				return nil
 			}
-			typ := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			var typ hir.Type
+			if base.Kind == hir.Array && base.Equal(y.Type) {
+				typ = base
+			} else {
+				typ = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			}
+			if typ.Kind == hir.Dynamic && base.Kind == hir.Dynamic && l.primitiveHint(hint) {
+				// `box?.DDTEXT || ""` into a string result: the taken tagged
+				// operand is unboxed as the result's primitive (raises for
+				// another payload).
+				typ = hint
+			}
 			if typ.Kind == hir.Dynamic {
 				l.diagf(n, "unsupported-shortcircuit", "mixed tagged operands require value-preserving truthiness")
 				return nil
 			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
-			left, right := l.coerce(x, typ), l.coerce(y, typ)
+			left, right := l.taggedOperand(x, typ), l.coerce(y, typ)
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
 			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
-				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s", typ.String())
+				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s (left %s, right %s)", typ.String(), left.Type.String(), right.Type.String())
 				return nil
 			}
 			if op == ast.KindAmpersandAmpersandToken {
@@ -1389,6 +1734,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		cop := map[ast.Kind]string{
 			ast.KindLessThanToken: "<", ast.KindLessThanEqualsToken: "<=",
 			ast.KindGreaterThanToken: ">", ast.KindGreaterThanEqualsToken: ">="}[op]
+		if x.Type.Kind == hir.Optional || y.Type.Kind == hir.Optional {
+			return l.optionalRelation(n, cop, x, y)
+		}
 		return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: cop, Type: hir.T(hir.Bool), X: x, Y: y}
 	case ast.KindPlusToken:
 		if l.ck.GetTypeAtLocation(n).IsStringLike() {
@@ -1396,15 +1744,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if x == nil || y == nil {
 				return nil
 			}
-			if x.Type.Kind == hir.Number {
-				x = l.rtOp("number.toString", x, hir.T(hir.String))
-			} else if x.Type.Kind == hir.I32 {
-				x = l.rtOp("i32.toString", x, hir.T(hir.String))
-			}
-			if y.Type.Kind == hir.Number {
-				y = l.rtOp("number.toString", y, hir.T(hir.String))
-			} else if y.Type.Kind == hir.I32 {
-				y = l.rtOp("i32.toString", y, hir.T(hir.String))
+			x, y = l.primitiveString(n, x), l.primitiveString(n, y)
+			if x == nil || y == nil {
+				return nil
 			}
 			return l.rtOp("string.concat", x, hir.T(hir.String), y)
 		}
@@ -1445,22 +1787,44 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	case ast.KindInstanceOfKeyword:
 		return l.instanceOf(n)
 	case ast.KindQuestionQuestionToken:
-		// a ?? b: absent (undefined/null) picks b.
 		x := l.expr(b.Left)
 		if x == nil {
 			return nil
 		}
-		if x.Type.Kind != hir.Optional {
-			l.diagf(n, "unsupported-expr", "?? needs an optional left operand")
+		x = l.narrowedOperand(b.Left, x)
+		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic {
+			l.diagf(n, "unsupported-expr", "?? needs an optional or tagged left operand")
 			return nil
 		}
+		x = l.tempInit(n, x.Type, x)
+		base := x.Type
+		if base.Kind == hir.Optional {
+			base = base.Args[0]
+		}
+		hint := l.hint
+		l.hint = base
 		y := l.expr(b.Right)
+		l.hint = hint
 		if y == nil {
 			return nil
 		}
+		left := x
+		if x.Type.Kind == hir.Optional {
+			left = &hir.Expr{Kind: hir.Narrow, Type: base, X: x}
+		}
+		result := y.Type
+		if !base.Equal(y.Type) {
+			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		}
+		if result.Kind == hir.Void {
+			return nil
+		}
 		test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
-		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: y.Type, X: test, Y: y,
-			Z: &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: y.Type, X: x}}
+		if base.Kind == hir.Dynamic {
+			test = l.rtOp("dynamic.isNullish", left, hir.T(hir.Bool))
+		}
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.coerce(y, result), Z: l.coerce(left, result)}
+
 	case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 		l.diagf(n, "unsupported-expr", "assignment inside an expression is not lowered")
 		return nil
@@ -1469,11 +1833,45 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	return nil
 }
 
+// Undefined converts to NaN in a relational comparison, so every relational
+// operator returns false when either optional primitive is absent. Capture
+// both operands before testing the tags: the RHS still executes in that case.
+// Mixed primitive coercion remains blocking until its JS semantics are present.
+func (l *lowerer) optionalRelation(n *ast.Node, op string, x, y *hir.Expr) *hir.Expr {
+	base := func(t hir.Type) hir.Type {
+		if t.Kind == hir.Optional {
+			return t.Args[0]
+		}
+		return t
+	}
+	t := base(x.Type)
+	if !t.Equal(base(y.Type)) || (t.Kind != hir.Number && t.Kind != hir.String) {
+		l.diagf(n, "unsupported-optional-comparison", "mixed optional comparison requires JavaScript primitive coercion")
+		return nil
+	}
+	x = l.tempInit(n, x.Type, x)
+	y = l.tempInit(n, y.Type, y)
+	var guards []*hir.Expr
+	narrow := func(v *hir.Expr) *hir.Expr {
+		if v.Type.Kind != hir.Optional {
+			return v
+		}
+		guards = append(guards, &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: v}})
+		return &hir.Expr{Kind: hir.Narrow, Type: t, X: v}
+	}
+	result := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: hir.T(hir.Bool), X: narrow(x), Y: narrow(y)}
+	for i := len(guards) - 1; i >= 0; i-- {
+		result = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "&&", Type: hir.T(hir.Bool), X: guards[i], Y: result}
+	}
+	return result
+}
+
 func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *hir.Expr {
 	x, y := l.expr(b.Left), l.expr(b.Right)
 	if x == nil || y == nil {
 		return nil
 	}
+	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
 }
 
@@ -1486,6 +1884,26 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	if c := l.classOf(l.resolve(b.Right)); c != nil {
+		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
+			// A box holding a string, number or class value is never an
+			// instance; an object reference is tested as such.
+			l.diagf(n, "note-instanceof-dynamic", "instanceof on a tagged value tests its object reference")
+			d := x
+			if x.Type.Kind == hir.Optional {
+				present := l.tempInit(n, x.Type, x)
+				d = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}
+				test := &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: l.rtOp("dynamic.asRef", d, hir.Ref(hir.RootObject)), Owner: c.Name}
+				defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
+				return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: test}
+			}
+			return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: l.rtOp("dynamic.asRef", d, hir.Ref(hir.RootObject)), Owner: c.Name}
+		}
+		if l.unrelatedClasses(x.Type, c.Name) {
+			// The HIR static type of x and c share no subclass: the test is
+			// the constant false (HIR references are soundly typed).
+			l.diagf(n, "note-instanceof-unrelated", "instanceof between unrelated classes is the constant false")
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: x}), Y: hir.L(hir.T(hir.Bool), false)}
+		}
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Owner: c.Name}
 	}
 	cv := l.expr(b.Right)
@@ -1509,36 +1927,84 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return l.typeofCompare(n, operand.AsTypeOfExpression().Expression, literal.Text(), negated)
 		}
 	}
+	if x, ok := l.declaredMethodUndefinedCompare(n, b, negated); ok {
+		return x
+	}
 	leftUndef := l.isUndefinedType(b.Left)
 	rightUndef := l.isUndefinedType(b.Right)
-	if leftUndef != rightUndef {
-		operand := b.Left
-		if leftUndef {
-			operand = b.Right
+	if leftUndef && rightUndef {
+		// `x === undefined` where the checker already narrowed x to
+		// undefined: still a presence test of x.
+		switch {
+		case isUndefinedKeyword(b.Right) && !isUndefinedKeyword(b.Left):
+			leftUndef = false
+		case isUndefinedKeyword(b.Left) && !isUndefinedKeyword(b.Right):
+			rightUndef = false
 		}
-		x := l.expr(operand)
-		if x == nil {
-			return nil
-		}
-		if x.Type.Kind != hir.Optional && !x.Type.IsRef() {
-			l.diagf(n, "unsupported-expr", "undefined comparison needs an optional or reference operand")
-			return nil
-		}
-		test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
-		if negated {
-			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
-		}
-		return test
 	}
 	x, y := l.expr(b.Left), l.expr(b.Right)
 	if x == nil || y == nil {
 		return nil
 	}
+	if (x.Type.Kind == hir.Bool && y.Type.IsRef()) || (y.Type.Kind == hir.Bool && x.Type.IsRef()) {
+		// An object is never equal to a boolean (`this.conf === true` under
+		// a ts-ignore): the operands are evaluated, the result is constant.
+		l.diagf(n, "note-equality-unrelated", "equality between a reference and a boolean is the constant %v", negated)
+		var effects []*hir.Stmt
+		for _, operand := range []*hir.Expr{x, y} {
+			if operand.Kind != hir.Lit && operand.Kind != hir.Local && operand.Kind != hir.This {
+				effects = append(effects, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: operand})
+			}
+		}
+		if len(effects) == 0 {
+			return hir.L(hir.T(hir.Bool), negated)
+		}
+		return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(effects...), Y: hir.L(hir.T(hir.Bool), negated)}
+	}
+	loose := b.OperatorToken.Kind == ast.KindEqualsEqualsToken || b.OperatorToken.Kind == ast.KindExclamationEqualsToken
+	if leftUndef != rightUndef {
+		// Preserve both operand effects even for a statically undefined call.
+		x, y = l.tempInit(n, x.Type, x), l.tempInit(n, y.Type, y)
+		operand := x
+		if leftUndef {
+			operand = y
+		}
+		test := hir.L(hir.T(hir.Bool), false)
+		if operand.Type.Kind == hir.Optional || operand.Type.IsRef() {
+			test = &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: operand}
+			base := operand.Type
+			if base.Kind == hir.Optional {
+				base = base.Args[0]
+			}
+			if loose && base.Kind == hir.Dynamic {
+				test = l.rtOp("dynamic.isNullish", l.coerce(operand, hir.T(hir.Dynamic)), hir.T(hir.Bool))
+			}
+		}
+		if negated {
+			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+		}
+		return test
+	}
+	tagged := func(t hir.Type) bool {
+		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
+	}
+	if tagged(x.Type) || tagged(y.Type) {
+		if loose {
+			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
+			return nil
+		}
+		test := l.rtOp("dynamic.strictEquals", l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Bool), l.coerce(y, hir.T(hir.Dynamic)))
+		if negated {
+			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+		}
+		return test
+	}
+
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(y.Type) {
-		y = l.coerce(y, x.Type)
+		y = l.optionalView(y, x.Type)
 	}
 	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
-		x = l.coerce(x, y.Type)
+		x = l.optionalView(x, y.Type)
 	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
@@ -1613,6 +2079,16 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 		return l.rtOp("dynamic.asRef", x, mapped)
 	case (mapped.Kind == hir.ClassRef || mapped.Kind == hir.InterfaceRef) && !mapped.Equal(x.Type):
 		if mapped.Kind == hir.ClassRef && x.Type.Kind == hir.ClassRef && l.classesByQualifiedName(mapped.Name) != nil {
+			// A source-proven nominal downcast is checked by ABAP's ?=. An
+			// unproven one stays refused: JavaScript would carry on with the
+			// mistyped object where ?= raises.
+			if l.pinnedCheckedCast(n) {
+				for c := l.classesByQualifiedName(mapped.Name); c != nil; c = l.classesByQualifiedName(c.Super) {
+					if c.Super == x.Type.Name {
+						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+					}
+				}
+			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
 			return nil
 		}
@@ -1629,6 +2105,14 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
 		hint = hint.Args[0]
+	}
+	if hint.Kind == hir.InterfaceRef {
+		if part, ok := l.unionShapeFor(n, hint); ok {
+			hint = part
+		}
+	}
+	if hint.Kind == hir.Dynamic {
+		return l.dynamicRecordLiteral(n)
 	}
 	// A record hint builds a map: spreads copy entries, keys set.
 	if hint.Kind == hir.OrderedMap {
@@ -1734,10 +2218,17 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 		case ast.KindSpreadAssignment:
 			// Copy every field of the spread value into its parameter.
 			sv := l.expr(p.Expression())
+			if sv != nil && sv.Type.Kind == hir.Optional && sv.Type.Args[0].Kind == hir.ClassRef {
+				if !l.optionalSpreadArgs(p, sv, ctor, args) {
+					return nil
+				}
+				continue
+			}
 			if sv == nil || sv.Type.Kind != hir.ClassRef {
 				l.diagf(p, "unsupported-type", "spread needs a shape value")
 				return nil
 			}
+			sv = l.tempInit(p, sv.Type, sv)
 			l.diagf(p, "note-object-spread", "object spread copies the fields of %s", sv.Type.Name)
 			for i, cp := range ctor.Params {
 				for _, c := range l.out.Classes {
@@ -1816,16 +2307,8 @@ func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 		if part == nil {
 			return nil
 		}
-		switch part.Type.Kind {
-		case hir.String:
-		case hir.Number:
-			part = l.rtOp("number.toString", part, hir.T(hir.String))
-		case hir.I32:
-			part = l.rtOp("i32.toString", part, hir.T(hir.String))
-		case hir.Bool:
-			part = &hir.Expr{Kind: hir.Conditional, Node: part.Node, Type: hir.T(hir.String), X: part, Y: hir.L(hir.T(hir.String), "true"), Z: hir.L(hir.T(hir.String), "false")}
-		default:
-			l.diagf(span, "unsupported-expr", "template substitution of %s requires JavaScript string coercion", part.Type)
+		part = l.primitiveString(span, part)
+		if part == nil {
 			return nil
 		}
 		tail := l.expr(span.AsTemplateSpan().Literal)
@@ -1835,4 +2318,130 @@ func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 		result = l.rtOp("string.concat", l.rtOp("string.concat", result, hir.T(hir.String), part), hir.T(hir.String), tail)
 	}
 	return result
+}
+
+// ToString for supported primitive values. Preserve evaluation at the operand
+// position, even when an optional needs both a presence test and a payload read.
+func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
+	s := hir.T(hir.String)
+	switch x.Type.Kind {
+	case hir.String:
+		return x
+	case hir.Number:
+		return l.rtOp("number.toString", x, s)
+	case hir.I32:
+		return l.rtOp("i32.toString", x, s)
+	case hir.Bool:
+		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
+	case hir.Dynamic:
+		return l.rtOp("dynamic.toString", x, s)
+	case hir.Optional:
+		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
+			break
+		}
+		saved := l.pend
+		l.pend = nil
+		v := l.tempInit(at, x.Type, x)
+		pre := l.pend
+		l.pend = saved
+		payload := l.primitiveString(at, &hir.Expr{Kind: hir.Narrow, Type: x.Type.Args[0], X: v})
+		if payload == nil {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Seq, Type: s, Stmt: hir.B(pre...), Y: &hir.Expr{Kind: hir.Conditional, Type: s,
+			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: v}, Y: hir.L(s, "undefined"), Z: payload}}
+	}
+	l.diagf(at, "unsupported-expr", "string coercion of %s requires JavaScript ToPrimitive", x.Type)
+	return nil
+}
+
+// declaredMethodUndefinedCompare: `obj.m === undefined` where m is a method
+// declared without `?` on every declaration of its symbol is constant false
+// (true for !==). The receiver is still evaluated for its effects.
+func (l *lowerer) declaredMethodUndefinedCompare(n *ast.Node, b *ast.BinaryExpression, negated bool) (*hir.Expr, bool) {
+	access := b.Left
+	if !isUndefinedKeyword(b.Right) {
+		if !isUndefinedKeyword(b.Left) {
+			return nil, false
+		}
+		access = b.Right
+	}
+	if access.Kind != ast.KindPropertyAccessExpression {
+		return nil, false
+	}
+	sym := l.ck.GetSymbolAtLocation(access.AsPropertyAccessExpression().Name())
+	if sym == nil || len(sym.Declarations) == 0 {
+		return nil, false
+	}
+	for _, d := range sym.Declarations {
+		if d.Kind != ast.KindMethodDeclaration && d.Kind != ast.KindMethodSignature {
+			return nil, false
+		}
+		if d.PostfixToken() != nil && d.PostfixToken().Kind == ast.KindQuestionToken {
+			return nil, false
+		}
+	}
+	recv := l.expr(access.AsPropertyAccessExpression().Expression)
+	if recv == nil {
+		return nil, true
+	}
+	l.diagf(n, "note-declared-method", "a declared method is never undefined")
+	return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: recv}), Y: hir.L(hir.T(hir.Bool), negated)}, true
+}
+
+// isConditionOnly reports whether a call's value is only tested for
+// truthiness: an if/while condition, possibly under logical negation.
+func isConditionOnly(n *ast.Node) bool {
+	child, p := n, n.Parent
+	for p != nil && p.Kind == ast.KindParenthesizedExpression {
+		child, p = p, p.Parent
+	}
+	if p == nil {
+		return false
+	}
+	switch p.Kind {
+	case ast.KindIfStatement:
+		return p.AsIfStatement().Expression == child
+	case ast.KindWhileStatement:
+		return p.AsWhileStatement().Expression == child
+	case ast.KindPrefixUnaryExpression:
+		return p.AsPrefixUnaryExpression().Operator == ast.KindExclamationToken
+	}
+	return false
+}
+
+// unionViewFor: the checker's receiver type is a union of classes (undefined
+// aside) whose lowered common supertype lacks the member; the synthesized
+// union view carries it when every class declares it compatibly.
+func (l *lowerer) unionViewFor(x *ast.Node, name string) (hir.Type, *hir.Method, bool) {
+	t := l.ck.GetTypeAtLocation(x)
+	if t == nil || t.Flags()&checker.TypeFlagsUnion == 0 {
+		return hir.Type{}, nil, false
+	}
+	parts := []hir.Type{}
+	for _, c := range t.Types() {
+		if c.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull) != 0 {
+			continue
+		}
+		pt := l.mapCheckerType(x, c)
+		if pt.Kind != hir.ClassRef {
+			return hir.Type{}, nil, false
+		}
+		parts = append(parts, pt)
+	}
+	view, ok := l.unionInterface(x, parts)
+	if !ok {
+		return hir.Type{}, nil, false
+	}
+	for _, iface := range l.out.Interfaces {
+		if iface.Name != view.Name {
+			continue
+		}
+		for _, m := range iface.Methods {
+			if m.Name == name {
+				return view, m, true
+			}
+		}
+	}
+	return hir.Type{}, nil, false
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"github.com/oisee/abapiti/internal/tsgo/jsnum"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 	"math"
 )
 
@@ -22,6 +23,15 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	for parent := n; parent != nil; parent = parent.Parent {
+		if entry, ok := l.overrides[parent]; ok && entry.Patterns != nil {
+			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
+			if typ, ok := entry.Patterns.Annotations[span]; ok {
+				l.diagf(n, "note-override", "%s: %s", entry.ID, entry.Rationale)
+				return typ
+			}
+		}
+	}
 	t := l.ck.GetTypeFromTypeNode(n)
 	if t == nil {
 		l.diagf(n, "unsupported-type", "no checker type for annotation")
@@ -35,10 +45,17 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.T(hir.String)
 	case ast.KindBooleanKeyword:
 		return hir.T(hir.Bool)
+	case ast.KindTypePredicate:
+		if n.AsTypePredicateNode().AssertsModifier != nil {
+			return hir.T(hir.Void)
+		}
+		return hir.T(hir.Bool)
 	case ast.KindObjectKeyword:
 		return hir.Ref(hir.RootObject)
 	case ast.KindVoidKeyword:
 		return hir.T(hir.Void)
+	case ast.KindUndefinedKeyword:
+		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case ast.KindArrayType:
 		return hir.T(hir.Array, l.mapTypeNode(n.AsArrayTypeNode().ElementType))
 	case ast.KindParenthesizedType:
@@ -51,7 +68,11 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		optional := false
 		var parts []hir.Type
 		for _, u := range n.AsUnionTypeNode().Types.Nodes {
-			if u.Kind == ast.KindUndefinedKeyword || u.Kind == ast.KindNullKeyword || isNullLiteralType(u) {
+			if u.Kind == ast.KindNullKeyword || isNullLiteralType(u) {
+				parts = append(parts, hir.T(hir.Dynamic))
+				continue
+			}
+			if u.Kind == ast.KindUndefinedKeyword {
 				optional = true
 				continue
 			}
@@ -59,8 +80,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		}
 		return l.union(n, parts, optional)
 	case ast.KindNullKeyword:
-		// `T | null` is `T | undefined` here (there is no null in the HIR).
-		return hir.T(hir.Void)
+		return hir.T(hir.Dynamic)
 	case ast.KindLiteralType:
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindTupleType:
@@ -115,6 +135,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return l.mapTypeNode(targs[i])
 	}
 	switch name {
+	case "Promise":
+		if l.librarySymbol(sym) {
+			return hir.Ref(l.opaquePromise())
+		}
 	case "Set":
 		return hir.T(hir.OrderedSet, arg(0))
 	case "ReadonlySet":
@@ -137,6 +161,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		l.diagf(n, "note-builtin-error-ref", "Error lowered to builtin.Error")
 		return hir.Ref(l.builtinError())
 	}
+	if sym != nil && l.numericEnumOf(sym) != nil {
+		return hir.T(hir.Number)
+	}
 	// String enums lower to their string values.
 	if sym != nil && l.enumOf(sym) != nil {
 		l.diagf(n, "note-enum-string", "enum type %s lowered as string", name)
@@ -152,6 +179,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	}
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
+	}
+	if t, ok := l.indexOnlyInterface(sym); ok {
+		l.diagf(n, "note-record-map", "index-signature interface %s lowered as an insertion-ordered map", name)
+		return t
 	}
 	if i := l.ifaceOf(sym); i != nil {
 		return hir.Type{Kind: hir.InterfaceRef, Name: i.Name}
@@ -264,6 +295,23 @@ func (l *lowerer) union(n *ast.Node, parts []hir.Type, optional bool) hir.Type {
 	for _, d := range distinct {
 		kinds[d.Kind] = true
 	}
+	// Unrelated reference types: the object root keeps identity and
+	// instanceof; any member access on it is a (loud) diagnostic.
+	if len(kinds) > 0 && len(kinds) <= 2 && !kinds[hir.Dynamic] {
+		refsOnly := true
+		for k := range kinds {
+			if k != hir.ClassRef && k != hir.InterfaceRef {
+				refsOnly = false
+			}
+		}
+		if refsOnly {
+			l.diagf(n, "note-union-root", "union of unrelated references lowered to the object root")
+			if optional {
+				return hir.T(hir.Optional, hir.Ref(hir.RootObject))
+			}
+			return hir.Ref(hir.RootObject)
+		}
+	}
 	if len(kinds) > 1 {
 		l.diagf(n, "note-dynamic-union", "union of %d kinds lowered as a Dynamic (tagged) value", len(kinds))
 		return hir.T(hir.Dynamic)
@@ -301,8 +349,16 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		optional := false
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
-			if c.Flags()&checker.TypeFlagsUndefined != 0 || c.Flags()&checker.TypeFlagsNull != 0 {
+			if c.Flags()&checker.TypeFlagsNull != 0 {
+				parts = append(parts, hir.T(hir.Dynamic))
+				continue
+			}
+			if c.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
+				continue
+			}
+			if l.isNeverArray(c) && len(t.AsUnionOrIntersectionType().Types()) > 1 {
+				// `never[]` (an empty literal) adds nothing to a union.
 				continue
 			}
 			p := l.mapCheckerType(n, c)
@@ -310,6 +366,10 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				return p
 			}
 			parts = append(parts, p)
+		}
+		if len(parts) == 0 {
+			l.diagf(n, "unsupported-type", "union of empty array types has no element type")
+			return hir.T(hir.Void)
 		}
 		return l.union(n, parts, optional)
 	}
@@ -340,16 +400,14 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	case flags&checker.TypeFlagsVoid != 0:
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsUndefined != 0:
-		// `undefined` on its own is only lowered as the absent value of an
-		// Optional, with the contextual element type from the hint.
+		// A standalone undefined result still has a value, unlike void.
+		// There is no present payload; retain absence using the tagged ABI.
 		if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
 			return hir.T(hir.Optional, l.hint.Args[0])
 		}
-		l.diagf(n, "unsupported-type", "undefined without an optional context")
-		return hir.T(hir.Void)
+		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case flags&checker.TypeFlagsNull != 0:
-		l.diagf(n, "unsupported-type", "null without an optional context")
-		return hir.T(hir.Void)
+		return hir.T(hir.Dynamic)
 	case flags&checker.TypeFlagsObject != 0:
 		if t.IsTupleType() {
 			// Tuple elements are the numeric properties of the type; the
@@ -389,6 +447,15 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		if len(l.ck.GetSignaturesOfType(t, checker.SignatureKindConstruct)) > 0 {
 			l.diagf(n, "note-class-value-type", "constructor type lowered as a class value")
 			return hir.T(hir.ClassValue)
+		}
+		if l.isThunkType(t) {
+			l.diagf(n, "note-thunk-type", "parameterless void function type lowered as the closure thunk interface")
+			return l.thunkType()
+		}
+		// Promises carry only an opaque ABI. No fulfillment, await or async
+		// body is translated; coverage traps are the only callable producers.
+		if t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
+			return hir.Ref(l.opaquePromise())
 		}
 		// Array and library-collection reference types.
 		if l.ck.IsArrayType(t) || (t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlySet" || t.Symbol().Name == "ReadonlyMap")) {
@@ -450,9 +517,12 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			if t.Symbol().Name == "Object" && t.Symbol().ValueDeclaration == nil {
 				return hir.Ref(hir.RootObject)
 			}
+			if l.numericEnumOf(t.Symbol()) != nil && !t.IsClass() {
+				return hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+			}
 			if l.enumOf(t.Symbol()) != nil && !t.IsClass() {
-				l.diagf(n, "note-enum-string", "enum type %s lowered as string", t.Symbol().Name)
-				return hir.T(hir.String)
+				l.diagf(n, "note-enum-namespace", "enum value %s lowered as a namespace object", t.Symbol().Name)
+				return hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.String))
 			}
 			if c := l.classOf(t.Symbol()); c != nil {
 				return hir.Ref(c.Name)
@@ -483,8 +553,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	case flags&checker.TypeFlagsNonPrimitive != 0:
 		return hir.Ref(hir.RootObject)
 	case flags&checker.TypeFlagsAny != 0 || flags&checker.TypeFlagsUnknown != 0:
-		l.diagf(n, "note-any-object", "any/unknown lowered as the object root")
-		return hir.Ref(hir.RootObject)
+		l.diagf(n, "note-any-dynamic", "any/unknown lowered as a tagged JS value")
+		return hir.T(hir.Dynamic)
 	}
 	l.diagf(n, "unsupported-type", "checker type %s is not lowered", l.ck.TypeToString(t))
 	return hir.T(hir.Void)
@@ -500,6 +570,12 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 		var ft hir.Type
 		if pt != nil && pt.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) != 0 {
 			ft = hir.T(hir.Optional, hir.Ref(hir.RootObject))
+		} else if l.isNeverArray(pt) {
+			// An empty literal's never[]: matches any array field of a
+			// reused shape; it never defines a shape of its own.
+			ft = hir.T(hir.Array, hir.T(hir.Void))
+		} else if annotated, ok := l.propertyAnnotationOverride(p); ok {
+			ft = annotated
 		} else {
 			ft = l.mapCheckerType(n, pt)
 		}
@@ -516,23 +592,41 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 	// Required and optional reference properties have one physical layout.
 	// Reuse the existing shape; the checker narrows required reads at use sites.
 	for _, c := range l.out.Classes {
-		if !strings.HasPrefix(c.Name, "shape.") || len(c.Fields) != len(fields) {
+		if (!strings.HasPrefix(c.Name, "shape.") && !l.shapeLike[c.Name]) || len(c.Fields) != len(fields) || c.Ctor == nil {
 			continue
 		}
+		// The checker lists properties in its own order: match by name.
 		same := true
-		for j, f := range fields {
-			a, b := f.Type, c.Fields[j].Type
+		for _, f := range fields {
+			var existing *hir.Field
+			for k := range c.Fields {
+				if c.Fields[k].Name == f.Name {
+					existing = &c.Fields[k]
+				}
+			}
+			if existing == nil {
+				same = false
+				break
+			}
+			a, b := f.Type, existing.Type
 			if a.Kind == hir.Optional && a.Args[0].IsRef() {
 				a = a.Args[0]
 			}
 			if b.Kind == hir.Optional && b.Args[0].IsRef() {
 				b = b.Args[0]
 			}
-			same = same && f.Name == c.Fields[j].Name && a.Equal(b)
+			if a.Kind == hir.Array && a.Args[0].Kind == hir.Void && b.Kind == hir.Array {
+				a = b
+			}
+			same = same && a.Equal(b)
 		}
 		if same {
-			for j, p := range props {
-				l.fields[p] = c.Fields[j]
+			for _, p := range props {
+				for k := range c.Fields {
+					if c.Fields[k].Name == p.Name {
+						l.fields[p] = c.Fields[k]
+					}
+				}
 			}
 			return c
 		}
@@ -543,17 +637,80 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			return c
 		}
 	}
+	// A data object with a subset of a data interface's fields (the rest
+	// optional) is that data interface with the others absent: plain
+	// objects have no identity of their own.
+	for _, c := range l.out.Classes {
+		if !l.shapeLike[c.Name] || c.Ctor == nil || len(c.Fields) <= len(fields) {
+			continue
+		}
+		matched := 0
+		ok := true
+		for _, cf := range c.Fields {
+			found := false
+			for _, f := range fields {
+				if f.Name != cf.Name {
+					continue
+				}
+				a, b := f.Type, cf.Type
+				if a.Kind == hir.Optional && a.Args[0].IsRef() {
+					a = a.Args[0]
+				}
+				if b.Kind == hir.Optional && b.Args[0].IsRef() {
+					b = b.Args[0]
+				}
+				if a.Kind == hir.Array && a.Args[0].Kind == hir.Void && (b.Kind == hir.Array || (b.Kind == hir.Optional && b.Args[0].Kind == hir.Array)) {
+					a = b
+				}
+				if !a.Equal(b) && !(b.Kind == hir.Optional && b.Args[0].Equal(a)) {
+					ok = false
+				}
+				found = true
+			}
+			if found {
+				matched++
+			} else if cf.Type.Kind != hir.Optional {
+				ok = false
+			}
+		}
+		if ok && matched == len(fields) {
+			for _, p := range props {
+				for _, cf := range c.Fields {
+					if cf.Name == p.Name {
+						l.fields[p] = cf
+					}
+				}
+			}
+			l.diagf(n, "note-shape-subset", "anonymous shape lowered as the data interface %s with absent extra fields", c.Name)
+			return c
+		}
+	}
+	for _, f := range fields {
+		if f.Type.Kind == hir.Array && f.Type.Args[0].Kind == hir.Void {
+			l.diagf(n, "unsupported-type", "object literal with an empty array field %s matches no declared shape (%s)", f.Name, identity.String())
+			return nil
+		}
+	}
 	c := &hir.Class{Node: l.node(n), Name: key}
 	ctor := &hir.Method{Node: l.node(n), Name: "constructor", Result: hir.T(hir.Void)}
 	var list []*hir.Stmt
 	for idx, p := range props {
 		ft := fields[idx].Type
 		c.Fields = append(c.Fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft})
-		ctor.Params = append(ctor.Params, hir.Param{Name: p.Name, Type: ft})
+		// Reference fields share one physical layout with their optional
+		// views, so the constructor accepts an absent reference and stores
+		// it as the initial reference.
+		pt := ft
+		value := hir.V(p.Name, ft)
+		if ft.IsRef() {
+			pt = hir.T(hir.Optional, ft)
+			value = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: ft, X: hir.V(p.Name, pt)}
+		}
+		ctor.Params = append(ctor.Params, hir.Param{Name: p.Name, Type: pt})
 		list = append(list, &hir.Stmt{Kind: hir.Assign, Node: l.node(n),
 			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: p.Name, Type: ft,
 				X: &hir.Expr{Kind: hir.This, Node: l.node(n), Type: hir.Ref(key)}},
-			Y: hir.V(p.Name, ft)})
+			Y: value})
 		l.fields[p] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
 		if p.Parent != nil {
 			l.fieldsBy[p.Parent.Name+"."+p.Name] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
@@ -595,6 +752,19 @@ func (l *lowerer) synthFromAlias(n *ast.Node, sym *ast.Symbol) *hir.Class {
 		l.diagf(n, "unsupported-type", "alias %s has no lowered declaration", sym.Name)
 		return nil
 	}
+	if alias := decl.AsTypeAliasDeclaration(); alias.Type != nil && alias.Type.Kind == ast.KindTypeLiteral {
+		// An alias of an index-signature record is a map, not a shape; the
+		// checker mapping of the caller produces it.
+		saved := l.file
+		l.file = ast.GetSourceFileOfNode(decl)
+		before := len(l.diags)
+		record := l.recordType(alias.Type)
+		l.diags = l.diags[:before]
+		l.file = saved
+		if record.Kind == hir.OrderedMap {
+			return nil
+		}
+	}
 	lit := decl.Type()
 	if lit == nil || lit.Kind != ast.KindTypeLiteral {
 		l.diagf(n, "unsupported-type", "alias %s is not an object shape", sym.Name)
@@ -607,6 +777,10 @@ func (l *lowerer) synthFromAlias(n *ast.Node, sym *ast.Symbol) *hir.Class {
 	l.file = f
 	defer func() { l.file = savedFile }()
 	c := &hir.Class{Node: l.node(decl), Name: l.qualifiedName(f, sym.Name)}
+	if l.shapeLike == nil {
+		l.shapeLike = map[string]bool{}
+	}
+	l.shapeLike[c.Name] = true
 	// Register before the members so recursive shapes resolve to the same
 	// class instead of recursing.
 	l.synths[sym] = c

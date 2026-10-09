@@ -12,7 +12,7 @@ import (
 // bodies, so any body can resolve members of any class.
 
 func (l *lowerer) signaturesFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
 		case ast.KindClassDeclaration:
 			if c, ok := l.classes[stmt.Symbol()]; ok {
@@ -71,6 +71,10 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 		c = &hir.Class{Node: i.Node, Name: i.Name}
 		l.out.Classes = append(l.out.Classes, c)
 	}
+	if l.shapeLike == nil {
+		l.shapeLike = map[string]bool{}
+	}
+	l.shapeLike[c.Name] = true
 	if c.Ctor != nil {
 		return
 	}
@@ -100,6 +104,11 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 					continue
 				}
 				for _, field := range base.Fields {
+					if l.dataInterfaceDeclares(node, field.Name) {
+						// The derived interface redeclares the member; its own
+						// declaration below supplies the field once.
+						continue
+					}
 					field.Node = l.node(node)
 					c.Fields = append(c.Fields, field)
 					ctor.Params = append(ctor.Params, hir.Param{Name: field.Name, Type: field.Type})
@@ -196,7 +205,7 @@ func (l *lowerer) baseConstructorOf(name string) *hir.Method {
 }
 
 func (l *lowerer) bodiesFile(f *ast.SourceFile) {
-	for _, stmt := range f.Statements.Nodes {
+	for _, stmt := range l.statementNodes(f) {
 		if stmt.Kind != ast.KindClassDeclaration {
 			continue
 		}
@@ -217,7 +226,14 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 				l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
 			}
 		}
-		l.lowerImplicitInitializers(stmt, c)
+		if l.typeOnly[stmt] {
+			if c.Ctor == nil {
+				c.Ctor = &hir.Method{Node: l.node(stmt), Name: "constructor", Result: hir.T(hir.Void)}
+			}
+			c.Ctor.Body = hir.B(&hir.Stmt{Node: l.node(stmt), Kind: hir.Trap, Name: l.typeOnlyLocation(stmt)})
+		} else {
+			l.lowerImplicitInitializers(stmt, c)
+		}
 	}
 }
 
@@ -292,7 +308,14 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	}
 	static := m.ModifierFlags()&ast.ModifierFlagsStatic != 0
 	var typ hir.Type
+	overridden := false
+	if e, ok := l.overrides[m.Parent]; ok && e.Types[name].Kind != "" {
+		typ = e.Types[name]
+		overridden = true
+		l.diagf(m, "note-override", "%s: %s", e.ID, e.Rationale)
+	}
 	switch {
+	case overridden:
 	case m.Type() != nil:
 		typ = l.mapTypeNode(m.Type())
 	case m.Initializer() != nil:
@@ -373,6 +396,9 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 		} else if ps := p.Symbol(); ps != nil {
 			typ = l.mapCheckerType(p, l.ck.GetTypeOfSymbol(ps))
 		}
+		if p.QuestionToken() != nil && typ.Kind != hir.Optional {
+			typ = hir.T(hir.Optional, typ)
+		}
 		f := hir.Field{Node: l.node(p), Name: name, Type: typ, Private: p.ModifierFlags()&ast.ModifierFlagsPrivate != 0, Readonly: p.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
 		c.Fields = append(c.Fields, f)
 		if ps := p.Symbol(); ps != nil {
@@ -445,6 +471,9 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 			typ = hir.T(hir.Optional, typ)
 			l.diagf(p, "note-default-param", "parameter %s with a default lowered as Optional", name)
 		}
+		if t, ok := l.paramTypeOverride(node, hm.Name, name); ok {
+			typ = t
+		}
 		hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ})
 		checked[len(hm.Params)-1] = true
 	}
@@ -484,11 +513,19 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 }
 
 func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
+	if l.ifaceDone == nil {
+		l.ifaceDone = map[*hir.Interface]bool{}
+	}
+	if l.ifaceDone[i] {
+		return
+	}
+	l.ifaceDone[i] = true
 	if e, ok := l.overrides[node]; ok && e.Interface != nil {
 		i.Methods = e.Interface().Methods
 		l.diagf(node, "note-override", "%s: %s", e.ID, e.Rationale)
 		return
 	}
+	defer l.interfaceHeritage(node, i)
 	for _, m := range node.Members() {
 		if m.Kind != ast.KindMethodDeclaration && m.Kind != ast.KindMethodSignature {
 			name := m.Kind.String()
@@ -567,6 +604,10 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 		return
 	}
 	if e, ok := l.overrides[m]; ok && e.Method != nil {
+		return
+	}
+	if m.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+		l.diagf(m, "unsupported-async", "async body must be excluded by validated workload coverage")
 		return
 	}
 	if m.Body() == nil {
@@ -660,9 +701,13 @@ func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) [
 		if !ok {
 			continue
 		}
-		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) {
-			l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
-			continue
+		if static && !l.pureInitializer(mem.Initializer(), mem, map[*ast.Node]bool{}) && !l.pinnedStaticInitializer(mem.Initializer()) {
+			if e, ok := l.overrides[mem]; ok && e.Assume == "pure-static-initializer" {
+				l.diagf(mem, "note-override", "%s: %s", e.ID, e.Rationale)
+			} else {
+				l.diagf(mem.Initializer(), "unsupported-static-init", "static initializer is not provably pure and order-independent")
+				continue
+			}
 		}
 		t := l.declaredFieldType(c, name)
 		var target *hir.Expr
@@ -730,6 +775,11 @@ func (l *lowerer) declaredFieldType(c *hir.Class, name string) hir.Type {
 }
 
 func (l *lowerer) this(c *hir.Class) *hir.Expr {
+	if l.thisOverride != nil {
+		cp := *l.thisOverride
+		cp.Node = hir.Node{ID: l.nextID(), Source: l.thisOverride.Source}
+		return &cp
+	}
 	return &hir.Expr{Kind: hir.This, Node: hir.Node{ID: l.nextID(), Source: l.method.Source}, Type: hir.Ref(c.Name)}
 }
 

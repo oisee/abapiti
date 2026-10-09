@@ -725,7 +725,7 @@ func (p *numberPass) stmt(s *hir.Stmt, env map[string]numberInterval) (map[strin
 		shadow := map[string]numberInterval{}
 		absent := map[string]bool{}
 		for _, child := range s.List {
-			if child.Kind == hir.VarDecl {
+			if child != nil && child.Kind == hir.VarDecl {
 				if old, ok := env[child.Name]; ok {
 					shadow[child.Name] = old
 				} else {
@@ -1430,6 +1430,9 @@ func numberFieldInitialized(c *hir.Class, f hir.Field) bool {
 			for _, child := range s.List {
 				if assigned(child) {
 					return true
+				}
+				if child == nil {
+					continue
 				}
 				if child.Kind == hir.Return || child.Kind == hir.Throw || child.Kind == hir.If || child.Kind == hir.Try {
 					return false

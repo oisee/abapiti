@@ -24,12 +24,28 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	text := string(source)
 	start := strings.Index(text, "public static dead()")
 	end := strings.Index(text[start:], "}") + start + 1
-	coverage := &Reachability{Schema: 1, Workloads: []string{"feature-unit"}, Spans: []CoverageSpan{{File: "probe.ts", Start: start, End: end, Kind: "MethodDeclaration", Line: strings.Count(text[:start], "\n") + 1, SHA256: overrides.Fingerprint(text[start:end])}}}
+	coverage := &Reachability{Schema: 2, Workloads: []string{"feature-unit"}, Spans: []CoverageSpan{{File: "probe.ts", Start: start, End: end, Kind: "MethodDeclaration", Line: strings.Count(text[:start], "\n") + 1, SHA256: overrides.Fingerprint(text[start:end]), Executed: true, Workloads: []string{"UPSTREAM"}}}}
+	// The observed run body is deliberately OBSERVATION-only, so this
+	// differential also fails if pruning omits the acceptance workload.
+	runStart := strings.Index(text, "public static run(")
+	runEnd := strings.LastIndex(text[:strings.Index(text, "public async parseAsync")], "}") + 1
+	coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: runStart, End: runEnd, Kind: "MethodDeclaration", Line: strings.Count(text[:runStart], "\n") + 1, SHA256: overrides.Fingerprint(text[runStart:runEnd]), Executed: true, Workloads: []string{"OBSERVATION"}})
+	asyncStart := strings.Index(text, "public async parseAsync")
+	asyncEnd := strings.Index(text[asyncStart:], "}") + asyncStart + 1
+	coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: asyncStart, End: asyncEnd, Kind: "MethodDeclaration", Line: strings.Count(text[:asyncStart], "\n") + 1, SHA256: overrides.Fingerprint(text[asyncStart:asyncEnd]), Executed: true, Workloads: []string{"UPSTREAM"}})
+	bridgeStart := strings.Index(text, "public dead(value: Probe)")
+	bridgeEnd := strings.Index(text[bridgeStart:], "}") + bridgeStart + 1
+	bridgeLine := strings.Count(text[:bridgeStart], "\n") + 1
+	coverage.Spans = append(coverage.Spans, CoverageSpan{File: "probe.ts", Start: bridgeStart, End: bridgeEnd, Kind: "MethodDeclaration", Line: bridgeLine, SHA256: overrides.Fingerprint(text[bridgeStart:bridgeEnd]), Executed: true, Workloads: []string{"UPSTREAM"}})
 	p, err := Load(filepath.Join(dir, "tsconfig.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, nil, coverage)
+	registry, err := overrides.New(overrides.Entry{ID: "feature-clock", Key: overrides.Key{File: "probe.ts", Symbol: "Probe.clockProbe", Kind: "KindMethodDeclaration"}, SHA256: "aa5a066d26b27ecfcd6ad94f2ae867a7511ee608acf870dbbff45b39d404be96", Rationale: "Addendum 5 telemetry contract", Expressions: map[string]func() *hir.Expr{"Date.now()": overrides.TelemetryClock}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"probe.ts"}, registry, coverage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +84,24 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	line("PRIVATE SECTION.")
 	line("METHODS observations FOR TESTING.")
 	line("METHODS trap FOR TESTING.")
+	line("METHODS clock FOR TESTING.")
+	line("METHODS bridge FOR TESTING.")
 	line("ENDCLASS.")
 	line("CLASS ltcl_features IMPLEMENTATION.")
+	line("METHOD bridge.")
+	line("DATA view TYPE REF TO %s.", names.Get("probe.ts.BridgeAPI"))
+	line("DATA value TYPE REF TO %s.", names.Get("runtime.dynamic"))
+	line("DATA text TYPE string.")
+	line("DATA caught TYPE abap_bool.")
+	line("view = %s=>%s( ).", class, names.Get("member.createBridge"))
+	line("TRY.")
+	line("text = view->%s( %s = value ).", names.Get("member.dead"), names.Get("param.value"))
+	line("CATCH %s INTO DATA(failure).", names.Get("exception.unexecuted"))
+	line("caught = abap_true.")
+	line("cl_abap_unit_assert=>assert_equals( act = failure->source_location exp = `probe.ts:%d` ).", bridgeLine)
+	line("ENDTRY.")
+	line("cl_abap_unit_assert=>assert_true( act = caught ).")
+	line("ENDMETHOD.")
 	line("METHOD observations.")
 	for _, name := range []string{"raw", "needle", "expected", "actual"} {
 		line("DATA %s TYPE string.", name)
@@ -94,6 +126,17 @@ func TestEmitRegistryFeatures(t *testing.T) {
 		line("cl_abap_unit_assert=>assert_equals( act = actual exp = expected msg = `feature case %d` ).", i+1)
 	}
 	line("ENDMETHOD.")
+	line("METHOD clock.")
+	line("DATA first TYPE f.")
+	line("DATA current TYPE f.")
+	line("first = %s=>%s( ).", class, names.Get("member.clockProbe"))
+	line("cl_abap_unit_assert=>assert_true( act = xsdbool( first >= 0 AND first = trunc( first ) ) ).")
+	line("DO 100 TIMES.")
+	line("current = %s=>%s( ).", class, names.Get("member.clockProbe"))
+	line("cl_abap_unit_assert=>assert_true( act = xsdbool( current >= first AND current = trunc( current ) ) ).")
+	line("first = current.")
+	line("ENDDO.")
+	line("ENDMETHOD.")
 	line("METHOD trap.")
 	line("DATA actual TYPE f.")
 	line("DATA caught TYPE abap_bool.")
@@ -102,6 +145,15 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	line("CATCH %s INTO DATA(failure).", names.Get("exception.unexecuted"))
 	line("caught = abap_true.")
 	line("cl_abap_unit_assert=>assert_equals( act = failure->source_location exp = `probe.ts:%d` ).", coverage.Spans[0].Line)
+	line("ENDTRY.")
+	line("cl_abap_unit_assert=>assert_equals( act = caught exp = abap_true ).")
+	line("CLEAR caught.")
+	line("TRY.")
+	line("DATA(probe) = NEW %s( ).", class)
+	line("probe->%s( ).", names.Get("member.parseAsync"))
+	line("CATCH %s INTO failure.", names.Get("exception.unexecuted"))
+	line("caught = abap_true.")
+	line("cl_abap_unit_assert=>assert_equals( act = failure->source_location exp = `probe.ts:%d` ).", coverage.Spans[2].Line)
 	line("ENDTRY.")
 	line("cl_abap_unit_assert=>assert_equals( act = caught exp = abap_true ).")
 	line("ENDMETHOD.")

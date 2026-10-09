@@ -192,9 +192,30 @@ ENDCLASS.
 }
 
 func TestCrossMethodSuperRejected(t *testing.T) {
+	// Nothing from Child down redefines x: super.x() is me->x( ).
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": `
  export class Base { x(): number { return 1; } }
  export class Child extends Base { m(): number { return super.x(); } }
+ `}, []string{"probe.ts"})
+	files, err := abap.Emit(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, src := range files {
+		if strings.Contains(src, "super->") {
+			t.Fatal("SUPER-> to another method was emitted")
+		}
+		found = found || strings.Contains(src, "me->")
+	}
+	if !found {
+		t.Fatal("expected the inherited call through me")
+	}
+	// A subclass redefining x would capture me->x( ): still rejected.
+	prog = lowerStatementsProbe(t, map[string]string{"probe.ts": `
+ export class Base { x(): number { return 1; } }
+ export class Child extends Base { m(): number { return super.x(); } }
+ export class Grand extends Child { x(): number { return 3; } }
  `}, []string{"probe.ts"})
 	if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
 		t.Fatalf("expected blocking super diagnostic, got %v", err)

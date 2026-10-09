@@ -20,9 +20,15 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	}
 	elem := recv.Type.Args[0]
 	switch name {
-	case "map", "filter", "some", "reduce":
+	case "map", "filter", "some", "reduce", "find":
+	case "forEach", "every":
+		if !l.pinnedDenseCallback(n) {
+			l.diagf(n, "unsupported-call", "%s needs a source-pinned dense/stable receiver proof", name)
+			return nil, true
+		}
+		return l.denseCallbackLoop(n, name, recv, args), true
 	default:
-		return nil, false
+		return l.syntaxHofCall(n, name, recv, args)
 	}
 	if name == "reduce" {
 		if len(args) != 2 {
@@ -36,6 +42,13 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		l.diagf(n, "unsupported-call", "%s needs one callback", name)
 		return nil, true
 	}
+	if name == "find" && !elem.IsRef() {
+		if l.pinnedDenseCallback(n) {
+			return l.denseCallbackLoop(n, name, recv, args), true
+		}
+		l.diagf(n, "unsupported-call", "find on primitive arrays needs an absence-preserving callback ABI")
+		return nil, true
+	}
 	body, params, ok := l.callbackBody(n, args[0], elem)
 	if !ok {
 		return nil, true
@@ -43,6 +56,9 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	l.diagf(n, "note-callback-inline", "%s callback inlined into a loop", name)
 	if body.Type.Kind == hir.Void {
 		return nil, true
+	}
+	if name == "find" {
+		return l.findReferenceLoop(n, recv, elem, body, params), true
 	}
 
 	// Loop shape: ForEach binds params[0]; a second parameter is the index
@@ -90,6 +106,33 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return out, true
 	}
 	return nil, false
+}
+
+// find captures length once, but reads the current slot for each callback.
+// Unlike a table LOOP this ignores appended slots and observes removals and
+// replacements. Reference slots preserve undefined as an initial reference;
+// primitive slots need a separate callback ABI and remain blocked.
+func (l *lowerer) findReferenceLoop(n *ast.Node, receiver *hir.Expr, elem hir.Type, predicate *hir.Expr, params []string) *hir.Expr {
+	recv := l.tempInit(n, receiver.Type, receiver)
+	limit := l.tempInit(n, hir.T(hir.Number), l.rtOp("array.length", recv, hir.T(hir.I32)))
+	index := l.tempInit(n, hir.T(hir.Number), hir.L(hir.T(hir.Number), 0))
+	optional := hir.T(hir.Optional, elem)
+	out := l.tempInit(n, optional, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: optional, Value: nil})
+	var body []*hir.Stmt
+	body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: elem,
+		X: &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: elem, X: l.rtOp("array.get", recv, optional, index)}})
+	if len(params) >= 2 {
+		body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[1], Type: hir.T(hir.Number), X: l.coerce(index, hir.T(hir.Number))})
+	}
+	if len(params) >= 3 {
+		body = append(body, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[2], Type: recv.Type, X: recv})
+	}
+	body = append(body, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.toBool(n, predicate), Body: hir.B(
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: out, Y: l.coerce(hir.V(params[0], elem), optional)},
+		&hir.Stmt{Kind: hir.Break, Node: l.node(n)},
+	)}, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit}, Body: hir.B(body...)})
+	return out
 }
 
 // toBool applies JavaScript truthiness when the expression is not boolean.
@@ -215,11 +258,25 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		value = body
 	} else {
 		stmts := body.AsBlock().Statements.Nodes
-		if len(stmts) != 1 || stmts[0].Kind != ast.KindReturnStatement || stmts[0].AsReturnStatement().Expression == nil {
-			l.diagf(n, "unsupported-callback", "callback block must be exactly one return")
+		last := len(stmts) - 1
+		if last < 0 || stmts[last].Kind != ast.KindReturnStatement || stmts[last].AsReturnStatement().Expression == nil {
+			l.diagf(n, "unsupported-callback", "callback block must end with a return of a value")
 			return nil, nil, false
 		}
-		value = stmts[0].AsReturnStatement().Expression
+		for _, s := range stmts[:last] {
+			if l.containsReturn(s) {
+				l.diagf(n, "unsupported-callback", "callback block must have exactly one return")
+				return nil, nil, false
+			}
+		}
+		// Leading statements run per element, before the result value.
+		keep := l.hint
+		for _, s := range stmts[:last] {
+			lowered := l.stmts(s)
+			l.pend = append(l.pend, lowered...)
+		}
+		l.hint = keep
+		value = stmts[last].AsReturnStatement().Expression
 	}
 	if l.hint.Kind == hir.Array {
 		l.hint = l.hint.Args[0]
@@ -253,13 +310,29 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				continue
 			}
 			local := be.Name().Text()
+			if be.DotDotDotToken != nil {
+				// `...rest` is a fresh object of the remaining fields.
+				l.objectRest(el, local, x)
+				continue
+			}
 			field := local
 			if be.PropertyName != nil && be.PropertyName.Kind == ast.KindIdentifier {
 				field = be.PropertyName.Text()
 			}
 			ft := l.patternFieldType(x.Type, field)
-			l.declare(local, ft)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: ft,
+			lt := ft
+			if sym := el.Symbol(); sym != nil && ft.IsRef() {
+				// A required physical field may be an optional binding.
+				before := len(l.diags)
+				mapped := l.mapCheckerType(el, l.ck.GetTypeOfSymbol(sym))
+				if hasBlocking(l.diags[before:]) {
+					l.diags = l.diags[:before]
+				} else if mapped.Kind == hir.Optional && mapped.Args[0].Equal(ft) {
+					lt = mapped
+				}
+			}
+			l.declare(local, lt)
+			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
 				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}})
 		}
 	case ast.KindArrayBindingPattern:
@@ -479,6 +552,7 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) 
 			if a == nil {
 				return nil, false
 			}
+			a = l.presentValue(args[i], a, p.Type)
 			out = append(out, l.coerce(a, p.Type))
 			continue
 		}
@@ -500,15 +574,22 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) 
 // yielding the new length (which the callers ignore).
 func (l *lowerer) spreadPush(n *ast.Node, recv *hir.Expr, spread *ast.Node) *hir.Expr {
 	xs := l.expr(spread.Expression())
-	if xs == nil || xs.Type.Kind != hir.Array || !recv.Type.Equal(xs.Type) {
-		l.diagf(n, "unsupported-call", "push spread needs a matching array")
+	if xs != nil && xs.Type.Kind == hir.OrderedSet {
+		xs = l.rtOp("set.values", xs, hir.T(hir.Array, xs.Type.Args[0]))
+	}
+	if xs == nil || xs.Type.Kind != hir.Array || !l.acceptsType(recv.Type.Args[0], xs.Type.Args[0]) {
+		have := "nil"
+		if xs != nil {
+			have = xs.Type.String()
+		}
+		l.diagf(n, "unsupported-call", "push spread needs a matching array (%s <- %s)", recv.Type.String(), have)
 		return nil
 	}
 	l.serial++
 	v := "p" + itoa(l.serial)
-	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v, Type: recv.Type.Args[0], X: xs,
+	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v, Type: xs.Type.Args[0], X: xs,
 		Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
-			X: l.rtOp("array.push", recv, hir.T(hir.I32), hir.V(v, recv.Type.Args[0]))})})
+			X: l.rtOp("array.push", recv, hir.T(hir.I32), l.coerce(hir.V(v, xs.Type.Args[0]), recv.Type.Args[0]))})})
 	return l.rtOp("array.length", recv, hir.T(hir.I32))
 }
 

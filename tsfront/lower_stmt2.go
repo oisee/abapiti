@@ -13,8 +13,16 @@ import (
 // `instanceof` then narrows exactly like the original.
 func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 	t := n.AsTryStatement()
+	if t.FinallyBlock != nil && t.CatchClause == nil {
+		if l.containsReturn(t.TryBlock) || l.containsLoopControl(t.TryBlock) {
+			l.diagf(t.FinallyBlock, "unsupported-statement", "finally with return, break or continue in the try block is not lowered")
+			return nil
+		}
+		l.diagf(n, "note-finally", "try/finally lowered as catch-all, finally block, re-raise")
+		return &hir.Stmt{Kind: hir.Finally, Node: l.node(n), Body: l.scopeBlock(t.TryBlock), Else: l.scopeBlock(t.FinallyBlock)}
+	}
 	if t.FinallyBlock != nil {
-		l.diagf(t.FinallyBlock, "unsupported-statement", "finally is not lowered")
+		l.diagf(t.FinallyBlock, "unsupported-statement", "finally with catch is not lowered")
 		return nil
 	}
 	if t.CatchClause == nil {
@@ -113,15 +121,18 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 	for i := len(clauses) - 1; i >= 0; i-- {
 		c := clauses[i]
 		if c.Kind == ast.KindDefaultClause {
-			chain = hir.B(l.stmtList(c.AsCaseOrDefaultClause().Statements.Nodes)...)
+			chain = hir.B(l.stmtList(clauseStatements(c))...)
 			continue
 		}
 		value := l.expr(c.AsCaseOrDefaultClause().Expression)
 		if value == nil {
 			return nil
 		}
+		if subject.Type.Kind == hir.Optional && subject.Type.Args[0].Equal(value.Type) {
+			value = l.optionalView(value, subject.Type)
+		}
 		cond := &hir.Expr{Kind: hir.Binary, Node: l.node(c), Op: "==", Type: hir.T(hir.Bool), X: subject, Y: value}
-		body := hir.B(l.stmtList(c.AsCaseOrDefaultClause().Statements.Nodes)...)
+		body := hir.B(l.stmtList(clauseStatements(c))...)
 		chain = &hir.Stmt{Kind: hir.If, Node: l.node(c), X: cond, Body: body, Else: chain}
 	}
 	return chain
@@ -142,8 +153,26 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	}
 	name := decls[0].Name().Text()
 	recv := l.expr(f.Expression)
-	if recv == nil || recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
-		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map")
+	if recv != nil && recv.Type.Kind == hir.Optional && recv.Type.Args[0].Kind == hir.OrderedMap && recv.Type.Args[0].Args[0].Kind == hir.String {
+		// for-in over undefined iterates nothing. The receiver is evaluated
+		// once into a local declared by the returned block.
+		l.serial++
+		present := hir.V("t"+itoa(l.serial), recv.Type)
+		decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: present.Name, Type: recv.Type, X: recv}
+		keys := l.rtOp("map.keys", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: present}, hir.T(hir.Array, hir.T(hir.String)))
+		l.push()
+		l.declare(name, hir.T(hir.String))
+		body := l.scopeBlock(f.Statement)
+		l.pop()
+		loop := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
+		absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}
+		return hir.B(decl, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(loop)})
+	}
+	if recv == nil {
+		return nil
+	}
+	if recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
+		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map (%s)", recv.Type.String())
 		return nil
 	}
 	keys := l.rtOp("map.keys", recv, hir.T(hir.Array, hir.T(hir.String)))
@@ -152,6 +181,20 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	body := l.scopeBlock(f.Statement)
 	l.pop()
 	return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
+}
+
+// clauseStatements returns a case clause's statements up to its direct
+// `break` (the if/else chain ends the clause anyway); statements after
+// the break are unreachable.
+func clauseStatements(c *ast.Node) []*ast.Node {
+	var out []*ast.Node
+	for _, s := range c.AsCaseOrDefaultClause().Statements.Nodes {
+		if s.Kind == ast.KindBreakStatement && s.AsBreakStatement().Label == nil {
+			break
+		}
+		out = append(out, s)
+	}
+	return out
 }
 
 // destructureDecl lowers `const {a: x, b} = expr` and `const [x, y] = expr`.

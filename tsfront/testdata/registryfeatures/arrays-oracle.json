@@ -1,0 +1,18 @@
+{
+  "shift": "m/true/q/z/true/1|0/9007199254740991/true/true/0/0|/x/true|false/true/true|true/true/true/0",
+  "optionalIndex": "true/7/11/true/1/1",
+  "staticCollections": "0/1/11/1",
+  "find": "true/true/2/3/true/2/true",
+  "unionViews": "left/right/true/true/false",
+  "namedRecord": "0/11/true/first,second,third",
+  "interfaceHeritage": "token/own/own/token/token/true",
+  "denseCallbacks": "true/true/false/true/7/1/8/true/ab/x/0",
+  "postfix": "3/6/11/10/7/8/1/1/9/true/true",
+  "continueUpdates": "4/4/12",
+  "sliceAndUnshift": "abcde/de/abc//cd//bc/1/2/3/0/true",
+  "brandedOptional": "first/absent/first/first/second/first/second/absent/absent",
+  "indentation": "|&nbsp&nbsp&nbsp&nbsp|9007199254740991|-9007199254740991",
+  "matchTests": "true/true/yes/true/rp",
+  "splice": "x:abcdey;ax:bcdey;abx:cdey;abcdx:ey;abcdex:y;abcdex:y;abcdx:ey;abcx:dey;x:abcdey;1/3/true/second",
+  "codeUnits": "65,126,254,255,256,257,8364,55357,56832,9,"
+}

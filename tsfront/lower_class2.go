@@ -27,6 +27,10 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	if e, ok := l.overrides[fn]; ok && e.Method != nil {
 		return hm
 	}
+	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+		l.diagf(fn, "unsupported-async", "async body must be excluded by validated workload coverage")
+		return nil
+	}
 	if l.methodFailed(hm) {
 		return nil
 	}
@@ -393,11 +397,108 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
-	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) && !dst.Args[0].IsRef() {
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic && !x.Type.Equal(dst) {
+		boxed := l.coerce(x, hir.T(hir.Dynamic))
+		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: boxed, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
+	}
+	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.Optional && dst.Args[0].Kind != hir.Dynamic {
+		base := dst.Args[0]
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+			x = l.tempInit(nil, x.Type, x)
+			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(x, base)}
+		}
+	}
+	if x.Type.Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
+		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]
+		return l.rtOp(op, x, dst)
+	}
+	if x.Type.Kind == hir.Dynamic && (dst.Kind == hir.ClassRef || dst.Kind == hir.InterfaceRef || dst.Kind == hir.Array || dst.Kind == hir.OrderedMap || dst.Kind == hir.OrderedSet) {
+		// TypeScript typed the tagged value as the reference: the checked
+		// unboxing raises for any other payload.
+		return l.rtOp("dynamic.asRef", x, dst)
+	}
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
+		// TypeScript typed the tagged value as the primitive: absence raises.
+		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
+	}
+	// A present-only use of an optional primitive (TypeScript already typed
+	// it as the base): checked narrowing, absent raises.
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(dst) && !dst.IsRef() && dst.Kind != hir.Optional && dst.Kind != hir.Dynamic {
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
+	}
+	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) {
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
 	}
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
 		return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
+	}
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic {
+		switch {
+		case x.Type.Kind == hir.Dynamic || x.Type.Equal(dst):
+		case x.Type.Kind == hir.Optional && x.Type.Args[0].Kind != hir.Dynamic:
+			// An absent value stays absent; a present one is boxed.
+			present := l.tempInit(nil, x.Type, x)
+			absent := &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: present}
+			boxed := l.rtOp("dynamic.of", &hir.Expr{Kind: hir.Narrow, Type: x.Type.Args[0], X: present}, hir.T(hir.Dynamic))
+			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: absent, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: boxed}
+		case x.Type.Kind != hir.Optional && x.Type.Kind != hir.Void:
+			return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))
+		}
+	}
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.ClassRef {
+		if x.Type.Kind == hir.InterfaceRef {
+			converted := l.coerce(x, dst.Args[0])
+			if converted.Type.Equal(dst.Args[0]) {
+				return l.coerce(converted, dst)
+			}
+		}
+		if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.InterfaceRef {
+			source := x.Type.Args[0]
+			for base := l.classByName(l.ifaceClassBaseOf[source.Name]); base != nil; base = l.classByName(base.Super) {
+				if base.Name != dst.Args[0].Name {
+					continue
+				}
+				saved := l.tempInit(nil, x.Type, x)
+				present := &hir.Expr{Kind: hir.Narrow, Type: source, X: saved}
+				converted := &hir.Expr{Kind: hir.Cast, Type: dst.Args[0], X: present}
+				return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: converted}
+			}
+		}
+	}
+	if x.Type.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef {
+		for base := l.classByName(l.ifaceClassBaseOf[x.Type.Name]); base != nil; base = l.classByName(base.Super) {
+			if base.Name == dst.Name {
+				return &hir.Expr{Kind: hir.Cast, Node: x.Node, Type: dst, X: x}
+			}
+		}
+	}
+	// An interface value flowing into a class its declaration extends: the
+	// checked cast raises only for an implementer outside the declared
+	// hierarchy, which TypeScript's structural typing would not admit.
+	{
+		src, target := x.Type, dst
+		if src.Kind == hir.Optional {
+			src = src.Args[0]
+		}
+		if target.Kind == hir.Optional {
+			target = target.Args[0]
+		}
+		if src.Kind == hir.InterfaceRef && target.Kind == hir.InterfaceRef && src.Name != target.Name && l.acceptsType(target, src) {
+			// Structurally compatible interfaces are distinct ABAP interface
+			// types: the assignment needs the checked cast.
+			narrowTo := dst
+			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {
+				narrowTo = hir.T(hir.Optional, dst)
+			}
+			return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: narrowTo, X: x}
+		}
+		if src.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef && target.Name != hir.RootObject && (l.interfaceHasClassBase(src.Name, target) || l.unionPartsAccepted(src.Name, target)) {
+			narrowTo := dst
+			if x.Type.Kind == hir.Optional && dst.Kind != hir.Optional {
+				narrowTo = hir.T(hir.Optional, dst)
+			}
+			return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: narrowTo, X: x}
+		}
 	}
 	if x.Type.Kind == hir.ClassRef && dst.Kind == hir.InterfaceRef && !l.acceptsType(dst, x.Type) {
 		l.recordImplements(x.Type, dst)
