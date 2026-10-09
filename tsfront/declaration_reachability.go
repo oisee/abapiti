@@ -98,6 +98,28 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 		f := owners[n]
 		ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
 		l.file, l.ck = f, ck
+		// Constructing a class runs its base constructor (field initializers
+		// included) through super(): a constructed class's base is a value.
+		if n.Kind == ast.KindClassDeclaration && values[n] && n.AsClassDeclaration().HeritageClauses != nil {
+			for _, clause := range n.AsClassDeclaration().HeritageClauses.Nodes {
+				if clause.AsHeritageClause().Token != ast.KindExtendsKeyword {
+					continue
+				}
+				for _, t := range clause.AsHeritageClause().Types.Nodes {
+					sym := ck.GetSymbolAtLocation(t.AsExpressionWithTypeArguments().Expression)
+					if sym != nil && sym.Flags&ast.SymbolFlagsAlias != 0 {
+						if target, ok := ck.ResolveAlias(sym); ok {
+							sym = target
+						}
+					}
+					if sym != nil {
+						for _, decl := range sym.Declarations {
+							keep(decl, true)
+						}
+					}
+				}
+			}
+		}
 		seenTypes := map[*checker.Type]bool{}
 		var typeEdges func(*checker.Type)
 		typeEdges = func(t *checker.Type) {

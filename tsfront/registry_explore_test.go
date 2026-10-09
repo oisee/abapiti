@@ -102,6 +102,19 @@ func TestRegistryClosureGate(t *testing.T) {
 		}
 	}
 	verification := hir.Verify(prog)
+	// A type-only class (trapping constructor) must not be the base of a
+	// constructed one: super() would run the trap (BasicRuleConfig, 2026-10-09).
+	trapped := map[string]bool{}
+	for _, c := range prog.Classes {
+		if c.Ctor != nil && c.Ctor.Body != nil && len(c.Ctor.Body.List) == 1 && c.Ctor.Body.List[0].Kind == hir.Trap {
+			trapped[c.Name] = true
+		}
+	}
+	for _, c := range prog.Classes {
+		if c.Super != "" && trapped[c.Super] && !trapped[c.Name] {
+			t.Errorf("constructed class %s extends type-only %s", c.Name, c.Super)
+		}
+	}
 	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
