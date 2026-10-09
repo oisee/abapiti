@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront"
 	"github.com/spf13/cobra"
 )
@@ -233,6 +234,14 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	n.step("ABAP emitted: %d objects (%d classes, %d interfaces) -> %s", len(emitted), classes, intfs, filepath.Join(out, "classes"))
+	sourceMap, err := abap.SourceMap(lowering.Prog, names)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(out, "names.json"), sourceMap, 0644); err != nil {
+		return err
+	}
+	n.say("  names.json: every ABAP name -> TypeScript identity and file:line (for traces, dumps and reading)")
 
 	// 5. targets
 	var next []string
