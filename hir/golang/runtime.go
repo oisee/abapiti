@@ -267,6 +267,20 @@ func checkedI32(v int64) int32 {
  if v < -2147483648 || v > 2147483647 {panic(rangeFault{})}
  return int32(v)
 }
+func checkedAddI64(a,b int64) int64 {
+ v:=a+b
+ if b>0&&v<a || b<0&&v>a {panic(rangeFault{})}
+ return v
+}
+func checkedSubI64(a,b int64) int64 {
+ v:=a-b
+ if b<0&&v<a || b>0&&v>a {panic(rangeFault{})}
+ return v
+}
+func safeInteger(v int64) int64 {
+ if v < -9007199254740991 || v > 9007199254740991 {panic(rangeFault{})}
+ return v
+}
 func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
 	var v int64
 	switch op {
