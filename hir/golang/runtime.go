@@ -139,20 +139,33 @@ func writeRune(b *strings.Builder, r rune) {
  if r<=0xffff { writeUnit(b,uint16(r));return }
  hi,lo:=utf16.EncodeRune(r);writeUnit(b,uint16(hi));writeUnit(b,uint16(lo))
 }
-func (s jsString) upper() jsString {
- // Most lexer tokens are ASCII, and already-uppercase tokens need no copy.
- ascii,changed:=true,false
- for i:=int32(0);i<s.length();i++ {
-  c:=s.charCodeAt(i)
-  if c>=128 {ascii=false;break}
-  changed=changed||c>=97&&c<=122
+// Scan until the first changed unit, copy its prefix, and transform only the
+// suffix. Any non-ASCII unit restarts the unchanged Unicode implementation.
+func (s jsString) asciiCase(lower bool) (jsString, bool) {
+ from,to,delta:=byte('a'),byte('z'),byte(32)
+ if lower {from,to='A','Z'}
+ first:=0
+ for ;first+1<len(s);first+=2 {
+  c:=s[first]
+  if s[first+1]!=0||c>=128 {return "",false}
+  if c>=from&&c<=to {break}
  }
- if ascii&&!changed {return s}
+ if first==len(s) {return s,true}
+ var out strings.Builder;out.Grow(len(s));out.WriteString(string(s[:first]))
+ for i:=first;i+1<len(s);i+=2 {
+  c:=s[i]
+  if s[i+1]!=0||c>=128 {return "",false}
+  if c>=from&&c<=to {if lower {c+=delta}else{c-=delta}}
+  out.WriteByte(c);out.WriteByte(0)
+ }
+ return jsString(out.String()),true
+}
+func (s jsString) upper() jsString {
+ if out,ok:=s.asciiCase(false);ok {return out}
  var out strings.Builder
  out.Grow(len(s))
  for i:=int32(0);i<s.length();i++ {
   c:=s.charCodeAt(i)
-  if ascii {if c>=97&&c<=122 {c-=32};writeUnit(&out,uint16(c));continue}
   r:=rune(c)
   if c>=0xd800&&c<=0xdbff&&i+1<s.length() {
    d:=s.charCodeAt(i+1)
@@ -1027,6 +1040,7 @@ func cased(r rune) bool {
 	return unicode.IsUpper(r) || unicode.IsLower(r) || unicode.IsTitle(r) || unicode.Is(unicode.Other_Uppercase, r) || unicode.Is(unicode.Other_Lowercase, r)
 }
 func (s jsString) lower() jsString {
+	if out,ok:=s.asciiCase(true);ok {return out}
 	var rs []rune
 	for i := int32(0); i < s.length(); i++ {
 		r := rune(s.charCodeAt(i))

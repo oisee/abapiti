@@ -16,6 +16,9 @@ func TestSubsetAndRegexpEdges(t *testing.T) {
  fault:=func(f func()){defer func(){check(recover()!=nil)}();f()}
  check(str("ßﬃ").upper()==str("SSFFI"))
  check(str("ΟΣ ΟΣΑ İ").lower()==str("ος οσα i\u0307"))
+ check(str("ABC_xyz").upper()==str("ABC_XYZ") && str("abc_XYZ").lower()==str("abc_xyz"))
+ check(str("abßΣ").upper()==str("ABSSΣ") && str("ABΟΣ").lower()==str("abος"))
+ check(str("").upper()==str("") && str("").lower()==str(""))
  lone:=unit(0xd800);check(lone.upper()==lone && lone.lower()==lone)
  section:=str("a😀z").substring(1,3);check(section.charCodeAt(0)==0xd83d && section.charCodeAt(1)==0xde00)
  fault(func(){section.charCodeAt(-1)});fault(func(){section.charCodeAt(2)});fault(func(){str("").charCodeAt(0)})
