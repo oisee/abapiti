@@ -230,3 +230,54 @@ func TestGoRegistryXML(t *testing.T) {
 	}
 	t.Logf("%d tagged XML Node oracle cases compared", len(cases))
 }
+
+// tools/lexer-go-timing.mjs builds once, then times both runtimes in one process.
+func TestPrepareGoLexerTiming(t *testing.T) {
+	target := os.Getenv("ABAPITI_GO_LEXER_BENCH")
+	if target == "" {
+		t.Skip("run tools/lexer-go-timing.mjs for Go/Node timings")
+	}
+	lexerCore(t)
+	p, ds := lowerClosure(t)
+	if hasBlocking(ds) {
+		t.Fatal(ds)
+	}
+	files, err := gohir.Emit(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result hir.Type
+	for _, c := range p.Classes {
+		if c.Name == "src/abap/1_lexer/lexer.ts.Lexer" {
+			for _, m := range c.Methods {
+				if m.Name == "run" {
+					result = m.Result
+				}
+			}
+		}
+	}
+	if result.Name == "" {
+		t.Fatal("missing Lexer.run")
+	}
+	n := hir.NewNames()
+	invocation := fmt.Sprintf("%s(%s(),%s(raw),nil).%s().%s.Items", goEntry("src/abap/1_lexer/lexer.ts.Lexer", "run"), n.Get("new.src/abap/1_lexer/lexer.ts.Lexer"), n.Get("new.harness/test_file.ts.TestFile"), n.Get("base."+result.Name), n.Get("member.tokens"))
+	files["main.go"] = `package main
+import("encoding/json";"os";"time";"fmt")
+func main(){var request struct {Cases []struct{Name,Abap string};Iterations int};if err:=json.NewDecoder(os.Stdin).Decode(&request);err!=nil{panic(err)}
+ type observation struct{Name string ` + "`json:\"name\"`" + `;Milliseconds float64 ` + "`json:\"milliseconds\"`" + `;Tokens int ` + "`json:\"tokens\"`" + `}
+ out:=[]observation{};for _,c:=range request.Cases{raw:=str(c.Abap);lex:=func()int{return len(` + invocation + `)};for i:=0;i<30;i++{lex()};start:=time.Now();count:=0;for i:=0;i<request.Iterations;i++{count=lex()};elapsed:=float64(time.Since(start).Nanoseconds())/1e6/float64(request.Iterations);out=append(out,observation{c.Name,elapsed,count})};b,_:=json.Marshal(out);fmt.Println(string(b))}
+`
+	files["go.mod"] = "module timing\n\ngo 1.26.0\n"
+	dir := t.TempDir()
+	for name, source := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cmd := exec.Command("go", "build", "-o", target, ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("build timing driver: %v\n%s", err, out)
+	}
+}
