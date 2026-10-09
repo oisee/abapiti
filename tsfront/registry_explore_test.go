@@ -208,7 +208,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(out, class+".clas.abap"), []byte(RegistryRunClass(class, inputs, string(config), want, 0, names)), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(out, class+".clas.testclasses.abap"), []byte(RegistryRunTest(class)), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(out, class+".clas.testclasses.abap"), []byte(RegistryRunTest(class, traceTrap(names))), 0644); err != nil {
 			t.Fatal(err)
 		}
 		if os.Getenv("REGISTRY_RUN_CORPUS") != "" {
@@ -231,4 +231,12 @@ func envOr(primary, fallback string) string {
 		return v
 	}
 	return os.Getenv(fallback)
+}
+
+// traceTrap names the trap exception the cast-trace emission raises.
+func traceTrap(names *hir.Names) string {
+	if os.Getenv("ABAPITI_CAST_TRACE") == "" {
+		return ""
+	}
+	return names.Get("exception.unexecuted")
 }

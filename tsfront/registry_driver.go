@@ -152,8 +152,12 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 // RegistryRunTest always fails with the driver's report line (verdict,
 // timings, hash), the same convention as the structures benchmark: the
 // runner's message carries the measurement; ok=X is the acceptance.
-func RegistryRunTest(class string) string {
-	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nCALL METHOD " + class + "=>run IMPORTING report = report RECEIVING ok = ok.\nCATCH cx_root INTO error.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\ncl_abap_unit_assert=>fail( msg = report ).\nENDMETHOD.\nENDCLASS.\n"
+func RegistryRunTest(class, trap string) string {
+	trapCatch := ""
+	if trap != "" {
+		trapCatch = "CATCH " + trap + " INTO DATA(trapped).\nreport = |TRAP { trapped->source_location }|.\n"
+	}
+	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nCALL METHOD " + class + "=>run IMPORTING report = report RECEIVING ok = ok.\n" + trapCatch + "CATCH cx_root INTO error.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\ncl_abap_unit_assert=>fail( msg = report ).\nENDMETHOD.\nENDCLASS.\n"
 }
 
 // RegistryRunCorpusClass is the A4H variant: inputs come from the permanent

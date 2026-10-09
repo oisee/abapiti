@@ -1602,6 +1602,21 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " ?= " + obj + ".")
 		return
 	case "dynamic.of":
+		if x.X.Kind == hir.StaticGet && strings.HasSuffix(x.X.Name, "_namespace") && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
+			// An enum namespace is immutable: boxing it as a plain object (a
+			// snapshot of its entries) reads like the JavaScript object does.
+			dyn := b.e.name("runtime.dynamic")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			v := b.temp(hir.T(hir.Dynamic))
+			b.line("CREATE OBJECT " + n + ".")
+			b.line(n + "->tag = " + dyn + "=>tag_object.")
+			b.line("LOOP AT " + a + "->entries INTO DATA(" + row + ").")
+			b.boxDynamic(v, row+"-v", x.X.Type.Args[1])
+			b.line("APPEND VALUE #( k = " + row + "-k v = " + v + " ) TO " + n + "->entries.")
+			b.line("ENDLOOP.")
+			return
+		}
 		b.boxDynamic(n, a, x.X.Type)
 		return
 	case "dynamic.typeof", "dynamic.toString":

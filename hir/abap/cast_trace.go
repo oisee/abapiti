@@ -15,6 +15,10 @@ var castTrace = os.Getenv("ABAPITI_CAST_TRACE") != ""
 func (e *emitter) traceCasts() {
 	trap := e.name("exception.unexecuted")
 	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA source_location TYPE string.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
+	// The dynamic box's get reports the tag and key it cannot read.
+	if dyn := e.name("runtime.dynamic") + ".clas.abap"; e.files[dyn] != "" {
+		e.files[dyn] = strings.Replace(e.files[dyn], "ELSEIF tag = tag_number OR tag = tag_boolean.\nRETURN.\nELSE.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.", "ELSEIF tag = tag_number OR tag = tag_boolean.\nRETURN.\nELSE.\nDATA(getx) = NEW "+trap+"( ).\ngetx->source_location = |dynamic.get tag={ tag } key={ p0 }|.\nRAISE EXCEPTION getx.", 1)
+	}
 	serial := 0
 	for file, src := range e.files {
 		var out strings.Builder

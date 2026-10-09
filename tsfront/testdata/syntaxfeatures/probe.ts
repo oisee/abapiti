@@ -36,6 +36,7 @@ abstract class SiblingBase { public abstract tag(): string; }
 class Sibling1 extends SiblingBase { public tag(): string { return "s1"; } }
 class Sibling2 extends SiblingBase { public tag(): string { return "s2"; } public only2(): string { return "only2"; } }
 type Meta = {[key: string]: number};
+enum Color { Red = "r", Green = "g", Blue = "b" }
 interface INodeLike { kindOf(): string; }
 abstract class Holder<T extends INodeLike> implements INodeLike {
   protected readonly kids: T[] = [];
@@ -203,7 +204,10 @@ export class Probe {
     const ic: IConfigurable = rx;
     ic.setConfig(new XConf(4));
     const forwarded = `${rx.getConfig().level}` + rx.run(new ClassDef("c")) + rx.describe(new IntfDef("i")) + rx.label();
-    const parts: string[] = [labeled, evolving.join("+"), viewed, downcast, typed, filtered,
+    const colors: any = Color;
+    let colorKeys = "";
+    for (const k in Color) { if (colors[k] === "g" || colors[k] === needle) { colorKeys += k; } }
+    const parts: string[] = [colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
