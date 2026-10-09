@@ -223,17 +223,22 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
 	e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
 	e.line("func (self *%s) %s() *%s {return self}", e.obj(c.Name), e.getter(c.Name), e.obj(c.Name))
-	e.line("type %s interface {", e.ref(c.Name))
-	e.line("nilReference() bool")
-	if c.Super != "" {
-		e.line("%s", e.ref(c.Super))
+	if e.concreteClass(c.Name) {
+		// A class with no subclasses has one possible concrete representation.
+		e.line("type %s = *%s", e.ref(c.Name), e.obj(c.Name))
+	} else {
+		e.line("type %s interface {", e.ref(c.Name))
+		e.line("nilReference() bool")
+		if c.Super != "" {
+			e.line("%s", e.ref(c.Super))
+		}
+		e.line("%s() *%s", e.getter(c.Name), e.obj(c.Name))
+		for _, n := range e.effective(c) {
+			m, _ := e.method(c, n)
+			e.line("%s(%s)%s", e.member(n), e.params(m, false), e.result(m.Result))
+		}
+		e.line("}")
 	}
-	e.line("%s() *%s", e.getter(c.Name), e.obj(c.Name))
-	for _, n := range e.effective(c) {
-		m, _ := e.method(c, n)
-		e.line("%s(%s)%s", e.member(n), e.params(m, false), e.result(m.Result))
-	}
-	e.line("}")
 	for _, f := range c.Fields {
 		if f.Static {
 			e.line("var %s %s", e.name("static."+c.Name+"."+f.Name), e.typ(f.Type))
@@ -320,7 +325,11 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		}
 	}
 	if !m.Static {
-		e.line("if self==nil || self.nilReference() {panic(rangeFault{})}")
+		if e.concreteClass(c.Name) {
+			e.line("if self==nil {panic(rangeFault{})}")
+		} else {
+			e.line("if self==nil || self.nilReference() {panic(rangeFault{})}")
+		}
 	}
 	if m.Name != "class_constructor" {
 		e.line("%s()", e.name("init."+c.Name))
@@ -872,4 +881,16 @@ func hasExprReturnBoundary(x *hir.Expr) bool {
 		}
 	}
 	return false
+}
+
+func (e *emitter) concreteClass(name string) bool {
+	if name == hir.RootObject {
+		return false
+	}
+	for _, c := range e.p.Classes {
+		if c.Super == name {
+			return false
+		}
+	}
+	return true
 }
