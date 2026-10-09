@@ -1778,6 +1778,18 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		return
 	}
+	switch x.Op {
+	case "array.length":
+		// The items table is public: lines( ) saves a method call per access.
+		b.line(n + " = lines( " + a + "->items ).")
+		return
+	case "array.push":
+		b.line("APPEND " + args[0] + " TO " + a + "->items.")
+		if n != "" {
+			b.line(n + " = lines( " + a + "->items ).")
+		}
+		return
+	}
 	if x.Op == "record.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
 		b.line(n + " = abap_true.")
@@ -1851,6 +1863,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line(target + " = " + b.value(s.Y, s.X.Type) + ".")
 	case hir.ExprStmt:
+		if s.X.Kind == hir.RuntimeOp && s.X.Op == "array.push" {
+			// The new length is unused.
+			b.runtimeOp(s.X, "")
+			return
+		}
 		b.expr(s.X)
 	case hir.If:
 		a := b.expr(s.X)
