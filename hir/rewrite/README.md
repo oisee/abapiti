@@ -1,6 +1,6 @@
-# Grace v2 — rules over abapiti's HIR
+# Grace — rules over abapiti's HIR
 
-Adapted from the Grace v2 design draft (2026-10-09). Reviewer: abapiti.
+Adapted from the Grace design draft (2026-10-09). Reviewer: abapiti.
 Home: package `hir/rewrite` in oisee/abapiti, branch `proto/grace-v2`.
 Milestone 1 implements the fact layer; the rewrite layer below is future scope.
 
@@ -48,7 +48,7 @@ Two layers, one small language (S-expressions, like MinZ's Grace):
 ## Milestones
 
 1. **Engine + facts, no rewrites.** Extract base facts, compute `receivers`, `may_throw`, `pure`, `escapes`; print them; spot-check against hand reading of abaplint's lexer.
-2. **First rewrite = abapiti's inliner.** Express `hir/inline.go` as Grace v2 rules; output HIR byte-identical to hers on the same inputs. This proves the language can carry a real pass.
+2. **First rewrite = abapiti's inliner.** Express `hir/inline.go` as Grace rules; output HIR byte-identical to hers on the same inputs. This proves the language can carry a real pass.
 3. **Devirtualisation** via `receivers` (generalises the Go emitter's "concrete pointers for leaf classes" into HIR, so ABAP gains too).
 4. **may_throw → exception convention** facts exported to the Go emitter (keeps panic by default; switch per method only with profile evidence).
 5. **Parallel map proof** (`mark_parallel`): iteration writes only fresh objects and its own result slot, reads shared data, writes statics only as `memo_store` (thread-safe compute-once cache in the Go runtime) or commutative counters (atomics), `lazy_init` warmed before the region. Join re-raises the lowest-index exception; results in source order.

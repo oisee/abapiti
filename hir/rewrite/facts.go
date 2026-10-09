@@ -1,4 +1,4 @@
-// Package rewrite implements Grace v2 fact analysis over verified HIR.
+// Package rewrite implements Grace fact analysis over verified HIR.
 // Milestone 1 has no HIR mutation or rewrite actions.
 package rewrite
 
