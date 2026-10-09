@@ -59,6 +59,9 @@ func (r *runner) addInlineFacts() error {
 			size := 0
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, _ string) {
 				add("inline_stmt", id, string(s.Kind))
+				if s.Kind == hir.VarDecl && s.X == nil {
+					add("inline_uninitialized", id)
+				}
 				if s.Kind != hir.Block {
 					size++
 				}

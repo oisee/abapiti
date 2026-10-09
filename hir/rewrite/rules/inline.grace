@@ -26,7 +26,8 @@
  (base (inline_stmt ?m break))
  (base (inline_stmt ?m continue))
  (base (inline_expr ?m super))
- (base (inline_seq_return ?m)))
+ (base (inline_seq_return ?m))
+ (base (inline_uninitialized ?m)))
 
 (rule inline-candidate 20
  (head (inline_candidate ?m))

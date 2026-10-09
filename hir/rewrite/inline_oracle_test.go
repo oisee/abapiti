@@ -230,3 +230,30 @@ func TestInlinePreparesRejectedTemplateBeforeLaterCall(t *testing.T) {
 	}}}}
 	gracecheck.Check(t, p)
 }
+
+// TS: late(k) { let r; if (k > 0) r = k; return r === undefined ? -1 : r }
+// Calling late for [5, -1] in a loop must yield [5, -1], with a fresh frame.
+// A hoisted inlined declaration would retain 5 on the second iteration.
+func TestInlineRejectsUninitializedDeclarationInLoop(t *testing.T) {
+	i, ref := hir.T(hir.I32), hir.Ref("C")
+	late := &hir.Method{Name: "late", Virtual: true, Params: []hir.Param{{Name: "k", Type: i}}, Result: i,
+		Body: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "r", Type: i},
+			&hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Binary, Op: ">", Type: hir.T(hir.Bool), X: hir.V("k", i), Y: hir.L(i, 0)}, Body: hir.B(&hir.Stmt{Kind: hir.Assign, X: hir.V("r", i), Y: hir.V("k", i)})},
+			&hir.Stmt{Kind: hir.Return, X: hir.V("r", i)})}
+	call := &hir.Expr{Kind: hir.VirtualCall, Type: i, Name: "late", X: &hir.Expr{Kind: hir.This, Type: ref}, Args: []*hir.Expr{hir.V("k", i)}}
+	caller := &hir.Method{Name: "loop", Virtual: true, Params: []hir.Param{{Name: "ks", Type: hir.T(hir.Array, i)}}, Result: hir.T(hir.Void), Body: hir.B(
+		&hir.Stmt{Kind: hir.ForEach, Name: "k", Type: i, X: hir.V("ks", hir.T(hir.Array, i)), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: call})})}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{late, caller}}}}
+	inlineoracle.Check(t, p)
+	before := hir.Dump(p)
+	stats, err := rewrite.Inline(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CallSites != 0 || hir.Dump(p) != before {
+		t.Fatalf("uninitialized callee expanded: %+v", stats)
+	}
+	// The same guard applies to declarations nested in expression statements.
+	late.Body = hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.Seq, Type: i, Stmt: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "r", Type: i}), Y: hir.V("r", i)}})
+	inlineoracle.Check(t, p)
+}

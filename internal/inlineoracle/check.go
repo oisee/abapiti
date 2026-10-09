@@ -1,5 +1,5 @@
-// Package inlineoracle contains the pinned reference implementation and test
-// helpers. Production packages must not import it.
+// Package inlineoracle compares Grace against main's HIR inliner on independent
+// deep copies. Production packages must not import these test helpers.
 package inlineoracle
 
 import (
@@ -16,7 +16,7 @@ import (
 func Check(t *testing.T, p *hir.Program) {
 	t.Helper()
 	reference, grace := hirclone.Clone(p), hirclone.Clone(p)
-	count, callees := InlineStats(reference)
+	count, callees := hir.InlineStats(reference)
 	stats, err := rewrite.Inline(grace)
 	if err != nil {
 		t.Fatal(err)
