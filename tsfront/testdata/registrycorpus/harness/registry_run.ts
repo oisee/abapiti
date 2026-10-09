@@ -17,8 +17,19 @@ export class RegistryRun {
   }
 
   public run(config: string): string {
-    const reg = new Registry(new Config(config)).addFiles(this.files).addDependencies(this.dependencies);
+    return this.report(this.parse(config));
+  }
+
+  // parse and report are separate so a driver can time the two phases
+  public parse(config: string): Registry {
+    const reg = new Registry(new Config(config));
+    reg.addFiles(this.files);
+    reg.addDependencies(this.dependencies);
     reg.parse();
+    return reg;
+  }
+
+  public report(reg: Registry): string {
     const issues = reg.findIssues();
     let out = `${issues.length}`;
     for (const i of issues) {

@@ -164,13 +164,13 @@ func RegistryRunTest(class, trap string) string {
 // ZABAPITI_CORPUS table (sets ZABAPGIT and DEPS, SHA-256 verified on load),
 // progress goes to SLG1 through ZCL_ABAPITI_LOG. Dependency members are
 // stored as src/<path>; Node names them relative to deps/src.
-func RegistryRunCorpusClass(class, wantSHA string, names *hir.Names) string {
+func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, names *hir.Names) string {
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	harness := names.Get("harness/registry_run.ts.RegistryRun")
 	line("CLASS %s DEFINITION PUBLIC FINAL CREATE PUBLIC.", class)
 	line("PUBLIC SECTION.")
-	line("CLASS-METHODS run EXPORTING report TYPE string RETURNING VALUE(ok) TYPE abap_bool.")
+	line("CLASS-METHODS run IMPORTING negative TYPE abap_bool DEFAULT abap_false EXPORTING report TYPE string RETURNING VALUE(ok) TYPE abap_bool.")
 	line("PROTECTED SECTION.")
 	line("PRIVATE SECTION.")
 	line("ENDCLASS.")
@@ -178,18 +178,36 @@ func RegistryRunCorpusClass(class, wantSHA string, names *hir.Names) string {
 	line("METHOD run.")
 	line("DATA h TYPE REF TO %s.", harness)
 	line("DATA set TYPE REF TO zif_abapiti_corpus.")
+	line("DATA ch TYPE string.")
+	line("DATA want TYPE string.")
 	line("DATA log TYPE REF TO zcl_abapiti_log.")
 	for _, s := range []string{"name", "raw", "cfg", "dump", "hash"} {
 		line("DATA %s TYPE string.", s)
 	}
 	line("DATA i TYPE i.")
 	line("DATA files TYPE i.")
-	for _, s := range []string{"start", "stop", "load_us", "run_us"} {
+	for _, s := range []string{"start", "stop", "load_us", "parse_us", "report_us", "run_us"} {
 		line("DATA %s TYPE i.", s)
 	}
+	line("DATA reg TYPE REF TO %s.", names.Get("src/registry.ts.Registry"))
 	line("log = zcl_abapiti_log=>start( subobject = 'BENCH' extnumber = 'REGISTRY zabapgit' ).")
+	line("want = `%s`.", wantSHA)
 	line("GET RUN TIME FIELD start.")
 	line("CREATE OBJECT h.")
+	if negative != nil {
+		// Node adds the files in name order; the extra files sort first.
+		line("IF negative = abap_true.")
+		line("want = `%s`.", negative.SHA)
+		for _, f := range negative.Extra {
+			line("CLEAR raw.")
+			for _, s := range abapStringBuild("raw", "ch", f.Raw) {
+				line("%s", s)
+			}
+			line("CALL METHOD h->%s EXPORTING %s = `%s` %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), strings.ReplaceAll(f.Name, "`", "``"), names.Get("param.raw"))
+			line("files = files + 1.")
+		}
+		line("ENDIF.")
+	}
 	line("set = NEW zcl_abapiti_corpus( 'ZABAPGIT' ).")
 	line("DO set->count( ) TIMES.")
 	line("i = sy-index.")
@@ -197,7 +215,17 @@ func RegistryRunCorpusClass(class, wantSHA string, names *hir.Names) string {
 	line("IF name = `abaplint.json`.")
 	line("cfg = set->get( i ).")
 	line("ELSE.")
-	line("CALL METHOD h->%s EXPORTING %s = name %s = set->get( i ).", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
+	line("raw = set->get( i ).")
+	if negative != nil {
+		for _, f := range negative.Append {
+			line("IF negative = abap_true AND name = `%s`.", strings.ReplaceAll(f.Name, "`", "``"))
+			for _, s := range abapStringBuild("raw", "ch", f.Raw) {
+				line("%s", s)
+			}
+			line("ENDIF.")
+		}
+	}
+	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
 	line("files = files + 1.")
 	line("ENDIF.")
 	line("ENDDO.")
@@ -215,13 +243,19 @@ func RegistryRunCorpusClass(class, wantSHA string, names *hir.Names) string {
 	line("load_us = stop - start.")
 	line("log->info( |loaded { files } files, config { strlen( cfg ) } chars, { load_us } us| ).")
 	line("GET RUN TIME FIELD start.")
-	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = dump.", names.Get("member.run"), names.Get("param.config"))
+	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = reg.", names.Get("member.parse"), names.Get("param.config"))
 	line("GET RUN TIME FIELD stop.")
-	line("run_us = stop - start.")
+	line("parse_us = stop - start.")
+	line("log->info( |parsed: { parse_us } us| ).")
+	line("GET RUN TIME FIELD start.")
+	line("CALL METHOD h->%s EXPORTING %s = reg RECEIVING result = dump.", names.Get("member.report"), names.Get("param.reg"))
+	line("GET RUN TIME FIELD stop.")
+	line("report_us = stop - start.")
+	line("run_us = parse_us + report_us.")
 	line("cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = `SHA256` if_data = dump IMPORTING ef_hashstring = hash ).")
 	line("hash = to_lower( hash ).")
-	line("ok = xsdbool( hash = `%s` ).", wantSHA)
-	line("report = |REGISTRY ok={ ok } files={ files } load_us={ load_us } run_us={ run_us } sha256={ hash }|.")
+	line("ok = xsdbool( hash = want ).")
+	line("report = |REGISTRY negative={ negative } ok={ ok } files={ files } load_us={ load_us } parse_us={ parse_us } report_us={ report_us } run_us={ run_us } sha256={ hash }|.")
 	line("IF ok = abap_false.")
 	line("report = report && | head={ substring( val = dump len = nmin( val1 = strlen( dump ) val2 = 200 ) ) }|.")
 	line("ENDIF.")
@@ -233,6 +267,19 @@ func RegistryRunCorpusClass(class, wantSHA string, names *hir.Names) string {
 
 // RegistryRunReport runs the corpus driver as a background job and prints
 // its report line to the spool.
-func RegistryRunReport(program, class string) string {
-	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nCALL METHOD " + class + "=>run IMPORTING report = report RECEIVING ok = ok.\nWRITE: / report.\n"
+func RegistryRunReport(program, class string, negative bool) string {
+	flag := "abap_false"
+	if negative {
+		flag = "abap_true"
+	}
+	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nCALL METHOD " + class + "=>run EXPORTING negative = " + flag + " IMPORTING report = report RECEIVING ok = ok.\nWRITE: / report.\n"
+}
+
+// RegistryNegative is a seeded variant of the corpus run: Extra inputs are
+// added before the corpus set, Append texts are appended to the named set
+// members, and SHA is the Node oracle's hash of the printed issues.
+type RegistryNegative struct {
+	SHA    string         `json:"sha"`
+	Extra  []RegistryFile `json:"extra"`
+	Append []RegistryFile `json:"append"`
 }

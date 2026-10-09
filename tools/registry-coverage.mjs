@@ -29,6 +29,8 @@ if (args[0] === '--worker') {
   for (const [name,text] of main) reg.addFile(new a.MemoryFile(variant && name.endsWith('.abap') ? variant.filename : name,text+(variant && name.endsWith('.abap') ? variant.edit : '')));
   for (const [name,text] of files) reg.addDependency(new a.MemoryFile(name,text));
   reg.parse(); const issues = reg.findIssues();
+  // read every field the deployment harness prints for an issue
+  for (const i of issues) [i.getKey(), i.getSeverity(), i.getFilename(), i.getStart().getRow(), i.getStart().getCol(), i.getEnd().getRow(), i.getEnd().getCol(), i.getMessage()].join('|');
   if (variant ? !issues.some(i=>i.getKey()===variant.target) : issues.length!==0) throw new Error('coverage workload failed: '+(variant?.target ?? 'north-star'));
   console.log(JSON.stringify({target:variant?.target ?? 'north-star', issues:issues.length}));
  }
