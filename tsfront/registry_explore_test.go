@@ -250,6 +250,11 @@ func TestRegistryClosureGate(t *testing.T) {
 			}
 		}
 	}
+	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" && os.Getenv("REGISTRY_CLI") != "" {
+		if err := os.WriteFile(filepath.Join(out, "zabaplint.prog.abap"), []byte(RegistryCLIReport("zabaplint", names)), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
 }
 

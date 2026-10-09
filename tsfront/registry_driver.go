@@ -70,7 +70,7 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 	line("CLASS %s IMPLEMENTATION.", class)
 	line("METHOD run.")
 	line("DATA h TYPE REF TO %s.", harness)
-	for _, s := range []string{"raw", "cfg", "dump", "hash"} {
+	for _, s := range []string{"raw", "cfg", "dump", "hash", "stages"} {
 		line("DATA %s TYPE string.", s)
 	}
 	for _, s := range []string{"start", "stop", "load_us", "run_us"} {
@@ -90,7 +90,8 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 	line("cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = `SHA256` if_data = dump IMPORTING ef_hashstring = hash ).")
 	line("hash = to_lower( hash ).")
 	line("ok = xsdbool( hash = `%s` ).", wantSHA)
-	line("report = |REGISTRY ok={ ok } want_issues=%d load_us={ load_us } run_us={ run_us } sha256={ hash }|.", wantIssues)
+	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("report = |REGISTRY ok={ ok } want_issues=%d load_us={ load_us } run_us={ run_us } sha256={ hash } ms: { stages }|.", wantIssues)
 	line("IF ok = abap_false.")
 	line("report = report && | head={ substring( val = dump len = nmin( val1 = strlen( dump ) val2 = 200 ) ) }|.")
 	line("ENDIF.")
@@ -181,7 +182,7 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 	line("DATA ch TYPE string.")
 	line("DATA want TYPE string.")
 	line("DATA log TYPE REF TO zcl_abapiti_log.")
-	for _, s := range []string{"name", "raw", "cfg", "dump", "hash"} {
+	for _, s := range []string{"name", "raw", "cfg", "dump", "hash", "stages"} {
 		line("DATA %s TYPE string.", s)
 	}
 	line("DATA i TYPE i.")
@@ -255,7 +256,8 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 	line("cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = `SHA256` if_data = dump IMPORTING ef_hashstring = hash ).")
 	line("hash = to_lower( hash ).")
 	line("ok = xsdbool( hash = want ).")
-	line("report = |REGISTRY negative={ negative } ok={ ok } files={ files } load_us={ load_us } parse_us={ parse_us } report_us={ report_us } run_us={ run_us } sha256={ hash }|.")
+	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("report = |REGISTRY negative={ negative } ok={ ok } files={ files } load_us={ load_us } parse_us={ parse_us } report_us={ report_us } run_us={ run_us } sha256={ hash } ms: { stages }|.")
 	line("IF ok = abap_false.")
 	line("report = report && | head={ substring( val = dump len = nmin( val1 = strlen( dump ) val2 = 200 ) ) }|.")
 	line("ENDIF.")
@@ -272,7 +274,7 @@ func RegistryRunReport(program, class string, negative bool) string {
 	if negative {
 		flag = "abap_true"
 	}
-	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nCALL METHOD " + class + "=>run EXPORTING negative = " + flag + " IMPORTING report = report RECEIVING ok = ok.\nWRITE: / report.\n"
+	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nCALL METHOD " + class + "=>run EXPORTING negative = " + flag + " IMPORTING report = report RECEIVING ok = ok.\nDATA off TYPE i.\nDATA part TYPE string.\nWHILE off < strlen( report ).\npart = substring( val = report off = off len = nmin( val1 = 200 val2 = strlen( report ) - off ) ).\nWRITE: / part.\noff = off + 200.\nENDWHILE.\n"
 }
 
 // RegistryNegative is a seeded variant of the corpus run: Extra inputs are
@@ -282,4 +284,85 @@ type RegistryNegative struct {
 	SHA    string         `json:"sha"`
 	Extra  []RegistryFile `json:"extra"`
 	Append []RegistryFile `json:"append"`
+}
+
+// RegistryCLIReport is a report for open-steamgate's native build (osabap):
+// its selection screen becomes the command line, so the translated abaplint
+// checks a file from disk with a given abaplint.json and optional
+// dependencies (a text file listing one path per line).
+func RegistryCLIReport(program string, names *hir.Names) string {
+	var b strings.Builder
+	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
+	addFile := func(target, path, name string) {
+		line("CLEAR bytes.")
+		line("OPEN DATASET %s FOR INPUT IN BINARY MODE MESSAGE msg.", path)
+		line("IF sy-subrc <> 0.")
+		line("WRITE: / |cannot read { %s }: { msg }|.", path)
+		line("RETURN.")
+		line("ENDIF.")
+		line("READ DATASET %s INTO bytes.", path)
+		line("CLOSE DATASET %s.", path)
+		line("%s = cl_abap_codepage=>convert_from( bytes ).", target)
+		if name != "" {
+			line("name = %s.", path)
+			line("REPLACE ALL OCCURRENCES OF `\\` IN name WITH `/`.")
+			line("SPLIT name AT `/` INTO TABLE parts.")
+			line("READ TABLE parts INDEX lines( parts ) INTO name.")
+		}
+	}
+	line("REPORT %s LINE-SIZE 1023.", program)
+	line("PARAMETERS p_file TYPE string LOWER CASE.")
+	line("PARAMETERS p_config TYPE string LOWER CASE.")
+	line("PARAMETERS p_deps TYPE string LOWER CASE.")
+	line("PARAMETERS p_times AS CHECKBOX.")
+	line("DATA h TYPE REF TO %s.", names.Get("harness/registry_run.ts.RegistryRun"))
+	line("DATA reg TYPE REF TO %s.", names.Get("src/registry.ts.Registry"))
+	line("DATA bytes TYPE xstring.")
+	line("DATA msg TYPE string.")
+	for _, v := range []string{"name", "raw", "cfg", "list", "path", "dump", "stages"} {
+		line("DATA %s TYPE string.", v)
+	}
+	line("DATA parts TYPE STANDARD TABLE OF string WITH DEFAULT KEY.")
+	line("DATA paths TYPE STANDARD TABLE OF string WITH DEFAULT KEY.")
+	line("DATA out TYPE STANDARD TABLE OF string WITH DEFAULT KEY.")
+	line("START-OF-SELECTION.")
+	line("IF p_file IS INITIAL OR p_config IS INITIAL.")
+	line("WRITE: / `usage: --file FILE --config ABAPLINT_JSON [--deps LIST_OF_DEPENDENCY_PATHS] [--times] -allow-read DIR`.")
+	line("RETURN.")
+	line("ENDIF.")
+	line("TRY.")
+	line("CREATE OBJECT h.")
+	addFile("cfg", "p_config", "")
+	addFile("raw", "p_file", "name")
+	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
+	line("IF p_deps IS NOT INITIAL.")
+	addFile("list", "p_deps", "")
+	line("REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>cr_lf(1) IN list WITH ``.")
+	line("SPLIT list AT cl_abap_char_utilities=>newline INTO TABLE paths.")
+	line("LOOP AT paths INTO path.")
+	line("IF path IS INITIAL.")
+	line("CONTINUE.")
+	line("ENDIF.")
+	addFile("raw", "path", "name")
+	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addDependency"), names.Get("param.filename"), names.Get("param.raw"))
+	line("ENDLOOP.")
+	line("ENDIF.")
+	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = reg.", names.Get("member.parse"), names.Get("param.config"))
+	line("CALL METHOD h->%s EXPORTING %s = reg RECEIVING result = dump.", names.Get("member.report"), names.Get("param.reg"))
+	line("SPLIT dump AT cl_abap_char_utilities=>newline INTO TABLE out.")
+	line("LOOP AT out INTO raw.")
+	line("WRITE: / raw.")
+	line("ENDLOOP.")
+	line("IF p_times = abap_true.")
+	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("WRITE: / |ms: { stages }|.")
+	line("ENDIF.")
+	// Bodies the zabapgit workload never executes are traps in this build:
+	// say which TypeScript location the check reached instead of a bare dump.
+	line("CATCH %s INTO DATA(trapped).", names.Get("exception.unexecuted"))
+	line("WRITE: / |refused: this build has no code for { trapped->source_location }, which checking zabapgit_standalone never runs|.")
+	line("CATCH cx_root INTO DATA(error).")
+	line("WRITE: / |refused: { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.")
+	line("ENDTRY.")
+	return b.String()
 }
