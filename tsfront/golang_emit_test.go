@@ -297,3 +297,105 @@ func main(){if path:=os.Getenv("ABAPITI_LEXER_CPU_PROFILE");path!=""{f,err:=os.C
 		t.Fatalf("build timing driver: %v\n%s", err, out)
 	}
 }
+
+func TestGoStatementsStructuresDifferential(t *testing.T) {
+	lexerCore(t)
+	t.Setenv("ABAPITI_ASSUME_INT", "1")
+	t.Setenv("STRUCTURES_EMIT", "1")
+	p, ds := lowerStmtsClosure(t)
+	if hasBlocking(ds) {
+		t.Fatal(ds)
+	}
+	var main strings.Builder
+	main.WriteString("out:=[]string{};")
+	stmts, err := LoadStatementsCorpus("testdata/stmtscorpus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	regressions, err := LoadStatementsCorpus("testdata/stmtsregressions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmts = append(stmts, regressions...)
+	want := []string{}
+	names := []string{}
+	for _, c := range stmts {
+		fmt.Fprintf(&main, "out=append(out,%s(str(%q)).String());", goEntry("harness/statements_dump.ts.StatementsDump", "dump"), c.Abap)
+		want = append(want, c.Dump)
+		names = append(names, c.Name)
+	}
+	structures, err := loadStructuresCorpus("testdata/structurescorpus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range structures {
+		fmt.Fprintf(&main, "out=append(out,%s(str(%q),str(%q)).String());", goEntry("harness/structures_dump.ts.StructuresDump", "dump"), c.Abap, c.Filename)
+		want = append(want, c.Dump)
+		names = append(names, c.Name)
+	}
+	main.WriteString("b,_:=json.Marshal(out);fmt.Println(string(b))")
+	var got []string
+	if err := json.Unmarshal([]byte(runGoHIR(t, p, main.String())), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d dumps want %d", len(got), len(want))
+	}
+	for i, v := range got {
+		if v != want[i] {
+			t.Errorf("%s: got %.500q want %.500q", names[i], v, want[i])
+		}
+	}
+	t.Logf("%d statement/regression and %d structure dumps compared with Node", len(stmts), len(structures))
+}
+
+func TestGoMemoryFileDifferential(t *testing.T) {
+	lexerCore(t)
+	p, err := Load(filepath.Join(stmtsDir(t), "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, ds, err := p.Lower([]string{"src/files/_ifile.ts", "src/files/_abstract_file.ts", "src/files/memory_file.ts", "harness/memory_file_dump.ts"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasBlocking(ds) {
+		t.Fatal(ds)
+	}
+	var cases []struct{ Filename, Raw, Dump string }
+	raw, err := os.ReadFile("testdata/registrycorpus/memory-dumps.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	var splits []struct{ Raw, Separator, Dump string }
+	raw, err = os.ReadFile("testdata/registrycorpus/split-dumps.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(raw, &splits); err != nil {
+		t.Fatal(err)
+	}
+	var main strings.Builder
+	main.WriteString("out:=[]string{};")
+	want := []string{}
+	for _, c := range cases {
+		fmt.Fprintf(&main, "out=append(out,%s(str(%q),str(%q)).String());", goEntry("harness/memory_file_dump.ts.MemoryFileDump", "dump"), c.Filename, c.Raw)
+		want = append(want, c.Dump)
+	}
+	for _, c := range splits {
+		fmt.Fprintf(&main, "out=append(out,%s(str(%q),str(%q)).String());", goEntry("harness/memory_file_dump.ts.MemoryFileDump", "dumpSplit"), c.Raw, c.Separator)
+		want = append(want, c.Dump)
+	}
+	main.WriteString("b,_:=json.Marshal(out);fmt.Println(string(b))")
+	var got []string
+	if err = json.Unmarshal([]byte(runGoHIR(t, prog, main.String())), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("MemoryFile/split dumps differ: Go %q Node %q", got, want)
+	}
+	t.Logf("%d MemoryFile and %d split Node oracle cases equal", len(cases), len(splits))
+}
