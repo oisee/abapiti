@@ -262,6 +262,11 @@ func equal(a, b any) bool {
 	}
 	return a == b
 }
+// The widened result is exact; narrowing still traps signed overflow.
+func checkedI32(v int64) int32 {
+ if v < -2147483648 || v > 2147483647 {panic(rangeFault{})}
+ return int32(v)
+}
 func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
 	var v int64
 	switch op {
