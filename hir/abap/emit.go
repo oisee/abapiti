@@ -1668,9 +1668,31 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if x.Op == "dynamic.asRef" {
 			target = b.temp(hir.Ref(hir.RootObject))
 		}
+		record := x.Op == "dynamic.asRef" && x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String
+		if record {
+			// A record read from a tagged object graph (an any-typed {} bag):
+			// copy its entries into the record map; a boxed map stays itself.
+			b.line("IF " + a + " IS BOUND AND " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object.")
+			b.line("CREATE OBJECT " + n + ".")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("LOOP AT " + a + "->entries INTO DATA(" + row + ").")
+			v := row + "-v"
+			if x.Type.Args[1].Kind != hir.Dynamic {
+				box := b.temp(hir.T(hir.Dynamic))
+				b.line(box + " = " + row + "-v.")
+				v = b.unbox(box, x.Type.Args[1])
+			}
+			b.line(n + "->set( p0 = " + row + "-k p1 = " + v + " ).")
+			b.line("ENDLOOP.")
+			b.line("ELSE.")
+		}
 		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
 		if target != n {
 			b.line(n + " ?= " + target + ".")
+		}
+		if record {
+			b.line("ENDIF.")
 		}
 		return
 	case "regexp.source":
