@@ -944,6 +944,20 @@ func (b *body) expr(x *hir.Expr) string {
 		if target.Kind == hir.Optional {
 			target = target.Args[0]
 		}
+		if source.Kind == hir.Array && target.Kind == hir.Array && source.Args[0].Kind == hir.Optional && !source.Args[0].Args[0].IsRef() && source.Args[0].Args[0].Equal(target.Args[0]) {
+			// (T | undefined)[] narrowed to T[] (a type-predicate filter): a
+			// distinct array class, so the elements are copied unwrapped.
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("CREATE OBJECT " + n + ".")
+			b.line("LOOP AT " + a + "->items INTO DATA(" + row + ").")
+			b.line("IF " + row + " IS NOT BOUND OR " + row + "->has = abap_false.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_move_cast_error.")
+			b.line("ENDIF.")
+			b.line("APPEND " + row + "->value TO " + n + "->items.")
+			b.line("ENDLOOP.")
+			break
+		}
 		if (source.Kind == hir.ClassRef && target.Kind == hir.InterfaceRef) || (source.Kind == hir.InterfaceRef && target.Kind == hir.ClassRef) {
 			// A class/interface cross cast: widen to the object root first so
 			// the checked `?=` is valid whatever the static relation.

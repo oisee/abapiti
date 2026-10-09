@@ -211,7 +211,11 @@ export class Probe {
     for (const k in Color) { if (colors[k] === "g" || colors[k] === needle) { colorKeys += k; } }
     const conf = new RuleConf();
     const confText = `${conf.severity}/${conf.exclude?.length}/${conf.strict}`;
-    const parts: string[] = [confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
+    const maybeNames = [raw, undefined, needle].map(v => v?.toUpperCase());
+    const present = maybeNames.filter(v => v !== undefined);
+    present.push(...["c", "d"].map(v => v.toUpperCase()));
+    const presentText = present.join(",");
+    const parts: string[] = [presentText, confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,
