@@ -8,6 +8,9 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"string.replaceRegex": true,
+	"string.toLowerCase":  true,
+	"object.classOf":      true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
@@ -83,7 +86,11 @@ func (b *body) runtime(x *hir.Expr) string {
 			flags = args[1]
 		}
 		code = "newRegExp(" + args[0] + "," + flags + ")"
-	case "regexp.test", "regexp.match_test":
+	case "string.replaceRegex":
+		code = a + ".replaceRegex(" + strings.Join(args, ",") + ")"
+	case "regexp.match_test":
+		code = a + ".match_test(" + args[0] + ")"
+	case "regexp.test":
 		code = a + ".test(" + args[0] + ")"
 	case "regexp.source":
 		code = a + ".Source"
@@ -91,6 +98,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".toString()"
 	case "string.trim":
 		code = a + ".trim()"
+	case "string.toLowerCase":
+		code = a + ".lower()"
 	case "string.toUpperCase":
 		code = a + ".upper()"
 	case "string.length":
@@ -113,6 +122,16 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "float64(" + a + ")"
 	case "number.toString":
 		code = "numberString(" + a + ")"
+	case "object.classOf":
+		code = "classOf(" + a + ")"
+	case "classvalue.new":
+		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ".Factory())"
+	case "classvalue.name":
+		code = a + ".Name"
+	case "classvalue.has":
+		code = a + ".has(" + args[0] + ")"
+	case "dynamic.asClassValue":
+		code = "dynClass(" + a + ")"
 	case "dynamic.materialize":
 		code = b.e.materializer(x.Type) + "(" + a + ")"
 	case "clock.telemetry":
@@ -149,7 +168,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "dynamic.isString":
 		code = a + "!=nil && " + a + ".Tag==1"
 	case "dynamic.isFunction":
-		code = "false" // ClassValue construction is explicitly unsupported.
+		code = a + "!=nil && " + a + ".Tag==10"
 	case "dynamic.asString":
 		code = "dynString(" + a + ")"
 	case "dynamic.asRef":

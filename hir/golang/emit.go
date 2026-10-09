@@ -140,6 +140,8 @@ func (e *emitter) typ(t hir.Type) string {
 		return "float64"
 	case hir.String:
 		return "jsString"
+	case hir.ClassValue:
+		return "*classDescriptor"
 	case hir.RegExp:
 		return "*jsRegExp"
 	case hir.Dynamic:
@@ -204,6 +206,7 @@ func (e *emitter) effective(c *hir.Class) []string {
 	return a
 }
 func (e *emitter) class(c *hir.Class) {
+	e.descriptor(c)
 	e.line("type %s struct {", e.obj(c.Name))
 	e.line("source *dynamic")
 	if c.Super != "" {
@@ -565,11 +568,13 @@ func (b *body) expr(x *hir.Expr) string {
 		v = b.value(x.Z, t)
 		b.line("%s=%s }", n, v)
 		return n
+	case hir.ClassOf:
+		code = "&" + e.name("descriptor."+x.Owner)
 	case hir.InstanceOf:
 		a := b.expr(x.X)
 		if x.Y != nil {
-			e.unsupported(x.Node, "dynamic instanceof")
-			return "false"
+			cv := b.expr(x.Y)
+			return b.temp(t, "descriptorInstance("+a+","+cv+")")
 		}
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			a = "unwrap(" + a + ")"
@@ -734,6 +739,21 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("panic(payload[%s]{Type:%q,Value:%s})", e.typ(s.X.Type), s.X.Type.String(), v)
 	case hir.Trap:
 		b.line("panic(trap{Source:%q})", s.Name)
+	case hir.Finally:
+		b.line("func(){defer func(){")
+		old := b.locals
+		b.locals = clone(old)
+		b.tryDepth++
+		b.stmt(s.Else)
+		b.tryDepth--
+		b.locals = old
+		b.line("}()")
+		b.locals = clone(old)
+		b.tryDepth++
+		b.stmt(s.Body)
+		b.tryDepth--
+		b.locals = old
+		b.line("}()")
 	case hir.Try:
 		b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(payload[%s]);ok && caught.Type==%q {", e.typ(s.Type), s.Type.String())
 		old := b.locals
@@ -780,6 +800,9 @@ func (e *emitter) checkOps(s *hir.Stmt) {
 func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x == nil {
 		return
+	}
+	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
+		e.checkRegexp(x)
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

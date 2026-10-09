@@ -34,18 +34,50 @@ only that payload type, rethrowing all other panics. Trap uses a distinct panic.
 Returns use separate internal control panics so a return crosses try closures
 without being mistaken for an exception. This is a correctness-first prototype.
 
-`RuntimeOps()` returns sorted supported and unsupported catalogue entries. The
-fixtures' operations, numeric conversion/rendering helpers, and dynamic boxes
-and object/string extraction are supported. Every other catalogue operation
-fails with `not supported in the Go prototype: <op>` before source generation.
-ClassValue and RegExp types, variadic parameters, covariant array views,
-cross-method super calls, and break/continue crossing a try closure are also
-explicitly rejected. This is not a general TypeScript runtime.
+`RuntimeOps()` reports all catalogue names as implemented. Implementations retain
+bounded contracts: numeric rendering rejects fractions and unsafe numbers;
+ordering rejects characters outside the reviewed ASCII alphabets; JSON is strict;
+XML follows the reviewed abapGit subset and rejects comments, DTDs, numeric or
+unknown entities, and prototype-sensitive names. Materialization accepts data
+shapes with a matching field constructor ABI and retains the original graph.
+Class descriptors retain identity, ancestry, own static names and concrete
+zero-argument factories (including absent optional parameters); factories that
+require arguments fail explicitly.
 
-`go test ./hir/golang -v` executes each of the six copied ABAP fixture programs
-in a temporary standalone module via `go run`. The copied constructors are
-checked against the ABAP HIR goldens. Collection extra and all 24 int8 oracle
-values are included. Additional execution tests exercise UTF-16 surrogate
-sections, collection snapshots, reference reads, dynamic tags, native and
-JS-safe integer overflow, typed catches and uncaught traps. Unsupported catalogue
-operations are tested through the public emitter using verified programs.
+Reference arrays share `array[any]` storage and cast elements on reads, so typed
+views retain identity and mutation. Missing IndexGet reads return the element's
+zero value, matching ABAP READ TABLE; callers use optionals for presence.
+Unicode casing includes full mappings, contextual final sigma for lowercase,
+and preservation of lone surrogates. Finally uses defer, so it runs once on
+normal completion, return, throw or Trap.
+
+Regex patterns are deliberately reviewed individually; Go's RE2 syntax alone
+is never evidence of JavaScript equivalence. The lexer uses only `/\r/g`,
+which the frontend maps to literal `string.replaceAll`. Registry fixtures use:
+
+| JavaScript | Handling |
+| --- | --- |
+| `/^Y/`, `/^Z/` | Identical RE2 prefix tests |
+| `/test$/i` | `[tT][eE][sS][tT]$`, preventing Unicode fold differences |
+| `/a.c/i` | ASCII case pairs; dot excludes LF, CR, U+2028 and U+2029 |
+| `new RegExp("x/y", "gi")` | `[xX]/[yY]`, canonical escaped source, global state |
+
+Matching operates on one rune per UTF-16 unit, preserving non-Unicode regex
+width even for supplementary input and isolated surrogates. Global test advances
+and resets lastIndex; match_test resets global state. Replacement preserves
+original UTF-16 sections. Other literal patterns fail emission; other dynamic
+patterns fail construction. Dollar replacement substitutions are unsupported.
+
+Variadic parameters, primitive covariant array views, cross-method super calls,
+and break/continue crossing try/finally closures remain explicitly unsupported.
+Non-finite Number literals, general Number remainder and nonliteral/zero Number
+divisors retain the round-one restrictions. This is not a general JS runtime.
+
+`go test ./hir/golang -v` runs the six ABAP fixtures, int8 observations, and
+runtime semantic edge tests in standalone generated modules. The tests in
+`tsfront/golang_emit_test.go` run the same lowered lexer and registry programs
+as the ABAP tests. Lexer comparison regenerates the Node oracle, checks all 44
+cases and mutates an emitted token type to prove the comparison fails. Registry
+array, sort, iterator, feature, typed JSON and tagged XML tests use the existing
+Node observations. Integration checks skip if Node or the abaplint build is
+absent; set TSFRONT_ABAPLINT to the core directory to select another checkout.
