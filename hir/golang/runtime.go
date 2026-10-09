@@ -333,27 +333,40 @@ type entry[K, V any] struct {
 	Key   K
 	Value V
 }
-type orderedMap[K, V any] struct{ Entries []entry[K, V] }
-
+// Collection keys are primitive values or references. Normalize typed nil
+// references to the zero key, retaining the equality used by equal().
+func collectionKey[K comparable](k K) K {
+ switch any(k).(type) {
+ case jsString, bool, int32, int64, float64:
+  return k
+ default:
+  if nilRef(k) { var zero K; return zero }
+  return k
+ }
+}
+type orderedMap[K comparable, V any] struct {
+ Entries []entry[K,V]
+ index map[K]int
+}
+func (m *orderedMap[K,V]) ensureIndex() {
+ if m.index != nil { return }
+ m.index=make(map[K]int,len(m.Entries))
+ for i,e:=range m.Entries { m.index[collectionKey(e.Key)]=i }
+}
 func (m *orderedMap[K, V]) set(k K, v V) *orderedMap[K, V] {
-	for i, e := range m.Entries {
-		if equal(e.Key, k) {
-			m.Entries[i].Value = v
-			return m
-		}
-	}
-	m.Entries = append(m.Entries, entry[K, V]{k, v})
-	return m
+ m.ensureIndex()
+ key:=collectionKey(k)
+ if i,ok:=m.index[key];ok { m.Entries[i].Value=v;return m }
+ m.index[key]=len(m.Entries)
+ m.Entries=append(m.Entries,entry[K,V]{k,v})
+ return m
 }
-func (m *orderedMap[K, V]) get(k K) optional[V] {
-	for _, e := range m.Entries {
-		if equal(e.Key, k) {
-			return present(e.Value)
-		}
-	}
-	return optional[V]{}
+func (m *orderedMap[K,V]) get(k K) optional[V] {
+ m.ensureIndex()
+ if i,ok:=m.index[collectionKey(k)];ok { return present(m.Entries[i].Value) }
+ return optional[V]{}
 }
-func (m *orderedMap[K, V]) has(k K) bool { return m.get(k).Has }
+func (m *orderedMap[K,V]) has(k K) bool { m.ensureIndex();_,ok:=m.index[collectionKey(k)];return ok }
 func (m *orderedMap[K, V]) keys() *array[K] {
 	a := &array[K]{}
 	for _, e := range m.Entries {
@@ -369,21 +382,25 @@ func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {
 	return s
 }
 
-type orderedSet[T any] struct{ Items []T }
-
+type orderedSet[T comparable] struct {
+ Items []T
+ index map[T]int
+}
+func (s *orderedSet[T]) ensureIndex() {
+ if s.index != nil { return }
+ s.index=make(map[T]int,len(s.Items))
+ for i,v:=range s.Items { s.index[collectionKey(v)]=i }
+}
 func (s *orderedSet[T]) has(v T) bool {
-	for _, x := range s.Items {
-		if equal(x, v) {
-			return true
-		}
-	}
-	return false
+ s.ensureIndex()
+ _,ok:=s.index[collectionKey(v)]
+ return ok
 }
 func (s *orderedSet[T]) add(v T) *orderedSet[T] {
-	if !s.has(v) {
-		s.Items = append(s.Items, v)
-	}
-	return s
+ s.ensureIndex()
+ key:=collectionKey(v)
+ if _,ok:=s.index[key];!ok { s.index[key]=len(s.Items);s.Items=append(s.Items,v) }
+ return s
 }
 func (s *orderedSet[T]) values() *array[T] { return &array[T]{Items: append([]T(nil), s.Items...)} }
 func (a *array[T]) reverse() *array[T] {
@@ -487,23 +504,27 @@ func (m *orderedMap[K, V]) values() *array[V] {
 	}
 	return a
 }
-func (m *orderedMap[K, V]) delete(k K) bool {
-	for i, e := range m.Entries {
-		if equal(e.Key, k) {
-			m.Entries = append(m.Entries[:i], m.Entries[i+1:]...)
-			return true
-		}
-	}
-	return false
+func (m *orderedMap[K,V]) delete(k K) bool {
+ m.ensureIndex()
+ key:=collectionKey(k)
+ i,ok:=m.index[key];if !ok { return false }
+ delete(m.index,key)
+ copy(m.Entries[i:],m.Entries[i+1:])
+ var zero entry[K,V];m.Entries[len(m.Entries)-1]=zero
+ m.Entries=m.Entries[:len(m.Entries)-1]
+ for j:=i;j<len(m.Entries);j++ { m.index[collectionKey(m.Entries[j].Key)]=j }
+ return true
 }
 func (s *orderedSet[T]) delete(v T) bool {
-	for i, x := range s.Items {
-		if equal(x, v) {
-			s.Items = append(s.Items[:i], s.Items[i+1:]...)
-			return true
-		}
-	}
-	return false
+ s.ensureIndex()
+ key:=collectionKey(v)
+ i,ok:=s.index[key];if !ok { return false }
+ delete(s.index,key)
+ copy(s.Items[i:],s.Items[i+1:])
+ var zero T;s.Items[len(s.Items)-1]=zero
+ s.Items=s.Items[:len(s.Items)-1]
+ for j:=i;j<len(s.Items);j++ { s.index[collectionKey(s.Items[j])]=j }
+ return true
 }
 func (s *orderedSet[T]) copy(other *orderedSet[T]) *orderedSet[T] {
 	out := &orderedSet[T]{}
@@ -1007,7 +1028,7 @@ func referenceArray[T any](a *array[T]) *array[any] {
 	}
 	return out
 }
-func referenceSetFromArray[T any](s *orderedSet[T], a *array[any]) *orderedSet[T] {
+func referenceSetFromArray[T comparable](s *orderedSet[T], a *array[any]) *orderedSet[T] {
 	for _, v := range a.Items {
 		s.add(castRef[T](v))
 	}
