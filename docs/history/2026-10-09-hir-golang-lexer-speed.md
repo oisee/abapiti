@@ -174,3 +174,13 @@ Node .413/.343/.122. Longer profile confirms floatByte leaves the lexer hot
 path: largest classifier 3.03% flat / 3.64% cumulative; upper 2.42% flat /
 5.45% cumulative, initialization guard 4.85%. No robust default timing win is
 claimed from this noisy pair; the profile verifies the intended cost removal.
+
+R4.4 (C): ASCII upper/lower now scan to the first changed UTF-16 unit,
+copy its prefix, and transform the suffix with direct byte loads. Unchanged
+ASCII reuses the original storage. Any non-ASCII unit restarts the previous
+Unicode path in full, preserving contextual sigma, expansions and lone
+surrogates. Added prefix/suffix, empty and mixed ASCII/Unicode cases to the
+existing edges. Full uncached guard green. Default Go .546/.528/.144,
+Node .382/.329/.118; 400 Go .562/.486/.145, Node .329/.328/.128.
+This runtime representation/loop change is Go-only; the first-change casing
+algorithm could also be implemented in ABAP's string runtime.
