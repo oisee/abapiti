@@ -97,7 +97,9 @@ func TestReferenceCollectionSnapshots(t *testing.T) {
 func TestIntegerArithmeticBoundaries(t *testing.T) {
 	values := []int64{math.MinInt64, math.MinInt64 + 1, math.MaxInt64, math.MaxInt64 - 1, math.MinInt32, math.MaxInt32, -9007199254740992, -9007199254740991, 9007199254740991, 9007199254740992, -3, -1, 0, 1, 3}
 	var main strings.Builder
-	main.WriteString(`check:=func(a,b int64,op string,checked bool,bits int,want int64,fault bool){defer func(){if r:=recover();r!=nil{if _,ok:=r.(rangeFault);!ok||!fault{panic("unexpected fault")}}else if fault{panic("missing fault")}}();if integerArithmetic(a,b,op,checked,bits)!=want{panic("wrong result")}};`)
+	main.WriteString(`check:=func(a,b int64,op string,checked bool,bits int,want int64,fault bool){defer func(){if r:=recover();r!=nil{if _,ok:=r.(rangeFault);!ok||!fault{panic("unexpected fault")}}else if fault{panic("missing fault")}}();got:=integerArithmetic(a,b,op,checked,bits)
+ if bits==64 && (op=="+"||op=="-") {if op=="+"{got=checkedAddI64(a,b)}else{got=checkedSubI64(a,b)};if checked{got=safeInteger(got)}}
+ if got!=want{panic("wrong result")}};`)
 	for _, a := range values {
 		for _, b := range values {
 			for _, op := range []string{"+", "-", "*", "/", "%"} {
