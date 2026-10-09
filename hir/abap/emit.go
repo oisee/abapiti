@@ -627,6 +627,20 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 	}
 	return value
 }
+
+// receiver evaluates an object operand of a member access. `this` typed as
+// the emitted class or one of its ancestors is me itself: the copy into a
+// temporary would only be a same-type or upcast assignment.
+func (b *body) receiver(x *hir.Expr) string {
+	if x.Kind == hir.This && x.Type.Kind == hir.ClassRef && x.Type.Name != hir.RootObject {
+		for c := b.c; c != nil; c = b.e.classBy(c.Super) {
+			if c.Name == x.Type.Name {
+				return "me"
+			}
+		}
+	}
+	return b.expr(x)
+}
 func (b *body) value(x *hir.Expr, dst hir.Type) string { return b.convert(b.expr(x), x.Type, dst) }
 func (b *body) expr(x *hir.Expr) string {
 	if x == nil {
@@ -706,7 +720,7 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.This:
 		b.line(n + " = me.")
 	case hir.FieldGet:
-		b.line(n + " = " + b.expr(x.X) + "->" + e.member(x.Name) + ".")
+		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
 		b.initialize(x.Owner)
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
@@ -1294,7 +1308,7 @@ func (b *body) call(x *hir.Expr, n string) {
 		owner = b.c.Super
 		recv = "super->"
 	} else if x.X != nil {
-		recv = b.expr(x.X) + "->"
+		recv = b.receiver(x.X) + "->"
 		owner = x.X.Type.Name
 	} else {
 		recv = e.name(owner) + "=>"
@@ -1903,7 +1917,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		case hir.Local:
 			target = b.locals[s.X.Name]
 		case hir.FieldGet:
-			target = b.expr(s.X.X) + "->" + e.member(s.X.Name)
+			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
 		case hir.StaticGet:
 			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
