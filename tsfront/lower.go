@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
@@ -247,12 +249,16 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 	}
 	// Namespace modules outside the lowered file list still need their
 	// (possibly empty) export map: nothing in them is lowered, but code
-	// iterates them.
+	// iterates them. Name order: module classes and their descriptors are
+	// emitted in creation order, so map order would make the output vary.
+	var needed []*ast.SourceFile
 	for name := range l.nsNeeded {
-		f, ok := p.File(name)
-		if !ok {
-			continue
+		if f, ok := p.File(name); ok {
+			needed = append(needed, f)
 		}
+	}
+	sort.Slice(needed, func(i, j int) bool { return l.relFile(needed[i]) < l.relFile(needed[j]) })
+	for _, f := range needed {
 		if l.modules[f] != nil {
 			continue
 		}
@@ -529,11 +535,39 @@ func (l *lowerer) locOf(n *ast.Node) string {
 // qualifiedName builds the stable identity of a declaration: the file path
 // relative to the tsconfig directory plus the declaration name.
 func (l *lowerer) qualifiedName(f *ast.SourceFile, name string) string {
+	return l.relFile(f) + "." + name
+}
+
+// relFile is f's path relative to the tsconfig directory, with forward
+// slashes. A package that resolves outside that directory (a symlinked
+// node_modules) is named from its node_modules segment: generated names and
+// locations never depend on where the project or its packages live.
+func (l *lowerer) relFile(f *ast.SourceFile) string {
 	rel, err := filepath.Rel(l.prog.configDir, f.FileName())
 	if err != nil {
-		rel = f.FileName()
+		return f.FileName()
 	}
-	return rel + "." + name
+	rel = filepath.ToSlash(rel)
+	if strings.HasPrefix(rel, "../") {
+		if i := strings.Index(rel, "/node_modules/"); i >= 0 {
+			rel = rel[i+1:]
+		}
+	}
+	return rel
+}
+
+// trapLocation is the location a trap reports at run time: relative
+// "file:line:col", like the reachability traps.
+func (l *lowerer) trapLocation(n *ast.Node) string {
+	if l.file == nil {
+		return "<unknown>"
+	}
+	pos := 0
+	if n != nil {
+		pos = scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/)
+	}
+	line, col := lineCol(l.file, pos)
+	return fmt.Sprintf("%s:%d:%d", l.relFile(l.file), line, col)
 }
 
 // resolve returns the symbol at node with import aliases resolved. Property
