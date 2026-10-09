@@ -254,3 +254,15 @@ Full uncached guard green. Default Go .512/.502/.165, Node .429/.429/.162;
 restored code is `/tmp/round4-restored.cpu`; its timings were .492/.501/.151,
 with Node .296/.289/.093. These longer warm measurements reinforce that
 beating Node has not yet been established.
+
+R4.11 refreshes default.pgo from the 3,000-run restored-code profile, so
+training follows the retained source rather than old call-site offsets. Full
+uncached guard green. Default Go .549/.544/.162, Node .391/.386/.143;
+400 Go .487/.443/.122, Node .355/.317/.135. The subsequent 3,000-run CPU
+capture measured .456/.483/.135 versus Node .278/.285/.088. Refreshed PGO
+helps some longer readings but does not establish a win across files.
+
+A separate GOMAXPROCS=1 experiment (host default reports 8 CPUs) also failed
+across files: default Go .470/.434/.127 versus Node .374/.351/.131, at 400
+.500/.453/.121 versus .324/.340/.122. Scheduling defaults are retained; no
+benchmark-only runtime setting is used to claim success.
