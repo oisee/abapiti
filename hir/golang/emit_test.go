@@ -101,6 +101,9 @@ func TestRuntimeCatalogue(t *testing.T) {
 			params, result, ok := hir.RuntimeSignature(op, receiver)
 			if !ok {
 				switch op {
+				case "dynamic.materialize":
+					receiver = hir.T(hir.Dynamic)
+					result = hir.Ref("Object")
 				case "object.classOf":
 					receiver = hir.Ref("Object")
 					result = hir.T(hir.ClassValue)
