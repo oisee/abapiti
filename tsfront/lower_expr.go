@@ -1120,7 +1120,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: method.Result, Name: name, X: recv, Args: args}
 		}
-		if method == nil && recv.Type.Kind == hir.InterfaceRef {
+		if recv.Type.Kind == hir.InterfaceRef {
 			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
 				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
 				if !ok {

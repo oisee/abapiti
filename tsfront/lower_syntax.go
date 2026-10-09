@@ -425,24 +425,6 @@ func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	return nil, false
 }
 
-// postfixUpdate lowers x++ / x-- on a field or static operand: the old value
-// is the result, the store happens in the prelude.
-func (l *lowerer) postfixUpdate(n *ast.Node, x *hir.Expr, op string) *hir.Expr {
-	if x.Kind != hir.FieldGet && x.Kind != hir.StaticGet {
-		return nil
-	}
-	if x.Type.Kind != hir.Number && x.Type.Kind != hir.I32 {
-		return nil
-	}
-	if x.Kind == hir.FieldGet {
-		// Evaluate the receiver once.
-		x.X = l.tempInit(n, x.X.Type, x.X)
-	}
-	old := l.tempInit(n, x.Type, x)
-	l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: x, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: old, Y: hir.L(x.Type, 1)}})
-	return old
-}
-
 // setFromArray lowers new Set(arrayExpr): a fresh set with one add per
 // element, in order.
 func (l *lowerer) setFromArray(n *ast.Node, source *hir.Expr) *hir.Expr {
@@ -492,56 +474,6 @@ func continueTargets(n *ast.Node, into map[*ast.Node]bool) {
 		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
 	}
 	walk(n)
-}
-
-// forBodyWithContinue wraps the body of a for loop that has an update
-// expression in a one-shot loop: `continue` becomes a break out of that
-// loop, so the update still runs; the body's own `break` is hoisted through
-// a flag.
-func (l *lowerer) forBodyWithContinue(n *ast.Node, body *ast.Node, update *ast.Node) *hir.Stmt {
-	targets := map[*ast.Node]bool{}
-	continueTargets(body, targets)
-	for t := range targets {
-		if t.AsContinueStatement().Label != nil {
-			l.diagf(t, "unsupported-statement", "labeled continue is not lowered")
-			return nil
-		}
-	}
-	breaks := map[*ast.Node]bool{}
-	breakTargets(body, breaks)
-	if l.continueAsBreak == nil {
-		l.continueAsBreak = map[*ast.Node]bool{}
-	}
-	for t := range targets {
-		l.continueAsBreak[t] = true
-	}
-	defer func() {
-		for t := range targets {
-			delete(l.continueAsBreak, t)
-		}
-	}()
-	// A break inside the one-shot loop must leave the outer loop too.
-	flag := l.tempInit(n, hir.T(hir.Bool), hir.L(hir.T(hir.Bool), false))
-	if l.breakViaFlag == nil {
-		l.breakViaFlag = map[*ast.Node]*hir.Expr{}
-	}
-	for t := range breaks {
-		l.breakViaFlag[t] = flag
-	}
-	defer func() {
-		for t := range breaks {
-			delete(l.breakViaFlag, t)
-		}
-	}()
-	inner := []*hir.Stmt{l.scopeBlock(body), {Kind: hir.Break, Node: l.node(n)}}
-	oneShot := &hir.Stmt{Kind: hir.While, Node: l.node(n), X: hir.L(hir.T(hir.Bool), true), Body: hir.B(inner...)}
-	out := []*hir.Stmt{oneShot}
-	if len(breaks) > 0 {
-		out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: flag, Body: hir.B(&hir.Stmt{Kind: hir.Break, Node: l.node(n)})})
-	}
-	out = append(out, l.expressionStatement(update))
-	l.diagf(n, "note-for-continue", "continue inside a for loop with an update lowered through a one-shot inner loop")
-	return hir.B(out...)
 }
 
 func breakTargets(n *ast.Node, into map[*ast.Node]bool) {

@@ -57,6 +57,7 @@ func init() {
 	f.String("config", "", "osg: abaplint.json for the embedded run")
 	f.String("run-sha", zabapgitRunSHA, "SHA-256 of the expected issue dump that the run drivers compare against (default: zabapgit_standalone with abapGit's ci/abaplint.json)")
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
+	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
 	_ = abaplintCmd.MarkFlagRequired("output")
@@ -107,6 +108,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	runSHA, _ := flags.GetString("run-sha")
 	negativePath, _ := flags.GetString("negative")
 	quiet, _ := flags.GetBool("quiet")
+	assumeInt, _ := flags.GetBool("assume-int")
+	if assumeInt {
+		os.Setenv("ABAPITI_ASSUME_INT", "1")
+	} else {
+		os.Setenv("ABAPITI_ASSUME_INT", "")
+	}
 	evidence, _ := flags.GetBool("evidence")
 	targets, err := parseTargets(targetFlag)
 	if err != nil {
@@ -163,6 +170,9 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		how = fmt.Sprintf("built into abapiti, %d files unpacked (no network)", src.Files)
 	}
 	n.step("source: %s", how)
+	if assumeInt {
+		n.say("  numbers: TypeScript number as int8 (assume-int; --assume-int=false for binary64 f)")
+	}
 	n.say("  verified commit %s: %d closure files by SHA-256; npm %s", pin, len(closure.Sources), strings.Join(versions, ", "))
 
 	// 2. closure
