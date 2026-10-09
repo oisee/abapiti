@@ -1688,7 +1688,24 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ELSE.")
 		}
 		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
-		if target != n {
+		if record && x.Type.Args[1].Kind != hir.Dynamic {
+			// A boxed map<string, any> bag stands for the narrower record too.
+			bagType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
+			bag := b.temp(bagType)
+			b.line("TRY.")
+			b.line(n + " ?= " + target + ".")
+			b.line("CATCH cx_sy_move_cast_error.")
+			b.line(bag + " ?= " + target + ".")
+			b.line("CREATE OBJECT " + n + ".")
+			b.serial++
+			row := fmt.Sprintf("t%d", b.serial)
+			b.line("LOOP AT " + bag + "->entries INTO DATA(" + row + ").")
+			box := b.temp(hir.T(hir.Dynamic))
+			b.line(box + " = " + row + "-v.")
+			b.line(n + "->set( p0 = " + row + "-k p1 = " + b.unbox(box, x.Type.Args[1]) + " ).")
+			b.line("ENDLOOP.")
+			b.line("ENDTRY.")
+		} else if target != n {
 			b.line(n + " ?= " + target + ".")
 		}
 		if record {

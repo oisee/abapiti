@@ -32,7 +32,12 @@ export class XMLProbe {
   private static fromBag(flag: boolean): string {
     const bag: any = {};
     bag["A"] = "x";
+    const typed: {[k: string]: any} = {};
+    typed["A"] = "y";
+    const viaTyped = XMLProbe.constValue(typed as any);
+    const fromTyped = typeof viaTyped === "object" ? (viaTyped["A"] ?? "none") : "s";
     const val = XMLProbe.constValue(flag ? bag : "plain");
+    if (fromTyped !== "y") { return "typed:" + fromTyped; }
     if (typeof val === "string") { return val; }
     if (typeof val === "object" && val["A"] !== undefined) { return val["A"]; }
     return "none";
