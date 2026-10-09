@@ -110,6 +110,9 @@ var osdModules = []struct {
 	{"truncsat", "zcl_abapiti_truncsat", truncSatOSDCases(), false},
 	{"floattrap", "zcl_abapiti_floattrap", specialFloatOSDCases(), false},
 	{"i64wrap", "zcl_abapiti_i64wrap", i64WrapOSDCases(), false},
+	{"division32", "zcl_abapiti_division32", divisionOSDCases(false, false), false},
+	{"division64_div", "zcl_abapiti_division64_div", divisionOSDCases(true, false), false},
+	{"division64_rem", "zcl_abapiti_division64_rem", divisionOSDCases(true, true), false},
 	{"i32wrap", "zcl_abapiti_i32wrap", []osdCase{
 		{"add", []int32{2147483647, 1}},
 		{"add", []int32{-2147483648, -1}},
@@ -218,6 +221,10 @@ func moduleHasState(mod *Module) bool {
 }
 
 func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay bool, mappings ...map[string]string) string {
+	return osdTestClassReplayTrap(class, cases, want, replay, "cx_root", mappings...)
+}
+
+func osdTestClassReplayTrap(class string, cases []osdCase, want []osdResult, replay bool, trapClass string, mappings ...map[string]string) string {
 	// Standalone callers allocate exports in first-call order. Module emission
 	// passes its full map so internal functions participate in the namespace too.
 	names := make(map[string]string)
@@ -272,7 +279,7 @@ func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay 
 			}
 			call := fmt.Sprintf("lv_act = lo->%s( %s ).", names[prior.fn], strings.Join(priorParams, " "))
 			if want[j].trap {
-				fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n    ENDTRY.\n", call)
+				fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH %s.\n    ENDTRY.\n", call, trapClass)
 			} else {
 				fmt.Fprintf(&sb, "    %s\n", call)
 			}
@@ -280,7 +287,7 @@ func osdTestClassReplay(class string, cases []osdCase, want []osdResult, replay 
 		call := fmt.Sprintf("lv_act = lo->%s( %s ).", names[c.fn], strings.Join(params, " "))
 		if want[i].trap {
 			sb.WriteString("    lv_trapped = abap_false.\n")
-			fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH cx_root.\n        lv_trapped = abap_true.\n    ENDTRY.\n", call)
+			fmt.Fprintf(&sb, "    TRY.\n        %s\n      CATCH %s.\n        lv_trapped = abap_true.\n    ENDTRY.\n", call, trapClass)
 			fmt.Fprintf(&sb, "    cl_abap_unit_assert=>assert_true( act = lv_trapped msg = '%s must trap' ).\n", label)
 		} else {
 			fmt.Fprintf(&sb, "    %s\n", call)
@@ -312,6 +319,9 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			bin = buildDeepSwitchWasm()
 		case "runtime_helpers":
 			bin, _ = runtimeFixture()
+		case "division32", "division64_div", "division64_rem":
+			is64 := m.file != "division32"
+			bin, _ = buildDivisionModule(is64, divisionPairs(is64))
 		case "i32wrap":
 			bin = buildI32WrapModule()
 		case "importsplit":
@@ -349,6 +359,10 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			t.Fatalf("parse %s: %v", m.file, err)
 		}
 		want := wazeroResults(t, bin, m.cases)
+		trapClass := "cx_root"
+		if strings.HasPrefix(m.file, "division") {
+			trapClass = "cx_sy_dyn_call_illegal_method"
+		}
 		if m.file == "floattrap" {
 			// WASM supports NaN/Inf (NaN trunc_sat returns zero), but ABAP
 			// traps at their construction, before the conversion can run.
@@ -370,7 +384,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		}
 		// Imported re-exports are covered by the split facade.
 		if m.file != "importsplit" {
-			tests := osdTestClassReplay(m.class, m.cases, want, moduleHasState(mod) && !m.independent, names)
+			tests := osdTestClassReplayTrap(m.class, m.cases, want, moduleHasState(mod) && !m.independent, trapClass, names)
 			checkTestClass(t, m.class, tests, want)
 			for name, body := range map[string]string{
 				m.class + ".clas.abap":             src,
@@ -381,7 +395,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 				}
 			}
 		}
-		if m.file == "importsplit" || m.file == "i32wrap" || m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
+		if strings.HasPrefix(m.file, "division") || m.file == "importsplit" || m.file == "i32wrap" || m.file == "directsplit" || m.file == "add.wasm" || m.file == "factorial.wasm" || m.file == "i64wrap" || m.file == "callind" || m.file == "helpers" || m.file == "memgrow" {
 			splitName := strings.Replace(m.class, "zcl_abapiti_", "zcl_split_", 1)
 			budget := 200
 			if m.file == "callind" {
@@ -398,7 +412,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 			for ei, exp := range exports {
 				splitNames[exp.Name] = allocatedExports[ei]
 			}
-			splitTests := osdTestClassReplay(splitName, m.cases, want, moduleHasState(mod) && !m.independent, splitNames)
+			splitTests := osdTestClassReplayTrap(splitName, m.cases, want, moduleHasState(mod) && !m.independent, trapClass, splitNames)
 			checkTestClass(t, splitName, splitTests, want)
 			files[splitName+".clas.testclasses.abap"] = splitTests
 			for name, body := range files {

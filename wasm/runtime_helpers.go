@@ -206,6 +206,45 @@ func (c *compiler) emitI64Call(name, result, a, b string) {
 	}
 }
 
+var divisionHelperOps = []struct {
+	name string
+	op   byte
+}{
+	{"div_s32", OpI32DivS}, {"rem_s32", OpI32RemS},
+	{"div_u32", OpI32DivU}, {"rem_u32", OpI32RemU},
+	{"div_s64", OpI64DivS}, {"rem_s64", OpI64RemS},
+	{"div_u64", OpI64DivU}, {"rem_u64", OpI64RemU},
+}
+
+func (c *compiler) emitDivisionCall(name, result, a, b string) {
+	c.emitI64Call(name, result, a, b)
+}
+
+func emitFUGRDivisionHelpers(mod *Module) string {
+	used := make(map[byte]bool)
+	for _, f := range mod.Functions {
+		for _, inst := range f.Code {
+			used[inst.Op] = true
+		}
+	}
+	var sb strings.Builder
+	for _, h := range divisionHelperOps {
+		if !used[h.op] {
+			continue
+		}
+		typ := "i"
+		if strings.HasSuffix(h.name, "64") {
+			typ = "int8"
+		}
+		fmt.Fprintf(&sb, "FORM %s USING iv_a TYPE %s iv_b TYPE %s CHANGING rv TYPE %s.\n", h.name, typ, typ, typ)
+		for _, line := range strings.Split(kernelRuntimeBody(h.name), "\n") {
+			sb.WriteString("  " + line + "\n")
+		}
+		sb.WriteString("ENDFORM.\n\n")
+	}
+	return sb.String()
+}
+
 // Repeated division avoids constructing 2^31 or 2^63 in the result type.
 func shiftRightSignedBody(is64 bool) string {
 	bits := "32"
