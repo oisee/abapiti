@@ -1155,6 +1155,17 @@ func (b *body) localeCompareNames(n, a, other, length string) {
 }
 
 func (b *body) codeUnit(target, ch string) {
+	unit := b.rawTemp("c LENGTH 1")
+	bytes := b.rawTemp("xstring")
+	low := b.rawTemp("x LENGTH 1")
+	high := b.rawTemp("x LENGTH 1")
+	highInt := b.temp(hir.T(hir.I32))
+	// uccpi is exact below 255 on every runtime; OSG-JS computes high * 255,
+	// so only results from 255 up need the converter (A4H profile: one
+	// CONVERT per lexer character).
+	b.line(unit + " = " + ch + ".")
+	b.line(target + " = cl_abap_conv_out_ce=>uccpi( " + unit + " ).")
+	b.line("IF " + target + " >= 255.")
 	var conv string
 	if b.c != nil {
 		// Creating a converter per call dominated the lexer on A4H (one per character).
@@ -1170,16 +1181,13 @@ func (b *body) codeUnit(target, ch string) {
 		conv = b.rawTemp("REF TO cl_abap_conv_out_ce")
 		b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
 	}
-	bytes := b.rawTemp("xstring")
-	low := b.rawTemp("x LENGTH 1")
-	high := b.rawTemp("x LENGTH 1")
-	highInt := b.temp(hir.T(hir.I32))
 	b.line(conv + "->convert( EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + " ).")
 	b.line(low + " = " + bytes + "(1).")
 	b.line(high + " = " + bytes + "+1(1).")
 	b.line(target + " = " + low + ".")
 	b.line(highInt + " = " + high + ".")
 	b.line(target + " = " + target + " + " + highInt + " * 256.")
+	b.line("ENDIF.")
 }
 
 func (b *body) truth(n, a string, t hir.Type) {

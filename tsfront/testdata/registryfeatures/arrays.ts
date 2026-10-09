@@ -60,6 +60,14 @@ export class ArrayProbe {
     const iface: ChildView = first;
     return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}/${ArrayProbe.narrowedBranded(first)}/${ArrayProbe.narrowedBranded(second)}/${ArrayProbe.narrowedBranded()}/${ArrayProbe.narrowedBranded(new IdentityBase("plain"))}`;
   }
+  public static codeUnits(): string {
+    const text = "A~\u00fe\u00ff\u0100\u0101\u20ac\ud83d\ude00\t";
+    let out = "";
+    for (let index = 0; index < text.length; index++) {
+      out += `${text.charCodeAt(index)},`;
+    }
+    return out;
+  }
   public static splice(): string {
     const starts = [0, 1, 2, 4, 5, 9, -1, -2, -9];
     let out = "";
