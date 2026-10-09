@@ -1,6 +1,9 @@
 package golang
 
 import (
+	"fmt"
+	"math"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -86,6 +89,47 @@ func TestReferenceCollectionSnapshots(t *testing.T) {
 	probe.Static = true
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Object"}, {Name: "Probe", Methods: []*hir.Method{probe}}}}
 	if got := execute(t, p, "fmt.Println("+entry("Probe", "run")+"())"); got != "1\n" {
+		t.Fatal(got)
+	}
+}
+
+// Compare boundary arithmetic to the former arbitrary-precision implementation.
+func TestIntegerArithmeticBoundaries(t *testing.T) {
+	values := []int64{math.MinInt64, math.MinInt64 + 1, math.MaxInt64, math.MaxInt64 - 1, math.MinInt32, math.MaxInt32, -9007199254740992, -9007199254740991, 9007199254740991, 9007199254740992, -3, -1, 0, 1, 3}
+	var main strings.Builder
+	main.WriteString(`check:=func(a,b int64,op string,checked bool,bits int,want int64,fault bool){defer func(){if r:=recover();r!=nil{if _,ok:=r.(rangeFault);!ok||!fault{panic("unexpected fault")}}else if fault{panic("missing fault")}}();if integerArithmetic(a,b,op,checked,bits)!=want{panic("wrong result")}};`)
+	for _, a := range values {
+		for _, b := range values {
+			for _, op := range []string{"+", "-", "*", "/", "%"} {
+				x, y := big.NewInt(a), big.NewInt(b)
+				zero := (op == "/" || op == "%") && b == 0
+				if !zero {
+					switch op {
+					case "+":
+						x.Add(x, y)
+					case "-":
+						x.Sub(x, y)
+					case "*":
+						x.Mul(x, y)
+					case "/":
+						x.Quo(x, y)
+					case "%":
+						x.Rem(x, y)
+					}
+				}
+				for _, bits := range []int{32, 64} {
+					for _, checked := range []bool{false, true} {
+						fault := zero || !x.IsInt64()
+						v := x.Int64()
+						fault = fault || bits == 32 && (v < math.MinInt32 || v > math.MaxInt32) || checked && (v < -9007199254740991 || v > 9007199254740991)
+						fmt.Fprintf(&main, "check(%d,%d,%q,%t,%d,%d,%t);", a, b, op, checked, bits, v, fault)
+					}
+				}
+			}
+		}
+	}
+	main.WriteString(`fmt.Println("ok")`)
+	if got := execute(t, &hir.Program{}, main.String()); got != "ok\n" {
 		t.Fatal(got)
 	}
 }
