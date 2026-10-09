@@ -6,7 +6,6 @@ const runtimeSource = `package main
 import (
 	"encoding/binary"
 	"math"
-	"math/big"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -258,29 +257,27 @@ func equal(a, b any) bool {
 	return a == b
 }
 func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
-	x, y := big.NewInt(a), big.NewInt(b)
+	var v int64
 	switch op {
 	case "+":
-		x.Add(x, y)
+		v = a + b
+		if (b > 0 && v < a) || (b < 0 && v > a) { panic(rangeFault{}) }
 	case "-":
-		x.Sub(x, y)
+		v = a - b
+		if (b < 0 && v < a) || (b > 0 && v > a) { panic(rangeFault{}) }
 	case "*":
-		x.Mul(x, y)
+		v = a * b
+		if b != 0 && (v / b != a || a == -9223372036854775808 && b == -1) { panic(rangeFault{}) }
 	case "/":
-		if b == 0 {
-			panic(rangeFault{})
-		}
-		x.Quo(x, y)
+		if b == 0 || a == -9223372036854775808 && b == -1 { panic(rangeFault{}) }
+		v = a / b
 	case "%":
-		if b == 0 {
-			panic(rangeFault{})
-		}
-		x.Rem(x, y)
+		if b == 0 { panic(rangeFault{}) }
+		v = a % b
+	default:
+		// Preserve the helper's previous identity result for unknown operators.
+		v = a
 	}
-	if !x.IsInt64() {
-		panic(rangeFault{})
-	}
-	v := x.Int64()
 	if bits == 32 && (v < -2147483648 || v > 2147483647) {
 		panic(rangeFault{})
 	}
