@@ -51,27 +51,52 @@ Unicode casing includes full mappings, contextual final sigma for lowercase,
 and preservation of lone surrogates. Finally uses defer, so it runs once on
 normal completion, return, throw or Trap.
 
-Regex patterns are deliberately reviewed individually; Go's RE2 syntax alone
-is never evidence of JavaScript equivalence. The lexer uses only `/\r/g`,
-which the frontend maps to literal `string.replaceAll`. Registry fixtures use:
+The pinned abaplint regex token grammars are listed in `regex_patterns.go`.
+They use ASCII word/digit sets and ASCII case pairs; dot excludes LF, CR,
+U+2028 and U+2029. Negative keyword lookaheads are separate exclusions.
+The dynamic grammar admits macro placeholders (`&` plus a positive decimal
+integer) and anchored ASCII literal alternatives used for SQL names.
+Patterns outside these reviewed languages fail emission when literal and
+construction when dynamic. Matching uses one rune per UTF-16 unit. Global
+state and replacement preserve UTF-16 sections; dollar substitutions remain
+explicitly unsupported. The Node oracle checks 117 patterns against 1,033
+inputs, including Unicode and line terminators.
 
-| JavaScript | Handling |
-| --- | --- |
-| `/^Y/`, `/^Z/` | Identical RE2 prefix tests |
-| `/test$/i` | `[tT][eE][sS][tT]$`, preventing Unicode fold differences |
-| `/a.c/i` | ASCII case pairs; dot excludes LF, CR, U+2028 and U+2029 |
-| `new RegExp("x/y", "gi")` | `[xX]/[yY]`, canonical escaped source, global state |
-
-Matching operates on one rune per UTF-16 unit, preserving non-Unicode regex
-width even for supplementary input and isolated surrogates. Global test advances
-and resets lastIndex; match_test resets global state. Replacement preserves
-original UTF-16 sections. Other literal patterns fail emission; other dynamic
-patterns fail construction. Dollar replacement substitutions are unsupported.
-
-Variadic parameters, primitive covariant array views, cross-method super calls,
-and break/continue crossing try/finally closures remain explicitly unsupported.
+The frontend packs variadic arguments into trailing arrays. Super calls resolve
+from the immediate base while retaining the concrete receiver. Typed internal
+loop-control panics cross try closures and unwind to the correct loop; catches
+continue to accept only exception payloads. The frontend/HIR verifier still
+reject finally bodies with exits and try/finally with catch. General primitive
+covariant array views remain unsupported. A fresh, unaliased temporary whose
+only uses are pushes before a final narrowing can be repacked after checking
+that every element is present; escaping/aliased arrays are rejected.
 Non-finite Number literals, general Number remainder and nonliteral/zero Number
 divisors retain the round-one restrictions. This is not a general JS runtime.
+
+The complete CLI closure compiles directly from HIR, without `hir.Inline`:
+
+```sh
+go run ./cmd/abapiti abaplint --target go -o /tmp/abaplint-go
+cd /tmp/abaplint-go/go
+GOFLAGS=-buildvcs=false go build -o ../zabaplint .
+```
+
+`--file`, `--config`, `--deps` and `--times` use the same RegistryRun harness
+as the ABAP native command. `--cpu-profile`, `--mem-profile` and `--metrics`
+collect full-check observations. The binary reads dependency list paths relative
+to its working directory, as the release check kit does.
+
+`ABAPITI_GO_FULL_TEST=1 go test ./cmd/abapiti -run TestGoFullClosure` compiles
+all 1,927 classes and 73 interfaces from the verified 1,538-file source closure,
+with CLI-default assume-int, pinned overrides and the reachability manifest.
+The same 1,995 unexecuted bodies remain explicit traps. Existing feature,
+lexer, statement, structure, MemoryFile and split differential tests run under
+`go test ./hir/... ./tsfront/...`.
+
+`node tools/hir-go-check.mjs KIT GO_BINARY OUTPUT_DIR [RELEASE_BINARY] [UPSTREAM]`
+rebuilds clean original Node abaplint 577f875e, checks both kit variants byte
+for byte, and writes stage timings, peak RSS, CPU/allocation profiles and the
+Go top ten CPU entries. It runs each host sequentially under GNU time.
 
 `go test ./hir/golang -v` runs the six ABAP fixtures, int8 observations, and
 runtime semantic edge tests in standalone generated modules. The tests in
