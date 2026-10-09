@@ -132,29 +132,35 @@ func (s jsString) trim() jsString {
 	}
 	return s[2*a : 2*b]
 }
+// Append a rune as UTF-16LE without temporary per-rune strings.
+func writeUnit(b *strings.Builder, c uint16) { b.WriteByte(byte(c));b.WriteByte(byte(c>>8)) }
+func writeRune(b *strings.Builder, r rune) {
+ if r<=0xffff { writeUnit(b,uint16(r));return }
+ hi,lo:=utf16.EncodeRune(r);writeUnit(b,uint16(hi));writeUnit(b,uint16(lo))
+}
 func (s jsString) upper() jsString {
-	out := jsString("")
-	for i := int32(0); i < s.length(); i++ {
-		c := s.charCodeAt(i)
-		r := rune(c)
-		if c >= 0xd800 && c <= 0xdbff && i+1 < s.length() {
-			d := s.charCodeAt(i + 1)
-			if d >= 0xdc00 && d <= 0xdfff {
-				r = utf16.DecodeRune(rune(c), rune(d))
-				i++
-			}
-		}
-		if r >= 0xd800 && r <= 0xdfff {
-			out += s.charAt(i)
-			continue
-		}
-		if v, ok := upperExpansion[r]; ok {
-			out += str(v)
-		} else {
-			out += str(string(unicode.ToUpper(r)))
-		}
-	}
-	return out
+ // Most lexer tokens are ASCII, and already-uppercase tokens need no copy.
+ ascii,changed:=true,false
+ for i:=int32(0);i<s.length();i++ {
+  c:=s.charCodeAt(i)
+  if c>=128 {ascii=false;break}
+  changed=changed||c>=97&&c<=122
+ }
+ if ascii&&!changed {return s}
+ var out strings.Builder
+ out.Grow(len(s))
+ for i:=int32(0);i<s.length();i++ {
+  c:=s.charCodeAt(i)
+  if ascii {if c>=97&&c<=122 {c-=32};writeUnit(&out,uint16(c));continue}
+  r:=rune(c)
+  if c>=0xd800&&c<=0xdbff&&i+1<s.length() {
+   d:=s.charCodeAt(i+1)
+   if d>=0xdc00&&d<=0xdfff {r=utf16.DecodeRune(rune(c),rune(d));i++}
+  }
+  if r>=0xd800&&r<=0xdfff {writeUnit(&out,uint16(r));continue}
+  if v,ok:=upperExpansion[r];ok {out.WriteString(string(str(v)))} else {writeRune(&out,unicode.ToUpper(r))}
+ }
+ return jsString(out.String())
 }
 
 type optional[T any] struct {
