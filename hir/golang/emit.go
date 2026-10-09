@@ -261,8 +261,16 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	// Reentrant first-use initialization matches ABAP's guarded class initialization.
-	e.line("var %s bool", e.name("initialized."+c.Name))
-	e.line("func %s() {if %s {return}; %s=true", e.name("init."+c.Name), e.name("initialized."+c.Name), e.name("initialized."+c.Name))
+	constructor := false
+	for _, m := range c.Methods {
+		constructor = constructor || m.Name == "class_constructor"
+	}
+	if constructor {
+		e.line("var %s bool", e.name("initialized."+c.Name))
+		e.line("func %s() {if %s {return}; %s=true", e.name("init."+c.Name), e.name("initialized."+c.Name), e.name("initialized."+c.Name))
+	} else {
+		e.line("func %s() {", e.name("init."+c.Name))
+	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" {
 			e.line("%s()", e.body(c.Name, m.Name))
@@ -351,6 +359,20 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		e.line("%s()", e.name("init."+c.Name))
 	}
 	b := &body{e: e, c: c, m: m, locals: map[string]string{}}
+	b.initialized = map[string]string{}
+	// Local flags track actual execution through branches, loops and catches.
+	// Declaring them has no initialization effects; the first access still runs
+	// the reentrant global guard at its original evaluation point.
+	walkStmt(m.Body, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+		if x.Kind == hir.StaticGet {
+			owner := e.fieldOwner(e.classBy(x.Owner), x.Name).Name
+			if _, ok := b.initialized[owner]; !ok {
+				flag := b.fresh()
+				b.initialized[owner] = flag
+				e.line("%s := false; _ = %s", flag, flag)
+			}
+		}
+	})
 	for i, p := range m.Params {
 		b.locals[p.Name] = fmt.Sprintf("p%d", i)
 		e.line("_ = p%d", i)
@@ -361,14 +383,15 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 }
 
 type body struct {
-	e        *emitter
-	c        *hir.Class
-	m        *hir.Method
-	locals   map[string]string
-	next     int
-	tryDepth int
-	loops    []int
-	capacity map[*hir.Expr][]*hir.Expr
+	e           *emitter
+	c           *hir.Class
+	m           *hir.Method
+	locals      map[string]string
+	next        int
+	tryDepth    int
+	loops       []int
+	capacity    map[*hir.Expr][]*hir.Expr
+	initialized map[string]string
 }
 
 func (b *body) line(f string, a ...any) { b.e.line(f, a...) }
@@ -457,7 +480,8 @@ func (b *body) lvalue(x *hir.Expr) string {
 		return v + "." + e.getter(c.Name) + "()." + e.member(x.Name)
 	case hir.StaticGet:
 		c := e.fieldOwner(e.classBy(x.Owner), x.Name)
-		b.line("%s()", e.name("init."+c.Name))
+		flag := b.initialized[c.Name]
+		b.line("if !%s { %s(); %s=true }", flag, e.name("init."+c.Name), flag)
 		return e.name("static." + c.Name + "." + x.Name)
 	}
 	e.unsupported(x.Node, "assignment "+string(x.Kind))
