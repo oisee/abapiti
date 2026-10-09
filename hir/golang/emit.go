@@ -56,7 +56,7 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
-	files := map[string]string{"hir.go": e.code.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource, "package main", "package "+pkg, 1)}
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -68,10 +68,12 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 }
 
 type emitter struct {
-	p     *hir.Program
-	names *hir.Names
-	code  strings.Builder
-	err   error
+	p             *hir.Program
+	names         *hir.Names
+	code          strings.Builder
+	err           error
+	extra         strings.Builder
+	materializers map[string]bool
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }
@@ -117,7 +119,14 @@ func (e *emitter) fieldOwner(c *hir.Class, n string) *hir.Class {
 	}
 	return nil
 }
+func arrayStorage(t hir.Type) hir.Type {
+	if t.Kind == hir.Array && t.Args[0].IsRef() {
+		return hir.T(hir.Array, hir.Ref(hir.RootObject))
+	}
+	return t
+}
 func (e *emitter) typ(t hir.Type) string {
+	t = arrayStorage(t)
 	switch t.Kind {
 	case hir.Void:
 		return ""
@@ -131,6 +140,8 @@ func (e *emitter) typ(t hir.Type) string {
 		return "float64"
 	case hir.String:
 		return "jsString"
+	case hir.RegExp:
+		return "*jsRegExp"
 	case hir.Dynamic:
 		return "*dynamic"
 	case hir.ClassRef:
@@ -194,6 +205,7 @@ func (e *emitter) effective(c *hir.Class) []string {
 }
 func (e *emitter) class(c *hir.Class) {
 	e.line("type %s struct {", e.obj(c.Name))
+	e.line("source *dynamic")
 	if c.Super != "" {
 		e.line("%s", e.obj(c.Super))
 	} else {
@@ -205,6 +217,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
 	e.line("func (self *%s) %s() *%s {return self}", e.obj(c.Name), e.getter(c.Name), e.obj(c.Name))
 	e.line("type %s interface {", e.ref(c.Name))
 	if c.Super != "" {
@@ -341,7 +354,7 @@ func (b *body) value(x *hir.Expr, t hir.Type) string {
 	if t.Kind == hir.Optional && x.Type.Kind != hir.Optional && !t.Args[0].IsRef() {
 		return "present(" + v + ")"
 	}
-	if t.Kind == hir.Array && !t.Equal(x.Type) {
+	if t.Kind == hir.Array && !arrayStorage(t).Equal(arrayStorage(x.Type)) {
 		b.e.unsupported(x.Node, "covariant array view")
 	}
 	return v
@@ -386,6 +399,8 @@ func (b *body) truth(v string, t hir.Type) string {
 			return "!nilRef(" + v + ")"
 		}
 		return v + ".Has && (" + b.truth(v+".Value", t.Args[0]) + ")"
+	case hir.Dynamic:
+		return "dynTruth(" + v + ")"
 	case hir.Bool:
 		return v
 	case hir.String:
@@ -433,7 +448,10 @@ func (b *body) expr(x *hir.Expr) string {
 		code = b.lvalue(x)
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
-		code = a + ".Items[" + i + "]"
+		code = a + ".get(" + i + ").Value"
+		if x.X.Type.Args[0].IsRef() {
+			code = "castRef[" + e.typ(t) + "](" + code + ")"
+		}
 	case hir.New:
 		a := []string{}
 		if t.Kind == hir.ClassRef {
@@ -447,8 +465,15 @@ func (b *body) expr(x *hir.Expr) string {
 				a = append(a, b.expr(v))
 			}
 			code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{}"
+			if t.Kind == hir.RegExp {
+				flags := `str("")`
+				if len(a) > 1 {
+					flags = a[1]
+				}
+				code = "newRegExp(" + a[0] + "," + flags + ")"
+			}
 			if t.Kind == hir.Array && len(a) > 0 {
-				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{Items:make([]" + e.typ(t.Args[0]) + "," + a[0] + ")}"
+				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{Items:make([]" + e.typ(arrayStorage(t).Args[0]) + "," + a[0] + ")}"
 			}
 		}
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
@@ -568,7 +593,7 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			src = src.Args[0]
 		}
-		if src.Equal(t) {
+		if src.Equal(t) || src.Kind == hir.Array && t.Kind == hir.Array && arrayStorage(src).Equal(arrayStorage(t)) {
 			code = a
 		} else if t.Kind == hir.ClassRef || t.Kind == hir.InterfaceRef {
 			code = "castRef[" + e.typ(t) + "](" + a + ")"
@@ -676,7 +701,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		a := b.expr(s.X)
 		index := b.fresh()
 		b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
-		n := b.temp(s.Type, a+".Items["+index+"]")
+		code := a + ".Items[" + index + "]"
+		if s.Type.IsRef() {
+			code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
+		}
+		n := b.temp(s.Type, code)
 		old := b.locals
 		b.locals = clone(old)
 		b.locals[s.Name] = n

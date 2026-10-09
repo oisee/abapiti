@@ -8,9 +8,12 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
+	"unicode"
 	"unicode/utf16"
- "unicode"
 )
 
 // jsString stores UTF-16LE units, including isolated surrogate sections. Its
@@ -49,16 +52,110 @@ func (s jsString) charCodeAt(i int32) int32 {
 	return int32(binary.LittleEndian.Uint16([]byte(s[int(i)*2 : int(i)*2+2])))
 }
 
-func sliceIndex(i,n int32) int32 { if i<0 {i=n+i}; return max(0,min(n,i)) }
-func (s jsString) slice(a,b int32) jsString { a=sliceIndex(a,s.length());b=sliceIndex(b,s.length());b=max(a,b);return s[2*a:2*b] }
-func (s jsString) substr(a,n int32) jsString {a=sliceIndex(a,s.length());n=max(0,min(n,s.length()-a));return s[2*a:2*(a+n)]}
-func (s jsString) charAt(i int32) jsString {if i<0 || i>=s.length(){return ""};return s[2*i:2*i+2]}
-func (s jsString) indexOf(needle jsString) int32 {for i:=int32(0);i<=s.length()-needle.length();i++ {if s[2*i:2*i+int32(len(needle))]==needle{return i}};return -1}
-func (s jsString) replaceAll(needle,with jsString) jsString { if needle=="" {out:=with;for i:=int32(0);i<s.length();i++ {out+=s.charAt(i)+with};return out};out:=jsString("");for {i:=s.indexOf(needle);if i<0{return out+s};out+=s[:2*i]+with;s=s[2*i+int32(len(needle)):]}}
-func (s jsString) split(sep jsString) *array[jsString] {a:=&array[jsString]{};if sep=="" {for i:=int32(0);i<s.length();i++ {a.Items=append(a.Items,s.charAt(i))};return a};for {i:=s.indexOf(sep);if i<0 {a.Items=append(a.Items,s);return a};a.Items=append(a.Items,s[:2*i]);s=s[2*i+int32(len(sep)):]}}
-func jsWhitespace(c int32) bool {return c==9 || c==10 || c==11 || c==12 || c==13 || c==32 || c==160 || c==0x1680 || c>=0x2000 && c<=0x200a || c==0x2028 || c==0x2029 || c==0x202f || c==0x205f || c==0x3000 || c==0xfeff}
-func (s jsString) trim() jsString {a,b:=int32(0),s.length();for a<b && jsWhitespace(s.charCodeAt(a)){a++};for b>a && jsWhitespace(s.charCodeAt(b-1)){b--};return s[2*a:2*b]}
-func (s jsString) upper() jsString {out:=jsString("");for i:=int32(0);i<s.length();i++ {c:=s.charCodeAt(i);r:=rune(c);if c>=0xd800 && c<=0xdbff && i+1<s.length() {d:=s.charCodeAt(i+1);if d>=0xdc00 && d<=0xdfff {r=utf16.DecodeRune(rune(c),rune(d));i++}};if r>=0xd800 && r<=0xdfff {out+=s.charAt(i);continue};if v,ok:=upperExpansion[r];ok {out+=str(v)}else{out+=str(string(unicode.ToUpper(r)))}};return out}
+func sliceIndex(i, n int32) int32 {
+	if i < 0 {
+		i = n + i
+	}
+	return max(0, min(n, i))
+}
+func (s jsString) slice(a, b int32) jsString {
+	a = sliceIndex(a, s.length())
+	b = sliceIndex(b, s.length())
+	b = max(a, b)
+	return s[2*a : 2*b]
+}
+func (s jsString) substr(a, n int32) jsString {
+	a = sliceIndex(a, s.length())
+	n = max(0, min(n, s.length()-a))
+	return s[2*a : 2*(a+n)]
+}
+func (s jsString) charAt(i int32) jsString {
+	if i < 0 || i >= s.length() {
+		return ""
+	}
+	return s[2*i : 2*i+2]
+}
+func (s jsString) indexOf(needle jsString) int32 {
+	for i := int32(0); i <= s.length()-needle.length(); i++ {
+		if s[2*i:2*i+int32(len(needle))] == needle {
+			return i
+		}
+	}
+	return -1
+}
+func (s jsString) replaceAll(needle, with jsString) jsString {
+	if needle == "" {
+		out := with
+		for i := int32(0); i < s.length(); i++ {
+			out += s.charAt(i) + with
+		}
+		return out
+	}
+	out := jsString("")
+	for {
+		i := s.indexOf(needle)
+		if i < 0 {
+			return out + s
+		}
+		out += s[:2*i] + with
+		s = s[2*i+int32(len(needle)):]
+	}
+}
+func (s jsString) split(sep jsString) *array[jsString] {
+	a := &array[jsString]{}
+	if sep == "" {
+		for i := int32(0); i < s.length(); i++ {
+			a.Items = append(a.Items, s.charAt(i))
+		}
+		return a
+	}
+	for {
+		i := s.indexOf(sep)
+		if i < 0 {
+			a.Items = append(a.Items, s)
+			return a
+		}
+		a.Items = append(a.Items, s[:2*i])
+		s = s[2*i+int32(len(sep)):]
+	}
+}
+func jsWhitespace(c int32) bool {
+	return c == 9 || c == 10 || c == 11 || c == 12 || c == 13 || c == 32 || c == 160 || c == 0x1680 || c >= 0x2000 && c <= 0x200a || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f || c == 0x3000 || c == 0xfeff
+}
+func (s jsString) trim() jsString {
+	a, b := int32(0), s.length()
+	for a < b && jsWhitespace(s.charCodeAt(a)) {
+		a++
+	}
+	for b > a && jsWhitespace(s.charCodeAt(b-1)) {
+		b--
+	}
+	return s[2*a : 2*b]
+}
+func (s jsString) upper() jsString {
+	out := jsString("")
+	for i := int32(0); i < s.length(); i++ {
+		c := s.charCodeAt(i)
+		r := rune(c)
+		if c >= 0xd800 && c <= 0xdbff && i+1 < s.length() {
+			d := s.charCodeAt(i + 1)
+			if d >= 0xdc00 && d <= 0xdfff {
+				r = utf16.DecodeRune(rune(c), rune(d))
+				i++
+			}
+		}
+		if r >= 0xd800 && r <= 0xdfff {
+			out += s.charAt(i)
+			continue
+		}
+		if v, ok := upperExpansion[r]; ok {
+			out += str(v)
+		} else {
+			out += str(string(unicode.ToUpper(r)))
+		}
+	}
+	return out
+}
 
 type optional[T any] struct {
 	Value T
@@ -79,6 +176,15 @@ type dynamic struct {
 }
 
 func box(v any) *dynamic {
+	if nilRef(v) {
+		return nil
+	}
+	if d, ok := v.(*dynamic); ok {
+		return d
+	}
+	if s, ok := v.(interface{ dynamicSource() *dynamic }); ok && s.dynamicSource() != nil {
+		return s.dynamicSource()
+	}
 	tag := uint8(2)
 	switch v.(type) {
 	case jsString:
@@ -180,7 +286,7 @@ func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
 	}
 	return v
 }
-func negativeZero() float64 {return math.Copysign(0,-1)}
+func negativeZero() float64 { return math.Copysign(0, -1) }
 func finite(x float64) float64 {
 	if math.IsInf(x, 0) || math.IsNaN(x) {
 		panic(rangeFault{})
@@ -256,7 +362,12 @@ func (m *orderedMap[K, V]) keys() *array[K] {
 	return a
 }
 
-func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {for _,v:=range a.Items {s.add(v)};return s}
+func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {
+	for _, v := range a.Items {
+		s.add(v)
+	}
+	return s
+}
 
 type orderedSet[T any] struct{ Items []T }
 
@@ -275,4 +386,462 @@ func (s *orderedSet[T]) add(v T) *orderedSet[T] {
 	return s
 }
 func (s *orderedSet[T]) values() *array[T] { return &array[T]{Items: append([]T(nil), s.Items...)} }
+func (a *array[T]) reverse() *array[T] {
+	for i, j := 0, len(a.Items)-1; i < j; i, j = i+1, j-1 {
+		a.Items[i], a.Items[j] = a.Items[j], a.Items[i]
+	}
+	return a
+}
+func (a *array[T]) unshift(v T) int32 {
+	a.Items = append([]T{v}, a.Items...)
+	return int32(len(a.Items))
+}
+func (a *array[T]) concat(b *array[T]) *array[T] {
+	out := a.slice0()
+	out.Items = append(out.Items, b.Items...)
+	return out
+}
+func (a *array[T]) slice0() *array[T]        { return a.slice2(0, int32(len(a.Items))) }
+func (a *array[T]) slice1(i int32) *array[T] { return a.slice2(i, int32(len(a.Items))) }
+func (a *array[T]) slice2(i, j int32) *array[T] {
+	n := int32(len(a.Items))
+	i = sliceIndex(i, n)
+	j = max(i, sliceIndex(j, n))
+	return &array[T]{Items: append([]T(nil), a.Items[i:j]...)}
+}
+func (a *array[T]) splice1(i int32) *array[T]      { return a.splice2(i, int32(len(a.Items))) }
+func (a *array[T]) splice1_view(i int32) *array[T] { return a.splice1(i) }
+func (a *array[T]) splice2(i, n int32) *array[T] {
+	i = sliceIndex(i, int32(len(a.Items)))
+	n = max(0, min(n, int32(len(a.Items))-i))
+	out := a.slice2(i, i+n)
+	a.Items = append(a.Items[:i], a.Items[i+n:]...)
+	return out
+}
+func (a *array[T]) splice3(i, n int32, v T) *array[T] {
+	i = sliceIndex(i, int32(len(a.Items)))
+	out := a.splice2(i, n)
+	a.Items = append(a.Items, v)
+	copy(a.Items[i+1:], a.Items[i:len(a.Items)-1])
+	a.Items[i] = v
+	return out
+}
+func (a *array[T]) pop() optional[T] {
+	if len(a.Items) == 0 {
+		return optional[T]{}
+	}
+	v := a.Items[len(a.Items)-1]
+	a.Items = a.Items[:len(a.Items)-1]
+	return present(v)
+}
+func (a *array[T]) shift() optional[T] {
+	if len(a.Items) == 0 {
+		return optional[T]{}
+	}
+	v := a.Items[0]
+	a.Items = a.Items[1:]
+	return present(v)
+}
+func (a *array[T]) indexOf(v T) int32 {
+	for i, x := range a.Items {
+		if equal(x, v) {
+			return int32(i)
+		}
+	}
+	return -1
+}
+func (a *array[T]) includes(v T) bool { return a.indexOf(v) >= 0 }
+func (a *array[T]) join(sep optional[jsString]) jsString {
+	s := str(",")
+	if sep.Has {
+		s = sep.Value
+	}
+	out := jsString("")
+	for i, v := range a.Items {
+		if i > 0 {
+			out += s
+		}
+		out += primitiveString(v)
+	}
+	return out
+}
+func primitiveString(v any) jsString {
+	switch x := v.(type) {
+	case jsString:
+		return x
+	case bool:
+		return str(strconv.FormatBool(x))
+	case int32:
+		return integerString(int64(x))
+	case int64:
+		return integerString(x)
+	case float64:
+		return numberString(x)
+	}
+	panic(rangeFault{})
+}
+func (m *orderedMap[K, V]) values() *array[V] {
+	a := &array[V]{}
+	for _, e := range m.Entries {
+		a.Items = append(a.Items, e.Value)
+	}
+	return a
+}
+func (m *orderedMap[K, V]) delete(k K) bool {
+	for i, e := range m.Entries {
+		if equal(e.Key, k) {
+			m.Entries = append(m.Entries[:i], m.Entries[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+func (s *orderedSet[T]) delete(v T) bool {
+	for i, x := range s.Items {
+		if equal(x, v) {
+			s.Items = append(s.Items[:i], s.Items[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+func (s *orderedSet[T]) copy(other *orderedSet[T]) *orderedSet[T] {
+	out := &orderedSet[T]{}
+	for _, v := range other.Items {
+		out.add(v)
+	}
+	return out
+}
+func (s jsString) startsWith(n jsString) bool { return s.length() >= n.length() && s[:len(n)] == n }
+func (s jsString) endsWith(n jsString) bool {
+	return s.length() >= n.length() && s[len(s)-len(n):] == n
+}
+func (s jsString) at(i int32) optional[jsString] {
+	if i < 0 || i >= s.length() {
+		return optional[jsString]{}
+	}
+	return present(s.charAt(i))
+}
+func (s jsString) replaceFirst(n, v jsString) jsString {
+	i := s.indexOf(n)
+	if i < 0 {
+		return s
+	}
+	return s[:2*i] + v + s[2*i+int32(len(n)):]
+}
+func (s jsString) repeatIndent(n float64) jsString {
+	n = math.Trunc(n)
+	if n <= 0 {
+		return ""
+	}
+	if math.IsNaN(n) || math.IsInf(n, 0) || n > 2147483647 {
+		panic(rangeFault{})
+	}
+	return jsString(strings.Repeat(string(s), int(n)))
+}
+func compareDomain(a, b jsString, alphabet string) int32 {
+	for _, s := range []jsString{a, b} {
+		for i := int32(0); i < s.length(); i++ {
+			if strings.IndexRune(alphabet, rune(s.charCodeAt(i))) < 0 {
+				panic(rangeFault{})
+			}
+		}
+	}
+	for i := int32(0); i < min(a.length(), b.length()); i++ {
+		x := strings.IndexRune(alphabet, rune(a.charCodeAt(i)))
+		y := strings.IndexRune(alphabet, rune(b.charCodeAt(i)))
+		if x < y {
+			return -1
+		}
+		if x > y {
+			return 1
+		}
+	}
+	if a.length() < b.length() {
+		return -1
+	}
+	if a.length() > b.length() {
+		return 1
+	}
+	return 0
+}
+func (s jsString) parseInt10() optional[float64] {
+	s = s.trim()
+	i := int32(0)
+	sign := float64(1)
+	if s.charAt(i) == str("-") {
+		sign = -1
+		i++
+	} else if s.charAt(i) == str("+") {
+		i++
+	}
+	start := i
+	v := float64(0)
+	for i < s.length() {
+		c := s.charCodeAt(i)
+		if c < 48 || c > 57 {
+			break
+		}
+		v = finite(v*10 + float64(c-48))
+		i++
+	}
+	if i == start {
+		return optional[float64]{}
+	}
+	return present(sign * v)
+}
+func (s jsString) parseInt10i64() optional[int64] {
+	v := s.parseInt10()
+	if !v.Has {
+		return optional[int64]{}
+	}
+	if v.Value < -9223372036854775808 || v.Value >= 9223372036854775808 {
+		panic(rangeFault{})
+	}
+	return present(int64(v.Value))
+}
+
+type jsRegExp struct {
+	Source, Flags jsString
+	compiled      *regexp.Regexp
+}
+
+func newRegExp(pattern, flags jsString) *jsRegExp {
+	p, f := pattern.String(), flags.String()
+	translated := ""
+	switch {
+	case (p == "^Y" || p == "^Z") && f == "":
+		translated = p
+	case p == "test$" && f == "i":
+		translated = "[tT][eE][sS][tT]$"
+	case p == "a.c" && f == "i":
+		translated = "[aA][^\\n\\r\\x{2028}\\x{2029}][cC]"
+	case p == "x/y" && f == "gi":
+		translated = "[xX]/[yY]"
+	default:
+		panic(trap{Source: "not supported in the Go prototype: JavaScript regexp /" + p + "/" + f})
+	}
+	return &jsRegExp{pattern.replaceAll(str("/"), str("\\/")), flags, regexp.MustCompile(translated)}
+}
+func (r *jsRegExp) test(s jsString) bool {
+	u := ""
+	for i := int32(0); i < s.length(); i++ {
+		u += string(rune(s.charCodeAt(i)))
+	}
+	return r.compiled.MatchString(u)
+}
+func (r *jsRegExp) toString() jsString { return str("/") + r.Source + str("/") + r.Flags }
+
+const (
+	tagObject uint8 = 7
+	tagArray  uint8 = 8
+	tagNull   uint8 = 9
+)
+
+func dynNull() *dynamic { return &dynamic{Tag: tagNull} }
+func dynEqual(a, b *dynamic) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Tag >= 4 && a.Tag <= 6 && b.Tag >= 4 && b.Tag <= 6 {
+		return dynNumber(a) == dynNumber(b)
+	}
+	if a.Tag != b.Tag {
+		return false
+	}
+	switch a.Tag {
+	case tagNull:
+		return true
+	case tagObject, tagArray:
+		return a == b
+	case 4, 5, 6:
+		return dynNumber(a) == dynNumber(b)
+	default:
+		return equal(a.Value, b.Value)
+	}
+}
+func dynNumber(d *dynamic) float64 {
+	if d == nil {
+		panic(rangeFault{})
+	}
+	switch d.Tag {
+	case 4:
+		return float64(d.Value.(int32))
+	case 5:
+		return float64(d.Value.(int64))
+	case 6:
+		return d.Value.(float64)
+	}
+	panic(rangeFault{})
+}
+func dynBoolean(d *dynamic) bool {
+	if d == nil || d.Tag != 3 {
+		panic(rangeFault{})
+	}
+	return d.Value.(bool)
+}
+func dynTypeof(d *dynamic) jsString {
+	if d == nil {
+		return str("undefined")
+	}
+	switch d.Tag {
+	case 1:
+		return str("string")
+	case 3:
+		return str("boolean")
+	case 4, 5, 6:
+		return str("number")
+	}
+	return str("object")
+}
+func dynToString(d *dynamic) jsString {
+	if d == nil {
+		return str("undefined")
+	}
+	switch d.Tag {
+	case tagNull:
+		return str("null")
+	case 1, 3, 4, 5, 6:
+		return primitiveString(d.Value)
+	default:
+		return str("[object Object]")
+	}
+}
+func dynTruth(d *dynamic) bool {
+	if d == nil || d.Tag == tagNull {
+		return false
+	}
+	switch d.Tag {
+	case 1:
+		return d.Value.(jsString).length() > 0
+	case 3:
+		return d.Value.(bool)
+	case 4, 5, 6:
+		return dynNumber(d) != 0
+	}
+	return true
+}
+func (d *dynamic) get(k jsString) *dynamic {
+	if d == nil {
+		panic(rangeFault{})
+	}
+	switch d.Tag {
+	case 2:
+		if m, ok := d.Value.(interface{ dynamicGet(jsString) *dynamic }); ok {
+			return m.dynamicGet(k)
+		}
+		panic(rangeFault{})
+	case tagObject:
+		return d.Value.(*orderedMap[jsString, *dynamic]).get(k).Value
+	case tagArray:
+		a := d.Value.(*array[*dynamic])
+		if k == str("length") {
+			return box(float64(len(a.Items)))
+		}
+		s := k.String()
+		i, err := strconv.ParseUint(s, 10, 31)
+		if err != nil || s == "" || strconv.FormatUint(i, 10) != s {
+			panic(rangeFault{})
+		}
+		return a.get(int32(i)).Value
+	case 1:
+		if k == str("length") {
+			return box(float64(d.Value.(jsString).length()))
+		}
+		return nil
+	case 3, 4, 5, 6:
+		return nil
+	}
+	panic(rangeFault{})
+}
+func (d *dynamic) put(k jsString, v *dynamic) {
+	if d != nil && d.Tag == 2 {
+		if m, ok := d.Value.(interface{ dynamicPut(jsString, *dynamic) }); ok {
+			m.dynamicPut(k, v)
+			return
+		}
+	}
+	if d == nil || d.Tag != tagObject {
+		panic(rangeFault{})
+	}
+	d.Value.(*orderedMap[jsString, *dynamic]).set(k, v)
+}
+func isArray(d *dynamic) bool {
+	if d == nil {
+		return false
+	}
+	if d.Tag == tagArray {
+		return true
+	}
+	_, ok := d.Value.(interface{ arrayMarker() })
+	return ok
+}
+func (a *array[T]) arrayMarker() {}
+
+var telemetryStart = time.Now()
+
+func telemetry() float64 { return float64(time.Since(telemetryStart).Nanoseconds()) / 1e6 }
+
+func unboxValue[T any](d *dynamic) T {
+	var z T
+	if _, ok := any(z).(*dynamic); ok {
+		return any(d).(T)
+	}
+	if d == nil {
+		panic(rangeFault{})
+	}
+	if v, ok := d.Value.(T); ok {
+		return v
+	}
+	if v, ok := any(dynNumberIfNeeded(d, z)).(T); ok {
+		return v
+	}
+	panic(rangeFault{})
+}
+func dynNumberIfNeeded[T any](d *dynamic, z T) any {
+	switch any(z).(type) {
+	case float64:
+		return dynNumber(d)
+	default:
+		return nil
+	}
+}
+func dynMap[V any](d *dynamic) *orderedMap[jsString, V] {
+	if d == nil {
+		panic(rangeFault{})
+	}
+	if m, ok := d.Value.(*orderedMap[jsString, V]); ok {
+		return m
+	}
+	var bag *orderedMap[jsString, *dynamic]
+	if d.Tag == tagObject || d.Tag == 2 {
+		bag, _ = d.Value.(*orderedMap[jsString, *dynamic])
+	}
+	if bag == nil {
+		panic(rangeFault{})
+	}
+	out := &orderedMap[jsString, V]{}
+	for _, e := range bag.Entries {
+		out.set(e.Key, unboxValue[V](e.Value))
+	}
+	return out
+}
+func (m *orderedMap[K, V]) dynamicGet(k jsString) *dynamic {
+	key, ok := any(k).(K)
+	if !ok {
+		panic(rangeFault{})
+	}
+	v := m.get(key)
+	if !v.Has {
+		return nil
+	}
+	return box(v.Value)
+}
+func (m *orderedMap[K, V]) dynamicPut(k jsString, v *dynamic) {
+	key, ok := any(k).(K)
+	if !ok {
+		panic(rangeFault{})
+	}
+	m.set(key, unboxValue[V](v))
+}
 `

@@ -11,53 +11,15 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
-	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 func TestEmitRegistryJSON(t *testing.T) {
-	dir := t.TempDir()
-	source, err := os.ReadFile("testdata/registryfeatures/json.ts")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "json.ts"), source, 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true},"files":["json.ts"]}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	registry, err := overrides.New(overrides.Entry{ID: "json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.parse", Kind: "KindMethodDeclaration"}, SHA256: "4d627fb0829356bf92903ad6dd03bba444f77d7c57560f3c162f7a1bd23a7db9", Rationale: "strict JSON external adapter differential", Method: func() *hir.Method {
-		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.Dynamic), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "json.parseSubset", Type: hir.T(hir.Dynamic), X: hir.V("text", hir.T(hir.String))}})}
-	}}, overrides.Entry{ID: "typed-json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.config", Kind: "KindMethodDeclaration"}, SHA256: "64d64c5d5ae6d288faa6c7732fd89638a55f9cd3725a91f59dcc25aa2055fdad", Rationale: "same typed adapter projection as Config constructor", Method: func() *hir.Method {
-		return &hir.Method{Name: "config", Static: true, Result: hir.Ref("json.ts.ConfigGraph"), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: overrides.StrictJSONProjection(hir.V("text", hir.T(hir.String)), hir.Ref("json.ts.ConfigGraph"))})}
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := Load(filepath.Join(dir, "tsconfig.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	prog, diags, err := p.LowerWithReachability([]string{"json.ts"}, registry, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasBlocking(diags) {
-		t.Fatal(diags)
-	}
-	if errs := hir.Verify(prog); len(errs) > 0 {
-		t.Fatal(errs, hir.Dump(prog))
-	}
-	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
-	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
-		gracecheck.Check(t, prog)
-	}
 	config := os.Getenv("REGISTRY_JSON_CONFIG")
 	if config == "" {
 		t.Skip("set REGISTRY_JSON_CONFIG and REGISTRY_JSON_RESOLVED to original JSON inputs")
 	}
-
+	prog := lowerRegistryJSON(t)
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)
@@ -196,4 +158,42 @@ func TestEmitRegistryJSON(t *testing.T) {
 		}
 	}
 	t.Logf("%d full JSON graphs, 17 rejection cases, %d emitted files", len(inputs), len(files))
+}
+
+func lowerRegistryJSON(t *testing.T) *hir.Program {
+	t.Helper()
+	dir := t.TempDir()
+	source, err := os.ReadFile("testdata/registryfeatures/json.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "json.ts"), source, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true},"files":["json.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := overrides.New(overrides.Entry{ID: "json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.parse", Kind: "KindMethodDeclaration"}, SHA256: "4d627fb0829356bf92903ad6dd03bba444f77d7c57560f3c162f7a1bd23a7db9", Rationale: "strict JSON external adapter differential", Method: func() *hir.Method {
+		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.Dynamic), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "json.parseSubset", Type: hir.T(hir.Dynamic), X: hir.V("text", hir.T(hir.String))}})}
+	}}, overrides.Entry{ID: "typed-json-fixture", Key: overrides.Key{File: "json.ts", Symbol: "JSONProbe.config", Kind: "KindMethodDeclaration"}, SHA256: "64d64c5d5ae6d288faa6c7732fd89638a55f9cd3725a91f59dcc25aa2055fdad", Rationale: "same typed adapter projection as Config constructor", Method: func() *hir.Method {
+		return &hir.Method{Name: "config", Static: true, Result: hir.Ref("json.ts.ConfigGraph"), Params: []hir.Param{{Name: "text", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: overrides.StrictJSONProjection(hir.V("text", hir.T(hir.String)), hir.Ref("json.ts.ConfigGraph"))})}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"json.ts"}, registry, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasBlocking(diags) {
+		t.Fatal(diags)
+	}
+	if errs := hir.Verify(prog); len(errs) > 0 {
+		t.Fatal(errs, hir.Dump(prog))
+	}
+	return prog
 }

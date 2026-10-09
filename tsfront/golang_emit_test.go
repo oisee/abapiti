@@ -121,3 +121,112 @@ func TestGoLexerDifferential(t *testing.T) {
 	}
 	t.Logf("%d/44 equal; token type mutation rejected", len(got))
 }
+
+// Reuse precisely the HIR and pinned overrides used by the ABAP fixture tests.
+func goRegistryOracle(t *testing.T, p *hir.Program, fixture, class string) {
+	t.Helper()
+	lexerCore(t)
+	raw, err := os.ReadFile("testdata/registryfeatures/" + fixture + "-oracle.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oracle map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	var main strings.Builder
+	main.WriteString("out:=map[string]string{};")
+	for _, c := range p.Classes {
+		if c.Name != fixture+".ts."+class {
+			continue
+		}
+		for _, m := range c.Methods {
+			var expected string
+			if !m.Static || len(m.Params) > 0 || m.Result.Kind != hir.String || json.Unmarshal(oracle[m.Name], &expected) != nil {
+				continue
+			}
+			fmt.Fprintf(&main, "out[%q]=%s().String();", m.Name, goEntry(c.Name, m.Name))
+		}
+	}
+	if fixture == "sorts" {
+		fmt.Fprintf(&main, "func(){defer func(){if recover()==nil {panic(\"ordering domain accepted\")}}();%s();}();", goEntry("sorts.ts.SortProbe", "rejected"))
+	}
+	main.WriteString("b,_:=json.Marshal(out);fmt.Println(string(b))")
+	out := runGoHIR(t, p, main.String())
+	var got map[string]string
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatal(err, out)
+	}
+	if len(got) == 0 {
+		t.Fatal("no oracle methods executed")
+	}
+	for name, actual := range got {
+		var expected string
+		json.Unmarshal(oracle[name], &expected)
+		if actual != expected {
+			t.Errorf("%s: got %q want %q", name, actual, expected)
+		}
+	}
+	t.Logf("%d Node oracle methods compared", len(got))
+}
+
+func TestGoRegistryJSON(t *testing.T) {
+	lexerCore(t)
+	p := lowerRegistryJSON(t)
+	raw, err := os.ReadFile("testdata/registryfeatures/config-oracle.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct{ Input, Expected string }
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	main := "out:=[]string{};"
+	for _, c := range cases {
+		main += fmt.Sprintf("out=append(out,%s(str(%q)).String());", goEntry("json.ts.JSONProbe", "defaults"), c.Input)
+	}
+	main += "b,_:=json.Marshal(out);fmt.Println(string(b))"
+	out := runGoHIR(t, p, main)
+	var got []string
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatal(err, out)
+	}
+	for i, c := range cases {
+		if got[i] != c.Expected {
+			t.Errorf("case %d: got %q want %q", i, got[i], c.Expected)
+		}
+	}
+	t.Logf("%d config Node oracle cases compared", len(cases))
+}
+
+func TestGoRegistryXML(t *testing.T) {
+	lexerCore(t)
+	p := lowerRegistryXML(t)
+	raw, err := os.ReadFile("testdata/registryfeatures/tagged-oracle.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Flag     bool
+		Expected string
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	main := "out:=[]string{};"
+	for _, c := range cases {
+		main += fmt.Sprintf("out=append(out,%s(%t).String());", goEntry("xml.ts.XMLProbe", "tagged"), c.Flag)
+	}
+	main += "b,_:=json.Marshal(out);fmt.Println(string(b))"
+	out := runGoHIR(t, p, main)
+	var got []string
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatal(err, out)
+	}
+	for i, c := range cases {
+		if got[i] != c.Expected {
+			t.Errorf("case %d: got %q want %q", i, got[i], c.Expected)
+		}
+	}
+	t.Logf("%d tagged XML Node oracle cases compared", len(cases))
+}
