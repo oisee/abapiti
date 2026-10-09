@@ -161,7 +161,7 @@ func fixtures() []fixture {
 	))
 	extra.Static = true
 	c.Methods = append(c.Methods, bad, extra)
-	return fs
+	return append(fs, inlineFixture())
 }
 
 // Keep global definitions under review, including empty visibility sections and
