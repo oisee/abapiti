@@ -60,6 +60,23 @@ export class ArrayProbe {
     const iface: ChildView = first;
     return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}/${ArrayProbe.narrowedBranded(first)}/${ArrayProbe.narrowedBranded(second)}/${ArrayProbe.narrowedBranded()}/${ArrayProbe.narrowedBranded(new IdentityBase("plain"))}`;
   }
+  public static reverse(): string {
+    let out = "";
+    const sizes = [0, 1, 2, 3, 4];
+    for (const size of sizes) {
+      const items: string[] = [];
+      for (let index = 0; index < size; index++) {
+        items.push("abcd".charAt(index));
+      }
+      const alias = items;
+      const result = items.reverse();
+      out += `${alias.join("")}:${result === items};`;
+    }
+    const first = new Item("first");
+    const refs = [first, new Item("second"), new Item("third")];
+    refs.reverse();
+    return `${out}${refs[2] === first}/${refs[0].name}`;
+  }
   public static codeUnits(): string {
     const text = "A~\u00fe\u00ff\u0100\u0101\u20ac\ud83d\ude00\t";
     let out = "";

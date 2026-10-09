@@ -14,5 +14,6 @@
   "indentation": "|&nbsp&nbsp&nbsp&nbsp|9007199254740991|-9007199254740991",
   "matchTests": "true/true/yes/true/rp",
   "splice": "x:abcdey;ax:bcdey;abx:cdey;abcdx:ey;abcdex:y;abcdex:y;abcdx:ey;abcx:dey;x:abcdey;1/3/true/second",
-  "codeUnits": "65,126,254,255,256,257,8364,55357,56832,9,"
+  "codeUnits": "65,126,254,255,256,257,8364,55357,56832,9,",
+  "reverse": ":true;a:true;ba:true;cba:true;dcba:true;true/third"
 }

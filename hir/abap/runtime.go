@@ -31,7 +31,9 @@ func (e *emitter) runtime(t hir.Type) {
 		line("TYPES items_type TYPE STANDARD TABLE OF " + elem + " WITH DEFAULT KEY.")
 		line("DATA items TYPE items_type.")
 		line("METHODS reverse RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("reverse", "DATA reversed TYPE items_type.\nDATA row TYPE "+elem+".\nDATA idx TYPE i.\nidx = lines( items ).\nWHILE idx > 0.\nREAD TABLE items INDEX idx INTO row.\nAPPEND row TO reversed.\nidx = idx - 1.\nENDWHILE.\nitems = reversed.\nresult = me.\n")
+		// In place, and nothing to do for 0 or 1 element (most calls in the
+		// statement combinators): no second table per call.
+		method("reverse", "DATA low TYPE "+elem+".\nDATA high TYPE "+elem+".\nDATA i TYPE i.\nDATA j TYPE i.\nresult = me.\ni = 1.\nj = lines( items ).\nWHILE i < j.\nREAD TABLE items INDEX i INTO low.\nREAD TABLE items INDEX j INTO high.\nMODIFY items FROM high INDEX i.\nMODIFY items FROM low INDEX j.\ni = i + 1.\nj = j - 1.\nENDWHILE.\n")
 		line("METHODS push IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
 		method("push", "APPEND p0 TO items.\nresult = lines( items ).\n")
 		line("METHODS unshift IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE i.")
