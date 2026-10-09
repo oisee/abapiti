@@ -64,6 +64,7 @@ func TestEmitRegistrySorts(t *testing.T) {
 	if errors := hir.Verify(prog); len(errors) > 0 {
 		t.Fatal(errors, hir.Dump(prog))
 	}
+	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "sorts", "SortProbe") })
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

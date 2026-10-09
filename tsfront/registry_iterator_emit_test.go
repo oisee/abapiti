@@ -55,6 +55,7 @@ func TestEmitRegistryIterators(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
+	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "iterators", "IteratorProbe") })
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

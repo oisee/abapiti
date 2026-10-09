@@ -41,39 +41,7 @@ func TestEmitRegistryXML(t *testing.T) {
 	if len(inventory) != 188 {
 		t.Fatal("expected all 188 original objects")
 	}
-	dir := t.TempDir()
-	source, err := os.ReadFile("testdata/registryfeatures/xml.ts")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "xml.ts"), source, 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true},"files":["xml.ts"]}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	entry := overrides.Entry{ID: "xml-fixture", Key: overrides.Key{File: "xml.ts", Symbol: "XMLProbe.parse", Kind: "KindMethodDeclaration"}, SHA256: "2694df07e7fa742006984694df4043d989b10a7f950b48ff4757d765c2e2f821", Rationale: "pinned subset adapter differential", Method: func() *hir.Method {
-		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.Dynamic), Params: []hir.Param{{Name: "xml", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "xml.parseSubset", Type: hir.T(hir.Dynamic), X: hir.V("xml", hir.T(hir.String))}})}
-	}}
-	rawEntry := overrides.Entry{ID: "xml-raw-fixture", Key: overrides.Key{File: "xml.ts", Symbol: "XMLProbe.raw", Kind: "KindMethodDeclaration"}, SHA256: "6d6fb6c53a947a2115784f19a8fe3f13179a2b5c48aa0ae3294c0b1e2f8ee974", Rationale: "same missing/XML adapter boundary as AbstractObject.parseRaw2", Method: func() *hir.Method { return overrides.XMLRawMethod("xml.ts.XMLProbe", "raw") }}
-	registry, err := overrides.New(entry, rawEntry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := Load(filepath.Join(dir, "tsconfig.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	prog, diags, err := p.LowerWithReachability([]string{"xml.ts"}, registry, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasBlocking(diags) {
-		t.Fatal(diags)
-	}
-	if errs := hir.Verify(prog); len(errs) > 0 {
-		t.Fatal(errs, hir.Dump(prog))
-	}
+	prog := lowerRegistryXML(t)
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)
@@ -246,4 +214,42 @@ func TestEmitRegistryXML(t *testing.T) {
 		}
 	}
 	t.Logf("%d original object observations: %d full XML trees, %d absent XML; %d emitted files", len(inventory), parsed, len(inventory)-parsed, len(files))
+}
+
+func lowerRegistryXML(t *testing.T) *hir.Program {
+	t.Helper()
+	dir := t.TempDir()
+	source, err := os.ReadFile("testdata/registryfeatures/xml.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "xml.ts"), source, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true},"files":["xml.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	entry := overrides.Entry{ID: "xml-fixture", Key: overrides.Key{File: "xml.ts", Symbol: "XMLProbe.parse", Kind: "KindMethodDeclaration"}, SHA256: "2694df07e7fa742006984694df4043d989b10a7f950b48ff4757d765c2e2f821", Rationale: "pinned subset adapter differential", Method: func() *hir.Method {
+		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.Dynamic), Params: []hir.Param{{Name: "xml", Type: hir.T(hir.String)}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "xml.parseSubset", Type: hir.T(hir.Dynamic), X: hir.V("xml", hir.T(hir.String))}})}
+	}}
+	rawEntry := overrides.Entry{ID: "xml-raw-fixture", Key: overrides.Key{File: "xml.ts", Symbol: "XMLProbe.raw", Kind: "KindMethodDeclaration"}, SHA256: "6d6fb6c53a947a2115784f19a8fe3f13179a2b5c48aa0ae3294c0b1e2f8ee974", Rationale: "same missing/XML adapter boundary as AbstractObject.parseRaw2", Method: func() *hir.Method { return overrides.XMLRawMethod("xml.ts.XMLProbe", "raw") }}
+	registry, err := overrides.New(entry, rawEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithReachability([]string{"xml.ts"}, registry, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasBlocking(diags) {
+		t.Fatal(diags)
+	}
+	if errs := hir.Verify(prog); len(errs) > 0 {
+		t.Fatal(errs, hir.Dump(prog))
+	}
+	return prog
 }
