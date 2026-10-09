@@ -23,6 +23,10 @@ type CoverageInputs struct {
 
 type Reachability struct {
 	CurrentInputs *CoverageInputs `json:"-"`
+	// InputsRecorded trusts the recorded workload inputs instead of
+	// rehashing them: set only for the manifest built into the binary,
+	// whose inputs were validated when it was recorded and committed.
+	InputsRecorded bool `json:"-"`
 
 	Schema      int      `json:"schema"`
 	UpstreamPin string   `json:"upstreamPin"`
@@ -157,6 +161,9 @@ func (r *Reachability) validateInputs() error {
 		if r.UpstreamPin != "" {
 			return fmt.Errorf("coverage workload inputs missing")
 		}
+		return nil
+	}
+	if r.InputsRecorded && r.CurrentInputs == nil {
 		return nil
 	}
 	if r.CurrentInputs == nil {
