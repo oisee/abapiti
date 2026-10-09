@@ -31,6 +31,12 @@ type emitter struct {
 	// codeUnits lists the classes whose bodies read UTF-16 code units through
 	// a converter they create once and keep in a private CLASS-DATA.
 	codeUnits map[string]bool
+
+	// staticConsts are static fields emitted as CONSTANTS (owner.field ->
+	// ABAP literal); staticInit marks classes whose initializer still has
+	// other work.
+	staticConsts map[string]string
+	staticInit   map[string]bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -46,6 +52,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	}
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
+	e.findStaticConstants()
 	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
@@ -362,6 +369,10 @@ func (e *emitter) class(c *hir.Class) {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
 	}
 	for _, f := range c.Fields {
+		if lit, ok := e.staticConstant(c.Name, f.Name); ok && f.Static {
+			fmt.Fprintf(&b, "CONSTANTS %s TYPE %s VALUE %s.\n", e.member(f.Name), e.typ(f.Type), lit)
+			continue
+		}
 		kw := "DATA"
 		if f.Static {
 			kw = "CLASS-DATA"
@@ -499,7 +510,18 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.locals[p.Name] = n
 		b.line(n + " = " + e.param(p.Name) + ".")
 	}
-	b.stmt(m.Body)
+	body := m.Body
+	if m.Name == "class_constructor" && m.Static && body != nil {
+		// Literal static constants are CONSTANTS; their assignments go.
+		kept := &hir.Stmt{Node: body.Node, Kind: body.Kind}
+		for _, s := range body.List {
+			if !e.isStaticConstantInit(c, s) {
+				kept.List = append(kept.List, s)
+			}
+		}
+		body = kept
+	}
+	b.stmt(body)
 	return "METHOD " + name + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
 }
 
@@ -529,6 +551,9 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 func (b *body) initialize(owner string) {
 	c := b.e.classBy(owner)
 	if c == nil {
+		return
+	}
+	if !b.e.staticInit[owner] {
 		return
 	}
 	for _, m := range c.Methods {
@@ -753,7 +778,9 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.FieldGet:
 		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
-		b.initialize(x.Owner)
+		if _, constant := e.staticConstant(x.Owner, x.Name); !constant {
+			b.initialize(x.Owner)
+		}
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
 		a := b.expr(x.X)

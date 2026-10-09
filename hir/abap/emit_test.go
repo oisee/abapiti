@@ -587,7 +587,9 @@ func TestSizedArrayAllocatesBeforeFilling(t *testing.T) {
 }
 
 func TestStaticInitializationWaitsForUse(t *testing.T) {
-	init := method("class_constructor", hir.T(hir.Void), hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32}, Y: lit(7)}))
+	// Not a literal: the field stays CLASS-DATA behind the lazy initializer.
+	seven := &hir.Expr{Kind: hir.Binary, Op: "+", Type: i32, X: lit(3), Y: lit(4)}
+	init := method("class_constructor", hir.T(hir.Void), hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32}, Y: seven}))
 	init.Static = true
 	run := method("run", i32, hir.B(ret(&hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32})))
 	run.Static = true
@@ -599,6 +601,41 @@ func TestStaticInitializationWaitsForUse(t *testing.T) {
 	source := files[names.Get("Registry")+".clas.abap"]
 	if strings.Contains(source, "METHOD class_constructor.") || !strings.Contains(source, names.Get("Registry")+"=>"+names.Get("builtin.initialize.Registry")+"( ).") {
 		t.Fatal("static initializer must be guarded and called on use")
+	}
+}
+
+// A static field set once to a literal by the initializer becomes CONSTANTS
+// and its reads need no initializer; a field also written elsewhere stays.
+func TestStaticLiteralBecomesConstant(t *testing.T) {
+	set := func(name string, v int) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: name, Type: i32}, Y: lit(v)}
+	}
+	get := func(name string) *hir.Expr { return &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: name, Type: i32} }
+	init := method("class_constructor", hir.T(hir.Void), hir.B(set("nl", 10), set("count", 0)))
+	init.Static = true
+	// Another class reads the constant: no initializer of Mod is needed.
+	readNL := method("getNL", i32, hir.B(ret(get("nl"))))
+	readNL.Static = true
+	bump := method("bump", hir.T(hir.Void), hir.B(set("count", 1)))
+	bump.Static = true
+	p := &hir.Program{Classes: []*hir.Class{
+		{Name: "Mod", Fields: []hir.Field{{Name: "nl", Type: i32, Static: true}, {Name: "count", Type: i32, Static: true}}, Methods: []*hir.Method{init, bump}},
+		{Name: "User", Methods: []*hir.Method{readNL}},
+	}}
+	files, names, err := EmitNamed(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := files[names.Get("Mod")+".clas.abap"]
+	if !strings.Contains(source, "CONSTANTS "+names.Get("member.nl")+" TYPE i VALUE 10.") {
+		t.Fatal("literal static field is not a constant:\n" + source)
+	}
+	if !strings.Contains(source, "CLASS-DATA "+names.Get("member.count")+" TYPE i.") {
+		t.Fatal("a field written outside the initializer must stay CLASS-DATA:\n" + source)
+	}
+	user := files[names.Get("User")+".clas.abap"]
+	if strings.Contains(user, names.Get("builtin.initialize.Mod")) || !strings.Contains(user, names.Get("Mod")+"=>"+names.Get("member.nl")) {
+		t.Fatal("reading a constant from another class must not run the initializer:\n" + user)
 	}
 }
 
