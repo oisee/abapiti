@@ -5,26 +5,21 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
-	"crypto/sha512"
-	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestCheckIntegrity(t *testing.T) {
-	data := []byte("abaplint")
-	sum := sha512.Sum512(data)
-	good := "sha512-" + base64.StdEncoding.EncodeToString(sum[:])
-	if err := checkIntegrity(data, good); err != nil {
+// The abaplint sources and npm type declarations built into abapiti unpack
+// to a tree that verifies against the pinned closure and package manifests.
+func TestEmbeddedAbaplint(t *testing.T) {
+	src, err := embeddedAbaplint(t.TempDir())
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := checkIntegrity([]byte("other"), good); err == nil || !strings.Contains(err.Error(), "integrity mismatch") {
-		t.Fatalf("mismatch not reported: %v", err)
-	}
-	if err := checkIntegrity(data, "sha1-abc"); err == nil {
-		t.Fatal("sha1 integrity accepted")
+	if !src.Embedded || src.Files != 1539 || len(src.Packages) != 3 {
+		t.Fatalf("unpacked %d files, %d packages", src.Files, len(src.Packages))
 	}
 }
 

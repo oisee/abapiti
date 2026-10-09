@@ -3,7 +3,7 @@
 Translates the core of [abaplint](https://github.com/abaplint/abaplint) from TypeScript into ABAP. Generation is pure Go: no Node, npm or SAP system is needed.
 
 ```sh
-abapiti abaplint -o out                      # download the pinned abaplint into the user cache
+abapiti abaplint -o out                      # abaplint 577f875e is built into abapiti: no network
 abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, after npm ci in packages/core)
 abapiti abaplint -o out --target native      # one target only: all (default), a4h, osg, native
 ```
@@ -12,7 +12,7 @@ abapiti abaplint -o out --target native      # one target only: all (default), a
 
 abaplint commit `577f875ebec44cfaf64841cfe71c8ab8dc32622e` (`@abaplint/core` 2.120.56). Nothing else is accepted.
 
-- **No path**: abapiti downloads `https://codeload.github.com/abaplint/abaplint/tar.gz/577f875e…` (about 1.2 MiB) and the three npm packages whose types the translation reads (`fast-xml-parser` 5.10.1, `json5` 2.2.3, `vscode-languageserver-types` 3.18.0). Their URLs come from `packages/core/package-lock.json` in the archive, and each tarball is checked against the lockfile's sha512 integrity before it is unpacked. The result is kept in `<user cache>/abapiti/abaplint-577f875e` (`--cache-dir` sets another place) and reused while it still verifies. `--offline` never downloads.
+- **No path**: abapiti unpacks the abaplint sources it carries (the 1,538 closure files of `packages/core` at 577f875e and abaplint's LICENSE, 0.5 MB compressed) and the type declarations of the three npm packages the translation reads (`fast-xml-parser` 5.10.1, `json5` 2.2.3, `vscode-languageserver-types` 3.18.0, with their licenses) into a temporary directory. Nothing is downloaded, so it works on networks that reach neither GitHub nor the npm registry.
 - **A checkout path**: no downloads. The packages are looked up in `packages/core/node_modules`, then in the root `node_modules`.
 
 In both cases every source file of the closure (1,538 files reachable from `registry.ts`, `config.ts` and `files/memory_file.ts`) and every file of the three npm packages must match its SHA-256 as recorded at the pin. If one does not match, the command stops and names the expected commit and the first file that differs. The fingerprinted overrides and the reachability manifest are recorded against the same pin. abapiti never builds anything from a different abaplint.
