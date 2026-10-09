@@ -1431,6 +1431,9 @@ func numberFieldInitialized(c *hir.Class, f hir.Field) bool {
 				if assigned(child) {
 					return true
 				}
+				if child == nil {
+					continue
+				}
 				if child.Kind == hir.Return || child.Kind == hir.Throw || child.Kind == hir.If || child.Kind == hir.Try {
 					return false
 				}

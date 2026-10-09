@@ -287,7 +287,14 @@ func (r *RegistryLowering) Err() error {
 		if len(r.Blocking) > 0 {
 			first = ": " + r.Blocking[0].String()
 		} else {
-			first = ": " + r.Verification[0].Error()
+			var shown []string
+			for i, e := range r.Verification {
+				if i == 5 {
+					break
+				}
+				shown = append(shown, e.Error())
+			}
+			first = ": " + strings.Join(shown, "; ")
 		}
 		return fmt.Errorf("Registry closure is not translatable (%d blocking diagnostics, %d HIR errors)%s", len(r.Blocking), len(r.Verification), first)
 	}

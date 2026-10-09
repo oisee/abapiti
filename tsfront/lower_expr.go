@@ -621,7 +621,15 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		if l.localSymbols == nil {
 			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
 		}
-		l.localSymbols[x] = l.ck.GetSymbolAtLocation(n)
+		symbol := l.ck.GetSymbolAtLocation(n)
+		if n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment {
+			// {type} names the property; the value is the local variable,
+			// which the range pass may rename when it is shadowed.
+			if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+				symbol = value
+			}
+		}
+		l.localSymbols[x] = symbol
 		if t.Kind == hir.Optional && len(l.guards) > 0 {
 			if typ, guarded := l.guards[l.resolve(n)]; guarded && t.Args[0].Equal(typ) {
 				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
