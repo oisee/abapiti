@@ -269,12 +269,28 @@ func main(){if path:=os.Getenv("ABAPITI_LEXER_CPU_PROFILE");path!=""{f,err:=os.C
 `
 	files["go.mod"] = "module timing\n\ngo 1.26.0\n"
 	dir := t.TempDir()
+	if saved := os.Getenv("ABAPITI_GO_LEXER_SOURCE"); saved != "" {
+		dir = saved
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for name, source := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	cmd := exec.Command("go", "build", "-o", target, ".")
+	args := []string{"build", "-o", target}
+	profile := os.Getenv("ABAPITI_GO_LEXER_PGO")
+	if profile == "" {
+		profile, err = filepath.Abs("../hir/golang/testdata/lexer/default.pgo")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	args = append(args, "-pgo="+profile)
+	args = append(args, ".")
+	cmd := exec.Command("go", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	if out, err := cmd.CombinedOutput(); err != nil {
