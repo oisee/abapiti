@@ -24,8 +24,11 @@ type clause struct {
 	body            []atom
 }
 
-// Rules is an immutable parsed set of fact clauses.
-type Rules struct{ clauses []clause }
+// Rules is an immutable parsed set of fact and rewrite rules.
+type Rules struct {
+	clauses  []clause
+	rewrites []rewriteRule
+}
 type sexpr struct {
 	text   string
 	quoted bool
@@ -144,6 +147,14 @@ func Parse(src string) (*DB, *Rules, error) {
 		if len(n.list) == 0 {
 			return nil, nil, fmt.Errorf("expected fact or rule")
 		}
+		if n.list[0].text == "grace" {
+			r, e := parseRewrite(n)
+			if e != nil {
+				return nil, nil, e
+			}
+			rs.rewrites = append(rs.rewrites, r)
+			continue
+		}
 		if n.list[0].text == "fact" {
 			a, e := parseAtom(sexpr{list: n.list[1:]})
 			if e != nil {
@@ -217,5 +228,6 @@ func Parse(src string) (*DB, *Rules, error) {
 		}
 	}
 	sort.SliceStable(rs.clauses, func(i, j int) bool { return rs.clauses[i].priority > rs.clauses[j].priority })
+	sort.SliceStable(rs.rewrites, func(i, j int) bool { return rs.rewrites[i].priority > rs.rewrites[j].priority })
 	return db, rs, nil
 }
