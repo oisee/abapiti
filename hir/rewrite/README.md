@@ -110,3 +110,93 @@ height. `bound depth N` caps that proof height (including the base case), rather
 than global rounds or number of joins. Shorter proofs can unlock bounded rules.
 This is an explicit fact-layer interpretation of the draft's bound; future
 recursive rewrite patterns will bound structural path length instead.
+
+### HIR extraction and analysis precision
+
+`Analyze` calls `hir.Verify` first; `Extract` assumes verified input. Method keys
+are `Class::member` (constructors use `constructor`). Sites and local bindings
+use method-qualified structural paths, so missing/duplicate Node IDs are safe,
+shadowed locals remain distinct, and output is reproducible. Assignment/return
+expressions are expression site keys. `param` indices are zero based, with `this`
+for the receiver. `new` records class allocations. Interfaces enter through
+`implements` and virtual receiver types; abstract method bodies are not analysed.
+`final` means a closed-world leaf, since HIR has no final/sealed declaration flag.
+
+Support relations (`concrete`, `defined`, `dispatch`, `site_type`, `narrowed`,
+`exact_receiver`, `expr`, `flow`, `argument`, `sink`, `fresh`, `mutation`,
+`static_origin`, `field_origin`, `site_method`, `runtime_mutates`, `raises`,
+`unknown_effect`, `implicit_init`, `flag_init`, `memo_shape`, `counter_shape`,
+`noncounter_write`) describe HIR identities, shapes and effects. The seven
+requested derived relations are evaluated from the embedded `.grace` rules.
+`flow(M,destination,source)` tracks possible value dependence for escape/alias
+analysis. It deliberately overapproximates dependencies of expressions.
+
+Receivers use concrete descendants/implementors and nearest inherited method
+implementations. Immutable locals initialised from `new`, immutable aliases,
+checked views and conditional unions narrow the candidate classes. Any local
+name assigned elsewhere in the method disables that narrowing (including loops
+and Seq); mutable locals and parameter/field/return flow fall back to CHA. This
+is deliberately conservative and not an interprocedural points-to analysis.
+Constructor calls and implicit class constructors on allocations, static member
+access and static calls enter the call graph. Empty virtual dispatch is unknown.
+
+`may_throw` includes explicit throws, traps, transitive calls, checked casts,
+checked conversions, potential Number arithmetic failures and runtime operations
+outside a reviewed non-raising whitelist. HIR's runtime catalogue has `Mutates`
+but no `MayRaise`; no target-independent non-throwing guarantee can be inferred
+from `Mutates=false`. Catch regions are recorded but do not suppress may-throw:
+this milestone does not prove handler coverage. Allocation failure is excluded.
+
+Purity means no field/static writes, no external or unknown effects, and calls
+only to methods meeting that same definition. Local collection mutation is
+allowed only on a proven fresh receiver with no escaping alias. The rules derive
+impurity first and then its complement among defined methods, so pure recursive
+cycles are supported. Throwing and divergence are independent of effect purity;
+`pure` is not a claim that memoisation or parallel execution is safe. Constructors
+writing their own fields are conservatively impure in this milestone.
+
+Escapes propagate backwards through assignments/value dependencies and across
+arguments to escaping callee parameters, including `this`. Stores, returns,
+throws and mutating/unknown runtime arguments are conservative sinks. Reads of
+static/instance fields retain origins across local aliases: mutating a static
+map/array counts as a static write. Assignment lvalues are also recorded as reads.
+`writes_static_transitive` follows all resolved call targets, including implicit
+initialisation. No facts change the input HIR.
+
+Memo recognition is the exact two-statement shape: `if (!staticMap.has(k))`
+containing only `v = staticPureMethod(k)` and `staticMap.set(k,v)`, then
+`return staticMap.get(k)`. Keys must be the same primitive local/literal; no else
+or additional statements are accepted. Shape extraction supplies `memo_shape`;
+the rule requires `pure(compute)`. This records shape only, without proving
+cache ownership, key completeness, invalidation, or thread safety.
+
+`lazy_init` records implicit HIR class constructors (ABAP's guarded first-use
+semantics), or a method guarded by `!staticBool` whose last statement sets that
+same bool true. This does not prove backend-independent ordering or atomicity.
+`counter_store` records only `static = static + literal` with no other assignment
+to the same field in that method; it is a syntactic classification, not a proof
+of floating-point commutativity or atomicity. Everything else is `other`.
+
+### Reproducing the lexer report
+
+```sh
+go test ./hir/... ./tsfront/...
+GRACE_FACTS_OUT=/tmp/lexer.facts go test ./tsfront -run '^TestLexerFactsReport$' -v
+```
+
+The helper shares the existing lexer closure lowering and checks the 44-case
+oracle corpus. Its golden is `tsfront/testdata/lexer.facts.golden`; tests never
+rewrite it. The report includes all nonempty fact counts, may-throw/pure sets,
+receiver classes for every virtual site (including empty sets), and static writes
+by method and class. Write totals count distinct `(method,class,field)` tuples,
+not dynamic events or individual store sites. A field may therefore have more
+than one classification across methods. The original lexer differential and
+backend goldens remain unchanged; no rewrite requires new oracle runs yet.
+
+### Open HIR interface questions for abapiti
+
+- Can RuntimeSpec expose semantic MayRaise and external/read/write effects, including SpecialOps?
+- Should HIR distinguish declared final/sealed classes from closed-world leaves?
+- Can HIR expose stable scoped local/site identities and resolved inherited declaration owners?
+- Should implicit class-constructor edges and initialisation order be represented in HIR?
+- What purity contract should fresh-object construction, static reads, throws and divergence use?
