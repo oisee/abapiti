@@ -14,7 +14,9 @@ export class XMLProbe {
     const empty: any = "";
     const list: any = flag ? ["a"] : "s";
     const key: any = flag ? "ab" : 1;
-    let upper = typeof key === "string" ? key.toUpperCase() : "n";
+    const word: any = flag ? "abc" : 7;
+    const props = `${word.length}/${word.foo === undefined}/${XMLProbe.row0(flag)}`;
+    let upper = props + (typeof key === "string" ? key.toUpperCase() : "n");
     const doc: any = XMLProbe.parse(flag ? "<a><ID>S</ID><KEY>k1</KEY><LEN>12x</LEN></a>" : "<a><ID>S</ID><KEY><b>x</b></KEY></a>");
     const row: any = doc?.a;
     if (row?.ID === "S" && typeof row.KEY === "string") { upper += row.KEY.toUpperCase(); } else { upper += "-"; }
@@ -25,6 +27,10 @@ export class XMLProbe {
     if (r.exec(flag ? "ABC" : "zz")) { hits += "e"; }
     if (!r.exec("zz")) { hits += "n"; }
     return `${upper}/${r.toString()}/${g.toString()}/${hits}|${Array.isArray(list)}/${Array.isArray(x)}/${Array.isArray(missing)}|${typeof x}/${x === null}/${x === 0}/${!!x}/${x ?? "fallback"}|${typeof bool}/${!!bool}/${bool}|${missing === undefined}/${missing === null}/${missing ?? "fallback"}|${!!empty}`;
+  }
+  private static row0(flag: boolean): string {
+    const doc: any = XMLProbe.parse(flag ? "<a><B>text</B></a>" : "<a><B><C>x</C></B></a>");
+    return doc?.a?.B?.C ?? "none";
   }
   public static parse(xml: string): unknown { throw new Error("external XML adapter"); }
 }

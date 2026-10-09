@@ -63,6 +63,9 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	}
 	e.support()
 	e.markArrays()
+	if castTrace {
+		e.traceCasts()
+	}
 	for file, src := range e.files {
 		out, err := wrap(src)
 		if err != nil {
@@ -1663,6 +1666,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
 		return
+	}
+	if castTrace && s.Node.Source != "" {
+		b.code.WriteString("*@src " + s.Node.Source + "\n")
+		b.lastInit = ""
 	}
 	e := b.e
 	switch s.Kind {

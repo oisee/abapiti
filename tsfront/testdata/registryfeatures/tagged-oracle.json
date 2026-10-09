@@ -1,10 +1,10 @@
 [
   {
     "flag": true,
-    "expected": "ABK112//a.c/i//x\\/y/gi/en|true/false/false|number/false/true/false/0|boolean/false/false|true/false/fallback|false"
+    "expected": "3/true/noneABK112//a.c/i//x\\/y/gi/en|true/false/false|number/false/true/false/0|boolean/false/false|true/false/fallback|false"
   },
   {
     "flag": false,
-    "expected": "n-none//a.c/i//x\\/y/gi/n|false/false/false|object/true/false/false/fallback|boolean/true/true|true/false/fallback|false"
+    "expected": "undefined/true/xn-none//a.c/i//x\\/y/gi/n|false/false/false|object/true/false/false/fallback|boolean/true/true|true/false/fallback|false"
   }
 ]

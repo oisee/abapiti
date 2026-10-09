@@ -47,6 +47,14 @@ index = index + 1.
 READ TABLE items INDEX index INTO result.
 ENDIF.
 ENDIF.
+ELSEIF tag = tag_string.
+IF p0 = 'length'.
+CREATE OBJECT result.
+result->tag = tag_number.
+result->nval = strlen( sval ).
+ENDIF.
+ELSEIF tag = tag_number OR tag = tag_boolean.
+RETURN.
 ELSE.
 RAISE EXCEPTION TYPE cx_sy_move_cast_error.
 ENDIF.
