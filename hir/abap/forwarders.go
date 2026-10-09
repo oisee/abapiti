@@ -124,16 +124,16 @@ func (b *body) unbox(value string, dst hir.Type) string {
 	n := b.temp(dst)
 	switch dst.Kind {
 	case hir.String:
-		b.line("CALL METHOD " + value + "->as_string RECEIVING result = " + n + ".")
+		b.line(n + " = " + value + "->as_string( ).")
 	case hir.Number:
-		b.line("CALL METHOD " + value + "->as_number RECEIVING result = " + n + ".")
+		b.line(n + " = " + value + "->as_number( ).")
 	case hir.Bool:
-		b.line("CALL METHOD " + value + "->as_boolean RECEIVING result = " + n + ".")
+		b.line(n + " = " + value + "->as_boolean( ).")
 	case hir.ClassValue:
-		b.line("CALL METHOD " + value + "->as_classvalue RECEIVING result = " + n + ".")
+		b.line(n + " = " + value + "->as_classvalue( ).")
 	default:
 		root := b.rawTemp("REF TO object")
-		b.line("CALL METHOD " + value + "->as_ref RECEIVING result = " + root + ".")
+		b.line(root + " = " + value + "->as_ref( ).")
 		b.line(n + " ?= " + root + ".")
 	}
 	return n

@@ -536,7 +536,7 @@ func (b *body) initialize(owner string) {
 			// The initializer returns at once when its flag is set; testing the
 			// flag here saves a method call on every static access (A4H profile).
 			b.line("IF " + b.e.name(owner) + "=>" + b.e.name("builtin.initialized."+c.Name) + " = abap_false.")
-			b.line("CALL METHOD " + b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + ".")
+			b.line(b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + "( ).")
 			b.line("ENDIF.")
 			return
 		}
@@ -1673,7 +1673,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
-			b.line("CALL METHOD " + args[0] + "->replace EXPORTING p0 = " + a + " p1 = " + args[1] + " RECEIVING result = " + n + ".")
+			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
@@ -1745,13 +1745,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 		}
 		if x.Type.Kind == hir.Void {
-			b.line("CALL METHOD " + a + "->" + method + " EXPORTING " + strings.Join(params, " ") + ".")
+			b.line(a + "->" + method + "( " + strings.Join(params, " ") + " ).")
 		} else {
-			call := "CALL METHOD " + a + "->" + method
-			if len(params) > 0 {
-				call += " EXPORTING " + strings.Join(params, " ")
-			}
-			b.line(call + " RECEIVING result = " + n + ".")
+			b.line(n + " = " + a + "->" + method + "( " + strings.Join(params, " ") + " ).")
 		}
 		return
 	case "clock.telemetry":
@@ -1776,12 +1772,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + a + "->name.")
 		return
 	case "classvalue.has":
-		b.line("CALL METHOD " + a + "->has EXPORTING p0 = " + args[0] + " RECEIVING result = " + n + ".")
+		b.line(n + " = " + a + "->has( p0 = " + args[0] + " ).")
 		return
 	case "classvalue.new":
 		b.e.descriptors = true
 		obj := b.rawTemp("REF TO object")
-		b.line("CALL METHOD " + b.e.name("runtime.classvalue.factory") + "=>new EXPORTING p0 = " + a + " RECEIVING result = " + obj + ".")
+		b.line(obj + " = " + b.e.name("runtime.classvalue.factory") + "=>new( p0 = " + a + " ).")
 		b.line(n + " ?= " + obj + ".")
 		return
 	case "dynamic.of":
@@ -1856,7 +1852,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDLOOP.")
 			b.line("ELSE.")
 		}
-		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
+		b.line(target + " = " + a + "->" + op + "( ).")
 		if record && x.Type.Args[1].Kind != hir.Dynamic {
 			// A boxed map<string, any> bag stands for the narrower record too.
 			bagType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))

@@ -597,7 +597,7 @@ func TestStaticInitializationWaitsForUse(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := files[names.Get("Registry")+".clas.abap"]
-	if strings.Contains(source, "METHOD class_constructor.") || !strings.Contains(source, "CALL METHOD "+names.Get("Registry")+"=>"+names.Get("builtin.initialize.Registry")) {
+	if strings.Contains(source, "METHOD class_constructor.") || !strings.Contains(source, names.Get("Registry")+"=>"+names.Get("builtin.initialize.Registry")+"( ).") {
 		t.Fatal("static initializer must be guarded and called on use")
 	}
 }
