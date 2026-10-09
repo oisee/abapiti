@@ -8,6 +8,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
 	"array.push": true, "array.get": true, "array.length": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
@@ -51,12 +52,18 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	code := ""
 	switch x.Op {
-	case "array.push", "array.get", "map.set", "map.get", "map.has", "map.keys", "set.add", "set.has", "set.values":
+	case "array.push", "array.get", "map.set", "map.get", "map.has", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
 	case "map.size":
 		code = "int32(len(" + a + ".Entries))"
+	case "string.substr", "string.slice", "string.charAt", "string.replaceAll", "string.split":
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "string.trim":
+		code = a + ".trim()"
+	case "string.toUpperCase":
+		code = a + ".upper()"
 	case "string.length":
 		code = a + ".length()"
 	case "string.concat":
