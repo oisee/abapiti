@@ -24,7 +24,7 @@ func (p *xmlParser) header() jsString {
 		} else if c == 34 || c == 39 {
 			quote = c
 		} else if c == 62 {
-			h := p.input.substring(start,p.cursor)
+			h := p.input[2*start : 2*p.cursor]
 			p.cursor++
 			return h
 		} else if c == 60 {
@@ -40,7 +40,7 @@ func xmlDecode(s jsString) jsString {
 	for i := int32(0); i < s.length(); i++ {
 		c := s.charAt(i)
 		if c != str("&") {
-			out = out.concat(c)
+			out += c
 			continue
 		}
 		j := i + 1
@@ -50,18 +50,18 @@ func xmlDecode(s jsString) jsString {
 		if j == s.length() {
 			xmlFail()
 		}
-		entity := s.substring(i,j+1).String()
+		entity := s[2*i : 2*(j+1)].String()
 		switch entity {
 		case "&amp;":
-			out = out.concat(str("&"))
+			out += str("&")
 		case "&lt;":
-			out = out.concat(str("<"))
+			out += str("<")
 		case "&gt;":
-			out = out.concat(str(">"))
+			out += str(">")
 		case "&quot;":
-			out = out.concat(str("\""))
+			out += str("\"")
 		case "&apos;":
-			out = out.concat(str("'"))
+			out += str("'")
 		default:
 			xmlFail()
 		}
@@ -91,7 +91,7 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 		if p.cursor == p.input.length() && closing == "" {
 			break
 		}
-		text = text.concat(p.input.substring(start,p.cursor))
+		text += p.input[2*start : 2*p.cursor]
 		if p.cursor == p.input.length() {
 			xmlFail()
 		}
@@ -100,7 +100,7 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 			xmlFail()
 		}
 		if h.startsWith(str("/")) {
-			if closing == "" || h.substring(1,h.length()) != closing {
+			if closing == "" || h[2:] != closing {
 				xmlFail()
 			}
 			closed = true
@@ -134,7 +134,7 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 		if n == 0 || !xmlHeader.MatchString(h.String()) {
 			xmlFail()
 		}
-		name := h.substring(0,n)
+		name := h[:2*n]
 		if name == str("__proto__") || name == str("constructor") || name == str("prototype") {
 			xmlFail()
 		}

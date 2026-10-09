@@ -16,86 +16,165 @@ import (
 	"unicode/utf8"
 )
 
-// ASCII uses one byte/unit; other strings carry a marker and UTF-16LE units.
-// The encoding is canonical, so equality and map keys remain value based.
+// jsString stores UTF-16LE units, including isolated surrogate sections. Its
+// comparable representation makes string and optional equality value based.
 type jsString string
-func compareStringStorage(a,b jsString) int {return strings.Compare(a.utf16Data(),b.utf16Data())}
-func (s jsString) wide() bool {return len(s)>0&&s[0]==255}
-func fromUTF16(s string) jsString {
- ascii:=true
- for i:=0;i+1<len(s);i+=2 {if s[i+1]!=0||s[i]>=128 {ascii=false;break}}
- if !ascii {return jsString("\xff"+s)}
- b:=make([]byte,len(s)/2);for i:=range b {b[i]=s[2*i]};return jsString(b)
-}
-func (s jsString) utf16Data() string {
- if s.wide(){return string(s[1:])}
- b:=make([]byte,2*len(s));for i:=range s {b[2*i]=s[i]};return string(b)
-}
+
 func str(s string) jsString {
- ascii:=true;for i:=range s {if s[i]>=128 {ascii=false;break}}
- if ascii {return jsString(s)}
- u:=utf16.Encode([]rune(s));b:=make([]byte,2*len(u))
- for i,v:=range u {binary.LittleEndian.PutUint16(b[2*i:],v)}
- return fromUTF16(string(b))
+	u := utf16.Encode([]rune(s))
+	b := make([]byte, 2*len(u))
+	for i, v := range u {
+		binary.LittleEndian.PutUint16(b[2*i:], v)
+	}
+	return jsString(b)
 }
 func (s jsString) String() string {
- if !s.wide(){return string(s)}
- data:=s[1:];u:=make([]uint16,len(data)/2)
- for i:=range u {u[i]=uint16(data[2*i])|uint16(data[2*i+1])<<8}
- return string(utf16.Decode(u))
+	u := make([]uint16, len(s)/2)
+	for i := range u {
+		u[i] = binary.LittleEndian.Uint16([]byte(s[2*i : 2*i+2]))
+	}
+	return string(utf16.Decode(u))
 }
-func (s jsString) length() int32 {if s.wide(){return int32((len(s)-1)/2)};return int32(len(s))}
-func (s jsString) concat(t jsString) jsString {
- if !s.wide()&&!t.wide(){return s+t}
- return fromUTF16(s.utf16Data()+t.utf16Data())
-}
-func (s jsString) substring(a,b int32) jsString {
- n:=s.length();a=max(0,min(n,a));b=max(0,min(n,b));if a>b {a,b=b,a}
- if !s.wide(){return s[a:b]}
- return fromUTF16(string(s[1+2*a:1+2*b]))
+func (s jsString) length() int32 { return int32(len(s) / 2) }
+func (s jsString) substring(a, b int32) jsString {
+	n := s.length()
+	a = max(0, min(n, a))
+	b = max(0, min(n, b))
+	if a > b {
+		a, b = b, a
+	}
+	return s[int(a)*2 : int(b)*2]
 }
 func (s jsString) charCodeAt(i int32) int32 {
- if !s.wide(){if i<0||int(i)>=len(s){panic(rangeFault{})};return int32(s[i])}
- j:=int(i)*2+1;if i<0||j>=len(s)-1{panic(rangeFault{})}
- return int32(s[j])|int32(s[j+1])<<8
+	j := int(i) * 2
+	if j < 0 || j >= len(s)-1 {
+		panic(rangeFault{})
+	}
+	return int32(s[j]) | int32(s[j+1])<<8
 }
-func sliceIndex(i,n int32) int32 {if i<0 {i=n+i};return max(0,min(n,i))}
-func (s jsString) slice(a,b int32) jsString {a=sliceIndex(a,s.length());b=max(a,sliceIndex(b,s.length()));return s.substring(a,b)}
-func (s jsString) substr(a,n int32) jsString {a=sliceIndex(a,s.length());n=max(0,min(n,s.length()-a));return s.substring(a,a+n)}
-func (s jsString) charAt(i int32) jsString {if i<0||i>=s.length(){return ""};return s.substring(i,i+1)}
+
+func sliceIndex(i, n int32) int32 {
+	if i < 0 {
+		i = n + i
+	}
+	return max(0, min(n, i))
+}
+func (s jsString) slice(a, b int32) jsString {
+	a = sliceIndex(a, s.length())
+	b = sliceIndex(b, s.length())
+	b = max(a, b)
+	return s[2*a : 2*b]
+}
+func (s jsString) substr(a, n int32) jsString {
+	a = sliceIndex(a, s.length())
+	n = max(0, min(n, s.length()-a))
+	return s[2*a : 2*(a+n)]
+}
+func (s jsString) charAt(i int32) jsString {
+	if i < 0 || i >= s.length() {
+		return ""
+	}
+	return s[2*i : 2*i+2]
+}
 func (s jsString) indexOf(needle jsString) int32 {
- if !s.wide()&&!needle.wide(){return int32(strings.Index(string(s),string(needle)))}
- data,n:=s.utf16Data(),needle.utf16Data();offset:=0
- for {i:=strings.Index(data[offset:],n);if i<0{return -1};i+=offset;if i%2==0{return int32(i/2)};offset=i+1}
+	for i := int32(0); i <= s.length()-needle.length(); i++ {
+		if s[2*i:2*i+int32(len(needle))] == needle {
+			return i
+		}
+	}
+	return -1
 }
-func (s jsString) replaceAll(needle,with jsString) jsString {
- if !s.wide()&&!needle.wide()&&!with.wide(){return jsString(strings.ReplaceAll(string(s),string(needle),string(with)))}
- if needle=="" {out:=with;for i:=int32(0);i<s.length();i++{out=out.concat(s.charAt(i)).concat(with)};return out}
- out:=jsString("");for {i:=s.indexOf(needle);if i<0{return out.concat(s)};out=out.concat(s.substring(0,i)).concat(with);s=s.substring(i+needle.length(),s.length())}
+func (s jsString) replaceAll(needle, with jsString) jsString {
+	if needle == "" {
+		out := with
+		for i := int32(0); i < s.length(); i++ {
+			out += s.charAt(i) + with
+		}
+		return out
+	}
+	out := jsString("")
+	for {
+		i := s.indexOf(needle)
+		if i < 0 {
+			return out + s
+		}
+		out += s[:2*i] + with
+		s = s[2*i+int32(len(needle)):]
+	}
 }
 func (s jsString) split(sep jsString) *array[jsString] {
- a:=&array[jsString]{};if sep=="" {for i:=int32(0);i<s.length();i++{a.Items=append(a.Items,s.charAt(i))};return a}
- for {i:=s.indexOf(sep);if i<0 {a.Items=append(a.Items,s);return a};a.Items=append(a.Items,s.substring(0,i));s=s.substring(i+sep.length(),s.length())}
+	a := &array[jsString]{}
+	if sep == "" {
+		for i := int32(0); i < s.length(); i++ {
+			a.Items = append(a.Items, s.charAt(i))
+		}
+		return a
+	}
+	for {
+		i := s.indexOf(sep)
+		if i < 0 {
+			a.Items = append(a.Items, s)
+			return a
+		}
+		a.Items = append(a.Items, s[:2*i])
+		s = s[2*i+int32(len(sep)):]
+	}
 }
-func jsWhitespace(c int32) bool {return c==9||c==10||c==11||c==12||c==13||c==32||c==160||c==0x1680||c>=0x2000&&c<=0x200a||c==0x2028||c==0x2029||c==0x202f||c==0x205f||c==0x3000||c==0xfeff}
-func (s jsString) trim() jsString {a,b:=int32(0),s.length();for a<b&&jsWhitespace(s.charCodeAt(a)){a++};for b>a&&jsWhitespace(s.charCodeAt(b-1)){b--};return s.substring(a,b)}
-func writeUnit(b *strings.Builder,c uint16){b.WriteByte(byte(c));b.WriteByte(byte(c>>8))}
-func writeRune(b *strings.Builder,r rune){if r<=0xffff {writeUnit(b,uint16(r));return};hi,lo:=utf16.EncodeRune(r);writeUnit(b,uint16(hi));writeUnit(b,uint16(lo))}
-func (s jsString) asciiCase(lower bool)(jsString,bool){
- if s.wide(){return "",false};from,to,delta:=byte('a'),byte('z'),byte(32);if lower {from,to='A','Z'}
- first:=0;for ;first<len(s);first++ {c:=s[first];if c>=from&&c<=to{break}}
- if first==len(s){return s,true};var out strings.Builder;out.Grow(len(s));out.WriteString(string(s[:first]))
- for i:=first;i<len(s);i++{c:=s[i];if c>=from&&c<=to{if lower{c+=delta}else{c-=delta}};out.WriteByte(c)}
+func jsWhitespace(c int32) bool {
+	return c == 9 || c == 10 || c == 11 || c == 12 || c == 13 || c == 32 || c == 160 || c == 0x1680 || c >= 0x2000 && c <= 0x200a || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f || c == 0x3000 || c == 0xfeff
+}
+func (s jsString) trim() jsString {
+	a, b := int32(0), s.length()
+	for a < b && jsWhitespace(s.charCodeAt(a)) {
+		a++
+	}
+	for b > a && jsWhitespace(s.charCodeAt(b-1)) {
+		b--
+	}
+	return s[2*a : 2*b]
+}
+// Append a rune as UTF-16LE without temporary per-rune strings.
+func writeUnit(b *strings.Builder, c uint16) { b.WriteByte(byte(c));b.WriteByte(byte(c>>8)) }
+func writeRune(b *strings.Builder, r rune) {
+ if r<=0xffff { writeUnit(b,uint16(r));return }
+ hi,lo:=utf16.EncodeRune(r);writeUnit(b,uint16(hi));writeUnit(b,uint16(lo))
+}
+// Scan until the first changed unit, copy its prefix, and transform only the
+// suffix. Any non-ASCII unit restarts the unchanged Unicode implementation.
+func (s jsString) asciiCase(lower bool) (jsString, bool) {
+ from,to,delta:=byte('a'),byte('z'),byte(32)
+ if lower {from,to='A','Z'}
+ first:=0
+ for ;first+1<len(s);first+=2 {
+  c:=s[first]
+  if s[first+1]!=0||c>=128 {return "",false}
+  if c>=from&&c<=to {break}
+ }
+ if first==len(s) {return s,true}
+ var out strings.Builder;out.Grow(len(s));out.WriteString(string(s[:first]))
+ for i:=first;i+1<len(s);i+=2 {
+  c:=s[i]
+  if s[i+1]!=0||c>=128 {return "",false}
+  if c>=from&&c<=to {if lower {c+=delta}else{c-=delta}}
+  out.WriteByte(c);out.WriteByte(0)
+ }
  return jsString(out.String()),true
 }
 func (s jsString) upper() jsString {
- if out,ok:=s.asciiCase(false);ok{return out};var out strings.Builder;out.Grow(len(s))
- for i:=int32(0);i<s.length();i++ {c:=s.charCodeAt(i);r:=rune(c)
-  if c>=0xd800&&c<=0xdbff&&i+1<s.length(){d:=s.charCodeAt(i+1);if d>=0xdc00&&d<=0xdfff {r=utf16.DecodeRune(rune(c),rune(d));i++}}
+ if out,ok:=s.asciiCase(false);ok {return out}
+ var out strings.Builder
+ out.Grow(len(s))
+ for i:=int32(0);i<s.length();i++ {
+  c:=s.charCodeAt(i)
+  r:=rune(c)
+  if c>=0xd800&&c<=0xdbff&&i+1<s.length() {
+   d:=s.charCodeAt(i+1)
+   if d>=0xdc00&&d<=0xdfff {r=utf16.DecodeRune(rune(c),rune(d));i++}
+  }
   if r>=0xd800&&r<=0xdfff {writeUnit(&out,uint16(r));continue}
-  if v,ok:=upperExpansion[r];ok{out.WriteString(str(v).utf16Data())}else{writeRune(&out,unicode.ToUpper(r))}
+  if v,ok:=upperExpansion[r];ok {out.WriteString(string(str(v)))} else {writeRune(&out,unicode.ToUpper(r))}
  }
- return fromUTF16(out.String())
+ return jsString(out.String())
 }
 
 type optional[T any] struct {
@@ -468,9 +547,9 @@ func (a *array[T]) join(sep optional[jsString]) jsString {
 	out := jsString("")
 	for i, v := range a.Items {
 		if i > 0 {
-			out = out.concat(s)
+			out += s
 		}
-		out = out.concat(primitiveString(v))
+		out += primitiveString(v)
 	}
 	return out
 }
@@ -526,9 +605,9 @@ func (s *orderedSet[T]) copy(other *orderedSet[T]) *orderedSet[T] {
 	}
 	return out
 }
-func (s jsString) startsWith(n jsString) bool { return s.length() >= n.length() && s.substring(0,n.length()) == n }
+func (s jsString) startsWith(n jsString) bool { return s.length() >= n.length() && s[:len(n)] == n }
 func (s jsString) endsWith(n jsString) bool {
-	return s.length() >= n.length() && s.substring(s.length()-n.length(),s.length()) == n
+	return s.length() >= n.length() && s[len(s)-len(n):] == n
 }
 func (s jsString) at(i int32) optional[jsString] {
 	if i < 0 || i >= s.length() {
@@ -541,7 +620,7 @@ func (s jsString) replaceFirst(n, v jsString) jsString {
 	if i < 0 {
 		return s
 	}
-	return s.substring(0,i).concat(v).concat(s.substring(i+n.length(),s.length()))
+	return s[:2*i] + v + s[2*i+int32(len(n)):]
 }
 func (s jsString) repeatIndent(n float64) jsString {
 	n = math.Trunc(n)
@@ -551,7 +630,7 @@ func (s jsString) repeatIndent(n float64) jsString {
 	if math.IsNaN(n) || math.IsInf(n, 0) || n > 2147483647 {
 		panic(rangeFault{})
 	}
-	if !s.wide(){return jsString(strings.Repeat(string(s),int(n)))};return fromUTF16(strings.Repeat(s.utf16Data(),int(n)))
+	return jsString(strings.Repeat(string(s), int(n)))
 }
 func compareDomain(a, b jsString, alphabet string) int32 {
 	for _, s := range []jsString{a, b} {
@@ -655,7 +734,7 @@ func (r *jsRegExp) test(s jsString) bool {
 		r.LastIndex = 0
 		return false
 	}
-	input := unitText(s.substring(start,s.length()))
+	input := unitText(s[2*start:])
 	m := r.compiled.FindStringIndex(input)
 	if m == nil {
 		if global {
@@ -694,12 +773,12 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 	for _, m := range matches {
 		a := int32(utf8.RuneCountInString(input[:m[0]]))
 		b := int32(utf8.RuneCountInString(input[:m[1]]))
-		out = out.concat(s.substring(last,a)).concat(v)
+		out += s[2*last:2*a] + v
 		last = b
 	}
-	return out.concat(s.substring(last,s.length()))
+	return out + s[2*last:]
 }
-func (r *jsRegExp) toString() jsString { return str("/").concat(r.Source).concat(str("/")).concat(r.Flags) }
+func (r *jsRegExp) toString() jsString { return str("/") + r.Source + str("/") + r.Flags }
 
 const (
 	tagObject uint8 = 7
@@ -982,7 +1061,7 @@ func (s jsString) lower() jsString {
 	out := jsString("")
 	for i, r := range rs {
 		if r >= 0xd800 && r <= 0xdfff {
-			out = out.concat(unit(int32(r)))
+			out += unit(int32(r))
 			continue
 		}
 		if r == 'Σ' {
@@ -1002,14 +1081,14 @@ func (s jsString) lower() jsString {
 				break
 			}
 			if before && !after {
-				out = out.concat(str("ς"))
+				out += str("ς")
 				continue
 			}
 		}
 		if v, ok := lowerExpansion[r]; ok {
-			out = out.concat(str(v))
+			out += str(v)
 		} else {
-			out = out.concat(str(string(unicode.ToLower(r))))
+			out += str(string(unicode.ToLower(r)))
 		}
 	}
 	return out
