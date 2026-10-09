@@ -111,7 +111,10 @@ abapiti add.wasm                               # shortcut for "compile wasm", to
 abapiti compile llvm prog.c --class zcl_prog   # needs clang
 abapiti compile llvm prog.ll --zip -o prog.zip # abapGit zip
 abapiti compile ts lexer.ts -o out/            # needs node + npm install, from a checkout
+abapiti abaplint -o out/                       # abaplint core → ABAP, no Node needed
 ```
+
+`abapiti abaplint` translates abaplint's core (commit 577f875e, `@abaplint/core` 2.120.56) into 2,110 ABAP classes and interfaces, packaged for A4H (abapGit zip), open-steamgate unit runners and open-steamgate's native build. The build is pruned to what checking zabapgit_standalone with abapGit's `ci/abaplint.json` executes; see [docs/abaplint-cli.md](docs/abaplint-cli.md).
 
 ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oisee/vibing-steampunk) (`vsp deploy out/zcl_wasm_add.clas.abap '$TMP'`) or abapGit.
 
