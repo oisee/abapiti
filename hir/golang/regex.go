@@ -7,11 +7,8 @@ import (
 // Each accepted language has been reviewed for UTF-16 JavaScript semantics.
 // Everything else fails before emission when literal, or at construction when dynamic.
 func reviewedRegexp(pattern, flags string) bool {
-	switch pattern + "/" + flags {
-	case "^Y/", "^Z/", "test$/i", "a.c/i", "x/y/gi":
-		return true
-	}
-	return false
+	_, ok := reviewedPatterns[pattern+"/"+flags]
+	return ok
 }
 func (e *emitter) checkRegexp(x *hir.Expr) {
 	if len(x.Args) == 0 {

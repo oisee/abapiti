@@ -9,8 +9,15 @@ func (b *body) capacityPlans(block *hir.Stmt) map[*hir.Expr][]*hir.Expr {
 	plans := map[*hir.Expr][]*hir.Expr{}
 	fresh := []*hir.Expr{}
 	for _, s := range block.List {
-		if s.Kind == hir.Assign && s.X.Kind == hir.FieldGet && s.X.X.Kind == hir.This {
+		if s == nil {
+			continue
+		}
+		if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.FieldGet && s.X.X != nil && s.X.X.Kind == hir.This {
 			c := b.e.fieldOwner(b.c, s.X.Name)
+			if c == nil {
+				fresh = nil
+				continue
+			}
 			private := false
 			for _, f := range c.Fields {
 				if f.Name == s.X.Name {
@@ -24,7 +31,7 @@ func (b *body) capacityPlans(block *hir.Stmt) map[*hir.Expr][]*hir.Expr {
 			}
 			continue
 		}
-		if s.Kind == hir.ExprStmt && s.X.Kind == hir.VirtualCall && s.X.X.Kind == hir.This {
+		if s.Kind == hir.ExprStmt && s.X.Kind == hir.VirtualCall && s.X.X != nil && s.X.X.Kind == hir.This {
 			m, _ := b.e.method(b.c, s.X.Name)
 			if m != nil && m.Internal {
 				for _, p := range m.Params {
