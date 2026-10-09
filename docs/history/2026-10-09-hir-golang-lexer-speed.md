@@ -266,3 +266,81 @@ A separate GOMAXPROCS=1 experiment (host default reports 8 CPUs) also failed
 across files: default Go .470/.434/.127 versus Node .374/.351/.131, at 400
 .500/.453/.121 versus .324/.340/.122. Scheduling defaults are retained; no
 benchmark-only runtime setting is used to claim success.
+
+R4.12 (A/C string loops): byte search uses Go's optimized strings.Index,
+rejecting unaligned UTF-16 matches. The ASCII casing prefix scan reads four
+units at a time: first prove all four ASCII, then lane arithmetic tests the
+case-changing range without carries; the existing scalar scan handles the
+first changed unit and tail. Unicode fallback and suffix transformation are
+unchanged. Added unaligned non-ASCII search, a Unicode boundary after four
+ASCII units, and changed units after eight unchanged units to existing edges.
+Full uncached guard green. Default Go .464/.433/.125, Node .363/.345/.124;
+400 Go .482/.432/.110, Node .338/.317/.117. Go-only byte/word loop shaping;
+ABAP could use optimized native search with the same unit-alignment contract.
+Final diagnostics allow PGO inlining indexOf (cost 112) and asciiCase (373);
+process/add remain above budget (14143/11279 > 2000). No charCodeAt bounds
+checks remain. Log: `/tmp/round4-strings-diag.log`.
+
+### Round 4 final measurements and commits
+
+Same tool: `node tools/lexer-go-timing.mjs 100` and `GOGC=400` with that command,
+GOCACHE/GOFLAGS as above. PGO uses the checked-in default.pgo; scheduling defaults
+are unchanged. The table includes every committed green step, including the
+separately committed and reverted compact-string experiment. Triples are
+wasm_compiler / bench_mem / abapgit, milliseconds/run. They are individual
+readings under variable host load, not confidence intervals or a monotonic
+speedup series.
+
+| Step | Commit | Default Go | Go at GOGC=400 |
+|---|---|---|---|
+| Fresh baseline (PGO off) | 5460973 | .580 / .599 / .160 | .583 / .562 / .173 |
+| R4.1 PGO and diagnostics | c840ea1 | .534 / .538 / .167 | .561 / .494 / .148 |
+| R4.2 Character indexing | d68fd54 | .620 / .579 / .148 | .651 / .608 / .172 |
+| R4.3 Immutable classifiers | 2b44a68 | .688 / .687 / .194 | .552 / .485 / .148 |
+| R4.4 ASCII casing | 5314fec | .546 / .528 / .144 | .562 / .486 / .145 |
+| R4.5 Class storage | 8bd8def | .553 / .500 / .129 | .551 / .460 / .130 |
+| R4.6 Capacity planning | f7259aa | .530 / .509 / .155 | .657 / .586 / .164 |
+| R4.7 Initialization guards | dba4bea | .823 / .868 / .225 | .735 / .605 / .166 |
+| R4.8 Integer query proof | 4679560 | .472 / .453 / .133 | .568 / .474 / .120 |
+| R4.9 Compact ASCII experiment | cad11e6 | .540 / .462 / .125 | .565 / .447 / .130 |
+| R4.10 Restore UTF-16 | d708f6c | .512 / .502 / .165 | .527 / .446 / .121 |
+| R4.11 Refresh PGO | 5b7b4fc | .549 / .544 / .162 | .487 / .443 / .122 |
+| R4.12 String loops | This final implementation/report commit | .464 / .433 / .125 | .482 / .432 / .110 |
+
+| File | Go default | Node | Go/Node | Go at 400 | Node | Go/Node |
+|---|---:|---:|---:|---:|---:|---:|
+| wasm_compiler | .464 | .363 | 1.28x | .482 | .338 | 1.43x |
+| bench_mem | .433 | .345 | 1.25x | .432 | .317 | 1.36x |
+| abapgit | .125 | .124 | 1.00x | .110 | .117 | .94x |
+
+Ratios are the tool's values from unrounded readings. **The requested target
+of beating Node across files is not achieved.** The short abapgit reading at
+400 is below Node; default is a tie at displayed precision. The final longer
+3,000-run capture is .434/.444/.118 versus Node .300/.289/.091 (1.44x/1.54x/
+1.30x), so there is no robust across-file win to claim.
+
+Final CPU flat tops (3,000 runs/file plus warmups): Lexer.add 10.65%,
+Lexer.process 10.65%, LexerBuffer.add 7.10%, asciiCase 4.14%, futex 4.14%,
+AbstractToken.constructor 3.55%, currentChar 3.25%, SPLITS integer classifier
+3.25%, charCodeAt 2.66%. mallocgc is 14.20% cumulative. CPU profile:
+`/tmp/round4-strings.cpu`; allocation profile: `/tmp/round4-strings.alloc`.
+
+Final allocation tops: Identifier 36.17%, result-array reserve 23.04%, Position
+16.44%, casing storage 8.41%, Punctuation 7.81%. Total ~1153 MB for 3,030
+invocations/file; normalized to the baseline's 1,030 invocations/file, ~392 MB
+versus ~744 MB, about **47% fewer sampled allocated bytes**. Distinct escaped
+tokens and Positions still account for much of the remainder. Their lifetimes
+do not justify pooling or straightforward scalar replacement.
+
+Abandoned/rejected: compact ASCII representation (extra wide-section
+normalization and no measured speed win); GOMAXPROCS=1 (no across-file win);
+overlapping/cache-rebuild timings (not valid isolated comparisons). A Go-emitter
+inliner and a fuzz harness were deliberately never written. Integrating Alice's
+forthcoming verified general `hir.Inline(p)` after rebasing remains future work,
+not a completed step in this round. There was no push.
+
+The capacity-step commit's automatic approval review timed out without a safety
+finding; its permitted retry succeeded. All retained steps and the compact
+experiment were committed as Alice V. <ooisee@gmail.com> using git -c after the
+existing guards passed. /tmp cache exhaustion required stale-cache cleanup and
+rerunning guards; no failing implementation was retained as a green step.
