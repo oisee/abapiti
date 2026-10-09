@@ -15,3 +15,5 @@ node_modules/
 
 # Large local-only test inputs (the tests skip when they are missing)
 wasm/testdata/abaplint.wasm
+
+.tmp
