@@ -520,7 +520,16 @@ func (a *array[T]) slice2(i, j int32) *array[T] {
 	return &array[T]{Items: append([]T(nil), a.Items[i:j]...)}
 }
 func (a *array[T]) splice1(i int32) *array[T]      { return a.splice2(i, int32(len(a.Items))) }
-func (a *array[T]) splice1_view(i int32) *array[T] { return a.splice1(i) }
+// The removed tail and retained prefix occupy disjoint storage. Limiting the
+// prefix capacity prevents later growth from overwriting the returned tail;
+// element writes and every other mutation remain independent as in JS splice.
+func (a *array[T]) splice1_view(i int32) *array[T] {
+ i = sliceIndex(i, int32(len(a.Items)))
+ out := &array[T]{}
+ if int(i) < len(a.Items) { out.Items = a.Items[i:] }
+ if i == 0 { a.Items = nil } else { a.Items = a.Items[:i:i] }
+ return out
+}
 func (a *array[T]) splice2(i, n int32) *array[T] {
 	i = sliceIndex(i, int32(len(a.Items)))
 	n = max(0, min(n, int32(len(a.Items))-i))

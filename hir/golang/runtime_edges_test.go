@@ -10,6 +10,32 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
+func TestSpliceViewIndependence(t *testing.T) {
+	main := `
+ check:=func(ok bool){if !ok{panic("splice view alias")}}
+ for _,i:=range []int32{-9,-1,0,1,3,9} {
+  a:=&array[int32]{Items:[]int32{10,20,30}}
+  alias:=a
+  reference:=a.slice0();want:=reference.splice1(i)
+  tail:=a.splice1_view(i)
+  check(alias==a && tail!=a && len(tail.Items)==len(want.Items) && len(a.Items)==len(reference.Items))
+  for j,v:=range reference.Items {check(a.Items[j]==v)}
+  for j,v:=range want.Items {check(tail.Items[j]==v)}
+  a.push(40);a.put(int32(len(a.Items)),50);a.reverse();a.unshift(60)
+  for j,v:=range want.Items {check(tail.Items[j]==v)}
+  prefix:=a.slice0();tail.push(70);tail.put(0,80);tail.reverse();tail.shift();tail.pop()
+  for j,v:=range prefix.Items {check(a.Items[j]==v)}
+ }
+ a:=&array[int32]{Items:[]int32{1,2,3,4}}
+ b:=a.splice1_view(1);c:=b.splice1_view(1)
+ a.put(1,10);b.push(20);c.put(0,30)
+ check(a.Items[0]==1 && a.Items[1]==10 && b.Items[0]==2 && b.Items[1]==20 && c.Items[0]==30 && c.Items[1]==4)
+ fmt.Println("ok")`
+	if got := execute(t, &hir.Program{}, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}
+
 func TestSubsetAndRegexpEdges(t *testing.T) {
 	main := `
  check:=func(ok bool){if !ok{panic("semantic mismatch")}}
