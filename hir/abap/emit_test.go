@@ -718,3 +718,39 @@ func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
 		}
 	}
 }
+
+// Kernel-profile shortcuts: push/length on the public items table, constant
+// indices for integer literals, and me for a this receiver of the own class.
+func TestEmitterShortcuts(t *testing.T) {
+	arr := hir.T(hir.Array, i32)
+	al := local("a", arr)
+	num := hir.T(hir.Number)
+	index := func(v any) *hir.Expr {
+		return &hir.Expr{Kind: hir.RuntimeOp, Op: "number.index", Type: i32, X: hir.L(num, v)}
+	}
+	this := &hir.Expr{Kind: hir.This, Type: hir.Ref("Short")}
+	field := &hir.Expr{Kind: hir.FieldGet, Type: i32, X: this, Name: "n"}
+	m := method("run", i32, hir.B(
+		decl("a", arr, newObj(arr)), run(rt("array.push", al, i32, lit(4))),
+		decl("len", i32, rt("array.push", al, i32, lit(5))),
+		&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: index(2)}, Y: lit(6)},
+		&hir.Stmt{Kind: hir.Assign, X: field, Y: &hir.Expr{Kind: hir.IndexGet, Type: i32, X: al, Y: index(1)}},
+		decl("big", i32, index(2147483647)),
+		ret(binary("+", field, rt("array.length", al, i32), i32))))
+	c := &hir.Class{Name: "Short", Fields: []hir.Field{{Name: "n", Type: i32}}, Methods: []*hir.Method{m}}
+	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{c}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := files[names.Get("Short")+".clas.abap"]
+	for _, want := range []string{"APPEND t", "INDEX 3.", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("missing %q:\n%s", want, src)
+		}
+	}
+	for _, bad := range []string{"->push(", "->length(", "( me )", "trunc(", "+ 1."} {
+		if strings.Contains(src, bad) {
+			t.Errorf("unexpected %q:\n%s", bad, src)
+		}
+	}
+}
