@@ -81,3 +81,18 @@ cases and mutates an emitted token type to prove the comparison fails. Registry
 array, sort, iterator, feature, typed JSON and tagged XML tests use the existing
 Node observations. Integration checks skip if Node or the abaplint build is
 absent; set TSFRONT_ABAPLINT to the core directory to select another checkout.
+
+Run `node tools/lexer-go-timing.mjs [iterations]` from this clone for the
+same-machine lexer benchmark (default 100, 30 warmups). It builds a temporary
+Go executable, verifies token counts, excludes compilation/startup/dump output,
+and reports milliseconds per lexer run against the original Node implementation.
+The correctness-first Go emitter uses checked integer helpers and panic/recover
+returns; these measurements do not claim an optimized lexer.
+
+Measured on 2026-10-09, 100 runs per file after 30 warmups:
+
+| Corpus file | Go ms/run | Node ms/run | Go/Node | Tokens |
+| --- | ---: | ---: | ---: | ---: |
+| real_wasm_compiler | 26.456 | 0.415 | 63.78 | 1840 |
+| real_bench_mem | 28.272 | 0.320 | 88.35 | 2056 |
+| real_abapgit | 8.862 | 0.142 | 62.47 | 505 |
