@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"unicode/utf16"
+ "unicode"
 )
 
 // jsString stores UTF-16LE units, including isolated surrogate sections. Its
@@ -47,6 +48,17 @@ func (s jsString) charCodeAt(i int32) int32 {
 	}
 	return int32(binary.LittleEndian.Uint16([]byte(s[int(i)*2 : int(i)*2+2])))
 }
+
+func sliceIndex(i,n int32) int32 { if i<0 {i=n+i}; return max(0,min(n,i)) }
+func (s jsString) slice(a,b int32) jsString { a=sliceIndex(a,s.length());b=sliceIndex(b,s.length());b=max(a,b);return s[2*a:2*b] }
+func (s jsString) substr(a,n int32) jsString {a=sliceIndex(a,s.length());n=max(0,min(n,s.length()-a));return s[2*a:2*(a+n)]}
+func (s jsString) charAt(i int32) jsString {if i<0 || i>=s.length(){return ""};return s[2*i:2*i+2]}
+func (s jsString) indexOf(needle jsString) int32 {for i:=int32(0);i<=s.length()-needle.length();i++ {if s[2*i:2*i+int32(len(needle))]==needle{return i}};return -1}
+func (s jsString) replaceAll(needle,with jsString) jsString { if needle=="" {out:=with;for i:=int32(0);i<s.length();i++ {out+=s.charAt(i)+with};return out};out:=jsString("");for {i:=s.indexOf(needle);if i<0{return out+s};out+=s[:2*i]+with;s=s[2*i+int32(len(needle)):]}}
+func (s jsString) split(sep jsString) *array[jsString] {a:=&array[jsString]{};if sep=="" {for i:=int32(0);i<s.length();i++ {a.Items=append(a.Items,s.charAt(i))};return a};for {i:=s.indexOf(sep);if i<0 {a.Items=append(a.Items,s);return a};a.Items=append(a.Items,s[:2*i]);s=s[2*i+int32(len(sep)):]}}
+func jsWhitespace(c int32) bool {return c==9 || c==10 || c==11 || c==12 || c==13 || c==32 || c==160 || c==0x1680 || c>=0x2000 && c<=0x200a || c==0x2028 || c==0x2029 || c==0x202f || c==0x205f || c==0x3000 || c==0xfeff}
+func (s jsString) trim() jsString {a,b:=int32(0),s.length();for a<b && jsWhitespace(s.charCodeAt(a)){a++};for b>a && jsWhitespace(s.charCodeAt(b-1)){b--};return s[2*a:2*b]}
+func (s jsString) upper() jsString {out:=jsString("");for i:=int32(0);i<s.length();i++ {c:=s.charCodeAt(i);r:=rune(c);if c>=0xd800 && c<=0xdbff && i+1<s.length() {d:=s.charCodeAt(i+1);if d>=0xdc00 && d<=0xdfff {r=utf16.DecodeRune(rune(c),rune(d));i++}};if r>=0xd800 && r<=0xdfff {out+=s.charAt(i);continue};if v,ok:=upperExpansion[r];ok {out+=str(v)}else{out+=str(string(unicode.ToUpper(r)))}};return out}
 
 type optional[T any] struct {
 	Value T
@@ -243,6 +255,8 @@ func (m *orderedMap[K, V]) keys() *array[K] {
 	}
 	return a
 }
+
+func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {for _,v:=range a.Items {s.add(v)};return s}
 
 type orderedSet[T any] struct{ Items []T }
 

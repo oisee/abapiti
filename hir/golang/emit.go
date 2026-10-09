@@ -56,7 +56,7 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
-	files := map[string]string{"hir.go": e.code.String(), "runtime.go": strings.Replace(runtimeSource, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": e.code.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource, "package main", "package "+pkg, 1)}
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -579,7 +579,7 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.NumericConvert, hir.CheckedNumericConvert:
 		a := b.expr(x.X)
 		if x.Kind == hir.CheckedNumericConvert {
-			b.line("if float64(%s)<%d || float64(%s)>%d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(rangeFault{})}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
+			b.line("if float64(%s) < %d || float64(%s) > %d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(rangeFault{})}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
 		}
 		code = e.typ(t) + "(" + a + ")"
 	case hir.NumericMinMax:
