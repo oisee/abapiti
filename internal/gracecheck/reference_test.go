@@ -21,7 +21,12 @@ func TestReferenceSemantics(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		Evaluate(t, base, src)
+		want := Evaluate(t, base, src)
+		got, _, err := ReferenceFull(base, src, 1000000000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		Equal(t, got, want)
 	}
 	base, _, _ := rewrite.Parse(`(fact x a)`)
 	if _, _, e := Reference(base, `(rule x 0 (head (y ?a)) (base (x ?a)))`, 0); e == nil {

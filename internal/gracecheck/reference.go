@@ -1,6 +1,7 @@
 // Package gracecheck is independent, deliberately slow test support for Grace.
-// It uses full Cartesian joins and repeated whole-rule scans, never engine joins,
-// argument indexes, deltas, or cached joins. Production code must not import it.
+// It uses repeated whole-rule scans, never engine joins or deltas. Reference
+// uses Cartesian joins; ReferenceFull uses independently built hash projections
+// for large closures. Production code must not import it.
 package gracecheck
 
 import (
@@ -185,6 +186,17 @@ func match(a atom, f fact, env map[string]string) (map[string]string, bool) {
 // Reference returns the full fixed point and counts premise/guard examinations.
 // cap bounds actual work, including joins, so a regression cannot spin forever.
 func Reference(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, error) {
+	return reference(base, source, cap, false)
+}
+
+// ReferenceFull keeps the same whole-rule fixed-point algorithm and parser as
+// Reference, but rebuilds hash projections from each round's complete snapshot.
+// It shares no parser, join, indexes, stratification or deltas with the engine.
+func ReferenceFull(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, error) {
+	return reference(base, source, cap, true)
+}
+
+func reference(base *rewrite.DB, source string, cap int, hashed bool) (*rewrite.DB, int, error) {
 	cs, err := parse(source)
 	if err != nil {
 		return nil, 0, err
@@ -242,13 +254,62 @@ func Reference(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, erro
 			for _, f := range facts {
 				relations[f.pred] = append(relations[f.pred], f)
 			}
+			// A projection uses all currently bound columns, rather than the engine's
+			// per-column candidate selection. Build it lazily once per snapshot.
+			projections := map[string]map[string][]fact{}
+			candidates := func(a atom, env map[string]string) []fact {
+				if !hashed {
+					return relations[a.pred]
+				}
+				var columns []int
+				var values []string
+				for i, n := range a.terms {
+					if wildcard(n) {
+						continue
+					}
+					v := n.text
+					if variable(n) {
+						var ok bool
+						v, ok = env[n.text]
+						if !ok {
+							continue
+						}
+					}
+					columns = append(columns, i)
+					values = append(values, v)
+				}
+				if len(columns) == 0 {
+					return relations[a.pred]
+				}
+				mask, _ := json.Marshal(columns)
+				id := a.pred + string(mask)
+				projection, ok := projections[id]
+				if !ok {
+					projection = map[string][]fact{}
+					for _, f := range relations[a.pred] {
+						if !tick() {
+							return nil
+						}
+						var keyValues []string
+						for _, col := range columns {
+							keyValues = append(keyValues, f.args[col])
+						}
+						key, _ := json.Marshal(keyValues)
+						projection[string(key)] = append(projection[string(key)], f)
+					}
+					projections[id] = projection
+				}
+				key, _ := json.Marshal(values)
+				return projection[string(key)]
+			}
+
 			var additions []fact
 			for _, c := range cs {
 				if levels[c.head.pred] != level {
 					continue
 				}
-				// Full relation scans, with only a static conjunction order. There is no
-				// bound-argument index and every clause is evaluated anew every round.
+				// Static conjunction order; every clause is evaluated anew every
+				// round, using scans or independently hashed snapshot projections.
 				c.body = append([]atom(nil), c.body...)
 				sort.SliceStable(c.body, func(i, j int) bool { return len(relations[c.body[i].pred]) < len(relations[c.body[j].pred]) })
 				var walk func(int, map[string]string, int)
@@ -262,7 +323,7 @@ func Reference(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, erro
 							walk(pos+1, env, depth)
 							return
 						}
-						for _, f := range relations[a.pred] {
+						for _, f := range candidates(a, env) {
 							if !tick() {
 								return
 							}
@@ -307,7 +368,7 @@ func Reference(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, erro
 								return
 							}
 						} else if a.negative {
-							for _, f := range relations[a.pred] {
+							for _, f := range candidates(a, env) {
 								if !tick() {
 									return
 								}

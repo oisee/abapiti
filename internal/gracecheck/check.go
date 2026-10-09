@@ -58,9 +58,29 @@ func Equal(t *testing.T, a, b *rewrite.DB) {
 }
 func Evaluate(t *testing.T, base *rewrite.DB, source string) *rewrite.DB {
 	t.Helper()
-	ref, steps, e := Reference(base, source, 1000000000)
+	return evaluate(t, base, source, false)
+}
+func evaluate(t *testing.T, base *rewrite.DB, source string, full bool) *rewrite.DB {
+	t.Helper()
+	start := time.Now()
+	reference := Reference
+	timeout := 30 * time.Second
+	if full {
+		reference = ReferenceFull
+		timeout = 5 * time.Minute
+	}
+	ref, steps, e := reference(base, source, 1000000000)
 	if e != nil {
 		t.Fatal(e)
+	}
+	if !full {
+		// Validate the large-closure join mode against Cartesian evaluation on
+		// every ordinary fixture, including the combined analysis/inline source.
+		hashed, _, err := ReferenceFull(base, source, 1000000000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		Equal(t, hashed, ref)
 	}
 	db := rewrite.NewDB()
 	for _, p := range base.Predicates() {
@@ -81,12 +101,12 @@ func Evaluate(t *testing.T, base *rewrite.DB, source string) *rewrite.DB {
 		if e != nil {
 			t.Fatal(e)
 		}
-	case <-time.After(30 * time.Second):
-		t.Fatal("engine fixed-point evaluation exceeded 30s")
+	case <-time.After(timeout):
+		t.Fatalf("engine fixed-point evaluation exceeded %s", timeout)
 	}
 
 	Equal(t, db, ref)
-	t.Logf("reference examined %d premises", steps)
+	t.Logf("reference examined %d premises; equality and engine termination passed in %s", steps, time.Since(start))
 	return db
 }
 
@@ -94,13 +114,24 @@ func Evaluate(t *testing.T, base *rewrite.DB, source string) *rewrite.DB {
 // copies. The pinned oracle still checks the unchanged input independently.
 func Check(t *testing.T, p *hir.Program) {
 	t.Helper()
+	check(t, p, false)
+}
+
+// CheckFull runs all invariants with independently hashed reference joins and
+// a five-minute engine deadline per equality check for the full pinned closure.
+func CheckFull(t *testing.T, p *hir.Program) {
+	t.Helper()
+	check(t, p, true)
+}
+func check(t *testing.T, p *hir.Program, full bool) {
+	t.Helper()
 	start := time.Now()
 	if es := hir.Verify(p); len(es) > 0 {
 		t.Fatal(es)
 	}
 	src := Source(t, "analysis")
 	base := rewrite.Extract(p)
-	db := Evaluate(t, base, src)
+	db := evaluate(t, base, src, full)
 	actual, e := rewrite.Analyze(p)
 	if e != nil {
 		t.Fatal(e)
@@ -119,7 +150,7 @@ func Check(t *testing.T, p *hir.Program) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	allFacts := Evaluate(t, rewriteBase, src+"\n"+Source(t, "inline"))
+	allFacts := evaluate(t, rewriteBase, src+"\n"+Source(t, "inline"), full)
 	// Check the phased preparation used by Rewrite, in addition to the combined
 	// source: Analyze first, then native syntax facts and inline rule evaluation.
 	for _, pred := range rewriteBase.Predicates() {
@@ -137,13 +168,19 @@ func Check(t *testing.T, p *hir.Program) {
 		t.Fatal(e)
 	}
 	Equal(t, actual, allFacts)
+	t.Log("analysis and inline reference equality, reevaluation and phased preparation passed")
 	Monotonicity(t, rewriteBase, src+"\n"+Source(t, "inline"))
 	Permutations(t, p)
 	if hir.Dump(p) != beforeInput {
 		t.Fatal("fact extraction mutated HIR")
 	}
+	t.Log("positive monotonicity and declaration determinism passed")
+	oracleStart := time.Now()
 	inlineoracle.Check(t, p)
+	t.Logf("inline oracle runtime: %s", time.Since(oracleStart))
+	budgetStart := time.Now()
 	Budgets(t, p)
+	t.Logf("depth, method and program budgets passed in %s", time.Since(budgetStart))
 	q := Clone(t, p)
 	first, e := rewrite.Inline(q)
 	if e != nil {
@@ -179,7 +216,7 @@ func Check(t *testing.T, p *hir.Program) {
 	if again.CallSites != 0 || hir.Dump(q) != before {
 		t.Fatal("inline fixed point is not idempotent")
 	}
-	t.Logf("Grace checks: %s, %d verified rounds", time.Since(start), stats.Rounds)
+	t.Logf("Grace checks: %s, %d verified rounds; termination and idempotence passed", time.Since(start), stats.Rounds)
 }
 
 // CanonicalDump ignores declaration storage order, which has no HIR semantics.
