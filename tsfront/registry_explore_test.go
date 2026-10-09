@@ -180,7 +180,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		for _, root := range []struct {
 			dir string
 			dep bool
-		}{{os.Getenv("REGISTRY_INPUT"), false}, {os.Getenv("REGISTRY_DEPENDENCIES"), true}} {
+		}{{envOr("REGISTRY_RUN_INPUT", "REGISTRY_INPUT"), false}, {envOr("REGISTRY_RUN_DEPENDENCIES", "REGISTRY_DEPENDENCIES"), true}} {
 			var names []string
 			if err := filepath.WalkDir(root.dir, func(path string, d os.DirEntry, err error) error {
 				if err == nil && !d.IsDir() {
@@ -222,4 +222,13 @@ func TestRegistryClosureGate(t *testing.T) {
 		}
 	}
 	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
+}
+
+// envOr reads the first variable, falling back to the second: the run
+// driver may take other inputs than the coverage workload.
+func envOr(primary, fallback string) string {
+	if v := os.Getenv(primary); v != "" {
+		return v
+	}
+	return os.Getenv(fallback)
 }
