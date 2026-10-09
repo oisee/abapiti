@@ -627,6 +627,20 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 	}
 	return value
 }
+
+// receiver evaluates an object operand of a member access. `this` typed as
+// the emitted class or one of its ancestors is me itself: the copy into a
+// temporary would only be a same-type or upcast assignment.
+func (b *body) receiver(x *hir.Expr) string {
+	if x.Kind == hir.This && x.Type.Kind == hir.ClassRef && x.Type.Name != hir.RootObject {
+		for c := b.c; c != nil; c = b.e.classBy(c.Super) {
+			if c.Name == x.Type.Name {
+				return "me"
+			}
+		}
+	}
+	return b.expr(x)
+}
 func (b *body) value(x *hir.Expr, dst hir.Type) string { return b.convert(b.expr(x), x.Type, dst) }
 func (b *body) expr(x *hir.Expr) string {
 	if x == nil {
@@ -706,13 +720,17 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.This:
 		b.line(n + " = me.")
 	case hir.FieldGet:
-		b.line(n + " = " + b.expr(x.X) + "->" + e.member(x.Name) + ".")
+		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
 		b.initialize(x.Owner)
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
-		a, i := b.expr(x.X), b.expr(x.Y)
-		b.line(i + " = " + i + " + 1.")
+		a := b.expr(x.X)
+		i, constant := tableIndex(x.Y)
+		if !constant {
+			i = b.expr(x.Y)
+			b.line(i + " = " + i + " + 1.")
+		}
 		row := n
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
@@ -1290,7 +1308,7 @@ func (b *body) call(x *hir.Expr, n string) {
 		owner = b.c.Super
 		recv = "super->"
 	} else if x.X != nil {
-		recv = b.expr(x.X) + "->"
+		recv = b.receiver(x.X) + "->"
 		owner = x.X.Type.Name
 	} else {
 		recv = e.name(owner) + "=>"
@@ -1347,7 +1365,61 @@ func (b *body) call(x *hir.Expr, n string) {
 		b.line(n + " ?= " + target + ".")
 	}
 }
+
+// literalIndex is the integer value of an index expression that is a numeric
+// literal holding an exact integer within i32 (directly or via number.index).
+func literalIndex(x *hir.Expr) (int64, bool) {
+	if x == nil {
+		return 0, false
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "number.index" {
+		x = x.X
+		if x == nil || x.Type.Kind != hir.Number {
+			return 0, false
+		}
+	} else if x.Type.Kind != hir.I32 {
+		return 0, false
+	}
+	if x.Kind != hir.Lit || x.Value == nil {
+		return 0, false
+	}
+	var k int64
+	switch v := x.Value.(type) {
+	case float64:
+		if v != math.Trunc(v) || v < -2147483648 || v > 2147483647 {
+			return 0, false
+		}
+		k = int64(v)
+	default:
+		// Plain decimal digits only; anything else keeps the generic path.
+		parsed, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 64)
+		if err != nil {
+			return 0, false
+		}
+		k = parsed
+	}
+	if k < -2147483648 || k > 2147483647 {
+		return 0, false
+	}
+	return k, true
+}
+
+// tableIndex is the constant 1-based table index of a literal JavaScript
+// index, when its +1 cannot overflow i.
+func tableIndex(x *hir.Expr) (string, bool) {
+	k, ok := literalIndex(x)
+	if !ok || k < 0 || k >= 2147483647 {
+		return "", false
+	}
+	return strconv.FormatInt(k+1, 10), true
+}
+
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if k, ok := literalIndex(x); ok {
+		// A literal index needs neither the f temporary nor saturation.
+		b.line(n + " = " + strconv.FormatInt(k, 10) + ".")
+		return
+	}
 	a := b.expr(x.X)
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
@@ -1778,6 +1850,18 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		return
 	}
+	switch x.Op {
+	case "array.length":
+		// The items table is public: lines( ) saves a method call per access.
+		b.line(n + " = lines( " + a + "->items ).")
+		return
+	case "array.push":
+		b.line("APPEND " + args[0] + " TO " + a + "->items.")
+		if n != "" {
+			b.line(n + " = lines( " + a + "->items ).")
+		}
+		return
+	}
 	if x.Op == "record.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
 		b.line(n + " = abap_true.")
@@ -1833,14 +1917,20 @@ func (b *body) stmt(s *hir.Stmt) {
 		case hir.Local:
 			target = b.locals[s.X.Name]
 		case hir.FieldGet:
-			target = b.expr(s.X.X) + "->" + e.member(s.X.Name)
+			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
 		case hir.StaticGet:
 			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
 		case hir.IndexGet:
-			a, i := b.expr(s.X.X), b.expr(s.X.Y)
+			a := b.expr(s.X.X)
+			i, constant := tableIndex(s.X.Y)
+			if !constant {
+				i = b.expr(s.X.Y)
+			}
 			v := b.value(s.Y, s.X.Type)
-			b.line(i + " = " + i + " + 1.")
+			if !constant {
+				b.line(i + " = " + i + " + 1.")
+			}
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
 			b.line("CLEAR " + row + ".")
 			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
@@ -1851,6 +1941,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line(target + " = " + b.value(s.Y, s.X.Type) + ".")
 	case hir.ExprStmt:
+		if s.X.Kind == hir.RuntimeOp && s.X.Op == "array.push" {
+			// The new length is unused.
+			b.runtimeOp(s.X, "")
+			return
+		}
 		b.expr(s.X)
 	case hir.If:
 		a := b.expr(s.X)
