@@ -133,3 +133,26 @@ func TestIntegerArithmeticBoundaries(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestIndexedCollectionEdges(t *testing.T) {
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Base"}, {Name: "Child", Super: "Base"}}}
+	n := hir.NewNames()
+	main := fmt.Sprintf(`
+ check:=func(ok bool){if !ok{panic("collection mismatch")}}
+ var child *%s
+ var ref %s=child
+ m:=&orderedMap[any,int32]{}
+ m.set(ref,1);m.set(nil,2);check(len(m.Entries)==1&&m.get(ref).Value==2&&m.get(nil).Value==2)
+ a,b:=&%s{},&%s{}
+ m.set(a,3);m.set(b,4);keys:=m.keys();check(m.delete(a)&&!m.has(a)&&m.get(b).Value==4)
+ m.set(a,5);check(m.Entries[1].Key==b&&m.Entries[2].Key==a&&keys.Items[1]==a)
+ s:=&orderedSet[any]{};s.add(ref).add(nil).add(a).add(b);snap:=s.values();check(len(s.Items)==3)
+ check(s.delete(a)&&s.has(b));s.add(a);check(s.Items[1]==b&&s.Items[2]==a&&snap.Items[1]==a)
+ nums:=&orderedSet[float64]{};nums.add(negativeZero()).add(0);check(len(nums.Items)==1&&nums.has(0))
+ nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==3&&!nums.has(nan)&&!nums.delete(nan))
+ opts:=&orderedSet[optional[int32]]{};opts.add(optional[int32]{}).add(present(int32(0)));check(len(opts.Items)==2)
+ fmt.Println("ok")`, n.Get("struct.Child"), n.Get("ref.Base"), n.Get("struct.Child"), n.Get("struct.Child"))
+	if got := execute(t, p, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}
