@@ -7,6 +7,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/rewrite"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/internal/inlineoracle"
 )
 
@@ -153,5 +154,31 @@ func TestInlineBudgetCountsSeqBlock(t *testing.T) {
 	}
 	if stats.CallSites != 1 {
 		t.Fatalf("exact two-node budget rejected: %+v", stats)
+	}
+}
+
+// Traversal-numbered names are part of the pinned byte-level oracle contract.
+// Declaration-order invariance therefore needs alpha-normalisation; changing
+// native naming to remove this difference would break milestone 2 compatibility.
+func TestInlineOracleNamesFollowDeclarationOrder(t *testing.T) {
+	i := hir.T(hir.I32)
+	leaf := &hir.Method{Name: "leaf", Virtual: true, Params: []hir.Param{{Name: "p", Type: i}}, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.V("p", i)})}
+	caller := func(name string) *hir.Method {
+		return &hir.Method{Name: name, Virtual: true, Params: []hir.Param{{Name: "x", Type: i}}, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.VirtualCall, Name: "leaf", Type: i, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("C")}, Args: []*hir.Expr{hir.V("x", i)}}})}
+	}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{leaf, caller("a"), caller("b")}}}}
+	q := gracecheck.Clone(t, p)
+	q.Classes[0].Methods[1], q.Classes[0].Methods[2] = q.Classes[0].Methods[2], q.Classes[0].Methods[1]
+	inlineoracle.Check(t, p)
+	inlineoracle.Check(t, q)
+	gracecheck.Permutations(t, p)
+	if _, e := rewrite.Inline(p); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := rewrite.Inline(q); e != nil {
+		t.Fatal(e)
+	}
+	if gracecheck.CanonicalDump(p) == gracecheck.CanonicalDump(q) {
+		t.Fatal("fixture no longer demonstrates pinned traversal naming; revisit determinism contract")
 	}
 }

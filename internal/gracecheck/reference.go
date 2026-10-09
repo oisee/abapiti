@@ -375,3 +375,56 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
+
+// PositiveSource keeps the positive alternatives of the same parsed Grace
+// rules. Negated comparisons are value filters and remain monotone. Removing
+// relational negation makes the subset invariant under arbitrary fact growth.
+func PositiveSource(source string) (string, error) {
+	cs, e := parse(source)
+	if e != nil {
+		return "", e
+	}
+	var b strings.Builder
+	writeAtom := func(a atom) string {
+		var s strings.Builder
+		if a.negative {
+			s.WriteString("(not ")
+		}
+		s.WriteString("(" + a.pred)
+		for _, n := range a.terms {
+			s.WriteByte(' ')
+			if n.quoted {
+				s.WriteString(strconv.Quote(n.text))
+			} else {
+				s.WriteString(n.text)
+			}
+		}
+		s.WriteByte(')')
+		if a.negative {
+			s.WriteByte(')')
+		}
+		return s.String()
+	}
+	for i, c := range cs {
+		ok := true
+		for _, a := range c.body {
+			if a.negative && !comparison(a.pred) {
+				ok = false
+			}
+		}
+		if !ok {
+			continue
+		}
+		fmt.Fprintf(&b, "(rule positive%d 0 (head %s) (base", i, writeAtom(c.head))
+		for _, a := range c.body {
+			b.WriteByte(' ')
+			b.WriteString(writeAtom(a))
+		}
+		b.WriteByte(')')
+		if c.bound >= 0 {
+			fmt.Fprintf(&b, " (bound depth %d)", c.bound)
+		}
+		b.WriteString(")\n")
+	}
+	return b.String(), nil
+}

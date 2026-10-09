@@ -101,3 +101,19 @@ func Inline(p *hir.Program) (Stats, error) {
 	}
 	return Rewrite(p, rs, Limits{})
 }
+
+// ExtractRewriteFacts returns a read-only snapshot of base HIR facts plus node
+// and native inline shape facts, before any Grace rule is evaluated. This is
+// useful for diagnostics and independent evaluators of the rewrite rules.
+// Like Analyze, it requires verified input and leaves the program unchanged.
+func ExtractRewriteFacts(p *hir.Program) (*DB, error) {
+	if es := hir.Verify(p); len(es) > 0 {
+		return nil, fmt.Errorf("invalid HIR: %v", es)
+	}
+	r := &runner{p: p, db: Extract(p)}
+	r.index()
+	if err := r.addInlineFacts(); err != nil {
+		return nil, err
+	}
+	return r.db, nil
+}

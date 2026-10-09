@@ -7,12 +7,17 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir/rewrite"
-	"github.com/oisee/abapiti/internal/inlineoracle"
+	"github.com/oisee/abapiti/internal/gracecheck"
 )
 
 // TestLexerFactsReport shares the exact lowering closure used by the lexer
 // differential. GRACE_FACTS_OUT exports a report; goldens remain read-only.
 func TestLexerFactsReport(t *testing.T) {
+	if _, err := os.Stat(filepath.Join("testdata", "lexer", "tsconfig.json")); os.IsNotExist(err) {
+		t.Skip("vendored lexer closure absent")
+	} else if err != nil {
+		t.Fatal(err)
+	}
 	p, diags := lowerClosure(t)
 	for _, d := range diags {
 		if !strings.HasPrefix(d.Category, "note-") && d.Category != "skipped-computed-name" {
@@ -26,7 +31,7 @@ func TestLexerFactsReport(t *testing.T) {
 	if len(corpus) != 44 {
 		t.Fatalf("corpus cardinality: %d", len(corpus))
 	}
-	inlineoracle.Check(t, p)
+	gracecheck.Check(t, p)
 	db, err := rewrite.Analyze(p)
 	if err != nil {
 		t.Fatal(err)

@@ -309,3 +309,61 @@ action. The tuple language cannot itself construct AST lists, lower early
 returns to Conditional/Seq, or carry lexical renaming environments. Expressing
 those operations entirely in Grace would require AST constructors and recursive
 sequence/scoping patterns beyond this milestone's action primitive.
+
+## Engine regression tests
+
+`internal/gracecheck` is test support only. Its independent parser and naive
+stratified fixed-point evaluator scan full relations and every rule on every
+round. They use no engine joins, argument indexes, deltas or cached joins.
+Ordinary fact-set membership and minimum proof heights implement set semantics
+and bounded proofs. The evaluator caps premise examinations at one billion;
+the engine comparison also has a 30-second deadline. Both `analysis.grace` and
+`inline.grace` are checked, including the phased preparation used by `Rewrite`.
+`ExtractRewriteFacts` exposes a verified, read-only native syntax snapshot for
+that comparison; it makes no selection decisions.
+
+The common checker runs on 64 seeded programs (32 cyclic call graphs and 32
+independent-literal statement permutations, seeds 0..31) and 15 hand-written
+programs: empty/single methods, throws across calls and loop nesting at depths
+0/1/3/4/5/63/64/65, a structural interface diamond, and array/map aliases with
+and without optionals. Separate tests exercise cycles of lengths 1..4 against
+five depth bounds, six callee-chain depth boundaries, and the minimal Seq budget
+regression. HIR supports single class inheritance; the diamond's two arms are
+represented through structural interfaces.
+
+Lexer and all seven registry fixture tests call the same checker before any
+external emission-oracle skip. It checks reference fact equality, reevaluation,
+declaration permutations, positive-rule monotonicity, one-pass inline
+idempotence, verified rounds, zero depth, independently counted per-method and
+program growth, and the pinned inliner dump/counter comparison. Synthetic graph
+cycles are virtual calls; embedded rules reject recursive candidates rather
+than unrolling them. The Seq budget regression fixes an omitted enclosing block
+in the native node counter; default fixture oracle results are unchanged.
+
+Two qualifications are deliberate. Relational negation is not monotone under
+arbitrary input growth: adding a write can remove `pure`. Monotonicity therefore
+uses the positive alternatives of the actual embedded rules; the complete
+stratified rules are covered by the independent evaluator. Executable statement
+order is semantic, and structural fact site IDs encode that order. Statement
+permutation tests use independent literals. Declaration permutation facts must
+be exactly equal, while rewritten dumps are compared after sorting declarations
+and alpha-normalising generated local names. The pinned oracle numbers those
+names by traversal order. `TestInlineOracleNamesFollowDeclarationOrder` keeps a
+minimal demonstration that literal dump invariance under method permutations
+would conflict with byte-identical oracle compatibility.
+
+```sh
+go test ./hir/... ./tsfront/... ./internal/gracecheck -count=1
+go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
+GRACE_FULL_CLOSURE=1 go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 5m
+```
+
+The full test is opt-in and skips under `-short`. It uses `REGISTRY_CLOSURE` when
+provided, or materialises the embedded pinned archive and declaration packages,
+verifies all 1,538 source hashes, and lowers through `LowerRegistry` with the
+registry overrides. It logs lowering evidence and skips Grace checks if the
+complete input does not lower to verified HIR. On this clone the full unpruned
+lowering took 34.4 seconds: 2,043 classes, 644 blocking diagnostics and 392
+verification errors. Thus no full-closure fact/oracle result is claimed. The
+uncached ordinary suite took 1.7 seconds for `hir/rewrite` and 25.2 seconds for
+`tsfront`; the focused lexer/registry check run took 13.0 seconds.

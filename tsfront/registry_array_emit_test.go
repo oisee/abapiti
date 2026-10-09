@@ -10,7 +10,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
-	"github.com/oisee/abapiti/internal/inlineoracle"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -57,7 +57,7 @@ func TestEmitRegistryArrays(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	inlineoracle.Check(t, prog)
+	gracecheck.Check(t, prog)
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

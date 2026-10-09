@@ -11,7 +11,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
-	"github.com/oisee/abapiti/internal/inlineoracle"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -51,7 +51,7 @@ func TestEmitRegistryXML(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	inlineoracle.Check(t, prog)
+	gracecheck.Check(t, prog)
 	oracle := os.Getenv("REGISTRY_XML_ORACLE")
 	if oracle == "" {
 		t.Skip("set REGISTRY_XML_ORACLE to original inventory and REGISTRY_XML_INPUTS to input roots")

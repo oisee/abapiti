@@ -11,7 +11,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
-	"github.com/oisee/abapiti/internal/inlineoracle"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -49,7 +49,7 @@ func TestEmitRegistryJSON(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	inlineoracle.Check(t, prog)
+	gracecheck.Check(t, prog)
 	config := os.Getenv("REGISTRY_JSON_CONFIG")
 	if config == "" {
 		t.Skip("set REGISTRY_JSON_CONFIG and REGISTRY_JSON_RESOLVED to original JSON inputs")

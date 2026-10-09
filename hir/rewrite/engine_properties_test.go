@@ -38,50 +38,7 @@ func TestSeededEnginePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("seed_%02d", seed), func(t *testing.T) {
 			p := graph(seed, 8, 1+int(seed%4))
 			gracecheck.Check(t, p)
-			q := gracecheck.Clone(t, p)
-			r := rand.New(rand.NewSource(seed + 1000))
-			r.Shuffle(len(q.Classes), func(i, j int) { q.Classes[i], q.Classes[j] = q.Classes[j], q.Classes[i] })
-			for _, c := range q.Classes {
-				r.Shuffle(len(c.Methods), func(i, j int) { c.Methods[i], c.Methods[j] = c.Methods[j], c.Methods[i] })
-			}
-			a, e := rewrite.Analyze(p)
-			if e != nil {
-				t.Fatal(e)
-			}
-			b, e := rewrite.Analyze(q)
-			if e != nil {
-				t.Fatal(e)
-			}
-			gracecheck.Equal(t, a, b)
-			// Positive subprograms are monotone. Negated complements (e.g. pure) are
-			// intentionally excluded: adding writes can retract purity on a fresh run.
-			src := gracecheck.Source(t, "analysis")
-			base := rewrite.Extract(p)
-			positiveMonotonicity(t, base, src)
 		})
-	}
-}
-func positiveMonotonicity(t *testing.T, base *rewrite.DB, src string) {
-	t.Helper() // Keep whole rules only when every alternative is positive.
-	// The transitive throw/write/escape rules are the monotone recursive kernel.
-	src = `(rule throw 0 (head (may_throw ?m)) (base (throws ?m _)) (tail (calls ?m ?n _) (may_throw ?n)))
- (rule write 0 (head (writes_static_transitive ?m ?c ?f)) (base (writes_static ?m ?c ?f)) (tail (calls ?m ?n _) (writes_static_transitive ?n ?c ?f)))`
-	before := gracecheck.Evaluate(t, base, src)
-	for _, tuple := range base.Facts("defined") {
-		if e := base.Add("throws", tuple[0], "added"); e != nil {
-			t.Fatal(e)
-		}
-		if e := base.Add("writes_static", tuple[0], "Graph", "extra"); e != nil {
-			t.Fatal(e)
-		}
-	}
-	after := gracecheck.Evaluate(t, base, src)
-	for _, p := range before.Predicates() {
-		for _, a := range before.Facts(p) {
-			if !after.Has(p, a...) {
-				t.Fatalf("adding facts retracted %s%v", p, a)
-			}
-		}
 	}
 }
 func TestSmallAndNestedEnginePrograms(t *testing.T) {
@@ -145,5 +102,66 @@ func TestDiamondInterfacesAndCollectionAliases(t *testing.T) {
 				gracecheck.Check(t, &hir.Program{Classes: []*hir.Class{{Name: "Alias", Methods: []*hir.Method{m}}}})
 			})
 		}
+	}
+}
+
+func TestIndependentStatementPermutations(t *testing.T) {
+	for seed := int64(0); seed < 32; seed++ {
+		t.Run(fmt.Sprintf("seed_%02d", seed), func(t *testing.T) {
+			i := hir.T(hir.I32)
+			m := &hir.Method{Name: "literals", Static: true, Result: hir.T(hir.Void), Body: hir.B()}
+			for n := 0; n < 8; n++ {
+				m.Body.List = append(m.Body.List, &hir.Stmt{Kind: hir.ExprStmt, X: hir.L(i, n)})
+			}
+			p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{m}}}}
+			q := gracecheck.Clone(t, p)
+			r := rand.New(rand.NewSource(seed))
+			r.Shuffle(8, func(i, j int) {
+				q.Classes[0].Methods[0].Body.List[i], q.Classes[0].Methods[0].Body.List[j] = q.Classes[0].Methods[0].Body.List[j], q.Classes[0].Methods[0].Body.List[i]
+			})
+			a, e := rewrite.Analyze(p)
+			if e != nil {
+				t.Fatal(e)
+			}
+			b, e := rewrite.Analyze(q)
+			if e != nil {
+				t.Fatal(e)
+			}
+			gracecheck.Equal(t, a, b)
+			gracecheck.Check(t, q)
+		})
+	}
+}
+
+func TestInlineCalleeChainDepth(t *testing.T) {
+	for _, depth := range []int{0, 1, 2, 3, 4, 64} {
+		t.Run(fmt.Sprintf("depth_%d", depth), func(t *testing.T) {
+			i := hir.T(hir.I32)
+			c := &hir.Class{Name: "Chain"}
+			for n := 0; n < 4; n++ {
+				x := hir.L(i, 7)
+				if n < 3 {
+					x = &hir.Expr{Kind: hir.VirtualCall, Name: fmt.Sprintf("m%d", n+1), Type: i, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("Chain")}}
+				}
+				c.Methods = append(c.Methods, &hir.Method{Name: fmt.Sprintf("m%d", n), Virtual: true, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: x})})
+			}
+			p := &hir.Program{Classes: []*hir.Class{c}}
+			src := strings.ReplaceAll(gracecheck.Source(t, "inline"), "depth 64", fmt.Sprintf("depth %d", depth))
+			_, rs, e := rewrite.Parse(src)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if _, e := rewrite.Rewrite(p, rs, rewrite.Limits{}); e != nil {
+				t.Fatal(e)
+			}
+			x := c.Methods[0].Body.List[0].X
+			if depth < 3 {
+				if x.Kind != hir.VirtualCall || x.Name != fmt.Sprintf("m%d", depth+1) {
+					t.Fatalf("depth %d: got %s %s", depth, x.Kind, x.Name)
+				}
+			} else if x.Kind != hir.Lit {
+				t.Fatalf("depth %d: chain did not expand to leaf: %s", depth, x.Kind)
+			}
+		})
 	}
 }
