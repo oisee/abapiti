@@ -477,6 +477,11 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	} else if m.Static || m.Name == "constructor" {
 		b.initialize(c.Name)
 	}
+	if name == "constructor" && !m.Static && e.needsImplicitSuper(c, m) {
+		// TypeScript's implicit super() precedes field initializers; ABAP
+		// refuses any access to ME before SUPER->CONSTRUCTOR (A4H, 2026-10-09).
+		b.line("super->constructor( ).")
+	}
 	for _, p := range m.Params {
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
@@ -2050,4 +2055,33 @@ func (e *emitter) isInterface(name string) bool {
 		}
 	}
 	return false
+}
+
+// needsImplicitSuper: a subclass constructor without its own super call,
+// below an ancestor constructor (explicit or implicit) that takes no required
+// parameters.
+func (e *emitter) needsImplicitSuper(c *hir.Class, m *hir.Method) bool {
+	if c.Super == "" {
+		return false
+	}
+	// ABAP demands the call whenever there is a superclass, even one whose
+	// constructor is implicit (no HIR constructor up the chain).
+	parent := e.p.Constructor(c.Super)
+	if parent == nil {
+		parent = &hir.Method{}
+	}
+	for _, p := range parent.Params {
+		if p.Type.Kind != hir.Optional {
+			return false
+		}
+	}
+	called := false
+	if m.Body != nil {
+		e.walkStmt(m.Body, func(x *hir.Expr) {
+			if x != nil && x.Kind == hir.SuperCall && x.Name == "constructor" {
+				called = true
+			}
+		})
+	}
+	return !called
 }
