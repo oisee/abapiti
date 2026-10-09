@@ -47,7 +47,11 @@ func (e *emitter) runtime(t hir.Type) {
 		line("METHODS slice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method("slice2", "DATA from TYPE i.\nDATA upto TYPE i.\nfrom = p0.\nupto = p1.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF upto < 0.\nupto = lines( items ) + upto.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nIF upto > lines( items ).\nupto = lines( items ).\nENDIF.\nCREATE OBJECT result.\nIF from < upto.\nAPPEND LINES OF items FROM from + 1 TO upto TO result->items.\nENDIF.\n")
 		line("METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method("splice1", "DATA from TYPE i.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0 OR from >= lines( items ).\nCREATE OBJECT result.\nRETURN.\nENDIF.\nCREATE OBJECT result.\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\n")
+		// A short head moves the shared table to the result and copies only the
+		// head back; copying the tail made repeated splice(1) quadratic on A4H.
+		method("splice1", "DATA from TYPE i.\nDATA head TYPE items_type.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from >= lines( items ).\nRETURN.\nENDIF.\n"+
+			"IF from * 2 > lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\nRETURN.\nENDIF.\n"+
+			"IF from > 0.\nAPPEND LINES OF items FROM 1 TO from TO head.\nENDIF.\nresult->items = items.\nCLEAR items.\nIF from > 0.\nDELETE result->items FROM 1 TO from.\nENDIF.\nitems = head.\n")
 		line("METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method("splice2", "DATA from TYPE i.\nDATA cnt TYPE i.\nDATA last TYPE i.\nfrom = p0 + 1.\nIF from < 1.\nfrom = 1.\nENDIF.\ncnt = p1.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nIF from + cnt - 1 > lines( items ).\ncnt = lines( items ) - from + 1.\nENDIF.\nIF cnt < 0.\ncnt = 0.\nENDIF.\nCREATE OBJECT result.\nIF cnt > 0.\nlast = from + cnt - 1.\nAPPEND LINES OF items FROM from TO last TO result->items.\nDELETE items FROM from TO last.\nENDIF.\n")
 		line("METHODS splice3 IMPORTING p0 TYPE i p1 TYPE i p2 TYPE " + elem + " RETURNING VALUE(result) TYPE REF TO " + name + ".")

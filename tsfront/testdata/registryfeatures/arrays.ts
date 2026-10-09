@@ -60,6 +60,23 @@ export class ArrayProbe {
     const iface: ChildView = first;
     return `${ArrayProbe.optionalIdentity(iface)}/${ArrayProbe.optionalViewIdentity()}/${ArrayProbe.optionalViewIdentity(iface)}/${ArrayProbe.unionIdentity(first)}/${ArrayProbe.unionIdentity(second)}/${ArrayProbe.narrowedBranded(first)}/${ArrayProbe.narrowedBranded(second)}/${ArrayProbe.narrowedBranded()}/${ArrayProbe.narrowedBranded(new IdentityBase("plain"))}`;
   }
+  public static splice(): string {
+    const starts = [0, 1, 2, 4, 5, 9, -1, -2, -9];
+    let out = "";
+    for (const start of starts) {
+      const items = ["a", "b", "c", "d", "e"];
+      const alias = items;
+      const rest = items.splice(start);
+      items.push("x");
+      rest.push("y");
+      out += `${alias.join("")}:${rest.join("")};`;
+    }
+    const first = new Item("first");
+    const refs = [first, new Item("second"), new Item("third")];
+    const tail = refs.splice(1);
+    tail.push(new Item("fourth"));
+    return `${out}${refs.length}/${tail.length}/${refs[0] === first}/${tail[0].name}`;
+  }
   public static sliceAndUnshift(): string {
     const text = "abcde";
     const empty: number[] = [];

@@ -26,6 +26,10 @@ type emitter struct {
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
 	descCount                                       map[string]int
+
+	// codeUnits lists the classes whose bodies read UTF-16 code units through
+	// a converter they create once and keep in a private CLASS-DATA.
+	codeUnits map[string]bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -451,7 +455,11 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	b.WriteString("ENDCLASS.\n")
-	e.files[e.name(c.Name)+".clas.abap"] = b.String()
+	out := b.String()
+	if e.codeUnits[c.Name] {
+		out = strings.Replace(out, "PRIVATE SECTION.\nENDCLASS.\n", "PRIVATE SECTION.\nCLASS-DATA "+e.name("builtin.codeUnit."+c.Name)+" TYPE REF TO cl_abap_conv_out_ce.\nENDCLASS.\n", 1)
+	}
+	e.files[e.name(c.Name)+".clas.abap"] = out
 }
 
 type body struct {
@@ -521,7 +529,11 @@ func (b *body) initialize(owner string) {
 	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" && m.Static {
+			// The initializer returns at once when its flag is set; testing the
+			// flag here saves a method call on every static access (A4H profile).
+			b.line("IF " + b.e.name(owner) + "=>" + b.e.name("builtin.initialized."+c.Name) + " = abap_false.")
 			b.line("CALL METHOD " + b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + ".")
+			b.line("ENDIF.")
 			return
 		}
 	}
@@ -1143,12 +1155,25 @@ func (b *body) localeCompareNames(n, a, other, length string) {
 }
 
 func (b *body) codeUnit(target, ch string) {
-	conv := b.rawTemp("REF TO cl_abap_conv_out_ce")
+	var conv string
+	if b.c != nil {
+		// Creating a converter per call dominated the lexer on A4H (one per character).
+		if b.e.codeUnits == nil {
+			b.e.codeUnits = map[string]bool{}
+		}
+		b.e.codeUnits[b.c.Name] = true
+		conv = b.e.name("builtin.codeUnit." + b.c.Name)
+		b.line("IF " + conv + " IS NOT BOUND.")
+		b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+		b.line("ENDIF.")
+	} else {
+		conv = b.rawTemp("REF TO cl_abap_conv_out_ce")
+		b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
+	}
 	bytes := b.rawTemp("xstring")
 	low := b.rawTemp("x LENGTH 1")
 	high := b.rawTemp("x LENGTH 1")
 	highInt := b.temp(hir.T(hir.I32))
-	b.line(conv + " = cl_abap_conv_out_ce=>create( encoding = '4103' ).")
 	b.line(conv + "->convert( EXPORTING data = " + ch + " IMPORTING buffer = " + bytes + " ).")
 	b.line(low + " = " + bytes + "(1).")
 	b.line(high + " = " + bytes + "+1(1).")
