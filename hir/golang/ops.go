@@ -195,6 +195,9 @@ func (b *body) runtime(x *hir.Expr) string {
 	if x.Op == "set.has" && x.X.Kind == hir.StaticGet {
 		if classifier := b.e.classifiers[staticKey(x.X)]; classifier != "" {
 			code = classifier + "(" + a + "," + args[0] + ")"
+			if b.e.characterInteger(x.Args[0], b.m, map[*hir.Expr]bool{}, map[*hir.Method]bool{}) {
+				code = classifier + "_integer(" + a + ",int32(" + args[0] + "))"
+			}
 		}
 	}
 	return b.temp(x.Type, code)

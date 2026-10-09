@@ -207,6 +207,11 @@ func TestImmutableCharacterMembershipEdges(t *testing.T) {
 	has.Static = true
 	has.Params = []hir.Param{{Name: "value", Type: number}}
 	c := &hir.Class{Name: "Characters", Fields: []hir.Field{{Name: "members", Type: set, Static: true, Readonly: true}}, Methods: []*hir.Method{ctor, has}}
+	code := &hir.Expr{Kind: hir.NumericConvert, Type: number, X: rt("string.charCodeAt", local("text", str), i32, lit(0))}
+	integer := method("integer", boolean, ret(rt("set.has", field, boolean, code)))
+	integer.Static = true
+	integer.Params = []hir.Param{{Name: "text", Type: str}}
+	c.Methods = append(c.Methods, integer)
 	p := &hir.Program{Classes: []*hir.Class{c}}
 	files, err := Emit(p)
 	if err != nil {
@@ -216,6 +221,7 @@ func TestImmutableCharacterMembershipEdges(t *testing.T) {
 		t.Fatal("membership-only set was not classified")
 	}
 	main := fmt.Sprintf(`check:=func(ok bool){if !ok {panic("classification")}};has:=%s;zero:=float64(0);check(has(-1)&&has(0)&&has(-zero)&&has(127)&&has(255));check(!has(-2)&&!has(256)&&!has(65535)&&!has(.5)&&!has(-.5)&&!has(0/zero)&&!has(1/zero));fmt.Println("ok")`, entry("Characters", "has"))
+	main += fmt.Sprintf(`;check(%s(str("ÿ")) && !%s(str("Ā")) && !%s(unit(0xffff)))`, entry("Characters", "integer"), entry("Characters", "integer"), entry("Characters", "integer"))
 	if got := execute(t, p, main); got != "ok\n" {
 		t.Fatal(got)
 	}

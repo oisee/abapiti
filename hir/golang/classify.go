@@ -142,6 +142,7 @@ func (e *emitter) characterSets() {
 				}
 				e.extra.WriteString(fmt.Sprintf("var %s_table = [256]bool{%s}\n", name, strings.Join(entries, ",")))
 				e.extra.WriteString(fmt.Sprintf("func %s(s *orderedSet[float64], n float64) bool {if s==nil {panic(rangeFault{})};if n == -1 {return %t};i:=int32(n);return uint32(i)<256 && n==float64(i) && %s_table[i]}\n", name, eof, name))
+				e.extra.WriteString(fmt.Sprintf("func %s_integer(s *orderedSet[float64], i int32) bool {if s==nil {panic(rangeFault{})};if i == -1 {return %t};return uint32(i)<256 && %s_table[i]}\n", name, eof, name))
 			}
 		}
 	}
