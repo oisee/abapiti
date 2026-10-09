@@ -44,6 +44,9 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	if err := inline(p); err != nil {
+		return nil, nil, err
+	}
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
 	e.promoteValueSlots()
