@@ -150,6 +150,10 @@ func TestIndexedCollectionEdges(t *testing.T) {
  check(s.delete(a)&&s.has(b));s.add(a);check(s.Items[1]==b&&s.Items[2]==a&&snap.Items[1]==a)
  nums:=&orderedSet[float64]{};nums.add(negativeZero()).add(0);check(len(nums.Items)==1&&nums.has(0))
  nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==3&&!nums.has(nan)&&!nums.delete(nan))
+ nums.add(63).add(64).add(127).add(128).add(255).add(256).add(-1).add(0.5)
+ for _,v:=range []float64{0,63,64,127,128,255,256,-1,0.5}{check(nums.has(v))}
+ check(!nums.has(254)&&nums.delete(64)&&!nums.has(64));nums.add(64);check(nums.has(64))
+ check(nums.delete(0)&&!nums.has(negativeZero()));nums.add(negativeZero());check(nums.has(0))
  opts:=&orderedSet[optional[int32]]{};opts.add(optional[int32]{}).add(present(int32(0)));check(len(opts.Items)==2)
  fmt.Println("ok")`, n.Get("struct.Child"), n.Get("ref.Base"), n.Get("struct.Child"), n.Get("struct.Child"))
 	if got := execute(t, p, main); got != "ok\n" {

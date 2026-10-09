@@ -393,16 +393,25 @@ func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {
 	return s
 }
 
+// A byte-valued Number can use a bitmap; other keys retain typed lookup.
+func floatByte(v any) (uint8,bool) {
+ n,ok:=v.(float64)
+ if !ok || n<0 || n>=256 {return 0,false}
+ b:=uint8(n)
+ return b,n==float64(b)
+}
 type orderedSet[T comparable] struct {
  Items []T
  index map[T]int
+ bytes [4]uint64
 }
 func (s *orderedSet[T]) ensureIndex() {
  if s.index != nil { return }
  s.index=make(map[T]int,len(s.Items))
- for i,v:=range s.Items { s.index[collectionKey(v)]=i }
+ for i,v:=range s.Items { s.index[collectionKey(v)]=i;if b,ok:=floatByte(v);ok {s.bytes[b>>6]|=uint64(1)<<(b&63)} }
 }
 func (s *orderedSet[T]) has(v T) bool {
+ if s.index!=nil {if b,ok:=floatByte(v);ok {return s.bytes[b>>6]&(uint64(1)<<(b&63))!=0}}
  // Small primitive sets avoid hashing and compare unboxed typed values.
  if len(s.Items)<=16 {
   switch any(v).(type) {
@@ -418,7 +427,7 @@ func (s *orderedSet[T]) has(v T) bool {
 func (s *orderedSet[T]) add(v T) *orderedSet[T] {
  s.ensureIndex()
  key:=collectionKey(v)
- if _,ok:=s.index[key];!ok { s.index[key]=len(s.Items);s.Items=append(s.Items,v) }
+ if _,ok:=s.index[key];!ok { s.index[key]=len(s.Items);s.Items=append(s.Items,v);if b,ok:=floatByte(v);ok {s.bytes[b>>6]|=uint64(1)<<(b&63)} }
  return s
 }
 func (s *orderedSet[T]) values() *array[T] { return &array[T]{Items: append([]T(nil), s.Items...)} }
@@ -539,6 +548,7 @@ func (s *orderedSet[T]) delete(v T) bool {
  key:=collectionKey(v)
  i,ok:=s.index[key];if !ok { return false }
  delete(s.index,key)
+ if b,ok:=floatByte(v);ok {s.bytes[b>>6] &^= uint64(1)<<(b&63)}
  copy(s.Items[i:],s.Items[i+1:])
  var zero T;s.Items[len(s.Items)-1]=zero
  s.Items=s.Items[:len(s.Items)-1]
