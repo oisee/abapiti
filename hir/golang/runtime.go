@@ -46,10 +46,11 @@ func (s jsString) substring(a, b int32) jsString {
 	return s[int(a)*2 : int(b)*2]
 }
 func (s jsString) charCodeAt(i int32) int32 {
-	if i < 0 || i >= s.length() {
+	j := int(i) * 2
+	if j < 0 || j >= len(s)-1 {
 		panic(rangeFault{})
 	}
-	return int32(binary.LittleEndian.Uint16([]byte(s[int(i)*2 : int(i)*2+2])))
+	return int32(s[j]) | int32(s[j+1])<<8
 }
 
 func sliceIndex(i, n int32) int32 {

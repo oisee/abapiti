@@ -142,3 +142,15 @@ This installation lacks a prebuilt pprof tool; use
 `GOCACHE=/tmp/abapiti-go-cache go run /usr/lib/go/src/cmd/pprof ...`.
 Baseline profiles and compiler log: `/tmp/round4-baseline.cpu`,
 `/tmp/round4-baseline.alloc`, `/tmp/round4-diag.log`.
+
+R4.2 (A): use byte-offset bounds checking and two direct UTF-16 byte loads in
+charCodeAt. Compiler diagnostics now show **no residual bounds checks** in this
+helper or its inlined stream call sites listed above. Negative index and EOF
+still raise rangeFault; added a targeted surrogate-section/negative/EOF case to
+the existing semantic edges. Full uncached guard green. Default Go
+.620/.579/.148, Node .327/.351/.111; 400 Go .651/.608/.172, Node .355/.309/.115.
+This is a compiler-proven indexing improvement, **not a measured speed win**;
+the first timing pair is noisier/slower than R4.1. Longer CPU sample: floatByte
+7.23%, charCodeAt 6.63%, process 7.83%, add 7.23%; it confirms membership is
+still worth addressing. No load reuse was attempted across method calls or
+mutations, where the emitter cannot prove equivalence. Go-only byte layout.
