@@ -21,9 +21,9 @@ flowchart LR
 
 | Host | Check time | Result |
 |---|---|---|
-| SAP 7.58 kernel (A4H), background job | 230 s | = Node abaplint, byte for byte (SHA-256 of all issues) |
-| open-steamgate Go (osgo) | 93 s | = Node |
-| `zabaplint`, native command (Go) | 105 s | = Node |
+| SAP 7.58 kernel (A4H), background job | 221 s | = Node abaplint, byte for byte (SHA-256 of all issues) |
+| open-steamgate Go (osgo) | 91 s | = Node |
+| `zabaplint`, native command (Go) | ~100 s | = Node |
 | Node abaplint 2.120.56 | 13.5 s | reference |
 
 A seeded variant with one error per rule gives Node's issues on every host. The stage-by-stage breakdown and how the time came down are in the [v0.1.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.1.0).
