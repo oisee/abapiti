@@ -11,8 +11,8 @@ import (
 // on both OSG runtimes through hir-unit.sh): a guarded-return chain, local
 // declarations in a nested block, argument evaluation order, a side-effecting
 // void method with an early return used as a statement, a receiver evaluated
-// once, a recursive method, a shadowing block and an overridden method (the
-// last three stay calls). run returns 42, or the number of the failed check.
+// once, a recursive method, a shadowing block, a declaration without
+// initializer called twice and an overridden method (the last four stay calls). run returns 42, or the number of the failed check.
 func inlineFixture() fixture {
 	ctr := hir.Ref("InlCounter")
 	this := &hir.Expr{Kind: hir.This, Type: ctr}
@@ -56,6 +56,10 @@ func inlineFixture() fixture {
 			decl("x", i32, a),
 			hir.B(decl("x", i32, lit(5)), set(this, "log", local("x", i32))),
 			ret(local("x", i32))),
+		virtual("late", i32, []hir.Param{{Name: "k", Type: i32}},
+			decl("r", i32, nil),
+			ifs(binary(">", k, lit(0), boolean), hir.B(assign("r", i32, k)), nil),
+			ret(local("r", i32))),
 	}}
 	base := &hir.Class{Name: "InlBase", Methods: []*hir.Method{virtual("val", i32, nil, ret(lit(1)))}}
 	sub := &hir.Class{Name: "InlSub", Super: "InlBase", Methods: []*hir.Method{virtual("val", i32, nil, ret(lit(2)))}}
@@ -85,6 +89,8 @@ func inlineFixture() fixture {
 		fail(ne(call(hir.VirtualCall, local("b", hir.Ref("InlBase")), "", "val", i32), 2), 12),
 		run(vc("bump", hir.T(hir.Void), vc("next", i32))),
 		fail(or(ne(field(c, "log"), 58), ne(field(c, "n"), 16)), 13),
+		fail(ne(vc("late", i32, lit(5)), 5), 14),
+		fail(ne(vc("late", i32, lit(-1)), 0), 15),
 		ret(lit(42)),
 	))
 	run.Static = true
@@ -108,7 +114,8 @@ func TestInlineCandidates(t *testing.T) {
 	if n != total || len(stats) != len(want) {
 		t.Errorf("inlined %d sites %v, want %d %v", n, stats, total, want)
 	}
-	// Overridden (Base.val), recursive (fact) and shadowing (shadow) callees stay calls.
+	// Overridden (Base.val), recursive (fact), shadowing (shadow) and
+	// uninitialized-declaration (late) callees stay calls.
 	calls := map[string]int{}
 	var walk func(x *hir.Expr)
 	var walkStmt func(s *hir.Stmt)
@@ -140,7 +147,7 @@ func TestInlineCandidates(t *testing.T) {
 		}
 	}
 	walkStmt(p.Classes[3].Methods[0].Body)
-	if len(calls) != 3 || calls["val"] != 1 || calls["fact"] != 1 || calls["shadow"] != 1 {
+	if len(calls) != 4 || calls["val"] != 1 || calls["fact"] != 1 || calls["shadow"] != 1 || calls["late"] != 2 {
 		t.Fatalf("remaining calls in run: %v", calls)
 	}
 }

@@ -162,7 +162,7 @@ func (in *inliner) eligible(c *Class, m *Method) bool {
 	inSeq = func(x *Expr) {
 		// A return inside an expression's statements would leave the caller.
 		walk(x.Stmt, func(s *Stmt) {
-			if s.Kind == Return {
+			if s.Kind == Return || (s.Kind == VarDecl && s.X == nil) {
 				ok = false
 			}
 		}, func(*Expr) {})
@@ -172,6 +172,13 @@ func (in *inliner) eligible(c *Class, m *Method) bool {
 		case Block:
 		case Trap, Throw, Try, Finally, While, ForEach, Break, Continue:
 			ok = false
+		case VarDecl:
+			// The caller's DATA keeps its value across inlined calls in a loop;
+			// a declaration without initializer relied on a fresh method frame.
+			if s.X == nil {
+				ok = false
+			}
+			stmts++
 		default:
 			stmts++
 		}

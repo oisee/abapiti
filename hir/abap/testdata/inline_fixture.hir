@@ -38,6 +38,12 @@ class InlCounter
     var x:i32 = (5):i32
     ((this):classref<InlCounter>.log):i32 = (x):i32
     return (x):i32
+  method late virtual(k:i32):i32
+    var r:i32 = _
+    if ((k):i32 > (0):i32):bool
+      (r):i32 = (k):i32
+    end if
+    return (r):i32
 class InlBase
   method val virtual():i32
     return (1):i32
@@ -110,5 +116,11 @@ class inline_fixture
     end if
     if ((((c):classref<InlCounter>.log):i32 != (58):i32):bool || (((c):classref<InlCounter>.n):i32 != (16):i32):bool):bool
       return (13):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.late((5):i32)):i32 != (5):i32):bool
+      return (14):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.late((-1):i32)):i32 != (0):i32):bool
+      return (15):i32
     end if
     return (42):i32
