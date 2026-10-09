@@ -142,7 +142,14 @@ func (a *inlineAction) expand(call *hir.Expr, statement *hir.Stmt, caller *hir.M
 func treeSize(s *hir.Stmt, e *hir.Expr) int {
 	n := 0
 	fs := func(*hir.Stmt, string) { n++ }
-	fx := func(*hir.Expr, string) { n++ }
+	fx := func(e *hir.Expr, _ string) {
+		n++
+		// Structural site traversal visits Seq contents but omits their enclosing
+		// block. Expansion budgets count that block as a statement too.
+		if e.Stmt != nil {
+			n++
+		}
+	}
 	visitTree(s, "", fs, fx)
 	visitExpr(e, "", fs, fx)
 	return n

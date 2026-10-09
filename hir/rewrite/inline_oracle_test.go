@@ -123,3 +123,35 @@ func TestInlineSelectionOracle(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) { p := inlineFixture(); tc.change(p); inlineoracle.Check(t, p) })
 	}
 }
+
+// Minimal reproducer: a parameter binding creates a Seq with an enclosing
+// block. Omitting that block charges one added node although growth is two.
+func TestInlineBudgetCountsSeqBlock(t *testing.T) {
+	i := hir.T(hir.I32)
+	leaf := &hir.Method{Name: "leaf", Virtual: true, Params: []hir.Param{{Name: "p", Type: i}}, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.V("p", i)})}
+	caller := &hir.Method{Name: "caller", Virtual: true, Params: []hir.Param{{Name: "x", Type: i}}, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.VirtualCall, Name: "leaf", Type: i, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("C")}, Args: []*hir.Expr{hir.V("x", i)}}})}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{leaf, caller}}}}
+	src, e := os.ReadFile("rules/inline.grace")
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, rs, e := rewrite.Parse(string(src))
+	if e != nil {
+		t.Fatal(e)
+	}
+	before := hir.Dump(p)
+	stats, e := rewrite.Rewrite(p, rs, rewrite.Limits{MethodGrowth: 1, ProgramGrowth: 1})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if stats.CallSites != 0 || hir.Dump(p) != before {
+		t.Fatalf("Seq enclosing block escaped budget: %+v", stats)
+	}
+	stats, e = rewrite.Rewrite(p, rs, rewrite.Limits{MethodGrowth: 2, ProgramGrowth: 2})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if stats.CallSites != 1 {
+		t.Fatalf("exact two-node budget rejected: %+v", stats)
+	}
+}
