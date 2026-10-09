@@ -210,3 +210,23 @@ func TestInlineFactsNilStatementInRejectedMethod(t *testing.T) {
 		inlineoracle.Check(t, p)
 	}
 }
+
+func TestInlinePreparesRejectedTemplateBeforeLaterCall(t *testing.T) {
+	i, ref := hir.T(hir.I32), hir.Ref("C")
+	ret := func(e *hir.Expr) *hir.Stmt { return &hir.Stmt{Kind: hir.Return, X: e} }
+	local := func() *hir.Stmt {
+		return &hir.Stmt{Kind: hir.VarDecl, Name: "obj", Type: ref, X: &hir.Expr{Kind: hir.New, Type: ref, Name: "C"}}
+	}
+	call := func(name string) *hir.Expr {
+		return &hir.Expr{Kind: hir.VirtualCall, Type: i, X: hir.V("obj", ref), Name: name}
+	}
+	shadow := func(n int) *hir.Stmt { return hir.B(&hir.Stmt{Kind: hir.VarDecl, Type: i, Name: "x", X: hir.L(i, n)}) }
+	// The caller comes first. The nested shadow declarations prevent flattening,
+	// but preparing rejected still rewrites get before caller's later get call.
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{
+		{Name: "caller", Virtual: true, Result: i, Body: hir.B(local(), &hir.Stmt{Kind: hir.ExprStmt, X: call("rejected")}, ret(call("get")))},
+		{Name: "rejected", Virtual: true, Result: i, Body: hir.B(local(), &hir.Stmt{Kind: hir.ExprStmt, X: call("get")}, shadow(1), shadow(2), ret(hir.L(i, 3)))},
+		{Name: "get", Virtual: true, Result: i, Body: hir.B(ret(hir.L(i, 4)))},
+	}}}}
+	gracecheck.Check(t, p)
+}

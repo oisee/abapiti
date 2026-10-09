@@ -52,10 +52,12 @@
  (head (inline_path ?a ?b))
  (base (inline_edge ?a ?b))
  (tail (inline_path ?a ?x) (inline_edge ?x ?b)))
+; Prepare eligible callees before testing their rewritten return template.
+; Preparation can inline their own calls even when this call cannot expand.
 (rule inline-allowed 0
  (head (inline_allowed ?s ?callee))
  (base (inline_dispatch _ ?s ?c ?name ?callee) (inline_arity ?s)
-       (inline_candidate ?callee) (inline_template ?callee)
+       (inline_candidate ?callee)
        (not (inline_overridden ?c ?name ?callee))
        (not (inline_path ?callee ?callee))))
 
