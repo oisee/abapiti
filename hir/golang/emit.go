@@ -211,10 +211,19 @@ func (e *emitter) effective(c *hir.Class) []string {
 func (e *emitter) class(c *hir.Class) {
 	e.descriptor(c)
 	e.line("type %s struct {", e.obj(c.Name))
-	e.line("source *dynamic")
+	// Only materializable data shapes can acquire a dynamic source. Other
+	// objects still escape normally, but need no permanently nil source slot.
+	source := c.Super == "" && !c.Abstract && len(c.Methods) == 0 && c.Ctor != nil && len(c.Ctor.Params) == len(c.Fields)
+	if source {
+		e.line("source *dynamic")
+	}
+	storage := source
+	for _, f := range c.Fields {
+		storage = storage || !f.Static
+	}
 	if c.Super != "" {
 		e.line("%s", e.obj(c.Super))
-	} else {
+	} else if !storage {
 		e.line("identity byte")
 	}
 	for _, f := range c.Fields {
@@ -224,7 +233,11 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	e.line("}")
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
-	e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+	if source {
+		e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+	} else {
+		e.line("func (self *%s) dynamicSource() *dynamic {return nil}", e.obj(c.Name))
+	}
 	e.line("func (self *%s) %s() *%s {return self}", e.obj(c.Name), e.getter(c.Name), e.obj(c.Name))
 	if e.concreteClass(c.Name) {
 		// A class with no subclasses has one possible concrete representation.

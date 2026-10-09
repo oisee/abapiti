@@ -184,3 +184,18 @@ existing edges. Full uncached guard green. Default Go .546/.528/.144,
 Node .382/.329/.118; 400 Go .562/.486/.145, Node .329/.328/.128.
 This runtime representation/loop change is Go-only; the first-change casing
 algorithm could also be implemented in ABAP's string runtime.
+
+R4.5 (D, class storage): omit permanently nil dynamic-source fields from
+classes that cannot be materialized by the existing data-shape ABI. Omit the
+identity byte when fields already give the root object nonzero size; empty
+objects retain it. Subclasses embed the base without another source pointer.
+Returned tokens/Positions still allocate independently, escape through results,
+and keep distinct identities. No pooling or object reuse.
+
+Full uncached guard green, including typed JSON materialization and identity
+edges. On this amd64 layout Identifier shrinks 80 -> 48 bytes and Position
+32 -> 16 bytes. The allocation profile falls ~742 -> 519 MB per 1,030 runs/file;
+Identifier ~232 -> 134 MB, Position ~136 -> 68 MB. Array growth now dominates
+at 42.15%. Default Go .553/.500/.129, Node .304/.302/.111; 400 Go
+.551/.460/.130, Node .334/.321/.115. This is Go-only storage elimination.
+Lifetimes do not permit scalar replacement of the escaped tokens/Positions.
