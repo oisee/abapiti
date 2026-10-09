@@ -199,3 +199,18 @@ Identifier ~232 -> 134 MB, Position ~136 -> 68 MB. Array growth now dominates
 at 42.15%. Default Go .553/.500/.129, Node .304/.302/.111; 400 Go
 .551/.460/.130, Node .334/.321/.115. This is Go-only storage elimination.
 Lifetimes do not permit scalar replacement of the escaped tokens/Positions.
+
+R4.7 (profile-driven guard cleanup): classes with no class constructor emit an
+empty init function. Per-invocation local flags coalesce repeated static-field
+initialization guards, while first access remains at its original evaluation
+point through loops, branches and catches. Global reentrant initialization is
+unchanged. This is Go-only guard code; a general HIR dominance analysis could
+also remove redundant initialization operations in ABAP.
+
+The first guard run hit a full /tmp during linking (5 GB Go cache); stale cache
+entries freed 3.9 GB and the full uncached guard then passed. Initial timings
+overlapped cache rebuilding and were rejected. Isolated readings: default Go
+.823/.868/.225, Node .513/.405/.156; 400 Go .735/.605/.166,
+Node .453/.513/.184. Host load rose to 18, so these readings are not evidence
+of a stable regression or win. Compiler diagnostics still confirm PGO inlines
+the stream accessors (costs 405/351/328); no emitter inlining pass was added.
