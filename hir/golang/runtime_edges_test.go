@@ -187,3 +187,49 @@ func TestCheckedInt32ConversionEdges(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestImmutableCharacterMembershipEdges(t *testing.T) {
+	number := hir.T(hir.Number)
+	set := hir.T(hir.OrderedSet, number)
+	field := &hir.Expr{Kind: hir.StaticGet, Owner: "Characters", Name: "members", Type: set}
+	builder := local("builder", set)
+	init := hir.B(decl("builder", set, newObj(set)))
+	for _, v := range []float64{-1, 0, 127, 255} {
+		init.List = append(init.List, run(rt("set.add", builder, set, hir.L(number, v))))
+	}
+	init.List = append(init.List, &hir.Stmt{Kind: hir.Assign, X: field, Y: builder})
+	ctor := method("class_constructor", hir.T(hir.Void), init)
+	ctor.Static = true
+	has := method("has", boolean, ret(rt("set.has", field, boolean, local("value", number))))
+	has.Static = true
+	has.Params = []hir.Param{{Name: "value", Type: number}}
+	c := &hir.Class{Name: "Characters", Fields: []hir.Field{{Name: "members", Type: set, Static: true, Readonly: true}}, Methods: []*hir.Method{ctor, has}}
+	p := &hir.Program{Classes: []*hir.Class{c}}
+	files, err := Emit(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(files["hir.go"], "[256]bool") {
+		t.Fatal("membership-only set was not classified")
+	}
+	main := fmt.Sprintf(`check:=func(ok bool){if !ok {panic("classification")}};has:=%s;zero:=float64(0);check(has(-1)&&has(0)&&has(-zero)&&has(127)&&has(255));check(!has(-2)&&!has(256)&&!has(65535)&&!has(.5)&&!has(-.5)&&!has(0/zero)&&!has(1/zero));fmt.Println("ok")`, entry("Characters", "has"))
+	if got := execute(t, p, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+	// A readonly binding can still expose a mutable set. Either mutation or
+	// returning an alias must prevent classification.
+	mutate := method("mutate", hir.T(hir.Void), hir.B(run(rt("set.add", field, set, hir.L(number, float64(9))))))
+	mutate.Static = true
+	alias := method("alias", set, ret(field))
+	alias.Static = true
+	for _, extra := range []*hir.Method{mutate, alias} {
+		c.Methods = append([]*hir.Method{ctor, has}, extra)
+		files, err = Emit(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(files["hir.go"], "[256]bool") {
+			t.Fatal("mutable or escaping set was classified")
+		}
+	}
+}
