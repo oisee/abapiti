@@ -262,8 +262,8 @@ func TestPrepareGoLexerTiming(t *testing.T) {
 	n := hir.NewNames()
 	invocation := fmt.Sprintf("%s(%s(),%s(raw),nil).%s().%s.Items", goEntry("src/abap/1_lexer/lexer.ts.Lexer", "run"), n.Get("new.src/abap/1_lexer/lexer.ts.Lexer"), n.Get("new.harness/test_file.ts.TestFile"), n.Get("base."+result.Name), n.Get("member.tokens"))
 	files["main.go"] = `package main
-import("encoding/json";"os";"time";"fmt")
-func main(){var request struct {Cases []struct{Name,Abap string};Iterations int};if err:=json.NewDecoder(os.Stdin).Decode(&request);err!=nil{panic(err)}
+import("encoding/json";"os";"time";"fmt";"runtime";"runtime/pprof")
+func main(){if path:=os.Getenv("ABAPITI_LEXER_CPU_PROFILE");path!=""{f,err:=os.Create(path);if err!=nil{panic(err)};if err=pprof.StartCPUProfile(f);err!=nil{panic(err)};defer func(){pprof.StopCPUProfile();f.Close()}()};if path:=os.Getenv("ABAPITI_LEXER_ALLOC_PROFILE");path!=""{defer func(){f,err:=os.Create(path);if err!=nil{panic(err)};runtime.GC();if err=pprof.Lookup("allocs").WriteTo(f,0);err!=nil{panic(err)};f.Close()}()};var request struct {Cases []struct{Name,Abap string};Iterations int};if err:=json.NewDecoder(os.Stdin).Decode(&request);err!=nil{panic(err)}
  type observation struct{Name string ` + "`json:\"name\"`" + `;Milliseconds float64 ` + "`json:\"milliseconds\"`" + `;Tokens int ` + "`json:\"tokens\"`" + `}
  out:=[]observation{};for _,c:=range request.Cases{raw:=str(c.Abap);lex:=func()int{return len(` + invocation + `)};for i:=0;i<30;i++{lex()};start:=time.Now();count:=0;for i:=0;i<request.Iterations;i++{count=lex()};elapsed:=float64(time.Since(start).Nanoseconds())/1e6/float64(request.Iterations);out=append(out,observation{c.Name,elapsed,count})};b,_:=json.Marshal(out);fmt.Println(string(b))}
 `
