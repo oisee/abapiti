@@ -711,8 +711,12 @@ func (b *body) expr(x *hir.Expr) string {
 		b.initialize(x.Owner)
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
-		a, i := b.expr(x.X), b.expr(x.Y)
-		b.line(i + " = " + i + " + 1.")
+		a := b.expr(x.X)
+		i, constant := tableIndex(x.Y)
+		if !constant {
+			i = b.expr(x.Y)
+			b.line(i + " = " + i + " + 1.")
+		}
 		row := n
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
@@ -1347,7 +1351,61 @@ func (b *body) call(x *hir.Expr, n string) {
 		b.line(n + " ?= " + target + ".")
 	}
 }
+
+// literalIndex is the integer value of an index expression that is a numeric
+// literal holding an exact integer within i32 (directly or via number.index).
+func literalIndex(x *hir.Expr) (int64, bool) {
+	if x == nil {
+		return 0, false
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "number.index" {
+		x = x.X
+		if x == nil || x.Type.Kind != hir.Number {
+			return 0, false
+		}
+	} else if x.Type.Kind != hir.I32 {
+		return 0, false
+	}
+	if x.Kind != hir.Lit || x.Value == nil {
+		return 0, false
+	}
+	var k int64
+	switch v := x.Value.(type) {
+	case float64:
+		if v != math.Trunc(v) || v < -2147483648 || v > 2147483647 {
+			return 0, false
+		}
+		k = int64(v)
+	default:
+		// Plain decimal digits only; anything else keeps the generic path.
+		parsed, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 64)
+		if err != nil {
+			return 0, false
+		}
+		k = parsed
+	}
+	if k < -2147483648 || k > 2147483647 {
+		return 0, false
+	}
+	return k, true
+}
+
+// tableIndex is the constant 1-based table index of a literal JavaScript
+// index, when its +1 cannot overflow i.
+func tableIndex(x *hir.Expr) (string, bool) {
+	k, ok := literalIndex(x)
+	if !ok || k < 0 || k >= 2147483647 {
+		return "", false
+	}
+	return strconv.FormatInt(k+1, 10), true
+}
+
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if k, ok := literalIndex(x); ok {
+		// A literal index needs neither the f temporary nor saturation.
+		b.line(n + " = " + strconv.FormatInt(k, 10) + ".")
+		return
+	}
 	a := b.expr(x.X)
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
@@ -1850,9 +1908,15 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
 		case hir.IndexGet:
-			a, i := b.expr(s.X.X), b.expr(s.X.Y)
+			a := b.expr(s.X.X)
+			i, constant := tableIndex(s.X.Y)
+			if !constant {
+				i = b.expr(s.X.Y)
+			}
 			v := b.value(s.Y, s.X.Type)
-			b.line(i + " = " + i + " + 1.")
+			if !constant {
+				b.line(i + " = " + i + " + 1.")
+			}
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
 			b.line("CLEAR " + row + ".")
 			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
