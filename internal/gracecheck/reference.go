@@ -308,16 +308,36 @@ func reference(base *rewrite.DB, source string, cap int, hashed bool) (*rewrite.
 				if levels[c.head.pred] != level {
 					continue
 				}
-				// Static conjunction order; every clause is evaluated anew every
-				// round, using scans or independently hashed snapshot projections.
+				// Every clause is evaluated anew every round. Cartesian mode uses
+				// static order; full mode chooses the smallest bound projection.
 				c.body = append([]atom(nil), c.body...)
-				sort.SliceStable(c.body, func(i, j int) bool { return len(relations[c.body[i].pred]) < len(relations[c.body[j].pred]) })
+				if !hashed {
+					sort.SliceStable(c.body, func(i, j int) bool { return len(relations[c.body[i].pred]) < len(relations[c.body[j].pred]) })
+				}
 				var walk func(int, map[string]string, int)
 				walk = func(pos int, env map[string]string, depth int) {
 					if steps > cap {
 						return
 					}
 					if pos < len(c.body) {
+						if hashed {
+							// Choose the smallest complete-snapshot projection under the
+							// current bindings, avoiding unrelated Cartesian products.
+							best, size := pos, int(^uint(0)>>1)
+							for i := pos; i < len(c.body); i++ {
+								a := c.body[i]
+								if a.negative || comparison(a.pred) {
+									continue
+								}
+								n := len(candidates(a, env))
+								if n < size {
+									best, size = i, n
+								}
+							}
+							c.body[pos], c.body[best] = c.body[best], c.body[pos]
+							defer func() { c.body[pos], c.body[best] = c.body[best], c.body[pos] }()
+						}
+
 						a := c.body[pos]
 						if a.negative || comparison(a.pred) {
 							walk(pos+1, env, depth)
