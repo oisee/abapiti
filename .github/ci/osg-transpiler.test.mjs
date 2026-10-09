@@ -15,8 +15,15 @@ test("accepts the old local-build wording at the pinned commit", () => {
 });
 
 test("accepts the pinned-build wording at the pinned commit", () => {
-  const description = "transpiler: the pinned build of oisee/transpiler 753230cb (libs.lock.json), at /cache/transpiler, calling itself 2.13.96";
+  const description = "transpiler: the pinned build of oisee/transpiler 753230cb (libs.lock.json), at /cache/transpiler/packages/transpiler, calling itself 2.13.96\n"
+    + "runtime: the pinned build of oisee/transpiler 753230cb (libs.lock.json), at /cache/transpiler/packages/runtime, calling itself 2.13.96";
   assert.equal(parseTranspilerDescription(description, ref).matches, true);
+  assert.equal(parseTranspilerDescription(description, ref).where, "/cache/transpiler/packages/transpiler");
+  const runtime = parseRuntimeDescription(description, ref);
+  assert.equal(runtime.matches, true);
+  assert.equal(runtime.where, "/cache/transpiler/packages/runtime");
+  const other = description.replace("runtime: the pinned build of oisee/transpiler 753230cb", "runtime: the pinned build of oisee/transpiler e2a459b1");
+  assert.equal(parseRuntimeDescription(other, ref).matches, false);
 });
 
 test("matches a mode-dirty pinned local build and rejects different commits", () => {

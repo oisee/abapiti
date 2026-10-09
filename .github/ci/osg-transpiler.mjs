@@ -13,18 +13,20 @@ export function pinnedTranspilerRef(osg) {
 
 export function parseTranspilerDescription(description, expectedRef) {
   const line = description.split("\n")[0] ?? "";
-  const pinned = line.match(/^transpiler: the pinned build of \S+ ([0-9a-f]{8,40}) \(libs\.lock\.json\)/);
+  const pinned = line.match(/^transpiler: the pinned build of \S+ ([0-9a-f]{8,40}) \(libs\.lock\.json\)(?:, at (.+?), calling itself )?/);
   const local = line.match(/^transpiler: a LOCAL BUILD, (.+?) \((?:HEAD )?([0-9a-f]{8,40})(?:, uncommitted changes)?\)/);
   if (!pinned && !local) return null;
   const commit = pinned ? pinned[1] : local[2];
   const clean = !line.includes(", uncommitted changes");
-  return {commit, clean, where: local?.[1], matches: expectedRef.startsWith(commit) && commit.length >= 8};
+  return {commit, clean, where: pinned ? pinned[2] : local[1], matches: expectedRef.startsWith(commit) && commit.length >= 8};
 }
 
 export function parseRuntimeDescription(description, expectedRef) {
   const line = description.split("\n")[1] ?? "";
   if (line.startsWith("runtime: none installed at ")) return {kind: "missing"};
   if (line.startsWith("runtime: @abaplint/runtime ")) return {kind: "published"};
+  const pinned = line.match(/^runtime: the pinned build of \S+ ([0-9a-f]{8,40}) \(libs\.lock\.json\), at (.+?), calling itself /);
+  if (pinned) return {kind: "linked", where: pinned[2], clean: true, matches: expectedRef.startsWith(pinned[1])};
   const local = line.match(/^runtime: a LOCAL BUILD, (.+?) \((?:HEAD )?([0-9a-f]{8,40})(?:, uncommitted changes)?\)/);
   if (!local) return {kind: "invalid"};
   return {
