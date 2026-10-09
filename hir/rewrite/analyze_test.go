@@ -184,3 +184,70 @@ func TestRejectInvalidHIR(t *testing.T) {
 		t.Fatal("accepted nil")
 	}
 }
+
+func TestInheritedInterfaceAndScopedLocals(t *testing.T) {
+	base := &hir.Class{Name: "Base", Methods: []*hir.Method{{Name: "f", Virtual: true, Result: hir.T(hir.Void), Body: hir.B()}}}
+	child := &hir.Class{Name: "Child", Super: "Base", Implements: []string{"J"}}
+	vcall := &hir.Expr{Kind: hir.VirtualCall, Name: "f", Type: hir.T(hir.Void), X: hir.V("i", hir.Type{Kind: hir.InterfaceRef, Name: "I"})}
+	m := method("invoke", exp(vcall))
+	m.Params = []hir.Param{{Name: "i", Type: hir.Type{Kind: hir.InterfaceRef, Name: "I"}}}
+	p := &hir.Program{Classes: []*hir.Class{base, child, {Name: "Caller", Methods: []*hir.Method{m}}}, Interfaces: []*hir.Interface{{Name: "I", Methods: []*hir.Method{{Name: "f", Result: hir.T(hir.Void)}}}, {Name: "J", Methods: []*hir.Method{{Name: "f", Result: hir.T(hir.Void)}}}}}
+	d, e := Analyze(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	site := d.Facts("virtual_call")[0][3]
+	assertFact(t, d, true, "receivers", site, "Child")
+	assertFact(t, d, true, "calls", "Caller::invoke", "Base::f", site)
+	assertFact(t, d, false, "receivers", site, "Base")
+	arr := hir.T(hir.Array, integer)
+	scoped := method("scoped", variable("v", arr, &hir.Expr{Kind: hir.New, Type: arr}), hir.B(variable("v", arr, hir.V("p", arr)), ret(hir.V("v", arr))))
+	scoped.Params = []hir.Param{{Name: "p", Type: arr}}
+	scoped.Result = arr
+	seq := &hir.Expr{Kind: hir.Seq, Type: arr, Stmt: hir.B(variable("v", arr, &hir.Expr{Kind: hir.New, Type: arr})), Y: hir.V("v", arr)}
+	sequenced := method("seq", ret(seq))
+	sequenced.Result = arr
+	d = analyze(t, &hir.Class{Name: "Scope", Methods: []*hir.Method{scoped, sequenced}})
+	assertFact(t, d, false, "escapes", "Scope::scoped", "Scope::scoped/body/s0/local/v")
+	assertFact(t, d, true, "escapes", "Scope::scoped", "Scope::scoped/param/p")
+	assertFact(t, d, true, "escapes", "Scope::seq", "Scope::seq/body/s0/x/seq/s0/local/v")
+}
+
+func TestThrowEscapeAndInstanceWrite(t *testing.T) {
+	arr := hir.T(hir.Array, integer)
+	throw := method("throw", &hir.Stmt{Kind: hir.Throw, X: hir.V("p", arr)})
+	throw.Params = []hir.Param{{Name: "p", Type: arr}}
+	c := &hir.Class{Name: "C", Fields: []hir.Field{{Name: "f", Type: arr}}}
+	save := method("save", store(&hir.Expr{Kind: hir.FieldGet, Type: arr, Name: "f", X: &hir.Expr{Kind: hir.This, Type: hir.Ref("C")}}, hir.V("p", arr)))
+	save.Static = false
+	save.Params = throw.Params
+	c.Methods = []*hir.Method{throw, save, method("none")}
+	d := analyze(t, c)
+	for _, m := range []string{"throw", "save"} {
+		assertFact(t, d, true, "escapes", "C::"+m, "C::"+m+"/param/p")
+	}
+	assertFact(t, d, true, "writes_field", "C::save", "C", "f")
+	assertFact(t, d, false, "pure", "C::save")
+	assertFact(t, d, false, "may_throw", "C::none")
+	assertFact(t, d, true, "pure", "C::none")
+}
+
+func TestEscapingSiblingAlias(t *testing.T) {
+	arr := hir.T(hir.Array, integer)
+	m := method("build", variable("a", arr, &hir.Expr{Kind: hir.New, Type: arr}), variable("b", arr, hir.V("a", arr)), exp(runtimeExpr("array.push", integer, hir.V("b", arr), hir.L(integer, 1))), ret(hir.V("a", arr)))
+	m.Result = arr
+	d := analyze(t, &hir.Class{Name: "C", Methods: []*hir.Method{m}})
+	assertFact(t, d, true, "escapes", "C::build", "C::build/body/s1/local/b")
+	assertFact(t, d, false, "pure", "C::build")
+}
+
+func TestOptionalReferenceAliasEscape(t *testing.T) {
+	arr := hir.T(hir.Array, integer)
+	opt := hir.T(hir.Optional, arr)
+	view := &hir.Expr{Kind: hir.Narrow, Type: arr, X: hir.V("b", opt)}
+	m := method("build", variable("a", opt, &hir.Expr{Kind: hir.New, Type: arr}), variable("b", opt, hir.V("a", opt)), exp(runtimeExpr("array.push", integer, view, hir.L(integer, 1))), ret(hir.V("a", opt)))
+	m.Result = opt
+	d := analyze(t, &hir.Class{Name: "C", Methods: []*hir.Method{m}})
+	assertFact(t, d, true, "escapes", "C::build", "C::build/body/s1/local/b")
+	assertFact(t, d, false, "pure", "C::build")
+}

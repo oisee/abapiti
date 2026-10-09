@@ -50,6 +50,9 @@ func (x *extractor) shapes(body *hir.Stmt) {
 		if cond != nil && cond.Kind == hir.Unary && cond.Op == "!" && runtime(cond.X, "map.has") && staticMap(cond.X.X) && len(cond.X.Args) == 1 && stableKey(cond.X.Args[0]) && runtime(ret, "map.get") && same(ret.X, cond.X.X) && len(ret.Args) == 1 && same(ret.Args[0], cond.X.Args[0]) && len(bs) == 2 && bs[0].Kind == hir.VarDecl && bs[1].Kind == hir.ExprStmt {
 			compute, store := bs[0].X, bs[1].X
 			if compute != nil && compute.Kind == hir.DirectCall && compute.X == nil && len(compute.Args) == 1 && same(compute.Args[0], cond.X.Args[0]) && runtime(store, "map.set") && same(store.X, ret.X) && len(store.Args) == 2 && same(store.Args[0], ret.Args[0]) && store.Args[1].Kind == hir.Local && store.Args[1].Name == bs[0].Name {
+				if cond.X.Args[0].Kind == hir.Local && cond.X.Args[0].Name == bs[0].Name {
+					return
+				}
 				target := x.resolve(compute.Owner, compute.Name)
 				if target != "" {
 					x.add("memo_shape", x.method, x.fieldOwner(ret.X.Owner, ret.X.Name), ret.X.Name, target)

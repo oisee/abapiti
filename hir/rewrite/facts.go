@@ -22,8 +22,14 @@ type table struct {
 // DB is a set of memoised relations. Public reads are sorted copies.
 type DB struct{ tables map[string]*table }
 
-func NewDB() *DB            { return &DB{tables: map[string]*table{}} }
-func key(args Tuple) string { b, _ := json.Marshal(args); return string(b) }
+func NewDB() *DB { return &DB{tables: map[string]*table{}} }
+func key(args Tuple) string {
+	if args == nil {
+		args = Tuple{}
+	}
+	b, _ := json.Marshal(args)
+	return string(b)
+}
 func (d *DB) put(pred string, args Tuple, depth int) (bool, error) {
 	t := d.tables[pred]
 	if t == nil {

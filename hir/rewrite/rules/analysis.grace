@@ -2,7 +2,8 @@
 (rule subtype 0 (head (subtype ?c ?b))
  (base (class ?c) (extends ?c ?b))
  (base (class ?c) (implements ?c ?b))
- (tail (extends ?c ?x) (subtype ?x ?b)))
+ (tail (extends ?c ?x) (subtype ?x ?b))
+ (tail (subtype ?c ?i) (interface_subtype ?i ?b)))
 (rule self-type 0 (head (subtype ?c ?c)) (base (class ?c)))
 (rule receivers 0 (head (receivers ?s ?c))
  (base (virtual_call ?m _ _ ?s) (exact_receiver ?s ?c))
@@ -53,3 +54,8 @@
 
 (rule counter 0 (head (counter_store ?m ?c ?f))
  (base (counter_shape ?m ?c ?f) (not (noncounter_write ?m ?c ?f))))
+
+; Reference bindings share escape status in both directions.
+(rule escape-alias 0 (head (escapes ?m ?a))
+ (base (alias ?m ?a ?b) (escapes ?m ?b))
+ (base (alias ?m ?b ?a) (escapes ?m ?b)))

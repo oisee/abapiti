@@ -54,3 +54,20 @@ func TestQuotedConstants(t *testing.T) {
 		t.Fatal(d.Facts("ok"))
 	}
 }
+
+func TestZeroArityAndShorterProof(t *testing.T) {
+	d, r, e := Parse(`(fact ready)
+ (rule long 10 (head (middle a)) (base (ready)))
+ (rule longer 9 (head (seed a)) (base (middle a)))
+ (rule short 0 (head (seed a)) (base (ready)))
+ (rule bounded 0 (head (answer)) (base (seed a)) (bound depth 2))`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = Evaluate(d, r); e != nil {
+		t.Fatal(e)
+	}
+	if !d.Has("ready") || !d.Has("answer") {
+		t.Fatal("zero arity or minimum depth lost")
+	}
+}

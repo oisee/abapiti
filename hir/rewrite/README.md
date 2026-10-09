@@ -1,6 +1,8 @@
-# Grace v2 — rewrite rules over abapiti's HIR (draft spec, dell, 2026-10-09)
+# Grace v2 — rules over abapiti's HIR
 
-Owner: dell (with executors). Customer and reviewer: abapiti. Home: package `hir/rewrite` in oisee/abapiti (branch, not main, until reviewed).
+Adapted from the Grace v2 design draft (2026-10-09). Reviewer: abapiti.
+Home: package `hir/rewrite` in oisee/abapiti, branch `proto/grace-v2`.
+Milestone 1 implements the fact layer; the rewrite layer below is future scope.
 
 ## Purpose
 
@@ -122,8 +124,8 @@ for the receiver. `new` records class allocations. Interfaces enter through
 `implements` and virtual receiver types; abstract method bodies are not analysed.
 `final` means a closed-world leaf, since HIR has no final/sealed declaration flag.
 
-Support relations (`concrete`, `defined`, `dispatch`, `site_type`, `narrowed`,
-`exact_receiver`, `expr`, `flow`, `argument`, `sink`, `fresh`, `mutation`,
+Support relations (`concrete`, `defined`, `dispatch`, `interface_subtype`, `site_type`, `narrowed`,
+`exact_receiver`, `expr`, `flow`, `alias`, `argument`, `sink`, `fresh`, `mutation`,
 `static_origin`, `field_origin`, `site_method`, `runtime_mutates`, `raises`,
 `unknown_effect`, `implicit_init`, `flag_init`, `memo_shape`, `counter_shape`,
 `noncounter_write`) describe HIR identities, shapes and effects. The seven
@@ -131,7 +133,8 @@ requested derived relations are evaluated from the embedded `.grace` rules.
 `flow(M,destination,source)` tracks possible value dependence for escape/alias
 analysis. It deliberately overapproximates dependencies of expressions.
 
-Receivers use concrete descendants/implementors and nearest inherited method
+Receivers include structural interface-to-interface compatibility, as in Verify,
+concrete descendants/implementors and nearest inherited method
 implementations. Immutable locals initialised from `new`, immutable aliases,
 checked views and conditional unions narrow the candidate classes. Any local
 name assigned elsewhere in the method disables that narrowing (including loops
@@ -155,6 +158,7 @@ cycles are supported. Throwing and divergence are independent of effect purity;
 `pure` is not a claim that memoisation or parallel execution is safe. Constructors
 writing their own fields are conservatively impure in this milestone.
 
+Reference binding aliases share escape status in both directions.
 Escapes propagate backwards through assignments/value dependencies and across
 arguments to escaping callee parameters, including `this`. Stores, returns,
 throws and mutating/unknown runtime arguments are conservative sinks. Reads of
@@ -186,7 +190,7 @@ GRACE_FACTS_OUT=/tmp/lexer.facts go test ./tsfront -run '^TestLexerFactsReport$'
 
 The helper shares the existing lexer closure lowering and checks the 44-case
 oracle corpus. Its golden is `tsfront/testdata/lexer.facts.golden`; tests never
-rewrite it. The report includes all nonempty fact counts, may-throw/pure sets,
+rewrite it. The report includes base/derived counts (including zeros) and nonempty support relation counts, may-throw/pure sets,
 receiver classes for every virtual site (including empty sets), and static writes
 by method and class. Write totals count distinct `(method,class,field)` tuples,
 not dynamic events or individual store sites. A field may therefore have more

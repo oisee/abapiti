@@ -73,6 +73,13 @@ func Extract(p *hir.Program) *DB {
 	for _, c := range p.Classes {
 		x.classes[c.Name] = c
 	}
+	for _, a := range p.Interfaces {
+		for _, b := range p.Interfaces {
+			if interfaceAccepts(a, b) {
+				x.add("interface_subtype", a.Name, b.Name)
+			}
+		}
+	}
 	for _, c := range p.Classes {
 		x.add("class", c.Name)
 		if !c.Abstract {
@@ -263,6 +270,12 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("calls", x.method, target, path)
 		} else {
 			x.add("unknown_effect", x.method)
+			for i := range e.Args {
+				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
+			}
+			if ids[0] != "" {
+				x.add("sink", x.method, ids[0])
+			}
 			x.add("raises", x.method, path)
 		}
 		if e.X != nil {
@@ -288,6 +301,9 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("runtime_mutates", e.Op, strconv.FormatBool(spec.Mutates))
 		}
 		if spec.Mutates {
+			if e.Type.IsRef() {
+				x.add("alias", x.method, path, ids[0])
+			}
 			x.add("mutation", x.method, ids[0])
 			for i := range e.Args {
 				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
@@ -308,8 +324,14 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("raises", x.method, path)
 		}
 	case hir.Cast, hir.CheckedNumericConvert:
+		if e.Kind == hir.Cast {
+			x.add("alias", x.method, path, ids[0])
+		}
 		x.add("raises", x.method, path)
 	case hir.Narrow:
+		if e.Type.IsRef() {
+			x.add("alias", x.method, path, ids[0])
+		}
 		if e.Type.IsRef() && e.X != nil && !e.Type.Equal(e.X.Type) {
 			x.add("raises", x.method, path)
 		}
@@ -350,6 +372,9 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 		if id != "" {
 			x.add("assign", x.method, b.id, id)
 			x.add("flow", x.method, b.id, id)
+			if referenceType(s.Type) {
+				x.add("alias", x.method, b.id, id)
+			}
 		}
 		if b.fresh {
 			x.add("fresh", x.method, b.id)
@@ -364,6 +389,9 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 		case hir.Local:
 			x.add("assign", x.method, a, b)
 			x.add("flow", x.method, a, b)
+			if referenceType(s.X.Type) {
+				x.add("alias", x.method, a, b)
+			}
 		case hir.StaticGet:
 			owner := x.fieldOwner(s.X.Owner, s.X.Name)
 			x.add("writes_static", x.method, owner, s.X.Name)
@@ -411,4 +439,36 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 		x.add("local", x.method, id, s.Type.String())
 	}
 	x.stmt(s.Else, path+"/else", catchEnv)
+}
+
+// Interface-to-interface assignment is structural in hir.Verify.
+func interfaceAccepts(src, dst *hir.Interface) bool {
+	for _, want := range dst.Methods {
+		found := false
+		for _, got := range src.Methods {
+			if got.Name != want.Name || !got.Result.Equal(want.Result) || len(got.Params) != len(want.Params) {
+				continue
+			}
+			match := true
+			for i, p := range want.Params {
+				if p.Name != got.Params[i].Name || !p.Type.Equal(got.Params[i].Type) {
+					match = false
+				}
+			}
+			if match {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func referenceType(t hir.Type) bool {
+	if t.Kind == hir.Optional && len(t.Args) == 1 {
+		return referenceType(t.Args[0])
+	}
+	return t.IsRef()
 }

@@ -11,7 +11,19 @@ import (
 func Report(d *DB) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "fact counts")
+	predicates := map[string]bool{}
+	for _, p := range strings.Fields("class extends implements method static final calls virtual_call new reads_field writes_field reads_static writes_static throws trap try local assign returns param runtime_op receivers may_throw pure escapes writes_static_transitive memo_store lazy_init counter_store") {
+		predicates[p] = true
+	}
 	for _, p := range d.Predicates() {
+		predicates[p] = true
+	}
+	var ordered []string
+	for p := range predicates {
+		ordered = append(ordered, p)
+	}
+	sort.Strings(ordered)
+	for _, p := range ordered {
 		fmt.Fprintf(&b, "  %s %d\n", p, d.Count(p))
 	}
 	for _, p := range []string{"may_throw", "pure"} {
