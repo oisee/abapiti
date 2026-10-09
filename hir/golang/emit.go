@@ -563,13 +563,22 @@ func (b *body) expr(x *hir.Expr) string {
 			e.unsupported(x.Node, "Number remainder")
 		}
 		if t.Kind == hir.I32 || t.Kind == hir.I64 {
-			code = fmt.Sprintf("%s(integerArithmetic(int64(%s),int64(%s),%q,%t,%d))", e.typ(t), a, v, x.Op, x.CheckIntegerOverflow, integerBits(t))
+			if t.Kind == hir.I32 && (x.Op == "+" || x.Op == "-" || x.Op == "*") {
+				// int64 holds every exact result of these operations on int32 inputs.
+				code = fmt.Sprintf("checkedI32(int64(%s) %s int64(%s))", a, x.Op, v)
+			} else {
+				code = fmt.Sprintf("%s(integerArithmetic(int64(%s),int64(%s),%q,%t,%d))", e.typ(t), a, v, x.Op, x.CheckIntegerOverflow, integerBits(t))
+			}
 		}
 	case hir.Unary:
 		a := b.expr(x.X)
 		code = x.Op + a
 		if t.Kind == hir.I32 || t.Kind == hir.I64 {
-			code = fmt.Sprintf("%s(integerArithmetic(0,int64(%s),%q,%t,%d))", e.typ(t), a, "-", x.CheckIntegerOverflow, integerBits(t))
+			if t.Kind == hir.I32 {
+				code = "checkedI32(-int64(" + a + "))"
+			} else {
+				code = fmt.Sprintf("%s(integerArithmetic(0,int64(%s),%q,%t,%d))", e.typ(t), a, "-", x.CheckIntegerOverflow, integerBits(t))
+			}
 		} else if t.Kind == hir.Number && x.Op == "-" {
 			code = "finite(" + code + ")"
 		}
