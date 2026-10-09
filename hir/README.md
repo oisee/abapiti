@@ -77,7 +77,10 @@ corpus through the v750 syntax gate and both osgo and OSG-JS, requiring all six
 rows to pass. The default corpus must contain inline DATA and IS INSTANCE OF.
 Both runtimes use the same default ABAP 7.50 output, including scalar VALUE
 initializers and IS BOUND guards before IS INSTANCE OF. The osgo CI pin is
-`7e7294323fd380859a71552b18b39ddffde93c69`, which supports these constructs
+`73351d09c77968ebf4f14f83c0df9cd9772f9288` (it adds decode_base64 #680,
+string→int8 #693, round caches #694, `where` positions #695 and the
+APPEND LINES/DELETE fix #697 to the earlier
+`7e7294323fd380859a71552b18b39ddffde93c69`), which supports these constructs
 and mode keywords inside literals, with fixes for per-session statics (029),
 UTF-16 length/sections and their memoization (026/031), the core read_int4 pin,
 and IS INSTANCE OF dependency closure (034).
