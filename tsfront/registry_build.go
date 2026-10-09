@@ -309,6 +309,24 @@ func (r *RegistryLowering) Emit() (map[string]string, *hir.Names, error) {
 	return emitted, names, nil
 }
 
+// LiveSpans counts the recorded function spans and those the deployment,
+// negative or observation workloads executed (schema 2; schema 1: Executed).
+func (r *Reachability) LiveSpans() (live, total int) {
+	for _, span := range r.Spans {
+		ok := span.Executed
+		if r.Schema == 2 {
+			ok = false
+			for _, w := range span.Workloads {
+				ok = ok || w == "DEPLOYMENT" || w == "NEGATIVE" || w == "OBSERVATION"
+			}
+		}
+		if ok {
+			live++
+		}
+	}
+	return live, len(r.Spans)
+}
+
 // ReadRegistryInputs reads the run driver's inputs: files under inputDir,
 // then dependencies under depsDir, each set in path order.
 func ReadRegistryInputs(inputDir, depsDir string) ([]RegistryFile, error) {

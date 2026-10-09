@@ -3,6 +3,7 @@
 //	abapiti compile wasm <in.wasm> [--class zcl_x] [-o dir]
 //	abapiti compile llvm <in.ll|in.c> [--class zcl_x] [-o file] [--zip]
 //	abapiti compile ts   <in.ts> [--prefix zcl_] [-o dir]
+//	abapiti abaplint [abaplint-checkout] -o dir [--target all|a4h|osg|native]
 //	abapiti <in.wasm>    shortcut for "compile wasm"
 package main
 
