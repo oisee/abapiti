@@ -92,3 +92,53 @@ go tool pprof -top -alloc_space /tmp/lexer.alloc
 ```
 
 For longer CPU profiles, pass 1000 instead of 100. This session's baseline profiles are `/tmp/hir-before.cpu` and `/tmp/hir-before-sampled.alloc`; each step's profiles are `/tmp/hir-stepN.cpu` and `/tmp/hir-stepN.alloc` (step 3 uses `step3b`); final longer profiles are `/tmp/hir-step13-long.cpu` and `/tmp/hir-final-400.cpu`. Generated binaries were kept under `/tmp/hir-stepN` for inspecting symbols. Profiling instrumentation is opt-in and does not change default timing.
+
+## Round 4 (starting at 5460973)
+
+No fuzz harness, no emitter inliner, no push. Guard for every retained step:
+`GOCACHE=/tmp/abapiti-go-cache GOFLAGS=-buildvcs=false go test ./hir/... ./tsfront/... -count=1`.
+This runs the existing 44-case Node differential and mutation check, registry
+oracles, catalogue and semantic edges. No skips in the baseline guard.
+Timings use `tools/lexer-go-timing.mjs 100`, sequentially after the guards finish;
+30 warmups/file, compilation/startup excluded. Triples are wasm_compiler /
+bench_mem / abapgit, milliseconds/run. GOGC unset for default.
+
+| Step | Default Go | GOGC=400 Go | Default Node | GOGC=400 Node |
+|---|---|---|---|---|
+| Fresh baseline, PGO off | .580 / .599 / .160 | .583 / .562 / .173 | .319 / .311 / .111 | .330 / .303 / .128 |
+| R4.1 PGO baseline | .534 / .538 / .167 | .561 / .494 / .148 | .320 / .306 / .109 | .348 / .328 / .115 |
+
+R4.1 stores the 1,000-run benchmark CPU profile as
+`hir/golang/testdata/lexer/default.pgo`. Only the concrete lexer timing build
+uses it by default; arbitrary HIR programs do not inherit lexer training.
+`ABAPITI_GO_LEXER_PGO=off` disables it; an absolute profile path overrides it.
+`ABAPITI_GO_LEXER_SOURCE=/tmp/round4-source` preserves generated source for
+compiler diagnostics. Initial PGO timings overlapped the guard and were
+rejected; the table is the isolated remeasurement.
+
+Before emitter edits, compiled the saved module using
+`go build -pgo=/tmp/round4-baseline.cpu -gcflags='-m=2 -d=ssa/check_bce'`.
+PGO allows currentChar/nextChar/nextNextChar/charCodeAt and Number Set.has
+(costs 390/342/342/319/252) to inline. Lexer.process and Lexer.add remain
+non-inlineable (costs 14200/11145 > PGO budget 2000). Concrete leaf receivers
+already dispatch directly; polymorphic token receivers retain interfaces.
+Remaining slice checks occur at stream charCodeAt calls (generated lines
+4978/5024/5087/5143/5199/5255), substring/charAt, and runtime casing loops.
+No emitter inlining pass will be added. The future general `hir.Inline(p)` is
+reserved for integration after rebasing onto Alice's main.
+
+Baseline CPU: Lexer.process 8.11% flat, Lexer.add 7.03%, floatByte 4.86%,
+charCodeAt 4.86%, initialization guard 3.78%, upper 2.16% flat / 8.11% cumulative.
+Baseline allocations (1,030 invocations/file): Identifier 32.61%, array.push
+29.76%, Position 18.29%, other token constructor 7.26%, casing storage 3.77%.
+These confirm the ranked candidates, with allocation costs still substantial.
+PGO and Go compiler indexing/loop changes are Go-only. Immutable membership
+recognition and lifetime/capacity proofs could become general HIR rewrites and
+benefit ABAP; this round will keep any backend representation changes in Go.
+The report's previous round's 'target met' referred to its <2x target, not
+beating Node; round 4's goal is Go/Node <1.
+
+This installation lacks a prebuilt pprof tool; use
+`GOCACHE=/tmp/abapiti-go-cache go run /usr/lib/go/src/cmd/pprof ...`.
+Baseline profiles and compiler log: `/tmp/round4-baseline.cpu`,
+`/tmp/round4-baseline.alloc`, `/tmp/round4-diag.log`.
