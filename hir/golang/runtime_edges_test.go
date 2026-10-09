@@ -17,6 +17,8 @@ func TestSubsetAndRegexpEdges(t *testing.T) {
  check(str("ßﬃ").upper()==str("SSFFI"))
  check(str("ΟΣ ΟΣΑ İ").lower()==str("ος οσα i\u0307"))
  lone:=unit(0xd800);check(lone.upper()==lone && lone.lower()==lone)
+ section:=str("a😀z").substring(1,3);check(section.charCodeAt(0)==0xd83d && section.charCodeAt(1)==0xde00)
+ fault(func(){section.charCodeAt(-1)});fault(func(){section.charCodeAt(2)});fault(func(){str("").charCodeAt(0)})
  check(str("😀x").split(str("")).Items[0]==unit(0xd83d))
  check(str("😀x").replaceAll(unit(0xde00),str("z"))==unit(0xd83d)+str("zx"))
  check(str("\ufeff\u2007 -12x").parseInt10().Value == -12)
