@@ -2,7 +2,8 @@
 
 Adapted from the Grace design draft (2026-10-09). Reviewer: abapiti.
 Home: package `hir/rewrite` in oisee/abapiti, branch `proto/grace-v2`.
-Milestone 1 implements the fact layer; the rewrite layer below is future scope.
+Milestones 1 and 2 implement the fact layer and the bounded rewrite layer,
+including the Grace inliner. Backend integration remains separate.
 
 ## Purpose
 
@@ -78,10 +79,10 @@ E-graphs and per-target cost extraction (only when rules start to conflict); ISL
 
 ## Milestone 1 implementation contract
 
-This package is read-only: it verifies its input, extracts facts and evaluates
-rules. No actions, invalidation, backend integration or oracle changes exist yet.
-The design above describes later milestones as well as this one. All source and
-rules here are fresh; MinZ's Grace, Datalog and ISLE supplied syntax ideas only.
+`Analyze`, `Extract`, `Evaluate` and `Report` remain read-only. Milestone 2 adds
+mutation through `Rewrite` and `Inline`, as described below. All engine source
+and rules here are fresh; MinZ's Grace, Datalog and ISLE supplied syntax ideas
+only. The reference inliner is relocated exclusively into test support.
 
 The public entry points are `Parse`, `Evaluate`, `NewDB`, and (with extraction)
 `Analyze` and `Report`. The package uses only HIR and the Go standard library.
@@ -195,7 +196,8 @@ receiver classes for every virtual site (including empty sets), and static write
 by method and class. Write totals count distinct `(method,class,field)` tuples,
 not dynamic events or individual store sites. A field may therefore have more
 than one classification across methods. The original lexer differential and
-backend goldens remain unchanged; no rewrite requires new oracle runs yet.
+backend goldens remain unchanged. The milestone 2 test also compares independent
+HIR copies with the pinned reference inliner before reporting the original facts.
 
 ### Open HIR interface questions for abapiti
 
@@ -204,3 +206,106 @@ backend goldens remain unchanged; no rewrite requires new oracle runs yet.
 - Can HIR expose stable scoped local/site identities and resolved inherited declaration owners?
 - Should implicit class-constructor edges and initialisation order be represented in HIR?
 - What purity contract should fresh-object construction, static reads, throws and divergence use?
+
+## Milestone 2 rewrite contract
+
+`Rewrite(program, rules, Limits)` mutates verified HIR and returns `Stats` plus
+an error. `Inline(program)` parses the embedded `rules/inline.grace` and invokes
+that runner. `Stats.CallSites` and `Stats.Callees` match the reference's total
+and `Class.method` counters; `Stats.Rounds` also records verified rounds.
+
+```lisp
+(grace small-instance-method 10
+  (match (node ?site virtual))
+  (where (inline_allowed ?site ?callee))
+  (action (inline ?site))
+  (bound depth 64))
+```
+
+A match is `(node site kind)` over structural expression sites. Statement kinds
+are also available as `node` facts for guards, and the inline shape facts cover
+structured bodies, nested blocks/Ifs and Seq statements. `where` is a conjunction
+of positive or negated facts. Guards and action operands are range restricted.
+`le`, `neq` and `contains` are reserved, two-argument comparisons, evaluated after
+positive joins; unknown/non-numeric operands cannot prove a numeric guard.
+Priorities descend; declaration order breaks ties. A node takes the first
+successful action, and replacements are never traversed again in that round.
+
+`inline(site)` supports statically class-typed virtual calls, and void calls in
+expression-statement position. Its primitive resolves the existing `dispatch`
+fact, builds a return template, binds receiver then arguments once, and copies
+with fresh scoped names. It substitutes matching literal arguments only for
+never-assigned parameters, and substitutes `this` only for the declaring class.
+It does not impose purity. Selection policy is in Grace: virtual instance body,
+12-statement limit, excluded statement/expression kinds, variadic/constructor/
+checker-variant exclusions, exact arity, closed-world override tests, and
+candidate-call-cycle exclusion. This deliberately uses static-class dispatch;
+`receivers` narrowing and `pure` would change the reference's criteria.
+
+`replace(node, expr)` takes an expression site as its second operand. Currently
+both expressions must be same-typed literals, locals or `this`; effects cannot
+be dropped, duplicated or moved. Richer expression constructors and effect
+proofs can extend this primitive later. No backend changes are made.
+
+Round inputs are snapshotted. Operands are visited X/Y/Z/Args/Seq, statements
+X/Y/Body/Else/List, and methods in program order (constructors first). When an
+inline action needs a template, the callee's original nodes are visited first.
+Each method is visited once per round. This reproduces the reference's naming
+and call-site order without visiting generated nodes. Rule depth bounds count
+callee-chain edges: depth 0 prevents rewriting; 64 is the embedded rule's bound.
+Candidate cycles are rejected rather than unrolled, exactly as in the oracle.
+
+Zero-valued `Limits` choose one round, 100,000 added nodes per method and
+1,000,000 per program. Growth counts statements plus expressions, charging only
+positive growth, across all rounds. A budget-rejected expansion consumes no
+serial number or call-site counter. User limits must be nonnegative. Every round
+runs `hir.Verify`. Its snapshot tables are discarded wholesale, invalidating
+rewritten regions and all transitive dependencies; subsequent rounds rebuild
+facts and derived tables. A round without actions terminates the run early.
+These safety limits can intentionally differ from the unbounded reference on
+larger inputs; the checked fixtures do not reach them.
+
+### Oracle and reproducibility
+
+`internal/inlineoracle` pins `hir/inline.go` from `origin/wip/hir-inline` at
+`1f84049419b22f062573ebbe7f30c48cfcecfae2`. Only the package, HIR import and private
+class-constructor constant are mechanically adapted. Only tests import it;
+production rewrite code has no oracle dependency. Its README records the source
+SHA-256. Each comparison makes two type-preserving copies, compares `hir.Dump`
+byte for byte and compares total/per-callee `InlineStats`. Failures print the
+first differing line or stats. No golden or production HIR is replaced.
+
+The lexer fact-report fixture and all seven registry emission fixtures perform
+this comparison. JSON/XML do it before their existing external-corpus emission
+skips; singleton sources are pinned locally with hashes so the default test run
+covers their HIR too. The original ABAP/Go differential tests and goldens are
+unchanged. Focused oracle cases cover recursive and mutually recursive calls,
+checker variants, descendant overrides, size limits, guarded returns, void
+bodies, shadowing, Seq scopes, parameter assignment and fresh-name collisions.
+Runner tests cover budgets, depth, priority/ties and same-round exclusion.
+
+```sh
+go test ./hir/... ./tsfront/...
+go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
+go test ./hir/rewrite -run 'TestInline|TestReplaceRoundSnapshot' -v
+```
+
+The fixtures are byte-identical, with identical total and per-callee counters:
+lexer 61; registry arrays 2, features 0, iterators 7, JSON 0, singletons 0,
+sorts 10, XML 1. The lexer corpus still contains 44 cases.
+
+### Size and language boundary
+
+Physical line counts (including comments/blanks, excluding tests and the oracle):
+rewrite runner 366 Go lines, inline action/return lowering 411, inline facts 103,
+and inline rules 66: 946 lines for the new runner/action/facts/rules files.
+The full package is 2,144 Go lines plus 127 Grace lines, including milestone 1.
+The pinned original inliner is 743 lines and is counted separately.
+
+No reference selection criterion is omitted. Return-template feasibility is a
+native shape fact (`inline_template`), and template lowering, effect bindings,
+hygienic naming and scoped copying are implemented by the native `inline`
+action. The tuple language cannot itself construct AST lists, lower early
+returns to Conditional/Seq, or carry lexical renaming environments. Expressing
+those operations entirely in Grace would require AST constructors and recursive
+sequence/scoping patterns beyond this milestone's action primitive.

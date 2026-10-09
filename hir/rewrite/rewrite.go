@@ -130,6 +130,7 @@ type runner struct {
 	nodes          map[string]rewriteNode
 	ids            map[*hir.Expr]string
 	methods        map[*hir.Method]string
+	byID           map[string]*hir.Method
 	done           map[*hir.Method]bool
 	growth         map[*hir.Method]int
 	total, changed int
@@ -201,6 +202,9 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 func (r *runner) validate() error {
 	for _, rr := range r.rules.rewrites {
 		for _, a := range append([]atom{rr.match}, rr.where...) {
+			if comparison(a.pred) && len(a.args) != 2 {
+				return fmt.Errorf("%s needs two terms", a.pred)
+			}
 			if t := r.db.tables[a.pred]; t != nil && len(t.index) != len(a.args) {
 				return fmt.Errorf("%s: inconsistent arity", a.pred)
 			}
@@ -212,6 +216,7 @@ func (r *runner) index() {
 	r.nodes = map[string]rewriteNode{}
 	r.ids = map[*hir.Expr]string{}
 	r.methods = map[*hir.Method]string{}
+	r.byID = map[string]*hir.Method{}
 	for _, c := range r.p.Classes {
 		ms := append([]*hir.Method{}, c.Methods...)
 		if c.Ctor != nil {
@@ -224,6 +229,7 @@ func (r *runner) index() {
 			}
 			id := methodID(c.Name, name)
 			r.methods[m] = id
+			r.byID[id] = m
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, path string) {
 				r.nodes[path] = rewriteNode{path, nil, s, m}
 				r.db.Add("node", path, string(s.Kind))
@@ -344,7 +350,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 				copy := *target
 				out = &copy
 			case "inline":
-				out, stmt = r.inline.expand(e, s, m, depth, rr.bound)
+				out, stmt = r.inline.expand(e, s, m, depth)
 			}
 			if out == nil && stmt == nil {
 				continue

@@ -71,3 +71,18 @@ func TestZeroArityAndShorterProof(t *testing.T) {
 		t.Fatal("zero arity or minimum depth lost")
 	}
 }
+
+func TestComparisonGuards(t *testing.T) {
+	db, rs, err := Parse(`
+  (fact size small 3) (fact size big 13) (fact size unknown "?")
+  (rule large 0 (head (large ?m)) (base (size ?m ?n) (not (le ?n 12))))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = Evaluate(db, rs); err != nil {
+		t.Fatal(err)
+	}
+	if !db.Has("large", "big") || db.Count("large") != 1 {
+		t.Fatal(db.Facts("large"))
+	}
+}

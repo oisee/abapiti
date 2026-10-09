@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir/rewrite"
+	"github.com/oisee/abapiti/internal/inlineoracle"
 )
 
 // TestLexerFactsReport shares the exact lowering closure used by the lexer
@@ -25,6 +26,7 @@ func TestLexerFactsReport(t *testing.T) {
 	if len(corpus) != 44 {
 		t.Fatalf("corpus cardinality: %d", len(corpus))
 	}
+	inlineoracle.Check(t, p)
 	db, err := rewrite.Analyze(p)
 	if err != nil {
 		t.Fatal(err)

@@ -17,6 +17,9 @@ func Evaluate(db *DB, rules *Rules) error {
 		levels[p] = 0
 	}
 	for _, c := range rules.clauses {
+		if comparison(c.head.pred) {
+			return fmt.Errorf("%s: comparison in head", c.name)
+		}
 		bound := map[string]bool{}
 		for _, a := range c.body {
 			if !a.negative && !comparison(a.pred) {
@@ -28,6 +31,9 @@ func Evaluate(db *DB, rules *Rules) error {
 			}
 		}
 		for _, a := range append([]atom{c.head}, c.body...) {
+			if comparison(a.pred) && len(a.args) != 2 {
+				return fmt.Errorf("%s needs two terms", a.pred)
+			}
 			if n, ok := arity[a.pred]; ok && n != len(a.args) {
 				return fmt.Errorf("%s: inconsistent arity", a.pred)
 			}
@@ -229,13 +235,24 @@ func compare(a atom, env map[string]string) bool {
 			return false
 		}
 	}
-	if a.pred == "contains" {
-		return strings.Contains(v[0], v[1])
+	var result bool
+	switch a.pred {
+	case "contains":
+		result = strings.Contains(v[0], v[1])
+	case "neq":
+		result = v[0] != v[1]
+	case "le":
+		x, e := strconv.Atoi(v[0])
+		y, f := strconv.Atoi(v[1])
+		if e != nil || f != nil {
+			return false
+		}
+		result = x <= y
+	default:
+		return false
 	}
-	if a.pred == "neq" {
-		return v[0] != v[1]
+	if a.negative {
+		result = !result
 	}
-	x, e := strconv.Atoi(v[0])
-	y, f := strconv.Atoi(v[1])
-	return e == nil && f == nil && x <= y
+	return result
 }

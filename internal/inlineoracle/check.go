@@ -37,7 +37,7 @@ func Check(t *testing.T, p *hir.Program) {
 	if want != got {
 		a, b := strings.Split(want, "\n"), strings.Split(got, "\n")
 		for i := 0; i < len(a) || i < len(b); i++ {
-			var x, y string
+			x, y := "<end of dump>", "<end of dump>"
 			if i < len(a) {
 				x = a[i]
 			}

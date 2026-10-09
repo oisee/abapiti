@@ -49,22 +49,26 @@ func newInlineAction(r *runner) *inlineAction {
 		a.prefix = "x" + a.prefix
 	}
 }
-func (a *inlineAction) expand(call *hir.Expr, statement *hir.Stmt, caller *hir.Method, depth, bound int) (*hir.Expr, *hir.Stmt) {
-	rows := a.r.db.Facts("inline_allowed")
-	var callee *hir.Method
-	for _, row := range rows {
-		if row[0] == a.r.ids[call] {
-			for m, id := range a.r.methods {
-				if id == row[1] {
-					callee = m
-					break
-				}
-			}
-			break
-		}
-	}
-	if callee == nil {
+func (a *inlineAction) expand(call *hir.Expr, statement *hir.Stmt, caller *hir.Method, depth int) (*hir.Expr, *hir.Stmt) {
+	if call.Kind != hir.VirtualCall || call.X == nil || call.X.Type.Kind != hir.ClassRef {
 		return nil, nil
+	}
+	var callee *hir.Method
+	lookup := atom{pred: "dispatch", args: []term{{value: call.X.Type.Name}, {value: call.Name}, {wild: true}}}
+	for _, row := range candidates(a.r.db, lookup, nil) {
+		if _, ok := matches(lookup, row, nil); !ok {
+			continue
+		}
+		callee = a.r.byID[row.args[2]]
+		break
+	}
+	if callee == nil || len(call.Args) != len(callee.Params) {
+		return nil, nil
+	}
+	for _, p := range callee.Params {
+		if p.Variadic {
+			return nil, nil
+		}
 	}
 	if !a.prepared[callee] {
 		a.prepared[callee] = true

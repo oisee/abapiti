@@ -10,13 +10,14 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/inlineoracle"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 func TestEmitRegistrySingletons(t *testing.T) {
 	root := os.Getenv("REGISTRY_CLOSURE")
 	if root == "" {
-		t.Skip("REGISTRY_CLOSURE required")
+		root = "testdata/registrysingletons"
 	}
 	dir := t.TempDir()
 	names := []string{"_abstract_type", "cgeneric_type", "clike_type", "pgeneric_type", "simple_type", "xgeneric_type"}
@@ -57,6 +58,7 @@ func TestEmitRegistrySingletons(t *testing.T) {
 	if errors := hir.Verify(prog); len(errors) > 0 {
 		t.Fatal(errors, hir.Dump(prog))
 	}
+	inlineoracle.Check(t, prog)
 	emitted, abapNames, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)
