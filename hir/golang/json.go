@@ -8,7 +8,7 @@ type jsonParser struct {
 }
 
 func jsonFail()             { panic(trap{Source: "input is outside the supported strict JSON subset"}) }
-func unit(c int32) jsString { b := []byte{byte(c), byte(c >> 8)}; return jsString(b) }
+func unit(c int32) jsString { b := []byte{byte(c), byte(c >> 8)}; return fromUTF16(string(b)) }
 func (p *jsonParser) peek() int32 {
 	if p.cursor >= p.input.length() {
 		return -1
@@ -43,24 +43,24 @@ func (p *jsonParser) text() jsString {
 			jsonFail()
 		}
 		if c != 92 {
-			out += unit(c)
+			out = out.concat(unit(c))
 			continue
 		}
 		c = p.peek()
 		p.cursor++
 		switch c {
 		case 34, 92, 47:
-			out += unit(c)
+			out = out.concat(unit(c))
 		case 98:
-			out += unit(8)
+			out = out.concat(unit(8))
 		case 102:
-			out += unit(12)
+			out = out.concat(unit(12))
 		case 110:
-			out += unit(10)
+			out = out.concat(unit(10))
 		case 114:
-			out += unit(13)
+			out = out.concat(unit(13))
 		case 116:
-			out += unit(9)
+			out = out.concat(unit(9))
 		case 117:
 			v := int32(0)
 			for j := 0; j < 4; j++ {
@@ -80,7 +80,7 @@ func (p *jsonParser) text() jsString {
 				}
 				v = v*16 + digit
 			}
-			out += unit(v)
+			out = out.concat(unit(v))
 		default:
 			jsonFail()
 		}
@@ -177,7 +177,7 @@ func (p *jsonParser) value() *dynamic {
 				p.cursor++
 			}
 		}
-		v, err := strconv.ParseFloat(p.input[2*start:2*p.cursor].String(), 64)
+		v, err := strconv.ParseFloat(p.input.substring(start,p.cursor).String(), 64)
 		if err != nil {
 			jsonFail()
 		}
