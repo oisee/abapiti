@@ -29,7 +29,9 @@ func TestReferenceSemantics(t *testing.T) {
 		Equal(t, got, want)
 	}
 	base, _, _ := rewrite.Parse(`(fact x a)`)
-	if _, _, e := Reference(base, `(rule x 0 (head (y ?a)) (base (x ?a)))`, 0); e == nil {
-		t.Fatal("step cap ignored")
+	for name, ref := range map[string]func(*rewrite.DB, string, int) (*rewrite.DB, int, error){"Cartesian": Reference, "hashed": ReferenceFull} {
+		if _, _, e := ref(base, `(rule x 0 (head (y ?a)) (base (x ?a)))`, 0); e == nil {
+			t.Fatalf("%s step cap ignored", name)
+		}
 	}
 }

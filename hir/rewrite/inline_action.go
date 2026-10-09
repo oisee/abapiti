@@ -322,6 +322,9 @@ func returnShape(s *hir.Stmt) (any, all bool) {
 }
 func (b returnLowering) flat(s *hir.Stmt) bool {
 	for _, v := range statementList(s) {
+		if v == nil {
+			return false
+		}
 		if v.Kind == hir.VarDecl && b.declarations[v.Name] != 1 {
 			return false
 		}
@@ -341,6 +344,9 @@ func (b returnLowering) lower(list []*hir.Stmt) (*hir.Expr, []*hir.Stmt, bool) {
 	var pre []*hir.Stmt
 	void := b.result.Kind == hir.Void
 	for i, s := range list {
+		if s == nil {
+			return nil, nil, false
+		}
 		rest := list[i+1:]
 		switch s.Kind {
 		case hir.Return:

@@ -3,31 +3,19 @@
 package inlineoracle
 
 import (
-	"bytes"
-	"encoding/gob"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/rewrite"
+	"github.com/oisee/abapiti/internal/hirclone"
 )
 
 // Check compares independent copies, leaving the lowering fixture unchanged.
 func Check(t *testing.T, p *hir.Program) {
 	t.Helper()
-	clone := func() *hir.Program {
-		var data bytes.Buffer
-		if err := gob.NewEncoder(&data).Encode(p); err != nil {
-			t.Fatal(err)
-		}
-		var q hir.Program
-		if err := gob.NewDecoder(&data).Decode(&q); err != nil {
-			t.Fatal(err)
-		}
-		return &q
-	}
-	reference, grace := clone(), clone()
+	reference, grace := hirclone.Clone(p), hirclone.Clone(p)
 	count, callees := InlineStats(reference)
 	stats, err := rewrite.Inline(grace)
 	if err != nil {

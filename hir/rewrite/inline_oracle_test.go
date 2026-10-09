@@ -182,3 +182,31 @@ func TestInlineOracleNamesFollowDeclarationOrder(t *testing.T) {
 		t.Fatal("fixture no longer demonstrates pinned traversal naming; revisit determinism contract")
 	}
 }
+
+// Verified HIR can contain nil block entries. Template extraction visits even
+// large methods which the pinned inliner rejects before building a template.
+func TestInlineFactsNilStatementInRejectedMethod(t *testing.T) {
+	i := hir.T(hir.I32)
+	ret := func() *hir.Stmt { return &hir.Stmt{Kind: hir.Return, X: hir.L(i, 1)} }
+	for _, body := range []*hir.Stmt{
+		hir.B(nil, ret()),
+		hir.B(&hir.Stmt{Kind: hir.If, X: hir.L(hir.T(hir.Bool), true), Body: hir.B(ret()), Else: hir.B(nil)}, ret()),
+	} {
+		// Force the oracle's size rejection while preserving the problematic shape.
+		for n := 0; n < 13; n++ {
+			body.List = append(body.List, &hir.Stmt{Kind: hir.ExprStmt, X: hir.L(i, n)})
+		}
+		p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{{Name: "large", Virtual: true, Result: i, Body: body}}}}}
+		if errs := hir.Verify(p); len(errs) != 0 {
+			t.Fatal(errs)
+		}
+		before := hir.Dump(p)
+		if _, err := rewrite.ExtractRewriteFacts(p); err != nil {
+			t.Fatal(err)
+		}
+		if hir.Dump(p) != before {
+			t.Fatal("template extraction changed HIR")
+		}
+		inlineoracle.Check(t, p)
+	}
+}

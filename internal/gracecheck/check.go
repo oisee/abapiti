@@ -1,8 +1,6 @@
 package gracecheck
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"math/rand"
 	"os"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/rewrite"
+	"github.com/oisee/abapiti/internal/hirclone"
 	"github.com/oisee/abapiti/internal/inlineoracle"
 )
 
@@ -31,15 +30,7 @@ func Source(t *testing.T, name string) string {
 }
 func Clone(t *testing.T, p *hir.Program) *hir.Program {
 	t.Helper()
-	var b bytes.Buffer
-	if e := gob.NewEncoder(&b).Encode(p); e != nil {
-		t.Fatal(e)
-	}
-	var q hir.Program
-	if e := gob.NewDecoder(&b).Decode(&q); e != nil {
-		t.Fatal(e)
-	}
-	return &q
+	return hirclone.Clone(p)
 }
 func Equal(t *testing.T, a, b *rewrite.DB) {
 	t.Helper()
@@ -129,6 +120,14 @@ func check(t *testing.T, p *hir.Program, full bool) {
 	if es := hir.Verify(p); len(es) > 0 {
 		t.Fatal(es)
 	}
+	beforeInput := hir.Dump(p)
+	rewriteBase, e := rewrite.ExtractRewriteFacts(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	oracleStart := time.Now()
+	inlineoracle.Check(t, p)
+	t.Logf("inline oracle runtime: %s", time.Since(oracleStart))
 	src := Source(t, "analysis")
 	base := rewrite.Extract(p)
 	db := evaluate(t, base, src, full)
@@ -145,11 +144,6 @@ func check(t *testing.T, p *hir.Program, full bool) {
 		t.Fatal(e)
 	}
 	Equal(t, db, actual)
-	beforeInput := hir.Dump(p)
-	rewriteBase, e := rewrite.ExtractRewriteFacts(p)
-	if e != nil {
-		t.Fatal(e)
-	}
 	allFacts := evaluate(t, rewriteBase, src+"\n"+Source(t, "inline"), full)
 	// Check the phased preparation used by Rewrite, in addition to the combined
 	// source: Analyze first, then native syntax facts and inline rule evaluation.
@@ -175,9 +169,6 @@ func check(t *testing.T, p *hir.Program, full bool) {
 		t.Fatal("fact extraction mutated HIR")
 	}
 	t.Log("positive monotonicity and declaration determinism passed")
-	oracleStart := time.Now()
-	inlineoracle.Check(t, p)
-	t.Logf("inline oracle runtime: %s", time.Since(oracleStart))
 	budgetStart := time.Now()
 	Budgets(t, p)
 	t.Logf("depth, method and program budgets passed in %s", time.Since(budgetStart))
