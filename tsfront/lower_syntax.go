@@ -320,7 +320,7 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 		optT := hir.T(hir.Optional, hir.T(hir.Number))
 		parsed := l.tempInit(n, optT, l.rtOp("string.parseInt10", s, optT))
 		l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: parsed},
-			Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.locOf(n)})})
+			Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n)})})
 		l.diagf(n, "note-parse-int", "parseInt(s, 10) lowered; a NaN result traps with this location")
 		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Number), X: parsed}, true
 	case "isNaN":

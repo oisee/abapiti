@@ -379,7 +379,7 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 		// Node host I/O (process.stderr.write in performance output): no ABAP
 		// equivalent; reaching it raises with the TypeScript location.
 		l.diagf(n, "note-host-process", "process host call traps when reached")
-		return &hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.locOf(n)}
+		return &hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n)}
 	}
 	if n.Kind == ast.KindPostfixUnaryExpression {
 		u := n.AsPostfixUnaryExpression()
