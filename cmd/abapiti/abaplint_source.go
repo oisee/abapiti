@@ -2,35 +2,26 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
-	"crypto/sha512"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/oisee/abapiti/tsfront"
 )
-
-// abaplintArchiveURL is the source archive of the pinned commit.
-const abaplintArchiveURL = "https://codeload.github.com/abaplint/abaplint/tar.gz/" + tsfront.RegistryUpstreamPin
 
 // abaplintSource is a verified abaplint tree: packages/core/src with the
 // closure files, and the npm packages the front end resolves.
 type abaplintSource struct {
 	Root     string            // repository root (holds packages/core)
 	Packages map[string]string // npm package name -> its directory
-	Fetched  bool              // downloaded in this run
-	Cached   bool              // reused from the cache
-	Bytes    int64             // bytes downloaded
-	Files    int               // files extracted from the archive
+	Embedded bool              // unpacked from inside abapiti
+	Files    int               // files unpacked
 }
 
 func coreDir(root string) string { return filepath.Join(root, "packages", "core") }
@@ -87,114 +78,26 @@ func describeHead(root string) string {
 	return "; its HEAD is " + head
 }
 
-// fetchAbaplint returns the verified cached tree at cacheDir, downloading
-// the archive and the npm packages when it is missing or does not verify.
-func fetchAbaplint(cacheDir string, offline bool, say func(string, ...any)) (*abaplintSource, error) {
-	if _, err := os.Stat(cacheDir); err == nil {
-		src, verr := verifyAbaplintCheckout(cacheDir)
-		if verr == nil {
-			src.Cached = true
-			return src, nil
-		}
-		if offline {
-			return nil, fmt.Errorf("cached abaplint at %s does not verify: %v", cacheDir, verr)
-		}
-		say("cache %s does not verify (%v); downloading again", cacheDir, verr)
-	} else if offline {
-		return nil, fmt.Errorf("--offline: no abaplint checkout given and none cached at %s", cacheDir)
-	}
-	if err := os.MkdirAll(filepath.Dir(cacheDir), 0755); err != nil {
-		return nil, err
-	}
-	stage, err := os.MkdirTemp(filepath.Dir(cacheDir), filepath.Base(cacheDir)+".partial-")
+// embeddedAbaplint unpacks the abaplint sources and npm type declarations
+// that ship inside abapiti into dir and verifies them like a checkout.
+func embeddedAbaplint(dir string) (*abaplintSource, error) {
+	files, err := extractTarGz(bytes.NewReader(tsfront.EmbeddedAbaplintArchive()), dir, func(name string) (string, bool) { return name, true })
 	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(stage)
-	client := &http.Client{Timeout: 10 * time.Minute}
-	var total int64
-	start := time.Now()
-	n, files, err := download(client, abaplintArchiveURL, func(r io.Reader) (int, error) {
-		return extractTarGz(r, stage, func(name string) (string, bool) {
-			// <repo>-<sha>/packages/core/{src/**,package.json,package-lock.json}
-			_, rest, ok := strings.Cut(name, "/")
-			if !ok {
-				return "", false
-			}
-			if strings.HasPrefix(rest, "packages/core/src/") || rest == "packages/core/package.json" || rest == "packages/core/package-lock.json" {
-				return rest, true
-			}
-			return "", false
-		})
-	})
-	if err != nil {
-		return nil, err
-	}
-	total += n
-	say("downloaded abaplint %s: %s, %d files of packages/core (%.1fs)", tsfront.RegistryUpstreamPin[:8], mib(n), files, time.Since(start).Seconds())
-	lock, err := readLock(filepath.Join(coreDir(stage), "package-lock.json"))
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("embedded abaplint: %v", err)
 	}
 	for _, pkg := range tsfront.RegistryNodePackages() {
-		entry, ok := lock.Packages["node_modules/"+pkg.Name]
-		if !ok || entry.Version != pkg.Version || entry.Resolved != pkg.Resolved || entry.Integrity != pkg.Integrity {
-			return nil, fmt.Errorf("packages/core/package-lock.json of %s does not pin %s@%s (%s)", tsfront.RegistryUpstreamPin[:8], pkg.Name, pkg.Version, pkg.Integrity)
-		}
-		// The type declarations ship inside abapiti: no npm registry is
-		// contacted (some networks only reach a private feed).
-		if err := pkg.WriteEmbedded(filepath.Join(coreDir(stage), "node_modules", pkg.Name)); err != nil {
+		if err := pkg.WriteEmbedded(filepath.Join(coreDir(dir), "node_modules", pkg.Name)); err != nil {
 			return nil, err
 		}
 	}
-	say("npm type declarations: %d packages from inside abapiti, pinned by package-lock.json, no npm download", len(tsfront.RegistryNodePackages()))
-	if _, err := verifyAbaplintCheckout(stage); err != nil {
-		return nil, fmt.Errorf("downloaded abaplint: %v", err)
-	}
-	if err := os.RemoveAll(cacheDir); err != nil {
-		return nil, err
-	}
-	if err := os.Rename(stage, cacheDir); err != nil {
-		return nil, err
-	}
-	src, err := verifyAbaplintCheckout(cacheDir)
+	src, err := verifyAbaplintCheckout(dir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("embedded abaplint: %v", err)
 	}
-	src.Fetched, src.Bytes, src.Files = true, total, files
+	src.Embedded, src.Files = true, files
 	return src, nil
 }
 
-// download GETs url and hands the body to consume; errors name the URL.
-func download(client *http.Client, url string, consume func(io.Reader) (int, error)) (int64, int, error) {
-	resp, err := client.Get(url)
-	if err != nil {
-		return 0, 0, fmt.Errorf("download %s: %v (behind a proxy set HTTPS_PROXY; offline, pass a checkout of abaplint at %s instead: abapiti abaplint <path> -o out)", url, err, tsfront.RegistryUpstreamPin[:8])
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return 0, 0, fmt.Errorf("download %s: HTTP %s", url, resp.Status)
-	}
-	counter := &countingReader{r: resp.Body}
-	files, err := consume(counter)
-	if err != nil {
-		return counter.n, files, fmt.Errorf("download %s: %v", url, err)
-	}
-	return counter.n, files, nil
-}
-
-type countingReader struct {
-	r io.Reader
-	n int64
-}
-
-func (c *countingReader) Read(p []byte) (int, error) {
-	n, err := c.r.Read(p)
-	c.n += int64(n)
-	return n, err
-}
-
-// extractTarGz writes the regular files that keep maps to a relative path.
 func extractTarGz(r io.Reader, dst string, keep func(string) (string, bool)) (int, error) {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
@@ -240,38 +143,3 @@ func extractTarGz(r io.Reader, dst string, keep func(string) (string, bool)) (in
 		files++
 	}
 }
-
-type packageLock struct {
-	Packages map[string]struct {
-		Version   string `json:"version"`
-		Resolved  string `json:"resolved"`
-		Integrity string `json:"integrity"`
-	} `json:"packages"`
-}
-
-func readLock(file string) (*packageLock, error) {
-	raw, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	var lock packageLock
-	if err := json.Unmarshal(raw, &lock); err != nil {
-		return nil, fmt.Errorf("%s: %v", file, err)
-	}
-	return &lock, nil
-}
-
-// checkIntegrity verifies a "sha512-<base64>" subresource integrity value.
-func checkIntegrity(data []byte, sri string) error {
-	want, ok := strings.CutPrefix(sri, "sha512-")
-	if !ok {
-		return fmt.Errorf("unsupported integrity %q", sri)
-	}
-	sum := sha512.Sum512(data)
-	if got := base64.StdEncoding.EncodeToString(sum[:]); got != want {
-		return fmt.Errorf("integrity mismatch: got sha512-%s, lockfile %s", got, sri)
-	}
-	return nil
-}
-
-func mib(n int64) string { return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20)) }

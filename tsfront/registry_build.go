@@ -38,6 +38,16 @@ var registryNodePackages []byte
 //go:embed all:testdata/registrycorpus/node-packages
 var registryNodePackageFiles embed.FS
 
+// The abaplint sources of the closure at the pin (packages/core/src files
+// listed in closure.json) and abaplint's LICENSE, as a gzipped tar, so
+// abapiti translates abaplint without any download.
+//
+//go:embed testdata/registrycorpus/abaplint-core-577f875e.tar.gz
+var registryAbaplintArchive []byte
+
+// EmbeddedAbaplintArchive returns the embedded abaplint source archive.
+func EmbeddedAbaplintArchive() []byte { return registryAbaplintArchive }
+
 // RegistryHarness returns the embedded deployment harness source.
 func RegistryHarness() []byte { return append([]byte(nil), registryHarness...) }
 

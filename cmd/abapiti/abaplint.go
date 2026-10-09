@@ -57,8 +57,6 @@ func init() {
 	f.String("config", "", "osg: abaplint.json for the embedded run")
 	f.String("run-sha", zabapgitRunSHA, "SHA-256 of the expected issue dump that the run drivers compare against (default: zabapgit_standalone with abapGit's ci/abaplint.json)")
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
-	f.String("cache-dir", "", "Where the downloaded abaplint is kept (default: <user cache>/abapiti/abaplint-577f875e)")
-	f.Bool("offline", false, "Never download; use the given checkout or the cache")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
 	_ = abaplintCmd.MarkFlagRequired("output")
@@ -108,8 +106,6 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	config, _ := flags.GetString("config")
 	runSHA, _ := flags.GetString("run-sha")
 	negativePath, _ := flags.GetString("negative")
-	cacheDir, _ := flags.GetString("cache-dir")
-	offline, _ := flags.GetBool("offline")
 	quiet, _ := flags.GetBool("quiet")
 	evidence, _ := flags.GetBool("evidence")
 	targets, err := parseTargets(targetFlag)
@@ -147,14 +143,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		if cacheDir == "" {
-			base, err := os.UserCacheDir()
-			if err != nil {
-				return fmt.Errorf("no user cache directory (%v); pass --cache-dir or a checkout path", err)
-			}
-			cacheDir = filepath.Join(base, "abapiti", "abaplint-"+pin)
+		dir, err := os.MkdirTemp("", "abapiti-abaplint-src-")
+		if err != nil {
+			return err
 		}
-		src, err = fetchAbaplint(cacheDir, offline, n.say)
+		defer os.RemoveAll(dir)
+		src, err = embeddedAbaplint(dir)
 		if err != nil {
 			return err
 		}
@@ -165,11 +159,8 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		versions = append(versions, p.Name+"@"+p.Version)
 	}
 	how := "checkout " + src.Root
-	switch {
-	case src.Fetched:
-		how = fmt.Sprintf("downloaded %s into %s", mib(src.Bytes), src.Root)
-	case src.Cached:
-		how = "cached " + src.Root
+	if src.Embedded {
+		how = fmt.Sprintf("built into abapiti, %d files unpacked (no network)", src.Files)
 	}
 	n.step("source: %s", how)
 	n.say("  verified commit %s: %d closure files by SHA-256; npm %s", pin, len(closure.Sources), strings.Join(versions, ", "))

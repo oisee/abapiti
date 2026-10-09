@@ -38,7 +38,7 @@ Download `abapiti` for your platform from the [latest release](https://github.co
 abapiti abaplint -o out
 ```
 
-This fetches abaplint 577f875e from GitHub (about 1.7 MB, every file checked against its recorded SHA-256), translates it in a few seconds and writes:
+abaplint 577f875e is built into the binary (every file checked against its recorded SHA-256), so this needs no network. It translates in a few seconds and writes:
 
 | Directory | For | Run it |
 |---|---|---|
