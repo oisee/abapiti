@@ -368,6 +368,7 @@ type body struct {
 	next     int
 	tryDepth int
 	loops    []int
+	capacity map[*hir.Expr][]*hir.Expr
 }
 
 func (b *body) line(f string, a ...any) { b.e.line(f, a...) }
@@ -536,6 +537,17 @@ func (b *body) expr(x *hir.Expr) string {
 		a := []string{}
 		for i, v := range x.Args {
 			a = append(a, b.value(v, m.Params[i].Type))
+		}
+		if fields := b.capacity[x]; len(fields) != 0 {
+			for i, p := range m.Params {
+				if p.Type.Kind == hir.String {
+					for _, f := range fields {
+						array := b.expr(f)
+						b.line("%s.reserve(min(65536,int(%s.length())/5))", array, a[i])
+					}
+					break
+				}
+			}
 		}
 		if x.Kind == hir.VirtualCall {
 			code = recv + "." + e.member(x.Name) + "(" + strings.Join(a, ",") + ")"
@@ -710,6 +722,9 @@ func (b *body) stmt(s *hir.Stmt) {
 	e := b.e
 	switch s.Kind {
 	case hir.Block:
+		capacity := b.capacity
+		b.capacity = b.capacityPlans(s)
+		defer func() { b.capacity = capacity }()
 		old := b.locals
 		b.locals = clone(old)
 		b.line("{")
