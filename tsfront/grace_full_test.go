@@ -11,15 +11,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oisee/abapiti/hir/rewrite"
 	"github.com/oisee/abapiti/internal/gracecheck"
 )
 
-// The full closure is opt-in because lowering thousands of original methods
-// and naive joins are unsuitable for the ordinary frontend unit-test loop.
+// The full closure uses the production CLI lowering inputs. Skip it with
+// -short: independent reference joins are expensive on thousands of methods.
 func TestGraceFullRegistryClosure(t *testing.T) {
-	if testing.Short() || os.Getenv("GRACE_FULL_CLOSURE") != "1" {
-		t.Skip("set GRACE_FULL_CLOSURE=1 without -short for the pinned 1538-file closure")
+	if testing.Short() {
+		t.Skip("full pinned 1538-file closure requires non-short tests")
 	}
+	t.Setenv("ABAPITI_ASSUME_INT", "1")
 	start := time.Now()
 	defer func() { t.Logf("full Grace closure runtime: %s", time.Since(start)) }()
 	dir := os.Getenv("REGISTRY_CLOSURE")
@@ -66,7 +68,7 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 				t.Fatal(e)
 			}
 		}
-		config := `{"compilerOptions":{"module":"commonjs","target":"es2020","lib":["es2020"],"noEmit":true,"skipLibCheck":true,"strictNullChecks":true,"strictFunctionTypes":true,"noImplicitAny":true,"strictPropertyInitialization":false},"include":["src/**/*.ts"]}`
+		config := `{"compilerOptions":{"module":"commonjs","target":"es2020","lib":["es2020"],"noEmit":true,"skipLibCheck":true,"strictNullChecks":true,"strictFunctionTypes":true,"noImplicitAny":true,"strictPropertyInitialization":false},"include":["src/**/*.ts","harness/**/*.ts"]}`
 		if e := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(config), 0644); e != nil {
 			t.Fatal(e)
 		}
@@ -81,29 +83,43 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 		}
 		t.Fatal(e)
 	}
+	harness := filepath.Join(dir, RegistryHarnessPath)
+	if e := os.MkdirAll(filepath.Dir(harness), 0755); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(harness, RegistryHarness(), 0644); e != nil {
+		t.Fatal(e)
+	}
+	coverage, e := EmbeddedReachability()
+	if e != nil {
+		t.Fatal(e)
+	}
+
 	registry, e := RegistryOverrides()
 	if e != nil {
 		t.Fatal(e)
 	}
-	lowering, e := LowerRegistry(dir, manifest.Files(), registry, nil)
+	lowering, e := LowerRegistry(dir, append(manifest.Files(), RegistryHarnessPath), registry, coverage)
 	if e != nil {
 		t.Fatal(e)
 	}
 	t.Logf("lowered %d files in %s: %d classes, %d blocking diagnostics, %d verification errors", len(manifest.Sources), time.Since(start), len(lowering.Prog.Classes), len(lowering.Blocking), len(lowering.Verification))
-	if len(lowering.Blocking) > 0 || len(lowering.Verification) > 0 {
-		for i, d := range lowering.Blocking {
-			if i == 5 {
-				break
-			}
-			t.Log(d)
-		}
-		for i, e := range lowering.Verification {
-			if i == 5 {
-				break
-			}
-			t.Log(e)
-		}
-		t.Skip("full closure does not lower to verified HIR yet; Grace checks require complete verified input")
+	if e := lowering.Err(); e != nil {
+		t.Fatal(e)
 	}
-	gracecheck.Check(t, lowering.Prog)
+	if len(lowering.Prog.Classes) != 1927 || len(lowering.Prog.Interfaces) != 73 {
+		t.Fatalf("changed closure: %d classes, %d interfaces", len(lowering.Prog.Classes), len(lowering.Prog.Interfaces))
+	}
+	db, e := rewrite.Analyze(lowering.Prog)
+	if e != nil {
+		t.Fatal(e)
+	}
+	report := rewrite.Report(db)
+	t.Log("full closure facts\n" + report[strings.Index(report, "summary\n"):])
+	if out := os.Getenv("GRACE_FULL_FACTS_OUT"); out != "" {
+		if e := os.WriteFile(out, []byte(report), 0644); e != nil {
+			t.Fatal(e)
+		}
+	}
+	gracecheck.CheckFull(t, lowering.Prog)
 }

@@ -353,17 +353,27 @@ minimal demonstration that literal dump invariance under method permutations
 would conflict with byte-identical oracle compatibility.
 
 ```sh
-go test ./hir/... ./tsfront/... ./internal/gracecheck -count=1
+go test -short ./hir/... ./tsfront/... ./internal/gracecheck -count=1
 go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
-GRACE_FULL_CLOSURE=1 go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 5m
+go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 60m
 ```
 
-The full test is opt-in and skips under `-short`. It uses `REGISTRY_CLOSURE` when
-provided, or materialises the embedded pinned archive and declaration packages,
-verifies all 1,538 source hashes, and lowers through `LowerRegistry` with the
-registry overrides. It logs lowering evidence and skips Grace checks if the
-complete input does not lower to verified HIR. On this clone the full unpruned
-lowering took 34.4 seconds: 2,043 classes, 644 blocking diagnostics and 392
-verification errors. Thus no full-closure fact/oracle result is claimed. The
-uncached ordinary suite took 1.7 seconds for `hir/rewrite` and 25.2 seconds for
-`tsfront`; the focused lexer/registry check run took 13.0 seconds.
+The full test skips under `-short`. It uses `REGISTRY_CLOSURE` when provided,
+or materialises the embedded pinned archive and declaration packages, verifies
+all 1,538 source hashes, and lowers with the production CLI's fingerprinted
+registry overrides, embedded reachability, `RegistryRun` harness and assume-int
+contract. Lowering errors fail the test. The expected closure has 1,927 classes
+and 73 interfaces. No Go HIR backend is needed.
+
+`CheckFull` runs the same checks as `Check`, with independent hash projections
+in the reference evaluator and a five-minute engine deadline per equality check.
+The reference still reparses rules independently, rescans every rule over the
+complete snapshot each round, and shares no engine join or delta code. Ordinary
+fixtures compare this mode with the Cartesian reference as well as the engine.
+Both reference modes retain the one-billion-premise work cap. The Cartesian
+reference exhausted that cap on the full closure after 108.3 seconds.
+
+The test logs the facts summary, inline oracle counters, per-check runtimes and
+verified rewrite rounds. Set `GRACE_FULL_FACTS_OUT` to export the complete sorted
+facts report, including method sets, virtual receivers and static writes by
+class. See [the full-closure results](../../docs/grace-full-closure.md).
