@@ -77,10 +77,15 @@ func (s jsString) charAt(i int32) jsString {
 	return s[2*i : 2*i+2]
 }
 func (s jsString) indexOf(needle jsString) int32 {
-	for i := int32(0); i <= s.length()-needle.length(); i++ {
-		if s[2*i:2*i+int32(len(needle))] == needle {
-			return i
-		}
+	// Search bytes with Go's optimized implementation, rejecting matches that
+	// start inside a UTF-16 unit. Empty needles still match at unit zero.
+	offset := 0
+	for offset <= len(s)-len(needle) {
+		i := strings.Index(string(s[offset:]), string(needle))
+		if i < 0 { return -1 }
+		i += offset
+		if i & 1 == 0 { return int32(i/2) }
+		offset = i+1
 	}
 	return -1
 }
@@ -145,6 +150,14 @@ func (s jsString) asciiCase(lower bool) (jsString, bool) {
  from,to,delta:=byte('a'),byte('z'),byte(32)
  if lower {from,to='A','Z'}
  first:=0
+ low,high:=uint64(0x001f001f001f001f),uint64(0x0005000500050005)
+ if lower {low,high=0x003f003f003f003f,0x0025002500250025}
+ for first+8<=len(s) {
+  word:=binary.LittleEndian.Uint64([]byte(s[first:first+8]))
+  if word&0xff80ff80ff80ff80!=0 {return "",false}
+  if (word+low)&^(word+high)&0x0080008000800080!=0 {break}
+  first+=8
+ }
  for ;first+1<len(s);first+=2 {
   c:=s[first]
   if s[first+1]!=0||c>=128 {return "",false}
