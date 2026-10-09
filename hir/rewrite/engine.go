@@ -1,6 +1,10 @@
 package rewrite
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Evaluate grows db to a stratified fixed point. Each join after the initial
 // round consumes at least one delta relation (semi-naive evaluation). Minimum
@@ -15,7 +19,7 @@ func Evaluate(db *DB, rules *Rules) error {
 	for _, c := range rules.clauses {
 		bound := map[string]bool{}
 		for _, a := range c.body {
-			if !a.negative {
+			if !a.negative && !comparison(a.pred) {
 				for _, t := range a.args {
 					if t.variable {
 						bound[t.value] = true
@@ -30,7 +34,7 @@ func Evaluate(db *DB, rules *Rules) error {
 			arity[a.pred] = len(a.args)
 			levels[a.pred] = 0
 			for _, t := range a.args {
-				if (a.negative || a.pred == c.head.pred) && t.variable && !bound[t.value] {
+				if (a.negative || comparison(a.pred) || a.pred == c.head.pred) && t.variable && !bound[t.value] {
 					return fmt.Errorf("%s: unbound %s", c.name, t.value)
 				}
 			}
@@ -80,7 +84,7 @@ func Evaluate(db *DB, rules *Rules) error {
 				}
 				positive := false
 				for pivot, a := range c.body {
-					if a.negative {
+					if a.negative || comparison(a.pred) {
 						continue
 					}
 					positive = true
@@ -157,6 +161,12 @@ func join(db, delta *DB, c clause, pivot, pos int, env map[string]string, depth 
 	if pos == len(c.body) {
 		// Negatives are checked after positive bindings, independently of source order.
 		for _, a := range c.body {
+			if comparison(a.pred) {
+				if !compare(a, env) {
+					return
+				}
+				continue
+			}
 			if a.negative {
 				for _, r := range candidates(db, a, env) {
 					if _, ok := matches(a, r, env); ok {
@@ -181,7 +191,7 @@ func join(db, delta *DB, c clause, pivot, pos int, env map[string]string, depth 
 		return
 	}
 	a := c.body[pos]
-	if a.negative {
+	if a.negative || comparison(a.pred) {
 		join(db, delta, c, pivot, pos+1, env, depth, emit)
 		return
 	}
@@ -198,4 +208,34 @@ func join(db, delta *DB, c clause, pivot, pos int, env map[string]string, depth 
 			join(db, delta, c, pivot, pos+1, e, n, emit)
 		}
 	}
+}
+
+func comparison(p string) bool { return p == "le" || p == "neq" || p == "contains" }
+func compare(a atom, env map[string]string) bool {
+	if len(a.args) != 2 {
+		return false
+	}
+	v := make([]string, 2)
+	for i, t := range a.args {
+		v[i] = t.value
+		if t.variable {
+			var ok bool
+			v[i], ok = env[t.value]
+			if !ok {
+				return false
+			}
+		}
+		if t.wild {
+			return false
+		}
+	}
+	if a.pred == "contains" {
+		return strings.Contains(v[0], v[1])
+	}
+	if a.pred == "neq" {
+		return v[0] != v[1]
+	}
+	x, e := strconv.Atoi(v[0])
+	y, f := strconv.Atoi(v[1])
+	return e == nil && f == nil && x <= y
 }

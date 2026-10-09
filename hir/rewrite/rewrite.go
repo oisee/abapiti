@@ -84,7 +84,7 @@ func parseRewrite(n sexpr) (rewriteRule, error) {
 	}
 	bound := map[string]bool{}
 	for _, a := range append([]atom{r.match}, r.where...) {
-		if !a.negative {
+		if !a.negative && !comparison(a.pred) {
 			for _, t := range a.args {
 				if t.variable {
 					bound[t.value] = true
@@ -93,7 +93,7 @@ func parseRewrite(n sexpr) (rewriteRule, error) {
 		}
 	}
 	for _, a := range append([]atom{r.action}, r.where...) {
-		if a.negative || a.pred == r.action.pred {
+		if a.negative || comparison(a.pred) || a.pred == r.action.pred {
 			for _, t := range a.args {
 				if t.wild || t.variable && !bound[t.value] {
 					return r, fmt.Errorf("%s: unbound action/guard", r.name)
@@ -158,7 +158,11 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 		return r.stats, fmt.Errorf("invalid HIR: %v", es)
 	}
 	for round := 0; round < r.limits.Rounds; round++ {
-		r.db = Extract(p)
+		var err error
+		r.db, err = Analyze(p)
+		if err != nil {
+			return r.stats, err
+		}
 		r.index()
 		if err := r.addInlineFacts(); err != nil {
 			return r.stats, err
