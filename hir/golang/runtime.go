@@ -4,6 +4,7 @@ package golang
 const runtimeSource = `package main
 
 import (
+ "encoding/json"
 	"encoding/binary"
 	"math"
 	"reflect"
@@ -262,6 +263,7 @@ func dynString(d *dynamic) jsString {
 }
 
 type trap struct{ Source string }
+func (t trap) Error()string{return t.Source}
 type rangeFault struct{}
 type payload[T any] struct {
 	Type  string
@@ -361,7 +363,14 @@ func numberString(x float64) jsString {
 	return str(strconv.FormatInt(int64(x), 10))
 }
 
+type loopControl struct {Target string;Continue bool}
+
 type array[T any] struct{ Items []T }
+func presentArray[T any](a *array[optional[T]]) *array[T] {
+ if a==nil{return nil};out:=&array[T]{Items:make([]T,len(a.Items))}
+ for i,v:=range a.Items {out.Items[i]=unwrap(v)}
+ return out
+}
 
 func (a *array[T]) reserve(n int) {
  if a==nil||n<=cap(a.Items) {return}
@@ -710,25 +719,27 @@ func (s jsString) parseInt10i64() optional[int64] {
 type jsRegExp struct {
 	Source, Flags jsString
 	compiled      *regexp.Regexp
+ denied *regexp.Regexp
 	LastIndex     int32
 }
 
+var macroPlaceholderPattern=regexp.MustCompile("^&[1-9][0-9]*$")
+var literalAlternativePattern=regexp.MustCompile("^\\^[A-Za-z0-9_|()?]+\\$?$")
+
 func newRegExp(pattern, flags jsString) *jsRegExp {
 	p, f := pattern.String(), flags.String()
-	translated := ""
-	switch {
-	case (p == "^Y" || p == "^Z") && f == "":
-		translated = p
-	case p == "test$" && f == "i":
-		translated = "[tT][eE][sS][tT]$"
-	case p == "a.c" && f == "i":
-		translated = "[aA][^\\n\\r\\x{2028}\\x{2029}][cC]"
-	case p == "x/y" && f == "gi":
-		translated = "[xX]/[yY]"
-	default:
-		panic(trap{Source: "not supported in the Go prototype: JavaScript regexp /" + p + "/" + f})
-	}
-	return &jsRegExp{pattern.replaceAll(str("/"), str("\\/")), flags, regexp.MustCompile(translated), 0}
+ spec, ok := reviewedRegexPatterns[p+"/"+f]
+ if !ok && f=="g" && macroPlaceholderPattern.MatchString(p) {spec=[2]string{p,""};ok=true}
+ if !ok && (f==""||f=="i") && literalAlternativePattern.MatchString(p) {
+  translated:=p
+  if f=="i" {var out strings.Builder;for _,c:=range p{if c>='a'&&c<='z'||c>='A'&&c<='Z'{out.WriteRune('[');out.WriteRune(unicode.ToUpper(c));out.WriteRune(unicode.ToLower(c));out.WriteRune(']')}else{out.WriteRune(c)}};translated=out.String()}
+  spec=[2]string{translated,""};ok=true
+ }
+ if !ok {panic(trap{Source: "not supported in the Go prototype: JavaScript regexp /" + p + "/" + f})}
+ var denied *regexp.Regexp
+ if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
+ return &jsRegExp{Source:pattern.replaceAll(str("/"), str("\\/")),Flags:flags,compiled:regexp.MustCompile(spec[0]),denied:denied}
+
 }
 func unitText(s jsString) string {
 	var b strings.Builder
@@ -736,6 +747,10 @@ func unitText(s jsString) string {
 		b.WriteRune(rune(s.charCodeAt(i)))
 	}
 	return b.String()
+}
+func (r *jsRegExp) find(input string) []int {
+ if r.denied!=nil && r.denied.MatchString(input) {return nil}
+ return r.compiled.FindStringIndex(input)
 }
 func (r *jsRegExp) test(s jsString) bool {
 	start := int32(0)
@@ -748,7 +763,7 @@ func (r *jsRegExp) test(s jsString) bool {
 		return false
 	}
 	input := unitText(s[2*start:])
-	m := r.compiled.FindStringIndex(input)
+	m := r.find(input)
 	if m == nil {
 		if global {
 			r.LastIndex = 0
@@ -945,7 +960,7 @@ func (a *array[T]) arrayMarker() {}
 
 var telemetryStart = time.Now()
 
-func telemetry() float64 { return float64(time.Since(telemetryStart).Nanoseconds()) / 1e6 }
+func telemetry() float64 { return float64(time.Since(telemetryStart).Milliseconds()) }
 
 func unboxValue[T any](d *dynamic) T {
 	var z T

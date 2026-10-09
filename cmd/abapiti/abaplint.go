@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/oisee/abapiti/hir/abap"
+	gohir "github.com/oisee/abapiti/hir/golang"
 	"github.com/oisee/abapiti/tsfront"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +52,7 @@ Outputs under <outdir>:
 func init() {
 	f := abaplintCmd.Flags()
 	f.StringP("output", "o", "", "Output directory (required)")
-	f.String("target", "all", "Targets to write: all, a4h, osg or native (comma-separated)")
+	f.String("target", "all", "Targets to write: all (ABAP targets), a4h, osg, native or go (comma-separated)")
 	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip")
 	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
 	f.String("deps", "", "osg: folder of dependency files")
@@ -89,10 +90,10 @@ func parseTargets(s string) (map[string]bool, error) {
 		switch t = strings.TrimSpace(strings.ToLower(t)); t {
 		case "all":
 			targets["a4h"], targets["osg"], targets["native"] = true, true, true
-		case "a4h", "osg", "native":
+		case "a4h", "osg", "native", "go":
 			targets[t] = true
 		default:
-			return nil, fmt.Errorf("--target %q: use all, a4h, osg or native", t)
+			return nil, fmt.Errorf("--target %q: use all, a4h, osg, native or go", t)
 		}
 	}
 	return targets, nil
@@ -218,6 +219,21 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. ABAP
+	if targets["go"] {
+		files, err := gohir.Emit(lowering.Prog)
+		if err != nil {
+			return err
+		}
+		files["main.go"] = tsfront.RegistryGoCLI()
+		files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
+		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
+			return err
+		}
+		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))
+		if len(targets) == 1 {
+			return nil
+		}
+	}
 	emitted, names, err := lowering.Emit()
 	if err != nil {
 		return err

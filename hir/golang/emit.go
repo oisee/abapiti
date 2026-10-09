@@ -2,6 +2,7 @@
 package golang
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/format"
 	"go/token"
@@ -57,7 +58,9 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource, "package main", "package "+pkg, 1)}
+	patternJSON, _ := json.Marshal(reviewedPatterns)
+	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -181,9 +184,7 @@ func (e *emitter) result(t hir.Type) string {
 func (e *emitter) params(m *hir.Method, named bool) string {
 	a := []string{}
 	for i, p := range m.Params {
-		if p.Variadic {
-			e.unsupported(m.Node, "variadic parameters")
-		}
+		// The frontend packs rest arguments into a trailing HIR array.
 		s := e.typ(p.Type)
 		if named {
 			s = fmt.Sprintf("p%d %s", i, s)
@@ -389,7 +390,7 @@ type body struct {
 	locals      map[string]string
 	next        int
 	tryDepth    int
-	loops       []int
+	loops       []loopState
 	capacity    map[*hir.Expr][]*hir.Expr
 	initialized map[string]string
 }
@@ -538,9 +539,6 @@ func (b *body) expr(x *hir.Expr) string {
 		recv := ""
 		if x.Kind == hir.SuperCall {
 			owner = b.c.Super
-			if x.Name != b.m.Name && !(x.Name == "constructor" && b.m == b.c.Ctor) {
-				e.unsupported(x.Node, "cross-method super call")
-			}
 			recv = "self"
 		} else if x.X != nil {
 			recv = b.expr(x.X)
@@ -683,7 +681,9 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if src.Equal(t) || src.Kind == hir.Array && t.Kind == hir.Array && arrayStorage(src).Equal(arrayStorage(t)) {
 			code = a
-		} else if t.Kind == hir.ClassRef || t.Kind == hir.InterfaceRef {
+		} else if b.freshOptionalArray(x) {
+			code = "presentArray(" + a + ")"
+		} else if t.Kind == hir.ClassRef || t.Kind == hir.InterfaceRef || t.Kind == hir.Optional && t.Args[0].IsRef() {
 			code = "castRef[" + e.typ(t) + "](" + a + ")"
 		} else {
 			e.unsupported(x.Node, "narrow "+t.String())
@@ -716,12 +716,21 @@ func (b *body) expr(x *hir.Expr) string {
 		old := b.locals
 		b.locals = clone(old)
 		n := b.fresh()
-		b.line("var %s %s; _=%s; {", n, e.typ(t), n)
+		if t.Kind == hir.Void {
+			b.line("{")
+		} else {
+			b.line("var %s %s; _=%s; {", n, e.typ(t), n)
+		}
 		for _, s := range x.Stmt.List {
 			b.stmt(s)
 		}
 		v := b.expr(x.Y)
-		b.line("%s=%s }", n, v)
+		if t.Kind == hir.Void {
+			b.line("}")
+			n = ""
+		} else {
+			b.line("%s=%s }", n, v)
+		}
 		b.locals = old
 		return n
 	case hir.RuntimeOp:
@@ -795,12 +804,12 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("for {")
 		a := b.expr(s.X)
 		b.line("if !%s {break}", a)
-		b.loops = append(b.loops, b.tryDepth)
+		b.beginLoop(s.Body)
 		old := b.locals
 		b.locals = clone(old)
 		b.stmt(s.Body)
 		b.locals = old
-		b.loops = b.loops[:len(b.loops)-1]
+		b.endLoop()
 		b.line("}")
 	case hir.ForEach:
 		a := b.expr(s.X)
@@ -814,16 +823,18 @@ func (b *body) stmt(s *hir.Stmt) {
 		old := b.locals
 		b.locals = clone(old)
 		b.locals[s.Name] = n
-		b.loops = append(b.loops, b.tryDepth)
+		b.beginLoop(s.Body)
 		b.stmt(s.Body)
-		b.loops = b.loops[:len(b.loops)-1]
+		b.endLoop()
 		b.locals = old
 		b.line("}")
 	case hir.Break, hir.Continue:
-		if len(b.loops) > 0 && b.loops[len(b.loops)-1] != b.tryDepth {
-			e.unsupported(s.Node, "loop control across try")
+		loop := b.loops[len(b.loops)-1]
+		if loop.wrapped || loop.depth != b.tryDepth {
+			b.line("panic(loopControl{Target:%q,Continue:%t})", loop.id, s.Kind == hir.Continue)
+		} else {
+			b.line(string(s.Kind))
 		}
-		b.line(string(s.Kind))
 	case hir.Return:
 		if b.m.Result.Kind == hir.Void {
 			if s.X != nil {
@@ -994,4 +1005,27 @@ func (e *emitter) stringLiteral(value string) string {
 	e.stringLiterals[value] = name
 	fmt.Fprintf(&e.extra, "var %s = str(%q)\n", name, value)
 	return name
+}
+
+type loopState struct {
+	depth   int
+	id      string
+	wrapped bool
+}
+
+func (b *body) beginLoop(s *hir.Stmt) {
+	l := loopState{depth: b.tryDepth, id: b.fresh(), wrapped: hasReturnBoundary(s)}
+	if l.wrapped {
+		b.line("%s:=0;func(){defer func(){if x:=recover();x!=nil{if c,ok:=x.(loopControl);ok&&c.Target==%q{if c.Continue{%s=2}else{%s=1}}else{panic(x)}}}()", l.id, l.id, l.id, l.id)
+		b.tryDepth++
+	}
+	b.loops = append(b.loops, l)
+}
+func (b *body) endLoop() {
+	l := b.loops[len(b.loops)-1]
+	b.loops = b.loops[:len(b.loops)-1]
+	if l.wrapped {
+		b.tryDepth--
+		b.line("}();if %s==1 {break};if %s==2 {continue}", l.id, l.id)
+	}
 }
