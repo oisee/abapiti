@@ -2,7 +2,7 @@ package tsfront
 
 import (
 	"crypto/sha256"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,6 +34,9 @@ var registryClosure []byte
 
 //go:embed testdata/registrycorpus/node-packages.json
 var registryNodePackages []byte
+
+//go:embed all:testdata/registrycorpus/node-packages
+var registryNodePackageFiles embed.FS
 
 // RegistryHarness returns the embedded deployment harness source.
 func RegistryHarness() []byte { return append([]byte(nil), registryHarness...) }
@@ -97,7 +100,8 @@ func (c *RegistryClosure) Verify(root string) error {
 }
 
 // RegistryNodePackage is one npm package the front end resolves from
-// packages/core: lockfile coordinates and every file of its tarball.
+// packages/core: lockfile coordinates and the files of its tarball the
+// translation reads (type declarations and package.json) plus its license.
 type RegistryNodePackage struct {
 	Name      string `json:"name"`
 	Version   string `json:"version"`
@@ -132,6 +136,26 @@ func (p RegistryNodePackage) Verify(dir string) error {
 		}
 	}
 	return nil
+}
+
+// WriteEmbedded writes the package's pinned files (type declarations,
+// package.json, license) from the abapiti binary into dir and verifies them,
+// so a fetch needs no npm registry.
+func (p RegistryNodePackage) WriteEmbedded(dir string) error {
+	for _, f := range p.Files {
+		raw, err := registryNodePackageFiles.ReadFile("testdata/registrycorpus/node-packages/" + p.Name + "/" + f.File)
+		if err != nil {
+			return fmt.Errorf("npm package %s@%s: %w", p.Name, p.Version, err)
+		}
+		target := filepath.Join(dir, filepath.FromSlash(f.File))
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(target, raw, 0644); err != nil {
+			return err
+		}
+	}
+	return p.Verify(dir)
 }
 
 // RegistryOverrides is the override registry of the Registry build: the

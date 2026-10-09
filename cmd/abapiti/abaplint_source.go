@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"bytes"
 	"compress/gzip"
 	"crypto/sha512"
 	"encoding/base64"
@@ -137,34 +136,18 @@ func fetchAbaplint(cacheDir string, offline bool, say func(string, ...any)) (*ab
 	if err != nil {
 		return nil, err
 	}
-	start = time.Now()
 	for _, pkg := range tsfront.RegistryNodePackages() {
 		entry, ok := lock.Packages["node_modules/"+pkg.Name]
 		if !ok || entry.Version != pkg.Version || entry.Resolved != pkg.Resolved || entry.Integrity != pkg.Integrity {
 			return nil, fmt.Errorf("packages/core/package-lock.json of %s does not pin %s@%s (%s)", tsfront.RegistryUpstreamPin[:8], pkg.Name, pkg.Version, pkg.Integrity)
 		}
-		dir := filepath.Join(coreDir(stage), "node_modules", pkg.Name)
-		var data []byte
-		n, _, err := download(client, entry.Resolved, func(r io.Reader) (int, error) {
-			var err error
-			data, err = io.ReadAll(r)
-			return 0, err
-		})
-		if err != nil {
+		// The type declarations ship inside abapiti: no npm registry is
+		// contacted (some networks only reach a private feed).
+		if err := pkg.WriteEmbedded(filepath.Join(coreDir(stage), "node_modules", pkg.Name)); err != nil {
 			return nil, err
 		}
-		total += n
-		if err := checkIntegrity(data, entry.Integrity); err != nil {
-			return nil, fmt.Errorf("%s: %v", entry.Resolved, err)
-		}
-		if _, err := extractTarGz(bytes.NewReader(data), dir, func(name string) (string, bool) {
-			rest, ok := strings.CutPrefix(name, "package/")
-			return rest, ok && rest != ""
-		}); err != nil {
-			return nil, fmt.Errorf("%s: %v", entry.Resolved, err)
-		}
 	}
-	say("downloaded %d npm packages from package-lock.json, sha512 integrity verified (%.1fs)", len(tsfront.RegistryNodePackages()), time.Since(start).Seconds())
+	say("npm type declarations: %d packages from inside abapiti, pinned by package-lock.json, no npm download", len(tsfront.RegistryNodePackages()))
 	if _, err := verifyAbaplintCheckout(stage); err != nil {
 		return nil, fmt.Errorf("downloaded abaplint: %v", err)
 	}
@@ -186,7 +169,7 @@ func fetchAbaplint(cacheDir string, offline bool, say func(string, ...any)) (*ab
 func download(client *http.Client, url string, consume func(io.Reader) (int, error)) (int64, int, error) {
 	resp, err := client.Get(url)
 	if err != nil {
-		return 0, 0, fmt.Errorf("download %s: %v", url, err)
+		return 0, 0, fmt.Errorf("download %s: %v (behind a proxy set HTTPS_PROXY; offline, pass a checkout of abaplint at %s instead: abapiti abaplint <path> -o out)", url, err, tsfront.RegistryUpstreamPin[:8])
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
