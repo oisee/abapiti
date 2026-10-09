@@ -246,3 +246,11 @@ branches and normalization are not justified. Its experiment commit will be
 followed by restoration of UTF-16 storage. An override with freshly trained
 PGO was also noisy (.725/.766/.171 default, .722/.564/.169 at 400) and did not
 establish a robust win; it was not used to replace the round's default profile.
+
+R4.10 restores the pre-experiment UTF-16 representation and representation-
+specific internals, retaining every prior optimization and integer edge check.
+Full uncached guard green. Default Go .512/.502/.165, Node .429/.429/.162;
+400 Go .527/.446/.121, Node .420/.355/.129. A 3,000-run CPU profile of the
+restored code is `/tmp/round4-restored.cpu`; its timings were .492/.501/.151,
+with Node .296/.289/.093. These longer warm measurements reinforce that
+beating Node has not yet been established.
