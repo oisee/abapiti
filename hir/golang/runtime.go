@@ -398,6 +398,14 @@ func (s *orderedSet[T]) ensureIndex() {
  for i,v:=range s.Items { s.index[collectionKey(v)]=i }
 }
 func (s *orderedSet[T]) has(v T) bool {
+ // Small primitive sets avoid hashing and compare unboxed typed values.
+ if len(s.Items)<=16 {
+  switch any(v).(type) {
+  case jsString, bool, int32, int64, float64:
+   for _,x:=range s.Items { if x==v { return true } }
+   return false
+  }
+ }
  s.ensureIndex()
  _,ok:=s.index[collectionKey(v)]
  return ok
