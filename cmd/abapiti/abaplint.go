@@ -23,7 +23,7 @@ const zabapgitRunSHA = "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a
 
 var abaplintCmd = &cobra.Command{
 	Use:   "abaplint [path-to-abaplint-checkout] -o <outdir>",
-	Short: "Translate abaplint (TypeScript) into ABAP classes",
+	Short: "Translate abaplint (TypeScript) into ABAP classes or Go",
 	Long: `Translate the core of abaplint (github.com/abaplint/abaplint, commit
 577f875e, @abaplint/core 2.120.56) into ABAP, without Node.
 
@@ -41,7 +41,8 @@ Outputs under <outdir>:
   a4h/      abapGit zip: classes + ZCL_ABAPITI_REGISTRY_A4H + ZABAPITI_REGISTRY_RUN
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
-  native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build`,
+  native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
+  go/       with --target go: direct HIR Go executable sources (go build .)`,
 	Example: `  abapiti abaplint -o out
   abapiti abaplint ~/src/abaplint -o out --target native
   abapiti abaplint -o out --target osg --input zabapgit/in --deps zabapgit/deps/src --config ci-abaplint.json`,
@@ -142,7 +143,11 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	n := &narrator{w: cmd.ErrOrStderr(), quiet: quiet, start: time.Now()}
 	began := n.start
 	pin := tsfront.RegistryUpstreamPin[:8]
-	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.56) from TypeScript into ABAP", version, pin)
+	destination := "ABAP"
+	if targets["go"] && len(targets) == 1 {
+		destination = "Go"
+	}
+	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.56) from TypeScript into %s", version, pin, destination)
 
 	// 1. source
 	var src *abaplintSource
