@@ -27,6 +27,7 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		return nil, errs[0]
 	}
 	e := &emitter{p: p, names: hir.NewNames()}
+	e.characterSets()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
 			e.checkOps(m.Body)
@@ -75,6 +76,7 @@ type emitter struct {
 	extra          strings.Builder
 	materializers  map[string]bool
 	stringLiterals map[string]string
+	classifiers    map[string]string
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }

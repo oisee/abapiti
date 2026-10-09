@@ -154,3 +154,23 @@ the first timing pair is noisier/slower than R4.1. Longer CPU sample: floatByte
 7.23%, charCodeAt 6.63%, process 7.83%, add 7.23%; it confirms membership is
 still worth addressing. No load reuse was attempted across method calls or
 mutations, where the emitter cannot prove equivalence. Go-only byte layout.
+
+R4.3 (B): compile the three immutable membership-only character sets into
+256-entry bool classifiers, with explicit -1 EOF handling. The proof requires
+readonly leaf-owner statics, one straight-line publication, constants assigned
+once earlier in that constructor, no builder escape, and exclusively set.has
+uses throughout the program. Static initialization, evaluation order and nil
+receiver failures remain intact. Unsupported or mutable sets keep the runtime.
+The proof could be a general HIR rewrite; the tables/byte representation are
+Go-only. No mutation of HIR or inlining was introduced.
+
+Targeted semantic edges cover EOF, 0/negative zero, 127/255, non-ASCII 65535,
+fractions, NaN/infinity, and exclusion when a readonly binding is mutated or
+returned as an alias. The alias test caught shared-node handling in the first
+proof; it now uses assignment context rather than pointer identity to exempt
+publication. Full uncached guard then passed.
+Default Go .688/.687/.194, Node .439/.386/.137; 400 Go .552/.485/.148,
+Node .413/.343/.122. Longer profile confirms floatByte leaves the lexer hot
+path: largest classifier 3.03% flat / 3.64% cumulative; upper 2.42% flat /
+5.45% cumulative, initialization guard 4.85%. No robust default timing win is
+claimed from this noisy pair; the profile verifies the intended cost removal.
