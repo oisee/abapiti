@@ -83,6 +83,7 @@ func TestEmitRegistryFeatures(t *testing.T) {
 		t.Fatal("missing oracle cases")
 	}
 	t.Run("Go", func(t *testing.T) {
+		lexerCore(t)
 		main := "out:=[]string{};"
 		for _, c := range cases {
 			main += fmt.Sprintf("out=append(out,%s(str(%q),str(%q),float64(%g),%t).String());", goEntry("probe.ts.Probe", "run"), c.Raw, c.Needle, c.N, c.Flag)
