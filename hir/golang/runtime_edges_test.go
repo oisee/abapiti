@@ -160,3 +160,26 @@ func TestIndexedCollectionEdges(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestCheckedInt32ConversionEdges(t *testing.T) {
+	number := hir.T(hir.Number)
+	convert := func(name string, min, max int64) *hir.Method {
+		m := method(name, i32, ret(&hir.Expr{Kind: hir.CheckedNumericConvert, Type: i32, X: local("value", number), Range: &hir.IntegerRange{Min: min, Max: max}}))
+		m.Static = true
+		m.Params = []hir.Param{{Name: "value", Type: number}}
+		return m
+	}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Conversion", Methods: []*hir.Method{convert("full", math.MinInt32, math.MaxInt32), convert("limited", 0, 10)}}}}
+	main := `check:=func(ok bool){if !ok{panic("conversion mismatch")}};fault:=func(f func()){defer func(){if _,ok:=recover().(rangeFault);!ok{panic("wrong fault")}}();f();panic("missing fault")};`
+	full, limited := entry("Conversion", "full"), entry("Conversion", "limited")
+	for _, v := range []int64{math.MinInt32, -1, 0, 1, math.MaxInt32} {
+		main += fmt.Sprintf("check(%s(%d)==%d);", full, v, v)
+	}
+	for _, v := range []string{"-2147483649", "2147483648", "4294967296", "9007199254740991", "0.5", "-0.5", "negativeZero()/negativeZero()", "1/negativeZero()", "-1/negativeZero()"} {
+		main += fmt.Sprintf("fault(func(){%s(%s)});", full, v)
+	}
+	main += fmt.Sprintf(`check(%s(negativeZero())==0);check(%s(0)==0);check(%s(10)==10);fault(func(){%s(-1)});fault(func(){%s(11)});fmt.Println("ok")`, full, limited, limited, limited, limited)
+	if got := execute(t, p, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}

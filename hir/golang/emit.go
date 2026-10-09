@@ -632,7 +632,21 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.NumericConvert, hir.CheckedNumericConvert:
 		a := b.expr(x.X)
 		if x.Kind == hir.CheckedNumericConvert {
-			b.line("if float64(%s) < %d || float64(%s) > %d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(rangeFault{})}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
+			if t.Kind == hir.I32 {
+				// An exact round trip proves integrality, finiteness and int32 range.
+				narrowed := b.temp(t, e.typ(t)+"("+a+")")
+				checks := []string{a + " != " + e.typ(x.X.Type) + "(" + narrowed + ")"}
+				if x.Range.Min > math.MinInt32 {
+					checks = append(checks, fmt.Sprintf("int64(%s) < %d", narrowed, x.Range.Min))
+				}
+				if x.Range.Max < math.MaxInt32 {
+					checks = append(checks, fmt.Sprintf("int64(%s) > %d", narrowed, x.Range.Max))
+				}
+				b.line("if %s {panic(rangeFault{})}", strings.Join(checks, " || "))
+				return narrowed
+			} else {
+				b.line("if float64(%s) < %d || float64(%s) > %d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(rangeFault{})}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
+			}
 		}
 		code = e.typ(t) + "(" + a + ")"
 	case hir.NumericMinMax:
