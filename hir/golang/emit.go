@@ -68,12 +68,13 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 }
 
 type emitter struct {
-	p             *hir.Program
-	names         *hir.Names
-	code          strings.Builder
-	err           error
-	extra         strings.Builder
-	materializers map[string]bool
+	p              *hir.Program
+	names          *hir.Names
+	code           strings.Builder
+	err            error
+	extra          strings.Builder
+	materializers  map[string]bool
+	stringLiterals map[string]string
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }
@@ -391,7 +392,7 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 	}
 	switch t.Kind {
 	case hir.String:
-		return "str(" + strconv.Quote(v.(string)) + ")"
+		return b.e.stringLiteral(v.(string))
 	case hir.Bool:
 		return fmt.Sprint(v)
 	case hir.Number:
@@ -893,4 +894,18 @@ func (e *emitter) concreteClass(name string) bool {
 		}
 	}
 	return true
+}
+
+// Convert immutable source literals once, rather than in each execution.
+func (e *emitter) stringLiteral(value string) string {
+	if e.stringLiterals == nil {
+		e.stringLiterals = map[string]string{}
+	}
+	if name, ok := e.stringLiterals[value]; ok {
+		return name
+	}
+	name := e.name("literal." + value)
+	e.stringLiterals[value] = name
+	fmt.Fprintf(&e.extra, "var %s = str(%q)\n", name, value)
+	return name
 }
