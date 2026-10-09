@@ -214,3 +214,13 @@ overlapped cache rebuilding and were rejected. Isolated readings: default Go
 Node .453/.513/.184. Host load rose to 18, so these readings are not evidence
 of a stable regression or win. Compiler diagnostics still confirm PGO inlines
 the stream accessors (costs 405/351/328); no emitter inlining pass was added.
+
+R4.8 (B refinement): when the membership query is proven an exact int32,
+use integer classification directly. The proof follows all local definitions
+and leaf-method returns, rejects Number parameters/unknowns/cycles, and accepts
+I32-to-Number conversions and exact literals. All five lexer membership call
+sites qualify. Unknown inputs keep fraction/NaN/infinity handling. Added a
+non-ASCII 255/256/65535 check to the existing classifier semantic edge test.
+Full uncached guard green. Default Go .472/.453/.133, Node .373/.339/.124;
+400 Go .568/.474/.120, Node .358/.328/.133. This range proof is suitable for a
+general HIR rewrite (including ABAP); the specialized classifier is Go-only.
