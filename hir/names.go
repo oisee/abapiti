@@ -36,3 +36,12 @@ func (n *Names) Get(id string) string {
 	n.byName[s] = id
 	return s
 }
+
+// Pairs lists every assigned identity as (emitted name, qualified id).
+func (n *Names) Pairs() map[string]string {
+	out := make(map[string]string, len(n.byName))
+	for name, id := range n.byName {
+		out[name] = id
+	}
+	return out
+}
