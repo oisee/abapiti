@@ -310,10 +310,12 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		result = "(result " + e.typ(m.Result) + ")"
 	}
 	e.line("func %s(%s) %s {", e.body(c.Name, m.Name), params, result)
-	if m.Result.Kind == hir.Void {
-		e.line("defer func(){if x:=recover();x!=nil {if _,ok:=x.(returnedVoid);!ok {panic(x)}}}()")
-	} else {
-		e.line("defer func(){if x:=recover();x!=nil {if r,ok:=x.(returned[%s]);ok {result=r.Value}else{panic(x)}}}()", e.typ(m.Result))
+	if hasReturnBoundary(m.Body) {
+		if m.Result.Kind == hir.Void {
+			e.line("defer func(){if x:=recover();x!=nil {if _,ok:=x.(returnedVoid);!ok {panic(x)}}}()")
+		} else {
+			e.line("defer func(){if x:=recover();x!=nil {if r,ok:=x.(returned[%s]);ok {result=r.Value}else{panic(x)}}}()", e.typ(m.Result))
+		}
 	}
 	if !m.Static {
 		e.line("if nilRef(self) {panic(rangeFault{})}")
@@ -729,10 +731,18 @@ func (b *body) stmt(s *hir.Stmt) {
 			if s.X != nil {
 				b.expr(s.X)
 			}
-			b.line("panic(returnedVoid{})")
+			if b.tryDepth == 0 {
+				b.line("return")
+			} else {
+				b.line("panic(returnedVoid{})")
+			}
 		} else {
 			v := b.value(s.X, b.m.Result)
-			b.line("panic(returned[%s]{%s})", e.typ(b.m.Result), v)
+			if b.tryDepth == 0 {
+				b.line("return %s", v)
+			} else {
+				b.line("panic(returned[%s]{%s})", e.typ(b.m.Result), v)
+			}
 		}
 	case hir.Throw:
 		v := b.expr(s.X)
@@ -826,4 +836,38 @@ func numberLiteral(v any) float64 {
 	default:
 		return r.Float()
 	}
+}
+
+// Returns crossing generated try/finally closures must unwind to the method.
+// Ordinary returns use Go control flow and need no recovery wrapper.
+func hasReturnBoundary(s *hir.Stmt) bool {
+	if s == nil {
+		return false
+	}
+	if s.Kind == hir.Try || s.Kind == hir.Finally {
+		return true
+	}
+	if hasExprReturnBoundary(s.X) || hasExprReturnBoundary(s.Y) || hasReturnBoundary(s.Body) || hasReturnBoundary(s.Else) {
+		return true
+	}
+	for _, child := range s.List {
+		if hasReturnBoundary(child) {
+			return true
+		}
+	}
+	return false
+}
+func hasExprReturnBoundary(x *hir.Expr) bool {
+	if x == nil {
+		return false
+	}
+	if hasReturnBoundary(x.Stmt) || hasExprReturnBoundary(x.X) || hasExprReturnBoundary(x.Y) || hasExprReturnBoundary(x.Z) {
+		return true
+	}
+	for _, arg := range x.Args {
+		if hasExprReturnBoundary(arg) {
+			return true
+		}
+	}
+	return false
 }
