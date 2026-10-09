@@ -22,8 +22,10 @@ func (e *emitter) traceCasts() {
 	serial := 0
 	for file, src := range e.files {
 		var out strings.Builder
-		where, method := "", ""
+		where, method, prev := "", "", ""
 		for _, line := range strings.Split(src, "\n") {
+			guarded := prev == "TRY."
+			prev = line
 			if rest, ok := strings.CutPrefix(line, "*@src "); ok {
 				where = rest
 				continue
@@ -35,7 +37,7 @@ func (e *emitter) traceCasts() {
 			if at == "" {
 				at = file + " " + method
 			}
-			if method != "" && !strings.HasPrefix(line, "METHOD ") && (strings.Contains(line, " ?= ") || strings.Contains(line, "= CAST ") || strings.Contains(line, "->as_")) {
+			if method != "" && !guarded && !strings.HasPrefix(line, "METHOD ") && (strings.Contains(line, " ?= ") || strings.Contains(line, "= CAST ") || strings.Contains(line, "->as_")) {
 				serial++
 				out.WriteString("TRY.\n" + line + "\nCATCH cx_sy_move_cast_error.\n")
 				fmt.Fprintf(&out, "DATA(castx%d) = NEW %s( ).\ncastx%d->source_location = `%s`.\nRAISE EXCEPTION castx%d.\nENDTRY.\n", serial, trap, serial, strings.ReplaceAll(at, "`", "``"), serial)

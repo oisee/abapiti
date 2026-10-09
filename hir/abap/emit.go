@@ -902,6 +902,20 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("ENDIF.")
 			break
 		}
+		if e.isInterface(x.Owner) {
+			// A checked cast decides interface membership on every runtime
+			// (OSG-JS IS INSTANCE OF ignores interfaces: inbox 039).
+			probe := b.rawTemp("REF TO " + e.name(x.Owner))
+			b.line(n + " = abap_false.")
+			b.line("IF " + a + " IS BOUND.")
+			b.line("TRY.")
+			b.line(probe + " ?= " + a + ".")
+			b.line(n + " = abap_true.")
+			b.line("CATCH cx_sy_move_cast_error.")
+			b.line("ENDTRY.")
+			b.line("ENDIF.")
+			break
+		}
 		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 	case hir.ClassOf:
 		e.descriptors = true
@@ -1974,4 +1988,13 @@ func (e *emitter) wideShape(c *hir.Class) bool {
 		}
 	}
 	return true
+}
+
+func (e *emitter) isInterface(name string) bool {
+	for _, i := range e.p.Interfaces {
+		if i.Name == name {
+			return true
+		}
+	}
+	return false
 }

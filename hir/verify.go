@@ -767,7 +767,7 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			}
 			break
 		}
-		if (a.Kind != ClassRef && a.Kind != InterfaceRef && a.Kind != Optional) || v.classes[e.Owner] == nil {
+		if (a.Kind != ClassRef && a.Kind != InterfaceRef && a.Kind != Optional) || (v.classes[e.Owner] == nil && v.interfaces[e.Owner] == nil) {
 			v.fail(e.Node, "invalid instanceof")
 		}
 	case IsUndefined:
