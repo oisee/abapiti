@@ -43,7 +43,7 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 	load := func(ids []int) {
 		calls = append(calls, "CLEAR raw.")
 		for _, id := range ids {
-			calls = append(calls, fmt.Sprintf("CALL METHOD input_%04d CHANGING raw = raw.", id))
+			calls = append(calls, fmt.Sprintf("input_%04d( CHANGING raw = raw ).", id))
 		}
 		calls = append(calls, "raw = decode( raw ).")
 	}
@@ -53,7 +53,7 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 		if f.Dependency {
 			member = names.Get("member.addDependency")
 		}
-		calls = append(calls, fmt.Sprintf("CALL METHOD h->%s EXPORTING %s = `%s` %s = raw.", member, names.Get("param.filename"), strings.ReplaceAll(f.Name, "`", "``"), names.Get("param.raw")))
+		calls = append(calls, fmt.Sprintf("h->%s( %s = `%s` %s = raw ).", member, names.Get("param.filename"), strings.ReplaceAll(f.Name, "`", "``"), names.Get("param.raw")))
 	}
 	load(chunk(config))
 	calls = append(calls, "cfg = raw.")
@@ -77,20 +77,20 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 		line("DATA %s TYPE i.", s)
 	}
 	line("GET RUN TIME FIELD start.")
-	line("CREATE OBJECT h.")
+	line("h = NEW #( ).")
 	for _, c := range calls {
 		line("%s", c)
 	}
 	line("GET RUN TIME FIELD stop.")
 	line("load_us = stop - start.")
 	line("GET RUN TIME FIELD start.")
-	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = dump.", names.Get("member.run"), names.Get("param.config"))
+	line("dump = h->%s( cfg ).", names.Get("member.run"))
 	line("GET RUN TIME FIELD stop.")
 	line("run_us = stop - start.")
 	line("cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = `SHA256` if_data = dump IMPORTING ef_hashstring = hash ).")
 	line("hash = to_lower( hash ).")
 	line("ok = xsdbool( hash = `%s` ).", wantSHA)
-	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("stages = h->%s( ).", names.Get("member.timings"))
 	line("report = |REGISTRY ok={ ok } want_issues=%d load_us={ load_us } run_us={ run_us } sha256={ hash } ms: { stages }|.", wantIssues)
 	line("IF ok = abap_false.")
 	line("report = report && | head={ substring( val = dump len = nmin( val1 = strlen( dump ) val2 = 200 ) ) }|.")
@@ -158,7 +158,7 @@ func RegistryRunTest(class, trap string) string {
 	if trap != "" {
 		trapCatch = "CATCH " + trap + " INTO DATA(trapped).\nreport = |TRAP { trapped->source_location }|.\n"
 	}
-	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nCALL METHOD " + class + "=>run IMPORTING report = report RECEIVING ok = ok.\n" + trapCatch + "CATCH cx_root INTO error.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\ncl_abap_unit_assert=>fail( msg = report ).\nENDMETHOD.\nENDCLASS.\n"
+	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nok = " + class + "=>run( IMPORTING report = report ).\n" + trapCatch + "CATCH cx_root INTO error.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\ncl_abap_unit_assert=>fail( msg = report ).\nENDMETHOD.\nENDCLASS.\n"
 }
 
 // RegistryRunCorpusClass is the A4H variant: inputs come from the permanent
@@ -194,7 +194,7 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 	line("log = zcl_abapiti_log=>start( subobject = 'BENCH' extnumber = 'REGISTRY zabapgit' ).")
 	line("want = `%s`.", wantSHA)
 	line("GET RUN TIME FIELD start.")
-	line("CREATE OBJECT h.")
+	line("h = NEW #( ).")
 	if negative != nil {
 		// Node adds the files in name order; the extra files sort first.
 		line("IF negative = abap_true.")
@@ -204,7 +204,7 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 			for _, s := range abapStringBuild("raw", "ch", f.Raw) {
 				line("%s", s)
 			}
-			line("CALL METHOD h->%s EXPORTING %s = `%s` %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), strings.ReplaceAll(f.Name, "`", "``"), names.Get("param.raw"))
+			line("h->%s( %s = `%s` %s = raw ).", names.Get("member.addFile"), names.Get("param.filename"), strings.ReplaceAll(f.Name, "`", "``"), names.Get("param.raw"))
 			line("files = files + 1.")
 		}
 		line("ENDIF.")
@@ -226,7 +226,7 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 			line("ENDIF.")
 		}
 	}
-	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
+	line("h->%s( %s = name %s = raw ).", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
 	line("files = files + 1.")
 	line("ENDIF.")
 	line("ENDDO.")
@@ -236,7 +236,7 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 	line("name = set->name( i ).")
 	line("IF strlen( name ) > 4 AND name(4) = `src/`.")
 	line("name = substring( val = name off = 4 ).")
-	line("CALL METHOD h->%s EXPORTING %s = name %s = set->get( i ).", names.Get("member.addDependency"), names.Get("param.filename"), names.Get("param.raw"))
+	line("h->%s( %s = name %s = set->get( i ) ).", names.Get("member.addDependency"), names.Get("param.filename"), names.Get("param.raw"))
 	line("files = files + 1.")
 	line("ENDIF.")
 	line("ENDDO.")
@@ -244,19 +244,19 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 	line("load_us = stop - start.")
 	line("log->info( |loaded { files } files, config { strlen( cfg ) } chars, { load_us } us| ).")
 	line("GET RUN TIME FIELD start.")
-	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = reg.", names.Get("member.parse"), names.Get("param.config"))
+	line("reg = h->%s( cfg ).", names.Get("member.parse"))
 	line("GET RUN TIME FIELD stop.")
 	line("parse_us = stop - start.")
 	line("log->info( |parsed: { parse_us } us| ).")
 	line("GET RUN TIME FIELD start.")
-	line("CALL METHOD h->%s EXPORTING %s = reg RECEIVING result = dump.", names.Get("member.report"), names.Get("param.reg"))
+	line("dump = h->%s( reg ).", names.Get("member.report"))
 	line("GET RUN TIME FIELD stop.")
 	line("report_us = stop - start.")
 	line("run_us = parse_us + report_us.")
 	line("cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = `SHA256` if_data = dump IMPORTING ef_hashstring = hash ).")
 	line("hash = to_lower( hash ).")
 	line("ok = xsdbool( hash = want ).")
-	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("stages = h->%s( ).", names.Get("member.timings"))
 	line("report = |REGISTRY negative={ negative } ok={ ok } files={ files } load_us={ load_us } parse_us={ parse_us } report_us={ report_us } run_us={ run_us } sha256={ hash } ms: { stages }|.")
 	line("IF ok = abap_false.")
 	line("report = report && | head={ substring( val = dump len = nmin( val1 = strlen( dump ) val2 = 200 ) ) }|.")
@@ -274,7 +274,7 @@ func RegistryRunReport(program, class string, negative bool) string {
 	if negative {
 		flag = "abap_true"
 	}
-	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nCALL METHOD " + class + "=>run EXPORTING negative = " + flag + " IMPORTING report = report RECEIVING ok = ok.\nDATA off TYPE i.\nDATA part TYPE string.\nWHILE off < strlen( report ).\npart = substring( val = report off = off len = nmin( val1 = 200 val2 = strlen( report ) - off ) ).\nWRITE: / part.\noff = off + 200.\nENDWHILE.\n"
+	return "REPORT " + program + ".\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nok = " + class + "=>run( EXPORTING negative = " + flag + " IMPORTING report = report ).\nDATA off TYPE i.\nDATA part TYPE string.\nWHILE off < strlen( report ).\npart = substring( val = report off = off len = nmin( val1 = 200 val2 = strlen( report ) - off ) ).\nWRITE: / part.\noff = off + 200.\nENDWHILE.\n"
 }
 
 // RegistryNegative is a seeded variant of the corpus run: Extra inputs are
@@ -331,10 +331,10 @@ func RegistryCLIReport(program string, names *hir.Names) string {
 	line("RETURN.")
 	line("ENDIF.")
 	line("TRY.")
-	line("CREATE OBJECT h.")
+	line("h = NEW #( ).")
 	addFile("cfg", "p_config", "")
 	addFile("raw", "p_file", "name")
-	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
+	line("h->%s( %s = name %s = raw ).", names.Get("member.addFile"), names.Get("param.filename"), names.Get("param.raw"))
 	line("IF p_deps IS NOT INITIAL.")
 	addFile("list", "p_deps", "")
 	line("REPLACE ALL OCCURRENCES OF cl_abap_char_utilities=>cr_lf(1) IN list WITH ``.")
@@ -344,17 +344,17 @@ func RegistryCLIReport(program string, names *hir.Names) string {
 	line("CONTINUE.")
 	line("ENDIF.")
 	addFile("raw", "path", "name")
-	line("CALL METHOD h->%s EXPORTING %s = name %s = raw.", names.Get("member.addDependency"), names.Get("param.filename"), names.Get("param.raw"))
+	line("h->%s( %s = name %s = raw ).", names.Get("member.addDependency"), names.Get("param.filename"), names.Get("param.raw"))
 	line("ENDLOOP.")
 	line("ENDIF.")
-	line("CALL METHOD h->%s EXPORTING %s = cfg RECEIVING result = reg.", names.Get("member.parse"), names.Get("param.config"))
-	line("CALL METHOD h->%s EXPORTING %s = reg RECEIVING result = dump.", names.Get("member.report"), names.Get("param.reg"))
+	line("reg = h->%s( cfg ).", names.Get("member.parse"))
+	line("dump = h->%s( reg ).", names.Get("member.report"))
 	line("SPLIT dump AT cl_abap_char_utilities=>newline INTO TABLE out.")
 	line("LOOP AT out INTO raw.")
 	line("WRITE: / raw.")
 	line("ENDLOOP.")
 	line("IF p_times = abap_true.")
-	line("CALL METHOD h->%s RECEIVING result = stages.", names.Get("member.timings"))
+	line("stages = h->%s( ).", names.Get("member.timings"))
 	line("WRITE: / |ms: { stages }|.")
 	line("ENDIF.")
 	// Bodies the zabapgit workload never executes are traps in this build:
