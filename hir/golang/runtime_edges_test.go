@@ -70,3 +70,22 @@ func TestDescriptors(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestReferenceCollectionSnapshots(t *testing.T) {
+	ref := hir.Ref("Object")
+	arr := hir.T(hir.Array, ref)
+	mt := hir.T(hir.OrderedMap, ref, ref)
+	st := hir.T(hir.OrderedSet, ref)
+	a, m, s, o := local("a", arr), local("m", mt), local("s", st), local("o", ref)
+	body := hir.B(decl("o", ref, newObj(ref)), decl("a", arr, newObj(arr)), run(rt("array.push", a, i32, o)), decl("m", mt, newObj(mt)), run(rt("map.set", m, mt, o, o)), decl("s", st, newObj(st)), run(rt("set.fromArray", s, st, a)))
+	for _, x := range []*hir.Expr{rt("map.keys", m, arr), rt("map.values", m, arr), rt("set.values", s, arr)} {
+		body.List = append(body.List, &hir.Stmt{Kind: hir.ForEach, Name: "item", Type: ref, X: x, Body: &hir.Stmt{Kind: hir.If, X: binary("!=", local("item", ref), o, boolean), Body: ret(lit(99))}})
+	}
+	body.List = append(body.List, ret(lit(1)))
+	probe := method("run", i32, body)
+	probe.Static = true
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Object"}, {Name: "Probe", Methods: []*hir.Method{probe}}}}
+	if got := execute(t, p, "fmt.Println("+entry("Probe", "run")+"())"); got != "1\n" {
+		t.Fatal(got)
+	}
+}

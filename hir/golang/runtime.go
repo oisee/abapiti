@@ -1002,4 +1002,18 @@ func (s jsString) lower() jsString {
 	}
 	return out
 }
+
+func referenceArray[T any](a *array[T]) *array[any] {
+	out := &array[any]{}
+	for _, v := range a.Items {
+		out.push(v)
+	}
+	return out
+}
+func referenceSetFromArray[T any](s *orderedSet[T], a *array[any]) *orderedSet[T] {
+	for _, v := range a.Items {
+		s.add(castRef[T](v))
+	}
+	return s
+}
 `

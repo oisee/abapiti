@@ -183,8 +183,14 @@ func (b *body) runtime(x *hir.Expr) string {
 			code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
 		}
 	}
-	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional {
+	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {
 		code += ".Value"
+	}
+	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values") && x.Type.Args[0].IsRef() {
+		code = "referenceArray(" + code + ")"
+	}
+	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {
+		code = "referenceSetFromArray(" + a + "," + args[0] + ")"
 	}
 	return b.temp(x.Type, code)
 }
