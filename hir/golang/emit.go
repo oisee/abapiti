@@ -220,9 +220,11 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
 	e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
 	e.line("func (self *%s) %s() *%s {return self}", e.obj(c.Name), e.getter(c.Name), e.obj(c.Name))
 	e.line("type %s interface {", e.ref(c.Name))
+	e.line("nilReference() bool")
 	if c.Super != "" {
 		e.line("%s", e.ref(c.Super))
 	}
@@ -318,7 +320,7 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		}
 	}
 	if !m.Static {
-		e.line("if nilRef(self) {panic(rangeFault{})}")
+		e.line("if self==nil || self.nilReference() {panic(rangeFault{})}")
 	}
 	if m.Name != "class_constructor" {
 		e.line("%s()", e.name("init."+c.Name))
