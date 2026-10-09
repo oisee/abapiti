@@ -283,6 +283,8 @@ func (l *lowerer) assumeIntegerTypes() {
 				} else {
 					e.Op = "i64.toString"
 				}
+			case "string.parseInt10":
+				e.Op = "string.parseInt10i64"
 			case "number.remainder2":
 				if floatingIntegerBoundary(e.X) {
 					e.X = integerFloat(e.X)

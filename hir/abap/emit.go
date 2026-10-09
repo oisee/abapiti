@@ -1695,7 +1695,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + "->has = abap_true.")
 			b.line(n + "->value = " + a + "+" + args[0] + "(1).")
 			b.line("ENDIF.")
-		case "string.parseInt10":
+		case "string.parseInt10", "string.parseInt10i64":
 			b.parseInt10(n, a, length)
 		case "string.localeCompareNames":
 			b.localeCompareNames(n, a, args[0], length)

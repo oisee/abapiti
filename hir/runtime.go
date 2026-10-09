@@ -22,7 +22,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.strictEquals":      {Dynamic, 1, false},
 	"dynamic.asBoolean":         {Dynamic, 0, false},
 	"dynamic.null":              {I32, 0, false},
-	"clock.telemetry":           {Number, 0, false},
+	"clock.telemetry":           {I32, 0, false},
 	"i64.toString":              {I64, 0, false},
 	"i64.remainder2":            {I64, 0, false},
 	"number.remainder2":         {Number, 0, false},
@@ -45,7 +45,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"array.indexOf": {Array, 1, false}, "array.includes": {Array, 1, false},
 	"array.join": {Array, 1, false},
 	"set.delete": {OrderedSet, 1, true}, "map.values": {OrderedMap, 0, false},
-	"string.at": {String, 1, false}, "string.parseInt10": {String, 0, false},
+	"string.at": {String, 1, false}, "string.parseInt10": {String, 0, false}, "string.parseInt10i64": {String, 0, false},
 	"string.replaceFirst":       {String, 2, false},
 	"string.localeCompareNames": {String, 1, false},
 	"record.delete":             {OrderedMap, 1, true},
@@ -178,6 +178,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "string.parseInt10":
 		// Radix-10 parseInt; absent stands for NaN (no digits).
 		return nil, T(Optional, T(Number)), true
+	case "string.parseInt10i64":
+		// The same under assume-int: the digits land in an int8 box.
+		return nil, T(Optional, T(I64)), true
 	case "string.replaceFirst":
 		return []Type{T(String), T(String)}, T(String), true
 	case "string.localeCompareNames":

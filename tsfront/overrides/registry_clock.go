@@ -5,7 +5,7 @@ import "github.com/oisee/abapiti/hir"
 // TelemetryClock is authorized only for source-pinned duration measurements.
 // General Date and epoch time remain unsupported.
 func TelemetryClock() *hir.Expr {
-	return &hir.Expr{Kind: hir.RuntimeOp, Op: "clock.telemetry", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0)}
+	return &hir.Expr{Kind: hir.RuntimeOp, Op: "clock.telemetry", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.I32), 0)}
 }
 func registryClocks() []Entry {
 	return []Entry{
