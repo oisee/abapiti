@@ -5,15 +5,87 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
+ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
+
 ```mermaid
 flowchart LR
-  C["C / Rust / Zig"] -->|clang · wasi-sdk| W[".wasm"]
-  W -->|abapiti| A["ABAP class<br/>(or interfaces + classes)"]
+  T["abaplint core<br/>(TypeScript)"] -->|"tsgo checker"| H["HIR<br/>typed object IR"]
+  H -->|verify · emit| A["2,110 ABAP classes"]
   A --> K["SAP kernel (A4H)"]
   A --> O["osgo<br/>open-steamgate, Go"]
-  A --> J["OSG-JS<br/>abaplint runtime"]
-  N["native C · wazero"] -. "expected values" .-> A
+  A --> J["OSG-JS<br/>open-steamgate, JS"]
+  A -->|osabap| N["zabaplint<br/>native command"]
 ```
+
+**Status, 9 Oct 2026.** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json):
+
+| Host | Check time | Result |
+|---|---|---|
+| SAP 7.58 kernel (A4H), background job | 221 s | = Node abaplint, byte for byte (SHA-256 of all issues) |
+| open-steamgate Go (osgo) | 91 s | = Node |
+| `zabaplint`, native command (Go) | ~100 s | = Node |
+| Node abaplint 2.120.56 | 13.5 s | reference |
+
+A seeded variant with one error per rule gives Node's issues on every host. The stage-by-stage breakdown and how the time came down are in the [v0.1.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.1.0).
+
+> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
+
+## Quick start: three abaplints with one command
+
+Download `abapiti` for your platform from the [latest release](https://github.com/oisee/abapiti/releases/latest), then:
+
+```sh
+abapiti abaplint -o out
+```
+
+This fetches abaplint 577f875e from GitHub (about 1.7 MB, every file checked against its recorded SHA-256), translates it in a few seconds and writes:
+
+| Directory | For | Run it |
+|---|---|---|
+| `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
+| `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](https://github.com/oisee/abapiti/blob/v0.1.0/docs/abaplint-cli.md#output)) |
+| `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
+
+To have the open-steamgate output check zabapgit itself, pass the inputs. They are embedded into a driver class whose result is compared with Node's:
+
+```sh
+abapiti abaplint -o out --input zabapgit/ --deps deps/src --config abaplint.json
+```
+
+Narration is on by default: every step prints what it did, with counts and timings. `--quiet` turns it off. Details: [docs/abaplint-cli.md](https://github.com/oisee/abapiti/blob/v0.1.0/docs/abaplint-cli.md).
+
+### zabaplint: abaplint as one native command
+
+The release also has `zabaplint` for Linux, macOS and Windows (amd64, arm64). It is the translated abaplint compiled TypeScript → ABAP → Go by open-steamgate's `osabap`:
+
+```sh
+zabaplint --file zabapgit_standalone.prog.abap --config abaplint.json \
+          --deps deps.txt --times -allow-read .
+```
+
+`deps.txt` lists one dependency path per line, and `-allow-read` is the sandbox root for file reads. The output is the issue count, then one line per issue: `key|severity|file|row:col|row:col|message`.
+
+## Reproduce everything from scratch
+
+```sh
+git clone https://github.com/oisee/abapiti && cd abapiti
+git checkout v0.1.0                         # the translator is on this tag until it is merged into main
+go build -o abapiti ./cmd/abapiti          # Go 1.26
+./abapiti abaplint -o out                   # or: ./abapiti abaplint ~/src/abaplint -o out
+go test ./hir/... ./tsfront ./cmd/...       # unit tests, emitter fixtures, the generation gate
+```
+
+- **Runtimes.** CI runs the feature fixtures as ABAP Unit on osgo and OSG-JS at the pinned open-steamgate (`.github/ci/osgo.ref`).
+- **Kernel.** The kernel runs used a permanent package on A4H. The driver reads zabapgit from the table `ZABAPITI_CORPUS`, which is created by the abapGit package in [`tools/allbackends/corpus-abap/`](https://github.com/oisee/abapiti/tree/v0.1.0/tools/allbackends/corpus-abap). The builder for its input archive is still a local script and comes with the next release.
+- **Node reference.** The Node reference is the same harness ([`registry_run.ts`](https://github.com/oisee/abapiti/blob/v0.1.0/tsfront/testdata/registrycorpus/harness/registry_run.ts)) run on abaplint's own TypeScript.
+- **Pruning.** The reachability manifest that decides which bodies are compiled was recorded with [`tools/registry-coverage.mjs`](tools/registry-coverage.mjs) (ADR [0009](docs/adr/0009-reachability-pruning.md)).
+
+How it works in more depth: [the ADRs](docs/adr/) (own object HIR, tsgo front end, ABAP 7.50 target, number semantics, reachability pruning).
+
+Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpiler and the acceptance test: check `zabapgit_standalone` on the stack in under 5 minutes.
+
+<details>
+<summary><b>Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
 
@@ -111,7 +183,10 @@ abapiti add.wasm                               # shortcut for "compile wasm", to
 abapiti compile llvm prog.c --class zcl_prog   # needs clang
 abapiti compile llvm prog.ll --zip -o prog.zip # abapGit zip
 abapiti compile ts lexer.ts -o out/            # needs node + npm install, from a checkout
+abapiti abaplint -o out/                       # abaplint core → ABAP, no Node needed
 ```
+
+`abapiti abaplint` translates abaplint's core (commit 577f875e, `@abaplint/core` 2.120.56) into 2,110 ABAP classes and interfaces, packaged for A4H (abapGit zip), open-steamgate unit runners and open-steamgate's native build. The build is pruned to what checking zabapgit_standalone with abapGit's `ci/abaplint.json` executes; see [docs/abaplint-cli.md](https://github.com/oisee/abapiti/blob/v0.1.0/docs/abaplint-cli.md).
 
 ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oisee/vibing-steampunk) (`vsp deploy out/zcl_wasm_add.clas.abap '$TMP'`) or abapGit.
 
@@ -134,6 +209,8 @@ OSD activates code through the abaplint transpiler, so a green OSD run proves th
 - **M2 (done on the kernel and osgo):** the size ladder: the C corpus, Monocypher, and QuickJS evaluating JavaScript inside ABAP. QuickJS on OSG-JS is still to run.
 - **M3:** the TypeScript-transpiled lexer vs the `@abaplint/core` lexer on the same inputs.
 - **M4:** jseval (Go) and ZCL_JSEVAL (ABAP) conformance.
+
+</details>
 
 ## History
 
