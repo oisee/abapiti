@@ -3,6 +3,7 @@ package tsfront
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func TestGoRestSuperFinallyNodeOracle(t *testing.T) {
  static run() { let n=0; let i=0; while(i<5) { i++; try { if(i===2){continue;} if(i===4){break;} n+=i; } catch(e) {n+=100;} } try {n+=1;} finally {n+=10;} return n+new Child().other()+Probe.rest(1,2,3); }
  }
 `
-	node := exec.Command("node", "-e", source+`process.stdout.write(String(Probe.run())+"\n")`)
+	node := exec.Command("node", "-e", strings.ReplaceAll(source, ": number[]", "")+`process.stdout.write(String(Probe.run())+"\n")`)
 	want, err := node.CombinedOutput()
 	if err != nil {
 		t.Fatal(err, string(want))

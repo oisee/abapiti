@@ -66,7 +66,7 @@ The frontend packs variadic arguments into trailing arrays. Super calls resolve
 from the immediate base while retaining the concrete receiver. Typed internal
 loop-control panics cross try closures and unwind to the correct loop; catches
 continue to accept only exception payloads. The frontend/HIR verifier still
-reject finally bodies with exits and try/finally with catch. General primitive
+reject exits from the try block of try/finally, and try/catch/finally. General primitive
 covariant array views remain unsupported. A fresh, unaliased temporary whose
 only uses are pushes before a final narrowing can be repacked after checking
 that every element is present; escaping/aliased arrays are rejected.
