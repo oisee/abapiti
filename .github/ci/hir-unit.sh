@@ -13,7 +13,7 @@ node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
   for suite in TestFixtures Test750Semantics; do
-    expected=6
+    expected=7
     if [[ "$suite" == Test750Semantics ]]; then expected=1; fi
     classes="$gen/$suite"
     status=0

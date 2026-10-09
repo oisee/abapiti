@@ -31,6 +31,12 @@ type emitter struct {
 	// codeUnits lists the classes whose bodies read UTF-16 code units through
 	// a converter they create once and keep in a private CLASS-DATA.
 	codeUnits map[string]bool
+
+	// staticConsts are static fields emitted as CONSTANTS (owner.field ->
+	// ABAP literal); staticInit marks classes whose initializer still has
+	// other work.
+	staticConsts map[string]string
+	staticInit   map[string]bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -44,8 +50,12 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	if err := inline(p); err != nil {
+		return nil, nil, err
+	}
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
+	e.findStaticConstants()
 	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
@@ -362,6 +372,10 @@ func (e *emitter) class(c *hir.Class) {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
 	}
 	for _, f := range c.Fields {
+		if lit, ok := e.staticConstant(c.Name, f.Name); ok && f.Static {
+			fmt.Fprintf(&b, "CONSTANTS %s TYPE %s VALUE %s.\n", e.member(f.Name), e.typ(f.Type), lit)
+			continue
+		}
 		kw := "DATA"
 		if f.Static {
 			kw = "CLASS-DATA"
@@ -499,7 +513,18 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.locals[p.Name] = n
 		b.line(n + " = " + e.param(p.Name) + ".")
 	}
-	b.stmt(m.Body)
+	body := m.Body
+	if m.Name == "class_constructor" && m.Static && body != nil {
+		// Literal static constants are CONSTANTS; their assignments go.
+		kept := &hir.Stmt{Node: body.Node, Kind: body.Kind}
+		for _, s := range body.List {
+			if !e.isStaticConstantInit(c, s) {
+				kept.List = append(kept.List, s)
+			}
+		}
+		body = kept
+	}
+	b.stmt(body)
 	return "METHOD " + name + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
 }
 
@@ -531,12 +556,15 @@ func (b *body) initialize(owner string) {
 	if c == nil {
 		return
 	}
+	if !b.e.staticInit[owner] {
+		return
+	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" && m.Static {
 			// The initializer returns at once when its flag is set; testing the
 			// flag here saves a method call on every static access (A4H profile).
 			b.line("IF " + b.e.name(owner) + "=>" + b.e.name("builtin.initialized."+c.Name) + " = abap_false.")
-			b.line("CALL METHOD " + b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + ".")
+			b.line(b.e.name(owner) + "=>" + b.e.name("builtin.initialize."+c.Name) + "( ).")
 			b.line("ENDIF.")
 			return
 		}
@@ -753,7 +781,9 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.FieldGet:
 		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
 	case hir.StaticGet:
-		b.initialize(x.Owner)
+		if _, constant := e.staticConstant(x.Owner, x.Name); !constant {
+			b.initialize(x.Owner)
+		}
 		b.line(n + " = " + e.name(x.Owner) + "=>" + e.member(x.Name) + ".")
 	case hir.IndexGet:
 		a := b.expr(x.X)
@@ -1673,7 +1703,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
-			b.line("CALL METHOD " + args[0] + "->replace EXPORTING p0 = " + a + " p1 = " + args[1] + " RECEIVING result = " + n + ".")
+			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
@@ -1745,13 +1775,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
 		}
 		if x.Type.Kind == hir.Void {
-			b.line("CALL METHOD " + a + "->" + method + " EXPORTING " + strings.Join(params, " ") + ".")
+			b.line(a + "->" + method + "( " + strings.Join(params, " ") + " ).")
 		} else {
-			call := "CALL METHOD " + a + "->" + method
-			if len(params) > 0 {
-				call += " EXPORTING " + strings.Join(params, " ")
-			}
-			b.line(call + " RECEIVING result = " + n + ".")
+			b.line(n + " = " + a + "->" + method + "( " + strings.Join(params, " ") + " ).")
 		}
 		return
 	case "clock.telemetry":
@@ -1776,12 +1802,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + a + "->name.")
 		return
 	case "classvalue.has":
-		b.line("CALL METHOD " + a + "->has EXPORTING p0 = " + args[0] + " RECEIVING result = " + n + ".")
+		b.line(n + " = " + a + "->has( p0 = " + args[0] + " ).")
 		return
 	case "classvalue.new":
 		b.e.descriptors = true
 		obj := b.rawTemp("REF TO object")
-		b.line("CALL METHOD " + b.e.name("runtime.classvalue.factory") + "=>new EXPORTING p0 = " + a + " RECEIVING result = " + obj + ".")
+		b.line(obj + " = " + b.e.name("runtime.classvalue.factory") + "=>new( p0 = " + a + " ).")
 		b.line(n + " ?= " + obj + ".")
 		return
 	case "dynamic.of":
@@ -1856,7 +1882,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDLOOP.")
 			b.line("ELSE.")
 		}
-		b.line("CALL METHOD " + a + "->" + op + " RECEIVING result = " + target + ".")
+		b.line(target + " = " + a + "->" + op + "( ).")
 		if record && x.Type.Args[1].Kind != hir.Dynamic {
 			// A boxed map<string, any> bag stands for the narrower record too.
 			bagType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))

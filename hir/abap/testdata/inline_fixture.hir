@@ -1,0 +1,126 @@
+hir v1
+class InlCounter
+  field n:i32
+  field log:i32
+  method cur virtual():i32
+    if (((this):classref<InlCounter>.n):i32 < (0):i32):bool
+      return (100):i32
+    else
+      if (((this):classref<InlCounter>.n):i32 >= (10):i32):bool
+        return (200):i32
+      end if
+    end if
+    return (((this):classref<InlCounter>.n):i32 * (2):i32):i32
+  method next virtual():i32
+    ((this):classref<InlCounter>.n):i32 = (((this):classref<InlCounter>.n):i32 + (1):i32):i32
+    return ((this):classref<InlCounter>.n):i32
+  method pair virtual(a:i32, b:i32):i32
+    var x:i32 = ((a):i32 * (10):i32):i32
+    var y:i32 = ((x):i32 + (b):i32):i32
+    (x):i32 = (y):i32
+    return (x):i32
+  method bump virtual(k:i32):void
+    ((this):classref<InlCounter>.log):i32 = ((((this):classref<InlCounter>.log):i32 * (10):i32):i32 + (k):i32):i32
+    if ((k):i32 == (0):i32):bool
+      return _
+    end if
+    ((this):classref<InlCounter>.n):i32 = (((this):classref<InlCounter>.n):i32 + (k):i32):i32
+  method me virtual():classref<InlCounter>
+    ((this):classref<InlCounter>.log):i32 = ((((this):classref<InlCounter>.log):i32 * (10):i32):i32 + (9):i32):i32
+    return (this):classref<InlCounter>
+  method fact virtual(k:i32):i32
+    if ((k):i32 <= (1):i32):bool
+      return (1):i32
+    end if
+    return ((k):i32 * (virtual  (this):classref<InlCounter>.fact(((k):i32 - (1):i32):i32)):i32):i32
+  method shadow virtual(a:i32):i32
+    var x:i32 = (a):i32
+    var x:i32 = (5):i32
+    ((this):classref<InlCounter>.log):i32 = (x):i32
+    return (x):i32
+  method late virtual(k:i32):i32
+    var r:i32 = _
+    if ((k):i32 > (0):i32):bool
+      (r):i32 = (k):i32
+    end if
+    return (r):i32
+class InlBase
+  method val virtual():i32
+    return (1):i32
+class InlSub extends InlBase
+  method val virtual():i32
+    return (2):i32
+class inline_fixture
+  method run static():i32
+    var c:classref<InlCounter> = (new classref<InlCounter>()):classref<InlCounter>
+    if ((seq (if (((inl_1_self):classref<InlCounter>.n):i32 < (0):i32):bool then (100):i32 else (if (((inl_1_self):classref<InlCounter>.n):i32 >= (10):i32):bool then (200):i32 else (((inl_1_self):classref<InlCounter>.n):i32 * (2):i32):i32):i32):i32):i32 != (0):i32):bool
+      return (1):i32
+    end if
+    ((c):classref<InlCounter>.n):i32 = (-3):i32
+    if ((seq (if (((inl_2_self):classref<InlCounter>.n):i32 < (0):i32):bool then (100):i32 else (if (((inl_2_self):classref<InlCounter>.n):i32 >= (10):i32):bool then (200):i32 else (((inl_2_self):classref<InlCounter>.n):i32 * (2):i32):i32):i32):i32):i32 != (100):i32):bool
+      return (2):i32
+    end if
+    ((c):classref<InlCounter>.n):i32 = (12):i32
+    if ((seq (if (((inl_3_self):classref<InlCounter>.n):i32 < (0):i32):bool then (100):i32 else (if (((inl_3_self):classref<InlCounter>.n):i32 >= (10):i32):bool then (200):i32 else (((inl_3_self):classref<InlCounter>.n):i32 * (2):i32):i32):i32):i32):i32 != (200):i32):bool
+      return (3):i32
+    end if
+    ((c):classref<InlCounter>.n):i32 = (4):i32
+    if ((seq (if (((inl_4_self):classref<InlCounter>.n):i32 < (0):i32):bool then (100):i32 else (if (((inl_4_self):classref<InlCounter>.n):i32 >= (10):i32):bool then (200):i32 else (((inl_4_self):classref<InlCounter>.n):i32 * (2):i32):i32):i32):i32):i32 != (8):i32):bool
+      return (4):i32
+    end if
+    ((c):classref<InlCounter>.n):i32 = (1):i32
+    if ((seq (seq (seq (inl_7_x):i32):i32):i32):i32 != (23):i32):bool
+      return (5):i32
+    end if
+    var inl_8_self:classref<InlCounter> = (c):classref<InlCounter>
+    ((inl_8_self):classref<InlCounter>.log):i32 = ((((inl_8_self):classref<InlCounter>.log):i32 * (10):i32):i32 + (0):i32):i32
+    if ((0):i32 == (0):i32):bool
+    else
+      ((inl_8_self):classref<InlCounter>.n):i32 = (((inl_8_self):classref<InlCounter>.n):i32 + (0):i32):i32
+    end if
+    var inl_9_self:classref<InlCounter> = (c):classref<InlCounter>
+    ((inl_9_self):classref<InlCounter>.log):i32 = ((((inl_9_self):classref<InlCounter>.log):i32 * (10):i32):i32 + (4):i32):i32
+    if ((4):i32 == (0):i32):bool
+    else
+      ((inl_9_self):classref<InlCounter>.n):i32 = (((inl_9_self):classref<InlCounter>.n):i32 + (4):i32):i32
+    end if
+    if ((((c):classref<InlCounter>.log):i32 != (4):i32):bool || (((c):classref<InlCounter>.n):i32 != (7):i32):bool):bool
+      return (6):i32
+    end if
+    ((c):classref<InlCounter>.log):i32 = (0):i32
+    if ((seq (if (((inl_11_self):classref<InlCounter>.n):i32 < (0):i32):bool then (100):i32 else (if (((inl_11_self):classref<InlCounter>.n):i32 >= (10):i32):bool then (200):i32 else (((inl_11_self):classref<InlCounter>.n):i32 * (2):i32):i32):i32):i32):i32 != (14):i32):bool
+      return (7):i32
+    end if
+    if (((c):classref<InlCounter>.log):i32 != (9):i32):bool
+      return (8):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.fact((5):i32)):i32 != (120):i32):bool
+      return (9):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.shadow((6):i32)):i32 != (6):i32):bool
+      return (10):i32
+    end if
+    if (((c):classref<InlCounter>.log):i32 != (5):i32):bool
+      return (11):i32
+    end if
+    var b:classref<InlBase> = (new classref<InlSub>()):classref<InlSub>
+    if ((virtual  (b):classref<InlBase>.val()):i32 != (2):i32):bool
+      return (12):i32
+    end if
+    var inl_13_self:classref<InlCounter> = (c):classref<InlCounter>
+    var inl_13_k:i32 = (seq (seq ((inl_12_self):classref<InlCounter>.n):i32):i32):i32
+    ((inl_13_self):classref<InlCounter>.log):i32 = ((((inl_13_self):classref<InlCounter>.log):i32 * (10):i32):i32 + (inl_13_k):i32):i32
+    if ((inl_13_k):i32 == (0):i32):bool
+    else
+      ((inl_13_self):classref<InlCounter>.n):i32 = (((inl_13_self):classref<InlCounter>.n):i32 + (inl_13_k):i32):i32
+    end if
+    if ((((c):classref<InlCounter>.log):i32 != (58):i32):bool || (((c):classref<InlCounter>.n):i32 != (16):i32):bool):bool
+      return (13):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.late((5):i32)):i32 != (5):i32):bool
+      return (14):i32
+    end if
+    if ((virtual  (c):classref<InlCounter>.late((-1):i32)):i32 != (0):i32):bool
+      return (15):i32
+    end if
+    return (42):i32
