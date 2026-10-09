@@ -1,0 +1,5 @@
+INTERFACE zif_abapiti_corpus PUBLIC.
+  METHODS count RETURNING VALUE(result) TYPE i.
+  METHODS get IMPORTING idx TYPE i RETURNING VALUE(result) TYPE string.
+  METHODS name IMPORTING idx TYPE i RETURNING VALUE(result) TYPE string.
+ENDINTERFACE.

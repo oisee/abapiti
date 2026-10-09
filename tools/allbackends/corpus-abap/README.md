@@ -1,0 +1,1 @@
+Import this folder once with abapGit into package `$ZABAPITI_CORPUS`, then activate all objects. The report loads a server-side archive with `OPEN DATASET`; keep the package permanent while set-specific filler reports and benchmarks remain disposable.
