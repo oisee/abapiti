@@ -211,6 +211,15 @@ func TestRegistryClosureGate(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(out, class+".clas.testclasses.abap"), []byte(RegistryRunTest(class)), 0644); err != nil {
 			t.Fatal(err)
 		}
+		if os.Getenv("REGISTRY_RUN_CORPUS") != "" {
+			a4h := "zcl_abapiti_registry_a4h"
+			if err := os.WriteFile(filepath.Join(out, a4h+".clas.abap"), []byte(RegistryRunCorpusClass(a4h, want, names)), 0644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(out, "zabapiti_registry_run.prog.abap"), []byte(RegistryRunReport("zabapiti_registry_run", a4h)), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	t.Logf("Registry closure emitted %d ABAP files", len(emitted))
 }
