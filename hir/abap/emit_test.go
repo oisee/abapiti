@@ -610,7 +610,9 @@ func TestStaticLiteralBecomesConstant(t *testing.T) {
 	set := func(name string, v int) *hir.Stmt {
 		return &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: name, Type: i32}, Y: lit(v)}
 	}
-	get := func(name string) *hir.Expr { return &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: name, Type: i32} }
+	get := func(name string) *hir.Expr {
+		return &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: name, Type: i32}
+	}
 	init := method("class_constructor", hir.T(hir.Void), hir.B(set("nl", 10), set("count", 0)))
 	init.Static = true
 	// Another class reads the constant: no initializer of Mod is needed.
