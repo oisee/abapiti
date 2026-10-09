@@ -96,7 +96,14 @@ func (e *emitter) materializer(t hir.Type) string {
 			line("%s = %s.", local, call(field.Type, "p0->get( `"+key+"` )"))
 			arguments = append(arguments, e.param(field.Name)+" = "+local)
 		}
-		line("result = NEW %s( %s ).", e.name(c.Name), strings.Join(arguments, " "))
+		if e.wideShape(c) {
+			line("result = NEW %s( ).", e.name(c.Name))
+			for i, field := range c.Fields {
+				line("result->%s = field%d.", e.member(field.Name), i)
+			}
+		} else {
+			line("result = NEW %s( %s ).", e.name(c.Name), strings.Join(arguments, " "))
+		}
 		line("result->%s = p0.", e.name("builtin.materializedSource"))
 	default:
 		e.err = fmt.Errorf("materialization does not support %s", t.String())

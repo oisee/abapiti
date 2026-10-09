@@ -666,3 +666,36 @@ func TestVoidSequenceStatement(t *testing.T) {
 		}
 	}
 }
+
+// A shape with hundreds of fields once produced a 31,619-character
+// `METHODS constructor IMPORTING …` that the kernel refused (statement too
+// long, A4H 2026-10-09). Wide copy-only constructors are dropped; NEW sets
+// the fields one statement each.
+func TestWideShapeHasNoConstructor(t *testing.T) {
+	c := &hir.Class{Name: "shape.wide", Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}}
+	opt := hir.T(hir.Optional, str)
+	var args []*hir.Expr
+	for i := 0; i < 60; i++ {
+		f := fmt.Sprintf("field%02d", i)
+		c.Fields = append(c.Fields, hir.Field{Name: f, Type: str})
+		c.Ctor.Params = append(c.Ctor.Params, hir.Param{Name: f, Type: opt})
+		c.Ctor.Body.List = append(c.Ctor.Body.List, &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, Name: f, Type: str, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("shape.wide")}}, Y: &hir.Expr{Kind: hir.Narrow, Type: str, X: hir.V(f, opt)}})
+		args = append(args, &hir.Expr{Kind: hir.Lit, Type: opt, Value: f})
+	}
+	m := method("f", hir.Ref("shape.wide"), ret(&hir.Expr{Kind: hir.New, Type: hir.Ref("shape.wide"), Args: args}))
+	m.Static = true
+	files, err := Emit(&hir.Program{Classes: []*hir.Class{c, {Name: "user", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, src := range files {
+		if strings.Contains(src, "METHODS constructor IMPORTING") && strings.Contains(name, "shape") {
+			t.Fatalf("%s still has the wide constructor", name)
+		}
+		for _, stmt := range strings.Split(src, ".\n") {
+			if len(stmt) > 2000 {
+				t.Fatalf("%s: statement of %d characters", name, len(stmt))
+			}
+		}
+	}
+}

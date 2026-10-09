@@ -363,7 +363,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 		fmt.Fprintf(&b, "%s %s TYPE %s.\n", kw, e.member(f.Name), e.typ(f.Type))
 	}
-	if c.Ctor != nil {
+	if c.Ctor != nil && !e.wideShape(c) {
 		b.WriteString(e.signature(c.Ctor, true))
 	}
 	for _, m := range c.Methods {
@@ -392,7 +392,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
-	if c.Ctor != nil {
+	if c.Ctor != nil && !e.wideShape(c) {
 		b.WriteString(e.body(c, c.Ctor, "constructor"))
 	}
 	for _, m := range c.Methods {
@@ -751,6 +751,24 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 		b.initialize(t.Name)
+		if c := e.classBy(t.Name); c != nil && e.wideShape(c) {
+			// A wide shape has no constructor: its fields are set one by one.
+			values := make([]string, len(x.Args))
+			for i, a := range x.Args {
+				field := c.Ctor.Body.List[i].X.Type
+				if a.Type.Kind == hir.Optional && !a.Type.Equal(field) && c.Ctor.Body.List[i].Y.Kind == hir.Narrow {
+					// The constructor narrowed (checked) the optional parameter.
+					values[i] = b.expr(&hir.Expr{Kind: hir.Narrow, Node: a.Node, Type: field, X: a})
+				} else {
+					values[i] = b.value(a, field)
+				}
+			}
+			b.line(n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( ).")
+			for i := range values {
+				b.line(n + "->" + e.member(c.Ctor.Params[i].Name) + " = " + values[i] + ".")
+			}
+			break
+		}
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
@@ -1917,4 +1935,28 @@ func (e *emitter) overriddenBelow(class, name string) bool {
 		}
 	}
 	return false
+}
+
+// wideShape: a class whose constructor would exceed the kernel's statement
+// length (hundreds of parameters, e.g. the all-rules config shape) and whose
+// constructor body only copies each parameter into the same-named field.
+// Such a class is emitted without a constructor; NEW sets the fields.
+func (e *emitter) wideShape(c *hir.Class) bool {
+	if c.Ctor == nil || len(c.Ctor.Params) <= 40 || c.Super != "" || c.Ctor.Body == nil {
+		return false
+	}
+	if len(c.Ctor.Body.List) != len(c.Ctor.Params) {
+		return false
+	}
+	for i, s := range c.Ctor.Body.List {
+		p := c.Ctor.Params[i]
+		y := s.Y
+		if y != nil && y.Kind == hir.Narrow {
+			y = y.X
+		}
+		if s.Kind != hir.Assign || s.X == nil || y == nil || s.X.Kind != hir.FieldGet || s.X.Name != p.Name || y.Kind != hir.Local || y.Name != p.Name {
+			return false
+		}
+	}
+	return true
 }
