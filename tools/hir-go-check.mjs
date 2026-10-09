@@ -7,7 +7,10 @@ import {spawnSync} from 'node:child_process';
 import {PerformanceObserver,performance} from 'node:perf_hooks';
 import {buildUpstream} from './statements-upstream.mjs';
 const require=createRequire(import.meta.url);
-if(process.argv[2]==='--node-worker'){
+if(process.argv[2]==='--summarize'){
+ const out=resolve(process.argv[3]),go=resolve(process.argv[4]);
+ const results=JSON.parse(readFileSync(join(out,'results.json'),'utf8'));report(results.rows,out,go,results);
+}else if(process.argv[2]==='--node-worker'){
  const [harness,kit,variant]=process.argv.slice(3);
  const {RegistryRun}=require(harness);const h=new RegistryRun();
  const input=variant==='clean'?'zabapgit_standalone.prog.abap':'seeded/zabapgit_standalone.prog.abap';
@@ -57,10 +60,42 @@ if(process.argv[2]==='--node-worker'){
   }
   if(releaseArg)run('Go-ABAP','clean',resolve(releaseArg),['--file','zabapgit_standalone.prog.abap','--config','abaplint.json','--deps','deps.txt','--times','-allow-read','.'],{GODEBUG:'gctrace=1'});
   writeFileSync(join(out,'results.json'),JSON.stringify({GOGC:process.env.GOGC||'default',rows},null,2)+'\n');
-  console.log('| Host | Input | Check s | Lexer | Statements | Structures | Syntax | Rules | Peak MiB | GC share |');
-  console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|');
-  for(const r of rows)console.log(`| ${r.host} | ${r.variant} | ${r.checkSeconds.toFixed(3)} | ${r.lexer?.toFixed(3)||'—'} | ${r.statements?.toFixed(3)||'—'} | ${r.structures?.toFixed(3)||'—'} | ${r.syntax?.toFixed(3)||'—'} | ${r.rules.toFixed(3)} | ${r.peakRSSMiB.toFixed(1)} | ${((r.goGCProcessCPUFraction??r.goGCCPUFraction??r.nodeGCWallFraction??r.releaseGCCPUFraction??NaN)*100).toFixed(2)}% |`);
-  const profile=spawnSync('go',['tool','pprof','-top','-nodecount=10',go,join(out,'clean.cpu')],{encoding:'utf8',env:process.env});
-  if(profile.status!==0)throw new Error(profile.stderr);writeFileSync(join(out,'top10.txt'),profile.stdout);console.log(profile.stdout);
+  report(rows,out,go,{GOGC:process.env.GOGC||'default',rows});
  }finally{built.dispose()}
+}
+
+
+// GC runtime CPU counters estimate utilization; under scheduling contention
+// they can exceed measured process CPU. Attribute the HIR CPU profile samples
+// to collection, worker, assistance, sweep and scavenging stacks instead.
+function gcSampleShare(binary,profile){
+ const raw=spawnSync('go',['tool','pprof','-raw',binary,profile],{encoding:'utf8',maxBuffer:64*1024*1024,env:process.env});
+ if(raw.status!==0)throw new Error(raw.stderr);
+ const [samples,locations]=raw.stdout.split('Locations\n');const gc=new Set();let current;
+ for(const line of locations.split('Mappings\n')[0].split('\n')){
+  const m=/^\s*(\d+):/.exec(line);if(m)current=Number(m[1]);
+  if(/runtime\.(?:gcBgMarkWorker|gcAssistAlloc|gcStart|gcMarkDone|gcMarkTermination|sweepone|bgsweep|bgscavenge|scavenge)/.test(line))gc.add(current);
+ }
+ let total=0,collected=0;
+ for(const line of samples.split('\n')){const m=/^\s*\d+\s+(\d+):\s+([\d ]+)/.exec(line);if(m){const n=Number(m[1]);total+=n;if(m[2].trim().split(/\s+/).some(v=>gc.has(Number(v))))collected+=n}}
+ if(!total)throw new Error('empty CPU profile');return collected/total;
+}
+function report(rows,out,go,results){
+ for(const r of rows){
+  if(r.host==='Go-HIR'){
+   r.goGCSampledCPUFraction=gcSampleShare(go,join(out,r.variant+'.cpu'));
+   if(r.goGCProcessCPUFraction!==undefined){r.goGCEstimatedProcessCPUFraction=r.goGCProcessCPUFraction;delete r.goGCProcessCPUFraction}
+  }
+  if(r.host==='Go-ABAP'){
+   const trace=readFileSync(join(out,`${r.host}-${r.variant}.err`),'utf8');let seconds=0;
+   for(const m of trace.matchAll(/([\d.]+)\+([\d.]+)\/([\d.]+)\/([\d.]+)\+([\d.]+) ms cpu/g))seconds+=m.slice(1).map(Number).reduce((a,v)=>a+v,0)/1000;
+   r.releaseGCCPUFraction=seconds/r.cpuSeconds;
+  }
+ }
+ writeFileSync(join(out,'results.json'),JSON.stringify({...results,rows},null,2)+'\n');
+ console.log('| Host | Input | Check s | Lexer | Statements | Structures | Syntax | Rules | Peak MiB | GC share |');
+ console.log('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+ for(const r of rows)console.log(`| ${r.host} | ${r.variant} | ${r.checkSeconds.toFixed(3)} | ${r.lexer?.toFixed(3)||'—'} | ${r.statements?.toFixed(3)||'—'} | ${r.structures?.toFixed(3)||'—'} | ${r.syntax?.toFixed(3)||'—'} | ${r.rules.toFixed(3)} | ${r.peakRSSMiB.toFixed(1)} | ${((r.goGCSampledCPUFraction??r.nodeGCWallFraction??r.releaseGCCPUFraction??NaN)*100).toFixed(2)}% |`);
+ const profile=spawnSync('go',['tool','pprof','-top','-nodecount=10',go,join(out,'clean.cpu')],{encoding:'utf8',env:process.env});
+ if(profile.status!==0)throw new Error(profile.stderr);writeFileSync(join(out,'top10.txt'),profile.stdout);console.log(profile.stdout);
 }
