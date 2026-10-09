@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf16"
+	"unicode/utf8"
 )
 
 // jsString stores UTF-16LE units, including isolated surrogate sections. Its
@@ -187,6 +188,8 @@ func box(v any) *dynamic {
 	}
 	tag := uint8(2)
 	switch v.(type) {
+	case *classDescriptor:
+		tag = 10
 	case jsString:
 		tag = 1
 	case bool:
@@ -604,6 +607,7 @@ func (s jsString) parseInt10i64() optional[int64] {
 type jsRegExp struct {
 	Source, Flags jsString
 	compiled      *regexp.Regexp
+	LastIndex     int32
 }
 
 func newRegExp(pattern, flags jsString) *jsRegExp {
@@ -621,14 +625,68 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
 	default:
 		panic(trap{Source: "not supported in the Go prototype: JavaScript regexp /" + p + "/" + f})
 	}
-	return &jsRegExp{pattern.replaceAll(str("/"), str("\\/")), flags, regexp.MustCompile(translated)}
+	return &jsRegExp{pattern.replaceAll(str("/"), str("\\/")), flags, regexp.MustCompile(translated), 0}
+}
+func unitText(s jsString) string {
+	var b strings.Builder
+	for i := int32(0); i < s.length(); i++ {
+		b.WriteRune(rune(s.charCodeAt(i)))
+	}
+	return b.String()
 }
 func (r *jsRegExp) test(s jsString) bool {
-	u := ""
-	for i := int32(0); i < s.length(); i++ {
-		u += string(rune(s.charCodeAt(i)))
+	start := int32(0)
+	global := r.Flags.indexOf(str("g")) >= 0
+	if global {
+		start = r.LastIndex
 	}
-	return r.compiled.MatchString(u)
+	if start < 0 || start > s.length() {
+		r.LastIndex = 0
+		return false
+	}
+	input := unitText(s[2*start:])
+	m := r.compiled.FindStringIndex(input)
+	if m == nil {
+		if global {
+			r.LastIndex = 0
+		}
+		return false
+	}
+	if global {
+		r.LastIndex = start + int32(utf8.RuneCountInString(input[:m[1]]))
+	}
+	return true
+}
+func (r *jsRegExp) match_test(s jsString) bool {
+	if r.Flags.indexOf(str("g")) < 0 {
+		return r.test(s)
+	}
+	r.LastIndex = 0
+	found := r.test(s)
+	r.LastIndex = 0
+	return found
+}
+func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
+	if v.indexOf(str("$")) >= 0 {
+		panic(trap{Source: "not supported in the Go prototype: regexp replacement substitutions"})
+	}
+	input := unitText(s)
+	global := r.Flags.indexOf(str("g")) >= 0
+	limit := 1
+	if global {
+		limit = -1
+		r.LastIndex = 0
+	}
+	matches := r.compiled.FindAllStringIndex(input, limit)
+	out := jsString("")
+	last := int32(0)
+	for _, m := range matches {
+		a := int32(utf8.RuneCountInString(input[:m[0]]))
+		b := int32(utf8.RuneCountInString(input[:m[1]]))
+		out += s[2*last:2*a] + v
+		last = b
+	}
+	return out + s[2*last:]
 }
 func (r *jsRegExp) toString() jsString { return str("/") + r.Source + str("/") + r.Flags }
 
@@ -685,6 +743,8 @@ func dynTypeof(d *dynamic) jsString {
 		return str("undefined")
 	}
 	switch d.Tag {
+	case 10:
+		return str("function")
 	case 1:
 		return str("string")
 	case 3:
@@ -701,10 +761,12 @@ func dynToString(d *dynamic) jsString {
 	switch d.Tag {
 	case tagNull:
 		return str("null")
-	case 1, 3, 4, 5, 6:
+	case 4, 5, 6:
+		return numberString(dynNumber(d))
+	case 1, 3:
 		return primitiveString(d.Value)
 	default:
-		return str("[object Object]")
+		panic(rangeFault{})
 	}
 }
 func dynTruth(d *dynamic) bool {
@@ -843,5 +905,101 @@ func (m *orderedMap[K, V]) dynamicPut(k jsString, v *dynamic) {
 		panic(rangeFault{})
 	}
 	m.set(key, unboxValue[V](v))
+}
+
+type classDescriptor struct {
+	Name    jsString
+	Parent  *classDescriptor
+	Statics []jsString
+	Factory func() any
+}
+
+func (d *classDescriptor) has(k jsString) bool {
+	if d != nil {
+		for _, s := range d.Statics {
+			if s == k {
+				return true
+			}
+		}
+	}
+	return false
+}
+func classOf(v any) *classDescriptor {
+	if nilRef(v) {
+		return nil
+	}
+	if d, ok := v.(interface{ descriptor() *classDescriptor }); ok {
+		return d.descriptor()
+	}
+	panic(rangeFault{})
+}
+func descriptorInstance(v any, d *classDescriptor) bool {
+	if nilRef(v) {
+		return false
+	}
+	for c := classOf(v); c != nil; c = c.Parent {
+		if c == d {
+			return true
+		}
+	}
+	return false
+}
+func dynClass(d *dynamic) *classDescriptor {
+	if d == nil || d.Tag != 10 {
+		panic(rangeFault{})
+	}
+	return d.Value.(*classDescriptor)
+}
+
+func cased(r rune) bool {
+	return unicode.IsUpper(r) || unicode.IsLower(r) || unicode.IsTitle(r) || unicode.Is(unicode.Other_Uppercase, r) || unicode.Is(unicode.Other_Lowercase, r)
+}
+func (s jsString) lower() jsString {
+	var rs []rune
+	for i := int32(0); i < s.length(); i++ {
+		r := rune(s.charCodeAt(i))
+		if utf16.IsSurrogate(r) && r <= 0xdbff && i+1 < s.length() {
+			d := rune(s.charCodeAt(i + 1))
+			if d >= 0xdc00 && d <= 0xdfff {
+				r = utf16.DecodeRune(r, d)
+				i++
+			}
+		}
+		rs = append(rs, r)
+	}
+	out := jsString("")
+	for i, r := range rs {
+		if r >= 0xd800 && r <= 0xdfff {
+			out += unit(int32(r))
+			continue
+		}
+		if r == 'Σ' {
+			before, after := false, false
+			for j := i - 1; j >= 0; j-- {
+				if caseIgnorable[rs[j]] {
+					continue
+				}
+				before = cased(rs[j])
+				break
+			}
+			for j := i + 1; j < len(rs); j++ {
+				if caseIgnorable[rs[j]] {
+					continue
+				}
+				after = cased(rs[j])
+				break
+			}
+			if before && !after {
+				out += str("ς")
+				continue
+			}
+		}
+		if v, ok := lowerExpansion[r]; ok {
+			out += str(v)
+		} else {
+			out += str(string(unicode.ToLower(r)))
+		}
+	}
+	return out
 }
 `
