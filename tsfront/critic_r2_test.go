@@ -49,7 +49,7 @@ func sourceProbe(t *testing.T, source string) string {
 func TestCriticR2MemberPassesFailClosed(t *testing.T) {
 	for _, source := range []string{
 		`export class Probe { static {} run(): number { return 0; } }`,
-		`export class Probe { get value(): number { return 7; } }`,
+		`export class Probe { set value(n: number) {} }`,
 	} {
 		_, diags := lowerProbe(t, sourceProbe(t, source))
 		count := 0

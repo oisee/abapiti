@@ -219,7 +219,7 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 		l.class = c
 		for _, m := range stmt.Members() {
 			switch m.Kind {
-			case ast.KindMethodDeclaration:
+			case ast.KindMethodDeclaration, ast.KindGetAccessor:
 				l.lowerMethodBody(m)
 			case ast.KindConstructor:
 				l.lowerConstructorBody(m, c)
@@ -282,7 +282,7 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 		switch m.Kind {
 		case ast.KindPropertyDeclaration:
 			l.propertySignature(m, c)
-		case ast.KindMethodDeclaration:
+		case ast.KindMethodDeclaration, ast.KindGetAccessor:
 			l.methodSignature(m, c)
 		case ast.KindConstructor:
 			l.constructorSignature(m, c)
@@ -358,6 +358,11 @@ func (l *lowerer) methodSignature(m *ast.Node, c *hir.Class) {
 		return
 	}
 	hm := &hir.Method{Node: l.node(m), Name: name, Internal: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0}
+	if m.Kind == ast.KindGetAccessor {
+		// A property read is an invocation, not a storage slot. Keep a
+		// separate member name so data fields cannot alias the getter ABI.
+		hm.Name = "get." + name
+	}
 	hm.Static = m.ModifierFlags()&ast.ModifierFlagsStatic != 0
 	hm.Abstract = m.ModifierFlags()&ast.ModifierFlagsAbstract != 0
 	hm.Virtual = !hm.Static
