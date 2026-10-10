@@ -1,0 +1,58 @@
+Singleton argument sites (one row per call/parameter; chained iterations excluded from S1)
+Caller stage/class | in-loop | outside | all | some | none | chained
+lexer | 0 | 0 | 0 | 0 | 0 | 0
+other | 0 | 6 | 1 | 0 | 5 | 0
+rules | 0 | 0 | 0 | 0 | 0 | 0
+statements | 1 | 2 | 2 | 0 | 1 | 0
+statements/combi.Alternative* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Combi | 0 | 1 | 0 | 1 | 0 | 0
+statements/combi.Expression* | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Optional* | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.OptionalPriority | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Permutation* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Plus* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Sequence* | 1 | 0 | 0 | 1 | 0 | 1
+statements/combi.Star* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Token* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Vers* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Word* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.WordSequence* | 0 | 0 | 0 | 0 | 0 | 0
+structures | 0 | 3 | 0 | 0 | 3 | 0
+syntax | 2 | 2 | 1 | 0 | 3 | 0
+Total S1 sites: 21
+Receiver methods (* profile #5 hot class; parameter details in methods.csv)
+Receiver method | only iterated | first blocker
+Alternative::run*[0] | false | virtual argument
+AlternativePriority::run[0] | false | virtual argument
+Expression::run*[0] | true | 1 foreach uses
+FailCombinator::run[0] | true | 0 foreach uses
+LangVers::run[0] | true | 0 foreach uses
+LangVersNot::run[0] | false | virtual argument
+Optional::run*[0] | true | 1 foreach uses
+OptionalPriority::run[0] | true | 1 foreach uses
+Permutation::run*[0] | false | virtual argument
+Plus::run*[0] | false | virtual argument
+PlusPriority::run[0] | false | virtual argument
+Regex::run[0] | true | 1 foreach uses
+Sequence::run*[0] | true | 1 foreach uses
+Star::run*[0] | false | var
+StarPriority::run[0] | false | var
+StopBefore1::run[0] | true | 1 foreach uses
+StopBefore2::run[0] | true | 1 foreach uses
+Token::run*[0] | true | 1 foreach uses
+Vers::run*[0] | false | virtual argument
+Word::run*[0] | true | 1 foreach uses
+WordSequence::run*[0] | false | virtual argument
+StatementParser::tokensToNodes[0] | true | 1 foreach uses
+IStructureResult::constructor[0] | false | assign value
+IMatch::constructor[0] | false | assign value
+CurrentScope::addFormDefinitions[0] | true | 1 foreach uses
+module::checkDatabaseFields[1] | false | array.length receiver/operand
+MethodDefReturning::runSyntax[2] | false | conditional operand
+StructureType::constructor[0] | false | array.length receiver/operand
+MethodParameters::add[3] | false | array.includes receiver/operand
+Registry::_addFiles[0] | true | 1 foreach uses
+Registry::addFiles[0] | false | virtual argument
+tuple::constructor[2] | false | assign value
+Hot-class S1 coverage: 0/3 (0.0%) all receivers; 3/3 partially covered.
+Partial sites can use m_one(e)=m([e]) for uncovered receivers. Static site counts are not execution-weighted savings; chained calls have no singleton guarantee.
