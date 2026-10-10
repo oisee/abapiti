@@ -1,0 +1,40 @@
+Production fact code: 309f30e; reference-support improvement: 1a69af9; candidate-guard improvement: 514d021; baseline: 5de8670.
+
+Green: go vet ./...; go test -short ./...; lint gate origin/main (2.13.2; canary 5/5).
+Green: focused structured CFG, def/use, candidate, ownership and SCC/independent DFS tests.
+Green: lexer golden rerun with ABAPITI_GRACECHECK=1: 30.06 s. Cartesian + independently hashed reference equality, phased preparation, declaration determinism, rewrite budgets and idempotence passed; the reviewed golden matches.
+Green: complete 6336-file default build manifests identical.
+Green: ABAPITI_GRACE_FULL=1 full pinned registry closure: 2093.09 s (34m53s). Both reference equalities, reevaluation, phased preparation, positive monotonicity, declaration determinism, depth/method/program budgets, verified termination and idempotence passed. Incremental/full recomputation agrees on two rounds and 1487 inline sites. No blocking or verification errors across 1538 source files plus harness, 1927 classes and 73 interfaces.
+
+All heavy commands use flock /tmp/abapiti-heavy.lock, GOCACHE=$HOME/.cache/abapiti-go-cache and GOTMPDIR=$HOME/.cache/grace-tmp. Final pipeline also sets TMPDIR to the same cache and GOMAXPROCS=4.
+The shared lock file was removed/recreated during earlier work; stale jobs were stopped and final evidence comes from a single serialized pipeline. The pathname was removed/recreated again during the long reference run; our test was paused and resumed under a newly acquired current-inode lock. A cache-only watchdog pauses that test and reacquires the lock if the pathname changes again. The timing trials preceded these later replacements.
+
+Approximation: path feasibility is not proven; every nonlocal expression may enter its handler and Finally joins normal/exceptional exits. Aliases are flow-insensitive and are not heap points-to facts. Escape follows value dependence and can mark a container when an element escapes. Any-writing callees remain any even when their effects might be confined at a caller. Own-fields proves direct receiver/immutable-receiver-alias writes, not arbitrary ownership of reachable fields. MayRaise is not suppressed by catch; MayDiverge conservatively includes all loops and closed-world cycles.
+R1 does not resolve native struct/record row representations. R2 excludes arbitrary call consumers and labels lowered spread/push-all by available HIR operations. R3 primitive append candidates prove local value-cell usage at HIR level; runtime string backing uniqueness and kernel profitability are not proven. Static rankings do not estimate dynamic time saved.
+
+Table convention: loop_depth counts surrounding loops; R1 in-loop means nested in an outer loop. Statement totals in summaries include all statements/combi.<class> rows. R1 gain counts include only value rows.
+
+Cost: three warm paired full builds, alternating before/after order under the shared lock. Baseline 5de8670 versus code 309f30e. Median build 31.76 -> 31.77 s (+0.0315%), within 5%. Median isolated Grace inline pass 0.444593330 -> 0.754084816 s (+69.6% in the isolated interval); the 0.309491486 s difference is 0.9745% of baseline full build time. The inline demand excludes all new flow/summary facts. These timings demonstrate the whole-build budget, not an unchanged isolated-pass time. Both versions select 1487 inline sites and 190 callees and emit byte-identical complete output. Raw trials and manifest digest are in cost.csv/cost.json.
+
+Candidate totals: R1 679 screened, 26 qualify (10 value rows, 16 reference rows); R2 3394 screened, 3 qualify; R3 4562 screened, 10 qualify. Statements: R3 2 > R1 0 = R2 0 gain candidates; lexer: R1 = R2 = R3 = 0. The two statement R3 candidates are Alternative.first (combi.ts:942:5) and AlternativePriority.first (combi.ts:1018:5), both string APPEND sources inside loops. Four statement R1 reference-row qualifiers do not save kernel row copies. Per-class tables, producer/consumer kinds, blockers and top 20 for each rule are in tables.txt; flow-sites.csv contains every screened site.
+
+Dominant statement blockers: 59 R1 rows escape; 2609 R2 arrays/aliases escape under the conservative relation; 2698 R3 reference sources lack an ownership proof and 40 primitive sources fail the single-definition/read ownership screen. This explains the small qualifying counts, rather than asserting absence of kernel optimization opportunities. The three R2 qualifiers are two New arrays in MethodParameters.workaroundRAP and map.keys consumed by ForEach in Config.checkVersion. All ten R3 qualifiers are array.push value sources.
+
+Reference scaling: the first complete global snapshot reference exhausted its 1000000000-premise cap after 2347.33 s. The cap was not raised. Test-only 1a69af9 independently evaluates the unchanged liveness rules per method after validating disjoint CFG/local ownership, and then evaluates all remaining global rules. The Cartesian evaluator remains unchanged and checks partitioned results on synthetic fixtures. Cross-method edges/custom rules fall back to generic evaluation. No production facts, candidate counts or build behavior changed in this step.
+
+Green full analysis reference comparison: 435383414 premises, equal facts and engine termination, 15m18.516729987s. Combined analysis/inline reference equality also passed: 443152814 premises in 15m3.654857419s; reevaluation and phased preparation agree. All remaining full invariants passed.
+
+R1 row-type detail: 58 value-row sites screened, 10 qualify (8 string and 2 optional<string>); 608 object-reference-row sites screened, 16 qualify; 13 unknown-row sites blocked. No qualifying number, bool or native struct/record rows occur in this closure. Exact row types remain in flow-sites.csv.
+
+R3 reference-source guard additionally requires one syntactic read: one local binding alone does not exclude aliases in operand temporaries such as a.concat(a). Prior benign reads can therefore also block a reference candidate. The counterexample is a synthetic HIR regression.
+
+Final commands (all under the shared heavy lock, cache environment above):
+  go vet ./...
+  go test -short ./...
+  ./.github/ci/lint.sh gate origin/main
+  ABAPITI_GRACE_FULL=1 go test ./tsfront -run '^TestGraceFullRegistryClosure$' -count=1 -timeout=90m -v
+  ABAPITI_GRACECHECK=1 go test ./tsfront -run '^TestLexerFactsReport$' -count=1 -timeout=30m -v
+  go test ./cmd/grace-counts
+  go run ./cmd/grace-counts -output docs/history/2026-10-10-grace-flow-facts
+
+Full facts were checked with reference support 1a69af9; subsequent 514d021 changes only candidate diagnostics and documentation. Its new a.concat(a) regression, vet, complete short suite and lint gate all passed; counts were regenerated. The default CLI/inline implementation measured in cost.csv/cost.json is unchanged by both follow-up commits. Every green step was pushed to origin/analysis/grace-flow-facts.

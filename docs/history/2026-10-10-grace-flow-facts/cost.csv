@@ -1,0 +1,13 @@
+workload,version,trial,seconds,peak_rss_kib
+inline,before,1,0.425288353,
+inline,before,2,0.444593330,
+inline,before,3,0.492106578,
+inline,after,1,0.754084816,
+inline,after,2,0.622114554,
+inline,after,3,0.814663201,
+build,before,1,31.76,400572
+build,before,2,30.17,416052
+build,before,3,32.08,386376
+build,after,1,31.77,406428
+build,after,2,35.58,387804
+build,after,3,27.73,396100
