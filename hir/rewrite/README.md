@@ -477,3 +477,48 @@ facts. Every component still uses repeated whole-rule snapshot scans; there are
 no production-engine joins or deltas. Ordinary fixtures compare this result with
 the unchanged Cartesian evaluator. This avoids repeating all unrelated methods
 for each step along the longest method during the full registry gate.
+
+## Accumulator specialization (opt-in)
+
+`ABAPITI_ACCUMULATOR=1` enables `rewrite.Accumulator` through the same
+`rewrite.PrepareAccumulator` hook at both ABAP and Go emission boundaries.
+The default is OFF. `ABAPITI_ACCUMULATOR_STATS=1` reports each original HIR
+site and its exception proof on stderr.
+
+An eligible instance method returning `T[]` gets a void `m_into(..., acc: T[])`
+variant. A leading fresh result allocation (through transparent body blocks) is removed, pushes target the existing
+array object, and returns become void returns. Families use the method name,
+parameter types/variadic flags, and result type. Other implementations receive
+an ordinary dispatching `m` call followed by a loop of pushes. Interface/base
+variants copy visibility/virtual flags and never carry `Abstract`. Existing
+consumers are rewritten before these defaults are added.
+
+The pass requires Grace freshness and resolved call facts. Frontend allocation
+initializer temporaries can be collapsed only with freshness, single-use,
+last-use and reference-identity (`must_alias`) proofs. The callee result has no
+uses except pushes and direct returns. Caller output identity is private:
+no assignment, alias, field/static store, closure capture, or call operand can
+expose it. Its fresh allocation can be reached through only the same proven
+initializer links. Shape checks complement the facts conservatively.
+
+Consumers are whole-array append loops or an adjacent result temporary followed
+by such a loop. The pinned `length == 1 ? push(temp[0]) : push(...temp)` fast
+path also qualifies: both branches append the entire array exactly once.
+Grace use counts and last-use facts rule out additional consumers. General
+iteration, returned-value tests that choose different output or affect control
+flow, and nonadjacent appends stay unchanged. Sequence's child reassignment is
+outside this transformation.
+
+Every site reports `may_throw=false` when every resolved target has a defined,
+transitively nonthrowing body. Otherwise it requires a fresh private output
+local and a caller with no catch/finally handler; a throw then discards that
+output before it can be returned. Missing dispatch or ownership proofs prevent
+the rewrite. Output parameters/fields are conservatively left unchanged.
+
+The only ignored result read is the unused length expression emitted by
+`spreadPush` after its push loop, including the production `Seq` expression
+prelude, with the exact same source node.
+Explicit source length/index reads in the callee prevent a direct clone.
+`hir.Verify` checks the result of the pass. Synthetic guard fixtures compare
+Grace facts with the independent reference evaluator; both generated Go flag
+states execute mixed direct/default receivers and check append order.

@@ -1,0 +1,17 @@
+stage,caller,site,callee,exception_guard
+statements,src/abap/2_statements/combi.ts.Optional::run,src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s1/x,run,fresh local dead on exception
+statements,src/abap/2_statements/combi.ts.Permutation::run,src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/body/s0/x/seq/s0/x,run,fresh local dead on exception
+statements,src/abap/2_statements/combi.ts.Permutation::run,src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/else/s0/x/seq/s0/x,run,fresh local dead on exception
+statements,src/abap/2_statements/combi.ts.Alternative::run,src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s0/x,run,fresh local dead on exception
+other,src/abap/nodes/expression_node.ts.ExpressionNode::getTokens,src/abap/nodes/expression_node.ts.ExpressionNode::getTokens/body/s1/body/s0/x/seq/s0/x,toTokens,fresh local dead on exception
+other,src/abap/nodes/expression_node.ts.ExpressionNode::toTokens,src/abap/nodes/expression_node.ts.ExpressionNode::toTokens/body/s2/body/s0/else/s0/x/seq/s0/x,toTokens,fresh local dead on exception
+other,src/abap/nodes/expression_node.ts.ExpressionNode::getAllTokens,src/abap/nodes/expression_node.ts.ExpressionNode::getAllTokens/body/s1/body/s0/else/s0/x/seq/s0/x,getAllTokens,fresh local dead on exception
+other,src/abap/nodes/expression_node.ts.ExpressionNode::findAllExpressionsRecursive,src/abap/nodes/expression_node.ts.ExpressionNode::findAllExpressionsRecursive/body/s1/body/s1/x/seq/s0/x,findAllExpressionsRecursive,fresh local dead on exception
+other,src/abap/nodes/expression_node.ts.ExpressionNode::findAllExpressions,src/abap/nodes/expression_node.ts.ExpressionNode::findAllExpressions/body/s1/body/s0/else/else/s0/x/seq/s0/x,findAllExpressions,fresh local dead on exception
+other,src/abap/nodes/statement_node.ts.StatementNode::getTokens,src/abap/nodes/statement_node.ts.StatementNode::getTokens/body/s1/body/s0/x/seq/s0/x,toTokens,fresh local dead on exception
+other,src/abap/nodes/statement_node.ts.StatementNode::findAllExpressions,src/abap/nodes/statement_node.ts.StatementNode::findAllExpressions/body/s1/body/s0/else/else/s0/x/seq/s0/x,findAllExpressions,fresh local dead on exception
+other,src/abap/nodes/statement_node.ts.StatementNode::toTokens,src/abap/nodes/statement_node.ts.StatementNode::toTokens/body/s2/body/s0/else/s0/x/seq/s0/x,toTokens,fresh local dead on exception
+other,src/abap/nodes/structure_node.ts.StructureNode::findAllStatements,src/abap/nodes/structure_node.ts.StructureNode::findAllStatements/body/s1/body/s0/body/s0/x/seq/s0/x,findAllStatements,fresh local dead on exception
+other,src/abap/types/method_parameters.ts.MethodParameters::getAll,src/abap/types/method_parameters.ts.MethodParameters::getAll/body/s3/x/seq/s0/x,getImporting,may_throw=false
+rules,src/rules/_abap_rule.ts.ABAPRule::run,src/rules/_abap_rule.ts.ABAPRule::run/body/s3/body/s0/x/seq/s0/x,runParsed,fresh local dead on exception
+rules,src/rules/unknown_types.ts.UnknownTypes::traverse,src/rules/unknown_types.ts.UnknownTypes::traverse/body/s6/body/s0/x/seq/s0/x,traverse,fresh local dead on exception
