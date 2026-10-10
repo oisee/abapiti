@@ -14,15 +14,20 @@ type flowExtractor struct {
 	envs  map[string]scope
 	loops map[string][]string
 	uses  map[string]int
+	edges map[string][]string
+	keep  map[string]bool
 }
 
 func (x *extractor) flowFacts(m *hir.Method, env scope) {
-	f := &flowExtractor{x: x, envs: map[string]scope{}, loops: map[string][]string{}, uses: map[string]int{}}
+	f := &flowExtractor{x: x, envs: map[string]scope{}, loops: map[string][]string{}, uses: map[string]int{}, edges: map[string][]string{}, keep: map[string]bool{}}
 	for _, b := range env {
 		f.uses[b.id] = 0
+		f.define(b.id, x.method+"/entry")
 	}
 	f.bindStmt(m.Body, x.method+"/body", copyScope(env), nil)
-	f.stmt(m.Body, x.method+"/body", "", "", "", "")
+	f.node(x.method+"/entry", env, nil)
+	f.edge(x.method+"/entry", f.stmt(m.Body, x.method+"/body", "", "", "", ""))
+	f.flushEdges()
 	for id, n := range f.uses {
 		x.add("use_count", id, strconv.Itoa(n))
 	}
@@ -115,11 +120,11 @@ func (f *flowExtractor) bindStmt(s *hir.Stmt, path string, env scope, loops []st
 		id := path + "/local/" + s.Name
 		env[s.Name] = binding{id: id}
 		f.uses[id] = 0
-		f.x.add("def", id, path)
+		f.define(id, path)
 	}
 	if s.Kind == hir.Assign && s.X != nil {
 		if s.X.Kind == hir.Local {
-			f.x.add("def", env[s.X.Name].id, path)
+			f.define(env[s.X.Name].id, path)
 		} else if s.X.Kind == hir.FieldGet || s.X.Kind == hir.IndexGet {
 			target := f.value(s.X.X, path+"/x/0")
 			f.x.add("writes_value", f.x.method, target)
@@ -137,12 +142,13 @@ func (f *flowExtractor) bindStmt(s *hir.Stmt, path string, env scope, loops []st
 		body[s.Name] = binding{id: id}
 		f.x.add("loop", path, f.value(s.X, path+"/x"), id)
 		f.uses[id] = 0
-		f.x.add("def", id, path+"/row")
+		f.define(id, path+"/row")
 		f.node(path+"/row", body, loops)
 	}
 	if s.Kind == hir.Try {
 		other[s.Name] = binding{id: path + "/catch/" + s.Name}
-		f.x.add("def", other[s.Name].id, path+"/catch")
+		f.uses[other[s.Name].id] = 0
+		f.define(other[s.Name].id, path+"/catch")
 		f.node(path+"/catch", other, loops)
 	}
 	f.bindStmt(s.Body, path+"/body", body, loops)
@@ -152,18 +158,19 @@ func (f *flowExtractor) bindStmt(s *hir.Stmt, path string, env scope, loops []st
 }
 func (f *flowExtractor) edge(a, b string) {
 	if a != "" && b != "" {
-		f.x.add("next", a, b)
+		f.edges[a] = append(f.edges[a], b)
 	}
 }
 func (f *flowExtractor) read(id, path string) {
 	if id == "" {
 		return
 	}
+	f.keep[path] = true
 	f.x.add("use", id, path)
 	f.x.add("observed", id, path)
 	f.uses[id]++
 }
-func (f *flowExtractor) expr(e *hir.Expr, path, next, ex string, read bool) string {
+func (f *flowExtractor) expr(e *hir.Expr, path, next, ex, brk, cont string, read bool) string {
 	if e == nil {
 		return next
 	}
@@ -177,30 +184,30 @@ func (f *flowExtractor) expr(e *hir.Expr, path, next, ex string, read bool) stri
 		f.read(f.value(e, path), path)
 	}
 	if e.Kind == hir.Conditional {
-		y := f.expr(e.Y, path+"/1", path, ex, true)
-		z := f.expr(e.Z, path+"/2", path, ex, true)
+		y := f.expr(e.Y, path+"/1", path, ex, brk, cont, true)
+		z := f.expr(e.Z, path+"/2", path, ex, brk, cont, true)
 		fork := path + "/branch"
 		f.edge(fork, y)
 		f.edge(fork, z)
-		return f.expr(e.X, path+"/0", fork, ex, true)
+		return f.expr(e.X, path+"/0", fork, ex, brk, cont, true)
 	}
 	if e.Kind == hir.Binary && (e.Op == "&&" || e.Op == "||") {
-		y := f.expr(e.Y, path+"/1", path, ex, true)
+		y := f.expr(e.Y, path+"/1", path, ex, brk, cont, true)
 		fork := path + "/branch"
 		f.edge(fork, y)
 		f.edge(fork, path)
-		return f.expr(e.X, path+"/0", fork, ex, true)
+		return f.expr(e.X, path+"/0", fork, ex, brk, cont, true)
 	}
 	entry := path
 	for i := len(e.Args) - 1; i >= 0; i-- {
-		entry = f.expr(e.Args[i], fmt.Sprintf("%s/arg%d", path, i), entry, ex, true)
+		entry = f.expr(e.Args[i], fmt.Sprintf("%s/arg%d", path, i), entry, ex, brk, cont, true)
 	}
-	entry = f.expr(e.Z, path+"/2", entry, ex, true)
-	entry = f.expr(e.Y, path+"/1", entry, ex, true)
-	entry = f.expr(e.X, path+"/0", entry, ex, true)
+	entry = f.expr(e.Z, path+"/2", entry, ex, brk, cont, true)
+	entry = f.expr(e.Y, path+"/1", entry, ex, brk, cont, true)
+	entry = f.expr(e.X, path+"/0", entry, ex, brk, cont, true)
 	if e.Kind == hir.Seq && e.Stmt != nil {
 		for i := len(e.Stmt.List) - 1; i >= 0; i-- {
-			entry = f.stmt(e.Stmt.List[i], fmt.Sprintf("%s/seq/s%d", path, i), entry, "", "", ex)
+			entry = f.stmt(e.Stmt.List[i], fmt.Sprintf("%s/seq/s%d", path, i), entry, brk, cont, ex)
 		}
 	}
 	return entry
@@ -232,9 +239,9 @@ func (f *flowExtractor) stmt(s *hir.Stmt, path, next, brk, cont, ex string) stri
 		f.edge(path, body)
 		if s.Kind == hir.ForEach {
 			f.edge(header, path)
-			return f.expr(s.X, path+"/x", header, ex, true)
+			return f.expr(s.X, path+"/x", header, ex, brk, cont, true)
 		}
-		entry := f.expr(s.X, path+"/x", path, ex, true)
+		entry := f.expr(s.X, path+"/x", path, ex, brk, cont, true)
 		f.edge(header, entry)
 		return header
 	case hir.Try:
@@ -261,8 +268,36 @@ func (f *flowExtractor) stmt(s *hir.Stmt, path, next, brk, cont, ex string) stri
 	default:
 		f.edge(path, next)
 	}
-	entry := f.expr(s.Y, path+"/y", path, ex, true)
+	entry := f.expr(s.Y, path+"/y", path, ex, brk, cont, true)
 	read := !(s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.Local)
-	entry = f.expr(s.X, path+"/x", entry, ex, read)
+	entry = f.expr(s.X, path+"/x", entry, ex, brk, cont, read)
 	return entry
+}
+
+// Definitions and actual reads are the only liveness transfer/observation
+// points. Contract all intervening evaluation/branch nodes into path edges.
+// A separate traversal for each source preserves branch correlations and cycles;
+// stopping at kept nodes preserves kills and left-to-right operand order.
+func (f *flowExtractor) define(id, site string) {
+	f.keep[site] = true
+	f.x.add("def", id, site)
+}
+func (f *flowExtractor) flushEdges() {
+	for from := range f.keep {
+		seen := map[string]bool{}
+		pending := append([]string{}, f.edges[from]...)
+		for len(pending) > 0 {
+			to := pending[len(pending)-1]
+			pending = pending[:len(pending)-1]
+			if seen[to] {
+				continue
+			}
+			seen[to] = true
+			if f.keep[to] {
+				f.x.add("next", from, to)
+				continue
+			}
+			pending = append(pending, f.edges[to]...)
+		}
+	}
 }

@@ -39,6 +39,17 @@ func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
 
 func run(out, dir string) error {
 	start := time.Now()
+	var err error
+	out, err = filepath.Abs(out)
+	if err != nil {
+		return err
+	}
+	if dir != "" {
+		dir, err = filepath.Abs(dir)
+		if err != nil {
+			return err
+		}
+	}
 	if err := os.MkdirAll(out, 0755); err != nil {
 		return err
 	}
@@ -95,6 +106,9 @@ func run(out, dir string) error {
 		return fmt.Errorf("changed closure: %d classes, %d interfaces", len(p.Classes), len(p.Interfaces))
 	}
 	fmt.Fprintf(os.Stderr, "lowered 1538 files + harness: %d classes, %d interfaces; no blocking/verification errors (%s)\n", len(p.Classes), len(p.Interfaces), time.Since(start))
+	if os.Getenv("GRACE_COUNTS_MEASURE_INLINE") == "1" {
+		return measureInline(p)
+	}
 	db, err := rewrite.Analyze(p)
 	if err != nil {
 		return err
@@ -104,7 +118,12 @@ func run(out, dir string) error {
 	for i := range sites {
 		sites[i].Source = strings.TrimPrefix(sites[i].Source, dir+string(filepath.Separator))
 	}
-	report := tables(sites, methods)
+	flowSites := flowCounts(p, db, dir)
+	flowReport, err := writeFlowOutputs(out, flowSites, db)
+	if err != nil {
+		return err
+	}
+	report := tables(sites, methods) + flowReport
 	if err := writeOutputs(out, sites, methods, report); err != nil {
 		return err
 	}
