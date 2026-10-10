@@ -503,8 +503,10 @@ includes exception/finally paths. `store_next` contracts that CFG to the first
 read or definition of the candidate binding on each path, and Grace derives
 `not_read_after` from those boundaries. Declarations remain to bind emitter
 locals; only their initializer is removed. A dead assignment becomes an empty
-block. Later rounds refresh changed methods; setting
-`ABAPITI_GRACE_RECOMPUTE=full` retains full recomputation for comparison.
+block. The fixed rules skip methods with neither an inert local store nor a
+possible immediate whole-expression copy; guards still see the complete CFG
+inside eligible methods. Later rounds refresh changed methods; setting
+`ABAPITI_GRACE_RECOMPUTE=full` retains unfiltered full recomputation for comparison.
 
 `GRACE_COUNTS_MEASURE_STORES=1 go run ./cmd/grace-counts -output DIR` reports
 three pass samples on independent copies of the pinned full closure, stages,

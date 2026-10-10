@@ -522,3 +522,57 @@ func detachStoreSyntax(p *hir.Program, rules *Rules) {
 		m.Body = snapshotStmt(m.Body)
 	}
 }
+
+// A method needs an inert store or a possible immediate whole-expression copy.
+// Other effectful stores cannot select either embedded action. This is only a
+// work filter; all guards still run on complete eligible methods.
+func storeCandidateMethods(p *hir.Program) map[*hir.Method]bool {
+	active := map[*hir.Method]bool{}
+	for _, c := range p.Classes {
+		methods := append([]*hir.Method{}, c.Methods...)
+		if c.Ctor != nil {
+			methods = append(methods, c.Ctor)
+		}
+		for _, m := range methods {
+			walkSyntax(m.Body, func(s *hir.Stmt, _ string) {
+				if rhs := storeRHS(s); rhs != nil && storeType(s).Equal(rhs.Type) && storeInert(rhs) {
+					active[m] = true
+				}
+				if s.Kind != hir.Block {
+					return
+				}
+				for i := 0; i+1 < len(s.List); i++ {
+					def, use := s.List[i], s.List[i+1]
+					rhs := storeRHS(def)
+					if rhs == nil || !storeType(def).Equal(rhs.Type) {
+						continue
+					}
+					name := def.Name
+					if def.Kind == hir.Assign {
+						name = def.X.Name
+					}
+					var value *hir.Expr
+					switch use.Kind {
+					case hir.VarDecl, hir.Return, hir.ExprStmt:
+						value = use.X
+					case hir.Assign:
+						if use.X != nil && use.X.Kind == hir.Local {
+							value = use.Y
+						}
+					}
+					if value != nil && value.Kind == hir.Local && value.Name == name {
+						active[m] = true
+					}
+				}
+			}, func(*hir.Expr, string) {})
+		}
+	}
+	return active
+}
+
+func storeType(s *hir.Stmt) hir.Type {
+	if s.Kind == hir.Assign {
+		return s.X.Type
+	}
+	return s.Type
+}

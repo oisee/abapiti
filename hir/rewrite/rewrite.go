@@ -36,6 +36,7 @@ type runner struct {
 	stmtIDs        map[*hir.Stmt]string
 	copies         map[string]copyPlan
 	storeOnly      bool
+	storeMethods   map[*hir.Method]bool
 	unreadStores   map[string]bool
 	methods        map[*hir.Method]string
 	byID           map[string]*hir.Method
@@ -82,6 +83,9 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 	}
 	r.storeOnly = isStoreRules(rules)
 	detachStoreSyntax(p, rules)
+	if r.storeOnly && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" {
+		r.storeMethods = storeCandidateMethods(p)
+	}
 	incremental := r.limits.Rounds > 1 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" && isInlineRules(rules)
 	for round := 0; round < r.limits.Rounds; round++ {
 		if r.storeOnly && round > 0 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" {
@@ -96,7 +100,11 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 		}
 		if !incremental || round == 0 {
 			if r.storeOnly {
-				r.db = extractStoreFacts(p, demanded, r.refresh)
+				active := r.refresh
+				if active == nil {
+					active = r.storeMethods
+				}
+				r.db = extractStoreFacts(p, demanded, active)
 			} else {
 				r.db = extractDemanded(p, demanded)
 			}
@@ -230,7 +238,7 @@ func (r *runner) index() error {
 			ms = append(ms, c.Ctor)
 		}
 		for _, m := range ms {
-			if r.refresh != nil && !r.refresh[m] {
+			if r.storeOnly && r.storeMethods != nil && !r.storeMethods[m] || r.refresh != nil && !r.refresh[m] {
 				continue
 			}
 			name := m.Name
@@ -241,7 +249,7 @@ func (r *runner) index() error {
 			r.methods[m] = id
 			r.byID[id] = m
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, path string) {
-				if !allNodes {
+				if !allNodes || r.storeOnly && s.Kind != hir.Block && s.Kind != hir.VarDecl && s.Kind != hir.Assign {
 					return
 				}
 				r.nodes[path] = rewriteNode{path, nil, s, m}
@@ -313,7 +321,7 @@ func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hi
 	}
 }
 func (r *runner) method(m *hir.Method, depth int) {
-	if r.done[m] || m.Body == nil || r.storeOnly && r.refresh != nil && !r.refresh[m] {
+	if r.done[m] || m.Body == nil || r.storeOnly && (r.storeMethods != nil && !r.storeMethods[m] || r.refresh != nil && !r.refresh[m]) {
 		return
 	}
 	r.done[m] = true
@@ -362,6 +370,9 @@ func (r *runner) expr(e *hir.Expr, m *hir.Method, depth int) *hir.Expr {
 	return e
 }
 func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.Expr, *hir.Stmt) {
+	if r.storeOnly && e.Kind != hir.Local {
+		return nil, nil
+	}
 	id, original := r.ids[e]
 	if !original {
 		return nil, nil

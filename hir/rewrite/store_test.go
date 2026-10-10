@@ -2,12 +2,22 @@ package rewrite
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
 )
 
 func TestStoreGuards(t *testing.T) {
+	source, err := ruleFiles.ReadFile("rules/stores.grace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Preserve priority ordering but bypass the embedded-rule fast path.
+	_, unfiltered, err := Parse(strings.Replace(string(source), "copy-local 20", "copy-local 21", 1))
+	if err != nil {
+		t.Fatal(err)
+	}
 	i, b := hir.T(hir.I32), hir.T(hir.Bool)
 	decl := func(n string, x *hir.Expr) *hir.Stmt { return &hir.Stmt{Kind: hir.VarDecl, Name: n, Type: i, X: x} }
 	ret := func(x *hir.Expr) *hir.Stmt { return &hir.Stmt{Kind: hir.Return, X: x} }
@@ -38,7 +48,7 @@ func TestStoreGuards(t *testing.T) {
 			makeP := func() *hir.Program {
 				return &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{{Name: "run", Static: true, Result: i, Body: cloneStoreStmt(tc.body)}, {Name: "effect", Static: true, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.Throw, X: hir.L(i, 1)})}}}}}
 			}
-			p, q := makeP(), makeP()
+			p, q, z := makeP(), makeP(), makeP()
 			stats, err := CopyProp(p)
 			if err != nil {
 				t.Fatal(err)
@@ -53,6 +63,13 @@ func TestStoreGuards(t *testing.T) {
 			}
 			if hir.Dump(p) != hir.Dump(q) || !reflect.DeepEqual(stats, other) {
 				t.Fatal("nondeterministic")
+			}
+			generic, err := Rewrite(z, unfiltered, Limits{Rounds: 16})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if hir.Dump(p) != hir.Dump(z) || !reflect.DeepEqual(stats, generic) {
+				t.Fatal("filtered actions differ from generic adapter")
 			}
 			before := hir.Dump(p)
 			again, err := CopyProp(p)

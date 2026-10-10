@@ -65,7 +65,9 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 		f.envs[path] = copyScope(env)
 	}
 	for i, c := range []*hir.Expr{e.X, e.Y, e.Z} {
-		f.bindExpr(c, fmt.Sprintf("%s/%d", path, i), env, loops)
+		if c != nil {
+			f.bindExpr(c, path+"/"+strconv.Itoa(i), env, loops)
+		}
 	}
 	for i, c := range e.Args {
 		f.bindExpr(c, fmt.Sprintf("%s/arg%d", path, i), env, loops)
@@ -223,9 +225,15 @@ func (f *flowExtractor) expr(e *hir.Expr, path, next, ex, brk, cont string, read
 	for i := len(e.Args) - 1; i >= 0; i-- {
 		entry = f.expr(e.Args[i], fmt.Sprintf("%s/arg%d", path, i), entry, ex, brk, cont, true)
 	}
-	entry = f.expr(e.Z, path+"/2", entry, ex, brk, cont, true)
-	entry = f.expr(e.Y, path+"/1", entry, ex, brk, cont, true)
-	entry = f.expr(e.X, path+"/0", entry, ex, brk, cont, true)
+	if e.Z != nil {
+		entry = f.expr(e.Z, path+"/2", entry, ex, brk, cont, true)
+	}
+	if e.Y != nil {
+		entry = f.expr(e.Y, path+"/1", entry, ex, brk, cont, true)
+	}
+	if e.X != nil {
+		entry = f.expr(e.X, path+"/0", entry, ex, brk, cont, true)
+	}
 	if e.Kind == hir.Seq && e.Stmt != nil {
 		for i := len(e.Stmt.List) - 1; i >= 0; i-- {
 			entry = f.stmt(e.Stmt.List[i], fmt.Sprintf("%s/seq/s%d", path, i), entry, brk, cont, ex)
