@@ -125,18 +125,25 @@ func count(p *hir.Program, db *rewrite.DB, literalSource func(string) bool) ([]s
 		valid := true
 		// Trace only declaration aliases; assignments invalidate singleton status,
 		// except the explicit x = callee(x) loop chain, whose first iteration is S1.
-		for decls[id].path != "" {
+		for {
 			if seen[id] {
 				valid = false
 				break
 			}
 			seen[id] = true
+			if node := nodes[id]; node.e != nil && node.e.Kind == hir.Seq && node.e.Y != nil && node.e.Y.Kind == hir.Local && len(flow[id]) == 1 {
+				id = flow[id][0]
+				continue
+			}
 			d := decls[id]
+			if d.path == "" {
+				break
+			}
 			if d.order >= n.order {
 				valid = false
 				break
 			}
-			if d.input != d.path+"/x" {
+			if d.init != nil && d.init.Kind != hir.New {
 				form = "local"
 			}
 			for _, a := range assignments[id] {
@@ -176,6 +183,9 @@ func count(p *hir.Program, db *rewrite.DB, literalSource func(string) bool) ([]s
 				}
 			}
 			if !touches {
+				continue
+			}
+			if seen[path] && use.e.Kind == hir.Seq {
 				continue
 			}
 			if use.e.Kind == hir.RuntimeOp && use.e.Op == "array.push" && seen[receiverID(path, use.e)] && len(use.e.Args) == 1 && blockOf(path) == blockOf(id) {
