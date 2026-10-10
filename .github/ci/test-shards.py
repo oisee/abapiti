@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic wasm partition, textual coverage merge, and CI aggregation."""
+"""Deterministic test partitions (wasm, tsfront), textual coverage merge, and CI aggregation."""
 import collections
 import json
 from pathlib import Path
@@ -7,21 +7,26 @@ import re
 import sys
 
 WASM = "github.com/oisee/abapiti/wasm"
+TSFRONT = "github.com/oisee/abapiti/tsfront"
+# Packages whose top-level tests are split in halves over two shards, and the
+# shards that run the halves.
+SPLIT = {WASM: ("wasm", (1, 2)), TSFRONT: ("tsfront", (3, 4))}
+SHARDS = (1, 2, 3, 4)
 
 
-def split(listing, out, shard):
+def split(listing, out, half, name="wasm"):
     # Benchmarks are listed by -list . too, but go test does not run them.
     names = sorted(line for line in listing.read_text().splitlines()
                    if re.fullmatch(r"(?:Test|Example|Fuzz)\w*", line))
     if not names or len(names) != len(set(names)):
-        raise ValueError("empty or duplicate wasm test list")
+        raise ValueError(f"empty or duplicate {name} test list")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "wasm-listed.json").write_text(json.dumps(names))
-    selected = names[shard - 1::2]
+    (out / f"{name}-listed.json").write_text(json.dumps(names))
+    selected = names[half - 1::2]
     # An empty shard must never fall back to running all tests.
     pattern = "^(" + "|".join(selected) + ")$" if selected else "^$"
-    (out / "wasm-run.txt").write_text(pattern + "\n")
-    print(f"wasm shard {shard}: {len(selected)} of {len(names)} top-level tests; regex {len(pattern)} bytes")
+    (out / f"{name}-run.txt").write_text(pattern + "\n")
+    print(f"{name} half {half}: {len(selected)} of {len(names)} top-level tests; regex {len(pattern)} bytes")
 
 
 def merge(profiles, dest):
@@ -49,7 +54,7 @@ def merge(profiles, dest):
 
 def aggregate(root, out):
     out.mkdir(parents=True, exist_ok=True)
-    shards = [root / f"test-shard-{i}" for i in (1, 2, 3)]
+    shards = [root / f"test-shard-{i}" for i in SHARDS]
     logs = [s / "test.json" for s in shards if (s / "test.json").is_file()]
     combined = "".join(p.read_text().rstrip() + "\n" for p in logs)
     (out / "test.json").write_text(combined)
@@ -73,7 +78,7 @@ def aggregate(root, out):
         if event.get("Test") and action in ("pass", "fail", "skip"):
             row["pass_" if action == "pass" else action] += 1
         if not event.get("Test") and action in ("pass", "fail") and "Elapsed" in event:
-            # Sum package work across wasm halves, comparable to the old serial run.
+            # Sum package work across split halves, comparable to the old serial run.
             row["seconds"] = (row["seconds"] or 0) + event["Elapsed"]
     for pkg, row in packages.items():
         row["pass"] = row.pop("pass_")
@@ -84,32 +89,34 @@ def aggregate(root, out):
 
 
 def check(root):
-    listed = []
-    executed = collections.Counter()
-    for i in (1, 2, 3):
+    logs = {}
+    for i in SHARDS:
         shard = root / f"test-shard-{i}"
         # Require artifacts even if a shard was cancelled or failed before testing.
         events = [json.loads(line) for line in (shard / "test.json").read_text().splitlines()]
         if not events:
             raise ValueError(f"empty test log for shard {i}")
-        if i < 3:
-            listed.append(json.loads((shard / "wasm-listed.json").read_text()))
-        for event in events:
-            name = event.get("Test", "")
-            if event.get("Package") == WASM and event.get("Action") == "run" and name and "/" not in name:
-                executed[name] += 1
-    if listed[0] != listed[1]:
-        raise ValueError("wasm test lists differ between shards")
-    expected = collections.Counter(listed[0])
-    if executed != expected:
-        raise ValueError(f"wasm execution mismatch: missing={dict(expected - executed)}, extra/duplicate={dict(executed - expected)}")
-    print(f"All {len(expected)} listed top-level wasm tests ran exactly once")
+        logs[i] = events
+    for pkg, (name, pair) in SPLIT.items():
+        listed = [json.loads((root / f"test-shard-{i}" / f"{name}-listed.json").read_text()) for i in pair]
+        if listed[0] != listed[1]:
+            raise ValueError(f"{name} test lists differ between shards")
+        executed = collections.Counter()
+        for events in logs.values():
+            for event in events:
+                test = event.get("Test", "")
+                if event.get("Package") == pkg and event.get("Action") == "run" and test and "/" not in test:
+                    executed[test] += 1
+        expected = collections.Counter(listed[0])
+        if executed != expected:
+            raise ValueError(f"{name} execution mismatch: missing={dict(expected - executed)}, extra/duplicate={dict(executed - expected)}")
+        print(f"All {len(expected)} listed top-level {name} tests ran exactly once")
 
 
 if __name__ == "__main__":
     command, *args = sys.argv[1:]
     if command == "split":
-        split(Path(args[0]), Path(args[1]), int(args[2]))
+        split(Path(args[0]), Path(args[1]), int(args[2]), *args[3:])
     elif command == "merge":
         merge([Path(p) for p in args[1:]], Path(args[0]))
     elif command == "aggregate":
