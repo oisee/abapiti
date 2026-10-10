@@ -37,6 +37,9 @@ type emitter struct {
 	// other work.
 	staticConsts map[string]string
 	staticInit   map[string]bool
+	// constSets are static integer sets built from constants and only ever
+	// asked has() (owner.field -> members); has() becomes a comparison chain.
+	constSets map[string][]string
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -56,6 +59,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
 	e.findStaticConstants()
+	e.findConstSets()
 	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
@@ -1482,6 +1486,9 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.constSetHas(x, n) {
+		return
+	}
 	if k, ok := literalIndex(x); ok {
 		// A literal index needs neither the f temporary nor saturation.
 		b.line(n + " = " + strconv.FormatInt(k, 10) + ".")
