@@ -29,9 +29,12 @@ func TestMinMaxNumberAndEmptyTraps(t *testing.T) {
 	for _, s := range files {
 		text.WriteString(s)
 	}
-	for _, want := range []string{"empty input yields Infinity", "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.", "signed-zero tie", " FROM 2.", "READ TABLE"} {
+	for _, want := range []string{"->items ) = 0.\n", "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.", " = 0 AND ", " FROM 2.", "READ TABLE"} {
 		if !strings.Contains(text.String(), want) {
 			t.Fatalf("missing %q", want)
 		}
+	}
+	if strings.Contains(text.String(), "\"") {
+		t.Fatal("generated ABAP must not contain comments")
 	}
 }
