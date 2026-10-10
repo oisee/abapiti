@@ -126,6 +126,25 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
+	// Cross-check each contracted store boundary against the full liveness
+	// relation, which CheckFull also validates with its independent evaluator.
+	storeFacts, err := rewrite.ExtractRewriteFacts(lowering.Prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readAfter := map[string]bool{}
+	for _, edge := range storeFacts.Facts("store_next") {
+		if storeFacts.Has("use", edge[0], edge[2]) {
+			readAfter[edge[1]] = true
+		}
+	}
+	for _, store := range storeFacts.Facts("store_inert") {
+		if readAfter[store[0]] != db.Has("live_out", store[1], store[0]) {
+			t.Fatalf("contracted liveness differs at %v", store)
+		}
+	}
+	t.Logf("contracted liveness agrees at %d store candidates", storeFacts.Count("store_inert"))
+	storeFacts = nil
 	gracecheck.CheckFull(t, lowering.Prog)
 	a, b := hirclone.Clone(lowering.Prog), hirclone.Clone(lowering.Prog)
 	sa, err := rewrite.CopyProp(a)
