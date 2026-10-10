@@ -1,0 +1,3926 @@
+{
+  "schema": 1,
+  "id": "structure-parser-singletons",
+  "status": "proposed",
+  "target": {
+    "key": {
+      "File": "src/abap/3_structures/structure_parser.ts",
+      "Symbol": "StructureParser.runFile",
+      "Kind": "KindMethodDeclaration"
+    },
+    "sha256": "01880132c915dd980afca090db0d8a2776722cc86a03116bde366d3c89592505"
+  },
+  "dependencies": [
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "958b9bf898413a06cbb1aa39c4ac476167a6dc04797164d8f3fe7b165104b11f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "2ad2cfd5fd814cb2cc31766e3ff713dcdd09645f743490e78eafec60977eae12"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "264f3f91988e69b9aa350c69fa45064ad87feca6c8222e885542064a33b48d6f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d5bae4973423f08edc9f725521c51e09300b90c8f53330d8bce7f3985f3534fa"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "765c86a41baff66b8efae684bf56fd4c3f6481a7c5e69b53a6bd6f594695fc8e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "45e90dca9a1fb27a3d24df779328d20983c0966ea2f00241d97132fb1428dabb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1f1469082ffe8e19059f66570b6ed1351cf819946f8177c16a1d9cb092f459de"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "609e3bb3cc46902a82623fb1baa5ab4e2766bb7ea2bcfc487e55c8b9a233e846"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Alternative.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "915b0e4f0c13a499eb96b5af12591bdcaedf7385c9aae07385305cb63b3a2a19"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d672e7b754bea3bb711c22bf17babdc93563fbf191f310df6ad515633b8377e2"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "2ad2cfd5fd814cb2cc31766e3ff713dcdd09645f743490e78eafec60977eae12"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "264f3f91988e69b9aa350c69fa45064ad87feca6c8222e885542064a33b48d6f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d5bae4973423f08edc9f725521c51e09300b90c8f53330d8bce7f3985f3534fa"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "765c86a41baff66b8efae684bf56fd4c3f6481a7c5e69b53a6bd6f594695fc8e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "45e90dca9a1fb27a3d24df779328d20983c0966ea2f00241d97132fb1428dabb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1f1469082ffe8e19059f66570b6ed1351cf819946f8177c16a1d9cb092f459de"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d93c5167b5d2f3c72d735f4946e58aa40b97c86f7d865b492b8379034d046d8a"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "AlternativePriority.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "915b0e4f0c13a499eb96b5af12591bdcaedf7385c9aae07385305cb63b3a2a19"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "ecfe22c10ade76b5bfeb74c42de35fbd75af6d2754126d837863e0af5cf99d78"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.getLanguageVersion",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "236ea9ec0d3b296594618d315f1734273989af2f62b009a2c0c678b10ead86c0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.getRelease",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1e39421046a51f3cebcd1388137edd07d8ccbf16596c71724d1f3883c749f47f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.isOpenABAP",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "e79eda4aad82e4574abd4140e830b498b5dfea009c4520e40b16d58ee6b3ce7a"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.langVer",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "249c5b4c7c13005519f32084056d955109f35e8eca1d438ba952e0dcd87ee06d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3e8fc7a320372876af6d0ab89a34dab00215209fd53fe2576da86e4e9ae742f3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "961c076f536b1ebee94e506b9221fca5d47e089714e376e901f9b5e393a82f16"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.release",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "a1bb79774ecbec82ee2bfdbfba3ab08c3be5d69e0a37bc07af696ccff4727e81"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Combi.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "88c78d478172345c0490d057c264106f85e97b08a05c6d038ec1b12ccf89d6f9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "fb9e895dd778f2b2db751d11eb1c2d4252b7d5c29df16cc7a2c21499da4c9483"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f4c1f9fecaac14f58338a366c335220951b571584bd7c608241474858b945067"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.getName",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "00d39127c17d94e2ba5f113086d8b83ea633f86095b6a75040782209d6bbcfdd"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.getRunnable",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "0c8dc80c78740047e379e214535dc40901db984fb4a82fbf2da6e9d4f14c28d6"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b9e4793a93cdf73a73339c64417cbe512a772f636ea006c02e2800f4792ba185"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "60a96547742834d310aeec5c919f23f7dffd23a5b8f215ebe61baa0b2817c2a6"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ff5aab6f476aae2c146df0d7187b556e7417c17d2c188fb81998a120dadc6327"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "628907be73476026fc7ec8eea80d407091adf11326734dd7eb10aa0210a8b367"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.runnable",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "7f1ac6759cf1d96da029a9c922556e7b04a313e00cee9b97a5e1a7702f7546f4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Expression.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "712c2a60a86e0ba89a9155cc7aaef22989969ac2c5588ad0b9d4ef904349001d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "14e4f625f35f7c37aa21d525013b77da0086997f62d79bcf0fd0871278712faf"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "115a0c0cb664bc105105cd48f376c1c3b945a412c1122229e0a3520e2d709232"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "938607aea38039216fe222096663d275d3d47daddf924534b64c79db4ca9b3ba"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2caad295913ce4a7f9ccc86ea1da9db22e470b3a0eaf677edbcbb0580f2a892c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8c8ba043757a488c172d407855dd5d3889493e9f1fa966c6ed1714819450652a"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dbad12bfd07ec12d3a9cf642eb8213f2d9657b398e3e71ea44fa0eb13b2ff2e3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinator.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d4a697bd6ad58f71a880f8544d2b57a08b58bb2c45d27f4859f16c7221509f5b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailCombinatorError",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "0345e89b4601f5a27b6ab5cc00701ea5ac26df0b373447537a69ce6381696b64"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e2582052e915314a77dbad6141a21f6ba4df5e8f42d9ce6e38963183eec070a6"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "115a0c0cb664bc105105cd48f376c1c3b945a412c1122229e0a3520e2d709232"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "938607aea38039216fe222096663d275d3d47daddf924534b64c79db4ca9b3ba"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2caad295913ce4a7f9ccc86ea1da9db22e470b3a0eaf677edbcbb0580f2a892c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "00d6448baabbcda873027747a38ff94e58eacbe62227774655ea9aeddf035cab"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dd7dfd4b3e0300d43931e293ee668f3e4a3b1ba81a1347f58e8184f6c96135cf"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStar.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d4a697bd6ad58f71a880f8544d2b57a08b58bb2c45d27f4859f16c7221509f5b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "FailStarError",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "b002e20906920f362a0e5628964970e2bca1ca997a8ed850321c8f302858973e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "IVerOptions",
+        "Kind": "KindInterfaceDeclaration"
+      },
+      "sha256": "63def058afe6a635eb9989b388e6c942dfd5412a79e8977288211d6fb1100cb9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "db3577174536cc7ee6613bf590f984174eacf12390edb2a1287b338f9edbb0ec"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "51145fb715a5f7247d5c747b7d84038531f1b7af25d80434c4c043f929b98557"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "24dbccc228d9d7ec7c743c5324e6247db5bf9b0e4f743da50e0b35a2194ff411"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d75ea6bc73f21d50c090cf5548aae50ef62aa0f3702afe66c740e95e36665f14"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.langVersion",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "2a942908b6a6dc6f4e61cc0b334e3a698dd88709a22117fdb67b8d40efdae0dd"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1e58b9f42f2a2e0378aae07df033bd0158b49b8d4feab9f8354981bf410ca5b5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "befd449a5cef0b1cc66175be9dea3e55b1c9e99b4781f9da9cac995c453460b9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "26778a37ee9bc09656f5b78457799738a17deb5a007d689dd6fd6eacfc133a04"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.runnable",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "8b056216be7e9247276456a70b3c6849b563759bd9216283c432b4786052637d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVers.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "40f066f0795a8c3e51ec665a4e68dffc9f43a87e278fb1c56b60feb473cca542"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "7a5ad33f4956a58a618000806b8297bd313f38837738c44e0992ce858929659e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "51145fb715a5f7247d5c747b7d84038531f1b7af25d80434c4c043f929b98557"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "24dbccc228d9d7ec7c743c5324e6247db5bf9b0e4f743da50e0b35a2194ff411"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d75ea6bc73f21d50c090cf5548aae50ef62aa0f3702afe66c740e95e36665f14"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.langVersion",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "2a942908b6a6dc6f4e61cc0b334e3a698dd88709a22117fdb67b8d40efdae0dd"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1e58b9f42f2a2e0378aae07df033bd0158b49b8d4feab9f8354981bf410ca5b5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "0f04e1ba941ce4a1640556f29978a4c4bd0b7370b241088c678f5fa421e79514"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b738eb56f5093514cf79258c9c3e3b018a119e6ba1f538d6b469a8975a3f4c1f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.runnable",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "8b056216be7e9247276456a70b3c6849b563759bd9216283c432b4786052637d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "LangVersNot.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "06921f8a45daeab1bd422cdb2a23a1a558c49274fcad692360a5f813453323f0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "2cef4662845034ec107d74371d8957f58923755b135cd2034828ec277186fe22"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "1028be45c25a5b133f61051bd79987f2873c96bb0dd0d750bf9c6a274fe4131e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c4ce6d6185653e4d09e74dbdaab504bd2b10cefad933138690a61a219536030b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dbf451f1a8ce7d368b1cb3d3bd7d2a7f24471355e96bc598a7ecf5d1a2a3fa45"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.optional",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "7aee514119704555065782d743ca40638474fad2894f95eee6893d9cda9aef38"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9e626d0200d17da8ba32f8532671279c97914ff455fcd7090c33eb5ccc5f0004"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8da8ff5e89a99de47aa94a50afd8754bc4ace438b14a0ebeaba017a88854379e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Optional.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ca327b0af483a8fd79cede637ae9371fba215b18dd879ceb3fe2e4d57f6137a0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "ec061ff057b379385e049a2c5468925fdc2e1fefc21a0644efd50fefa3e18ad5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "1028be45c25a5b133f61051bd79987f2873c96bb0dd0d750bf9c6a274fe4131e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c4ce6d6185653e4d09e74dbdaab504bd2b10cefad933138690a61a219536030b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dbf451f1a8ce7d368b1cb3d3bd7d2a7f24471355e96bc598a7ecf5d1a2a3fa45"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.optional",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "7aee514119704555065782d743ca40638474fad2894f95eee6893d9cda9aef38"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9e626d0200d17da8ba32f8532671279c97914ff455fcd7090c33eb5ccc5f0004"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5f72c79fe29b8197d6112bbb55ec26194a015af01383b6a4cdb2853741e8b9e0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "OptionalPriority.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ca327b0af483a8fd79cede637ae9371fba215b18dd879ceb3fe2e4d57f6137a0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "0d2b4ad808f76182baf68313ee2df1c9f9245c15789e8c8734ee0cbab0bb39f4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "4c94c39e14d7844ed0c209c8f73bc374f02ca232bb8601d0799e8aaaf6e15f17"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d5bae4973423f08edc9f725521c51e09300b90c8f53330d8bce7f3985f3534fa"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "765c86a41baff66b8efae684bf56fd4c3f6481a7c5e69b53a6bd6f594695fc8e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "45e90dca9a1fb27a3d24df779328d20983c0966ea2f00241d97132fb1428dabb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3b7a888e08088d602d747b04b885c7d38cc747876ddd82a54f696bf22d0d3e83"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2fe18a4c8eda08dc9e6239edb2377464e6ffe5dff79d83f16df6b1bd345bbbf4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Permutation.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d7a1f95346cbe55b099f42a410bb00fc086e348c712d4429a72ca27c7845c31e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "c1a0da23d790e61d8e1bd11b3daace2c10e1f4f2639416e44eae4720c3b274eb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "ca155d17a7a79805dc8bc24901452340d0ea8ffd6e2965c0041eea7c2318f83c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5b4f152ba8b38c8a642839408879b230fa69b2e4742f2fdb5dac28fc6b435990"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d73d9e8007f6af5b9a278ff6f85b49b3f9bc7dc94d2142a63fd4be5f4aabf520"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c48fd2020ace6d19292fc843b6d5a430bdee5c897d8ca08cfd1f112677e81de9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.plu",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "f7eaf4e67fc2aeaccb5b22350b2d5cbc1f57c897ec15b802ac2e01db20f2ea2c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dafe207fdfd46394fd4c75b242c81f895ce2a50c6cfc55bfd18081647f11c879"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8a8d8f12b4d9463777179e513e3d4c438b08e8dd8f3505e2f70496201b5f4a78"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.sub",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "04d43fd3c95dff8ce55a5d75cce5eaf13dabe00b1bd9c1ab8da773959ce23ad1"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Plus.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d97ff967a7d4bfd2369d797ed635282de9fe8cd367fa8000465f55335638b968"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "09e25ed20ed3658a83d14b1d24fdfac89e85ae01506d1c73ec74ed85acb0f888"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "291310e6e7831390fb20d4274be30e38da5e774ad9148fe7c118fd8405cd28da"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5b4f152ba8b38c8a642839408879b230fa69b2e4742f2fdb5dac28fc6b435990"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d73d9e8007f6af5b9a278ff6f85b49b3f9bc7dc94d2142a63fd4be5f4aabf520"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c48fd2020ace6d19292fc843b6d5a430bdee5c897d8ca08cfd1f112677e81de9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.plu",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "f7eaf4e67fc2aeaccb5b22350b2d5cbc1f57c897ec15b802ac2e01db20f2ea2c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dafe207fdfd46394fd4c75b242c81f895ce2a50c6cfc55bfd18081647f11c879"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8a8d8f12b4d9463777179e513e3d4c438b08e8dd8f3505e2f70496201b5f4a78"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.sub",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "04d43fd3c95dff8ce55a5d75cce5eaf13dabe00b1bd9c1ab8da773959ce23ad1"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "PlusPriority.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d97ff967a7d4bfd2369d797ed635282de9fe8cd367fa8000465f55335638b968"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "9b4e529dbdeda8fc181a1fbe4fed7a8c3b464a4688b97df9daeb4083f284c843"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "5ff7b7fe6cbdcf1fb1f67dca55878d498444541c5bb38282bc414c3560f69cfe"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7cf80e4f24c3897e93a3fcf4c277c2e9abe9d5d7abfbb94820d707cce781a0ca"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2caad295913ce4a7f9ccc86ea1da9db22e470b3a0eaf677edbcbb0580f2a892c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50e6bab1b47985a49189b99f665a9888f069a8e2ca9b600be1e3755ad5d3e935"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.regexp",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "b78b64ae5de93dfaa9944c7f51129d0265f3029e8c263a2f1af410f8e93bbc7f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "af892ad0f499c2b1b689f9df30dca6f0ba88d4a58a672e423f83135ce06ed001"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Regex.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "a6bc40849eb4a68b2198c1ba45ae4371139f115490a6cee147c7870bbfb77387"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "a53c91e35c55299b41300b4b5d8bc2ceb6631d39237a6c6acc5dfe3b316407b9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "dc38546d251a7a16bdcbb094440f0060083129901ddc1ad428225d21e95eb179"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3ccd8e7d31ae1dace1149eee9a4835354dcb8c59c59d55a46c797d75a4c667c5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f0f646d2276d342d9aa8b20c57a296ef9966930c187c1c239160266e4f847283"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "765c86a41baff66b8efae684bf56fd4c3f6481a7c5e69b53a6bd6f594695fc8e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "45e90dca9a1fb27a3d24df779328d20983c0966ea2f00241d97132fb1428dabb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8e67f2f1e59c817e8a6f201b474460f8ee61adc45952e2121c13032a51b2d744"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "67e2dcaa56fc73a5cde9b2cec76c5011ecb2af303b61c1cba4ad5aba3740b969"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Sequence.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d33db25bc9f65ac8fcbb20d09b0ec117122d1e420a1d1c4af711f46d25d43dc2"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "8c2c67f24779016acf16453b5a4e71747175ba0989c515b327ae00038ee18038"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "e1e565643e91011b2baedaed4c8cbc93ee4a5b4faaf931f5d22c3a3d0b1c218b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "509e5325c275a5dd90ab748387556edd820e7b6d2f94842e36235b2c501f015b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "911b5aa6bcb5d276e2e24dcb087536616232f5bb630fd25e0f0558099e261909"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "10ff7af56f29eb8ac222c053bdabd2f8790a1bdc2d151de453e58fcfd740d4ce"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "bb3bfd510645548a662e183b94eb8d13e4611f686ff68be5d99b4eeb5723a636"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.sta",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "e9ccca824d016ced4a3883fdfd81356b5827d11c867ee2583b305d85d07dbee3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Star.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8404cbe941da901ce18b65848ebd0d8c13a345bae107468ed7e0b1c8de567ea3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "4add4bc2b80a8e1b96f8101d9e651b6e1b63546b21f1be551766e1c2bc5f8eae"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "e1e565643e91011b2baedaed4c8cbc93ee4a5b4faaf931f5d22c3a3d0b1c218b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "509e5325c275a5dd90ab748387556edd820e7b6d2f94842e36235b2c501f015b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "911b5aa6bcb5d276e2e24dcb087536616232f5bb630fd25e0f0558099e261909"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "10ff7af56f29eb8ac222c053bdabd2f8790a1bdc2d151de453e58fcfd740d4ce"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "bebd76433152657b6a09a82617e80258e1510de67e5a27a1db4ce80be2dac2a1"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.sta",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "e9ccca824d016ced4a3883fdfd81356b5827d11c867ee2583b305d85d07dbee3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StarPriority.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8404cbe941da901ce18b65848ebd0d8c13a345bae107468ed7e0b1c8de567ea3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "63840772ca6e7731b5c1c445e84de591fea7b8a23a36b0572c3a4d5fe714f8b3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "8716aaa616f3a234b6feaef04a537e16bbf0ce14b575c8235474032d647dff46"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ac74bd271bcea1bece6779bbd5ee45805c5ad894f0599b8a454f790e6fea17d5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "870b0bd2bc81de78965ae75088b463c579b3807cc22ba3851c91857998cafd74"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b1021ec8e03eaf8814677aad2b79d44fe6b316b0ffd2f135103b3f44ea0ce469"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4b920fbe23f37b66e18e41a2ccb20df52831b21321a34f9a6335290e80f1f026"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4bc7819ff389fe1f0954c1247b9ef60047b80129d6bfc2eb2946bc42d8d8a902"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "986f3f0aad1f6a12241034b201c10e87ced4afa7da3c0360562a4371a2ad5dc8"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore1.words",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "cad1eaf8ad72cf6b35a27439b15a3aa87fda1b0043a343f4293c290554049a38"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e83b77819eb1747846759738c7ce61188806b0ed7c8887cdf865c697837e0695"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "499c68ac3b2d53f23b519f069ad26eaed68cfd019951825a585a55585ee5b5e8"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ac74bd271bcea1bece6779bbd5ee45805c5ad894f0599b8a454f790e6fea17d5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "870b0bd2bc81de78965ae75088b463c579b3807cc22ba3851c91857998cafd74"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b1021ec8e03eaf8814677aad2b79d44fe6b316b0ffd2f135103b3f44ea0ce469"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9fa293115ac80e44cde0d107b2eb51a6f8ce76cc75dd68b57cba6a928cbd56a6"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ec271c3c8821015e43cb0277807cbc2436118a540b2f0a34b962537bc5e4fd79"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.t1",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "a92903a5232941f75db37bdd32e8c08eabf0273b4fe340a5d73722c5ee6185c1"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.t2",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "a07449f70903f3d62d0eb30e39a55abc273f05d9e8f322ffc1d948aa35d01c29"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "StopBefore2.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8d66b755b8ab4aa4d99e84a4734455564144351b66c19c4399b6ae91a0d292bc"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e4a925d7f165afa1be03eb0306ad5a3398a1ad26243ccd3f7e5df1d2170419ef"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "253aa5a73272fcce9a62994a255b87dd96aba57a12a600a2c186d4ff901960ca"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7cf80e4f24c3897e93a3fcf4c277c2e9abe9d5d7abfbb94820d707cce781a0ca"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2caad295913ce4a7f9ccc86ea1da9db22e470b3a0eaf677edbcbb0580f2a892c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.name",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "11e839745ab136e0bd757832f53adc02fd2c3699417a2e705f1b6a54fa31b716"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7ee9a8d9813bf2fa2ecff12da2bc1108e98813375e2b7e5ad5f6e476bf044163"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f84c0d4c71fbbb27830151f733b45cad73e90f5a6f3feb323406a99206f7cafb"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "80351f58a9ef96c9014447f1258f683509ce51f4cceca07abe59d533343c6e90"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Token.tokenType",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "e60970531788280e393d9dabfe9bfefd0ac8d1fd69d33f015647974e424e8ba0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "1594b51092b0a6ba0c6f880bd0c4d79557b042bb9b995cd584ebfe4989c12b18"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.also",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "15aad6b11f207851a12bc4db5bd958ef50a64d51e0d404835746955d79eff9b9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "f7867020f2a47223cdc3984755a472703cc23089b413a24e30457df8f1149e4d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "24dbccc228d9d7ec7c743c5324e6247db5bf9b0e4f743da50e0b35a2194ff411"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d75ea6bc73f21d50c090cf5548aae50ef62aa0f3702afe66c740e95e36665f14"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1e58b9f42f2a2e0378aae07df033bd0158b49b8d4feab9f8354981bf410ca5b5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ab8b4936df3fcd0eaf786335902bf6e82d7c0128b9d920f5e43d48a711a901a7"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.release",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "ccc5271d7731eff3ebed13e740f1923024cd5c37e7a652f342226410c8ff5320"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "46c8dfef51115454c3ff3df07de19872e3a7c80c8d5859945131afe5f10bc342"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.runnable",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "8b056216be7e9247276456a70b3c6849b563759bd9216283c432b4786052637d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Vers.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "399004a6f85d7e71d9568fb9bb74fa96409adf76f71d802477626f53f0a60832"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "60349041fe252714508c8ab783acbea7bed6dc17202e625bde23d1aaa515fe49"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "e2c784f4cb9b9cc3931d0debf8599ba65a253b95c7a3f6d164bc5ecf244ffd26"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7d7d26fb4ee65d86324338021285bc5e639822b8141169da01ffcf411b032bc3"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7cf80e4f24c3897e93a3fcf4c277c2e9abe9d5d7abfbb94820d707cce781a0ca"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "951f425fa3090ff1c39e4b0c7a776ae63fcf2bc28d4920d816b3498dfd60f14f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9ecda9c062609e1ad3f4fee6fa3e4a27e8d6c47d023a35a22cbd0065af38edd1"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1ed9de01d56ca477899dac41cfeb97d2b0a230fd203667943c4cbb9a1ec7d95b"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.s",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "2c0993d5186667ed07d9690c7c2525e4c7c55b933d968cd571c79efbc01f612d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "Word.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3c9dcdcbd8317840428ec3ac65a759960abdd893c3e9e41d82623b3439f8da3c"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "2950af5bde1db61c2dbc1ee6b7be2102ca5a153d70a26103e92e6041aac2da41"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "924602f2293d5efee5402a8c2b644cb2eddcfeb1b15ef97c09bf1637f95ab190"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "13bc53e795d2ff3e6dff063252dd4ef13618ebc7c29c20f3db8e1ecbdad11faa"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "7cf80e4f24c3897e93a3fcf4c277c2e9abe9d5d7abfbb94820d707cce781a0ca"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.listKeywords",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1d92e394b1615e5387c11cf6ac36d1dc91fb7bd84b3e82e40efb7ef667f85b51"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.railroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "09d66d1082d7b753167198bc799231e4399bac28b3abd9f6ff1528b868050d55"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "bb63bd0701cc3468f6c26af8c88c4484dad8ac47008ddd2ead4e2986ae2ac34f"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.seq",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "c3c3b48ab2066310b7c9b2cb0fb135d59758cc02be792074a24c3cafac50af7a"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.stri",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "bc07509aced692ebff114dd4448e5cfec74ad10160eeb041dfd50254379a2426"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.toStr",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2dfc3089252f7fa3760ad26eab102025cefc0ab6050583169d898a7af0aec0f9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "WordSequence.words",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "87adde035f0d4df3d0e760cb21f11ef7c1afac237c783313b963440b4defb5ef"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "alt",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "8b595c7b1a28740d690cf26d4f2653f60dd496e62bfb6a648fee054e0840fc71"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "altPrio",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "86cd78a12abbbf2a72bfabe7e54885f1888a7b508395503df5066b7e4bbcd6d2"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "best",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "d2984e920f177d63c80a286cb371a192833d415fb21e18872de0bc0147d7bed8"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "consumed",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "74dcc70aad967ae5521d96c08d8c34a6c7ecf20ade5a8f63c3e70fe114859cb9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "copy",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "08e0c005a76fb18cd45358f7cb086d2634bf0e7ba519f00c770444b1a8509b33"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "expressionSingletons",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "3edda94748a8b4bb0abfdccc41dda293fc4cbed0b88109a5897a35151f2e1dcd"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "failCombinator",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "5f3a95eee24b0707a96fbeef979e3d72c3f5202d861cf713934076bc6ce8b486"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "failStar",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "c0a4ce2212e6fe29aca1f41666d2b20e64096d474fc6086f504477a355ccee18"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "foo",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "c82d954c980bec3c5e394106dd56d1c990f1cac4dfaaebebaa3ace17ecfb2955"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "index",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "e23ae73f15588e191c092b488f375c512c2cfeddf69497820bf33a938fc0caf5"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "inputToRelease",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "9304939488aa2956838527841af9bede537cf4dfd7c499a89a361a06e95732bc"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "langVersionOrdinal",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "04099c107cca58b7152d95ab64b905c52002b2f6480ce383e8ec8dfee2a04304"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "left",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "702c5d664e795a8b5136330f43db45c6d9e99e3d5bb0df542138144ae065d8f4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "mapInput",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "ae304084bb6ce64c2176d481cbafb04d12414e535cf7ff0008908666f2c8e8f2"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "match",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "fbb67fdb39b5b545e04eb32c5e2262103ae227cf219cfe7439b3c9f35b30b281"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "name",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "83ce8a9cef97f1a3103f3d69dc3e6a6a981643119dce49b3af78dc00c436584d"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "opt",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "d3c4d847271fc90237259aa96132359b3774a8f104ac62fc8d51267a70be4859"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "optPrio",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "47de716d97a24c25621afc29cdb2305dfb732830e719899a0a6e9637f91ed28e"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "p",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "148de9c5a7a44d19e56cd9ae1a554bf67847afb0c58f6e12fa29ac7ddfca9940"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "per",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "3d0e7c8d7d60f260d812861e32268ca9fea73849a3bdb86c063cb0b27a1463d4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "plus",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "ebe59c38d144e811c360cc746e7d0c35af74f9a1f9e0ae1d0eb8e7e928645e42"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "plusPrio",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "6cf433bfe839dec82a2a5a77654cfa922864a3145ef90cb583ac8312cc02ba22"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "prev",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "80bdc595ad69c4d381a593abe917bbbc1657a2190a017efb12f16b4abcd644bf"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "re",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "ae614d88cbfce2dfe9e620fd0550d000bfbe130b00cd12f1c9a5aa758c9bb9a4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "regex",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "0e9f9059cd3e17d171f0eb0144d79bde3353791fed4690d33e50f66a40837776"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "results",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "d7655d52b2c8352389b9dcd3cf60ed32e3edcfc8ce8f50bc4270eb6fbf7b3e16"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "seq",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "e534b09f44a5747070b5435e5167eaf7f4b4d07177d95b55d64b8e83b6b8aaa7"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "sequence",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "bf37c7c208717d6de100ce851b48273f8d5d945c8dc64fc64372087ffcf88ba9"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "split",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "aff4d27b2510201aae378da7cc9667f51fb4c45f0baabc604a1fa5f41905d4b0"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "st",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "56af4bde70a47ae7d0f1ebb30e45ed336165d5c9ec00ba9a92311e33a4256d74"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "star",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "915286334e32776603a1938b8d228ded2c28ae0123e07c6595a91e74afe4ef73"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "starPrio",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "88daeff8b37193c480d11e3088b699cede9bcafe95f455a79211a0af953c9cd4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "stopBefore",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "4479aa53cd8eca26bac36df08afa4d19eb683ca21bd942aaca896477ce805416"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "stopBefore1",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "fe5af10d8a0b828bdbec693b19cc8b978996bd93bddcef4e8f8d4713b7f8a0b6"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "str",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "82fe6521d15e22eb9edc615e2442229f1261120b9fcefa63e7fc6d5ba14cab13"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "stringSingletons",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "00fc2223f3a6ffd5a1f342f159e8856b63f13fd6cdb17d061bd5e8eff2f480ed"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "t",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "tok",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "9efc3fcb0fecc78ffb75d80bd97990736b2529b40fffb0622423fc235b8000e2"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "toke",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "2e445b4ef801316b0a415c78ece069294423a6e206acdea286099360a9e30aac"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "ver",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "26f28497586a5a4a94dec75cfbca6de29d9ccbd9ba9039eba612c3d4175a6bc4"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "verLang",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "cf0200e4b46b9841ef19a14609099a4ac8ed8e8785bf56147461c0a34cfa3344"
+    },
+    {
+      "key": {
+        "File": "src/abap/2_statements/combi.ts",
+        "Symbol": "verNotLang",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "2c73e137ae0fa351db56fd99f77b6a895cd7c2a208f44f43f9486bf5266bfe9e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "StructureParser",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d6ad727e3d56f56906165b423e5badd5be8364d13daa5e298421c7dc607c2347"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "StructureParser.findStructureForFile",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "a66bfe7e235b9b1dcba6fffe2a1833174550b7441ed0c888028541e69e6f2ec9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "StructureParser.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5b1740e0da8c8ec94f51cb59ed3b7720140cf2c1f23109f01f75335744a68442"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "StructureParser.runFile",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "01880132c915dd980afca090db0d8a2776722cc86a03116bde366d3c89592505"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "StructureParser.singletons",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "cf204f062f5be7721d54e14fd835b4226d79ce097bcedee40ef793e20ce99db6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "descr",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "778f14215e3ad28b2d0f3516176619a8d18782274bafd576aba74af24cac369d"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "filtered",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "37cb37c601601b569c88fdc6362448d3806dbe5ca421d1e60570045a044651a7"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "get",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "8240ff36bea88da6604a18704f904d5fa5d0256613f24a8cf9ad3faae18b228e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "parent",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "aad2279f25d4b8c24ac03768c0f1bb59033a2a9dd01c043cf027314cd7a62ce6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "result",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "709afca46d1d182d79e3a0d87f72651f6d236e6ea9fba9b391c02be5b6aa41da"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "s",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "043a718774c572bd8a25adbeb1bfcd5c0256ae11cecf9f9c3f925d0e52beaf89"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "statement",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "9f224220059fec38b3c504b3e05473593c7d57c323bbaf8bb3c8a10582d8b49a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_parser.ts",
+        "Symbol": "structure",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "630b8bd5fbea51dedfbd006239107f56b84cc4d0d10571ae937e4daee216f67f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structure_result.ts",
+        "Symbol": "IStructureResult",
+        "Kind": "KindInterfaceDeclaration"
+      },
+      "sha256": "71f900715de7069d83634d43b5c5a253bc451858b55a67bbedf96e4d1115448e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "13abe13b73df1f19cefb0cc523140667d325228f8a5a7c7534d0155f25563ed1"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "a8d51f2832d9fb7581cc205fc4cfebb34b547b6facf25a0f0efefbe171f73422"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d5bae4973423f08edc9f725521c51e09300b90c8f53330d8bce7f3985f3534fa"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "f2d4e2e1027943c7fb8a4e530dff639e7bcc056736b337c00b8028dac935f913"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.map",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "35a3e4bc1a4fc8cb139bdac417f128f79ec9742c8d6ff5d1e58a50a5681e9f94"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "74d0110b6053f614718e40410ad4d0c223f6d7d061dda05b191c3701edafc374"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.setupMap",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3d80a767b020fdb054a71943605cb342b7dda9d2f7dda7be38a8ad96a1ba5d5f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Alternative.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9d9e6f272891549ccb75651d8d27fb28932aaaeaa4ae8011161ead31267408b8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "cd38b1060ff54e5b3464134717767049f2d490257707d6d73d50e59aad3dab65"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "1a7f96316cffd08234ea2acee478923763dfc750034920568c492e7ace02180c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "0691c5953ebe34b55b6337f86a234dd699a55d76e5c662376fda72908b61649c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.obj",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "79a5ac79a9a9572e130be5e4c0a10743dbff0ac1e55a3d39fe58070b3f27b9d3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f4ba83794fb03106fbf5ed0358d3b72c77e4dda612be4112734250069c84cfc9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Optional.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5f1444f3eca4c39d1e0ae791ee05c0ab72f1d6d156501629c50e26a97eba35c0"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "942a73c07dbbc86c01fb16209fde7bf2e587967515a20cf4d7ae244d9d38f1b4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "9f3f04abc51a07f436f0004b8c206745b8db59cd115ca439efbc3d9afdcf0aad"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3ccd8e7d31ae1dace1149eee9a4835354dcb8c59c59d55a46c797d75a4c667c5"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f0f646d2276d342d9aa8b20c57a296ef9966930c187c1c239160266e4f847283"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.list",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "f2d4e2e1027943c7fb8a4e530dff639e7bcc056736b337c00b8028dac935f913"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4549db3dc91f362d83f9a946fe0f0a3b8386a8a647a64a425d12273c2e8d1210"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Sequence.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "465621533d457ef965a8d666ee6e4d3488c048ae2d6a47a1e469b9cd733918ae"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "ef9d66ea3f77c638e4be1770db98b473c65c9038d13cb4759a1b4b81c37c5747"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "1a7f96316cffd08234ea2acee478923763dfc750034920568c492e7ace02180c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "50a6a7cf03ad225968b3ece7fd9ae6670c4d6c2ea0252133497835eccd60da52"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "0691c5953ebe34b55b6337f86a234dd699a55d76e5c662376fda72908b61649c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.obj",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "79a5ac79a9a9572e130be5e4c0a10743dbff0ac1e55a3d39fe58070b3f27b9d3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b8158bc85dd2ffc0ce4a9bbbdba4c76f6165385c52edf152cded5c3ea7726788"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "Star.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "e6578498ad3860476c6a2f00e20247460b27bcdc715b04ec41b419c818e81301"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "3d0a4fbd389d202caecfc9d50560802978b4b4637463334f4a41f6318ad2c638"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.className",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b2f48064915246fce14416a1ed01cb8646be01ec6c406050353e4a694390ea67"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "3d6fc76bee165b4bc490cd429b2884f7ea94d810c30fe0c582ed45af1daf0e15"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1eae86387669b3aa115061897b8aea6e12453a78bfaae1f93c2aa99cf4ea9e0b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8f892e2fef0d065775129e1fc002f45fb2a296b9a68daf3a5b1f0259e0b40e30"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.obj",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "e219d86c65e4ae49a72b65d348fe95f018f90b47034996c0542a0af6f06a5c7f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "aac45808f02ec1d822aee374b4137220fd54109b7fa722bc52bfd022b3c91ad4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStatement.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4a572d0e1acac477adc07e37a5d7a6e3166d392e4ca0e551e93fe821ee1d83fc"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "1a2654df01aa021bf14d0e79f8c2e27ebdcc67ac0a2a7901e56f10da9f6ad7e3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.constructor",
+        "Kind": "KindConstructor"
+      },
+      "sha256": "368f45b87b2ffeade278cfc66fb700ae8c9411c58f0e4e80f762dfb4620bdef1"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.first",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "e5a4db62c8ffc4a668c9197a519e2daf7a8bf0a56832c8e9f33e86638e80bdb8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.getUsing",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ce17eb956edb6fd01de3a512310f6b3626275e4e61a2cab75ae6f6fa4d29a744"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.matcher",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "a885e2e6c31f68bdf9ff94f3c75f73432a39abe3bed5d09ad7a39e42cfee9cc3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.run",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c5eb356fb69cd29ceb2a882fb9282db66370650877bc45bf6c6c39efae3157e8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.s",
+        "Kind": "KindPropertyDeclaration"
+      },
+      "sha256": "01b0cff5a11ec8379fe3de998af4c5057ce6b2da0df0ccb02d42a57423c51894"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.setupMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4abf2ccf0605226e9fa03167a3157f6f3a28de5f046ed9b487126cd001d22eb5"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "SubStructure.toRailroad",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "25b2fad79b5730ad8e6e20747965193c7f89879dfa7fa4142c0d1e1919666b06"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "alt",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "0e057b03deff3306656c2a32c80ca351c0c462569724aef90587a0d7c4c4503b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "beginEnd",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "d5aeda911d65cc50093441fed57ca5a30fc115a9fbbc939e7d61050bc6e1e86b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "count",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "8594650b6e3d03a491c40d5a1bc7a9c22696d0e7ac50ae69e77002aa28b11438"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "countError",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "d474cf3a1634a80c31563be1a2aa5065c6ccd16f342190bc072a3f4bcc8b02e4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "first",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "nparent",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "1e33d8f5c1aedb27c628f1cbcb3033b55642a73f88e0631113c87d3e4c510e9e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "o",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "665736c08fcce7eeed831b43eeab8cbf929867c50d6d0cdea21e5f7fd5be3937"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "opt",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "74a4f1616ac22f437966422cf6b9cd2f2b343a3888cc4f667e8470589d1e90e9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "seq",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "61b283b4ad2786eb292ba072737bba0b63138bf6b54a79ab4a4b2a4ae03127a8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "singletons",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "1a99bd1e98f1e9b108a6eeaa4460e938b1dea6aa32f2d12456c87dfb78763e6e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "sta",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "43b79dda427f5f2e4d15b15dbce44dffc61be2a6af48dcc3a72870e38c1a5412"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "star",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "0de18fc1de6a8e4fc972f30c1b26f56bbcad4f4d0fe3708caea3ae5d7d0f14bd"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "sub",
+        "Kind": "KindFunctionDeclaration"
+      },
+      "sha256": "56d70da4f75c37870830279c6ba910d1c79004cf6c517fdc19281c3dc4d33034"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_combi.ts",
+        "Symbol": "token",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "3be7150614f50708005af47b742fd42830e42df550c17d888f3e523511ec3fbd"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_match.ts",
+        "Symbol": "IMatch",
+        "Kind": "KindInterfaceDeclaration"
+      },
+      "sha256": "1f553d388c1af6c28dff7462a8555f8ca4130e035d035a5a335b5983e625e29f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure.ts",
+        "Symbol": "IStructure",
+        "Kind": "KindInterfaceDeclaration"
+      },
+      "sha256": "0c495afa965780cf4fe3ad4063303217d895ebbee6dd080aa91dcb5e0dd9877b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure.ts",
+        "Symbol": "IStructure.getMatcher",
+        "Kind": "KindMethodSignature"
+      },
+      "sha256": "8288f0d8fbe57ef038c0d0cb8c08a613aad3c22aa1463fe1e403fd8bb060e1fd"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure_runnable.ts",
+        "Symbol": "IStructureRunnable",
+        "Kind": "KindInterfaceDeclaration"
+      },
+      "sha256": "338b45c9db3dede5863a4f2f9f36f71cde459b47ca5bd39ae4a7a036808e8dd6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure_runnable.ts",
+        "Symbol": "IStructureRunnable.first",
+        "Kind": "KindMethodSignature"
+      },
+      "sha256": "8f09631f43e6614bb9cdf58dc3ece026f7e2e1c972176a1ff463b83019d6bdea"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure_runnable.ts",
+        "Symbol": "IStructureRunnable.getUsing",
+        "Kind": "KindMethodSignature"
+      },
+      "sha256": "21f02c12cc23da36d4ea21135fff63d486dbdef570617c6336155727d0493f42"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure_runnable.ts",
+        "Symbol": "IStructureRunnable.run",
+        "Kind": "KindMethodSignature"
+      },
+      "sha256": "f325d499dbdd987ea761e7f6ed800b39c01283b66d9e5bbf10e44b4370c34b1c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/_structure_runnable.ts",
+        "Symbol": "IStructureRunnable.toRailroad",
+        "Kind": "KindMethodSignature"
+      },
+      "sha256": "343c8a4041b6f36c43266465e2ac052fe3ad67a00cfc6649378fc1f7bf52e9ae"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/any.ts",
+        "Symbol": "Any",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "10026ff6ff4a64085bd883e7f308c799609453991a2e3868572ce13de7bcfe61"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/any.ts",
+        "Symbol": "Any.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "73964ffef77e39f8cdeafafd392dec8a1756d190e3978c2147c32c7839dfb89d"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at.ts",
+        "Symbol": "At",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "6dd2cf273248d8a73df0d6a2af99fb1ac2ddfbc332cfcde596f8256e96997912"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at.ts",
+        "Symbol": "At.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "e61376c79f3a11f4dde9dc8a3b2f43e2293f06cf628b55fdb6ecf215d2e50e27"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at_first.ts",
+        "Symbol": "AtFirst",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d1fb7db5ac222f8e133ccd356cf00b6f2ddabe7fe9d81e52207e5f0178ecb7a2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at_first.ts",
+        "Symbol": "AtFirst.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "31f6f8e079f8de32bab6ce5e2feb783072677cedacbb90f21eaf46dd8dddb9d9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at_last.ts",
+        "Symbol": "AtLast",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "08694b7c94c8f59eae6cde2d1e474fae8f3afe7d7c93edf283b04331d65c838f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/at_last.ts",
+        "Symbol": "AtLast.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "15a38cef0e4fd57e49905c28bfb767174976eb91741cf788cdd573cb479e4520"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/body.ts",
+        "Symbol": "Body",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "fa590d3dc845546f1a416d68bbbfe6dc2f9470005a9dc2c55993105ad3f15c7c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/body.ts",
+        "Symbol": "Body.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f6cb5e86126d5b91081bc88250b869aee1110f22b80cd2f9e5f10ced91db1f0a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/case.ts",
+        "Symbol": "Case",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "98d2c5ade2cb03fa6e9e3321a08b6cb7d0649ea27037f124b6003028d4ad967b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/case.ts",
+        "Symbol": "Case.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "0d66a91eb72139e3a01545a3578428a87b0b4794bd618e199176846599d0c40c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/case_type.ts",
+        "Symbol": "CaseType",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "a40d80c8454466a203d8fc138fb77ac7debdac97f615b227f375d79517d8a974"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/case_type.ts",
+        "Symbol": "CaseType.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "17223eb9ca8508584e9396421d5d47a4383c2bc5f058817ebcf9706d79ea62c7"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/catch.ts",
+        "Symbol": "Catch",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "dfe4c687c0f69f3b320b69a67161b1cb364b18f1da9af8fabf27094eb29581ed"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/catch.ts",
+        "Symbol": "Catch.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "db53bfb647c582f5522fc40ce43864afff424ea8fcac3aceca08477369e78299"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/catch.ts",
+        "Symbol": "cat",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "f81c9ba7c56cdc4ea72a38e0444b339a065220bb5117c4b04be8ec38bd2be7e6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/catch_system_exceptions.ts",
+        "Symbol": "CatchSystemExceptions",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d533ea244309f7888ce262f3439c774aee0ffe860f544e8a83a3a5ddd3b80853"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/catch_system_exceptions.ts",
+        "Symbol": "CatchSystemExceptions.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "589925c50b1bebc996580f5951d94d8338d0f33cac75f1de9c7ccac75684a2fa"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/chain.ts",
+        "Symbol": "Chain",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "9ffcfafa460ad1cea527291aa17ac354ad3b245a5a8fe475547ed3414f730020"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/chain.ts",
+        "Symbol": "Chain.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "89e7210c513e067429cba38f3489850acd5eac555d755b8dd400c5366e0ff582"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_data.ts",
+        "Symbol": "ClassData",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e059d2669d252d7ddf7ce75e27683d8fa83aa1327c4e1dbc6fd5efb8db057c70"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_data.ts",
+        "Symbol": "ClassData.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "f46a8a484219f308915cefcad745488a53603785635af9b105a3175f24cbe211"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_definition.ts",
+        "Symbol": "ClassDefinition",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "803a0a901a0c25f8e00d3360ffbc1ffda453c6ae656ac2d2fccb2280c2faa78e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_definition.ts",
+        "Symbol": "ClassDefinition.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "9c7c2831544de5be783de5184861427cfbba21aa21308fe5c53481e9d3576a3e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_definition.ts",
+        "Symbol": "body",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "187b8ad70bbe29b610106803ea707a60714a916d7b3bcb0f27078f70f4ce3774"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_global.ts",
+        "Symbol": "ClassGlobal",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "dbac305c8964bfff7fbe9b6835b3bc1bd9d0800fc1184c63dc4afda9a3691dac"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_global.ts",
+        "Symbol": "ClassGlobal.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "668aa88739fb1ea0bdb7d85ddbc4b6285e4de24cc9b572f1a6b800795221f6c4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_implementation.ts",
+        "Symbol": "ClassImplementation",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "f663dd136ac5e5ff84aee8281ec3347aeb69e4e9fbdba3672af6901829c15e44"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_implementation.ts",
+        "Symbol": "ClassImplementation.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "742c2aa2020689d4d558f0fefe24566fb1fe89a16c6b913c2b5bf3468fbea5c3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/class_implementation.ts",
+        "Symbol": "body",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "6a1212764e02cdd3ed5672ec6c0bc6bba1553324dba0811d1a7435a25a68ee04"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/cleanup.ts",
+        "Symbol": "Cleanup",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "a96f645ed4d51976996d745e7b2c7d2d623d8e7460a443082a6f20c94e18cb51"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/cleanup.ts",
+        "Symbol": "Cleanup.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c9129dfae6d006895885b6d3f74db518237c8aa008641f81d78244c5c47fc835"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/cleanup.ts",
+        "Symbol": "cleanup",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "22956af028f25442942f7cacdd2e53a344f725a0393b9c6f4989a0dd6b917935"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/constants.ts",
+        "Symbol": "Constants",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "06182356d44546f2a20f8cf97190f625a577a72694c159ddd8140e30e0e12c9e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/constants.ts",
+        "Symbol": "Constants.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b41c28c2d75768059e6d75dba359a632867dcd80d99f837c20a6a5840e4df9d9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/data.ts",
+        "Symbol": "Data",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "b96a5d21aa0f8fc1a6328468862cff458065cc246448ab2fd921393eb97118b2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/data.ts",
+        "Symbol": "Data.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "582733af02bb87423e217735aba8a2cbed2b85f438195ee0a71a6d216d0b69e2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/define.ts",
+        "Symbol": "Define",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "578d4dc41a3d1bb497c045a58616a579d86acf480cdcccc8b342b88d6a664aa4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/define.ts",
+        "Symbol": "Define.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "199a07dcfb3ab78dbc15da658113c86b3bee6b197cfd95ccfa0ca3cb77df52e7"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/do.ts",
+        "Symbol": "Do",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "cb19dc294e8e56e17226883d5282125bf03f6bd8ba7e546879d837ade3e330b4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/do.ts",
+        "Symbol": "Do.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "27bbbcec8c416d2688993f142875e732407bcae1d1b9801d6de75a48f1175647"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/dynpro_logic.ts",
+        "Symbol": "DynproLogic",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "fd7176ddb75d8bd9104fbae7470ed2729b4b69538e9aa54656666ae9e175c4b1"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/dynpro_logic.ts",
+        "Symbol": "DynproLogic.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "31a6d958b9c1161b81a0e2f72a888079e10a5a23c724cab33303f3909fb56a16"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/dynpro_loop.ts",
+        "Symbol": "DynproLoop",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "100ac9bfd9ed1d11cf546ae90ff16d3dcd95d24ac529aec90103399de9d59e7a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/dynpro_loop.ts",
+        "Symbol": "DynproLoop.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "13f4e370fb404cdf92ba05d7b2b3a9766b1cdbd2a1575ad0a1eec1b79e8e2600"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/else.ts",
+        "Symbol": "Else",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "ffed5533178cbaba94848d036e43e2b8ef63981de2eccd9896f104e41f82988c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/else.ts",
+        "Symbol": "Else.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "19701657ec77b32e25d9376afdf196ed1a8fade5414b604f9a061adf5e69a641"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/else.ts",
+        "Symbol": "body",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "6c90447725dfe46baaac23db13d778cc2772e05dc05774fddb2a97f629ee6391"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/else.ts",
+        "Symbol": "elseif",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "35d3f0e4e2bb61bd2c0590f1347f2e6c579c264fe4ef24c7ec59d78608fb6443"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/elseif.ts",
+        "Symbol": "ElseIf",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d0e89fecf310f97405f40a5b943301b72058fc8ee6d6fd391c16b0ab02793a35"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/elseif.ts",
+        "Symbol": "ElseIf.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "c876f676ef8ddfd1a7d0b0c6eb74a96d60ae3f3deac192ad0ddc902505dd1814"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/elseif.ts",
+        "Symbol": "body",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "6c90447725dfe46baaac23db13d778cc2772e05dc05774fddb2a97f629ee6391"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/elseif.ts",
+        "Symbol": "elseif",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "34dc926a761d99eb2d8b9d746f279c10b0afb1e7b31afa69790ebd0f83d49707"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/enhancement.ts",
+        "Symbol": "Enhancement",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "611151e9ef9492d0bd3f36b9bc71a6eb6a1ada750c77e1a6e129ec3ba72db92f"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/enhancement.ts",
+        "Symbol": "Enhancement.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "32a0f122335d04902304cc42bd970d5d2ee70aed558de258b7fae1e68d5e12f7"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/enhancement_section.ts",
+        "Symbol": "EnhancementSection",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "9947ac9d69cdcaed8cd46a2d618007e0cadd3647b51faaf398518230913da247"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/enhancement_section.ts",
+        "Symbol": "EnhancementSection.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2e9bff2f8d6818f4900414445d506770dc0355026002e5746051ecb3fa6cd4ee"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/exec_sql.ts",
+        "Symbol": "ExecSQL",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "79c6661c1c31dc9a640934619d5326b3840903e2d4e8861477885dfb8329328b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/exec_sql.ts",
+        "Symbol": "ExecSQL.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5f4e0c7dfb914f9aa01f1ae4e61c89aafc60d415d7a13d05ff45fb616e2d9a5c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/form.ts",
+        "Symbol": "Form",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "ac1d57133bc155adcbc750461eed2972b0291b99a3183b25045f14d00f6aaf40"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/form.ts",
+        "Symbol": "Form.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "31c74abafbff9121a75c65727e6531199871c9ff36bb8db921aaecabd82accfb"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/function_module.ts",
+        "Symbol": "FunctionModule",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "8bda7a01beee3345def6e12438c41ffc29e9cfdaeb3d6bc9c8fd6dd9dcfd14ae"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/function_module.ts",
+        "Symbol": "FunctionModule.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "2baea870d5e1ee33c221de8f44139583e4ddb7b3db0b077885d1eaa41ee7d6e2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/if.ts",
+        "Symbol": "If",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "6f88b8140b83218c9e8516587518eee27fcee56509e38b99752a1665a6259076"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/if.ts",
+        "Symbol": "If.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d8dd259015dab31a4ac47c0c6acc285ac9ce94c7b1dffafeae832618c94d07f0"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/if.ts",
+        "Symbol": "contents",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "c83faa9a444b57a0d7a1728880aa2e8a075ce480c6c10a26831cf32b42694271"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/interface.ts",
+        "Symbol": "Interface",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "49891c3f405d66f85e69977f10aaa839d90651bddefd67fcebd36eb357b9ae2a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/interface.ts",
+        "Symbol": "Interface.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "8169c1cb1de7b9220074f2acace351a304f2b2477bdb12293d4f207868e36a68"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/interface.ts",
+        "Symbol": "intf",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "24a7b3a8c210779114489f485b06a0e26c7a0eb84edd0385c4f0a47cde1fda89"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/interface_global.ts",
+        "Symbol": "InterfaceGlobal",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "2bf1d36a0e27d97042d989c6fd972b2ec34ceef90241606942082bb44f410cca"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/interface_global.ts",
+        "Symbol": "InterfaceGlobal.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b35539411c6aca71c80d1986d7f106d25ad2293ce6a43e269709f7123bcafb0e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop.ts",
+        "Symbol": "Loop",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e7fb871ddc6e9168176fe92536b6603e76e2e4f71d89d5dcd5d5cec05d9b92fc"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop.ts",
+        "Symbol": "Loop.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "1ccc1ac9147b14ec83c1b5bc3cf2367ca0474090f3da2c4255f7b5f9949de70d"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop_at_screen.ts",
+        "Symbol": "LoopAtScreen",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "c6766388a1f7c00e0b74ad91f6b174f04d94a11baae171e31d2da987e3f632e4"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop_at_screen.ts",
+        "Symbol": "LoopAtScreen.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "be3120a179218ac582676b245c62dac6c0380ab9a506b162b303af0f8518d481"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop_extract.ts",
+        "Symbol": "LoopExtract",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "b0d59d780c374ab1e95c83913be3e22dd143345cc8e2a853a398267e28a486aa"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/loop_extract.ts",
+        "Symbol": "LoopExtract.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "d72d5e9c5af375762410634090c3db117320cf076049ee48ddf1f14d7b9d541c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/method.ts",
+        "Symbol": "Method",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "eea6bdcbf8352e4884c6c38e16024e5b5833b4f3bf6d712ea02d630e525dca86"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/method.ts",
+        "Symbol": "Method.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "de1e4e8dfb2dfbae60f35a4c036d8b2070b2671da845314daeaaaff5bd448de6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/module.ts",
+        "Symbol": "Module",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "8590dc25c9f8c8327f2d3734b092982f76bd7792975932fabc098a7d3753662b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/module.ts",
+        "Symbol": "Module.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "ba1740db66941596d1b4b23fa60ce2490d349ca70fbfd513a9ef6a3351c8e9fb"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/normal.ts",
+        "Symbol": "Normal",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "3c3071db69c14d27be58de987390faeadce2527ea7ac8a56d00c01a0d1c749b5"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/normal.ts",
+        "Symbol": "Normal.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "02162ff761ef02c9dfea629c4dd97a5cacd7842bbec761d066eeb34d9696a6b9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/on_change.ts",
+        "Symbol": "OnChange",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "e5fd02d63936bd7ea0a3ac4a23c8721ead3c1d16e90af5b9a857bb3e58b74df2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/on_change.ts",
+        "Symbol": "OnChange.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "b601438c288872851b91b26025e06240a374bd666e7f075ae343269f671d8af9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/private_section.ts",
+        "Symbol": "PrivateSection",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "6f6c734b6c3630101933e31faecc973a1f1f5b5ea772deb88589ef8660a6ccab"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/private_section.ts",
+        "Symbol": "PrivateSection.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "6ba932c3ae575f9885629ad5cc3d1545c6aebd3a6356c42baee386736b22f6ed"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_after_input.ts",
+        "Symbol": "ProcessAfterInput",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "d8fb51c7c192fdccc33611fb88d016554c314318c6894df05967162516541402"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_after_input.ts",
+        "Symbol": "ProcessAfterInput.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "41693ca13273746589e29c98682079193d8e0e63973a7936ce1360210e4042a1"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_after_input.ts",
+        "Symbol": "pai",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "42c01c83df366ff09dbafed0d6d1a4ba037cd3238c31fa402ada07d04bdc5ed8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_before_output.ts",
+        "Symbol": "ProcessBeforeOutput",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "b12301f33a7a3b78973df9188b8fc5be6b77a09af9a7c0b5573e6caf612c60cd"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_before_output.ts",
+        "Symbol": "ProcessBeforeOutput.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "56b7c8c4da11521966b573fa87a0c8878138aadc0fd08c4c047c18228dc04f77"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_before_output.ts",
+        "Symbol": "pbo",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "ad5af13be5f0cfc2d471163176fe4381df1c9c08fc6fbad7139f5e362ad55a83"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_help_request.ts",
+        "Symbol": "ProcessOnHelpRequest",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "6cb03c05eb4a0e69a0e762045c4541bff637aab62c29a2d77659ba92baafd47b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_help_request.ts",
+        "Symbol": "ProcessOnHelpRequest.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3920eaf4fccb87fcbc3781cdcd010032f4c2970edff1a064f00343c4c0b955a5"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_help_request.ts",
+        "Symbol": "pov",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "30bf938346265c540adac340b4f5520932d0764aa24f9b6b04019ed8e0a5e148"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_value_request.ts",
+        "Symbol": "ProcessOnValueRequest",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "cb8996aa389383eb1613fb097d99d3708e602e34a167fab384f1bc8b19905287"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_value_request.ts",
+        "Symbol": "ProcessOnValueRequest.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "a67562fd600b11ad583cac948477abfa5ab95dd505af6c0728264902bad155f2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/process_on_value_request.ts",
+        "Symbol": "pov",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "30bf938346265c540adac340b4f5520932d0764aa24f9b6b04019ed8e0a5e148"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/protected_section.ts",
+        "Symbol": "ProtectedSection",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "51a0dc6618e420a1232bd54e6cf9a46467dc74542a7ac7aa35adf8ea0c56b253"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/protected_section.ts",
+        "Symbol": "ProtectedSection.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "75cd6145824ae86fd37e58bf29c662d8eb8225e5fa5aa6db7263261185efcea8"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/provide.ts",
+        "Symbol": "Provide",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "5c1592f205e19255d13f8ee2e4b5567bafd14c43cc599f12bf11c109a2c1e7e0"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/provide.ts",
+        "Symbol": "Provide.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5cba7bf40da5a5646ca7d0cb739b478c711c343e9b8bc5b1cddc240ff43f872b"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/public_section.ts",
+        "Symbol": "PublicSection",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "97c3b4dc51f217f47df2c2d0db4e7d4d932cef6eddf9f8ee710d788edfa39261"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/public_section.ts",
+        "Symbol": "PublicSection.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "dc99b70c2a5273664d755b1250fee5c251f38d03fe34a5f4d0e54f689ef9d111"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/section_contents.ts",
+        "Symbol": "SectionContents",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "18ddcda609233bf3bcd281244d7674f4df406c642b635e79abe0eb18521e7cce"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/section_contents.ts",
+        "Symbol": "SectionContents.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "43ffa0a657e42b560f76e68b3bb145b80fb45fbd48a3fe6bc4de7c13df828932"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/select.ts",
+        "Symbol": "Select",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "5e1ffcb290899a41c7b1d6b973f757cba44672b808d4a91c7172ee7b7892425d"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/select.ts",
+        "Symbol": "Select.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "161888847e4f99902df4a3571a3319f4f59b0c5f10cbafe280bdc927b56d592e"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/statics.ts",
+        "Symbol": "Statics",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "26965ce5bb3fbc0b385433574390d629b8db072294cd804c9d72357ecf784460"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/statics.ts",
+        "Symbol": "Statics.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "80a675453c6054e67bf8492d1771c627c843d5944176bb9fe670ddaba5d71d25"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/test_injection.ts",
+        "Symbol": "TestInjection",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "3c01e04f50874878b8dabe4cdbf34f13be4ed0bd92a7435f7b65fbbc94805467"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/test_injection.ts",
+        "Symbol": "TestInjection.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "3d8490eb5d063d7b14e2b7a7c0286b74e8ab740073cde18ab2291d94e4b1fecf"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/test_seam.ts",
+        "Symbol": "TestSeam",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "66dd181d79df2d5c27452ba92417b10efb21207c39ae2290d3edf48fa6f90cf3"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/test_seam.ts",
+        "Symbol": "TestSeam.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "67028ec30ee520b611d3046c5b09e6a726efa7a84fa29b827d1be0a7a0f7fd0a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/try.ts",
+        "Symbol": "Try",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "f9746235ecc287c2319e8bf0a625be56dbf8ae133e814ce65602ef90ba9b72bd"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/try.ts",
+        "Symbol": "Try.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "59bff170888d9d5f0887feb3ea06ee7dfda2e46ae5f722a3227ba1aa6f470003"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/try.ts",
+        "Symbol": "block",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "a198ae30dcccd2cb8ddb8ddf3e3940d6ccf752659dfb5579ffb67c8d64b39472"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/type_enum.ts",
+        "Symbol": "TypeEnum",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "bcd3e6d4f58682b92037ec5625416860585c67b889931b8cc7bd71bacdad2ca6"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/type_enum.ts",
+        "Symbol": "TypeEnum.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "5fbce03fb9f9d9c1c24377a39bb5e507d962c414ac0f12c49556b6437a43c8b7"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/type_mesh.ts",
+        "Symbol": "TypeMesh",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "80cc25470ee977adae6fe143ff2d35f6a0563f226ca062ee00bd62bab9d29750"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/type_mesh.ts",
+        "Symbol": "TypeMesh.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "27b69b2eadfa26e00fbb3d92e798ecb9d4d94a1e37cc2676540b7de715cf16ed"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/types.ts",
+        "Symbol": "Types",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "6254dab90965d12fbda509b0ab0f2ad8e048bf19edf7c9cbc76bbf9ffc4af2f5"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/types.ts",
+        "Symbol": "Types.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "4eb8e0eb9a7f2876f7de43b552484d06b52babd42a88a3b10a327ea9f702ca19"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when.ts",
+        "Symbol": "When",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "0e60b9d5a3df699521fca944f9ecf6afaf3ce473e962ba47648b2a01e5820a87"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when.ts",
+        "Symbol": "When.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "64be01966101752e42f8d6fe19025df9bc978a972183952bbd3a18cb6a5af5b2"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when.ts",
+        "Symbol": "when",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "4c9276b0a8130ab438315d47a1ea5e6ce287bf2db1508d46abd3f75757c6fdee"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when_type.ts",
+        "Symbol": "WhenType",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "5faae0a34ef8ae18087870f6db692a5f258f4315e779fdd8be3d10cef23ced44"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when_type.ts",
+        "Symbol": "WhenType.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "6e5a99bcc0384759a48275ca5ecca13883796c17e7476e9dbdacddf357be651d"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/when_type.ts",
+        "Symbol": "when",
+        "Kind": "KindVariableDeclaration"
+      },
+      "sha256": "db69ab47e195df40ddacb09945ee34d47760185a8c8f963ef3e9d1f341a3b98a"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/while.ts",
+        "Symbol": "While",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "c4c0d8b78a19d5c90940dc03300e97acc72d42ecc8310aa95f8427c7ef26105c"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/while.ts",
+        "Symbol": "While.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "fec8d2f32c780674e1d543174360da2807acf788f1ee2848c653b5852a336fa9"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/with.ts",
+        "Symbol": "With",
+        "Kind": "KindClassDeclaration"
+      },
+      "sha256": "b5fd4dd37c95d87edaf7ce19726f757e099538f768bac60e888d2b0ab1430565"
+    },
+    {
+      "key": {
+        "File": "src/abap/3_structures/structures/with.ts",
+        "Symbol": "With.getMatcher",
+        "Kind": "KindMethodDeclaration"
+      },
+      "sha256": "6cf124ccee6ea4e5fc7fada00d6ba3f06c1d9f631c3baee8796d7149ef6fdeca"
+    }
+  ],
+  "receiver_set": [
+    "src/abap/3_structures/structure_parser.ts.StructureParser",
+    "src/abap/3_structures/structures/_combi.ts.Alternative",
+    "src/abap/3_structures/structures/_combi.ts.Optional",
+    "src/abap/3_structures/structures/_combi.ts.Sequence",
+    "src/abap/3_structures/structures/_combi.ts.Star",
+    "src/abap/3_structures/structures/_combi.ts.SubStatement",
+    "src/abap/3_structures/structures/_combi.ts.SubStructure",
+    "src/abap/3_structures/structures/any.ts.Any",
+    "src/abap/3_structures/structures/at.ts.At",
+    "src/abap/3_structures/structures/at_first.ts.AtFirst",
+    "src/abap/3_structures/structures/at_last.ts.AtLast",
+    "src/abap/3_structures/structures/body.ts.Body",
+    "src/abap/3_structures/structures/case.ts.Case",
+    "src/abap/3_structures/structures/case_type.ts.CaseType",
+    "src/abap/3_structures/structures/catch.ts.Catch",
+    "src/abap/3_structures/structures/catch_system_exceptions.ts.CatchSystemExceptions",
+    "src/abap/3_structures/structures/chain.ts.Chain",
+    "src/abap/3_structures/structures/class_data.ts.ClassData",
+    "src/abap/3_structures/structures/class_definition.ts.ClassDefinition",
+    "src/abap/3_structures/structures/class_global.ts.ClassGlobal",
+    "src/abap/3_structures/structures/class_implementation.ts.ClassImplementation",
+    "src/abap/3_structures/structures/cleanup.ts.Cleanup",
+    "src/abap/3_structures/structures/constants.ts.Constants",
+    "src/abap/3_structures/structures/data.ts.Data",
+    "src/abap/3_structures/structures/define.ts.Define",
+    "src/abap/3_structures/structures/do.ts.Do",
+    "src/abap/3_structures/structures/dynpro_logic.ts.DynproLogic",
+    "src/abap/3_structures/structures/dynpro_loop.ts.DynproLoop",
+    "src/abap/3_structures/structures/else.ts.Else",
+    "src/abap/3_structures/structures/elseif.ts.ElseIf",
+    "src/abap/3_structures/structures/enhancement.ts.Enhancement",
+    "src/abap/3_structures/structures/enhancement_section.ts.EnhancementSection",
+    "src/abap/3_structures/structures/exec_sql.ts.ExecSQL",
+    "src/abap/3_structures/structures/form.ts.Form",
+    "src/abap/3_structures/structures/function_module.ts.FunctionModule",
+    "src/abap/3_structures/structures/if.ts.If",
+    "src/abap/3_structures/structures/interface.ts.Interface",
+    "src/abap/3_structures/structures/interface_global.ts.InterfaceGlobal",
+    "src/abap/3_structures/structures/loop.ts.Loop",
+    "src/abap/3_structures/structures/loop_at_screen.ts.LoopAtScreen",
+    "src/abap/3_structures/structures/loop_extract.ts.LoopExtract",
+    "src/abap/3_structures/structures/method.ts.Method",
+    "src/abap/3_structures/structures/module.ts.Module",
+    "src/abap/3_structures/structures/normal.ts.Normal",
+    "src/abap/3_structures/structures/on_change.ts.OnChange",
+    "src/abap/3_structures/structures/private_section.ts.PrivateSection",
+    "src/abap/3_structures/structures/process_after_input.ts.ProcessAfterInput",
+    "src/abap/3_structures/structures/process_before_output.ts.ProcessBeforeOutput",
+    "src/abap/3_structures/structures/process_on_help_request.ts.ProcessOnHelpRequest",
+    "src/abap/3_structures/structures/process_on_value_request.ts.ProcessOnValueRequest",
+    "src/abap/3_structures/structures/protected_section.ts.ProtectedSection",
+    "src/abap/3_structures/structures/provide.ts.Provide",
+    "src/abap/3_structures/structures/public_section.ts.PublicSection",
+    "src/abap/3_structures/structures/section_contents.ts.SectionContents",
+    "src/abap/3_structures/structures/select.ts.Select",
+    "src/abap/3_structures/structures/statics.ts.Statics",
+    "src/abap/3_structures/structures/test_injection.ts.TestInjection",
+    "src/abap/3_structures/structures/test_seam.ts.TestSeam",
+    "src/abap/3_structures/structures/try.ts.Try",
+    "src/abap/3_structures/structures/type_enum.ts.TypeEnum",
+    "src/abap/3_structures/structures/type_mesh.ts.TypeMesh",
+    "src/abap/3_structures/structures/types.ts.Types",
+    "src/abap/3_structures/structures/when.ts.When",
+    "src/abap/3_structures/structures/when_type.ts.WhenType",
+    "src/abap/3_structures/structures/while.ts.While",
+    "src/abap/3_structures/structures/with.ts.With"
+  ],
+  "receiver_sha256": "0f103474ab338af1e51d5ca27366599c6270aeab066950dd05fe694bb5dc1471",
+  "upstream_sha256": "5ea3cd76e2058563ca5311dcc50707e78df5fd04bcb0ce84255ccbd3d0c8be4b",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "StructureParser.singletons",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "rationale": "After successful cycle-aware warm-up of the pinned reachable matcher graph, this cache receives no further writes within the guarded structures region. This is not purity, input ownership, or loop completeness.",
+  "attestations": [],
+  "dynamic_validation": {
+    "path": "",
+    "sha256": ""
+  },
+  "monitor": "structures-cache-prestore-v1",
+  "hosts": [
+    "TS-HG@Go"
+  ],
+  "permitted_optimizations": [
+    "warmup-freeze"
+  ]
+}

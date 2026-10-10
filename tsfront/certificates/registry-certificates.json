@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "certificates": [
+    "structure-parser-singletons.json",
+    "alternative-setup-map.json",
+    "substructure-setup-matcher.json",
+    "module-sub-singletons.json"
+  ],
+  "tombstones": []
+}
