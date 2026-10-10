@@ -81,3 +81,17 @@ func TestTemplateExpressionUses(t *testing.T) {
 		t.Fatal("template expression not counted correctly")
 	}
 }
+
+func TestConstantLiteralAndMix(t *testing.T) {
+	for _, s := range []string{`CONV string( |constant| )`, `CONV int8( '-2147483648' )`, `CONV abap_bool( abap_true )`} {
+		if !literalScalar(s) {
+			t.Fatalf("not literal: %s", s)
+		}
+	}
+	if literalScalar(`CONV string( |{ t1 }| )`) {
+		t.Fatal("dynamic template classified constant")
+	}
+	if mix("DO.") != "loop_entry" {
+		t.Fatal("DO not counted as loop")
+	}
+}

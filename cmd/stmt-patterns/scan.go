@@ -128,7 +128,7 @@ func mix(s string) string {
 		return "cast_assignment"
 	case strings.HasPrefix(u, "IF ") || strings.HasPrefix(u, "ELSEIF "):
 		return "condition"
-	case strings.HasPrefix(u, "LOOP ") || strings.HasPrefix(u, "WHILE ") || strings.HasPrefix(u, "DO "):
+	case strings.HasPrefix(u, "LOOP ") || strings.HasPrefix(u, "WHILE ") || strings.HasPrefix(u, "DO ") || u == "DO.":
 		return "loop_entry"
 	case strings.HasPrefix(u, "END") || u == "ELSE." || u == "TRY." || strings.HasPrefix(u, "CATCH "):
 		return "control_marker"
@@ -281,7 +281,7 @@ func detect(m *method) []occurrence {
 			if once && isTemp(v) && strings.HasPrefix(strings.ToUpper(expr), "CAST ") {
 				add("cast_temp", i, s.Text)
 			}
-			if regexp.MustCompile(`(?i)^CONV\s+\w+\(\s*(?:[-+]?[0-9]+|'(?:''|[^'])*'|abap_true|abap_false)\s*\)$`).MatchString(expr) {
+			if literalScalar(expr) {
 				add("literal_scalar", i, s.Text)
 			}
 		}
@@ -403,4 +403,19 @@ func validateMethods(ms []*method) error {
 		}
 	}
 	return nil
+}
+
+func literalScalar(expr string) bool {
+	d := regexp.MustCompile(`(?i)^CONV\s+\w+\(\s*(.+)\s*\)$`).FindStringSubmatch(expr)
+	if d == nil {
+		return false
+	}
+	inner := strings.TrimSpace(d[1])
+	if inner == "" {
+		return false
+	}
+	if regexp.MustCompile(`(?i)^(?:[-+]?[0-9]+|abap_true|abap_false)$`).MatchString(inner) {
+		return true
+	}
+	return strings.TrimSpace(maskStrings(inner)) == "" && (inner[0] == '\'' || inner[0] == '`' || inner[0] == '|')
 }

@@ -246,9 +246,9 @@ func run(input, source, output, work string, withHIR bool) error {
 		return err
 	}
 	var b strings.Builder
-	fmt.Fprintln(&b, "| Method | ABAP | TS stmts | TS ops | ABAP/TS stmt | HIR stmts | Profile |\n|---|---:|---:|---:|---:|---:|---|")
+	fmt.Fprintln(&b, "| Method | ABAP | Exec sites* | TS stmts | TS ops | ABAP/TS stmt | ABAP/TS op | HIR stmts | Profile |\n|---|---:|---:|---:|---:|---:|---:|---:|---|")
 	for _, m := range methods {
-		fmt.Fprintf(&b, "| %s | %d | %d | %d | %s | %d | %s |\n", shortID(m), len(m.Statements), m.TS, m.Ops, ratio(len(m.Statements), m.TS), m.HIR, m.Profile)
+		fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %s | %s | %d | %s |\n", shortID(m), len(m.Statements), len(m.Statements)-m.Mix["declaration"]-m.Mix["control_marker"], m.TS, m.Ops, ratio(len(m.Statements), m.TS), ratio(len(m.Statements), m.Ops), m.HIR, m.Profile)
 	}
 	fmt.Fprintln(&b, "\n| Pattern | Total | Outside loops | Inside loops |\n|---|---:|---:|---:|")
 	for _, p := range patterns {
