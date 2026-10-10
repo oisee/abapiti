@@ -1,0 +1,898 @@
+method,profile,pattern,outside_saved_sites,loop_saved_sites,per_call_equal_visits_envelope,assumptions
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),temp_assign,174,0,174 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),temp_argument,142,0,142 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),cast_temp,89,0,89 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),value_init_overwritten,192,0,192 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),bool_if,38,0,38 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),clear_before_write,71,2,71 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),literal_scalar,84,0,84 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.add,A4H hot (qualitative),range_bound_assignment,8,0,8 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),temp_assign,3,169,3 + 169*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),temp_argument,0,59,0 + 59*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),cast_temp,3,71,3 + 71*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),value_init_overwritten,3,224,3 + 224*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),bool_if,0,24,0 + 24*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),clear_before_write,5,27,5 + 27*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),literal_scalar,2,32,2 + 32*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer.ts.Lexer.process,A4H hot (qualitative),range_bound_assignment,8,0,8 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,temp_assign,9,0,9 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,temp_argument,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,value_init_overwritten,11,0,11 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,bool_if,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,literal_scalar,8,0,8 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.advance,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,temp_assign,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,temp_argument,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,value_init_overwritten,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.charCodeAt,supporting hot-path family,range_bound_assignment,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,literal_scalar,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.constructor,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,temp_assign,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,temp_argument,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,value_init_overwritten,5,0,5 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,bool_if,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,return_copy,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.currentChar,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getCol,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,value_init_overwritten,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getOffset,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRaw,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.getRow,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,temp_assign,7,0,7 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,value_init_overwritten,7,0,7 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextChar,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,temp_assign,7,0,7 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,value_init_overwritten,7,0,7 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.nextNextChar,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,temp_assign,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,value_init_overwritten,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,literal_scalar,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevChar,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,temp_assign,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,value_init_overwritten,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,literal_scalar,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/1_lexer/lexer_stream.ts.LexerStream.prevPrevChar,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,temp_assign,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,temp_argument,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,cast_temp,3,12,3 + 12*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,value_init_overwritten,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,receiver_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,clear_before_write,2,3,2 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,literal_scalar,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Alternative.run_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),temp_assign,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),temp_argument,0,6,0 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),cast_temp,3,13,3 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),value_init_overwritten,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),receiver_copy,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),clear_before_write,2,3,2 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),literal_scalar,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run,A4H hot LOOP (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.AlternativePriority.run_one,A4H hot LOOP (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),temp_assign,3,9,3 + 9*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),temp_argument,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),cast_temp,6,15,6 + 15*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),value_init_overwritten,0,11,0 + 11*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),clear_before_write,4,10,4 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),literal_scalar,1,1,1 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),temp_assign,6,7,6 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),temp_argument,1,3,1 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),cast_temp,9,12,9 + 12*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),value_init_overwritten,0,11,0 + 11*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),clear_before_write,8,7,8 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),literal_scalar,1,1,1 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Expression.run_one,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,temp_assign,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,temp_argument,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,cast_temp,3,13,3 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,value_init_overwritten,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,receiver_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,clear_before_write,2,3,2 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,literal_scalar,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,temp_assign,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,temp_argument,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,cast_temp,13,3,13 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,value_init_overwritten,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,receiver_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,table_read_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,clear_before_write,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Optional.run_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,temp_assign,3,6,3 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,temp_argument,1,13,1 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,cast_temp,3,26,3 + 26*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,value_init_overwritten,1,10,1 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,receiver_copy,1,6,1 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,table_read_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,clear_before_write,4,9,4 + 9*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,literal_scalar,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Permutation.run_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,cast_temp,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,temp_assign,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,cast_temp,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,clear_before_write,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Plus.run_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),temp_assign,1,12,1 + 12*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),temp_argument,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),cast_temp,3,18,3 + 18*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),value_init_overwritten,0,15,0 + 15*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),clear_before_write,2,14,2 + 14*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),literal_scalar,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Regex.run_one,A4H hot LOOP (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),temp_assign,1,7,1 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),temp_argument,0,10,0 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),cast_temp,3,21,3 + 21*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),value_init_overwritten,0,9,0 + 9*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),receiver_copy,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),bool_if,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),clear_before_write,2,7,2 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),literal_scalar,0,6,0 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run,A4H hot LOOP (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),temp_assign,7,2,7 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),temp_argument,7,3,7 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),cast_temp,16,7,16 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),value_init_overwritten,7,2,7 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),receiver_copy,3,1,3 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),bool_if,3,1,3 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),table_read_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),clear_before_write,9,1,9 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),literal_scalar,4,2,4 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Sequence.run_one,A4H hot LOOP (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,temp_assign,4,4,4 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,temp_argument,0,9,0 + 9*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,cast_temp,5,16,5 + 16*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,value_init_overwritten,1,7,1 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,receiver_copy,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,bool_if,1,3,1 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,clear_before_write,5,3,5 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,literal_scalar,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Star.run_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),temp_assign,1,11,1 + 11*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),temp_argument,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),cast_temp,3,19,3 + 19*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),value_init_overwritten,0,13,0 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),table_read_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),clear_before_write,2,17,2 + 17*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),literal_scalar,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),temp_assign,13,0,13 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),temp_argument,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),cast_temp,22,0,22 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),value_init_overwritten,13,0,13 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),table_read_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),clear_before_write,20,0,20 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),literal_scalar,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Token.run_one,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),temp_assign,1,13,1 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),temp_argument,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),cast_temp,3,19,3 + 19*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),value_init_overwritten,0,15,0 + 15*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),table_read_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),clear_before_write,2,17,2 + 17*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),literal_scalar,0,4,0 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),temp_assign,15,0,15 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),temp_argument,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),cast_temp,22,0,22 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),value_init_overwritten,15,0,15 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),table_read_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),clear_before_write,20,0,20 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),literal_scalar,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/combi.ts.Word.run_one,A4H hot LOOP (qualitative),range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,temp_assign,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,cast_temp,5,0,5 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,clear_before_write,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.constructor,supporting hot-path family,range_bound_assignment,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,cast_temp,7,0,7 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,clear_before_write,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.fromChain,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,temp_assign,2,4,2 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,temp_argument,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,cast_temp,2,4,2 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,value_init_overwritten,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,clear_before_write,2,6,2 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,literal_scalar,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getNodes,supporting hot-path family,range_bound_assignment,8,0,8 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokenIndex,trapped (not executed),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.getTokens,trapped (not executed),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,cast_temp,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,table_read_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peek,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,cast_temp,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,value_init_overwritten,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,table_read_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.peekAt,supporting hot-path family,range_bound_assignment,8,0,8 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.popNode,trapped (not executed),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,cast_temp,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,value_init_overwritten,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,receiver_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.remainingLength,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.setNodes,trapped (not executed),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,temp_assign,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,cast_temp,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,value_init_overwritten,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,literal_scalar,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.shift,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,temp_assign,4,5,4 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,temp_argument,2,1,2 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,cast_temp,6,6,6 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,value_init_overwritten,2,4,2 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,receiver_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,clear_before_write,6,8,6 + 8*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,literal_scalar,2,2,2 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/result.ts.Result.wrapConsumed,supporting hot-path family,range_bound_assignment,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,temp_assign,6,14,6 + 14*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,temp_argument,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,cast_temp,5,19,5 + 19*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,value_init_overwritten,5,10,5 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,receiver_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,table_read_copy,1,3,1 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,clear_before_write,8,20,8 + 20*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,literal_scalar,1,3,1 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.buildSplits,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,temp_argument,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,cast_temp,3,3,3 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,clear_before_write,3,1,3 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorize,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,temp_assign,20,0,20 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,temp_argument,9,0,9 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,cast_temp,21,0,21 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,value_init_overwritten,11,0,11 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,receiver_copy,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,bool_if,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,clear_before_write,27,0,27 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,literal_scalar,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.categorizeStatement,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,cast_temp,6,0,6 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,value_init_overwritten,3,0,3 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,bool_if,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.constructor,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,temp_assign,0,10,0 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,temp_argument,0,15,0 + 15*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,cast_temp,3,14,3 + 14*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,value_init_overwritten,0,17,0 + 17*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,receiver_copy,0,6,0 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,clear_before_write,3,17,3 + 17*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,literal_scalar,0,13,0 + 13*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.lazyUnknown,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,temp_assign,7,18,7 + 18*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,temp_argument,6,8,6 + 8*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,cast_temp,12,32,12 + 32*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,value_init_overwritten,4,6,4 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,receiver_copy,2,2,2 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,bool_if,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,return_copy,2,2,2 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,table_read_copy,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,clear_before_write,15,28,15 + 28*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,literal_scalar,2,6,2 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.match,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,temp_assign,15,2,15 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,temp_argument,10,0,10 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,cast_temp,17,6,17 + 6*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,value_init_overwritten,15,5,15 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,receiver_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,return_copy,5,0,5 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,clear_before_write,6,1,6 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,literal_scalar,13,0,13 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeAfter,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,temp_assign,2,11,2 + 11*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,temp_argument,0,12,0 + 12*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,cast_temp,0,20,0 + 20*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,value_init_overwritten,2,21,2 + 21*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,receiver_copy,0,7,0 + 7*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,table_read_copy,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,clear_before_write,0,28,0 + 28*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,literal_scalar,2,11,2 + 11*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.nativeSQL,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,temp_assign,6,26,6 + 26*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,temp_argument,3,15,3 + 15*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,cast_temp,13,46,13 + 46*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,value_init_overwritten,3,19,3 + 19*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,receiver_copy,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,bool_if,1,3,1 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,clear_before_write,15,41,15 + 41*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,literal_scalar,2,9,2 + 9*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.process,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,temp_assign,9,3,9 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,temp_argument,2,2,2 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,cast_temp,4,10,4 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,value_init_overwritten,6,10,6 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,receiver_copy,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,bool_if,1,2,1 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,return_copy,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,table_read_copy,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,clear_before_write,5,4,5 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,literal_scalar,10,5,10 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.removePragma,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,temp_assign,5,3,5 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,temp_argument,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,cast_temp,11,22,11 + 22*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,value_init_overwritten,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,bool_if,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,clear_before_write,4,16,4 + 16*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,literal_scalar,1,1,1 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.run,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,temp_argument,0,1,0 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,cast_temp,3,3,3 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,clear_before_write,2,1,2 + 1*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,temp_assign,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,cast_temp,5,0,5 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,clear_before_write,4,0,4 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/2_statements/statement_parser.ts.StatementParser.tokensToNodes_one,supporting hot-path family,range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),temp_argument,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),cast_temp,2,0,2 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.constructor,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),temp_assign,0,10,0 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),temp_argument,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),cast_temp,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),value_init_overwritten,2,5,2 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),clear_before_write,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),literal_scalar,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassDefinitionByName,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),temp_assign,0,10,0 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),temp_argument,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),cast_temp,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),value_init_overwritten,2,5,2 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),clear_before_write,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),literal_scalar,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getClassImplementationByName,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),temp_assign,0,10,0 + 10*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),temp_argument,0,3,0 + 3*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),cast_temp,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),value_init_overwritten,2,5,2 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),bool_if,0,2,0 + 2*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),clear_before_write,1,4,1 + 4*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),literal_scalar,0,5,0 + 5*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.getInterfaceDefinitionByName,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),cast_temp,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassDefinitions,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),cast_temp,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listClassImplementations,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),temp_assign,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),cast_temp,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),return_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),clear_before_write,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),literal_scalar,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listFormDefinitions,trapped (not executed),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),temp_assign,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),temp_argument,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),cast_temp,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),value_init_overwritten,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),literal_constructor,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),literal_range_build,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),receiver_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),bool_if,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),return_copy,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),table_read_copy,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),clear_before_write,1,0,1 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),literal_scalar,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
+src/abap/4_file_information/abap_file_information.ts.ABAPFileInformation.listInterfaceDefinitions,A4H lookup family (qualitative),range_bound_assignment,0,0,0 + 0*I,site visits; branch-dependent; I includes nesting; overlaps not additive
