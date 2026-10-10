@@ -775,7 +775,6 @@ func (b *body) expr(x *hir.Expr) string {
 			if t.Kind == hir.Number {
 				// Portable ABAP has no signbit; comparing zeros loses their sign.
 				b.line("IF " + n + " = 0 AND " + v + " = 0.")
-				b.line("\" Math." + x.Op + ": signed-zero tie cannot be resolved portably for ABAP f")
 				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 				b.line("ENDIF.")
 			}
@@ -784,8 +783,9 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("ENDIF.")
 		}
 		if x.Y == nil {
+			// An empty input yields Infinity, which neither ABAP f nor an
+			// integer can hold: trap instead of returning a wrong value.
 			b.line("IF lines( " + a + "->items ) = 0.")
-			b.line("\" Math." + x.Op + ": empty input yields Infinity, not representable by ABAP f or integers")
 			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 			b.line("ENDIF.")
 			b.line("READ TABLE " + a + "->items INDEX 1 INTO " + n + ".")
