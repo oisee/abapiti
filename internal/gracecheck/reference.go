@@ -193,7 +193,7 @@ func Reference(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, erro
 // Reference, but rebuilds hash projections from each round's complete snapshot.
 // It shares no parser, join, indexes, stratification or deltas with the engine.
 func ReferenceFull(base *rewrite.DB, source string, cap int) (*rewrite.DB, int, error) {
-	return reference(base, source, cap, true)
+	return methodFlowReference(base, source, cap)
 }
 
 func reference(base *rewrite.DB, source string, cap int, hashed bool) (*rewrite.DB, int, error) {
