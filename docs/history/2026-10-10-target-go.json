@@ -1,0 +1,44 @@
+{
+  "base": "d2d49dd87e7630bc57e464679c363ae4b59b941e",
+  "prototype": "8665338",
+  "go": "go1.26.0 linux/amd64",
+  "node": "26.9.0",
+  "logical_cpus": 4,
+  "GOCACHE": "$HOME/.cache/abapiti-go-cache",
+  "GOFLAGS": "-buildvcs=false",
+  "GOGC": "default",
+  "GOMAXPROCS": "default",
+  "generation_seconds": 20.394,
+  "go_build_seconds_rounded": 25.6,
+  "generation_and_build_seconds_rounded": 46.0,
+  "cache": "warm standard library; generated package recompiled",
+  "timing_scope": "wall time, including process startup, file/dependency I/O and stdout; other builds were active",
+  "checks": {
+    "clean": {
+      "seconds": [
+        12.667524151038378,
+        11.82454567309469,
+        12.260853744111955
+      ],
+      "median_seconds": 12.260853744111955,
+      "byte_identical": true,
+      "issues": 0
+    },
+    "seeded": {
+      "seconds": [
+        12.353386844042689,
+        15.749518129043281,
+        13.052953121252358
+      ],
+      "median_seconds": 13.052953121252358,
+      "byte_identical": true,
+      "issues": 5
+    }
+  },
+  "abap_diff_r": {
+    "exit_code": 0,
+    "output_bytes": 0,
+    "same_output_path": true,
+    "exemptions": []
+  }
+}

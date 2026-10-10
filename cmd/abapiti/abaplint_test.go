@@ -104,11 +104,14 @@ func TestWriteAbapGitZip(t *testing.T) {
 
 func TestParseTargets(t *testing.T) {
 	got, err := parseTargets("all")
-	if err != nil || !got["a4h"] || !got["osg"] || !got["native"] {
+	if err != nil || !got["a4h"] || !got["osg"] || !got["native"] || got["go"] {
 		t.Fatalf("all: %v %v", got, err)
 	}
 	if got, err := parseTargets("native, osg"); err != nil || got["a4h"] || !got["native"] || !got["osg"] {
 		t.Fatalf("native,osg: %v %v", got, err)
+	}
+	if got, err := parseTargets("go"); err != nil || len(got) != 1 || !got["go"] {
+		t.Fatalf("go: %v %v", got, err)
 	}
 	if _, err := parseTargets("wasm"); err == nil {
 		t.Fatal("unknown target accepted")

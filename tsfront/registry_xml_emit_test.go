@@ -11,12 +11,17 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // The supplied original inventory is expected data only. Production parsing
 // flows through tsgo -> pinned override -> HIR -> ABAP adapter/runtime.
 func TestEmitRegistryXML(t *testing.T) {
+	prog := lowerRegistryXML(t)
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
 	oracle := os.Getenv("REGISTRY_XML_ORACLE")
 	if oracle == "" {
 		t.Skip("set REGISTRY_XML_ORACLE to original inventory and REGISTRY_XML_INPUTS to input roots")
@@ -41,7 +46,6 @@ func TestEmitRegistryXML(t *testing.T) {
 	if len(inventory) != 188 {
 		t.Fatal("expected all 188 original objects")
 	}
-	prog := lowerRegistryXML(t)
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

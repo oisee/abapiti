@@ -58,6 +58,21 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
+	e.line("var goSources = map[string]string{")
+	for _, c := range classes {
+		methods := append([]*hir.Method(nil), c.Methods...)
+		if c.Ctor != nil {
+			methods = append(methods, c.Ctor)
+		}
+		for _, m := range methods {
+			source := m.Source
+			if source == "" {
+				source = c.Source
+			}
+			e.line("%q:%q,", e.body(c.Name, m.Name), relativeSource(source))
+		}
+	}
+	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
@@ -69,6 +84,17 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		files[n] = string(b)
 	}
 	return files, nil
+}
+
+// Match the ABAP source-map convention without modifying the shared HIR.
+func relativeSource(source string) string {
+	source = strings.ReplaceAll(source, "\\", "/")
+	for _, root := range []string{"/node_modules/", "/harness/", "/src/"} {
+		if i := strings.Index(source, root); i >= 0 {
+			return source[i+1:]
+		}
+	}
+	return source
 }
 
 type emitter struct {
@@ -302,7 +328,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 		e.line("func (self *%s) %s(%s)%s {", e.obj(c.Name), e.member(n), e.params(m, true), e.result(m.Result))
 		if m.Abstract {
-			e.line("panic(trap{Source:%q})", "abstract "+c.Name+"."+n)
+			e.line("panic(newTrap(%q))", "abstract "+c.Name+"."+n)
 		} else {
 			prefix := ""
 			if m.Result.Kind != hir.Void {
@@ -351,9 +377,9 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 	}
 	if !m.Static {
 		if e.concreteClass(c.Name) {
-			e.line("if self==nil {panic(rangeFault{})}")
+			e.line("if self==nil {panic(newRangeFault())}")
 		} else {
-			e.line("if self==nil || self.nilReference() {panic(rangeFault{})}")
+			e.line("if self==nil || self.nilReference() {panic(newRangeFault())}")
 		}
 	}
 	if m.Name != "class_constructor" {
@@ -432,7 +458,12 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 	}
 	switch t.Kind {
 	case hir.String:
-		return b.e.stringLiteral(v.(string))
+		text, ok := v.(string)
+		if !ok {
+			b.e.unsupported(node, "string literal has non-string value")
+			return `str("")`
+		}
+		return b.e.stringLiteral(text)
 	case hir.Bool:
 		return fmt.Sprint(v)
 	case hir.Number:
@@ -702,10 +733,10 @@ func (b *body) expr(x *hir.Expr) string {
 				if x.Range.Max < math.MaxInt32 {
 					checks = append(checks, fmt.Sprintf("int64(%s) > %d", narrowed, x.Range.Max))
 				}
-				b.line("if %s {panic(rangeFault{})}", strings.Join(checks, " || "))
+				b.line("if %s {panic(newRangeFault())}", strings.Join(checks, " || "))
 				return narrowed
 			} else {
-				b.line("if float64(%s) < %d || float64(%s) > %d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(rangeFault{})}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
+				b.line("if float64(%s) < %d || float64(%s) > %d || float64(%s)!=float64(%s) || float64(%s)!=float64(%s) {panic(newRangeFault())}", a, x.Range.Min, a, x.Range.Max, a, a, a, e.typ(t)+"("+a+")")
 			}
 		}
 		code = e.typ(t) + "(" + a + ")"
@@ -857,7 +888,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		v := b.expr(s.X)
 		b.line("panic(payload[%s]{Type:%q,Value:%s})", e.typ(s.X.Type), s.X.Type.String(), v)
 	case hir.Trap:
-		b.line("panic(trap{Source:%q})", s.Name)
+		b.line("panic(newTrap(%q))", s.Name)
 	case hir.Finally:
 		b.line("func(){defer func(){")
 		old := b.locals

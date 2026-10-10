@@ -38,7 +38,7 @@ func (e *emitter) descriptor(c *hir.Class) {
 			args = append(args, "*new("+e.typ(p.Type)+")")
 		}
 	}
-	factory := "func() any {panic(trap{Source:" + strconv.Quote("not supported in the Go prototype: classvalue.new requires a concrete zero-argument constructor: "+c.Name) + "})}"
+	factory := "func() any {panic(newTrap(" + strconv.Quote("classvalue.new requires a concrete zero-argument constructor: "+c.Name) + "))}"
 	if callable {
 		factory = "func() any {return " + e.name("new."+c.Name) + "(" + strings.Join(args, ",") + ")} "
 	}

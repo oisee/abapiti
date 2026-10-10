@@ -7,7 +7,7 @@ type xmlParser struct {
 	cursor int32
 }
 
-func xmlFail() { panic(trap{Source: "input is outside the reviewed abapGit XML subset"}) }
+func xmlFail() { panic(newTrap("input is outside the reviewed abapGit XML subset")) }
 
 var xmlHeader = regexp.MustCompile("^[A-Za-z_][A-Za-z0-9_.:-]*([ \\t\\n\\r\\f]+[A-Za-z_][A-Za-z0-9_.:-]*[ \\t\\n\\r\\f]*=[ \\t\\n\\r\\f]*(\"[^\"]*\"|'[^']*'))*[ \\t\\n\\r\\f]*/?$")
 

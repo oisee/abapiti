@@ -49,6 +49,15 @@ abaplint 577f875e is built into the binary (every file checked against its recor
 | `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
+An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint` when Go is on PATH:
+
+```sh
+abapiti abaplint -o out --target go
+out/go/zabaplint --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
+```
+
+`all` retains the three ABAP targets: the automatic Go build would add a toolchain dependency and change the default command’s behavior. TS-HG@Go uses the same pinned sources, overrides and pruned workload; see [its limits](docs/abaplint-cli.md#ts-hggo).
+
 To have the open-steamgate output check zabapgit itself, pass the inputs. They are embedded into a driver class whose result is compared with Node's:
 
 ```sh

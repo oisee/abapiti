@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"math"
 	"reflect"
+"runtime"
 	"regexp"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func (s jsString) substring(a, b int32) jsString {
 func (s jsString) charCodeAt(i int32) int32 {
 	j := int(i) * 2
 	if j < 0 || j >= len(s)-1 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return int32(s[j]) | int32(s[j+1])<<8
 }
@@ -91,6 +92,7 @@ func (s jsString) indexOf(needle jsString) int32 {
 	return -1
 }
 func (s jsString) replaceAll(needle, with jsString) jsString {
+ if with.indexOf(str("$")) >= 0 {panic(newTrap("replacement dollar substitutions are unsupported"))}
 	if needle == "" {
 		out := with
 		for i := int32(0); i < s.length(); i++ {
@@ -199,7 +201,7 @@ type optional[T any] struct {
 func present[T any](v T) optional[T] { return optional[T]{v, true} }
 func unwrap[T any](v optional[T]) T {
 	if !v.Has {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return v.Value
 }
@@ -243,13 +245,13 @@ func castRef[T any](v any) T {
 	}
 	r, ok := v.(T)
 	if !ok {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return r
 }
 func dynRef(d *dynamic) any {
 	if d == nil || d.Tag != 2 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return d.Value
 }
@@ -257,14 +259,22 @@ func integerString(x int64) jsString     { return str(strconv.FormatInt(x, 10)) 
 func numberRemainder2(x float64) float64 { return math.Mod(x, 2) }
 func dynString(d *dynamic) jsString {
 	if d == nil || d.Tag != 1 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return d.Value.(jsString)
 }
 
 type trap struct{ Source string }
 func (t trap) Error()string{return t.Source}
-type rangeFault struct{}
+type rangeFault struct{ Source string }
+func (f rangeFault) Error() string {return f.Source}
+func refusalSource(reason string) string {
+ pcs:=make([]uintptr,64);n:=runtime.Callers(2,pcs);frames:=runtime.CallersFrames(pcs[:n])
+ for {frame,more:=frames.Next();name:=frame.Function; if i:=strings.LastIndex(name,".");i>=0 {name=name[i+1:]}; if source:=goSources[name];source!="" {return source+": "+reason};if !more {break}}
+ return reason
+}
+func newRangeFault() rangeFault {return rangeFault{Source:refusalSource("value outside supported numeric, ordering or conversion domain")}}
+func newTrap(reason string) trap {return trap{Source:refusalSource(reason)}}
 type payload[T any] struct {
 	Type  string
 	Value T
@@ -293,21 +303,21 @@ func equal(a, b any) bool {
 }
 // The widened result is exact; narrowing still traps signed overflow.
 func checkedI32(v int64) int32 {
- if v < -2147483648 || v > 2147483647 {panic(rangeFault{})}
+ if v < -2147483648 || v > 2147483647 {panic(newRangeFault())}
  return int32(v)
 }
 func checkedAddI64(a,b int64) int64 {
  v:=a+b
- if b>0&&v<a || b<0&&v>a {panic(rangeFault{})}
+ if b>0&&v<a || b<0&&v>a {panic(newRangeFault())}
  return v
 }
 func checkedSubI64(a,b int64) int64 {
  v:=a-b
- if b<0&&v<a || b>0&&v>a {panic(rangeFault{})}
+ if b<0&&v<a || b>0&&v>a {panic(newRangeFault())}
  return v
 }
 func safeInteger(v int64) int64 {
- if v < -9007199254740991 || v > 9007199254740991 {panic(rangeFault{})}
+ if v < -9007199254740991 || v > 9007199254740991 {panic(newRangeFault())}
  return v
 }
 func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
@@ -315,35 +325,35 @@ func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
 	switch op {
 	case "+":
 		v = a + b
-		if (b > 0 && v < a) || (b < 0 && v > a) { panic(rangeFault{}) }
+		if (b > 0 && v < a) || (b < 0 && v > a) { panic(newRangeFault()) }
 	case "-":
 		v = a - b
-		if (b < 0 && v < a) || (b > 0 && v > a) { panic(rangeFault{}) }
+		if (b < 0 && v < a) || (b > 0 && v > a) { panic(newRangeFault()) }
 	case "*":
 		v = a * b
-		if b != 0 && (v / b != a || a == -9223372036854775808 && b == -1) { panic(rangeFault{}) }
+		if b != 0 && (v / b != a || a == -9223372036854775808 && b == -1) { panic(newRangeFault()) }
 	case "/":
-		if b == 0 || a == -9223372036854775808 && b == -1 { panic(rangeFault{}) }
+		if b == 0 || a == -9223372036854775808 && b == -1 { panic(newRangeFault()) }
 		v = a / b
 	case "%":
-		if b == 0 { panic(rangeFault{}) }
+		if b == 0 { panic(newRangeFault()) }
 		v = a % b
 	default:
 		// Preserve the helper's previous identity result for unknown operators.
 		v = a
 	}
 	if bits == 32 && (v < -2147483648 || v > 2147483647) {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	if checked && (v < -9007199254740991 || v > 9007199254740991) {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return v
 }
 func negativeZero() float64 { return math.Copysign(0, -1) }
 func finite(x float64) float64 {
 	if math.IsInf(x, 0) || math.IsNaN(x) {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return x
 }
@@ -358,7 +368,7 @@ func numberIndex(x float64) int32 {
 }
 func numberString(x float64) jsString {
 	if math.IsNaN(x) || math.IsInf(x, 0) || x != math.Trunc(x) || math.Abs(x) > 9007199254740991 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return str(strconv.FormatInt(int64(x), 10))
 }
@@ -396,7 +406,7 @@ func (a *array[T]) get(i int32) optional[T] {
 }
 func (a *array[T]) put(i int32, v T) {
 	if i < 0 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	for len(a.Items) <= int(i) {
 		var z T
@@ -597,7 +607,7 @@ func primitiveString(v any) jsString {
 	case float64:
 		return numberString(x)
 	}
-	panic(rangeFault{})
+	panic(newRangeFault())
 }
 func (m *orderedMap[K, V]) values() *array[V] {
 	a := &array[V]{}
@@ -647,6 +657,7 @@ func (s jsString) at(i int32) optional[jsString] {
 	return present(s.charAt(i))
 }
 func (s jsString) replaceFirst(n, v jsString) jsString {
+ if v.indexOf(str("$")) >= 0 {panic(newTrap("replacement dollar substitutions are unsupported"))}
 	i := s.indexOf(n)
 	if i < 0 {
 		return s
@@ -659,7 +670,7 @@ func (s jsString) repeatIndent(n float64) jsString {
 		return ""
 	}
 	if math.IsNaN(n) || math.IsInf(n, 0) || n > 2147483647 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return jsString(strings.Repeat(string(s), int(n)))
 }
@@ -667,7 +678,7 @@ func compareDomain(a, b jsString, alphabet string) int32 {
 	for _, s := range []jsString{a, b} {
 		for i := int32(0); i < s.length(); i++ {
 			if strings.IndexRune(alphabet, rune(s.charCodeAt(i))) < 0 {
-				panic(rangeFault{})
+				panic(newRangeFault())
 			}
 		}
 	}
@@ -720,7 +731,7 @@ func (s jsString) parseInt10i64() optional[int64] {
 		return optional[int64]{}
 	}
 	if v.Value < -9223372036854775808 || v.Value >= 9223372036854775808 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return present(int64(v.Value))
 }
@@ -744,7 +755,7 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
   if f=="i" {var out strings.Builder;for _,c:=range p{if c>='a'&&c<='z'||c>='A'&&c<='Z'{out.WriteRune('[');out.WriteRune(unicode.ToUpper(c));out.WriteRune(unicode.ToLower(c));out.WriteRune(']')}else{out.WriteRune(c)}};translated=out.String()}
   spec=[2]string{translated,""};ok=true
  }
- if !ok {panic(trap{Source: "not supported in the Go prototype: JavaScript regexp /" + p + "/" + f})}
+ if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
  return &jsRegExp{Source:pattern.replaceAll(str("/"), str("\\/")),Flags:flags,compiled:regexp.MustCompile(spec[0]),denied:denied}
@@ -795,7 +806,7 @@ func (r *jsRegExp) match_test(s jsString) bool {
 }
 func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 	if v.indexOf(str("$")) >= 0 {
-		panic(trap{Source: "not supported in the Go prototype: regexp replacement substitutions"})
+		panic(newTrap("regexp replacement dollar substitutions are unsupported"))
 	}
 	input := unitText(s)
 	global := r.Flags.indexOf(str("g")) >= 0
@@ -847,7 +858,7 @@ func dynEqual(a, b *dynamic) bool {
 }
 func dynNumber(d *dynamic) float64 {
 	if d == nil {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	switch d.Tag {
 	case 4:
@@ -857,11 +868,11 @@ func dynNumber(d *dynamic) float64 {
 	case 6:
 		return d.Value.(float64)
 	}
-	panic(rangeFault{})
+	panic(newRangeFault())
 }
 func dynBoolean(d *dynamic) bool {
 	if d == nil || d.Tag != 3 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return d.Value.(bool)
 }
@@ -893,7 +904,7 @@ func dynToString(d *dynamic) jsString {
 	case 1, 3:
 		return primitiveString(d.Value)
 	default:
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 }
 func dynTruth(d *dynamic) bool {
@@ -912,14 +923,14 @@ func dynTruth(d *dynamic) bool {
 }
 func (d *dynamic) get(k jsString) *dynamic {
 	if d == nil {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	switch d.Tag {
 	case 2:
 		if m, ok := d.Value.(interface{ dynamicGet(jsString) *dynamic }); ok {
 			return m.dynamicGet(k)
 		}
-		panic(rangeFault{})
+		panic(newRangeFault())
 	case tagObject:
 		return d.Value.(*orderedMap[jsString, *dynamic]).get(k).Value
 	case tagArray:
@@ -930,7 +941,7 @@ func (d *dynamic) get(k jsString) *dynamic {
 		s := k.String()
 		i, err := strconv.ParseUint(s, 10, 31)
 		if err != nil || s == "" || strconv.FormatUint(i, 10) != s {
-			panic(rangeFault{})
+			panic(newRangeFault())
 		}
 		return a.get(int32(i)).Value
 	case 1:
@@ -941,7 +952,7 @@ func (d *dynamic) get(k jsString) *dynamic {
 	case 3, 4, 5, 6:
 		return nil
 	}
-	panic(rangeFault{})
+	panic(newRangeFault())
 }
 func (d *dynamic) put(k jsString, v *dynamic) {
 	if d != nil && d.Tag == 2 {
@@ -951,7 +962,7 @@ func (d *dynamic) put(k jsString, v *dynamic) {
 		}
 	}
 	if d == nil || d.Tag != tagObject {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	d.Value.(*orderedMap[jsString, *dynamic]).set(k, v)
 }
@@ -977,7 +988,7 @@ func unboxValue[T any](d *dynamic) T {
 		return any(d).(T)
 	}
 	if d == nil {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	if v, ok := d.Value.(T); ok {
 		return v
@@ -985,7 +996,7 @@ func unboxValue[T any](d *dynamic) T {
 	if v, ok := any(dynNumberIfNeeded(d, z)).(T); ok {
 		return v
 	}
-	panic(rangeFault{})
+	panic(newRangeFault())
 }
 func dynNumberIfNeeded[T any](d *dynamic, z T) any {
 	switch any(z).(type) {
@@ -997,7 +1008,7 @@ func dynNumberIfNeeded[T any](d *dynamic, z T) any {
 }
 func dynMap[V any](d *dynamic) *orderedMap[jsString, V] {
 	if d == nil {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	if m, ok := d.Value.(*orderedMap[jsString, V]); ok {
 		return m
@@ -1007,7 +1018,7 @@ func dynMap[V any](d *dynamic) *orderedMap[jsString, V] {
 		bag, _ = d.Value.(*orderedMap[jsString, *dynamic])
 	}
 	if bag == nil {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	out := &orderedMap[jsString, V]{}
 	for _, e := range bag.Entries {
@@ -1018,7 +1029,7 @@ func dynMap[V any](d *dynamic) *orderedMap[jsString, V] {
 func (m *orderedMap[K, V]) dynamicGet(k jsString) *dynamic {
 	key, ok := any(k).(K)
 	if !ok {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	v := m.get(key)
 	if !v.Has {
@@ -1029,7 +1040,7 @@ func (m *orderedMap[K, V]) dynamicGet(k jsString) *dynamic {
 func (m *orderedMap[K, V]) dynamicPut(k jsString, v *dynamic) {
 	key, ok := any(k).(K)
 	if !ok {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	m.set(key, unboxValue[V](v))
 }
@@ -1058,7 +1069,7 @@ func classOf(v any) *classDescriptor {
 	if d, ok := v.(interface{ descriptor() *classDescriptor }); ok {
 		return d.descriptor()
 	}
-	panic(rangeFault{})
+	panic(newRangeFault())
 }
 func descriptorInstance(v any, d *classDescriptor) bool {
 	if nilRef(v) {
@@ -1073,7 +1084,7 @@ func descriptorInstance(v any, d *classDescriptor) bool {
 }
 func dynClass(d *dynamic) *classDescriptor {
 	if d == nil || d.Tag != 10 {
-		panic(rangeFault{})
+		panic(newRangeFault())
 	}
 	return d.Value.(*classDescriptor)
 }

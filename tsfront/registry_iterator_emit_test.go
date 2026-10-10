@@ -10,6 +10,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -54,6 +55,9 @@ func TestEmitRegistryIterators(t *testing.T) {
 	}
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
+	}
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
 	}
 	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "iterators", "IteratorProbe") })
 	files, names, err := abap.EmitNamed(prog)

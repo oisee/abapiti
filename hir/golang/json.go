@@ -7,7 +7,7 @@ type jsonParser struct {
 	cursor int32
 }
 
-func jsonFail()             { panic(trap{Source: "input is outside the supported strict JSON subset"}) }
+func jsonFail()             { panic(newTrap("input is outside the supported strict JSON subset")) }
 func unit(c int32) jsString { b := []byte{byte(c), byte(c >> 8)}; return jsString(b) }
 func (p *jsonParser) peek() int32 {
 	if p.cursor >= p.input.length() {

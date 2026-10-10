@@ -11,15 +11,19 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 func TestEmitRegistryJSON(t *testing.T) {
+	prog := lowerRegistryJSON(t)
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
 	config := os.Getenv("REGISTRY_JSON_CONFIG")
 	if config == "" {
 		t.Skip("set REGISTRY_JSON_CONFIG and REGISTRY_JSON_RESOLVED to original JSON inputs")
 	}
-	prog := lowerRegistryJSON(t)
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

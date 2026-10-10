@@ -5,7 +5,7 @@ Translates the core of [abaplint](https://github.com/abaplint/abaplint) from Typ
 ```sh
 abapiti abaplint -o out                      # abaplint 577f875e is built into abapiti: no network
 abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, after npm ci in packages/core)
-abapiti abaplint -o out --target native      # one target only: all (default), a4h, osg, native
+abapiti abaplint -o out --target native      # one target only: all (default ABAP set), a4h, osg, native, go
 ```
 
 The ABAP emitter inlines small methods with Grace's inline rules by default.
@@ -27,7 +27,7 @@ In both cases every source file of the closure (1,538 files reachable from `regi
 
 | Directory | Contents | Next step |
 |---|---|---|
-| `classes/` | the translated classes and interfaces (2,110 objects), shared by all targets | |
+| `classes/` | the translated classes and interfaces (2,110 objects), shared by the ABAP targets | |
 | `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_ABAPITI_REGISTRY_A4H` and the report `ZABAPITI_REGISTRY_RUN` (package `$ZABAPLINT`, set with `--package`) | import with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
 | `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_ABAPITI_REGISTRY_RUN`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
 | `native/` | `zabaplint.prog.abap` and `lib/` with the classes | in an open-steamgate checkout: `node tools/gogen/osabap.mjs native/zabaplint.prog.abap --lib native/lib` (set GOOS/GOARCH for cross builds), then `.out/osabap --file zabapgit_standalone.prog.abap --config abaplint.json -allow-read .` |
@@ -37,3 +37,54 @@ The output is deterministic. The same pinned input gives byte-identical files on
 ## Limits
 
 The build is pruned to the code paths that checking `zabapgit_standalone` with abapGit's `ci/abaplint.json` executes (release v702, six rules). These are the paths recorded in `tsfront/testdata/registrycorpus/reachability.json`. Function bodies outside them are compiled as traps. Other inputs or rules may reach such a trap. In that case the check is refused, and the refusal names the TypeScript location of the missing code (for example `refused: this build has no code for src/rules/….ts:42`). It never gives a silently wrong answer.
+
+## TS-HG@Go
+
+```sh
+abapiti abaplint -o out --target go
+# Go 1.26 on PATH: out/go/zabaplint is built automatically.
+# Otherwise only the buildable module is written:
+(cd out/go && GOFLAGS=-buildvcs=false go build -o zabaplint .)
+# Run from the directory containing deps.txt; dependency paths are relative to it:
+/path/to/out/go/zabaplint --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
+```
+
+TS-HG@Go translates TypeScript → HIR → Go directly, before ABAP inlining. The
+module (`hir.go`, `runtime.go`, `main.go`, `go.mod`) needs only the Go standard
+library. The executable prints the same issue dump as the ABAP native driver.
+`--times`, `--metrics`, `--cpu-profile` and `--mem-profile` add observations.
+`--input/--deps/--config` on the generation command still configure the osg target;
+pass the executable's flags to check files with Go.
+
+Go remains opt-in, including with `--target all`, to preserve the default output
+set and avoid introducing a Go build failure into existing ABAP generation.
+`--target all,go` explicitly requests both; the ABAP output remains identical.
+Generation and Go build costs are narrated separately. A failed Go build is an
+error with compiler diagnostics; absence of Go leaves the sources and prints the
+manual build command.
+
+Unsupported static shapes fail generation with a HIR/frontend diagnostic and TS
+location. Input-dependent limits refuse the check with a nonzero exit and
+`refused: <TS location>: <reason>` on stderr. Runtime helpers capture the nearest
+translated TS method only on failure; this names the method's declaration, while
+pruned bodies retain their recorded body location. There is no Go panic traceback
+for a refused CLI check. These contracts are bounded to the reviewed workload:
+
+| Rejected shape | Diagnostic boundary |
+|---|---|
+| Unreviewed regex patterns or flags | Literal patterns fail emission; dynamic patterns fail construction. The pinned token grammars and reviewed dynamic macro/SQL-name grammars are supported. |
+| Replacement containing `$` | The frontend rejects literal dollar substitutions; dynamic replacement strings are refused at runtime. |
+| Exits from the try body of try/finally; try/catch/finally | Frontend/HIR verification diagnostic, before emission. |
+| ClassValue factory for an abstract class or constructor requiring nonoptional arguments | Refused when `classvalue.new` invokes the factory. |
+| Nonfinite Number literals, general Number remainder, nonliteral or zero Number divisors | Verification/emission diagnostic. Runtime arithmetic rejects overflow, unsafe checked integers, invalid indices/conversions, and fractional/unsafe numeric string rendering. |
+| JSON outside the strict JSON grammar or nonfinite JSON numbers | Refused by the JSON subset parser; this is not JSON5. |
+| XML outside the reviewed abapGit subset | Refuses malformed nesting, comments, CDATA, DTDs, numeric/unknown entities and prototype-sensitive names. |
+| Ordering outside the reviewed ASCII alphabets | Refused by the ordering helper. |
+| Escaping/aliased primitive covariant array views or unsupported materialization ABI | Emission diagnostic; only proven unaliased temporary narrowing and matching field constructor shapes are supported. |
+| Trapped/pruned/unexecuted bodies | Refusal retains the TS source location; additional rules and workloads are not silently accepted. |
+
+The normal CI job **go target** builds the module/executable, verifies the lexer
+against fresh pinned Node output (44/44 plus a mutation check), checks the registry
+array/sort/iterator/feature/JSON/XML oracles, and compares clean and seeded output
+byte for byte against `zabapgit-check-kit.zip` from release v0.1.1. Go is cached and
+the job has a 15-minute timeout. Branch protection is left to the maintainer.

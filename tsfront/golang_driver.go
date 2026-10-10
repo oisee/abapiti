@@ -14,7 +14,7 @@ import("bufio";"encoding/json";"flag";"fmt";"os";"path/filepath";"runtime";"runt
 func main(){
  file:=flag.String("file","","ABAP file");config:=flag.String("config","","abaplint.json");deps:=flag.String("deps","","dependency path list");times:=flag.Bool("times",false,"print stage milliseconds");cpu:=flag.String("cpu-profile","","CPU profile path");mem:=flag.String("mem-profile","","allocation profile path");metrics:=flag.Bool("metrics",false,"print resource metrics to stderr");flag.Parse()
  if *file==""||*config==""{fmt.Fprintln(os.Stderr,"usage: --file FILE --config CONFIG [--deps LIST] [--times]");os.Exit(2)}
- defer func(){if x:=recover();x!=nil{fmt.Fprintf(os.Stderr,"refused: %T: %v\n",x,x);os.Exit(1)}}()
+ defer func(){if x:=recover();x!=nil{fmt.Fprintf(os.Stderr,"refused: %v\n",x);os.Exit(1)}}()
  read:=func(path string)string{raw,err:=os.ReadFile(path);if err!=nil{panic(err)};return string(raw)}
  h:=@new@()
  add:=func(path string,dependency bool){name:=filepath.Base(strings.ReplaceAll(path,"\\","/"));raw:=read(path);if dependency{h.@addDependency@(str(name),str(raw))}else{h.@addFile@(str(name),str(raw))}}

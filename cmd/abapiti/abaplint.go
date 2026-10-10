@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -42,7 +43,7 @@ Outputs under <outdir>:
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
   native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
-  go/       with --target go: direct HIR Go executable sources (go build .)`,
+  go/       with --target go: TS-HG@Go module + zabaplint executable when Go is on PATH`,
 	Example: `  abapiti abaplint -o out
   abapiti abaplint ~/src/abaplint -o out --target native
   abapiti abaplint -o out --target osg --input zabapgit/in --deps zabapgit/deps/src --config ci-abaplint.json`,
@@ -235,6 +236,18 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))
+		n.say("TS-HG@Go generation: %.3fs", time.Since(began).Seconds())
+		if goTool, lookupErr := exec.LookPath("go"); lookupErr == nil {
+			build := exec.CommandContext(cmd.Context(), goTool, "build", "-o", "zabaplint", ".")
+			build.Dir = filepath.Join(out, "go")
+			build.Env = append(os.Environ(), "GOFLAGS=-buildvcs=false")
+			if output, buildErr := build.CombinedOutput(); buildErr != nil {
+				return fmt.Errorf("TS-HG@Go build: %w\n%s", buildErr, output)
+			}
+			n.step("TS-HG@Go built: %s", filepath.Join(out, "go", "zabaplint"))
+		} else {
+			n.say("Go is absent from PATH; build the module with: cd %s && go build -o zabaplint .", filepath.Join(out, "go"))
+		}
 		if len(targets) == 1 {
 			return nil
 		}

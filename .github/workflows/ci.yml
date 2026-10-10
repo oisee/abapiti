@@ -553,3 +553,38 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
         run: ./.github/ci/fix-proven.sh "$BASE_REF" || true
+
+  go-target:
+    name: go target
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOFLAGS: -buildvcs=false
+      TSFRONT_ABAPLINT: ${{ github.workspace }}/.tmp/abaplint/packages/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build pinned Node lexer oracle
+        run: |
+          mkdir -p .tmp
+          git clone --filter=blob:none https://github.com/abaplint/abaplint.git .tmp/abaplint
+          git -C .tmp/abaplint fetch origin 577f875ebec44cfaf64841cfe71c8ab8dc32622e
+          git -C .tmp/abaplint checkout 577f875ebec44cfaf64841cfe71c8ab8dc32622e
+          cd .tmp/abaplint
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix packages/core
+          node node_modules/typescript/bin/tsc --project packages/core/tsconfig.json --incremental false
+      - name: Download v0.1.1 check kit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.1 --repo oisee/abapiti --pattern zabapgit-check-kit.zip --dir .tmp
+          unzip -q .tmp/zabapgit-check-kit.zip -d .tmp/kit
+      - name: Go build, lexer 44/44, registry oracles, clean and seeded kit
+        run: .github/ci/go-target.sh .tmp/go-target .tmp/kit/zabapgit-check-kit

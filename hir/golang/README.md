@@ -1,4 +1,4 @@
-This package is a Go prototype of the HIR backend. `Emit(p)` verifies the program
+This package is the TS-HG@Go backend. `Emit(p)` verifies the program
 and returns `hir.go` and `runtime.go` in package `main`. `EmitPackage(p, name)`
 selects another package name. Neither function writes files. Generated modules
 use only the Go standard library. Output identities and class ordering are
@@ -32,7 +32,8 @@ Generated code assumes sequential execution, like the fixture runtime.
 Throw uses a typed panic payload with the exact HIR type identity. Try catches
 only that payload type, rethrowing all other panics. Trap uses a distinct panic.
 Returns use separate internal control panics so a return crosses try closures
-without being mistaken for an exception. This is a correctness-first prototype.
+without being mistaken for an exception. Runtime refusals carry the nearest translated TS method location. The CLI
+prints a diagnostic and exits nonzero; it does not print a Go panic traceback.
 
 `RuntimeOps()` reports all catalogue names as implemented. Implementations retain
 bounded contracts: numeric rendering rejects fractions and unsafe numbers;
@@ -77,8 +78,8 @@ The complete CLI closure compiles directly from HIR, without `hir.Inline`:
 
 ```sh
 go run ./cmd/abapiti abaplint --target go -o /tmp/abaplint-go
-cd /tmp/abaplint-go/go
-GOFLAGS=-buildvcs=false go build -o ../zabaplint .
+# If Go is on PATH, /tmp/abaplint-go/go/zabaplint is built automatically.
+# Otherwise: cd /tmp/abaplint-go/go && GOFLAGS=-buildvcs=false go build -o zabaplint .
 ```
 
 `--file`, `--config`, `--deps` and `--times` use the same RegistryRun harness
