@@ -413,3 +413,53 @@ class. See [the full-closure results](../../docs/grace-full-closure.md).
 
 Measured engine changes and the retained relation list are recorded in
 [the performance report](../../docs/history/2026-10-10-grace-engine.md).
+
+## Flow and kernel opportunity analysis (2026-10-10)
+
+`Extract` additionally records `loop(Site,Iterated,RowVar)` for ForEach and
+`in_body(NodeSite,LoopSite)` for all transitively enclosed statement/expression
+sites (including nested loops and Seq). `def(Local,Site)` describes parameter entry, declaration,
+assignment, loop-row and catch definitions; `use(Local,Site)` records actual
+local/this expression reads, excluding a bare assignment LHS. `local_ref` retains
+binding identities even for that LHS. `use_count(Local,Count)` counts syntactic
+read occurrences, including zero for unused bindings; it is not a dynamic count.
+
+The analysis-only `next` graph preserves left-to-right operand evaluation,
+statement sequence, both If/conditional/short-circuit branches, While back-edges,
+ForEach row definitions, break/continue, early return, Try handlers and Finally.
+ForEach evaluates its input once; its iteration body has a back-edge. Seq gets
+its own lexical scope and its contained control-flow graph. Evaluation/control points with no local read or definition are contracted
+into path edges; every read and definition remains a distinct point, including
+operand order and exception alternatives. This avoids forcing the independent
+whole-rule evaluator through thousands of empty transfer steps. The embedded rules
+compute backward `live_in`/`live_out`, killing the old binding value at `def`.
+`not_read_after(Local,Site)` means that a value read at that expression completion
+site is not live on any successor path; it is emitted at actual read sites,
+rather than materializing every possible local/site pair. A later assignment
+kills the old value; reads of the new value do not prevent a last-use claim.
+Exceptions conservatively connect every nonliteral/nonlocal expression to its
+handler. Finally joins normal and exceptional exits, possibly admitting paths
+that do not execute; this can lose opportunities, never prove an unsafe last use.
+No branch constant folding or path feasibility proof is attempted.
+
+`writes(Method,none|own_fields|any)`, `allocates(Method)`, `may_raise(Method)` and
+`may_diverge(Method)` summarize the closed-world call graph, including all Grace
+virtual targets and ensure_init edges. `writes_value`, `writes_param` and
+`site_writes` propagate reference-alias writes and map callee parameter indices
+(including `this`) back to actual arguments. Immutable declaration aliases supply separate `must_alias` ownership proofs;
+possible aliases never prove own-field ownership. Direct writes to fields of `this`
+are own-fields; statics, unknown effects and writes to other unconfined storage
+are any. Proven confined local mutation is compatible with none. Calls to an
+any-writing method conservatively keep any even if a more precise ownership
+proof could confine that call. Allocations include runtime-table allocation
+flags; unknown effects may allocate/raise/diverge. Loops and recursive call
+cycles may diverge, even when a termination proof might exist. Raising uses the
+existing Effects adapter and may_throw rules; catches do not suppress it.
+
+Reference identity aliases are flow-insensitive and include declaration/assignment
+bindings, checked views, adapter receiver aliases, conditional results and Seq reference results.
+They are not an interprocedural heap points-to analysis. Value-dependence `flow`
+remains separate: an escaping element can conservatively mark its container as
+escaping. Kernel candidate reports treat uncertainty as a blocker. The default
+inliner still demands only its existing syntax relations and evaluates none of
+these new facts; no rewrite or emitter rule consumes them.
