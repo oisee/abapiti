@@ -298,7 +298,7 @@
     "branch_build": "go build -o .local/fit-objlit/abapiti-branch ./cmd/abapiti",
     "branch_output": "rm -rf .local/fit-objlit/out-main && .local/fit-objlit/abapiti-branch abaplint -o .local/fit-objlit/out-main --target all,go",
     "compare_output": "diff -r .local/fit-objlit/out-origin .local/fit-objlit/out-main",
-    "node_and_go_kit": "GOGC=400 node tools/hir-go-check.mjs /home/alice/.cache/abapiti-target-go/kit/zabapgit-check-kit .local/fit-objlit/out-main/go/zabaplint-go .local/fit-objlit/oracle '' /home/alice/.cache/kits/abaplint-577f875e"
+    "node_and_go_kit": "GOGC=400 node tools/hir-go-check.mjs ~/.cache/abapiti-target-go/kit/zabapgit-check-kit .local/fit-objlit/out-main/go/zabaplint-go .local/fit-objlit/oracle '' ~/.cache/kits/abaplint-577f875e"
   },
   "measurement_note": "The opt-in probe was added before measuring the unchanged origin/main implementation. It materializes the byte-pinned embedded closure, passes nil reachability, and explicitly clears ABAPITI_ASSUME_INT. Its passing status means evidence was collected, not that the full core compiles.",
   "output_note": "Generate both versions in the same output/build directory, snapshotting baseline first, so diff -r includes byte-identical Go executables rather than debug-path differences. --target all is the default ABAP set; go is additionally requested.",
