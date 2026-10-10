@@ -102,9 +102,9 @@ func TestCriticR2StaticPurity(t *testing.T) {
 		t.Run(name, func(t *testing.T) { requireDiagnostic(t, sourceProbe(t, source), "unsupported-static-init") })
 	}
 	for name, source := range map[string]string{
-		"constants":  `const a = 3; const b = a + 4; export class Probe { static n: number = b * 2; run(): number { return Probe.n; } }`,
-		"same_class": `export class Probe { static x: number = 7; static y: number = Probe.x + 1; run(): number { return Probe.y; } }`,
-		"collection": `const xs = new Set<number>([1, 2, 3]); export class Probe { run(): boolean { return xs.has(2); } }`,
+		"constants":   `const a = 3; const b = a + 4; export class Probe { static n: number = b * 2; run(): number { return Probe.n; } }`,
+		"same_class":  `export class Probe { static x: number = 7; static y: number = Probe.x + 1; run(): number { return Probe.y; } }`,
+		"collection":  `const xs = new Set<number>([1, 2, 3]); export class Probe { run(): boolean { return xs.has(2); } }`,
 		"trivial_new": `class Other { readonly x: number; constructor(x: number) { this.x = x; } } export class Probe { static o: Other = new Other(7); static s: Set<string> = new Set<string>(); static u: string | undefined = undefined; run(): number { return Probe.o.x; } }`,
 	} {
 		t.Run(name, func(t *testing.T) {
