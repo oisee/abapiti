@@ -135,6 +135,7 @@ func check(t *testing.T, p *hir.Program, full bool) {
 	src := Source(t, "analysis")
 	base := rewrite.Extract(p)
 	db := evaluate(t, base, src, full)
+	CheckRecursiveSeeds(t, db)
 	actual, e := rewrite.Analyze(p)
 	if e != nil {
 		t.Fatal(e)

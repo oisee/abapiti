@@ -167,12 +167,16 @@ func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 			}
 			x.assigned = map[string]bool{}
 			assignedNames(m.Body, x.assigned)
+			x.flowFacts(m, env)
 			x.stmt(m.Body, x.method+"/body", env)
 			x.shapes(m.Body)
 			if name == "class_constructor" {
 				x.add("implicit_init", c.Name)
 			}
 		}
+	}
+	if !syntaxOnly {
+		x.recursiveCalls()
 	}
 	return x.db
 }
@@ -214,6 +218,13 @@ func (x *extractor) proof(e *hir.Expr, env scope) ([]string, bool) {
 			return []string{e.Type.Name}, true
 		}
 		return nil, true
+	case hir.RuntimeOp:
+		// Fresh containers may contain existing element references. This proves
+		// container identity only; value-dependence escape remains conservative.
+		switch e.Op {
+		case "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "string.split", "map.keys", "map.values", "set.values", "set.copy", "set.fromArray":
+			return nil, true
+		}
 	case hir.Local:
 		if !x.assigned[e.Name] {
 			b := env[e.Name]
@@ -297,6 +308,7 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("calls", x.method, target, path)
 		} else {
 			x.add("unknown_effect", x.method)
+			x.add("unknown_summary", x.method)
 			for i := range e.Args {
 				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
 			}
@@ -338,6 +350,9 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 		}
 		// Allocation may be only an Optional wrapper around an existing ref.
 		// op_allocates alone does not prove ownership or confinement.
+		if !known || e.Op == "classvalue.new" || e.Op == "dynamic.materialize" {
+			x.add("unknown_summary", x.method)
+		}
 		if !known || effect.Reads.Global || e.Op == "classvalue.new" || e.Op == "dynamic.materialize" {
 			x.add("unknown_effect", x.method)
 			for _, id := range ids {
@@ -353,6 +368,18 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("raises", x.method, path)
 		}
 
+	case hir.Conditional:
+		if referenceType(e.Type) {
+			for _, id := range ids[1:] {
+				if id != "" {
+					x.add("alias", x.method, path, id)
+				}
+			}
+		}
+	case hir.Seq:
+		if referenceType(e.Type) && ids[1] != "" {
+			x.add("alias", x.method, path, ids[1])
+		}
 	case hir.Cast, hir.CheckedNumericConvert:
 		if e.Kind == hir.Cast {
 			x.add("alias", x.method, path, ids[0])
@@ -399,6 +426,9 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 			x.add("flow", x.method, b.id, id)
 			if referenceType(s.Type) {
 				x.add("alias", x.method, b.id, id)
+				if !x.assigned[s.Name] && s.X != nil && (s.X.Kind == hir.This || s.X.Kind == hir.Local && !x.assigned[s.X.Name]) {
+					x.add("must_alias", x.method, b.id, id)
+				}
 			}
 		}
 		if b.fresh {
