@@ -114,6 +114,9 @@ func TestRuntimeCatalogue(t *testing.T) {
 		case OrderedMap:
 			typ.Args = []Type{T(I32), T(String)}
 		}
+		if op == "array.matchIndex" {
+			typ = T(Array, T(String))
+		}
 		ps, r, ok := RuntimeSignature(op, typ)
 		if !ok || len(ps) != s.Arity || r.Kind == "" {
 			t.Fatal(op)

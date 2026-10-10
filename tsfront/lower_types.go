@@ -343,6 +343,21 @@ func (l *lowerer) union(n *ast.Node, parts []hir.Type, optional bool) hir.Type {
 	return hir.T(hir.Void)
 }
 
+func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
+	if t == nil {
+		return false
+	}
+	if t.IsUnion() {
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			if l.isMatchArrayType(part) {
+				return true
+			}
+		}
+		return false
+	}
+	return t.Symbol() != nil && t.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(t.Symbol())
+}
+
 // mapCheckerType maps the checker type of an expression (or an inferred
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
@@ -364,6 +379,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return mapped
 	}
 	if t.IsUnion() {
+		// Unlike arbitrary mixed null unions, a match array has a nullable
+		// reference ABI; no tagged Dynamic payload is needed.
+		matchArray, onlyMatch := false, true
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			if part.Symbol() != nil && part.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(part.Symbol()) {
+				matchArray = true
+			} else if part.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) == 0 {
+				onlyMatch = false
+			}
+		}
+		if matchArray && onlyMatch {
+			return hir.T(hir.Optional, hir.T(hir.Array, hir.T(hir.String)))
+		}
 		optional := false
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
@@ -499,6 +527,10 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		}
 		if mapped, ok := l.generatorCheckerType(n, t); ok {
 			return mapped
+		}
+		// Match arrays retain their numbered captures and match index.
+		if t.Symbol() != nil && t.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(t.Symbol()) {
+			return hir.T(hir.Array, hir.T(hir.String))
 		}
 		// Array and library-collection reference types.
 		if l.ck.IsArrayType(t) || (t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlySet" || t.Symbol().Name == "ReadonlyMap")) {

@@ -403,7 +403,8 @@ func numberString(x float64) jsString {
 
 type loopControl struct {Target string;Continue bool}
 
-type array[T any] struct{ Items []T }
+type array[T any] struct{ Items []T; MatchIndex int32; HasMatchIndex bool }
+func (a *array[T]) matchIndex() int32 {if !a.HasMatchIndex {panic(newTrap("global match index is not supported"))};return a.MatchIndex}
 func presentArray[T any](a *array[optional[T]]) *array[T] {
  if a==nil{return nil};out:=&array[T]{Items:make([]T,len(a.Items))}
  for i,v:=range a.Items {out.Items[i]=unwrap(v)}
@@ -692,6 +693,14 @@ func (s jsString) replaceFirst(n, v jsString) jsString {
 	}
 	return s[:2*i] + v + s[2*i+int32(len(n)):]
 }
+func (s jsString) repeat(n float64) jsString {
+ n = math.Trunc(n)
+ if math.IsNaN(n) {n=0}
+ if n<0 || math.IsInf(n,0) {panic(newRangeFault())}
+ if len(s)==0 || n==0 {return ""}
+ if n>2147483647 || n*float64(len(s))>2147483647 {panic(newRangeFault())}
+ return jsString(strings.Repeat(string(s),int(n)))
+}
 func (s jsString) repeatIndent(n float64) jsString {
 	n = math.Trunc(n)
 	if n <= 0 {
@@ -853,6 +862,26 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 		last = b
 	}
 	return out + s[2*last:]
+}
+func (s jsString) match(r *jsRegExp) *array[jsString] {
+ input:=unitText(s)
+ global:=r.Flags.indexOf(str("g"))>=0
+ if global {r.LastIndex=0}
+ if r.denied!=nil && r.denied.MatchString(input) {return nil}
+ limit:=1; if global {limit=-1}
+ matches:=r.compiled.FindAllStringSubmatchIndex(input,limit)
+ if len(matches)==0 {return nil}
+ out:=&array[jsString]{}
+ if !global {out.HasMatchIndex=true;out.MatchIndex=int32(utf8.RuneCountInString(input[:matches[0][0]]))}
+ for _,m:=range matches {
+  end:=len(m); if global {end=2}
+  for i:=0;i<end;i+=2 {
+   if m[i]<0 {panic(newTrap("unmatched optional regex capture is not supported"))}
+   a:=int32(utf8.RuneCountInString(input[:m[i]]));b:=int32(utf8.RuneCountInString(input[:m[i+1]]))
+   out.Items=append(out.Items,s[2*a:2*b])
+  }
+ }
+ return out
 }
 func (r *jsRegExp) toString() jsString { return str("/") + r.Source + str("/") + r.Flags }
 

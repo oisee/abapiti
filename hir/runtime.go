@@ -12,6 +12,9 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"string.repeat":             {String, 1, false},
+	"string.match":              {String, 1, false},
+	"array.matchIndex":          {Array, 0, false},
 	"xml.parseSubset":           {String, 0, false},
 	"json.parseSubset":          {String, 0, false},
 	"string.compareRegistryKey": {String, 1, false},
@@ -106,7 +109,11 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Number), true
 	case "string.length", "array.length", "map.size", "set.size":
 		return nil, i, true
-	case "string.repeatIndent":
+	case "array.matchIndex":
+		return nil, i, t.Args[0].Kind == String
+	case "string.match":
+		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
+	case "string.repeat", "string.repeatIndent":
 		return []Type{T(Number)}, T(String), true
 	case "string.concat":
 		return []Type{T(String)}, T(String), true

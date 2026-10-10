@@ -3,6 +3,13 @@ package golang
 // Pinned abaplint patterns reviewed as ASCII token grammars.
 // Dot excludes all four JS line terminators; word/digit remain ASCII.
 var reviewedPatterns = map[string][2]string{
+	"<CLSPROXY>(.)</CLSPROXY>/":   {"<CLSPROXY>([^\\n\\r\\x{2028}\\x{2029}])</CLSPROXY>", ""},
+	"(a)(b)/":                     {"(a)(b)", ""},
+	"&/g":                         {"&", ""},
+	"&&/g":                        {"&&", ""},
+	"a/g":                         {"a", ""},
+	"<CLSPROXY>(.)<\\/CLSPROXY>/": {"<CLSPROXY>([^\\n\\r\\x{2028}\\x{2029}])</CLSPROXY>", ""},
+
 	" /g":                        {" ", ""},
 	"\"/g":                       {"\"", ""},
 	"#/g":                        {"#", ""},
