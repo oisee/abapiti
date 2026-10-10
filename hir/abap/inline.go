@@ -14,6 +14,19 @@ import (
 // oracle Grace is checked against (same output), and ABAPITI_INLINE=0
 // disables the pass. ABAPITI_INLINE_STATS=1 prints the inlined callees.
 func inline(p *hir.Program) error {
+	// recv.m([e]) -> recv.m_one(e) before inlining (hir/singleton.go);
+	// ABAPITI_SINGLETON=0 disables it.
+	if os.Getenv("ABAPITI_SINGLETON") != "0" {
+		st := hir.Singleton(p)
+		if os.Getenv("ABAPITI_INLINE_STATS") != "" && st.Methods > 0 {
+			fmt.Fprintf(os.Stderr, "singleton: %d methods %v, %d clones, %d forwarding defaults, %d call sites\n", st.Methods, st.Names, st.Clones, st.Defaults, st.CallSites)
+		}
+		if st.Methods > 0 {
+			if errors := hir.Verify(p); len(errors) > 0 {
+				return fmt.Errorf("singleton specialisation produced invalid HIR (ABAPITI_SINGLETON=0 disables it): %w", errors[0])
+			}
+		}
+	}
 	var n int
 	var stats map[string]int
 	switch mode := os.Getenv("ABAPITI_INLINE"); mode {
