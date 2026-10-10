@@ -1673,11 +1673,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("CLEAR " + n + ".")
 			b.line("ENDIF.")
 		case "string.toUpperCase":
+			// Printable ASCII upper-cases with TRANSLATE alone (JS's special
+			// cases are all outside ASCII); anything else goes through the
+			// one full mapping in runtime.upper instead of ~100 inline REPLACEs.
 			b.line(n + " = " + a + ".")
-			for _, mapping := range fullUpperMappings {
-				b.line("REPLACE ALL OCCURRENCES OF `" + mapping[0] + "` IN " + n + " WITH `" + mapping[1] + "`.")
-			}
+			b.line("IF " + n + " CO " + asciiPrintable + ".")
 			b.line("TRANSLATE " + n + " TO UPPER CASE.")
+			b.line("ELSE.")
+			b.line(n + " = " + b.e.upperRuntime() + "=>full( " + n + " ).")
+			b.line("ENDIF.")
 		case "string.toLowerCase":
 			b.line(n + " = " + a + ".")
 			b.line("TRANSLATE " + n + " TO LOWER CASE.")
