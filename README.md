@@ -17,19 +17,20 @@ flowchart LR
   A -->|osabap| N["zabaplint<br/>native command"]
 ```
 
-**Status, 10 Oct 2026 ([v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0)).** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json). On every host the issues equal vanilla abaplint on Node byte for byte (SHA-256 of all issues):
+**Status, 10 Oct 2026 ([v0.3.0](https://github.com/oisee/abapiti/releases/tag/v0.3.0)).** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json). On every host the issues equal vanilla abaplint on Node byte for byte (SHA-256 of all issues). "Equal" means the issues, not the speed:
 
-| Run | v0.1 | v0.2 |
-|---|---|---|
-| TS-HA@A4H: SAP 7.58 kernel, background job | 221 s | **206.6 s** |
-| TS-HA@OSGO: open-steamgate Go runtime | 91 s | **61.3 s** |
-| TS-HA@OSGB: `zabaplint`, one executable (linux-amd64) | 92 s | **62 s** |
-| TS-HA@OSGJ: open-steamgate JS runtime | did not finish | did not finish; main since 2026-10-10 with open-steamgate 6e10128e: equal, 85 min |
-| TS@Node: abaplint 2.120.56 (vanilla) | 13.5 s | reference |
+| Run | v0.1 | v0.2 | v0.3 |
+|---|---|---|---|
+| TS-HA@A4H: SAP 7.58 kernel, background job | 221 s | 206.6 s | **171.5–179.3 s** |
+| TS-HA@OSGO: open-steamgate Go runtime | 91 s | 61.3 s | **14.3–17.2 s** |
+| TS-HA@OSGB: `zabaplint`, one executable (linux-amd64) | 92 s | 62 s | **17–20 s** |
+| TS-HA@OSGJ: open-steamgate JS runtime | did not finish | did not finish | **85 min** |
+| TS-HG@Go: `zabaplint-go`, TypeScript → HIR → Go | — | — | **7.9 s** |
+| TS@Node: abaplint 2.120.56 (vanilla) | 13.5 s | 13.5 s | 14.0 s |
 
-TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti; the names are explained in the [glossary](docs/glossary.md).
+TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti, TS-HG the same HIR emitted as Go; the names are explained in the [glossary](docs/glossary.md). v0.3: abapiti f9d5f8c, open-steamgate 7720f6e2 (OSGJ: 6e10128e). OSGO, OSGB, Go and Node ran on one 16-core Linux machine, with other jobs running; A4H is a separate machine, and runs of the same build there vary by about 5 %.
 
-A seeded variant with one error per rule equals vanilla on every host too. What made v0.2 faster, the stage-by-stage breakdown and the effect of each change are in the [v0.2.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
+A seeded variant with one error per rule equals vanilla on every host too. What changed in each step is in the release notes of [v0.3.0](https://github.com/oisee/abapiti/releases/tag/v0.3.0) and [v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
 > **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
 
@@ -104,6 +105,13 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 <summary><b>Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
+
+**2026-10-10 — v0.3.0: 4× faster on open-steamgate, a Go target faster than Node, readable names.**
+- **TS-HA@OSGO 61 s → 14–17 s, close to Node (13–14 s).** The biggest steps: `toUpperCase` on ASCII text through `TRANSLATE` (2.1×), numeric literals emitted as numbers instead of text, and open-steamgate's own fixes found on our input ([#701](https://github.com/oisee/open-steamgate/pull/701), [#706](https://github.com/oisee/open-steamgate/pull/706), [#707](https://github.com/oisee/open-steamgate/pull/707)).
+- **TS-HA@A4H 207 s → ~172–179 s.** `int8` constants, the `toUpperCase` fast path and `run_one` (abaplint's combinators no longer build a one-element array per call).
+- **TS-HG@Go.** `abapiti abaplint --target go` emits the same HIR as a standalone Go module. `zabaplint-go` checks zabapgit in 7.9 s, Node takes 14 s. The release ships it for six platforms.
+- **Readable names.** `ABAPITI_NAMES=readable` gives `ZCL_LNT_LEXER`, `ZIF_LNT_STATEMENT_RUNNABLE` and so on: 2,001 readable names, none hashed. On A4H (package `$ZLNT`) the result is equal to vanilla and just as fast.
+- **Grace** runs the inlining by default, and every HIR site has a stable id for profiling (`sites.json`).
 
 **2026-10-10 — v0.2.0: the translated abaplint is 1.5× faster off-stack and 7% faster on the kernel.**
 - **Inlining.** A HIR→HIR pass puts the bodies of small, never-overridden methods in place of their calls: 1,487 call sites, verified again afterwards. osgo goes from 70.4 s to 64.8 s; the kernel from 226.9 s to 212.5 s.
