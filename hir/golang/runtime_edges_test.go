@@ -290,3 +290,31 @@ func TestArrayGrowthAndConcatIndependence(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestSmallArrayLiteralEvaluationAndMutation(t *testing.T) {
+	arr := hir.T(hir.Array, i32)
+	local := hir.V("items", arr)
+	list := []*hir.Stmt{{Kind: hir.VarDecl, Name: "items", Type: arr, X: &hir.Expr{Kind: hir.New, Type: arr}}}
+	// A later element observes the current length; coallocation must not make
+	// the array full or move the evaluations ahead of earlier pushes.
+	for i := 0; i < 3; i++ {
+		length := &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: i32, X: local}
+		list = append(list, &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.push", Type: i32, X: local, Args: []*hir.Expr{length}}})
+	}
+	list = append(list, ret(local))
+	m := method("literal", arr, &hir.Stmt{Kind: hir.Block, List: list})
+	m.Static = true
+	p := &hir.Program{Classes: []*hir.Class{{Name: "SmallArray", Methods: []*hir.Method{m}}}}
+	main := fmt.Sprintf(`
+ check:=func(ok bool){if !ok{panic("small array mutation")}}
+ a:=%s();b:=%s();alias:=a
+ check(a!=b && len(a.Items)==3 && a.Items[0]==0 && a.Items[1]==1 && a.Items[2]==2)
+ tail:=a.splice1_view(1);a.push(40);tail.push(50);tail.put(0,60)
+ check(alias==a && len(a.Items)==2 && a.Items[0]==0 && a.Items[1]==40 && b.Items[1]==1 && tail.Items[0]==60)
+ copy:=tail.slice0();tail.reverse();tail.unshift(70);tail.shift();tail.pop()
+ check(copy.Items[0]==60 && copy.Items[1]==2 && copy.Items[2]==50)
+ fmt.Println("ok")`, entry("SmallArray", "literal"), entry("SmallArray", "literal"))
+	if got := execute(t, p, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}

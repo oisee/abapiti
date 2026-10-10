@@ -5,10 +5,12 @@ HIR, lowering and abaplint sources are unchanged.
 All heavy builds, guards and measurements take `flock /tmp/abapiti-heavy.lock`.
 Environment: `GOCACHE=$HOME/.cache/abapiti-go-cache`,
 `GOFLAGS=-buildvcs=false`, `TMPDIR=$HOME/.cache/hir-alloc/tmp`.
+Subsequent runs also set `GOMODCACHE=$HOME/.cache/abapiti-go-mod-cache`.
 Go 1.26.0; default GOGC and GOMAXPROCS. Another builder shares the host.
 
 Each row is the median of three complete invocations, each with CPU and memory
-profiles. Check seconds is the CLI's parse+report interval (compilation and input
+profiles. Total seconds is GNU time wall duration (including profile finalization);
+check seconds is the CLI's parse+report interval (compilation and input
 loading excluded); GNU time supplies peak RSS. GC CPU is the fraction of sampled
 CPU stacks containing collection, worker, assist, sweep or scavenger frames,
 counting a sample once. Allocation GiB and object counts are the sums of
@@ -22,14 +24,14 @@ for byte against the supplied kit. SHA-256:
 
 - clean: `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
 - seeded: `0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50`
-
-| Step | Input | Check s | GC CPU % | alloc GiB | Objects M | Peak MiB | Exact TotalAlloc GiB |
-|---|---|---:|---:|---:|---:|---:|---:|
-| Baseline `8665338` | clean | 9.751 | 41.88 | 3.220 | 75.354 | 632.0 | 3.421 |
-| Baseline `8665338` | seeded | 9.752 | 42.04 | 3.249 | 76.144 | 625.9 | 3.427 |
-
-| 1: small push + concat | clean | 9.691 | 39.99 | 2.356 | 75.157 | 579.7 | 2.652 |
-| 1: small push + concat | seeded | 9.653 | 40.41 | 2.375 | 76.714 | 582.1 | 2.659 |
+| Step | Input | Total s | Check s | GC CPU % | alloc GiB | Objects M | Peak MiB | Exact TotalAlloc GiB |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Baseline `8665338` | clean | 9.89 | 9.751 | 41.88 | 3.220 | 75.354 | 632.0 | 3.421 |
+| Baseline `8665338` | seeded | 9.90 | 9.752 | 42.04 | 3.249 | 76.144 | 625.9 | 3.427 |
+| 1: small push + concat | clean | 9.82 | 9.691 | 39.99 | 2.356 | 75.157 | 579.7 | 2.652 |
+| 1: small push + concat | seeded | 9.78 | 9.653 | 40.41 | 2.375 | 76.714 | 582.1 | 2.659 |
+| 2: small array coallocation | clean | 12.05 | 11.827 | 39.62 | 2.446 | 64.906 | 601.3 | 2.735 |
+| 2: small array coallocation | seeded | 12.49 | 12.279 | 39.76 | 2.443 | 64.658 | 600.3 | 2.741 |
 
 Raw per-run measurements: [baseline](2026-10-10-hir-golang-alloc/baseline.json).
 Executables, generated sources, profiles and logs are preserved under
@@ -62,3 +64,34 @@ removed; headroom is too generous for this workload and will be revisited.
 Remaining slice copies total 96 MB. Sequence/Expression still allocate 256/179 MB
 of headers; those and small literal buffers are the next target.
 Raw step data: [step 1](2026-10-10-hir-golang-alloc/step1.json).
+
+During queued validation the shared lock path was deleted while builders still
+held its inode. A fresh locked shell was closed without doing work after that
+was detected. Later batches acquire both the recreated `/tmp/abapiti-heavy.lock`
+and an open `/proc/PID/fd/3` reference to the original queued lock inode. This
+preserves serialization with the builders already waiting on the deleted file.
+No heavy work in this task intentionally bypasses the shared lock.
+
+Step 2 (this commit): fresh array declarations followed by one to four pushes
+coallocate the slice header and fixed initial buffer. Length remains zero until
+the original pushes execute; no element evaluation or publication moves. Both
+block and sequence preludes use the plan. Other arrays keep ordinary storage.
+The semantic probe checks an element reading the preceding length, distinct
+instances, aliases, growth, slice independence and disjoint views.
+
+The first probe initially called a non-variadic fixture helper with a statement
+list; that test compilation error was corrected. The complete uncached guard
+then passed, with the same required Go oracle counts as step 1. All six full
+checks match the kit hashes. Object counts fall about 12–15% from baseline,
+while exact bytes rise about 3% from step 1 due to small-object size-class rounding.
+Coallocation is retained for its object reduction; typed element storage is the
+planned next byte reduction. This intermediate step is not a byte-volume win
+relative to step 1.
+
+The shared lock path was removed again during this batch. Other builders using
+new lock inodes ran alongside this step despite this task holding the original
+and recreated-path locks. Compilation, tests and measurement are serial within
+this task, but step 2 and later wall time/RSS/GC readings include this external
+contention. They are observations, not a controlled speedup claim. Allocation
+volume and output equality are independent of that scheduling contention.
+Raw step data: [step 2](2026-10-10-hir-golang-alloc/step2.json).

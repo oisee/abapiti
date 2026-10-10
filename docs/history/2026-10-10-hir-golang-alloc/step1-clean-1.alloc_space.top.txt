@@ -1,0 +1,48 @@
+File: zabaplint
+Build ID: 7f9622c5bf6582676a856e3c965b063faadac4bf
+Type: alloc_space
+Time: 2026-10-10 13:11:20 UTC
+Showing nodes accounting for 2305.18MB, 95.57% of 2412.07MB total
+Dropped 407 nodes (cum <= 12.06MB)
+Showing top 40 nodes out of 219
+      flat  flat%   sum%        cum   cum%
+  512.30MB 21.24% 21.24%   512.30MB 21.24%  main.(*array[go.shape.interface {}]).push (inline)
+  410.70MB 17.03% 38.27%   410.70MB 17.03%  main.(*array[go.shape.interface {}]).concat (inline)
+  256.01MB 10.61% 48.88%  1376.07MB 57.05%  main.src/abap/2_statements/combi.ts.Sequence.run
+  178.50MB  7.40% 56.28%  1301.57MB 53.96%  main.src/abap/2_statements/combi.ts.Expression.run
+   96.01MB  3.98% 60.26%    96.01MB  3.98%  main.(*array[go.shape.interface {}]).slice2 (inline)
+   87.50MB  3.63% 63.89%    87.50MB  3.63%  main.src/abap/2_statements/result.ts.ResultNode constructor (inline)
+      65MB  2.69% 66.58%       80MB  3.32%  main.src/abap/2_statements/combi.ts.Token.run
+      64MB  2.65% 69.24%   662.52MB 27.47%  main.src/abap/2_statements/combi.ts.OptionalPriority.run
+   60.50MB  2.51% 71.74%   107.50MB  4.46%  main.src/abap/2_statements/combi.ts.Vers.run
+   59.11MB  2.45% 74.19%    59.11MB  2.45%  main.(*array[go.shape.string]).join
+      59MB  2.45% 76.64%       80MB  3.32%  main.src/abap/2_statements/combi.ts.Word.run
+   50.50MB  2.09% 78.73%    50.50MB  2.09%  main.src/abap/nodes/expression_node.ts.ExpressionNode constructor (inline)
+   45.62MB  1.89% 80.63%    60.51MB  2.51%  main.str
+   45.50MB  1.89% 82.51%  1248.05MB 51.74%  main.src/abap/2_statements/combi.ts.AlternativePriority.run
+      41MB  1.70% 84.21%       41MB  1.70%  main.src/abap/2_statements/result.ts.Result constructor (inline)
+   34.51MB  1.43% 85.64%    52.01MB  2.16%  main.src/abap/nodes/statement_node.ts.StatementNode.concatTokens
+   27.50MB  1.14% 86.78%   128.04MB  5.31%  main.src/abap/2_statements/combi.ts.Regex.run
+      26MB  1.08% 87.86%       26MB  1.08%  unicode/utf8.AppendRune (inline)
+   20.50MB  0.85% 88.71%       36MB  1.49%  main.src/abap/nodes/statement_node.ts.StatementNode.toTokens
+      18MB  0.75% 89.46%       18MB  0.75%  main.(*array[go.shape.string]).push (inline)
+      15MB  0.62% 90.08%       21MB  0.87%  main.src/abap/1_lexer/tokens/identifier.ts.Identifier constructor
+      15MB  0.62% 90.70%       15MB  0.62%  main.src/abap/nodes/token_node.ts.TokenNode constructor (inline)
+   14.89MB  0.62% 91.32%    14.89MB  0.62%  unicode/utf16.Encode
+   14.50MB   0.6% 91.92%    14.50MB   0.6%  internal/bytealg.MakeNoZero
+   14.50MB   0.6% 92.52%    14.50MB   0.6%  main.src/abap/3_structures/structures/_match.ts.IMatch constructor (inline)
+   14.50MB   0.6% 93.12%    14.50MB   0.6%  main.src/position.ts.Position constructor
+   12.52MB  0.52% 93.64%    12.52MB  0.52%  main.(*orderedMap[go.shape.string,go.shape.343237e4f99edd02fe330bb68c0edf71cb570b553c1b23262ff4e934da6a043a]).set
+       9MB  0.37% 94.01%       29MB  1.20%  main.src/abap/3_structures/structures/_combi.ts.SubStatement.run
+       9MB  0.37% 94.39%      175MB  7.26%  main.src/abap/2_statements/combi.ts.Optional.run
+       5MB  0.21% 94.59%   213.50MB  8.85%  main.src/abap/2_statements/combi.ts.Star.run.func2
+       5MB  0.21% 94.80%    64.51MB  2.67%  main.src/abap/nodes/statement_node.ts.StatementNode.getTokens
+    4.50MB  0.19% 94.99%   898.04MB 37.23%  main.src/abap/2_statements/combi.ts.Alternative.run
+       4MB  0.17% 95.15%   126.72MB  5.25%  main.src/abap/2_statements/statement_parser.ts.StatementParser.process
+       4MB  0.17% 95.32%    12.07MB   0.5%  main.src/abap/nodes/_abstract_node.ts.AbstractNode.addChild
+       2MB 0.083% 95.40%  1397.57MB 57.94%  main.src/abap/2_statements/combi.ts.Combi.run.func2
+       1MB 0.041% 95.44%    36.01MB  1.49%  main.src/abap/2_statements/statement_parser.ts.WorkArea.tokensToNodes
+       1MB 0.041% 95.49%    63.79MB  2.64%  main.src/abap/3_structures/structures/_combi.ts.Sequence.run
+       1MB 0.041% 95.53%   470.13MB 19.49%  main.src/abap/3_structures/structures/_combi.ts.Star.run
+    0.50MB 0.021% 95.55%    26.51MB  1.10%  main.src/abap/types/method_definition.ts.MethodDefinition constructor
+    0.50MB 0.021% 95.57%    26.01MB  1.08%  main.src/abap/types/method_parameters.ts.MethodParameters.constructor

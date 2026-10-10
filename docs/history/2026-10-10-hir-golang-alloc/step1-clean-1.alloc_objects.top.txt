@@ -1,0 +1,48 @@
+File: zabaplint
+Build ID: 7f9622c5bf6582676a856e3c965b063faadac4bf
+Type: alloc_objects
+Time: 2026-10-10 13:11:20 UTC
+Showing nodes accounting for 72248262, 95.79% of 75426765 total
+Dropped 413 nodes (cum <= 377133)
+Showing top 40 nodes out of 213
+      flat  flat%   sum%        cum   cum%
+  21300602 28.24% 28.24%   21300602 28.24%  main.(*array[go.shape.interface {}]).push (inline)
+  11184735 14.83% 43.07%   63777320 84.56%  main.src/abap/2_statements/combi.ts.Sequence.run
+   7798714 10.34% 53.41%   60291566 79.93%  main.src/abap/2_statements/combi.ts.Expression.run
+   3578131  4.74% 58.15%    3578131  4.74%  main.(*array[go.shape.interface {}]).slice2 (inline)
+   2867215  3.80% 61.95%    2867215  3.80%  main.src/abap/2_statements/result.ts.ResultNode constructor (inline)
+   2839879  3.77% 65.72%    3413321  4.53%  main.src/abap/2_statements/combi.ts.Token.run
+   2796206  3.71% 69.43%   31012387 41.12%  main.src/abap/2_statements/combi.ts.OptionalPriority.run
+   2643295  3.50% 72.93%    4891980  6.49%  main.src/abap/2_statements/combi.ts.Vers.run
+   2577740  3.42% 76.35%    3413332  4.53%  main.src/abap/2_statements/combi.ts.Word.run
+   1987907  2.64% 78.98%   58235456 77.21%  main.src/abap/2_statements/combi.ts.AlternativePriority.run
+   1654800  2.19% 81.18%    1654800  2.19%  main.src/abap/nodes/expression_node.ts.ExpressionNode constructor (inline)
+   1458180  1.93% 83.11%    1458180  1.93%  unicode/utf8.AppendRune (inline)
+   1343505  1.78% 84.89%    1343505  1.78%  main.src/abap/2_statements/result.ts.Result constructor (inline)
+   1201481  1.59% 86.48%    5985791  7.94%  main.src/abap/2_statements/combi.ts.Regex.run
+    983049  1.30% 87.79%     983049  1.30%  main.src/abap/nodes/token_node.ts.TokenNode constructor (inline)
+    950284  1.26% 89.05%     950284  1.26%  main.src/position.ts.Position constructor
+    895672  1.19% 90.24%    1621127  2.15%  main.src/abap/nodes/statement_node.ts.StatementNode.toTokens
+    720901  0.96% 91.19%     720901  0.96%  main.src/abap/nodes/token_node_regex.ts.TokenNodeRegex constructor (inline)
+    459714  0.61% 91.80%     459714  0.61%  internal/bytealg.MakeNoZero
+    393216  0.52% 92.32%     393376  0.52%  regexp.(*Regexp).backtrack
+    393211  0.52% 92.84%    8187412 10.85%  main.src/abap/2_statements/combi.ts.Optional.run
+    327694  0.43% 93.28%     554344  0.73%  main.src/abap/1_lexer/tokens/identifier.ts.Identifier constructor
+    314026  0.42% 93.69%     957782  1.27%  main.src/abap/3_structures/structures/_combi.ts.SubStatement.run
+    218456  0.29% 93.98%    2199478  2.92%  main.src/abap/nodes/statement_node.ts.StatementNode.getTokens
+    218451  0.29% 94.27%   10099061 13.39%  main.src/abap/2_statements/combi.ts.Star.run.func2
+    196606  0.26% 94.53%   41910162 55.56%  main.src/abap/2_statements/combi.ts.Alternative.run
+    188829  0.25% 94.78%     590008  0.78%  main.src/abap/nodes/statement_node.ts.StatementNode.concatTokens
+    174766  0.23% 95.02%    2503081  3.32%  main.src/abap/2_statements/statement_parser.ts.StatementParser.process
+    174761  0.23% 95.25%     377972   0.5%  main.src/abap/nodes/_abstract_node.ts.AbstractNode.addChild
+    140452  0.19% 95.43%     435466  0.58%  main.str
+     87382  0.12% 95.55%   64664289 85.73%  main.src/abap/2_statements/combi.ts.Combi.run.func2
+     43691 0.058% 95.61%     990579  1.31%  main.src/abap/2_statements/statement_parser.ts.WorkArea.tokensToNodes
+     43690 0.058% 95.67%    1556565  2.06%  main.src/abap/3_structures/structures/_combi.ts.Sequence.run
+     43690 0.058% 95.72%    1581155  2.10%  main.src/abap/3_structures/structures/_combi.ts.Star.run
+     21845 0.029% 95.75%     474362  0.63%  main.src/abap/types/method_parameters.ts.MethodParameters.constructor
+     21845 0.029% 95.78%    1580913  2.10%  main.src/abap/3_structures/structures/_combi.ts.Alternative.run
+      3641 0.0048% 95.79%     478003  0.63%  main.src/abap/types/method_definition.ts.MethodDefinition constructor
+         0     0% 95.79%    3336829  4.42%  main.(*array[go.shape.interface {}]).slice0 (inline)
+         0     0% 95.79%     655521  0.87%  main.(*jsRegExp).find
+         0     0% 95.79%    2113701  2.80%  main.(*jsRegExp).test

@@ -721,9 +721,7 @@ func (b *body) expr(x *hir.Expr) string {
 		} else {
 			b.line("var %s %s; _=%s; {", n, e.typ(t), n)
 		}
-		for _, s := range x.Stmt.List {
-			b.stmt(s)
-		}
+		b.stmtList(x.Stmt.List)
 		v := b.expr(x.Y)
 		if t.Kind == hir.Void {
 			b.line("}")
@@ -748,6 +746,47 @@ func clone(m map[string]string) map[string]string {
 	}
 	return n
 }
+
+// Coallocate a fresh small array header and its initial element storage.
+// Only capacity changes: all element evaluations and pushes stay in place,
+// including calls that observe or publish the partially built array.
+func (b *body) stmtList(list []*hir.Stmt) {
+	for i, s := range list {
+		n := smallArrayPrefix(list, i)
+		if n == 0 {
+			b.stmt(s)
+			continue
+		}
+		elem := b.e.typ(arrayStorage(s.Type).Args[0])
+		holder, local := b.fresh(), b.fresh()
+		b.line("%s:=&struct {Header array[%s];Buffer [%d]%s}{}", holder, elem, n, elem)
+		b.line("%s.Header.Items=%s.Buffer[:0]", holder, holder)
+		b.line("var %s %s=&%s.Header; _=%s", local, b.e.typ(s.Type), holder, local)
+		b.locals[s.Name] = local
+	}
+}
+func smallArrayPrefix(list []*hir.Stmt, i int) int {
+	s := list[i]
+	if s == nil || s.Kind != hir.VarDecl || s.Type.Kind != hir.Array || s.X == nil || s.X.Kind != hir.New || !s.X.Type.Equal(s.Type) || len(s.X.Args) != 0 {
+		return 0
+	}
+	n := 0
+	for _, next := range list[i+1:] {
+		if next == nil || next.Kind != hir.ExprStmt || next.X == nil {
+			break
+		}
+		x := next.X
+		if x.Kind != hir.RuntimeOp || x.Op != "array.push" || x.X == nil || x.X.Kind != hir.Local || x.X.Name != s.Name || !x.X.Type.Equal(s.Type) {
+			break
+		}
+		n++
+		if n > 4 {
+			return 0
+		}
+	}
+	return n
+}
+
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
 		return
@@ -761,9 +800,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		old := b.locals
 		b.locals = clone(old)
 		b.line("{")
-		for _, s := range s.List {
-			b.stmt(s)
-		}
+		b.stmtList(s.List)
 		b.line("}")
 		b.locals = old
 	case hir.VarDecl:
