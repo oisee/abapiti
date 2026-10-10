@@ -759,6 +759,9 @@ func (b *body) expr(x *hir.Expr) string {
 			if f, err := strconv.ParseFloat(fmt.Sprint(x.Value), 64); err == nil && (math.IsNaN(f) || math.IsInf(f, 0)) {
 				e.err = fmt.Errorf("node %d (%s): ABAP f cannot represent non-finite Number", x.ID, x.Source)
 				break
+			} else if err == nil && f == math.Trunc(f) && math.Abs(f) <= math.MaxInt32 && !(f == 0 && math.Signbit(f)) {
+				b.line(target + " = " + strconv.FormatInt(int64(f), 10) + ".")
+				break
 			}
 			b.line(target + " = '" + fmt.Sprint(x.Value) + "'.")
 		}
