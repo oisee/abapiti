@@ -275,7 +275,20 @@ func RegistryGoResultDebug(files map[string]string, mode string) error {
 			switch fn.Name.Name {
 			case "push", "put", "set", "unshift", "concat", "slice0", "slice1", "slice2", "splice1", "splice1_view", "splice2", "splice3", "pop", "shift", "reverse", "delete", "add", "copy":
 				receiver := fn.Recv.List[0].Names[0].Name
-				fn.Body.List = append(code("defer resultStored("+receiver+",resultSite)"), fn.Body.List...)
+				extra := ""
+				if fn.Name.Name == "push" {
+					extra = ",v"
+				}
+				if fn.Name.Name == "put" {
+					extra = ",i,v"
+				}
+				if fn.Name.Name == "set" {
+					extra = ",k,v"
+				}
+				if fn.Name.Name == "put" && !collectionReceiver(fn) {
+					continue
+				}
+				fn.Body.List = append(code("defer resultStored("+receiver+",resultSite,"+quoted(fn.Name.Name)+extra+")"), fn.Body.List...)
 				stats["container_origins"]++
 			}
 		}

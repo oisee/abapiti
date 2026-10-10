@@ -35,8 +35,20 @@ var resultGlobalNames []string
 var resultContainerOrigins=map[uintptr]map[int]string{}
 var resultFieldOrigins=map[uintptr]string{}
 func resultFieldStored(slot any,site string){v:=reflect.ValueOf(slot);if v.Kind()==reflect.Pointer{resultFieldOrigins[v.Pointer()]=site}}
-func resultStored(container any,site string){
+func resultDirect(v any)uintptr{value:=reflect.ValueOf(v);if value.IsValid()&&value.Type()==resultType&&!value.IsNil(){return value.Pointer()};return 0}
+func resultStored(container any,site,operation string,args ...any){
  v:=reflect.ValueOf(container);if v.Kind()!=reflect.Pointer||v.IsNil(){return};owner:=v.Pointer();v=v.Elem();if v.Kind()!=reflect.Struct{return};items:=v.FieldByName("Items");if !items.IsValid(){items=v.FieldByName("Entries")};if !items.IsValid()||items.Kind()!=reflect.Slice{return}
+ // Append, indexed overwrite and map entry writes update one holder. In
+ // particular, lexer token arrays must not be rescanned after every append.
+ if operation=="push"||operation=="put"||operation=="set" {
+  origins:=resultContainerOrigins[owner];index:=-1;contains:=false
+  switch operation {
+  case "push":if len(args)>0 {contains=resultDirect(args[0])!=0};index=items.Len()-1
+  case "put":if len(args)>1 {contains=resultDirect(args[1])!=0;index=int(reflect.ValueOf(args[0]).Int())}
+  case "set":if len(args)>1 {contains=resultDirect(args[0])!=0||resultDirect(args[1])!=0};if !contains&&len(origins)==0{return};keys:=v.FieldByName("index");if keys.IsValid()&&len(args)>0 {key:=reflect.ValueOf(args[0]);if !key.IsValid(){key=reflect.Zero(keys.Type().Key())};position:=keys.MapIndex(key);if position.IsValid(){index=int(position.Int())}}
+  }
+  if index<0||index>=items.Len(){return};if contains{if origins==nil{origins=map[int]string{};resultContainerOrigins[owner]=origins};origins[index]=site}else if origins!=nil{delete(origins,index)};return
+ }
  origins:=map[int]string{};for i:=0;i<items.Len();i++ {item:=items.Index(i);if item.Kind()==reflect.Struct{if value:=item.FieldByName("Value");value.IsValid(){item=value}};for item.Kind()==reflect.Interface&&!item.IsNil(){item=item.Elem()};if item.IsValid()&&item.Type()==resultType&&!item.IsNil(){origins[i]=site}}
  if len(origins)>0{resultContainerOrigins[owner]=origins}else{delete(resultContainerOrigins,owner)}
 }
