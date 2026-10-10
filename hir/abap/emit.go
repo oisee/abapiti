@@ -80,7 +80,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("builtin.classOf"), e.name("runtime.classvalue"))
 		}
 		b.WriteString("ENDINTERFACE.\n")
-		e.files[e.name(i.Name)+".intf.abap"] = b.String()
+		e.files[e.name(i.Name)+".intf.abap"] = originComment(i.Name, i.Source) + b.String()
 	}
 	for _, c := range p.Classes {
 		e.class(c)
@@ -483,7 +483,7 @@ func (e *emitter) class(c *hir.Class) {
 	if e.codeUnits[c.Name] {
 		out = strings.Replace(out, "PRIVATE SECTION.\nENDCLASS.\n", "PRIVATE SECTION.\nCLASS-DATA "+e.name("builtin.codeUnit."+c.Name)+" TYPE REF TO cl_abap_conv_out_ce.\nENDCLASS.\n", 1)
 	}
-	e.files[e.name(c.Name)+".clas.abap"] = out
+	e.files[e.name(c.Name)+".clas.abap"] = originComment(c.Name, c.Source) + out
 }
 
 type body struct {
