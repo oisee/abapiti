@@ -8,11 +8,27 @@ import (
 
 // Names uses qualified identities, independent of discovery order. A collision
 // is rejected rather than resolved according to traversal order.
-type Names struct{ byID, byName map[string]string }
+type Names struct {
+	byID, byName map[string]string
+	// fixed holds precomputed readable names (NewReadableNames); fallback is
+	// the prefix of hashed names ("z_" by default).
+	fixed    map[string]string
+	fallback string
+}
 
-func NewNames() *Names { return &Names{map[string]string{}, map[string]string{}} }
+func NewNames() *Names {
+	return &Names{byID: map[string]string{}, byName: map[string]string{}, fallback: "z_"}
+}
 func (n *Names) Get(id string) string {
 	if s, ok := n.byID[id]; ok {
+		return s
+	}
+	if s, ok := n.fixed[id]; ok {
+		if old, ok := n.byName[s]; ok && old != id {
+			panic("HIR readable name collision: " + id + " and " + old)
+		}
+		n.byID[id] = s
+		n.byName[s] = id
 		return s
 	}
 	var b strings.Builder
@@ -28,7 +44,12 @@ func (n *Names) Get(id string) string {
 		s = s[:12]
 	}
 	h := sha256.Sum256([]byte(id))
-	s = fmt.Sprintf("z_%s_%x", s, h[:7])
+	if n.fallback == "z_" {
+		s = fmt.Sprintf("z_%s_%x", s, h[:7])
+	} else {
+		// keep 30 characters with the longer project prefix
+		s = fmt.Sprintf("%s%s_%x", n.fallback, s, h[:(abapNameMax-len(n.fallback)-len(s)-1)/2])
+	}
 	if old, ok := n.byName[s]; ok && old != id {
 		panic("HIR name hash collision: " + id)
 	}
