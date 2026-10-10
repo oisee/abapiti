@@ -10,6 +10,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -63,6 +64,10 @@ func TestEmitRegistrySorts(t *testing.T) {
 	}
 	if errors := hir.Verify(prog); len(errors) > 0 {
 		t.Fatal(errors, hir.Dump(prog))
+	}
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
 	}
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {

@@ -11,36 +11,13 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
+	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // The supplied original inventory is expected data only. Production parsing
 // flows through tsgo -> pinned override -> HIR -> ABAP adapter/runtime.
 func TestEmitRegistryXML(t *testing.T) {
-	oracle := os.Getenv("REGISTRY_XML_ORACLE")
-	if oracle == "" {
-		t.Skip("set REGISTRY_XML_ORACLE to original inventory and REGISTRY_XML_INPUTS to input roots")
-	}
-	roots := filepath.SplitList(os.Getenv("REGISTRY_XML_INPUTS"))
-	if len(roots) == 0 {
-		t.Fatal("missing XML input roots")
-	}
-	raw, err := os.ReadFile(oracle)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var inventory []struct {
-		Name, Type  string
-		Files       []string
-		XML         any
-		Description *string
-	}
-	if err := json.Unmarshal(raw, &inventory); err != nil {
-		t.Fatal(err)
-	}
-	if len(inventory) != 188 {
-		t.Fatal("expected all 188 original objects")
-	}
 	dir := t.TempDir()
 	source, err := os.ReadFile("testdata/registryfeatures/xml.ts")
 	if err != nil {
@@ -74,6 +51,35 @@ func TestEmitRegistryXML(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
+	oracle := os.Getenv("REGISTRY_XML_ORACLE")
+	if oracle == "" {
+		t.Skip("set REGISTRY_XML_ORACLE to original inventory and REGISTRY_XML_INPUTS to input roots")
+	}
+	roots := filepath.SplitList(os.Getenv("REGISTRY_XML_INPUTS"))
+	if len(roots) == 0 {
+		t.Fatal("missing XML input roots")
+	}
+	raw, err := os.ReadFile(oracle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var inventory []struct {
+		Name, Type  string
+		Files       []string
+		XML         any
+		Description *string
+	}
+	if err := json.Unmarshal(raw, &inventory); err != nil {
+		t.Fatal(err)
+	}
+	if len(inventory) != 188 {
+		t.Fatal("expected all 188 original objects")
+	}
+
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

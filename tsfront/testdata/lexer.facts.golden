@@ -1,0 +1,277 @@
+fact counts
+  alias 115
+  argument 420
+  assign 100
+  calls 200
+  class 59
+  concrete 58
+  counter_store 0
+  defined 135
+  dispatch 414
+  ensure_init 8
+  escapes 784
+  exact_receiver 13
+  expr 1368
+  extends 48
+  field_origin 730
+  final 57
+  flow 1521
+  fresh 69
+  implements 1
+  implicit_init 2
+  impure 65
+  interface_subtype 1
+  lazy_init 2
+  local 170
+  may_throw 20
+  memo_store 0
+  method 135
+  mutation 4
+  narrowed 13
+  new 58
+  noncounter_write 32
+  op_aliases 93
+  op_allocates 93
+  op_conservative 9
+  op_may_raise 93
+  op_reads 137
+  op_writes 93
+  param 216
+  pure 70
+  raises 36
+  reads_field 86
+  reads_static 60
+  receivers 280
+  resolved 199
+  returns 138
+  runtime_op 88
+  sink 252
+  site_method 88
+  site_type 84
+  static 42
+  static_origin 458
+  subtype 108
+  throws 1
+  trap 0
+  try 0
+  virtual_call 84
+  writes_field 34
+  writes_static 32
+  writes_static_transitive 148
+may_throw
+  harness/lexer_dump.ts.LexerDump::dump
+  harness/lexer_dump.ts.LexerDump::firstDiff
+  harness/lexer_dump.ts.LexerDump::virtualProbe
+  src/abap/1_lexer/lexer.ts.Lexer::add
+  src/abap/1_lexer/lexer.ts.Lexer::process
+  src/abap/1_lexer/lexer.ts.Lexer::run
+  src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::add
+  src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::countIsEven
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::advance
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::charCodeAt
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::currentChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextNextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevPrevChar
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::debugDescription
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getEnd
+  src/position.ts.Position::isBetween
+  src/virtual_position.ts.VirtualPosition::equals
+  src/virtual_position.ts.VirtualPosition::isAfter
+pure
+  harness/lexer_dump.ts.LexerDump::firstDiff
+  harness/test_file.ts.TestFile::getFilename
+  harness/test_file.ts.TestFile::getObjectName
+  harness/test_file.ts.TestFile::getObjectType
+  harness/test_file.ts.TestFile::getRaw
+  harness/test_file.ts.TestFile::getRawRows
+  harness/token_name.ts.TokenName::tokenName
+  src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::countIsEven
+  src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::get
+  src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::length
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::charCodeAt
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::currentChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::getCol
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::getOffset
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::getRaw
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::getRow
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextNextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevPrevChar
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::debugDescription
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getCol
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getRow
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getStart
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getStr
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getUpperStr
+  src/abap/1_lexer/tokens/at.ts.At::railroad
+  src/abap/1_lexer/tokens/atw.ts.AtW::railroad
+  src/abap/1_lexer/tokens/bracket_left.ts.BracketLeft::railroad
+  src/abap/1_lexer/tokens/bracket_leftw.ts.BracketLeftW::railroad
+  src/abap/1_lexer/tokens/bracket_right.ts.BracketRight::railroad
+  src/abap/1_lexer/tokens/bracket_rightw.ts.BracketRightW::railroad
+  src/abap/1_lexer/tokens/dash.ts.Dash::railroad
+  src/abap/1_lexer/tokens/dashw.ts.DashW::railroad
+  src/abap/1_lexer/tokens/instance_arrow.ts.InstanceArrow::railroad
+  src/abap/1_lexer/tokens/instance_arroww.ts.InstanceArrowW::railroad
+  src/abap/1_lexer/tokens/paren_left.ts.ParenLeft::railroad
+  src/abap/1_lexer/tokens/paren_leftw.ts.ParenLeftW::railroad
+  src/abap/1_lexer/tokens/paren_right.ts.ParenRight::railroad
+  src/abap/1_lexer/tokens/paren_rightw.ts.ParenRightW::railroad
+  src/abap/1_lexer/tokens/plus.ts.Plus::railroad
+  src/abap/1_lexer/tokens/plusw.ts.PlusW::railroad
+  src/abap/1_lexer/tokens/static_arrow.ts.StaticArrow::railroad
+  src/abap/1_lexer/tokens/static_arroww.ts.StaticArrowW::railroad
+  src/abap/1_lexer/tokens/wat.ts.WAt::railroad
+  src/abap/1_lexer/tokens/watw.ts.WAtW::railroad
+  src/abap/1_lexer/tokens/wbracket_left.ts.WBracketLeft::railroad
+  src/abap/1_lexer/tokens/wbracket_leftw.ts.WBracketLeftW::railroad
+  src/abap/1_lexer/tokens/wbracket_right.ts.WBracketRight::railroad
+  src/abap/1_lexer/tokens/wbracket_rightw.ts.WBracketRightW::railroad
+  src/abap/1_lexer/tokens/wdash.ts.WDash::railroad
+  src/abap/1_lexer/tokens/wdashw.ts.WDashW::railroad
+  src/abap/1_lexer/tokens/winstance_arrow.ts.WInstanceArrow::railroad
+  src/abap/1_lexer/tokens/winstance_arroww.ts.WInstanceArrowW::railroad
+  src/abap/1_lexer/tokens/wparen_left.ts.WParenLeft::railroad
+  src/abap/1_lexer/tokens/wparen_leftw.ts.WParenLeftW::railroad
+  src/abap/1_lexer/tokens/wparen_right.ts.WParenRight::railroad
+  src/abap/1_lexer/tokens/wparen_rightw.ts.WParenRightW::railroad
+  src/abap/1_lexer/tokens/wplus.ts.WPlus::railroad
+  src/abap/1_lexer/tokens/wplusw.ts.WPlusW::railroad
+  src/abap/1_lexer/tokens/wstatic_arrow.ts.WStaticArrow::railroad
+  src/abap/1_lexer/tokens/wstatic_arroww.ts.WStaticArrowW::railroad
+  src/position.ts.Position::equals
+  src/position.ts.Position::getCol
+  src/position.ts.Position::getRow
+  src/position.ts.Position::isAfter
+  src/position.ts.Position::isBefore
+  src/position.ts.Position::isBetween
+  src/virtual_position.ts.VirtualPosition::equals
+  src/virtual_position.ts.VirtualPosition::isAfter
+receivers
+  harness/lexer_dump.ts.LexerDump::dump/body/s2/x: src/abap/1_lexer/lexer.ts.Lexer
+  harness/lexer_dump.ts.LexerDump::dump/body/s5/body/s1/y/0/0/0/0/arg0: src/abap/1_lexer/tokens/association_name.ts.AssociationName, src/abap/1_lexer/tokens/at.ts.At, src/abap/1_lexer/tokens/atw.ts.AtW, src/abap/1_lexer/tokens/bracket_left.ts.BracketLeft, src/abap/1_lexer/tokens/bracket_leftw.ts.BracketLeftW, src/abap/1_lexer/tokens/bracket_right.ts.BracketRight, src/abap/1_lexer/tokens/bracket_rightw.ts.BracketRightW, src/abap/1_lexer/tokens/colon.ts.Colon, src/abap/1_lexer/tokens/comment.ts.Comment, src/abap/1_lexer/tokens/dash.ts.Dash, src/abap/1_lexer/tokens/dashw.ts.DashW, src/abap/1_lexer/tokens/identifier.ts.Identifier, src/abap/1_lexer/tokens/instance_arrow.ts.InstanceArrow, src/abap/1_lexer/tokens/instance_arroww.ts.InstanceArrowW, src/abap/1_lexer/tokens/paren_left.ts.ParenLeft, src/abap/1_lexer/tokens/paren_leftw.ts.ParenLeftW, src/abap/1_lexer/tokens/paren_right.ts.ParenRight, src/abap/1_lexer/tokens/paren_rightw.ts.ParenRightW, src/abap/1_lexer/tokens/plus.ts.Plus, src/abap/1_lexer/tokens/plusw.ts.PlusW, src/abap/1_lexer/tokens/pragma.ts.Pragma, src/abap/1_lexer/tokens/punctuation.ts.Punctuation, src/abap/1_lexer/tokens/static_arrow.ts.StaticArrow, src/abap/1_lexer/tokens/static_arroww.ts.StaticArrowW, src/abap/1_lexer/tokens/string.ts.StringToken, src/abap/1_lexer/tokens/string_template.ts.StringTemplate, src/abap/1_lexer/tokens/string_template_begin.ts.StringTemplateBegin, src/abap/1_lexer/tokens/string_template_end.ts.StringTemplateEnd, src/abap/1_lexer/tokens/string_template_middle.ts.StringTemplateMiddle, src/abap/1_lexer/tokens/wat.ts.WAt, src/abap/1_lexer/tokens/watw.ts.WAtW, src/abap/1_lexer/tokens/wbracket_left.ts.WBracketLeft, src/abap/1_lexer/tokens/wbracket_leftw.ts.WBracketLeftW, src/abap/1_lexer/tokens/wbracket_right.ts.WBracketRight, src/abap/1_lexer/tokens/wbracket_rightw.ts.WBracketRightW, src/abap/1_lexer/tokens/wdash.ts.WDash, src/abap/1_lexer/tokens/wdashw.ts.WDashW, src/abap/1_lexer/tokens/winstance_arrow.ts.WInstanceArrow, src/abap/1_lexer/tokens/winstance_arroww.ts.WInstanceArrowW, src/abap/1_lexer/tokens/wparen_left.ts.WParenLeft, src/abap/1_lexer/tokens/wparen_leftw.ts.WParenLeftW, src/abap/1_lexer/tokens/wparen_right.ts.WParenRight, src/abap/1_lexer/tokens/wparen_rightw.ts.WParenRightW, src/abap/1_lexer/tokens/wplus.ts.WPlus, src/abap/1_lexer/tokens/wplusw.ts.WPlusW, src/abap/1_lexer/tokens/wstatic_arrow.ts.WStaticArrow, src/abap/1_lexer/tokens/wstatic_arroww.ts.WStaticArrowW
+  harness/lexer_dump.ts.LexerDump::dump/body/s5/body/s1/y/0/0/arg0/0: src/abap/1_lexer/tokens/association_name.ts.AssociationName, src/abap/1_lexer/tokens/at.ts.At, src/abap/1_lexer/tokens/atw.ts.AtW, src/abap/1_lexer/tokens/bracket_left.ts.BracketLeft, src/abap/1_lexer/tokens/bracket_leftw.ts.BracketLeftW, src/abap/1_lexer/tokens/bracket_right.ts.BracketRight, src/abap/1_lexer/tokens/bracket_rightw.ts.BracketRightW, src/abap/1_lexer/tokens/colon.ts.Colon, src/abap/1_lexer/tokens/comment.ts.Comment, src/abap/1_lexer/tokens/dash.ts.Dash, src/abap/1_lexer/tokens/dashw.ts.DashW, src/abap/1_lexer/tokens/identifier.ts.Identifier, src/abap/1_lexer/tokens/instance_arrow.ts.InstanceArrow, src/abap/1_lexer/tokens/instance_arroww.ts.InstanceArrowW, src/abap/1_lexer/tokens/paren_left.ts.ParenLeft, src/abap/1_lexer/tokens/paren_leftw.ts.ParenLeftW, src/abap/1_lexer/tokens/paren_right.ts.ParenRight, src/abap/1_lexer/tokens/paren_rightw.ts.ParenRightW, src/abap/1_lexer/tokens/plus.ts.Plus, src/abap/1_lexer/tokens/plusw.ts.PlusW, src/abap/1_lexer/tokens/pragma.ts.Pragma, src/abap/1_lexer/tokens/punctuation.ts.Punctuation, src/abap/1_lexer/tokens/static_arrow.ts.StaticArrow, src/abap/1_lexer/tokens/static_arroww.ts.StaticArrowW, src/abap/1_lexer/tokens/string.ts.StringToken, src/abap/1_lexer/tokens/string_template.ts.StringTemplate, src/abap/1_lexer/tokens/string_template_begin.ts.StringTemplateBegin, src/abap/1_lexer/tokens/string_template_end.ts.StringTemplateEnd, src/abap/1_lexer/tokens/string_template_middle.ts.StringTemplateMiddle, src/abap/1_lexer/tokens/wat.ts.WAt, src/abap/1_lexer/tokens/watw.ts.WAtW, src/abap/1_lexer/tokens/wbracket_left.ts.WBracketLeft, src/abap/1_lexer/tokens/wbracket_leftw.ts.WBracketLeftW, src/abap/1_lexer/tokens/wbracket_right.ts.WBracketRight, src/abap/1_lexer/tokens/wbracket_rightw.ts.WBracketRightW, src/abap/1_lexer/tokens/wdash.ts.WDash, src/abap/1_lexer/tokens/wdashw.ts.WDashW, src/abap/1_lexer/tokens/winstance_arrow.ts.WInstanceArrow, src/abap/1_lexer/tokens/winstance_arroww.ts.WInstanceArrowW, src/abap/1_lexer/tokens/wparen_left.ts.WParenLeft, src/abap/1_lexer/tokens/wparen_leftw.ts.WParenLeftW, src/abap/1_lexer/tokens/wparen_right.ts.WParenRight, src/abap/1_lexer/tokens/wparen_rightw.ts.WParenRightW, src/abap/1_lexer/tokens/wplus.ts.WPlus, src/abap/1_lexer/tokens/wplusw.ts.WPlusW, src/abap/1_lexer/tokens/wstatic_arrow.ts.WStaticArrow, src/abap/1_lexer/tokens/wstatic_arroww.ts.WStaticArrowW
+  harness/lexer_dump.ts.LexerDump::dump/body/s5/body/s1/y/arg0/0: src/abap/1_lexer/tokens/association_name.ts.AssociationName, src/abap/1_lexer/tokens/at.ts.At, src/abap/1_lexer/tokens/atw.ts.AtW, src/abap/1_lexer/tokens/bracket_left.ts.BracketLeft, src/abap/1_lexer/tokens/bracket_leftw.ts.BracketLeftW, src/abap/1_lexer/tokens/bracket_right.ts.BracketRight, src/abap/1_lexer/tokens/bracket_rightw.ts.BracketRightW, src/abap/1_lexer/tokens/colon.ts.Colon, src/abap/1_lexer/tokens/comment.ts.Comment, src/abap/1_lexer/tokens/dash.ts.Dash, src/abap/1_lexer/tokens/dashw.ts.DashW, src/abap/1_lexer/tokens/identifier.ts.Identifier, src/abap/1_lexer/tokens/instance_arrow.ts.InstanceArrow, src/abap/1_lexer/tokens/instance_arroww.ts.InstanceArrowW, src/abap/1_lexer/tokens/paren_left.ts.ParenLeft, src/abap/1_lexer/tokens/paren_leftw.ts.ParenLeftW, src/abap/1_lexer/tokens/paren_right.ts.ParenRight, src/abap/1_lexer/tokens/paren_rightw.ts.ParenRightW, src/abap/1_lexer/tokens/plus.ts.Plus, src/abap/1_lexer/tokens/plusw.ts.PlusW, src/abap/1_lexer/tokens/pragma.ts.Pragma, src/abap/1_lexer/tokens/punctuation.ts.Punctuation, src/abap/1_lexer/tokens/static_arrow.ts.StaticArrow, src/abap/1_lexer/tokens/static_arroww.ts.StaticArrowW, src/abap/1_lexer/tokens/string.ts.StringToken, src/abap/1_lexer/tokens/string_template.ts.StringTemplate, src/abap/1_lexer/tokens/string_template_begin.ts.StringTemplateBegin, src/abap/1_lexer/tokens/string_template_end.ts.StringTemplateEnd, src/abap/1_lexer/tokens/string_template_middle.ts.StringTemplateMiddle, src/abap/1_lexer/tokens/wat.ts.WAt, src/abap/1_lexer/tokens/watw.ts.WAtW, src/abap/1_lexer/tokens/wbracket_left.ts.WBracketLeft, src/abap/1_lexer/tokens/wbracket_leftw.ts.WBracketLeftW, src/abap/1_lexer/tokens/wbracket_right.ts.WBracketRight, src/abap/1_lexer/tokens/wbracket_rightw.ts.WBracketRightW, src/abap/1_lexer/tokens/wdash.ts.WDash, src/abap/1_lexer/tokens/wdashw.ts.WDashW, src/abap/1_lexer/tokens/winstance_arrow.ts.WInstanceArrow, src/abap/1_lexer/tokens/winstance_arroww.ts.WInstanceArrowW, src/abap/1_lexer/tokens/wparen_left.ts.WParenLeft, src/abap/1_lexer/tokens/wparen_leftw.ts.WParenLeftW, src/abap/1_lexer/tokens/wparen_right.ts.WParenRight, src/abap/1_lexer/tokens/wparen_rightw.ts.WParenRightW, src/abap/1_lexer/tokens/wplus.ts.WPlus, src/abap/1_lexer/tokens/wplusw.ts.WPlusW, src/abap/1_lexer/tokens/wstatic_arrow.ts.WStaticArrow, src/abap/1_lexer/tokens/wstatic_arroww.ts.WStaticArrowW
+  harness/lexer_dump.ts.LexerDump::virtualProbe/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  harness/lexer_dump.ts.LexerDump::virtualProbe/body/s1/body/s0/x: src/abap/1_lexer/tokens/association_name.ts.AssociationName, src/abap/1_lexer/tokens/at.ts.At, src/abap/1_lexer/tokens/atw.ts.AtW, src/abap/1_lexer/tokens/bracket_left.ts.BracketLeft, src/abap/1_lexer/tokens/bracket_leftw.ts.BracketLeftW, src/abap/1_lexer/tokens/bracket_right.ts.BracketRight, src/abap/1_lexer/tokens/bracket_rightw.ts.BracketRightW, src/abap/1_lexer/tokens/colon.ts.Colon, src/abap/1_lexer/tokens/comment.ts.Comment, src/abap/1_lexer/tokens/dash.ts.Dash, src/abap/1_lexer/tokens/dashw.ts.DashW, src/abap/1_lexer/tokens/identifier.ts.Identifier, src/abap/1_lexer/tokens/instance_arrow.ts.InstanceArrow, src/abap/1_lexer/tokens/instance_arroww.ts.InstanceArrowW, src/abap/1_lexer/tokens/paren_left.ts.ParenLeft, src/abap/1_lexer/tokens/paren_leftw.ts.ParenLeftW, src/abap/1_lexer/tokens/paren_right.ts.ParenRight, src/abap/1_lexer/tokens/paren_rightw.ts.ParenRightW, src/abap/1_lexer/tokens/plus.ts.Plus, src/abap/1_lexer/tokens/plusw.ts.PlusW, src/abap/1_lexer/tokens/pragma.ts.Pragma, src/abap/1_lexer/tokens/punctuation.ts.Punctuation, src/abap/1_lexer/tokens/static_arrow.ts.StaticArrow, src/abap/1_lexer/tokens/static_arroww.ts.StaticArrowW, src/abap/1_lexer/tokens/string.ts.StringToken, src/abap/1_lexer/tokens/string_template.ts.StringTemplate, src/abap/1_lexer/tokens/string_template_begin.ts.StringTemplateBegin, src/abap/1_lexer/tokens/string_template_end.ts.StringTemplateEnd, src/abap/1_lexer/tokens/string_template_middle.ts.StringTemplateMiddle, src/abap/1_lexer/tokens/wat.ts.WAt, src/abap/1_lexer/tokens/watw.ts.WAtW, src/abap/1_lexer/tokens/wbracket_left.ts.WBracketLeft, src/abap/1_lexer/tokens/wbracket_leftw.ts.WBracketLeftW, src/abap/1_lexer/tokens/wbracket_right.ts.WBracketRight, src/abap/1_lexer/tokens/wbracket_rightw.ts.WBracketRightW, src/abap/1_lexer/tokens/wdash.ts.WDash, src/abap/1_lexer/tokens/wdashw.ts.WDashW, src/abap/1_lexer/tokens/winstance_arrow.ts.WInstanceArrow, src/abap/1_lexer/tokens/winstance_arroww.ts.WInstanceArrowW, src/abap/1_lexer/tokens/wparen_left.ts.WParenLeft, src/abap/1_lexer/tokens/wparen_leftw.ts.WParenLeftW, src/abap/1_lexer/tokens/wparen_right.ts.WParenRight, src/abap/1_lexer/tokens/wparen_rightw.ts.WParenRightW, src/abap/1_lexer/tokens/wplus.ts.WPlus, src/abap/1_lexer/tokens/wplusw.ts.WPlusW, src/abap/1_lexer/tokens/wstatic_arrow.ts.WStaticArrow, src/abap/1_lexer/tokens/wstatic_arroww.ts.WStaticArrowW
+  harness/lexer_dump.ts.LexerDump::virtualProbe/body/s1/body/s1/body/s0/x/0/0/0/0: src/virtual_position.ts.VirtualPosition
+  harness/lexer_dump.ts.LexerDump::virtualProbe/body/s1/body/s1/body/s0/x/0/0/1/0: src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s0/x/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s0/x: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s1/x: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s12/body/s0/x/0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s12/body/s1/x/0/0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s12/body/s2/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s3/x/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s4/body/s0/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s6/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s9/body/s0/y/arg1: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s1/body/s9/body/s0/y/arg2: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/lexer.ts.Lexer::add/body/s2/x: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s2/y/arg0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s0/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s1/x: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s1/x/arg0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s2/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s3/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/else/else/x/0/0/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/else/x/1/0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/else/else/x/1/1/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/body/s0/else/else/else/else/else/else/x/1/0/0/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/body/s0/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/body/s0/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/else/body/s0/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/else/else/else/body/s0/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/else/x/0/0/0/1/0/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/else/else/x/1: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/x/0/0/1/0/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/x/1/0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/x/1/1/0/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/else/x/1/1/1/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/x/0/0/0/0/1/0/0: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s4/else/else/x/1: src/abap/1_lexer/lexer_buffer.ts.LexerBuffer
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s3/s0/body/s0/s5/x/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/lexer.ts.Lexer::process/body/s4/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::run/body/s3/x: src/abap/1_lexer/lexer.ts.Lexer
+  src/abap/1_lexer/lexer.ts.Lexer::run/body/s3/x/arg0: harness/test_file.ts.TestFile
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::advance/body/s0/x/0/0: src/abap/1_lexer/lexer_stream.ts.LexerStream
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getCol/body/s0/x: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getEnd/body/s0/x/arg0: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getEnd/body/s0/x/arg1/0: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getRow/body/s0/x: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/position.ts.Position::equals/body/s0/x/0/1: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/position.ts.Position::equals/body/s0/x/1/1: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/position.ts.Position::isBetween/body/s0/x/0: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/position.ts.Position::isBetween/body/s0/x/1: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::constructor/body/s0/x/arg0: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::constructor/body/s0/x/arg1: src/position.ts.Position, src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s0/x/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s0/x/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s1/x/0/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s1/x/0/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s1/x/1/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s1/x/1/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s2/x/0/0/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s2/x/0/0/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s2/x/0/1/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s2/x/0/1/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s3/x/0/0/0/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s3/x/0/0/0/1: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s3/x/0/0/1/0: src/virtual_position.ts.VirtualPosition
+  src/virtual_position.ts.VirtualPosition::isAfter/body/s0/body/s3/x/0/0/1/1: src/virtual_position.ts.VirtualPosition
+static writes (unique method/class/field)
+  harness/lexer_dump.ts.LexerDump::dump harness/lexer_dump.ts.LexerDump.tokenCount other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.AFTER_LITERAL other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.BUFS other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_AT other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_BACKSLASH other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_BACKTICK other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_COLON other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_COMMA other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_DASH other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_DOT other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_DQUOTE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_EQUALS other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_GT other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_HASH other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_LBRACE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_NL other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_PIPE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_QUOTE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_RBRACE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_SPACE other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_STAR other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.CH_TAB other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.EOF other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModeComment other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModeNormal other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModePing other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModePragma other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModeStr other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.ModeTemplate other
+  src/abap/1_lexer/lexer.ts.module::class_constructor src/abap/1_lexer/lexer.ts.module.SPLITS other
+  src/abap/1_lexer/lexer_stream.ts.module::class_constructor src/abap/1_lexer/lexer_stream.ts.module.EOF other
+  src/abap/1_lexer/lexer_stream.ts.module::class_constructor src/abap/1_lexer/lexer_stream.ts.module.NL other
+summary
+  methods pure=70 may_throw=20 defined=135
+  virtual sites single=68 total=84
+  static writes memo=0 counter=0 other=32
+  harness/lexer_dump.ts.LexerDump memo=0 counter=0 other=1
+  src/abap/1_lexer/lexer.ts.module memo=0 counter=0 other=29
+  src/abap/1_lexer/lexer_stream.ts.module memo=0 counter=0 other=2

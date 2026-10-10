@@ -163,6 +163,42 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  gracecheck:
+    name: Grace checks (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 35
+    env:
+      ABAPITI_GRACECHECK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Grace regression checks
+        run: |
+          go test -timeout 30m ./tsfront -run '^TestEmitRegistry'
+          go test -timeout 30m ./hir/rewrite/... ./internal/gracecheck/... ./internal/hirclone/...
+
+  gracefull:
+    name: Grace full closure (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    env:
+      ABAPITI_GRACE_FULL: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Grace on the full 1538-file closure
+        run: go test -timeout 55m ./tsfront -run '^TestGraceFullRegistryClosure$' -v
+
   # Keep this exact check name for branch protection and the merge helper.
   test:
     name: test
