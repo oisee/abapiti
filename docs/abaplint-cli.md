@@ -14,6 +14,12 @@ against (CI requires both to give the same program), and `ABAPITI_INLINE=0`
 disables inlining. `ABAPITI_INLINE_STATS=1` prints the call-site total and
 per-callee counts in the same format for both inliners.
 
+Before inlining, calls that pass a one-element array literal to a method that
+only iterates its array parameter, `recv.run([e])` in abaplint's combinators,
+become `recv.run_one(e)`: the method gets a variant with the loop body run once,
+other declarations of it forward to `run([x])`. `ABAPITI_SINGLETON=0` disables
+this.
+
 ## Input
 
 abaplint commit `577f875ebec44cfaf64841cfe71c8ab8dc32622e` (`@abaplint/core` 2.120.56). Nothing else is accepted.
