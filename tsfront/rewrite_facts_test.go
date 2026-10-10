@@ -13,6 +13,11 @@ import (
 // TestLexerFactsReport shares the exact lowering closure used by the lexer
 // differential. GRACE_FACTS_OUT exports a report; goldens remain read-only.
 func TestLexerFactsReport(t *testing.T) {
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1;
+	// the advisory "Grace checks" CI job runs it, the shared shards do not.
+	if os.Getenv("ABAPITI_GRACECHECK") != "1" {
+		t.Skip("Grace lexer facts report runs only with ABAPITI_GRACECHECK=1")
+	}
 	if _, err := os.Stat(filepath.Join("testdata", "lexer", "tsconfig.json")); os.IsNotExist(err) {
 		t.Skip("vendored lexer closure absent")
 	} else if err != nil {
