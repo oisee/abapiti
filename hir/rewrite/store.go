@@ -41,7 +41,7 @@ func CopyProp(p *hir.Program) (Stats, error) {
 }
 
 // storeInert is a deliberately small proof, rather than absence of an impurity
-// fact. In particular it excludes identity allocation, calls, checked numeric
+// fact. In particular it excludes identity allocation, calls, numeric arithmetic
 // operations, nullable dereferences and all unreviewed expression kinds.
 func storeInert(e *hir.Expr) bool {
 	if e == nil {
@@ -61,11 +61,11 @@ func storeInert(e *hir.Expr) bool {
 			return false
 		}
 	case hir.Binary:
-		if e.Op == "/" || e.Op == "%" || e.CheckIntegerOverflow || e.Type.Kind == hir.Number && (e.Op == "+" || e.Op == "-" || e.Op == "*") {
+		if e.Op == "/" || e.Op == "%" || e.CheckIntegerOverflow || (e.Type.Kind == hir.Number || e.Type.Kind == hir.I32 || e.Type.Kind == hir.I64) && (e.Op == "+" || e.Op == "-" || e.Op == "*") {
 			return false
 		}
 	case hir.Unary:
-		if e.CheckIntegerOverflow {
+		if e.CheckIntegerOverflow || e.Op == "-" {
 			return false
 		}
 	case hir.Conditional:

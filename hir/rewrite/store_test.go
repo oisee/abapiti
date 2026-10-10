@@ -228,3 +228,28 @@ func TestStoreActionsRecheckSafety(t *testing.T) {
 		t.Fatal("adapter removed a read store")
 	}
 }
+
+func TestStoreNativeArithmeticRaises(t *testing.T) {
+	for _, kind := range []hir.Kind{hir.I32, hir.I64, hir.Number} {
+		typ := hir.T(kind)
+		for _, op := range []string{"+", "-", "*", "negate"} {
+			t.Run(string(kind)+op, func(t *testing.T) {
+				rhs := &hir.Expr{Kind: hir.Binary, Op: op, Type: typ, X: hir.V("x", typ), Y: hir.V("y", typ)}
+				if op == "negate" {
+					rhs.Kind = hir.Unary
+					rhs.Op = "-"
+					rhs.Y = nil
+				}
+				p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{{Name: "run", Static: true, Params: []hir.Param{{Name: "x", Type: typ}, {Name: "y", Type: typ}}, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "unused", Type: typ, X: rhs})}}}}}
+				before := hir.Dump(p)
+				st, err := CopyProp(p)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if st.CopySites+st.DeadStores != 0 || hir.Dump(p) != before {
+					t.Fatal("unused native overflow/finite check was removed")
+				}
+			})
+		}
+	}
+}

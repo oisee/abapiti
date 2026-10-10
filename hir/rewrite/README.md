@@ -496,7 +496,7 @@ try/finally crossings and lowered closure captures are rejected. Changed RHS
 plans are deferred to a new round.
 
 DSE accepts only positively reviewed inert expressions: no calls, identity
-allocation, checked arithmetic, casts or unknown runtime operations. The CFG
+allocation, numeric arithmetic that can overflow, casts or unknown runtime operations. The CFG
 includes exception/finally paths. `store_next` contracts that CFG to the first
 read or definition of the candidate binding on each path, and Grace derives
 `not_read_after` from those boundaries. Declarations remain to bind emitter
