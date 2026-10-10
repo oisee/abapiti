@@ -155,6 +155,16 @@ func TestHolders(t *testing.T){
  resultPublish(r,"untracked closure capture");check();if len(resultFindings)!=5{t.Fatal("published Result accepted")}
  q:=&@OBJ@{};resultPublish(&struct{hidden *@OBJ@}{q},"hidden field capture");resultDebugMutation("holders.ts:3:1","");resultCheck(q,"setNodes");if len(resultFindings)!=6{t.Fatal("unexported capture was missed")}
 }
+func TestBudgetFailsClosed(t *testing.T){
+ resultFrames=nil;resultFindings=map[string]*resultFinding{};resultPublished=map[uintptr][]string{};resultUnknownPublish=false
+ resultWalkLimit=2;defer func(){resultWalkLimit=200000}()
+ r:=&@OBJ@{};f:=resultEnter("budget.ts:1:1");defer resultLeave(f)
+ resultRoot(f,"large",func()any{return []any{nil,nil,nil,r}},"store",100,1)
+ resultDebugMutation("budget.ts:2:1","");resultCheck(r,"wrapConsumed")
+ if len(resultFindings)!=1{t.Fatal("truncated holder walk accepted mutation")}
+ for _,v:=range resultFindings{if len(v.Published)==0{t.Fatal("missing truncation reason")}}
+ resultPublish([]any{nil,nil,nil,r},"capture");if !resultUnknownPublish{t.Fatal("truncated publication accepted")}
+}
 `, "@OBJ@", obj)
 	dir := t.TempDir()
 	for name, src := range map[string]string{"result_debug.go": runtime, "result_debug_test.go": testSource, "go.mod": "module holderfixture\ngo 1.26.0\n"} {
