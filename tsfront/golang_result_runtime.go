@@ -50,6 +50,14 @@ func resultStored(container any,site,operation string,args ...any){
   }
   if index<0||index>=items.Len(){return};if contains{if origins==nil{origins=map[int]string{};resultContainerOrigins[owner]=origins};origins[index]=site}else if origins!=nil{delete(origins,index)};return
  }
+ // Removing/reordering slots cannot introduce a new Result provenance.
+ // Literal-born slots without an origin keep the documented root fallback.
+ if len(resultContainerOrigins[owner])==0&&operation!="unshift"&&operation!="splice3"&&operation!="add" {return}
+ // Provenance records direct Result slots only. Skip Result-free element
+ // types before shift/splice reconstruction (especially long token arrays).
+ itemType:=items.Type().Elem();mayContain:=resultType.AssignableTo(itemType)
+ if itemType.Kind()==reflect.Struct {for i:=0;i<itemType.NumField();i++ {field:=itemType.Field(i);if (field.Name=="Key"||field.Name=="Value")&&resultType.AssignableTo(field.Type){mayContain=true}}}
+ if !mayContain {return}
  origins:=map[int]string{};for i:=0;i<items.Len();i++ {item:=items.Index(i);if item.Kind()==reflect.Struct{if value:=item.FieldByName("Value");value.IsValid(){item=value}};for item.Kind()==reflect.Interface&&!item.IsNil(){item=item.Elem()};if item.IsValid()&&item.Type()==resultType&&!item.IsNil(){origins[i]=site}}
  if len(origins)>0{resultContainerOrigins[owner]=origins}else{delete(resultContainerOrigins,owner)}
 }
