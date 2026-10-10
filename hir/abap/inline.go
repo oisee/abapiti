@@ -14,9 +14,6 @@ import (
 // oracle Grace is checked against (same output), and ABAPITI_INLINE=0
 // disables the pass. ABAPITI_INLINE_STATS=1 prints the inlined callees.
 func inline(p *hir.Program) error {
-	if err := rewrite.PrepareAccumulator(p); err != nil {
-		return err
-	}
 	// recv.m([e]) -> recv.m_one(e) before inlining (hir/singleton.go);
 	// ABAPITI_SINGLETON=0 disables it.
 	if os.Getenv("ABAPITI_SINGLETON") != "0" {

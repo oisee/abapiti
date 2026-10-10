@@ -11,6 +11,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/rewrite"
 )
 
 type emitter struct {
@@ -53,6 +54,9 @@ func Emit(p *hir.Program) (map[string]string, error) {
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
+	}
+	if err := rewrite.PrepareAccumulator(p); err != nil {
+		return nil, nil, err
 	}
 	if err := inline(p); err != nil {
 		return nil, nil, err
