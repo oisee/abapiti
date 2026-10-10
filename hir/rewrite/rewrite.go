@@ -158,19 +158,19 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 	if es := hir.Verify(p); len(es) > 0 {
 		return r.stats, fmt.Errorf("invalid HIR: %v", es)
 	}
+	selected, demanded, err := rewriteDependencies(rules)
+	if err != nil {
+		return r.stats, err
+	}
 	for round := 0; round < r.limits.Rounds; round++ {
-		var err error
-		r.db, err = Analyze(p)
-		if err != nil {
-			return r.stats, err
-		}
+		r.db = extractDemanded(p, demanded)
 		if err := r.index(); err != nil {
 			return r.stats, err
 		}
 		if err := r.addInlineFacts(); err != nil {
 			return r.stats, err
 		}
-		if err := Evaluate(r.db, rules); err != nil {
+		if err := Evaluate(r.db, selected); err != nil {
 			return r.stats, err
 		}
 		if err := r.validate(); err != nil {

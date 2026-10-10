@@ -70,16 +70,30 @@ func (x *extractor) init(c, site string) {
 // Extract expects verified HIR. Site identities are method-qualified structural
 // paths, independent of optional Node IDs. Abstract declarations have no body.
 func Extract(p *hir.Program) *DB {
-	x := &extractor{db: NewDB(), classes: map[string]*hir.Class{}}
+	return extractDemanded(p, nil)
+}
+
+func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
+	db := NewDB()
+	db.demanded = demanded
+	x := &extractor{db: db, classes: map[string]*hir.Class{}}
 	for _, c := range p.Classes {
 		x.classes[c.Name] = c
 	}
-	x.findInitializers(p)
-	x.addEffects()
-	for _, a := range p.Interfaces {
-		for _, b := range p.Interfaces {
-			if interfaceAccepts(a, b) {
-				x.add("interface_subtype", a.Name, b.Name)
+	syntaxOnly := demanded != nil
+	for pred := range demanded {
+		if pred != "dispatch" && pred != "defined" && pred != "static" && (len(pred) < 7 || pred[:7] != "inline_") && pred != "node" {
+			syntaxOnly = false
+		}
+	}
+	if !syntaxOnly {
+		x.findInitializers(p)
+		x.addEffects()
+		for _, a := range p.Interfaces {
+			for _, b := range p.Interfaces {
+				if interfaceAccepts(a, b) {
+					x.add("interface_subtype", a.Name, b.Name)
+				}
 			}
 		}
 	}
@@ -95,13 +109,15 @@ func Extract(p *hir.Program) *DB {
 			x.add("implements", c.Name, i)
 		}
 		leaf := true
-		for _, d := range p.Classes {
-			if d.Super == c.Name {
-				leaf = false
+		if !syntaxOnly {
+			for _, d := range p.Classes {
+				if d.Super == c.Name {
+					leaf = false
+				}
 			}
-		}
-		if leaf {
-			x.add("final", c.Name)
+			if leaf {
+				x.add("final", c.Name)
+			}
 		}
 		for cl := c; cl != nil; cl = x.classes[cl.Super] {
 			for _, m := range cl.Methods {
@@ -132,6 +148,9 @@ func Extract(p *hir.Program) *DB {
 				continue
 			}
 			x.add("defined", x.method)
+			if syntaxOnly {
+				continue
+			}
 			env := scope{}
 			if !m.Static {
 				env["this"] = binding{id: x.method + "/this"}

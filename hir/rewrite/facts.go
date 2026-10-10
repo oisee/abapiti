@@ -19,7 +19,10 @@ type table struct {
 }
 
 // DB is a set of memoised relations. Public reads are sorted copies.
-type DB struct{ tables map[string]*table }
+type DB struct {
+	tables   map[string]*table
+	demanded map[string]bool
+}
 
 func NewDB() *DB { return &DB{tables: map[string]*table{}} }
 func key(args Tuple) string {
@@ -30,6 +33,9 @@ func key(args Tuple) string {
 	return string(b)
 }
 func (d *DB) put(pred string, args Tuple, depth int) (bool, error) {
+	if d.demanded != nil && !d.demanded[pred] {
+		return false, nil
+	}
 	t := d.tables[pred]
 	if t == nil {
 		t = &table{keys: map[string]*row{}, index: make([]map[string][]*row, len(args))}
