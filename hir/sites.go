@@ -16,7 +16,7 @@ func AssignSiteIDs(p *Program) { AssignSiteIDsWithSource(p, func(s string) strin
 // Node.Source and target names remain untouched. A class SiteOwner hint can
 // supply a stable owner for serial-named synthetic declarations.
 func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
-	stampOwner := func(owner string, visit func(func(*Node, string))) {
+	stampOwner := func(owner, fallback string, visit func(func(*Node, string))) {
 		counts := map[string]int{}
 		visit(func(n *Node, kind string) {
 			source := normalize(n.Source)
@@ -31,6 +31,9 @@ func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
 				return
 			}
 			n.SiteOwner, n.SiteSource = owner, source
+			if !sitePosition(source) && sitePosition(fallback) {
+				n.SiteSource = fallback
+			}
 			n.SiteID = fmt.Sprintf("%s|%s|%s|%d", url.QueryEscape(owner), url.QueryEscape(identitySource), kind, ordinal)
 		})
 	}
@@ -38,7 +41,7 @@ func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
 		if m == nil {
 			return
 		}
-		stampOwner(owner+"."+m.Name, func(stamp func(*Node, string)) {
+		stampOwner(owner+"."+m.Name, normalize(m.Source), func(stamp func(*Node, string)) {
 			stamp(&m.Node, "method")
 			walk(m.Body, func(s *Stmt) { stamp(&s.Node, string(s.Kind)) }, func(x *Expr) { stamp(&x.Node, string(x.Kind)) })
 		})
@@ -48,7 +51,7 @@ func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
 		if owner == "" {
 			owner = c.Name
 		}
-		stampOwner(owner, func(stamp func(*Node, string)) {
+		stampOwner(owner, normalize(c.Source), func(stamp func(*Node, string)) {
 			stamp(&c.Node, "class")
 			for i := range c.Fields {
 				stamp(&c.Fields[i].Node, "field_decl")
@@ -60,7 +63,7 @@ func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
 		}
 	}
 	for _, c := range p.Interfaces {
-		stampOwner(c.Name, func(stamp func(*Node, string)) { stamp(&c.Node, "interface") })
+		stampOwner(c.Name, normalize(c.Source), func(stamp func(*Node, string)) { stamp(&c.Node, "interface") })
 		for _, m := range c.Methods {
 			method(c.Name, m)
 		}

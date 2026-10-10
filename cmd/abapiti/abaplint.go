@@ -43,6 +43,7 @@ Outputs under <outdir>:
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
   native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
+  sites.json with --target go: sites/1 stable HIR identities and Go locations
   go/       with --target go: TS-HG@Go module + zabaplint-go executable when Go is on PATH`,
 	Example: `  abapiti abaplint -o out
   abapiti abaplint ~/src/abaplint -o out --target native
@@ -226,13 +227,20 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 
 	// 4. ABAP
 	if targets["go"] {
-		files, err := gohir.Emit(lowering.Prog)
+		files, sites, err := gohir.EmitWithSites(lowering.Prog)
 		if err != nil {
 			return err
 		}
-		files["main.go"] = tsfront.RegistryGoCLI()
+		files["main.go"] = tsfront.RegistryGoCLIWithSites()
 		files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
 		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
+			return err
+		}
+		siteJSON, err := json.MarshalIndent(sites, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(out, "sites.json"), append(siteJSON, '\n'), 0644); err != nil {
 			return err
 		}
 		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))

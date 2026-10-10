@@ -15,5 +15,10 @@ func (p *Program) siteSource(source string) string {
 	if i := strings.Index(source, "/node_modules/"); i >= 0 {
 		return source[i+1:]
 	}
+	if filepath.IsAbs(source) {
+		if relative, err := filepath.Rel(p.configDir, source); err == nil {
+			return filepath.ToSlash(relative)
+		}
+	}
 	return source
 }

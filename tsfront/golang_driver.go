@@ -34,3 +34,13 @@ func main(){
 }
 `) + registryGoReadPolicy
 }
+
+// RegistryGoCLIWithSites adds host-side profile flags and input hashing for
+// packages emitted by golang.EmitWithSites. The ordinary CLI stays unchanged.
+func RegistryGoCLIWithSites() string {
+	return strings.NewReplacer(
+		`metrics:=flag.Bool`, `sites:=flag.String("profile-sites","","site profile JSON (requires -tags profile_sites)");metrics:=flag.Bool`,
+		` read:=`, ` if siteProfileEnabled {siteProfileStart(*sites);defer siteProfileFinish()} else if *sites!="" {siteProfileStart(*sites)}`+"\n"+` read:=`,
+		`return string(raw)`, `if siteProfileEnabled {siteProfileRead(filepath.Base(path),string(raw))};return string(raw)`,
+	).Replace(RegistryGoCLI())
+}
