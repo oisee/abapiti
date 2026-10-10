@@ -51,9 +51,11 @@ func (e *emitter) runtime(t hir.Type) {
 		line("METHODS splice1 IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		// A short head moves the shared table to the result and copies only the
 		// head back; copying the tail made repeated splice(1) quadratic on A4H.
+		// The fresh result right before the move lets gogen move the table
+		// instead of cloning it (open-steamgate move-then-clear).
 		method("splice1", "DATA from TYPE i.\nDATA head TYPE items_type.\nfrom = p0.\nIF from < 0.\nfrom = lines( items ) + from.\nENDIF.\nIF from < 0.\nfrom = 0.\nENDIF.\nCREATE OBJECT result.\nIF from >= lines( items ).\nRETURN.\nENDIF.\n"+
 			"IF from * 2 > lines( items ).\nAPPEND LINES OF items FROM from + 1 TO result->items.\nDELETE items FROM from + 1.\nRETURN.\nENDIF.\n"+
-			"IF from > 0.\nAPPEND LINES OF items FROM 1 TO from TO head.\nENDIF.\nresult->items = items.\nCLEAR items.\nIF from > 0.\nDELETE result->items FROM 1 TO from.\nENDIF.\nitems = head.\n")
+			"IF from > 0.\nAPPEND LINES OF items FROM 1 TO from TO head.\nENDIF.\nresult = NEW #( ).\nresult->items = items.\nCLEAR items.\nIF from > 0.\nDELETE result->items FROM 1 TO from.\nENDIF.\nitems = head.\n")
 		line("METHODS splice1_view IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method("splice1_view", "result = splice1( p0 ).\n")
 		line("METHODS splice2 IMPORTING p0 TYPE i p1 TYPE i RETURNING VALUE(result) TYPE REF TO " + name + ".")
