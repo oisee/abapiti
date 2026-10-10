@@ -424,6 +424,11 @@ func flowCounts(p *hir.Program, db *rewrite.DB, dir string) []flowSite {
 					if len(bindings[g]) != 1 {
 						reject(&s, "source has other reference bindings")
 					}
+					// Earlier reads can leave aliases in operand temporaries (for
+					// example a.concat(a)), even with only one local binding.
+					if !db.Has("use_count", id, "1") {
+						reject(&s, "reference source sharing unproved")
+					}
 					if kind == "append-value" {
 						reject(&s, "reference append has no kernel value-copy gain")
 					}

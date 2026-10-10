@@ -31,6 +31,7 @@ func TestFlowCandidates(t *testing.T) {
 		{"r3", hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: arr, X: fresh()}, copyArray()), "R3", true},
 		{"r3-later", hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: arr, X: fresh()}, copyArray(), loop()), "R3", false},
 		{"r3-alias", hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: arr, X: fresh()}, &hir.Stmt{Kind: hir.VarDecl, Name: "alias", Type: arr, X: v("a")}, copyArray()), "R3", false},
+		{"r3-double-operand", hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: arr, X: fresh()}, &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.concat", Type: arr, X: v("a"), Args: []*hir.Expr{v("a")}}}), "R3", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
