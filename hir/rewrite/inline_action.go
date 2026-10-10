@@ -87,7 +87,7 @@ func (a *inlineAction) expand(call *hir.Expr, statement *hir.Stmt, caller *hir.M
 	}
 	owner := strings.SplitN(a.r.methods[callee], "::", 2)[0]
 	label := owner + "." + callee.Name
-	c := &inlineCopy{prefix: fmt.Sprintf("%s%d_", a.prefix, a.serial+1), node: hir.Node{ID: call.ID, Source: strings.TrimSpace(call.Source + " inlined " + label)}, used: map[string]bool{}}
+	c := &inlineCopy{call: call.Node, prefix: fmt.Sprintf("%s%d_", a.prefix, a.serial+1), node: hir.Node{ID: call.ID, Source: strings.TrimSpace(call.Source + " inlined " + label)}, used: map[string]bool{}}
 	var pre []*hir.Stmt
 	selfType := hir.Ref(owner)
 	if call.X.Kind == hir.This && call.X.Type.Equal(selfType) {
@@ -158,6 +158,7 @@ func treeSize(s *hir.Stmt, e *hir.Expr) int {
 type inlineCopy struct {
 	prefix string
 	node   hir.Node
+	call   hir.Node
 	self   *hir.Expr
 	used   map[string]bool
 }
@@ -184,7 +185,7 @@ func (c *inlineCopy) expr(e *hir.Expr, env map[string]*hir.Expr) *hir.Expr {
 	}
 	if e.Kind == hir.This {
 		v := *c.self
-		v.Node = c.node
+		v.Node = hir.InlineNode(e.Node, c.call, c.node)
 		return &v
 	}
 	if e.Kind == hir.Local {
@@ -193,7 +194,7 @@ func (c *inlineCopy) expr(e *hir.Expr, env map[string]*hir.Expr) *hir.Expr {
 		}
 	}
 	v := *e
-	v.Node = c.node
+	v.Node = hir.InlineNode(e.Node, c.call, c.node)
 	if e.Range != nil {
 		rg := *e.Range
 		v.Range = &rg
@@ -221,7 +222,7 @@ func (c *inlineCopy) block(s *hir.Stmt, env map[string]*hir.Expr) *hir.Stmt {
 		return nil
 	}
 	v := *s
-	v.Node = c.node
+	v.Node = hir.InlineNode(s.Node, c.call, c.node)
 	v.List = make([]*hir.Stmt, len(s.List))
 	for i, x := range s.List {
 		v.List[i] = c.stmt(x, env)
@@ -236,7 +237,7 @@ func (c *inlineCopy) stmt(s *hir.Stmt, env map[string]*hir.Expr) *hir.Stmt {
 		return c.block(s, copyEnv(env))
 	}
 	v := *s
-	v.Node = c.node
+	v.Node = hir.InlineNode(s.Node, c.call, c.node)
 	v.X = c.expr(s.X, env)
 	v.Y = c.expr(s.Y, env)
 	v.Body = c.stmt(s.Body, copyEnv(env))

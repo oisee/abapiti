@@ -57,6 +57,11 @@ func (t Type) IsRef() bool {
 type Node struct {
 	ID     int
 	Source string
+	// Site metadata never participates in lowering or target spelling.
+	SiteID     string
+	SiteSource string
+	SiteOwner  string
+	InlinePath []string
 }
 type Program struct {
 	Classes    []*Class

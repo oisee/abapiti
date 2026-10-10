@@ -167,6 +167,7 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 	if es := hir.Verify(p); len(es) > 0 {
 		return r.stats, fmt.Errorf("invalid HIR: %v", es)
 	}
+	hir.AssignSiteIDs(p)
 	selected, demanded, err := rewriteDependencies(rules)
 	if err != nil {
 		return r.stats, err

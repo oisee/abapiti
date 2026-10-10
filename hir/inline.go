@@ -24,6 +24,7 @@ func Inline(p *Program) int {
 // InlineStats is Inline that also reports inlined call sites per callee
 // ("Class.method").
 func InlineStats(p *Program) (int, map[string]int) {
+	AssignSiteIDs(p)
 	in := &inliner{p: p, classes: map[string]*Class{}, children: map[string][]*Class{}, owner: map[*Method]*Class{},
 		candidate: map[*Method]bool{}, state: map[*Method]int{}, tmpl: map[*Method]*template{}, rewritten: map[*Method]bool{},
 		overridden: map[string]bool{}, stats: map[string]int{}}
@@ -417,6 +418,7 @@ type site struct {
 	in   *inliner
 	n    int
 	node Node
+	call Node
 	self *Expr
 	used map[string]bool
 }
@@ -428,7 +430,7 @@ func (in *inliner) bind(call *Expr, t *template) (*site, []*Stmt, map[string]*Ex
 	in.serial++
 	in.count++
 	in.stats[t.owner.Name+"."+t.m.Name]++
-	st := &site{in: in, n: in.serial, used: map[string]bool{}}
+	st := &site{in: in, n: in.serial, call: call.Node, used: map[string]bool{}}
 	st.node = Node{ID: call.ID, Source: strings.TrimSpace(call.Source + " inlined " + t.owner.Name + "." + t.m.Name)}
 	var decls []*Stmt
 	self := Ref(t.owner.Name)
@@ -497,7 +499,7 @@ func (st *site) expr(x *Expr, env map[string]*Expr) *Expr {
 	switch x.Kind {
 	case This:
 		c := *st.self
-		c.Node = st.node
+		c.Node = InlineNode(x.Node, st.call, st.node)
 		return &c
 	case Local:
 		if r, ok := env[x.Name]; ok {
@@ -505,7 +507,7 @@ func (st *site) expr(x *Expr, env map[string]*Expr) *Expr {
 		}
 	}
 	c := *x
-	c.Node = st.node
+	c.Node = InlineNode(x.Node, st.call, st.node)
 	if x.Range != nil {
 		r := *x.Range
 		c.Range = &r
@@ -537,7 +539,7 @@ func (st *site) list(s *Stmt, env map[string]*Expr) *Stmt {
 		return nil
 	}
 	c := *s
-	c.Node = st.node
+	c.Node = InlineNode(s.Node, st.call, st.node)
 	c.List = make([]*Stmt, len(s.List))
 	for i, x := range s.List {
 		c.List[i] = st.stmt(x, env)
@@ -554,7 +556,7 @@ func (st *site) stmt(s *Stmt, env map[string]*Expr) *Stmt {
 		return st.list(s, scope(env))
 	}
 	c := *s
-	c.Node = st.node
+	c.Node = InlineNode(s.Node, st.call, st.node)
 	c.X = st.expr(s.X, env)
 	c.Y = st.expr(s.Y, env)
 	c.Body = st.stmt(s.Body, scope(env))

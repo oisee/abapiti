@@ -302,6 +302,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if options.AssumeOnlyIntegerCalculations {
 		l.assumeIntegerTypes()
 	}
+	hir.AssignSiteIDs(l.out)
 	return l.out, l.diags, nil
 }
 
