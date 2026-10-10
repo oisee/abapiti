@@ -543,7 +543,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		}
 		// Anonymous object shapes (fresh literal types included): synthesize
 		// from the members.
-		if props := l.ck.GetPropertiesOfType(t); len(props) > 0 {
+		if props := l.ck.GetPropertiesOfType(t); len(props) > 0 || (t.Symbol() != nil && t.Symbol().Flags&(ast.SymbolFlagsObjectLiteral|ast.SymbolFlagsTypeLiteral) != 0) {
 			if c := l.synthFromProperties(n, props); c != nil {
 				return hir.Ref(c.Name)
 			}
@@ -586,11 +586,13 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 		if p.Flags&ast.SymbolFlagsOptional != 0 && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
-		fields = append(fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft})
+		fields = append(fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft, Readonly: shapePropertyReadonly(p)})
 		fmt.Fprintf(&identity, "%q:%s;", p.Name, ft.String())
 	}
 	// Required and optional reference properties have one physical layout.
 	// Reuse the existing shape; the checker narrows required reads at use sites.
+	// Readonly is a property view, so it preserves the existing physical ABI
+	// and shape name while remaining metadata on the symbol's lowered field.
 	for _, c := range l.out.Classes {
 		if (!strings.HasPrefix(c.Name, "shape.") && !l.shapeLike[c.Name]) || len(c.Fields) != len(fields) || c.Ctor == nil {
 			continue
@@ -624,7 +626,9 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			for _, p := range props {
 				for k := range c.Fields {
 					if c.Fields[k].Name == p.Name {
-						l.fields[p] = c.Fields[k]
+						field := c.Fields[k]
+						field.Readonly = shapePropertyReadonly(p)
+						l.fields[p] = field
 					}
 				}
 			}
@@ -696,7 +700,7 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 	var list []*hir.Stmt
 	for idx, p := range props {
 		ft := fields[idx].Type
-		c.Fields = append(c.Fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft})
+		c.Fields = append(c.Fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft, Readonly: fields[idx].Readonly})
 		// Reference fields share one physical layout with their optional
 		// views, so the constructor accepts an absent reference and stores
 		// it as the initial reference.
@@ -711,15 +715,29 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: p.Name, Type: ft,
 				X: &hir.Expr{Kind: hir.This, Node: l.node(n), Type: hir.Ref(key)}},
 			Y: value})
-		l.fields[p] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
+		l.fields[p] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft, Readonly: fields[idx].Readonly}
 		if p.Parent != nil {
-			l.fieldsBy[p.Parent.Name+"."+p.Name] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft}
+			l.fieldsBy[p.Parent.Name+"."+p.Name] = hir.Field{Node: l.node(n), Name: p.Name, Type: ft, Readonly: fields[idx].Readonly}
 		}
 	}
 	ctor.Body = hir.B(list...)
 	c.Ctor = ctor
 	l.out.Classes = append(l.out.Classes, c)
 	return c
+}
+
+// shapePropertyReadonly includes checker-created mapped/const properties as well
+// as explicit readonly signatures. Readonly remains metadata on the HIR field.
+func shapePropertyReadonly(p *ast.Symbol) bool {
+	if p.CheckFlags&ast.CheckFlagsReadonly != 0 {
+		return true
+	}
+	for _, d := range p.Declarations {
+		if d.ModifierFlags()&ast.ModifierFlagsReadonly != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // checkNumberLiteral rejects values outside the finite binary64 domain.
