@@ -187,3 +187,32 @@ func TestSiteMapDefaultBodies(t *testing.T) {
 		})
 	}
 }
+
+func TestCopyPropSiteIDs(t *testing.T) {
+	build := func() *hir.Program {
+		num := hir.T(hir.I32)
+		length := func() *hir.Expr {
+			return &hir.Expr{Node: hir.Node{Source: "probe.ts:1:1"}, Kind: hir.RuntimeOp, Op: "string.length", X: hir.L(hir.T(hir.String), "abc"), Type: num}
+		}
+		return &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{{Name: "run", Static: true, Result: num, Body: hir.B(
+			&hir.Stmt{Kind: hir.VarDecl, Name: "dead", Type: num, X: length()},
+			&hir.Stmt{Kind: hir.Return, X: length()},
+		)}}}}}
+	}
+	t.Setenv("ABAPITI_COPYPROP", "0")
+	_, before, err := EmitWithSites(build())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(before.Sites) != 2 {
+		t.Fatalf("baseline sites: %+v", before.Sites)
+	}
+	t.Setenv("ABAPITI_COPYPROP", "1")
+	_, after, err := EmitWithSites(build())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(after.Sites) != 1 || after.Sites[0].SiteID != before.Sites[1].SiteID {
+		t.Fatalf("removed store must drop its site and preserve the survivor: before=%+v after=%+v", before.Sites, after.Sites)
+	}
+}

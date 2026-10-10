@@ -387,7 +387,7 @@ func extractStoreFacts(p *hir.Program, demanded map[string]bool, active map[*hir
 	if demanded != nil {
 		demanded["next"] = true
 	}
-	db.demanded = demanded
+	db.SetDemand(demanded)
 	x := &extractor{db: db}
 	for _, c := range p.Classes {
 		methods := append([]*hir.Method{}, c.Methods...)

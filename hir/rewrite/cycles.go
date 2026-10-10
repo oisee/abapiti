@@ -7,7 +7,7 @@ import "sort"
 // expensive. Receiver selection mirrors the extracted closed-world hierarchy;
 // test support checks these seeds independently against Grace's resolved calls.
 func (x *extractor) recursiveCalls() {
-	if x.db.demanded != nil && !x.db.demanded["recursive_call"] {
+	if !x.db.Demands("recursive_call") {
 		return
 	}
 	graph := map[string][]string{}

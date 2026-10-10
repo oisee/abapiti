@@ -3,6 +3,7 @@ package rewrite
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/oisee/abapiti/grace"
 	"github.com/oisee/abapiti/hir"
