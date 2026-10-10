@@ -52,8 +52,9 @@ func TestSingleton(t *testing.T) {
 			t.Fatalf("%s.run_one must forward to run([x]):\n%s", p.Classes[c].Name, Dump(p))
 		}
 	}
-	if m := p.Interfaces[0].Methods; len(m) != 2 || m[1].Name != "run_one" || !m[1].Abstract {
-		t.Fatal("interface lacks run_one")
+	// Interface methods carry the flags of m (ABAP rejects ABSTRACT there).
+	if m := p.Interfaces[0].Methods; len(m) != 2 || m[1].Name != "run_one" || m[1].Abstract != m[0].Abstract {
+		t.Fatal("interface lacks run_one or its flags differ from run")
 	}
 }
 

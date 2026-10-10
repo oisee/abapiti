@@ -81,7 +81,7 @@ func Singleton(p *Program) SingletonStats {
 			for _, m := range in.Methods {
 				if member(m) {
 					in.Methods = append(in.Methods, &Method{Node: m.Node, Name: name + singletonSuffix,
-						Params: []Param{{Name: "x", Type: m.Params[0].Type.Args[0]}}, Result: m.Result, Virtual: m.Virtual, Abstract: true})
+						Params: []Param{{Name: "x", Type: m.Params[0].Type.Args[0]}}, Result: m.Result, Virtual: m.Virtual, Abstract: m.Abstract})
 				}
 			}
 		}
