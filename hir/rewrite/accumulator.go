@@ -250,6 +250,9 @@ func Accumulator(p *hir.Program) (AccumulatorStats, error) {
 }
 
 func accumulatorConsumer(s *hir.Stmt) (*hir.Expr, *hir.Expr, bool) {
+	if accumulatorSeqLength(s) != nil {
+		return accumulatorConsumer(s.X.Stmt.List[0])
+	}
 	if s == nil || s.Kind != hir.ForEach || s.X == nil || s.Body == nil {
 		return nil, nil, false
 	}
@@ -263,7 +266,7 @@ func accumulatorConsumer(s *hir.Stmt) (*hir.Expr, *hir.Expr, bool) {
 	if body.Kind != hir.ExprStmt || body.X == nil {
 		return nil, nil, false
 	}
-	push := body.X
+	push := accumulatorScalar(body.X)
 	if push.Kind != hir.RuntimeOp || push.Op != "array.push" || push.X == nil || push.X.Kind != hir.Local || len(push.Args) != 1 {
 		return nil, nil, false
 	}
@@ -272,6 +275,38 @@ func accumulatorConsumer(s *hir.Stmt) (*hir.Expr, *hir.Expr, bool) {
 		return nil, nil, false
 	}
 	return s.X, push.X, true
+}
+
+// Seq contains expression preludes in the production frontend. Only an ignored
+// spread-push expression may discard the length it yields after its loop.
+func accumulatorSeqLength(s *hir.Stmt) *hir.Expr {
+	if s == nil || s.Kind != hir.ExprStmt || s.X == nil || s.X.Kind != hir.Seq {
+		return nil
+	}
+	e := s.X
+	if e.Stmt == nil || e.Stmt.Kind != hir.Block || len(e.Stmt.List) != 1 || e.Stmt.List[0] == nil || e.Stmt.List[0].Kind != hir.ForEach {
+		return nil
+	}
+	loop := e.Stmt.List[0]
+	_, out, ok := accumulatorConsumer(loop)
+	length := accumulatorScalar(e.Y)
+	if !ok || length == nil || length.Kind != hir.RuntimeOp || length.Op != "array.length" || length.X == nil || length.X.Kind != hir.Local || length.X.Name != out.Name || e.Source == "" || e.Source != loop.Source {
+		return nil
+	}
+	return length
+}
+func accumulatorScalarPath(e *hir.Expr, path string) string {
+	for e != nil && (e.Kind == hir.NumericConvert || e.Kind == hir.RuntimeOp && e.Op == "number.fromI32") {
+		e = e.X
+		path += "/0"
+	}
+	return path
+}
+func accumulatorScalar(e *hir.Expr) *hir.Expr {
+	for e != nil && (e.Kind == hir.NumericConvert || e.Kind == hir.RuntimeOp && e.Op == "number.fromI32") {
+		e = e.X
+	}
+	return e
 }
 
 // The pinned combinators use a singleton fast path. Both branches append the
@@ -284,10 +319,7 @@ func accumulatorAppend(s *hir.Stmt) (*hir.Expr, *hir.Expr, []*hir.Expr, int, boo
 	if s == nil || s.Kind != hir.If || s.X == nil || s.X.Kind != hir.Binary || s.X.Op != "==" {
 		return nil, nil, nil, 0, false
 	}
-	length, one := s.X.X, s.X.Y
-	for length != nil && length.Kind == hir.NumericConvert {
-		length = length.X
-	}
+	length, one := accumulatorScalar(s.X.X), s.X.Y
 	if length == nil || length.Kind != hir.RuntimeOp || length.Op != "array.length" || length.X == nil || length.X.Kind != hir.Local || !accumulatorInteger(one, 1) {
 		return nil, nil, nil, 0, false
 	}
@@ -298,7 +330,7 @@ func accumulatorAppend(s *hir.Stmt) (*hir.Expr, *hir.Expr, []*hir.Expr, int, boo
 	if body == nil || body.Kind != hir.ExprStmt || body.X == nil {
 		return nil, nil, nil, 0, false
 	}
-	push := body.X
+	push := accumulatorScalar(body.X)
 	if push.Kind != hir.RuntimeOp || push.Op != "array.push" || push.X == nil || push.X.Kind != hir.Local || len(push.Args) != 1 {
 		return nil, nil, nil, 0, false
 	}
@@ -393,43 +425,55 @@ func accumulatorOwned(bid, method string, db *DB, bindings map[string]*hir.Stmt,
 type accumulatorResultShape struct {
 	name   string
 	prefix int
+	depth  int
 }
 
 func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape {
 	fail := accumulatorResultShape{}
-	if m.Body == nil || m.Body.Kind != hir.Block || len(m.Body.List) < 2 {
+	if m.Body == nil || m.Body.Kind != hir.Block || len(m.Body.List) == 0 {
 		return fail
 	}
-	decl := m.Body.List[0]
+	body := m.Body
+	path := id + "/body"
+	depth := 0
+	for len(body.List) == 1 && body.List[0] != nil && body.List[0].Kind == hir.Block {
+		body = body.List[0]
+		path += "/s0"
+		depth++
+	}
+	if len(body.List) < 2 {
+		return fail
+	}
+	decl := body.List[0]
 	if decl == nil || decl.Kind != hir.VarDecl || decl.X == nil || decl.X.Kind != hir.New || !decl.Type.Equal(m.Result) || len(decl.X.Args) != 0 {
 		return fail
 	}
 	prefix := 1
 	names := map[string]bool{decl.Name: true}
-	allowed := map[*hir.Expr]bool{}
-	for prefix < len(m.Body.List) {
-		next := m.Body.List[prefix]
+	allowed := map[string]bool{}
+	for prefix < len(body.List) {
+		next := body.List[prefix]
 		if next == nil || next.Kind != hir.VarDecl || next.X == nil || next.X.Kind != hir.Local || next.X.Name != decl.Name || !next.Type.Equal(m.Result) {
 			break
 		}
-		bid := fmt.Sprintf("%s/body/s%d/local/%s", id, prefix-1, decl.Name)
-		path := fmt.Sprintf("%s/body/s%d/x", id, prefix)
-		if !db.Has("fresh", id, bid) || !db.Has("use_count", bid, "1") || !db.Has("not_read_after", bid, path) {
+		bid := fmt.Sprintf("%s/s%d/local/%s", path, prefix-1, decl.Name)
+		usePath := fmt.Sprintf("%s/s%d/x", path, prefix)
+		if !db.Has("fresh", id, bid) || !db.Has("use_count", bid, "1") || !db.Has("not_read_after", bid, usePath) {
 			return fail
 		}
-		allowed[next.X] = true
+		allowed[usePath] = true
 		decl = next
 		names[decl.Name] = true
 		prefix++
 	}
-	bid := fmt.Sprintf("%s/body/s%d/local/%s", id, prefix-1, decl.Name)
+	bid := fmt.Sprintf("%s/s%d/local/%s", path, prefix-1, decl.Name)
 	if !db.Has("fresh", id, bid) || names["acc"] {
 		return fail
 	}
 	ignored := accumulatorSpreadLengths(m.Body)
 	returns := 0
 	good := true
-	visitTree(m.Body, "", func(s *hir.Stmt, _ string) {
+	visitTree(m.Body, id+"/body", func(s *hir.Stmt, site string) {
 		if (s.Kind == hir.VarDecl || s.Kind == hir.ForEach || s.Kind == hir.Try) && s.Name == "acc" {
 			good = false
 		}
@@ -437,37 +481,40 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 			if s.X == nil || s.X.Kind != hir.Local || s.X.Name != decl.Name {
 				good = false
 			} else {
-				allowed[s.X] = true
+				allowed[site+"/x"] = true
 				returns++
 			}
 		}
 		if (s.Kind == hir.VarDecl || s.Kind == hir.ForEach || s.Kind == hir.Try) && names[s.Name] {
 			isPrefix := false
-			for _, d := range m.Body.List[:prefix] {
-				isPrefix = isPrefix || s == d
+			for i := range body.List[:prefix] {
+				isPrefix = isPrefix || site == fmt.Sprintf("%s/s%d", path, i)
 			}
 			if !isPrefix {
 				good = false
 			}
 		}
 		if ignored[s] {
-			allowed[s.X.X] = true
+			allowed[accumulatorScalarPath(s.X, site+"/x")+"/0"] = true
 		}
-	}, func(e *hir.Expr, _ string) {
+		if length := accumulatorSeqLength(s); length != nil {
+			allowed[accumulatorScalarPath(s.X.Y, site+"/x/1")+"/0"] = true
+		}
+	}, func(e *hir.Expr, site string) {
 		if e.Kind == hir.RuntimeOp && e.Op == "array.push" && e.X != nil && e.X.Kind == hir.Local && e.X.Name == decl.Name {
-			allowed[e.X] = true
+			allowed[site+"/0"] = true
 		}
 	})
-	visitTree(m.Body, "", func(*hir.Stmt, string) {}, func(e *hir.Expr, _ string) {
-		if e.Kind == hir.Local && (e.Name == "acc" || names[e.Name] && !allowed[e]) {
+	visitTree(m.Body, id+"/body", func(*hir.Stmt, string) {}, func(e *hir.Expr, site string) {
+		if e.Kind == hir.Local && (e.Name == "acc" || names[e.Name] && !allowed[site]) {
 			good = false
 		}
 	})
-	last := m.Body.List[len(m.Body.List)-1]
+	last := body.List[len(body.List)-1]
 	if !good || returns == 0 || last == nil || last.Kind != hir.Return {
 		return fail
 	}
-	return accumulatorResultShape{decl.Name, prefix}
+	return accumulatorResultShape{decl.Name, prefix, depth}
 }
 
 // spreadPush's unused length follows its append loop and carries the exact
@@ -482,7 +529,11 @@ func accumulatorSpreadLengths(body *hir.Stmt) map[*hir.Stmt]bool {
 		for i := 1; i < len(s.List); i++ {
 			prev, read := s.List[i-1], s.List[i]
 			_, out, ok := accumulatorConsumer(prev)
-			if ok && read != nil && read.Kind == hir.ExprStmt && read.X != nil && read.X.Kind == hir.RuntimeOp && read.X.Op == "array.length" && read.X.X != nil && read.X.X.Kind == hir.Local && read.X.X.Name == out.Name && read.Source != "" && read.Source == prev.Source {
+			var length *hir.Expr
+			if read != nil && read.Kind == hir.ExprStmt {
+				length = accumulatorScalar(read.X)
+			}
+			if ok && length != nil && length.Kind == hir.RuntimeOp && length.Op == "array.length" && length.X != nil && length.X.Kind == hir.Local && length.X.Name == out.Name && read.Source != "" && read.Source == prev.Source {
 				ignored[read] = true
 			}
 		}
@@ -491,9 +542,15 @@ func accumulatorSpreadLengths(body *hir.Stmt) map[*hir.Stmt]bool {
 }
 func accumulatorBody(body *hir.Stmt, result accumulatorResultShape, arr hir.Type) *hir.Stmt {
 	out := accumulatorCopyStmt(body)
+	for i := 0; i < result.depth; i++ {
+		out = out.List[0]
+	}
 	out.List = out.List[result.prefix:]
 	ignored := accumulatorSpreadLengths(out)
 	visitTree(out, "", func(s *hir.Stmt, _ string) {
+		if accumulatorSeqLength(s) != nil {
+			s.X.Y = hir.L(s.X.Y.Type, 0)
+		}
 		if s.Kind == hir.Return {
 			s.X = nil
 		}

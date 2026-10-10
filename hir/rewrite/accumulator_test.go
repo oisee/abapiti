@@ -296,3 +296,48 @@ func TestAccumulatorNilStatements(t *testing.T) {
 		t.Fatalf("%v %v", st, err)
 	}
 }
+
+func TestAccumulatorFrontendBodyWrapper(t *testing.T) {
+	p, m, c := accumulatorFixture()
+	m.Body = hir.B(m.Body)
+	c.Body = hir.B(c.Body)
+	st, err := rewrite.Accumulator(p)
+	if err != nil || len(st.Sites) != 1 || st.Clones != 1 {
+		t.Fatalf("%v %v", st, err)
+	}
+}
+
+func accumulatorSpreadExpr(loop *hir.Stmt, out string, arr hir.Type) *hir.Stmt {
+	loop.Source = "probe.ts:1:1"
+	return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{Source: loop.Source}, Kind: hir.Seq, Type: hir.T(hir.I32), Stmt: hir.B(loop), Y: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: hir.T(hir.I32), X: hir.V(out, arr)}}}
+}
+func TestAccumulatorSpreadSeq(t *testing.T) {
+	p, m, c := accumulatorFixture()
+	c.Body.List[1] = accumulatorSpreadExpr(c.Body.List[1], "out", c.Result)
+	// Use the same ignored spread expression inside the callee.
+	m.Params = []hir.Param{{Name: "r", Type: m.Result}}
+	c.Params = append(c.Params, hir.Param{Name: "r", Type: m.Result})
+	c.Body.List[1].X.Stmt.List[0].X.Args = []*hir.Expr{hir.V("r", m.Result)}
+	loop := &hir.Stmt{Kind: hir.ForEach, Name: "row", Type: m.Result.Args[0], X: hir.V("r", m.Result), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.push", Type: hir.T(hir.I32), X: hir.V("result", m.Result), Args: []*hir.Expr{hir.V("row", m.Result.Args[0])}}})}
+	m.Body.List[1] = accumulatorSpreadExpr(loop, "result", m.Result)
+	db, err := rewrite.Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
+	st, err := rewrite.Accumulator(p)
+	if err != nil || st.Clones != 1 || len(st.Sites) != 1 {
+		t.Fatalf("%v %v", st, err)
+	}
+}
+
+func TestAccumulatorSharedResultReference(t *testing.T) {
+	p, m, _ := accumulatorFixture()
+	shared := m.Body.List[1].X.X
+	read := &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: hir.T(hir.I32), X: shared}}
+	m.Body.List = append(m.Body.List[:2], append([]*hir.Stmt{read}, m.Body.List[2:]...)...)
+	st, err := rewrite.Accumulator(p)
+	if err != nil || len(st.Sites) != 0 {
+		t.Fatalf("%v %v", st, err)
+	}
+}
