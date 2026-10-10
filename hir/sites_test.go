@@ -52,3 +52,27 @@ func TestSyntheticSitesUseOwnerKindOrdinal(t *testing.T) {
 		t.Fatalf("%s %s", a.SiteID, b.SiteID)
 	}
 }
+
+func TestSharedBridgeSitesBelongToEachMethod(t *testing.T) {
+	shared := &Expr{Node: Node{ID: 7, Source: "probe.ts:3:4"}, Kind: VirtualCall}
+	body := B(&Stmt{Kind: ExprStmt, X: shared}, &Stmt{Kind: ExprStmt, X: shared})
+	a, b := &Method{Name: "set_value", Body: body}, &Method{Name: "set", Body: body}
+	p := &Program{Classes: []*Class{{Name: "probe.ts.C", Methods: []*Method{a, b}}}}
+	before := Dump(p)
+	AssignSiteIDs(p)
+	x, y := a.Body.List[0].X, b.Body.List[0].X
+	if x == y || x.SiteID == y.SiteID || x.SiteOwner != "probe.ts.C.set_value" || y.SiteOwner != "probe.ts.C.set" {
+		t.Fatalf("shared owner: %+v %+v", x.Node, y.Node)
+	}
+	if a.Body.List[1].X != x || b.Body.List[1].X != y {
+		t.Fatal("within-method sharing changed")
+	}
+	if Dump(p) != before || x.ID != 7 || y.ID != 7 {
+		t.Fatal("legacy IR changed")
+	}
+	first, second := x.SiteID, y.SiteID
+	AssignSiteIDs(p)
+	if x.SiteID != first || y.SiteID != second {
+		t.Fatal("detachment not idempotent")
+	}
+}

@@ -16,6 +16,7 @@ func AssignSiteIDs(p *Program) { AssignSiteIDsWithSource(p, func(s string) strin
 // Node.Source and target names remain untouched. A class SiteOwner hint can
 // supply a stable owner for serial-named synthetic declarations.
 func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
+	ownSiteNodes(p)
 	stampOwner := func(owner, fallback string, visit func(func(*Node, string))) {
 		counts := map[string]int{}
 		visit(func(n *Node, kind string) {
