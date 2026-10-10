@@ -1,0 +1,16 @@
+rule_id,family,loop_count,before,after,status
+PM0001,cast-assign,5000000,a4h/cast-assign-before.prog.abap,a4h/cast-assign-after.prog.abap,pending A4H syntax check and measurement
+PM0002,cast-field,5000000,a4h/cast-field-before.prog.abap,a4h/cast-field-after.prog.abap,pending A4H syntax check and measurement
+PM0003,conv-bool,5000000,a4h/conv-bool-before.prog.abap,a4h/conv-bool-after.prog.abap,pending A4H syntax check and measurement
+PM0005,box-copy,5000000,a4h/box-copy-before.prog.abap,a4h/box-copy-after.prog.abap,pending A4H syntax check and measurement
+PM0007,cast,5000000,a4h/cast-before.prog.abap,a4h/cast-after.prog.abap,pending A4H syntax check and measurement
+PM0009,cast-initial,5000000,a4h/cast-initial-before.prog.abap,a4h/cast-initial-after.prog.abap,pending A4H syntax check and measurement
+PM0010,cast-call,5000000,a4h/cast-call-before.prog.abap,a4h/cast-call-after.prog.abap,pending A4H syntax check and measurement
+PM0011,cast-field,5000000,a4h/cast-field-before.prog.abap,a4h/cast-field-after.prog.abap,pending A4H syntax check and measurement
+PM0012,cast-copy,5000000,a4h/cast-copy-before.prog.abap,a4h/cast-copy-after.prog.abap,pending A4H syntax check and measurement
+PM0013,cast-bound,5000000,a4h/cast-bound-before.prog.abap,a4h/cast-bound-after.prog.abap,pending A4H syntax check and measurement
+PM0015,bool,5000000,a4h/bool-before.prog.abap,a4h/bool-after.prog.abap,pending A4H syntax check and measurement
+PM0016,downcast,5000000,a4h/downcast-before.prog.abap,a4h/downcast-after.prog.abap,pending A4H syntax check and measurement
+PM0017,conv-compare,5000000,a4h/conv-compare-before.prog.abap,a4h/conv-compare-after.prog.abap,pending A4H syntax check and measurement
+PM0018,cast-copy-decl-ref,5000000,a4h/cast-copy-decl-ref-before.prog.abap,a4h/cast-copy-decl-ref-after.prog.abap,pending A4H syntax check and measurement
+PM0020,cast-copy-decl-string,5000000,a4h/cast-copy-decl-string-before.prog.abap,a4h/cast-copy-decl-string-after.prog.abap,pending A4H syntax check and measurement

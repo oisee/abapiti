@@ -47,8 +47,8 @@ func exportPeepholes(input, output string) error {
 	for _, file := range files {
 		class := strings.ToUpper(strings.TrimSuffix(filepath.Base(file), ".clas.abap"))
 		entry := names[class]
-		if entry.Kind != "class" {
-			continue
+		if entry.ID == "" {
+			entry.ID = strings.ToLower(class)
 		}
 		raw, err := os.ReadFile(file)
 		if err != nil {

@@ -1,0 +1,43 @@
+rule_id,pattern,tag,sites,in_loop,hot_weight,saved_per_exec,correctness_gate,osgo_delta,a4h_ns,decision
+PM0001,"DATA(TMP) = CAST NAME( TMP ).
+TMP = TMP.",ABAP-only,5135,1453,10970,1,pending,pending,pending,pending
+PM0002,"DATA(TMP) = CAST NAME( TMP ).
+TMP = TMP->NAME.",ABAP-only,3354,1245,9081,1,pending,pending,pending,pending
+PM0003,"DATA(TMP) = CONV ABAP_BOOL( ABAP_TRUE ).
+IF TMP = ABAP_TRUE.",ABAP-only,3408,762,6096,1,pending,pending,pending,pending
+PM0004,"TMP = TMP->NAME.
+TMP = TMP.",HIR,2076,755,5166,1,pending,pending,pending,pending
+PM0005,"TMP = TMP.
+TMP->OVAL = TMP.",ABAP-only,4477,21,4564,1,pending,pending,pending,pending
+PM0006,"TMP = TMP.
+TMP = TMP.",HIR,1796,570,4172,1,pending,pending,pending,pending
+PM0007,"DATA(TMP) = CAST NAME( TMP ).
+TMP = NAME=>NAME( NAME = TMP NAME = TMP NAME = TMP ).",ABAP-only,2521,19,2602,1,pending,pending,pending,pending
+PM0008,"TMP = NAME=>NAME( NAME = TMP NAME = TMP NAME = TMP ).
+TMP = TMP.",HIR,2514,14,2556,1,pending,pending,pending,pending
+PM0009,"DATA(TMP) = CAST NAME( TMP ).
+IF TMP IS INITIAL.",ABAP-only,1297,342,2539,1,pending,pending,pending,pending
+PM0010,"DATA(TMP) = CAST NAME( TMP ).
+TMP = TMP->NAME( ).",ABAP-only,684,285,1671,1,pending,pending,pending,pending
+PM0011,"DATA(TMP) = CAST NAME( TMP ).
+TMP = TMP->VALUE.",ABAP-only,841,224,1603,1,pending,pending,pending,pending
+PM0012,"TMP = TMP.
+TMP ?= TMP.",ABAP-only,657,300,1587,1,pending,pending,pending,pending
+PM0013,"DATA(TMP) = CAST NAME( TMP ).
+TMP = XSDBOOL( TMP IS BOUND ).",ABAP-only,822,206,1509,1,pending,pending,pending,pending
+PM0014,"TMP = TMP->NAME( NAME = TMP ).
+TMP = TMP.",HIR,728,171,1463,1,pending,pending,pending,pending
+PM0015,"TMP = XSDBOOL( TMP IS BOUND ).
+IF TMP = ABAP_TRUE.",ABAP-only,738,194,1392,1,pending,pending,pending,pending
+PM0016,"TMP ?= TMP.
+TMP = TMP.",ABAP-only,514,204,1336,1,pending,pending,pending,pending
+PM0017,"DATA(TMP) = CONV STRING( LIT ).
+TMP = XSDBOOL( TMP = TMP ).",ABAP-only,407,173,1202,1,pending,pending,pending,pending
+PM0018,"TMP = TMP.
+DATA TMP TYPE REF TO NAME.
+DATA(TMP) = CAST NAME( TMP ).",ABAP-only,555,166,1155,1,pending,pending,pending,pending
+PM0019,"TMP = TMP->NAME( ).
+TMP = TMP.",HIR,523,177,1150,1,pending,pending,pending,pending
+PM0020,"TMP = TMP.
+DATA TMP TYPE STRING.
+DATA(TMP) = CAST NAME( TMP ).",ABAP-only,380,201,1112,1,pending,pending,pending,pending
