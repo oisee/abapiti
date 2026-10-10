@@ -40,6 +40,10 @@ func main(){
  fmt.Printf("%%d %%d %%d %%d\n",a.N,b.N,box.Items[0].(*%s).N,staticResult.N)
 }
 `, obj, obj, obj, obj, body("wrapConsumed"), obj, body("popNode"), obj, body("setNodes"), obj, obj, obj, obj, obj, body("wrapConsumed"), obj)
+	fixture = strings.Replace(fixture, "func main(){", "func erasedReturn(v any)any{return v}\nfunc main(){", 1)
+	fixture = strings.Replace(fixture, "resultDebugMutation(\"fixture.ts:10:3\",\"a\")", "var erased any=erasedReturn(a)\nresultDebugMutation(\"fixture.ts:10:3\",\"a\")", 1)
+	fixture = strings.Replace(fixture, "staticResult.N)", "staticResult.N,erased.(*"+obj+").N)", 1)
+	fixture = strings.Replace(fixture, "%d %d %d %d", "%d %d %d %d %d", 1)
 	runtime := `package main
 type array[T any]struct{Items []T}
 func(a *array[T])push(v T){a.Items=append(a.Items,v)}
@@ -86,9 +90,9 @@ func(m *orderedMap[K,V])set(k K,v V){m.Values[k]=v}
 			if err != nil {
 				t.Fatalf("%v\n%s", err, output)
 			}
-			expected := "8 8 8 8\n"
+			expected := "8 8 8 8 8\n"
 			if mode == "value" {
-				expected = "8 7 7 7\n"
+				expected = "8 7 7 7 7\n"
 			}
 			if string(output) != expected {
 				t.Fatalf("got %q, want %q", output, expected)

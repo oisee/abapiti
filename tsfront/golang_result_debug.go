@@ -170,7 +170,7 @@ func RegistryGoResultDebug(files map[string]string, mode string) error {
 						}
 					case *ast.ReturnStmt:
 						for i, e := range x.Results {
-							if isResult(info.TypeOf(e)) {
+							if couldBeResult(info.TypeOf(e)) {
 								x.Results[i] = copyExpr(e)
 								stats["returns"]++
 							}
