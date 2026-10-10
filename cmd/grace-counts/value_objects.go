@@ -219,16 +219,24 @@ func writeValueOutputs(out, dir string, p *hir.Program, flow *rewrite.DB, check 
 		}
 		if selectedValue(r.Class) || r.Removed > 0 {
 			first := ""
-			for _, s := range r.First {
+			for _, s := range r.Definite {
 				if s != "" {
 					first = s
 					break
 				}
 			}
+			if first == "" {
+				for _, s := range r.First {
+					if s != "" {
+						first = s
+						break
+					}
+				}
+			}
 			fmt.Fprintf(&report, "%s | %s | %s/%s | %d/%d/%d | %d | %s\n", r.Class, strings.Join(r.Conditions[:], " "), r.Bytes, r.Refs, r.Total, r.Loop, r.Hot, r.Removed, first)
 		}
 		if r.Class == "src/abap/2_statements/result.ts.Result" {
-			fmt.Fprintf(&report, "RESULT VERDICT: qualifies=%t; C1=%s; %s\n", r.Qualifies, r.Conditions[0], r.First[0])
+			fmt.Fprintf(&report, "RESULT VERDICT: qualifies=%t; C1=%s; %s\n", r.Qualifies, r.Conditions[0], r.Definite[0])
 		}
 	}
 	w.Flush()

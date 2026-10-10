@@ -282,7 +282,15 @@ func (v *valueScreen) store(t hir.Type, e *hir.Expr, path, source string) {
 			}
 			for _, cn := range v.possible(e.Type) {
 				if accepted[cn] {
-					v.block(cn, "3", path, source, "assigned to mixed supertype/interface "+target.String())
+					reason := "assigned to mixed supertype/interface " + target.String()
+					from := e.Type
+					if from.Kind == hir.Optional {
+						from = from.Args[0]
+					}
+					if from.Kind != hir.ClassRef || from.Name != cn {
+						reason = "potential " + reason
+					}
+					v.block(cn, "3", path, source, reason)
 				}
 			}
 		}
@@ -312,7 +320,7 @@ func (v *valueScreen) stmt(s *hir.Stmt, path string, loop int, c *hir.Class, m *
 					continue
 				}
 				reason := "field write outside own constructor: " + s.X.Owner + "." + s.X.Name
-				if s.X.X.Type.Kind == hir.Dynamic || s.X.X.Type.Name == hir.RootObject {
+				if untypedValueType(s.X.X.Type) {
 					reason = "potential " + reason
 				}
 				v.block(cn, "1", path, source, reason)
@@ -373,7 +381,7 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 		if len(a) > 0 && len(b) > 0 && !absent(e.X) && !absent(e.Y) {
 			for _, cn := range append(a, b...) {
 				reason := "reference equality"
-				if e.X.Type.Kind == hir.Dynamic || e.Y.Type.Kind == hir.Dynamic || e.X.Type.Name == hir.RootObject || e.Y.Type.Name == hir.RootObject {
+				if untypedValueType(e.X.Type) || untypedValueType(e.Y.Type) {
 					reason = "potential reference equality through dynamic type"
 				}
 				v.block(cn, "2", path, source, reason)
@@ -387,7 +395,7 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 		if e.X != nil {
 			for _, cn := range v.possible(e.X.Type) {
 				reason := "instanceof/class test through " + e.X.Type.String()
-				if e.X.Type.Kind == hir.Dynamic || e.X.Type.Name == hir.RootObject {
+				if untypedValueType(e.X.Type) {
 					reason = "potential " + reason
 				}
 				v.block(cn, "2", path, source, reason)
@@ -438,6 +446,13 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 				v.add("vo_dynamic_new", cn, c.Name+"::"+m.Name, path, source, strconv.Itoa(loop))
 			}
 		}
+		if e.Op == "dynamic.strictEquals" {
+			for _, arg := range operands {
+				for _, cn := range v.possible(arg.e.Type) {
+					v.block(cn, "2", path, source, "potential reference equality through dynamic.strictEquals")
+				}
+			}
+		}
 		key := []*hir.Expr{}
 		switch {
 		case strings.HasPrefix(e.Op, "map.") && len(e.Args) > 0 && (e.Op == "map.set" || e.Op == "map.get" || e.Op == "map.has" || e.Op == "map.delete"):
@@ -447,7 +462,11 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 		}
 		for _, k := range key {
 			for _, cn := range v.possible(k.Type) {
-				v.block(cn, "2", path, source, "identity-keyed collection: "+e.Op)
+				reason := "identity-keyed collection: " + e.Op
+				if untypedValueType(k.Type) {
+					reason = "potential " + reason
+				}
+				v.block(cn, "2", path, source, reason)
 			}
 		}
 		// Constructor conversions such as set.fromArray preserve element identity.
@@ -459,7 +478,15 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 		if strings.HasPrefix(e.Op, "classvalue.") || e.Op == "object.classOf" {
 			for _, op := range operands {
 				for _, cn := range v.possible(op.e.Type) {
-					v.block(cn, "2", path, source, "dynamic class operation: "+e.Op)
+					reason := "dynamic class operation: " + e.Op
+					from := op.e.Type
+					if from.Kind == hir.Optional {
+						from = from.Args[0]
+					}
+					if from.Kind != hir.ClassRef || from.Name != cn {
+						reason = "potential " + reason
+					}
+					v.block(cn, "2", path, source, reason)
 				}
 			}
 		}
@@ -480,7 +507,11 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 }
 func (v *valueScreen) collectionIdentity(t hir.Type, path, source, reason string) {
 	for _, cn := range v.possible(t) {
-		v.block(cn, "2", path, source, "identity-keyed collection: "+reason)
+		r := "identity-keyed collection: " + reason
+		if untypedValueType(t) {
+			r = "potential " + r
+		}
+		v.block(cn, "2", path, source, r)
 	}
 	for _, a := range t.Args {
 		v.collectionIdentity(a, path, source, reason)
@@ -551,4 +582,11 @@ func valueSourceOrder(s string) string {
 		return fmt.Sprintf("%s:%09d:%09d", strings.Join(parts[:len(parts)-2], ":"), line, col)
 	}
 	return s
+}
+
+func untypedValueType(t hir.Type) bool {
+	if t.Kind == hir.Optional {
+		return untypedValueType(t.Args[0])
+	}
+	return t.Kind == hir.Dynamic || (t.Kind == hir.ClassRef && t.Name == hir.RootObject)
 }

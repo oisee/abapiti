@@ -47,6 +47,19 @@ func TestValueObjects(t *testing.T) {
 			p.Classes[0].Methods = []*hir.Method{{Name: "optional", Static: true, Params: []hir.Param{{Name: "a", Type: hir.T(hir.Optional, hir.Ref("C"))}}, Result: hir.T(hir.Void), Body: hir.B()}}
 		}},
 	}
+	cases = append(cases, struct {
+		name, condition string
+		change          func(*hir.Program)
+	}{"dynamic-equality", "2", func(p *hir.Program) {
+		p.Classes[0].Methods = []*hir.Method{{Name: "compare", Static: true, Params: []hir.Param{{Name: "a", Type: hir.T(hir.Dynamic)}, {Name: "b", Type: hir.T(hir.Dynamic)}}, Result: hir.T(hir.Bool), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Node: hir.Node{Source: "fixture.ts:8:1"}, Kind: hir.RuntimeOp, Op: "dynamic.strictEquals", Type: hir.T(hir.Bool), X: hir.V("a", hir.T(hir.Dynamic)), Args: []*hir.Expr{hir.V("b", hir.T(hir.Dynamic))}}})}}
+	}})
+	cases = append(cases, struct {
+		name, condition string
+		change          func(*hir.Program)
+	}{"primitive-equality", "", func(p *hir.Program) {
+		p.Classes[0].Methods = []*hir.Method{{Name: "equals", Result: hir.T(hir.Bool), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Node: hir.Node{Source: "fixture.ts:8:1"}, Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: hir.L(hir.T(hir.I32), 1), Y: hir.L(hir.T(hir.I32), 1)}})}}
+	}})
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := valueFixture()
