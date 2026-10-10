@@ -49,7 +49,7 @@ func RuntimeOps() (supported, unsupported []string) {
 	return
 }
 
-func (b *body) runtime(x *hir.Expr) string {
+func (b *body) runtime(x *hir.Expr, discard bool) string {
 	if !supportedOps[x.Op] {
 		b.e.unsupported(x.Node, x.Op)
 		return ""
@@ -63,6 +63,17 @@ func (b *body) runtime(x *hir.Expr) string {
 			typ = ps[i]
 		}
 		args = append(args, b.value(v, typ))
+	}
+	if discard {
+		switch x.Op {
+		case "array.slice0", "array.slice1", "array.slice2":
+			// Arguments have already been evaluated and converted in source order.
+			// Keep the nil receiver failure even though no copy is observable.
+			b.line("_ = len(%s.Items)", a)
+		default:
+			b.line("%s.%s_discard(%s)", a, strings.Split(x.Op, ".")[1], strings.Join(args, ","))
+		}
+		return ""
 	}
 	code := ""
 	switch x.Op {
@@ -201,4 +212,15 @@ func (b *body) runtime(x *hir.Expr) string {
 		}
 	}
 	return b.temp(x.Type, code)
+}
+
+func discardArrayResult(x *hir.Expr) bool {
+	if x == nil || x.Kind != hir.RuntimeOp {
+		return false
+	}
+	switch x.Op {
+	case "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view":
+		return true
+	}
+	return false
 }

@@ -732,7 +732,7 @@ func (b *body) expr(x *hir.Expr) string {
 		b.locals = old
 		return n
 	case hir.RuntimeOp:
-		return b.runtime(x)
+		return b.runtime(x, false)
 	default:
 		e.unsupported(x.Node, string(x.Kind))
 		code = "*new(" + e.typ(t) + ")"
@@ -822,7 +822,11 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("%s=%s", a, v)
 		}
 	case hir.ExprStmt:
-		b.expr(s.X)
+		if discardArrayResult(s.X) {
+			b.runtime(s.X, true)
+		} else {
+			b.expr(s.X)
+		}
 	case hir.If:
 		a := b.expr(s.X)
 		b.line("if %s {", a)

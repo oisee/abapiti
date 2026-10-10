@@ -32,6 +32,8 @@ for byte against the supplied kit. SHA-256:
 | 1: small push + concat | seeded | 9.78 | 9.653 | 40.41 | 2.375 | 76.714 | 582.1 | 2.659 |
 | 2: small array coallocation | clean | 12.05 | 11.827 | 39.62 | 2.446 | 64.906 | 601.3 | 2.735 |
 | 2: small array coallocation | seeded | 12.49 | 12.279 | 39.76 | 2.443 | 64.658 | 600.3 | 2.741 |
+| 3: discard copies + capacity | clean | 13.22 | 13.030 | 38.68 | 2.372 | 67.134 | 578.3 | 2.557 |
+| 3: discard copies + capacity | seeded | 12.10 | 11.968 | 38.33 | 2.365 | 66.846 | 582.5 | 2.563 |
 
 Raw per-run measurements: [baseline](2026-10-10-hir-golang-alloc/baseline.json).
 Executables, generated sources, profiles and logs are preserved under
@@ -95,3 +97,21 @@ this task, but step 2 and later wall time/RSS/GC readings include this external
 contention. They are observations, not a controlled speedup claim. Allocation
 volume and output equality are independent of that scheduling contention.
 Raw step data: [step 2](2026-10-10-hir-golang-alloc/step2.json).
+
+Step 3 (this commit): concat uses 12.5% headroom instead of up to twice the left
+length. Unshift grows through push and moves the elements within the receiver's
+own capacity; capped splice prefixes still cannot overwrite their live tails.
+For directly discarded slice results, the emitter evaluates receiver and all
+arguments in order and keeps the nil receiver failure, without constructing a
+copy. Discarded splice operations mutate in place, clear removed slots, and
+construct no returned array. Returned slices/splices retain their previous ABI.
+
+The new probes compare discarded splice mutations with ordinary splice over
+negative/clamped indices, check independent view mutation after unshift/growth,
+and assert receiver-before-argument evaluation and nil failure for discarded
+slice. The evaluation probe initially used numeric HIR addition for a string;
+using the catalogue's string.concat corrected the probe. Full uncached guard
+then passed, with all required Go oracle counts unchanged. All six full checks
+match the kit hashes. Exact allocated bytes are now about 25.3% below baseline;
+small headers and pointer element storage remain the next targets.
+Raw step data: [step 3](2026-10-10-hir-golang-alloc/step3.json).

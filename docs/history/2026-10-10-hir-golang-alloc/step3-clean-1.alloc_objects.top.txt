@@ -1,0 +1,48 @@
+File: zabaplint
+Build ID: a7a9c4d653636179ed91d82e9db982266bf203d1
+Type: alloc_objects
+Time: 2026-10-10 14:06:31 UTC
+Showing nodes accounting for 60755168, 94.75% of 64123119 total
+Dropped 343 nodes (cum <= 320615)
+Showing top 40 nodes out of 222
+      flat  flat%   sum%        cum   cum%
+  11142630 17.38% 17.38%   11142630 17.38%  main.(*array[go.shape.interface {}]).push (inline)
+  11141252 17.37% 34.75%   52877771 82.46%  main.src/abap/2_statements/combi.ts.Sequence.run
+   7176262 11.19% 45.94%   50318457 78.47%  main.src/abap/2_statements/combi.ts.Expression.run
+   3371877  5.26% 51.20%    3371877  5.26%  main.(*array[go.shape.interface {}]).slice2 (inline)
+   2839892  4.43% 55.63%    4815256  7.51%  main.src/abap/2_statements/combi.ts.Vers.run
+   2789386  4.35% 59.98%    2789386  4.35%  unicode/utf8.AppendRune (inline)
+   2785327  4.34% 64.32%   24888274 38.81%  main.src/abap/2_statements/combi.ts.OptionalPriority.run
+   2534046  3.95% 68.28%    3484321  5.43%  main.src/abap/2_statements/combi.ts.Word.run
+   2534039  3.95% 72.23%    2992791  4.67%  main.src/abap/2_statements/combi.ts.Token.run
+   2179086  3.40% 75.63%    2179086  3.40%  main.src/abap/2_statements/result.ts.ResultNode constructor (inline)
+   2075290  3.24% 78.86%   47916433 74.73%  main.src/abap/2_statements/combi.ts.AlternativePriority.run
+   1130504  1.76% 80.63%    1130504  1.76%  main.src/abap/2_statements/result.ts.Result constructor (inline)
+   1130503  1.76% 82.39%    1130503  1.76%  main.src/abap/nodes/expression_node.ts.ExpressionNode constructor (inline)
+   1092252  1.70% 84.09%    7527126 11.74%  main.src/abap/2_statements/combi.ts.Regex.run
+   1048586  1.64% 85.73%    1048586  1.64%  main.src/abap/nodes/token_node.ts.TokenNode constructor (inline)
+    961209  1.50% 87.23%    1967812  3.07%  main.src/abap/nodes/statement_node.ts.StatementNode.toTokens
+    884740  1.38% 88.61%     884740  1.38%  main.src/abap/nodes/token_node_regex.ts.TokenNodeRegex constructor (inline)
+    655361  1.02% 89.63%     655393  1.02%  regexp.(*Regexp).backtrack
+    557064  0.87% 90.50%     557064  0.87%  main.src/position.ts.Position constructor
+    538439  0.84% 91.34%     538439  0.84%  internal/bytealg.MakeNoZero
+    305848  0.48% 91.81%     458768  0.72%  main.src/abap/1_lexer/tokens/identifier.ts.Identifier constructor
+    240303  0.37% 92.19%    2418981  3.77%  main.src/abap/2_statements/statement_parser.ts.StatementParser.process
+    234840  0.37% 92.55%     655365  1.02%  main.src/abap/3_structures/structures/_combi.ts.SubStatement.run
+    174765  0.27% 92.83%    5808953  9.06%  main.src/abap/2_statements/combi.ts.Optional.run
+    174760  0.27% 93.10%   35044779 54.65%  main.src/abap/2_statements/combi.ts.Alternative.run
+    168355  0.26% 93.36%     340389  0.53%  main.str
+    152915  0.24% 93.60%    8144229 12.70%  main.src/abap/2_statements/combi.ts.Star.run.func2
+    131074   0.2% 93.80%     953366  1.49%  main.src/abap/2_statements/statement_parser.ts.WorkArea.tokensToNodes
+    131070   0.2% 94.01%    1364600  2.13%  main.src/abap/3_structures/structures/_combi.ts.Sequence.run
+    126563   0.2% 94.21%     631964  0.99%  main.src/abap/nodes/statement_node.ts.StatementNode.concatTokens
+    109228  0.17% 94.38%    2556185  3.99%  main.src/abap/nodes/statement_node.ts.StatementNode.getTokens
+     98308  0.15% 94.53%   53547108 83.51%  main.src/abap/2_statements/combi.ts.Combi.run.func2
+     65535   0.1% 94.63%    4664895  7.27%  main.src/abap/2_statements/combi.ts.Permutation.run
+     32769 0.051% 94.68%    6838692 10.66%  main.src/abap/2_statements/combi.ts.StarPriority.run
+     21845 0.034% 94.72%    1348216  2.10%  main.src/abap/3_structures/structures/_combi.ts.Alternative.run
+     10923 0.017% 94.73%     498826  0.78%  main.src/abap/types/method_parameters.ts.MethodParameters.parse
+      4681 0.0073% 94.74%     536275  0.84%  main.src/abap/types/method_parameters.ts.MethodParameters constructor (inline)
+      3641 0.0057% 94.75%     572684  0.89%  main.src/abap/types/method_definition.ts.MethodDefinition constructor
+         0     0% 94.75%    3244266  5.06%  main.(*array[go.shape.interface {}]).slice0 (inline)
+         0     0% 94.75%     884769  1.38%  main.(*jsRegExp).find

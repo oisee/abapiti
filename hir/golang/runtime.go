@@ -503,14 +503,19 @@ func (a *array[T]) reverse() *array[T] {
 	return a
 }
 func (a *array[T]) unshift(v T) int32 {
-	a.Items = append([]T{v}, a.Items...)
-	return int32(len(a.Items))
+ // Reuse spare capacity only within this array's own range. Splice views
+ // already cap the retained prefix, so growth cannot overwrite a live tail.
+ var zero T
+ a.push(zero)
+ copy(a.Items[1:],a.Items[:len(a.Items)-1])
+ a.Items[0]=v
+ return int32(len(a.Items))
 }
 func (a *array[T]) concat(b *array[T]) *array[T] {
- // Build the independent result once. Headroom on a growing left operand
- // avoids a second allocation when a caller appends to the concatenation.
+ // Build the independent result once. Modest headroom avoids paying for
+ // nearly twice the result when a long left operand receives a short tail.
  n:=len(a.Items)+len(b.Items)
- items:=make([]T,n,max(n,2*len(a.Items)))
+ items:=make([]T,n,n+n/8)
  copy(items,a.Items);copy(items[len(a.Items):],b.Items)
  return &array[T]{Items:items}
 }
@@ -548,6 +553,28 @@ func (a *array[T]) splice3(i, n int32, v T) *array[T] {
 	a.Items[i] = v
 	return out
 }
+func (a *array[T]) splice1_discard(i int32) { a.splice2_discard(i,int32(len(a.Items))) }
+func (a *array[T]) splice2_discard(i,n int32) {
+ i=sliceIndex(i,int32(len(a.Items)))
+ n=max(0,min(n,int32(len(a.Items))-i))
+ size:=len(a.Items)-int(n)
+ copy(a.Items[i:],a.Items[i+n:])
+ clear(a.Items[size:])
+ a.Items=a.Items[:size]
+}
+func (a *array[T]) splice3_discard(i,n int32,v T) {
+ i=sliceIndex(i,int32(len(a.Items)))
+ a.splice2_discard(i,n)
+ a.push(v)
+ copy(a.Items[i+1:],a.Items[i:len(a.Items)-1])
+ a.Items[i]=v
+}
+func (a *array[T]) splice1_view_discard(i int32) {
+ i=sliceIndex(i,int32(len(a.Items)))
+ clear(a.Items[i:])
+ if i==0 {a.Items=nil} else {a.Items=a.Items[:i:i]}
+}
+
 func (a *array[T]) pop() optional[T] {
 	if len(a.Items) == 0 {
 		return optional[T]{}
