@@ -24,6 +24,8 @@ type LowerDiagnostic struct {
 	Category string `json:"category"`
 	Loc      string `json:"loc"` // file:line:col
 	Message  string `json:"message"`
+	Cascade  bool   `json:"cascade,omitempty"` // consequence of a failed local declaration
+	node     *ast.Node
 }
 
 func (d LowerDiagnostic) String() string { return d.Category + " " + d.Loc + ": " + d.Message }
@@ -303,6 +305,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		l.assumeIntegerTypes()
 	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
+	if coverage == nil {
+		l.classifyCascades()
+	}
 	return l.out, l.diags, nil
 }
 
@@ -549,7 +554,7 @@ func (l *lowerer) synthOf(sym *ast.Symbol) *hir.Class {
 }
 
 func (l *lowerer) diagf(n *ast.Node, category, format string, args ...any) {
-	l.diags = append(l.diags, LowerDiagnostic{Category: category, Loc: l.locOf(n), Message: fmt.Sprintf(format, args...)})
+	l.diags = append(l.diags, LowerDiagnostic{Category: category, Loc: l.locOf(n), Message: fmt.Sprintf(format, args...), node: n})
 }
 
 // node returns the identity (ID and source location) for a new HIR node.
