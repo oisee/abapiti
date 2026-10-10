@@ -78,7 +78,7 @@ func parseRewrite(n sexpr) (RewriteRule, error) {
 	if r.match.pred != "node" || len(r.match.args) != 2 {
 		return r, fmt.Errorf("match expects (node site kind)")
 	}
-	if (r.action.pred != "inline" || len(r.action.args) != 1) && (r.action.pred != "replace" || len(r.action.args) != 2) {
+	if (r.action.pred != "inline" || len(r.action.args) != 1) && (r.action.pred != "replace" || len(r.action.args) != 2) && (r.action.pred != "substitute-use" || len(r.action.args) != 2) && (r.action.pred != "remove-statement" || len(r.action.args) != 1) {
 		return r, fmt.Errorf("unknown rewrite action")
 	}
 	bound := map[string]bool{}

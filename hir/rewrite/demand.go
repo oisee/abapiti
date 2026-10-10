@@ -12,6 +12,16 @@ func rewriteDependencies(rules *Rules) (*Rules, map[string]bool, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	selected, needed := grace.SelectDemand([]*Rules{analysis, rules}, rules.RewriteGoals())
+	sets := []*Rules{analysis, rules}
+	goals := rules.RewriteGoals()
+	if isStoreRules(rules) {
+		sets = []*Rules{rules}
+	}
+	for _, rule := range rules.Rewrites() {
+		if rule.Action() == "substitute-use" || rule.Action() == "remove-statement" {
+			goals = append(goals, "next", "def", "use", "local_ref")
+		}
+	}
+	selected, needed := grace.SelectDemand(sets, goals)
 	return selected, needed, nil
 }

@@ -11,6 +11,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/rewrite"
 )
 
 type emitter struct {
@@ -55,6 +56,9 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		return nil, nil, errors[0]
 	}
 	if err := inline(p); err != nil {
+		return nil, nil, err
+	}
+	if _, err := rewrite.BeforeEmission(p); err != nil {
 		return nil, nil, err
 	}
 	names := hir.NewNames()

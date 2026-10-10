@@ -12,9 +12,11 @@ import (
 // Zero values select conservative defaults. Depth bounds in rules cap callee chains.
 type Limits struct{ Rounds, MethodGrowth, ProgramGrowth int }
 type Stats struct {
-	CallSites int
-	Callees   map[string]int
-	Rounds    int
+	CallSites             int
+	Callees               map[string]int
+	Rounds                int
+	CopySites, DeadStores int
+	Methods               map[string][2]int
 }
 type rewriteNode struct {
 	id     string
@@ -31,6 +33,10 @@ type runner struct {
 	stats          Stats
 	nodes          map[string]rewriteNode
 	ids            map[*hir.Expr]string
+	stmtIDs        map[*hir.Stmt]string
+	copies         map[string]copyPlan
+	storeOnly      bool
+	unreadStores   map[string]bool
 	methods        map[*hir.Method]string
 	byID           map[string]*hir.Method
 	done           map[*hir.Method]bool
@@ -46,13 +52,14 @@ type runner struct {
 // Rewrite applies rules deterministically, in operand order and callee-first for
 // inline actions. A round visits only its input nodes. Embedded inline rules
 // refresh changed method regions and their call dependants between rounds.
-// Other rules, or ABAPITI_GRACE_RECOMPUTE=full, use full recomputation.
+// Fixed store rules refresh changed methods; their guards have no call
+// dependencies. Other rules, or ABAPITI_GRACE_RECOMPUTE=full, recompute fully.
 func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 	return rewriteObserved(p, rules, limits, nil)
 }
 
 func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*DB)) (Stats, error) {
-	r := &runner{p: p, rules: rules, rewrites: rules.Rewrites(), limits: limits, stats: Stats{Callees: map[string]int{}}, growth: map[*hir.Method]int{}}
+	r := &runner{p: p, rules: rules, rewrites: rules.Rewrites(), limits: limits, stats: Stats{Callees: map[string]int{}, Methods: map[string][2]int{}}, growth: map[*hir.Method]int{}}
 	if limits.Rounds < 0 || limits.MethodGrowth < 0 || limits.ProgramGrowth < 0 {
 		return r.stats, fmt.Errorf("negative rewrite limit")
 	}
@@ -73,11 +80,28 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 	if err != nil {
 		return r.stats, err
 	}
+	r.storeOnly = isStoreRules(rules)
 	incremental := r.limits.Rounds > 1 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" && isInlineRules(rules)
 	for round := 0; round < r.limits.Rounds; round++ {
-		if !incremental || round == 0 {
-			r.db = extractDemanded(p, demanded)
+		if r.storeOnly && round > 0 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" {
+			r.refresh = map[*hir.Method]bool{}
+			for id := range r.dirty {
+				if m := r.byID[id]; m != nil {
+					r.refresh[m] = true
+				}
+			}
+		} else if r.storeOnly {
 			r.refresh = nil
+		}
+		if !incremental || round == 0 {
+			if r.storeOnly {
+				r.db = extractStoreFacts(p, demanded, r.refresh)
+			} else {
+				r.db = extractDemanded(p, demanded)
+			}
+			if !r.storeOnly {
+				r.refresh = nil
+			}
 			if incremental {
 				r.db.SetRegionOwner(r.inlineRegion)
 			}
@@ -104,7 +128,12 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 		if err := r.index(); err != nil {
 			return r.stats, err
 		}
-		if err := r.addInlineFacts(); err != nil {
+		if !r.storeOnly {
+			if err := r.addInlineFacts(); err != nil {
+				return r.stats, err
+			}
+		}
+		if err := r.addStoreFacts(); err != nil {
 			return r.stats, err
 		}
 		if err := Evaluate(r.db, selected); err != nil {
@@ -163,7 +192,7 @@ func (r *runner) index() error {
 	if r.rules != nil {
 		for _, rr := range r.rules.Rewrites() {
 			kind, anyKind := rr.Kind()
-			if rr.Action() == "replace" || anyKind {
+			if rr.Action() != "inline" || anyKind {
 				allNodes = true
 			}
 			kinds[kind] = true
@@ -178,12 +207,16 @@ func (r *runner) index() error {
 	if r.refresh == nil {
 		r.nodes = map[string]rewriteNode{}
 		r.ids = map[*hir.Expr]string{}
+		r.stmtIDs = map[*hir.Stmt]string{}
 		r.methods = map[*hir.Method]string{}
 		r.byID = map[string]*hir.Method{}
 	} else {
 		for id, node := range r.nodes {
 			if r.refresh[node.method] {
 				delete(r.nodes, id)
+				if node.stmt != nil {
+					delete(r.stmtIDs, node.stmt)
+				}
 				if node.expr != nil {
 					delete(r.ids, node.expr)
 				}
@@ -211,8 +244,12 @@ func (r *runner) index() error {
 					return
 				}
 				r.nodes[path] = rewriteNode{path, nil, s, m}
+				r.stmtIDs[s] = path
 				addNode(path, string(s.Kind))
 			}, func(e *hir.Expr, path string) {
+				if r.storeOnly && e.Kind != hir.Local && e.Kind != hir.New && e.Kind != hir.DirectCall && e.Kind != hir.VirtualCall {
+					return
+				}
 				if !allNodes && !kinds[string(e.Kind)] {
 					return
 				}
@@ -275,7 +312,7 @@ func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hi
 	}
 }
 func (r *runner) method(m *hir.Method, depth int) {
-	if r.done[m] || m.Body == nil {
+	if r.done[m] || m.Body == nil || r.storeOnly && r.refresh != nil && !r.refresh[m] {
 		return
 	}
 	r.done[m] = true
@@ -301,7 +338,7 @@ func (r *runner) stmt(s *hir.Stmt, m *hir.Method, depth int) *hir.Stmt {
 	for i, v := range s.List {
 		s.List[i] = r.stmt(v, m, depth)
 	}
-	return s
+	return r.removeStore(s, m)
 }
 func (r *runner) operands(e *hir.Expr, m *hir.Method, depth int) {
 	e.X = r.expr(e.X, m, depth)
@@ -344,6 +381,12 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 				}
 				copy := *target
 				out = &copy
+			case "substitute-use":
+				if plan, ok := r.copies[id]; ok && plan.defID == args[1] && plan.unchanged() && e.Type.Equal(plan.rhs.Type) {
+					out = plan.rhs
+					dropStore(plan.def)
+					r.countStore(m, true)
+				}
 			case "inline":
 				out, stmt = r.inline.expand(e, s, m, depth)
 			}

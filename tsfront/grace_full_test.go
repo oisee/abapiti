@@ -11,8 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/rewrite"
 	"github.com/oisee/abapiti/internal/gracecheck"
+	"github.com/oisee/abapiti/internal/hirclone"
+	"reflect"
 )
 
 // The full closure uses the production CLI lowering inputs. Independent
@@ -124,4 +127,26 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 		}
 	}
 	gracecheck.CheckFull(t, lowering.Prog)
+	a, b := hirclone.Clone(lowering.Prog), hirclone.Clone(lowering.Prog)
+	sa, err := rewrite.CopyProp(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ABAPITI_GRACE_RECOMPUTE", "full")
+	sb, err := rewrite.CopyProp(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hir.Dump(a) != hir.Dump(b) || !reflect.DeepEqual(sa, sb) {
+		t.Fatal("full copyprop nondeterminism")
+	}
+	before := hir.Dump(a)
+	again, err := rewrite.CopyProp(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.CopySites+again.DeadStores != 0 || before != hir.Dump(a) {
+		t.Fatal("full copyprop not idempotent")
+	}
+	t.Logf("full copyprop: %s", rewrite.StoreReport(sa))
 }

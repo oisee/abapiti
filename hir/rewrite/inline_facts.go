@@ -140,6 +140,9 @@ func ExtractRewriteFacts(p *hir.Program) (*DB, error) {
 	if err := r.addInlineFacts(); err != nil {
 		return nil, err
 	}
+	if err := r.addStoreFacts(); err != nil {
+		return nil, err
+	}
 	return r.db, nil
 }
 

@@ -218,6 +218,8 @@ func TestGlobalClassDefinitions(t *testing.T) {
 }
 
 func TestFixtures(t *testing.T) {
+	// This test pins the baseline emitter/inliner shape. Optimization has separate coverage.
+	t.Setenv("ABAPITI_COPYPROP", "0")
 	out := t.TempDir()
 	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
 		out = filepath.Join(base, t.Name())
@@ -690,6 +692,8 @@ func TestRootObjectTemporary(t *testing.T) {
 // only; it is not a call (the first full Registry emission produced
 // `z__…=>z_member__…( )` from one).
 func TestVoidSequenceStatement(t *testing.T) {
+	// This test pins the baseline emitter/inliner shape. Optimization has separate coverage.
+	t.Setenv("ABAPITI_COPYPROP", "0")
 	call := &hir.Expr{Kind: hir.DirectCall, Owner: "voidseq", Name: "g", Type: hir.T(hir.Void)}
 	seq := &hir.Expr{Kind: hir.Seq, Type: hir.T(hir.Void), Stmt: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: str, X: hir.L(str, "kept")}), Y: call}
 	f := method("f", hir.T(hir.Void), &hir.Stmt{Kind: hir.ExprStmt, X: seq})
@@ -761,6 +765,8 @@ func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
 // Kernel-profile shortcuts: push/length on the public items table, constant
 // indices for integer literals, and me for a this receiver of the own class.
 func TestEmitterShortcuts(t *testing.T) {
+	// This test pins the baseline emitter/inliner shape. Optimization has separate coverage.
+	t.Setenv("ABAPITI_COPYPROP", "0")
 	arr := hir.T(hir.Array, i32)
 	al := local("a", arr)
 	num := hir.T(hir.Number)

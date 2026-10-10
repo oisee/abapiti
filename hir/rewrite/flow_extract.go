@@ -10,16 +10,21 @@ import (
 // flowExtractor builds an analysis-only CFG. Nodes are evaluation completion
 // points; edges preserve operand order. Exceptional edges overapproximate raises.
 type flowExtractor struct {
-	x     *extractor
-	envs  map[string]scope
-	loops map[string][]string
-	uses  map[string]int
-	edges map[string][]string
-	keep  map[string]bool
+	x       *extractor
+	envs    map[string]scope
+	loops   map[string][]string
+	uses    map[string]int
+	edges   map[string][]string
+	keep    map[string]bool
+	compact bool
+	values  map[string]string
 }
 
 func (x *extractor) flowFacts(m *hir.Method, env scope) {
-	f := &flowExtractor{x: x, envs: map[string]scope{}, loops: map[string][]string{}, uses: map[string]int{}, edges: map[string][]string{}, keep: map[string]bool{}}
+	x.flowFactsMode(m, env, false)
+}
+func (x *extractor) flowFactsMode(m *hir.Method, env scope, compact bool) {
+	f := &flowExtractor{x: x, envs: map[string]scope{}, loops: map[string][]string{}, uses: map[string]int{}, edges: map[string][]string{}, keep: map[string]bool{}, compact: compact, values: map[string]string{}}
 	for _, b := range env {
 		f.uses[b.id] = 0
 		f.define(b.id, x.method+"/entry")
@@ -33,7 +38,12 @@ func (x *extractor) flowFacts(m *hir.Method, env scope) {
 	}
 }
 func (f *flowExtractor) node(path string, env scope, loops []string) {
-	f.envs[path] = copyScope(env)
+	if f.compact {
+		return
+	}
+	if !f.compact {
+		f.envs[path] = copyScope(env)
+	}
 	f.loops[path] = append([]string{}, loops...)
 	f.x.add("flow_node", f.x.method, path)
 	for _, l := range loops {
@@ -51,7 +61,9 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 			f.bindStmt(s, fmt.Sprintf("%s/seq/s%d", path, i), env, loops)
 		}
 	}
-	f.envs[path] = copyScope(env)
+	if !f.compact {
+		f.envs[path] = copyScope(env)
+	}
 	for i, c := range []*hir.Expr{e.X, e.Y, e.Z} {
 		f.bindExpr(c, fmt.Sprintf("%s/%d", path, i), env, loops)
 	}
@@ -64,6 +76,7 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 			name = "this"
 		}
 		id := env[name].id
+		f.values[path] = id
 		f.x.add("local_ref", path, id)
 	}
 	if e.Kind == hir.New {
@@ -93,6 +106,9 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 func (f *flowExtractor) value(e *hir.Expr, path string) string {
 	if e == nil {
 		return ""
+	}
+	if f.compact && (e.Kind == hir.Local || e.Kind == hir.This) {
+		return f.values[path]
 	}
 	if e.Kind == hir.Local {
 		return f.envs[path][e.Name].id
@@ -131,8 +147,13 @@ func (f *flowExtractor) bindStmt(s *hir.Stmt, path string, env scope, loops []st
 			f.x.add("site_writes", path, target)
 		}
 	}
-	body := copyScope(env)
-	other := copyScope(env)
+	body, other := env, env
+	if !f.compact || s.Body != nil || s.Kind == hir.ForEach {
+		body = copyScope(env)
+	}
+	if !f.compact || s.Else != nil || s.Kind == hir.Try {
+		other = copyScope(env)
+	}
 	if s.Kind == hir.ForEach || s.Kind == hir.While {
 		f.x.add("diverge_seed", f.x.method)
 		loops = append(append([]string{}, loops...), path)

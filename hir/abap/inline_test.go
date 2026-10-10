@@ -251,6 +251,8 @@ func TestInlineArgumentOrder(t *testing.T) {
 }
 
 func TestInlineDisabled(t *testing.T) {
+	// This test pins the baseline emitter/inliner shape. Optimization has separate coverage.
+	t.Setenv("ABAPITI_COPYPROP", "0")
 	names := hir.NewNames()
 	cur := "->" + names.Get("member.cur") + "("
 	t.Setenv("ABAPITI_INLINE", "0")

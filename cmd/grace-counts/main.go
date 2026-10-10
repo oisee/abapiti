@@ -106,6 +106,9 @@ func run(out, dir string) error {
 		return fmt.Errorf("changed closure: %d classes, %d interfaces", len(p.Classes), len(p.Interfaces))
 	}
 	fmt.Fprintf(os.Stderr, "lowered 1538 files + harness: %d classes, %d interfaces; no blocking/verification errors (%s)\n", len(p.Classes), len(p.Interfaces), time.Since(start))
+	if os.Getenv("GRACE_COUNTS_MEASURE_STORES") == "1" {
+		return measureStores(p, out)
+	}
 	if os.Getenv("GRACE_COUNTS_MEASURE_INLINE") == "1" {
 		return measureInline(p)
 	}

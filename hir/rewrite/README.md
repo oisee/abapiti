@@ -477,3 +477,36 @@ facts. Every component still uses repeated whole-rule snapshot scans; there are
 no production-engine joins or deltas. Ordinary fixtures compare this result with
 the unchanged Cartesian evaluator. This avoids repeating all unrelated methods
 for each step along the longest method during the full registry gate.
+
+## Copy propagation and dead stores (opt in)
+
+`ABAPITI_COPYPROP=1` enables the shared `BeforeEmission` pass in both HIR
+backends. The default is off. `CopyProp` can also be called directly. Policy is
+in `rules/stores.grace`; the adapter adds `substitute-use` and
+`remove-statement`, rechecks their safety, and verifies HIR after each bounded
+round. Statistics include copy/store totals and per-method counts.
+
+Copy propagation requires one initialized definition, one read, exact HIR
+types, and a use later in the same statement list. Inert expressions can move
+past inert stores that do not redefine their dependencies. Calls and heap or
+runtime writes are barriers, so alias writes and unknown method summaries
+cannot justify motion. An effectful or raising expression only moves into the
+whole expression of the immediately following statement. Loop, branch,
+try/finally crossings and lowered closure captures are rejected. Changed RHS
+plans are deferred to a new round.
+
+DSE accepts only positively reviewed inert expressions: no calls, identity
+allocation, checked arithmetic, casts or unknown runtime operations. The CFG
+includes exception/finally paths. `store_next` contracts that CFG to the first
+read or definition of the candidate binding on each path, and Grace derives
+`not_read_after` from those boundaries. Declarations remain to bind emitter
+locals; only their initializer is removed. A dead assignment becomes an empty
+block. Later rounds refresh changed methods; setting
+`ABAPITI_GRACE_RECOMPUTE=full` retains full recomputation for comparison.
+
+`GRACE_COUNTS_MEASURE_STORES=1 go run ./cmd/grace-counts -output DIR` reports
+three pass samples on independent copies of the pinned full closure, stages,
+and whole/hot-method emitted ABAP statement counts in `stores.json`. The ABAP
+baseline includes the existing singleton/inlining pipeline; Go starts at the
+original lowered input. `GRACE_COUNTS_PROFILE=PATH` optionally profiles the
+first Go pass sample.
