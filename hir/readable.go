@@ -46,11 +46,20 @@ func NewReadableNames(p *Program, project string) *Names {
 		func(id, prefix string) string { return fitName(prefix, area(id)+file(id), simpleSnake(id), "") },
 		func(id, prefix string) string { return fitName(prefix, area(id), simpleSnake(id), "_"+hash4(id)) },
 	}
+	// The harness objects around the translated classes (tsfront Drivers)
+	// take these names; a translated class never does.
+	taken := map[string]bool{}
+	for _, r := range []string{"REGISTRY_A4H", "REGISTRY_OSG"} {
+		taken["ZCL_"+project+"_"+r] = true
+	}
 	level := make([]int, len(decls))
 	for round := 0; round < len(levels); round++ {
 		count := map[string]int{}
 		for i, d := range decls {
 			count[levels[level[i]](d.id, d.prefix)]++
+		}
+		for name := range taken {
+			count[name] += 2
 		}
 		changed := false
 		for i, d := range decls {

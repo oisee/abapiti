@@ -378,7 +378,7 @@ type DriverNames struct {
 
 func Drivers() DriverNames {
 	if os.Getenv("ABAPITI_NAMES") == "readable" {
-		return DriverNames{"zcl_lnt_registry_run", "zcl_lnt_registry_a4h", "zlnt_registry_run", "zlnt_registry_clean", "zlnt_registry_neg"}
+		return DriverNames{"zcl_lnt_registry_osg", "zcl_lnt_registry_a4h", "zlnt_registry_run", "zlnt_registry_clean", "zlnt_registry_neg"}
 	}
 	return DriverNames{"zcl_abapiti_registry_run", "zcl_abapiti_registry_a4h", "zabapiti_registry_run", "zabapiti_registry_clean", "zabapiti_registry_neg"}
 }
