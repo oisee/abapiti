@@ -1,5 +1,5 @@
-// Package rewrite implements Grace fact analysis and bounded rewrites over HIR.
-package rewrite
+// Package grace implements IR-independent relational analysis and rule matching.
+package grace
 
 import (
 	"encoding/binary"
@@ -28,7 +28,7 @@ type DB struct {
 	symbols        *symbols
 	regionFor      func(string, Tuple) string
 	evaluateRegion func(string, Tuple) bool
-	selections     map[string]regionSelection
+	selections     map[string]RegionSelection
 }
 
 // Symbols and tuples are IR-independent. Zero is reserved for unbound variables.
@@ -171,4 +171,35 @@ func (d *DB) Count(pred string) int {
 		return len(t.rows)
 	}
 	return 0
+}
+
+// SetDemand limits future additions to the supplied relations; nil admits all.
+// The caller must not modify the map while the database is in use.
+func (d *DB) SetDemand(relations map[string]bool) { d.demanded = relations }
+
+// Demands lets an adapter skip extracting facts that cannot affect its goals.
+func (d *DB) Demands(pred string) bool { return d.demanded == nil || d.demanded[pred] }
+
+// Lookup returns copies of tuples matching a constant prefix, in insertion
+// order. It uses the same composite indexes as evaluation and adapter queries.
+func (d *DB) Lookup(pred string, prefix ...string) []Tuple {
+	t := d.tables[pred]
+	if t == nil || len(prefix) > t.arity {
+		return nil
+	}
+	a := atom{pred: pred}
+	for i := 0; i < t.arity; i++ {
+		v := term{wild: true}
+		if i < len(prefix) {
+			v = term{value: prefix[i]}
+		}
+		a.args = append(a.args, v)
+	}
+	var out []Tuple
+	for _, r := range candidates(d, a, nil) {
+		if _, ok := matches(a, r, nil); ok {
+			out = append(out, append(Tuple(nil), r.args...))
+		}
+	}
+	return out
 }

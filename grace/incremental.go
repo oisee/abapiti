@@ -1,15 +1,15 @@
-package rewrite
+package grace
 
-// regionSelection restricts a relation head column to values supplied by the
+// RegionSelection restricts a relation head column to values supplied by the
 // adapter. Plans prune a branch as soon as that head term becomes bound.
-type regionSelection struct {
-	column   int
-	contains func(string) bool
+type RegionSelection struct {
+	Column   int
+	Contains func(string) bool
 }
 
-// dependentRegions computes the conservative reverse dependency closure. Region
+// DependentRegions computes the conservative reverse dependency closure. Region
 // names and the graph come from the adapter; the engine has no IR knowledge.
-func dependentRegions(changed map[string]bool, reverse map[string][]string) map[string]bool {
+func DependentRegions(changed map[string]bool, reverse map[string][]string) map[string]bool {
 	affected := map[string]bool{}
 	var queue []string
 	for region := range changed {
@@ -27,10 +27,10 @@ func dependentRegions(changed map[string]bool, reverse map[string][]string) map[
 	return affected
 }
 
-// invalidateRegions removes base and derived facts owned by affected regions.
+// InvalidateRegions removes base and derived facts owned by affected regions.
 // Shared derived relations are recomputed conservatively, including negatives;
 // immutable global base facts and unrelated regional proofs survive the round.
-func (d *DB) invalidateRegions(affected map[string]bool, rules *Rules) {
+func (d *DB) InvalidateRegions(affected map[string]bool, rules *Rules) {
 	derived := map[string]bool{}
 	for _, c := range rules.clauses {
 		derived[c.head.pred] = true
@@ -54,4 +54,16 @@ func (d *DB) invalidateRegions(affected map[string]bool, rules *Rules) {
 			t.keys[pack(row.ids, ^uint64(0))] = row
 		}
 	}
+}
+
+// SetRegionOwner assigns ownership to future base and derived facts. Set it
+// before adding regional facts. Empty ownership denotes shared/global facts.
+func (d *DB) SetRegionOwner(owner func(string, Tuple) string) { d.regionFor = owner }
+
+// SelectRegions restricts future evaluation to selected head regions. The
+// optional accept callback also filters emitted tuples. Pass nils to reset.
+// The caller owns the map and callbacks and must not change them during use.
+func (d *DB) SelectRegions(selections map[string]RegionSelection, accept func(string, Tuple) bool) {
+	d.selections = selections
+	d.evaluateRegion = accept
 }

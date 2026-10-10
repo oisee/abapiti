@@ -3,110 +3,10 @@ package rewrite
 import (
 	"fmt"
 	"os"
-	"strconv"
 
+	"github.com/oisee/abapiti/grace"
 	"github.com/oisee/abapiti/hir"
 )
-
-type rewriteRule struct {
-	name            string
-	priority, bound int
-	match           atom
-	where           []atom
-	action          atom
-}
-
-func parseRewrite(n sexpr) (rewriteRule, error) {
-	r := rewriteRule{bound: -1}
-	if len(n.list) < 6 {
-		return r, fmt.Errorf("grace needs name, priority, match, where and action")
-	}
-	r.name = n.list[1].text
-	var err error
-	r.priority, err = strconv.Atoi(n.list[2].text)
-	if err != nil {
-		return r, err
-	}
-	seen := map[string]bool{}
-	for _, s := range n.list[3:] {
-		if len(s.list) == 0 {
-			return r, fmt.Errorf("empty grace section")
-		}
-		k := s.list[0].text
-		if seen[k] {
-			return r, fmt.Errorf("duplicate grace %s", k)
-		}
-		seen[k] = true
-		switch k {
-		case "match", "action":
-			if len(s.list) != 2 {
-				return r, fmt.Errorf("%s needs one atom", k)
-			}
-			a, e := parseAtom(s.list[1])
-			if e != nil {
-				return r, e
-			}
-			if a.negative {
-				return r, fmt.Errorf("negative %s", k)
-			}
-			if k == "match" {
-				r.match = a
-			} else {
-				r.action = a
-			}
-		case "where":
-			for _, v := range s.list[1:] {
-				a, e := parseAtom(v)
-				if e != nil {
-					return r, e
-				}
-				r.where = append(r.where, a)
-			}
-		case "bound":
-			if len(s.list) != 3 || s.list[1].text != "depth" {
-				return r, fmt.Errorf("expected bound depth N")
-			}
-			r.bound, err = strconv.Atoi(s.list[2].text)
-			if err != nil || r.bound < 0 {
-				return r, fmt.Errorf("invalid rewrite depth")
-			}
-		default:
-			return r, fmt.Errorf("unknown grace section %s", k)
-		}
-	}
-	if !seen["match"] || !seen["where"] || !seen["action"] {
-		return r, fmt.Errorf("grace needs match, where and action")
-	}
-	if r.match.pred != "node" || len(r.match.args) != 2 {
-		return r, fmt.Errorf("match expects (node site kind)")
-	}
-	if (r.action.pred != "inline" || len(r.action.args) != 1) && (r.action.pred != "replace" || len(r.action.args) != 2) {
-		return r, fmt.Errorf("unknown rewrite action")
-	}
-	bound := map[string]bool{}
-	for _, a := range append([]atom{r.match}, r.where...) {
-		if !a.negative && !comparison(a.pred) {
-			for _, t := range a.args {
-				if t.variable {
-					bound[t.value] = true
-				}
-			}
-		}
-	}
-	for _, a := range append([]atom{r.action}, r.where...) {
-		if a.negative || comparison(a.pred) || a.pred == r.action.pred {
-			for _, t := range a.args {
-				if t.wild || t.variable && !bound[t.value] {
-					return r, fmt.Errorf("%s: unbound action/guard", r.name)
-				}
-			}
-		}
-	}
-	if r.action.args[0] != r.match.args[0] {
-		return r, fmt.Errorf("action must rewrite the matched node")
-	}
-	return r, nil
-}
 
 // Limits bound rewrite rounds and growth, measured in statements plus expressions.
 // Zero values select conservative defaults. Depth bounds in rules cap callee chains.
@@ -126,6 +26,7 @@ type runner struct {
 	p              *hir.Program
 	db             *DB
 	rules          *Rules
+	rewrites       []grace.RewriteRule
 	limits         Limits
 	stats          Stats
 	nodes          map[string]rewriteNode
@@ -137,7 +38,7 @@ type runner struct {
 	total, changed int
 	inline         *inlineAction
 	err            error
-	plans          []*joinPlan
+	plans          []*grace.Matcher
 	refresh        map[*hir.Method]bool
 	dirty          map[string]bool
 }
@@ -151,7 +52,7 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 }
 
 func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*DB)) (Stats, error) {
-	r := &runner{p: p, rules: rules, limits: limits, stats: Stats{Callees: map[string]int{}}, growth: map[*hir.Method]int{}}
+	r := &runner{p: p, rules: rules, rewrites: rules.Rewrites(), limits: limits, stats: Stats{Callees: map[string]int{}}, growth: map[*hir.Method]int{}}
 	if limits.Rounds < 0 || limits.MethodGrowth < 0 || limits.ProgramGrowth < 0 {
 		return r.stats, fmt.Errorf("negative rewrite limit")
 	}
@@ -177,7 +78,7 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 			r.db = extractDemanded(p, demanded)
 			r.refresh = nil
 			if incremental {
-				r.db.regionFor = r.inlineRegion
+				r.db.SetRegionOwner(r.inlineRegion)
 			}
 		} else {
 			affected := r.inlineDependants(r.dirty)
@@ -187,18 +88,17 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 					r.refresh[m] = true
 				}
 			}
-			r.db.invalidateRegions(affected, selected)
-			r.db.selections = map[string]regionSelection{}
-			for _, c := range selected.clauses {
-				pred := c.head.pred
+			r.db.InvalidateRegions(affected, selected)
+			selections := map[string]grace.RegionSelection{}
+			for _, pred := range selected.Heads() {
 				if inlineRegionalHead(pred) {
-					r.db.selections[pred] = regionSelection{column: 0, contains: func(value string) bool { return affected[r.inlineRegionValue(pred, value)] }}
+					selections[pred] = grace.RegionSelection{Column: 0, Contains: func(value string) bool { return affected[r.inlineRegionValue(pred, value)] }}
 				}
 			}
-			r.db.evaluateRegion = func(pred string, args Tuple) bool {
+			r.db.SelectRegions(selections, func(pred string, args Tuple) bool {
 				region := r.inlineRegion(pred, args)
 				return region == "" || affected[region]
-			}
+			})
 		}
 		if err := r.index(); err != nil {
 			return r.stats, err
@@ -213,9 +113,8 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 			return r.stats, err
 		}
 		r.plans = nil
-		for _, rr := range r.rules.rewrites {
-			c := clause{head: rr.action, body: rr.where, bound: -1}
-			r.plans = append(r.plans, planJoin(r.db, c, -1, rr.match.args))
+		for _, rr := range r.rewrites {
+			r.plans = append(r.plans, rr.Matcher(r.db))
 		}
 		if observe != nil {
 			observe(r.db)
@@ -239,8 +138,7 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 			return r.stats, fmt.Errorf("rewrite round %d: %v", round+1, es)
 		}
 		r.stats.Rounds++
-		r.db.evaluateRegion = nil
-		r.db.selections = nil
+		r.db.SelectRegions(nil, nil)
 		if !incremental {
 			r.db = nil
 		}
@@ -251,14 +149,9 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 	return r.stats, nil
 }
 func (r *runner) validate() error {
-	for _, rr := range r.rules.rewrites {
-		for _, a := range append([]atom{rr.match}, rr.where...) {
-			if comparison(a.pred) && len(a.args) != 2 {
-				return fmt.Errorf("%s needs two terms", a.pred)
-			}
-			if t := r.db.tables[a.pred]; t != nil && t.arity != len(a.args) {
-				return fmt.Errorf("%s: inconsistent arity", a.pred)
-			}
+	for _, rr := range r.rewrites {
+		if err := rr.Validate(r.db); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -267,11 +160,12 @@ func (r *runner) index() error {
 	kinds := map[string]bool{}
 	allNodes := r.rules == nil
 	if r.rules != nil {
-		for _, rr := range r.rules.rewrites {
-			if rr.action.pred == "replace" || rr.match.args[1].variable || rr.match.args[1].wild {
+		for _, rr := range r.rules.Rewrites() {
+			kind, anyKind := rr.Kind()
+			if rr.Action() == "replace" || anyKind {
 				allNodes = true
 			}
-			kinds[rr.match.args[1].value] = true
+			kinds[kind] = true
 		}
 	}
 	var addErr error
@@ -433,20 +327,15 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 	if !original {
 		return nil, nil
 	}
-	for ri, rr := range r.rules.rewrites {
-		if rr.bound >= 0 && depth >= rr.bound {
+	for ri, rr := range r.rewrites {
+		if rr.Bound() >= 0 && depth >= rr.Bound() {
 			continue
 		}
-		env, ok := matches(rr.match, &row{args: Tuple{id, string(e.Kind)}}, map[string]string{})
-		if !ok {
-			continue
-		}
-		var choices []Tuple
-		r.plans[ri].run(r.db, r.db, env, func(a Tuple, _ int) { choices = append(choices, append(Tuple(nil), a...)) })
+		choices := r.plans[ri].Match(Tuple{id, string(e.Kind)})
 		for _, args := range choices {
 			var out *hir.Expr
 			var stmt *hir.Stmt
-			switch rr.action.pred {
+			switch rr.Action() {
 			case "replace":
 				target := r.nodes[args[1]].expr
 				if target == nil || !e.Type.Equal(target.Type) || !inert(e) || !inert(target) {

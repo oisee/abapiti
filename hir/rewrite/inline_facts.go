@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oisee/abapiti/grace"
 	"github.com/oisee/abapiti/hir"
 )
 
@@ -90,7 +91,7 @@ func (r *runner) addInlineFacts() error {
 				}
 			})
 			add("inline_size", id, strconv.Itoa(size))
-			if r.db.demanded == nil || r.db.demanded["inline_template"] {
+			if r.db.Demands("inline_template") {
 				if _, ok := makeTemplate(m); ok {
 					add("inline_template", id)
 				}
@@ -171,12 +172,10 @@ func (r *runner) inlineRegionValue(pred, value string) string {
 }
 func (r *runner) inlineDependants(changed map[string]bool) map[string]bool {
 	reverse := map[string][]string{}
-	if table := r.db.tables["inline_dispatch"]; table != nil {
-		for _, row := range table.rows {
-			reverse[row.args[4]] = append(reverse[row.args[4]], row.args[0])
-		}
+	for _, row := range r.db.Facts("inline_dispatch") {
+		reverse[row[4]] = append(reverse[row[4]], row[0])
 	}
-	return dependentRegions(changed, reverse)
+	return grace.DependentRegions(changed, reverse)
 }
 
 func inlineRegionalHead(pred string) bool {

@@ -1,7 +1,8 @@
 package rewrite
 
-// rewriteDependencies selects the transitive relation dependency closure,
-// including negative guards. Analysis remains available to user rewrite rules.
+import "github.com/oisee/abapiti/grace"
+
+// rewriteDependencies supplies the HIR analysis rules and rewrite goals.
 func rewriteDependencies(rules *Rules) (*Rules, map[string]bool, error) {
 	source, err := ruleFiles.ReadFile("rules/analysis.grace")
 	if err != nil {
@@ -11,35 +12,6 @@ func rewriteDependencies(rules *Rules) (*Rules, map[string]bool, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	all := append(append([]clause{}, analysis.clauses...), rules.clauses...)
-	needed := map[string]bool{}
-	for _, r := range rules.rewrites {
-		needed[r.match.pred] = true
-		for _, a := range r.where {
-			if !comparison(a.pred) {
-				needed[a.pred] = true
-			}
-		}
-	}
-	for changed := true; changed; {
-		changed = false
-		for _, c := range all {
-			if !needed[c.head.pred] {
-				continue
-			}
-			for _, a := range c.body {
-				if !comparison(a.pred) && !needed[a.pred] {
-					needed[a.pred] = true
-					changed = true
-				}
-			}
-		}
-	}
-	selected := &Rules{rewrites: rules.rewrites}
-	for _, c := range all {
-		if needed[c.head.pred] {
-			selected.clauses = append(selected.clauses, c)
-		}
-	}
+	selected, needed := grace.SelectDemand([]*Rules{analysis, rules}, rules.RewriteGoals())
 	return selected, needed, nil
 }

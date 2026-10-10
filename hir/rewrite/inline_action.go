@@ -54,12 +54,8 @@ func (a *inlineAction) expand(call *hir.Expr, statement *hir.Stmt, caller *hir.M
 		return nil, nil
 	}
 	var callee *hir.Method
-	lookup := atom{pred: "dispatch", args: []term{{value: call.X.Type.Name}, {value: call.Name}, {wild: true}}}
-	for _, row := range candidates(a.r.db, lookup, nil) {
-		if _, ok := matches(lookup, row, nil); !ok {
-			continue
-		}
-		callee = a.r.byID[row.args[2]]
+	for _, row := range a.r.db.Lookup("dispatch", call.X.Type.Name, call.Name) {
+		callee = a.r.byID[row[2]]
 		break
 	}
 	if callee == nil || len(call.Args) != len(callee.Params) {

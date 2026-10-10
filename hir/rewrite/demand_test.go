@@ -25,7 +25,7 @@ func TestRewriteDependencies(t *testing.T) {
 			t.Fatalf("unused dependency %s", p)
 		}
 	}
-	if len(selected.clauses) != len(rules.clauses) {
+	if len(selected.Heads()) != len(rules.Heads()) {
 		t.Fatal("inline selected unrelated analysis rules")
 	}
 	_, custom, err := Parse(`(grace pure-node 0 (match (node ?s lit)) (where (pure ?m) (not (escapes ?m ?s))) (action (replace ?s ?s)))`)
