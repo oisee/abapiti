@@ -75,11 +75,11 @@ func TestEmitRegistryArrays(t *testing.T) {
 	}
 	class := names.Get("arrays.ts.ArrayProbe")
 	driver := "CLASS ltcl_arrays DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\n"
-	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "splice", "codeUnits", "reverse", "brandedOptional", "indentation", "matchTests"} {
+	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "splice", "codeUnits", "reverse", "brandedOptional", "indentation", "matchTests", "strings"} {
 		driver += fmt.Sprintf("METHODS %s FOR TESTING.\n", method)
 	}
 	driver += "ENDCLASS.\nCLASS ltcl_arrays IMPLEMENTATION.\n"
-	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "splice", "codeUnits", "reverse", "brandedOptional", "indentation", "matchTests"} {
+	for _, method := range []string{"shift", "optionalIndex", "staticCollections", "find", "unionViews", "namedRecord", "interfaceHeritage", "denseCallbacks", "postfix", "continueUpdates", "sliceAndUnshift", "splice", "codeUnits", "reverse", "brandedOptional", "indentation", "matchTests", "strings"} {
 		expected, ok := oracle[method]
 		if !ok {
 			t.Fatal("missing original observation", method)

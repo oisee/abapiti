@@ -8,6 +8,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"string.repeat": true, "string.match": true, "array.matchIndex": true,
 	"string.replaceRegex": true,
 	"string.toLowerCase":  true,
 	"object.classOf":      true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -68,6 +69,10 @@ func (b *body) runtime(x *hir.Expr) string {
 	switch x.Op {
 	case "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "string.repeat", "string.match":
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
+	case "array.matchIndex":
+		code = a + ".matchIndex()"
 	case "record.delete":
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":

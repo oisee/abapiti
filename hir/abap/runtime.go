@@ -200,6 +200,12 @@ func (e *emitter) support() {
 	if e.regexpUsed {
 		e.regexpRuntime()
 	}
+	if e.matchUsed {
+		// Match metadata is absent from ordinary array runtimes.
+		e.typ(hir.T(hir.Array, hir.T(hir.String)))
+		file := e.name("runtime."+hir.T(hir.Array, hir.T(hir.String)).String()) + ".clas.abap"
+		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
+	}
 	if e.dynamicUsed {
 		e.classvalueRuntime()
 		e.dynamicRuntime()
@@ -565,6 +571,63 @@ ENDIF.
 ENDMETHOD.
 ENDCLASS.
 `
+	if e.matchUsed {
+		arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
+		file := name + ".clas.abap"
+		e.files[file] = strings.Replace(e.files[file], "METHODS test IMPORTING", "METHODS match IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE "+arr+".\nMETHODS test IMPORTING", 1)
+		e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD match.
+DATA matches TYPE match_result_tab.
+DATA hit TYPE match_result.
+DATA group TYPE submatch_result.
+DATA part TYPE string.
+IF excluded IS NOT INITIAL.
+  IF ignore_case = abap_true.
+    FIND REGEX excluded IN p0 IGNORING CASE.
+  ELSE.
+    FIND REGEX excluded IN p0.
+  ENDIF.
+  IF sy-subrc = 0.
+    RETURN.
+  ENDIF.
+ENDIF.
+IF global = abap_true.
+  IF ignore_case = abap_true.
+    FIND ALL OCCURRENCES OF REGEX posix IN p0 IGNORING CASE RESULTS matches.
+  ELSE.
+    FIND ALL OCCURRENCES OF REGEX posix IN p0 RESULTS matches.
+  ENDIF.
+ELSE.
+  IF ignore_case = abap_true.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS matches.
+  ELSE.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS matches.
+  ENDIF.
+ENDIF.
+IF matches IS INITIAL.
+  RETURN.
+ENDIF.
+CREATE OBJECT result.
+LOOP AT matches INTO hit.
+  IF global = abap_false.
+    result->match_index = hit-offset.
+    result->match_has_index = abap_true.
+  ENDIF.
+  part = p0+hit-offset(hit-length).
+  APPEND part TO result->items.
+  IF global = abap_false.
+    LOOP AT hit-submatches INTO group.
+      IF group-offset < 0.
+        RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+      ENDIF.
+      part = p0+group-offset(group-length).
+      APPEND part TO result->items.
+    ENDLOOP.
+  ENDIF.
+ENDLOOP.
+ENDMETHOD.
+ENDCLASS.
+`
+	}
 }
 
 // dynamicRuntime emits the tagged union box for Dynamic values.

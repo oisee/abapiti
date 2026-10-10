@@ -789,6 +789,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	}
 	switch n.Name().Text() {
+	case "index":
+		if l.isMatchArrayType(l.ck.GetTypeAtLocation(p.Expression)) {
+			return l.rtOp("array.matchIndex", recv, hir.T(hir.I32))
+		}
 	case "length":
 		switch recv.Type.Kind {
 		case hir.String:
@@ -1277,6 +1281,48 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("string.trim", recv, str), true
 		case "toUpperCase":
 			return l.rtOp("string.toUpperCase", recv, str), true
+		case "repeat":
+			if len(args) != 1 {
+				return nil, false
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			count := one()
+			if count == nil {
+				return nil, true
+			}
+			if count.Type.Kind != hir.Number && count.Type.Kind != hir.I32 && count.Type.Kind != hir.I64 {
+				l.diagf(n, "unsupported-call", "repeat count is not lowered: expected a number")
+				return nil, true
+			}
+			return l.rtOp("string.repeat", recv, str, l.coerce(count, hir.T(hir.Number))), true
+		case "match":
+			if len(args) != 1 {
+				return nil, false
+			}
+			// The regexp becomes the target receiver; evaluate the JS string
+			// receiver first, including any effects before pattern construction.
+			recv = l.tempInit(n, recv.Type, recv)
+			pattern := one()
+			if pattern == nil {
+				return nil, true
+			}
+			if pattern.Type.Kind == hir.String {
+				pattern = &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Node: l.node(n), Args: []*hir.Expr{pattern, hir.L(str, "")}}
+			}
+			if pattern.Type.Kind != hir.RegExp {
+				l.diagf(n, "unsupported-regex", "match argument is not lowered: expected RegExp or string")
+				return nil, true
+			}
+			if pattern.Kind == hir.New && len(pattern.Args) > 1 && pattern.Args[1].Kind == hir.Lit {
+				if flags, ok := pattern.Args[1].Value.(string); ok && strings.Trim(flags, "ig") != "" {
+					l.diagf(n, "unsupported-regex", "match flags %q are not lowered: only i and g are supported", flags)
+					return nil, true
+				}
+			}
+			if isConditionOnly(n) {
+				return l.rtOp("regexp.match_test", pattern, boolT, recv), true
+			}
+			return l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
 		case "replace", "replaceAll":
@@ -2039,6 +2085,25 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 		}
 		return test
+	}
+	// Match arrays encode null as an absent reference, not as Dynamic's
+	// distinct undefined tag. Preserve JS null checks without boxing it.
+	for _, pair := range []struct {
+		node, other *ast.Node
+		value       *hir.Expr
+	}{{b.Left, b.Right, x}, {b.Right, b.Left, y}} {
+		if pair.other.Kind == ast.KindNullKeyword && l.isMatchArrayType(l.ck.GetTypeAtLocation(pair.node)) {
+			test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: pair.value}
+			if value := pair.value; value.Kind == hir.RuntimeOp && value.Op == "string.match" {
+				// A null check does not read captures (which may be absent).
+				present := l.rtOp("regexp.match_test", value.Args[0], hir.T(hir.Bool), value.X)
+				test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
+			}
+			if negated {
+				return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+			}
+			return test
+		}
 	}
 	tagged := func(t hir.Type) bool {
 		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic

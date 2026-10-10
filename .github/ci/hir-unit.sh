@@ -4,17 +4,21 @@ work=${1:?usage: hir-unit.sh <osgo workdir>}
 root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
-rm -rf "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures"
+rm -rf "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^(TestFixtures|Test750Semantics)$' -count=1)
-(cd "$root" && ABAPITI_TEST_OUT="$gen/TestEmitSyntaxFeatures" go test ./tsfront -run '^TestEmitSyntaxFeatures$' -count=1)
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch; do
+  (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test ./tsfront -run "^$suite$" -count=1)
+done
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
-node "$root/.github/ci/hir-lint.mjs" "$gen/TestEmitSyntaxFeatures" "$osg"
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch; do
+  node "$root/.github/ci/hir-lint.mjs" "$gen/$suite" "$osg" --fixture
+done
 node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
-  for suite in TestFixtures Test750Semantics TestEmitSyntaxFeatures; do
+  for suite in TestFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
     classes="$gen/$suite"
