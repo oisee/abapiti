@@ -541,7 +541,7 @@ func Test750Syntax(t *testing.T) {
 	for _, src := range modern {
 		a += src
 	}
-	if !strings.Contains(a, "IS INSTANCE OF") || !strings.Contains(a, "VALUE abap_bool( )") || strings.Contains(a, "narrowed ?=") {
+	if !strings.Contains(a, "IS INSTANCE OF") || !(strings.Contains(a, "VALUE abap_bool( )") || strings.Contains(a, "TYPE abap_bool.")) || strings.Contains(a, "narrowed ?=") {
 		t.Fatal("default syntax or helper regression")
 	}
 }
