@@ -167,6 +167,7 @@ func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 			}
 			x.assigned = map[string]bool{}
 			assignedNames(m.Body, x.assigned)
+			x.flowFacts(m, env)
 			x.stmt(m.Body, x.method+"/body", env)
 			x.shapes(m.Body)
 			if name == "class_constructor" {
@@ -353,6 +354,10 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("raises", x.method, path)
 		}
 
+	case hir.Seq:
+		if referenceType(e.Type) && ids[1] != "" {
+			x.add("alias", x.method, path, ids[1])
+		}
 	case hir.Cast, hir.CheckedNumericConvert:
 		if e.Kind == hir.Cast {
 			x.add("alias", x.method, path, ids[0])
