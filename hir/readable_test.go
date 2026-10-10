@@ -32,7 +32,7 @@ func TestReadableNames(t *testing.T) {
 		"src/abap/5_syntax/expressions/method_source.ts.MethodSource":     "zcl_lnt_sy_method_source",
 		"src/abap/2_statements/combi.ts.FailCombinatorError":              "zcx_lnt_fail_combinator_error",
 		"src/abap/2_statements/statement_runnable.ts.IStatementRunnable":  "zif_lnt_statement_runnable",
-		"src/config.ts.IConfig":                                           "zcl_lnt_i_config",
+		"src/config.ts.IConfig":                                           "zcl_lnt_iconfig",
 		"src/config.ts.Config":                                            "zcl_lnt_config",
 		"src/rules/align_parameters.ts.ICandidate":                        "zcl_lnt_candidate",
 		"src/objects/iac_binary_data.ts.IACBinaryData":                    "zcl_lnt_iac_binary_data",

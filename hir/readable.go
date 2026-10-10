@@ -153,8 +153,8 @@ func exceptionClasses(p *Program) map[string]bool {
 // kind and 8 hex of its identity.
 func simpleSnake(id string) string { return declSnake(id, true) }
 
-// keptSnake keeps TypeScript's I: the fallback when dropping it collides
-// (IConfig next to a class Config).
+// keptSnake keeps TypeScript's I glued to the name (ICONFIG): the fallback
+// when dropping it collides (IConfig next to a class Config).
 func keptSnake(id string) string { return declSnake(id, false) }
 
 func declSnake(id string, drop bool) string {
@@ -167,8 +167,13 @@ func declSnake(id string, drop bool) string {
 			return snake(file) + "_MODULE"
 		}
 		name := id[ts+4:]
+		bare := dropInterfacePrefix(name)
 		if drop {
-			name = dropInterfacePrefix(name)
+			return snake(bare)
+		}
+		if bare != name {
+			// IConfig next to a class Config: ICONFIG, one word
+			return "I" + snake(bare)
 		}
 		return snake(name)
 	}
