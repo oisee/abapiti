@@ -1,0 +1,108 @@
+blocking=644 verification=392
+2	?? needs an optional or tagged left operand
+1	KindFunctionDeclaration is not lowered
+1	KindLabeledStatement is not lowered
+1	Math.min requires two arguments in this phase
+9	Math.min/max requires proven integers in this phase; exceptional numbers and signed zero need runtime support
+5	assignment to abap is not lowered
+1	assignment to code is not lowered
+1	assignment to fix1 is not lowered
+2	assignment to indentation is not lowered
+2	assignment to match is not lowered
+1	async body must be excluded by validated workload coverage
+1	binary operator KindInKeyword is not lowered
+3	call to KindIdentifier is not lowered
+1	call to KindParenthesizedExpression is not lowered
+1	callback KindPropertyAccessExpression is not an arrow function
+3	callback block must have exactly one return
+5	checker type DocumentSymbol is not a lowered declaration
+1	checker type Generator<IObject, void, undefined> is not a lowered declaration
+5	checker type RegExpExecArray is not a lowered declaration
+5	checker type RegExpMatchArray is not a lowered declaration
+2	constructor of the object root is not lowered
+1	delete supports ordinary lowered records only
+1	element access on classref is not lowered
+1	every needs a source-pinned dense/stable receiver proof
+3	find on primitive arrays needs an absence-preserving callback ABI
+1	for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)
+2	forEach needs a source-pinned dense/stable receiver proof
+32	identifier Date is not a lowered local or module value
+6	identifier JSON is not a lowered local or module value
+1	identifier Math is not a lowered local or module value
+4	identifier Object is not a lowered local or module value
+1	identifier RegExp is not a lowered local or module value
+2	identifier XMLParser is not a lowered local or module value
+1	identifier XMLValidator is not a lowered local or module value
+7	identifier abap is not a lowered local or module value
+1	identifier bodyCode is not a lowered local or module value
+1	identifier candidates is not a lowered local or module value
+2	identifier carriage is not a lowered local or module value
+3	identifier cleanOldName is not a lowered local or module value
+11	identifier code is not a lowered local or module value
+4	identifier column is not a lowered local or module value
+1	identifier crypto is not a lowered local or module value
+1	identifier ctor is not a lowered local or module value
+1	identifier data is not a lowered local or module value
+15	identifier end is not a lowered local or module value
+1	identifier escaped is not a lowered local or module value
+1	identifier fileNewName is not a lowered local or module value
+31	identifier fix is not a lowered local or module value
+25	identifier fix1 is not a lowered local or module value
+1	identifier fix2 is not a lowered local or module value
+4	identifier found is not a lowered local or module value
+1	identifier hash is not a lowered local or module value
+1	identifier icfServices is not a lowered local or module value
+2	identifier importing is not a lowered local or module value
+3	identifier indent is not a lowered local or module value
+67	identifier indentation is not a lowered local or module value
+2	identifier index is not a lowered local or module value
+1	identifier isException is not a lowered local or module value
+5	identifier issue is not a lowered local or module value
+2	identifier label is not a lowered local or module value
+11	identifier match is not a lowered local or module value
+2	identifier message is not a lowered local or module value
+4	identifier outlineFor is not a lowered local or module value
+1	identifier packedLength is not a lowered local or module value
+2	identifier paramName is not a lowered local or module value
+8	identifier parsed is not a lowered local or module value
+3	identifier pattern is not a lowered local or module value
+2	identifier range is not a lowered local or module value
+1	identifier regex is not a lowered local or module value
+2	identifier res is not a lowered local or module value
+2	identifier result is not a lowered local or module value
+2	identifier spaces is not a lowered local or module value
+1	identifier splitAt is not a lowered local or module value
+21	identifier start is not a lowered local or module value
+7	identifier symbol is not a lowered local or module value
+1	identifier text is not a lowered local or module value
+1	identifier typeInformation is not a lowered local or module value
+1	identifier updatedUrl is not a lowered local or module value
+2	identifier usedForbiddenToken is not a lowered local or module value
+3	identifier value is not a lowered local or module value
+11	identifier workspace is not a lowered local or module value
+13	method create on classvalue is not lowered
+15	method create on map is not lowered
+1	method delete on map is not lowered
+5	method exec on regexp is not lowered
+1	method flat on array is not lowered
+1	method getParameters on dynamic is not lowered
+1	method getStr on classref is not lowered
+2	method is on map is not lowered
+31	method match on string is not lowered
+40	method repeat on string is not lowered
+5	method replace on map is not lowered
+2	method toLocaleLowerCase on string is not lowered
+1	method toLocaleUpperCase on string is not lowered
+2	method trimEnd on string is not lowered
+1	new RegExp is not a lowered class
+2	new XMLParser is not a lowered class
+17	object literal needs a named lowered shape
+1	operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)
+4	replace with a non-literal pattern is not lowered
+1	string coercion of array<string> requires JavaScript ToPrimitive
+2	string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive
+1	string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive
+81	top-level KindModuleDeclaration is not lowered
+6	typeof comparison on optional<string> is not lowered
+1	unary KindPlusPlusToken is not lowered
+16	void local requires a value-preserving result ABI

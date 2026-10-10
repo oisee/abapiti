@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.isGeneratorABIValue(x) {
+		return x
+	}
 	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
 		// The checker sees the declared sibling class; the local holds the
 		// common base and may carry any of the assigned classes.
@@ -183,6 +186,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	t := l.ck.GetTypeAtLocation(n)
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+		return x
+	}
+	base := x.Type
+	if base.Kind == hir.Optional {
+		base = base.Args[0]
+	}
+	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
 	}
 	before := len(l.diags)
@@ -544,6 +554,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
 				sv := l.expr(el.Expression())
+				if sv != nil && l.generatorABIFor(sv.Type) != nil {
+					sv = l.drainGenerator(sv)
+				}
 				if sv != nil && sv.Type.Kind == hir.OrderedSet {
 					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
 				}
@@ -705,6 +718,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	}
 
+	if x, ok := l.generatorResultProperty(n); ok {
+		return x
+	}
 	sym := l.resolve(n)
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
@@ -868,6 +884,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, handled := l.promiseStatic(n); handled {
+		return x
+	}
+	if x, ok := l.generatorNextCall(n); ok {
 		return x
 	}
 	callee := n.Expression()

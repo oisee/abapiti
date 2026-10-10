@@ -62,6 +62,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
 		settledEnabled:     coverage == nil,
+		generatorEnabled:   true,
 		asyncMethods:       map[*hir.Method]bool{},
 		settlementWorld:    map[*ast.Node]string{},
 		settlementSuspends: map[*ast.Node]bool{},
@@ -108,6 +109,16 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if err := l.validateOverrides(files, registry); err != nil {
 		return nil, nil, err
+	}
+	if coverage == nil {
+		l.useResumableGenerators()
+	} else {
+		for _, entry := range l.overrides {
+			if entry.GeneratorSnapshot {
+				l.generatorEnabled = false
+				break
+			}
+		}
 	}
 	if coverage != nil && coverage.Schema == 2 {
 		var err error
@@ -346,6 +357,10 @@ type lowerer struct {
 	settlementSuspends map[*ast.Node]bool
 	settlementFiles    map[*ast.SourceFile]bool
 	settlementFailure  string
+	generatorEnabled   bool
+	generatorKeyLoops  map[*hir.Stmt]bool
+	generatorYield     *hir.Expr
+	generatorABIs      map[string]*generatorABI
 	integerOptions     LowerOptions
 	integerExceptions  map[*ast.Node]IntegerException
 	floatSites         map[string]bool

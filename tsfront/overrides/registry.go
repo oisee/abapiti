@@ -33,10 +33,13 @@ type Patterns struct {
 	SourceGuard bool
 }
 type Entry struct {
-	ID        string
-	Key       Key
-	SHA256    string
-	Rationale string
+	// GeneratorSnapshot marks a workload-only eager generator ABI. Full-closure
+	// lowering validates the fingerprint but uses the resumable source body.
+	GeneratorSnapshot bool
+	ID                string
+	Key               Key
+	SHA256            string
+	Rationale         string
 	// References name declarations introduced by a replacement rather than its source.
 	References []Key
 	// Exactly one builder is provided. Builders must return fresh nodes.

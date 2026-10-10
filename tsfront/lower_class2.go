@@ -42,6 +42,11 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 		l.declare(p.Name, p.Type)
 	}
 	l.asyncMethods[hm] = fn.ModifierFlags()&ast.ModifierFlagsAsync != 0
+	if isGeneratorFunction(fn) {
+		l.lowerGeneratorBody(fn, hm)
+		l.pop()
+		return hm
+	}
 	pre := l.applyDefaults(fn, hm)
 	restore := l.withLocalFns(fn.Body())
 	hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
@@ -442,6 +447,9 @@ func (l *lowerer) recordImplements(src hir.Type, dst hir.Type) {
 // coerce adapts a value flowing into a target type: boxing into Dynamic,
 // recording implicit interface implementations.
 func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
+	if x != nil && x.Type.Kind == hir.Array && l.generatorABIFor(dst) != nil {
+		return l.generatorArrayAdapter(x, dst)
+	}
 	if x == nil {
 		return nil
 	}

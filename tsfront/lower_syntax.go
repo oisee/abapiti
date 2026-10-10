@@ -371,6 +371,9 @@ func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		if x == nil {
 			return nil, true
 		}
+		if l.generatorABIFor(x.Type) != nil {
+			return l.drainGenerator(x), true
+		}
 		switch x.Type.Kind {
 		case hir.Array:
 			return l.rtOp("array.slice0", x, x.Type), true
