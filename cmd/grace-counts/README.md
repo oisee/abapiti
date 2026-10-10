@@ -72,7 +72,8 @@ allowed. Consumers are foreach, concat sources and join; current HIR lowers
 spread/push-all to ordinary collection operations/loops and has no preserved
 spread node. R3 screens complete array.slice0/set.copy operations, concat sources and
 array.push value arguments. Reference sources require a last use, owned
-non-escaping source and exactly one local reference binding; reference appends
+non-escaping source, exactly one local reference binding and one syntactic
+source read (excluding possible aliases in operand temporaries); reference appends
 give no kernel value-copy gain. Primitive append sources require a declared
 local with one definition and exactly one syntactic read at that last-use site,
 excluding parameters and previous value copies. Primitives have value semantics,
@@ -91,3 +92,7 @@ This diagnostic mode separates loading/cloning/GC from the pass interval.
 `flow-sites.csv` includes both row category and the exact HIR type string.
 R3 site identities append `/copyN` to the runtime-op site to distinguish its
 source operands; the source line still points to the copying operation.
+
+`loop_depth` counts surrounding loops. An R1 ForEach at depth zero is a loop
+outside any outer loop; an R1 in-loop row describes a nested loop. For R2/R3,
+the same depth describes the producer/copy operation's surrounding loops.

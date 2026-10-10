@@ -464,3 +464,13 @@ these new facts; no rewrite or emitter rule consumes them.
 `recursive_call(Method)` supplies closed-world SCC cycle membership without an
 all-pairs reachability table. An independent DFS in test support checks these
 seeds against Grace's resolved call relation, including virtual/initializer edges.
+
+The full independent reference evaluates the four liveness rules separately for
+each method's disjoint CFG, then evaluates the remaining global rules with those
+independently derived facts. It verifies ownership of every CFG edge and local
+before partitioning and falls back to global evaluation for cross-method edges,
+custom liveness rules, derived transfer inputs or external consumers of these
+facts. Every component still uses repeated whole-rule snapshot scans; there are
+no production-engine joins or deltas. Ordinary fixtures compare this result with
+the unchanged Cartesian evaluator. This avoids repeating all unrelated methods
+for each step along the longest method during the full registry gate.
