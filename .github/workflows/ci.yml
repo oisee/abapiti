@@ -196,7 +196,7 @@ jobs:
 
       - name: Grace regression checks
         run: |
-          go test -timeout 30m ./tsfront -run '^TestEmitRegistry'
+          go test -timeout 30m ./tsfront -run '^(TestEmitRegistry|TestLexerFactsReport$)'
           go test -timeout 30m ./hir/rewrite/... ./internal/gracecheck/... ./internal/hirclone/...
 
   gracefull:
