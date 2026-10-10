@@ -73,13 +73,17 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # legacy WASM path, deprecated 2026-10-10
+      - name: Vet legacy WASM tests (compile only)
+        run: go vet -tags wasmlegacy ./...
+
   test-shard:
     name: test shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2]
     env:
       TEST_SHARD: ${{ matrix.shard }}
       # -shuffle runs each package's tests in a random order, so a test that
@@ -103,25 +107,17 @@ jobs:
 
       - name: Select tests
         run: |
-          # Shards 1-2 split ./wasm, shards 3-4 split ./tsfront in halves;
-          # shard 3 also runs every other package.
-          if [ "$TEST_SHARD" -lt 3 ]; then
-            go test -list . ./wasm > "$OUT/wasm-list.txt"
-            python3 .github/ci/test-shards.py split "$OUT/wasm-list.txt" "$OUT" "$TEST_SHARD"
-          else
-            go test -list . ./tsfront > "$OUT/tsfront-list.txt"
-            python3 .github/ci/test-shards.py split "$OUT/tsfront-list.txt" "$OUT" "$((TEST_SHARD - 2))" tsfront
-          fi
-          if [ "$TEST_SHARD" -eq 3 ]; then
+          # Shards 1-2 split ./tsfront in halves; shard 1 runs other packages.
+          # The legacy WASM package is compiled by go vet, without default tests.
+          go test -list . ./tsfront > "$OUT/tsfront-list.txt"
+          python3 .github/ci/test-shards.py split "$OUT/tsfront-list.txt" "$OUT" "$TEST_SHARD"
+          if [ "$TEST_SHARD" -eq 1 ]; then
             go list ./... | grep -vx -e 'github.com/oisee/abapiti/wasm' -e 'github.com/oisee/abapiti/tsfront' > "$OUT/packages.txt"
           fi
 
-      # -race: the wasm tests run their inputs in wazero as the reference, and
-      # wazero compiles and runs on goroutines of its own. -json for the counts;
-      # it implies -v, so the log is printed back the way plain `go test`
-      # would: package lines, build errors, plus the output of the tests that
-      # failed. The TypeScript test skips without `npm install`, and clang is
-      # optional, as before.
+      # -race checks concurrent code. -json supplies the aggregation counts and
+      # implies -v; print package output and failed tests below. The TypeScript
+      # test skips without npm install, and clang remains optional.
       - name: Test
         id: test
         run: |
@@ -134,12 +130,8 @@ jobs:
             printf '%q ' "$@"
             echo
           }
-          if [ "$TEST_SHARD" -lt 3 ]; then
-            run wasm -run "$(cat "$OUT/wasm-run.txt")" ./wasm
-          else
-            run tsfront -run "$(cat "$OUT/tsfront-run.txt")" ./tsfront
-          fi
-          if [ "$TEST_SHARD" -eq 3 ]; then
+          run tsfront -run "$(cat "$OUT/tsfront-run.txt")" ./tsfront
+          if [ "$TEST_SHARD" -eq 1 ]; then
             mapfile -t packages < "$OUT/packages.txt"
             [ "${#packages[@]}" -gt 0 ]
             run packages "${packages[@]}"
@@ -250,12 +242,12 @@ jobs:
         if: always()
         run: python3 .github/ci/test-shards.py aggregate "$RUNNER_TEMP/test-shards" "$OUT"
 
-      - name: Every wasm test ran exactly once
+      - name: Every tsfront test ran exactly once
         if: always()
         run: python3 .github/ci/test-shards.py check "$RUNNER_TEMP/test-shards"
 
       # One annotation the report reads back as the row's detail. Coverage is
-      # over the compiler and interpreter packages only (wasm, llvm, ts, ts2go,
+      # over the compiler and interpreter packages only (llvm, ts, ts2go,
       # jseval, hir): cmd/ is thin glue and fun/ is demos, and counting them would
       # make the total move for reasons that are not the compilers'.
       - name: Summarise
@@ -268,14 +260,14 @@ jobs:
           [ "$builds" -gt 0 ] && counts="$counts, $builds packages did not build"
           cov=""
           if [ -s "$OUT/cover.out" ]; then
-            { head -1 "$OUT/cover.out"; grep -E '^github\.com/oisee/abapiti/(wasm|llvm|ts|ts2go|jseval|hir)/' "$OUT/cover.out" || true; } > "$OUT/cover-lib.out"
+            { head -1 "$OUT/cover.out"; grep -E '^github\.com/oisee/abapiti/(llvm|ts|ts2go|jseval|hir)/' "$OUT/cover.out" || true; } > "$OUT/cover-lib.out"
             cov=$(go tool cover -func="$OUT/cover-lib.out" | awk '/^total:/ {print $3}')
           fi
           tree=""
           [ -e "$OUT/tree-dirty" ] && tree=" · TREE DIRTY after the tests"
           echo "::notice title=ci-report::${counts}${cov:+, compiler coverage $cov}${tree} · seed $SHUFFLE_SEED"
 
-      # The aggregate script writes the existing per-package schema. wasm's
+      # The aggregate script writes the existing per-package schema. tsfront's
       # seconds sum both halves; its coverage comes from the merged blocks.
       - name: Upload the summary
         if: always()

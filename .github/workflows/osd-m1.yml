@@ -9,10 +9,8 @@ name: OSD M1
 # OSD activates through the abaplint transpiler, so green here is not proof of
 # kernel behaviour (TYPE i overflow, for one).
 
+# legacy WASM path, deprecated 2026-10-10
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:

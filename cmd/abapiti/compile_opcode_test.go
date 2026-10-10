@@ -1,3 +1,5 @@
+//go:build wasmlegacy
+
 package main
 
 import (
