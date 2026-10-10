@@ -215,3 +215,50 @@ func TestAccumulatorWholeAppendFastPath(t *testing.T) {
 		})
 	}
 }
+
+func TestAccumulatorExceptionProofs(t *testing.T) {
+	for _, raises := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no-throw-live-in-handler", true: "transitive-throw-live-in-handler"}[raises], func(t *testing.T) {
+			p, m, c := accumulatorFixture()
+			helper := &hir.Method{Name: "helper", Static: true, Result: hir.T(hir.Void), Body: hir.B()}
+			if raises {
+				helper.Body = hir.B(&hir.Stmt{Kind: hir.Throw, X: hir.L(hir.T(hir.I32), 1)})
+			}
+			p.Classes[0].Methods = append(p.Classes[0].Methods, helper)
+			m.Body.List = append(m.Body.List[:2], append([]*hir.Stmt{{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.DirectCall, Owner: "C", Name: "helper", Type: hir.T(hir.Void)}}}, m.Body.List[2:]...)...)
+			c.Body.List[1] = &hir.Stmt{Kind: hir.Try, Name: "err", Type: hir.T(hir.I32), Body: hir.B(c.Body.List[1]), Else: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.V("out", c.Result)})}
+			db, err := rewrite.Analyze(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
+			if db.Has("may_throw", "C::m") != raises {
+				t.Fatal("transitive exception fact")
+			}
+			st, err := rewrite.Accumulator(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := 1
+			if raises {
+				want = 0
+			}
+			if len(st.Sites) != want {
+				t.Fatal(st)
+			}
+			if !raises && st.Sites[0].Guard != "may_throw=false" {
+				t.Fatal(st)
+			}
+		})
+	}
+}
+
+func TestAccumulatorOtherCallRejectsResult(t *testing.T) {
+	p, m, _ := accumulatorFixture()
+	p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "take", Static: true, Result: hir.T(hir.Void), Params: []hir.Param{{Name: "a", Type: m.Result}}, Body: hir.B()})
+	m.Body.List = append(m.Body.List[:1], append([]*hir.Stmt{{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.DirectCall, Owner: "C", Name: "take", Type: hir.T(hir.Void), Args: []*hir.Expr{hir.V("result", m.Result)}}}}, m.Body.List[1:]...)...)
+	st, err := rewrite.Accumulator(p)
+	if err != nil || len(st.Sites) != 0 {
+		t.Fatalf("%v %v", st, err)
+	}
+}
