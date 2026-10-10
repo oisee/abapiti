@@ -10,7 +10,7 @@ Results are named `<code>@<host>`. The code part spells the pipeline, one letter
 | **TS-HA** | TypeScript → HIR → ABAP | abaplint translated by abapiti: 2,110 ABAP classes and interfaces, the same bytes for every host |
 | **TS-HG** | TypeScript → HIR → Go | abaplint translated through the same HIR straight to Go, without ABAP (dell's `hir/golang`) |
 
-HIR is abapiti's typed object IR. Grace is the rule engine over it; since #70 its inline rules are the default (`ABAPITI_INLINE=classic` runs the older `hir.Inline`, `0` disables inlining).
+HIR is abapiti's typed object IR, on the TypeScript side. **GIR** is open-steamgate's IR on the ABAP side (gogen: ABAP → GIR → Go for OSGO/OSGB, or JS for OSGI). Grace is the rule engine over it; since #70 its inline rules are the default (`ABAPITI_INLINE=classic` runs the older `hir.Inline`, `0` disables inlining).
 
 ## Hosts
 
@@ -22,6 +22,7 @@ HIR is abapiti's typed object IR. Grace is the rule engine over it; since #70 it
 | **OSGJ** | open-steamgate's JS runtime: ABAP translated to JS by the abaplint transpiler, `@abaplint/runtime` (`npm run osgjs:unit`) |
 | **OSGB** | open-steamgate's Go runtime in one executable: `osabap` compiles the ABAP plus a report into a binary. For abaplint that binary is the command **`zabaplint`** |
 | **Go** | a plain Go build of TS-HG |
+| **OSGI** | open-steamgate's IR-based JS backend: ABAP → GIR → synchronous JS on Node (in development, not released) |
 
 **osabap** is the compiler (open-steamgate `tools/gogen/osabap.mjs`): ABAP → one Go executable; its output is the host OSGB.
 
