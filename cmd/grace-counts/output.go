@@ -48,6 +48,9 @@ func tables(sites []site, methods []methodUse) string {
 	for _, stage := range []string{"statements", "lexer", "structures", "syntax", "rules", "other"} {
 		counts[stage] = tally{}
 	}
+	for _, class := range strings.Fields("Expression Sequence Vers Token Word Star Alternative Optional Plus Permutation WordSequence") {
+		counts["statements/combi."+class] = tally{}
+	}
 	for _, s := range sites {
 		t := counts[s.Stage]
 		if s.Form == "chained" {
@@ -97,12 +100,9 @@ func tables(sites []site, methods []methodUse) string {
 		fmt.Fprintf(&b, "%s%s | %d | %d | %d | %d | %d | %d\n", k, marker, t.in, t.out, t.all, t.some, t.none, t.chain)
 	}
 	fmt.Fprintf(&b, "Total S1 sites: %d\n", total)
-	fmt.Fprintln(&b, "Profile #5 receiver methods (* hot class; all details in methods.csv)")
+	fmt.Fprintln(&b, "Receiver methods (* profile #5 hot class; parameter details in methods.csv)")
 	fmt.Fprintln(&b, "Receiver method | only iterated | first blocker")
 	for _, m := range methods {
-		if !strings.HasPrefix(m.Method, "src/abap/2_statements/combi.ts.") || !strings.HasSuffix(m.Method, "::run") {
-			continue
-		}
 		marker := ""
 		if hot(m.Method) {
 			marker = "*"
@@ -114,7 +114,14 @@ func tables(sites []site, methods []methodUse) string {
 		if blocker == "" {
 			blocker = fmt.Sprintf("%d foreach uses", m.Loops)
 		}
-		fmt.Fprintf(&b, "%s%s | %t | %s\n", strings.TrimPrefix(m.Method, "src/abap/2_statements/combi.ts."), marker, m.Eligible, blocker)
+		name := strings.TrimPrefix(m.Method, "src/abap/2_statements/combi.ts.")
+		if i := strings.Index(name, ".ts."); i >= 0 {
+			name = name[i+4:]
+		}
+		if strings.HasPrefix(name, "tuple.") {
+			name = "tuple::constructor"
+		}
+		fmt.Fprintf(&b, "%s%s[%d] | %t | %s\n", name, marker, m.Arg, m.Eligible, blocker)
 	}
 	percent := 0.0
 	if hotSites > 0 {

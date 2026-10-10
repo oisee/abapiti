@@ -1,0 +1,33 @@
+method,parameter_index,parameter,only_iterated,foreach_uses,first_blocking_use,grace_escapes,grace_alias_edges,grace_flow_edges
+src/abap/2_statements/combi.ts.Alternative::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.AlternativePriority::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.AlternativePriority::run/body/s1/body/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.Expression::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.FailCombinator::run,0,r,true,0,,false,0,0
+src/abap/2_statements/combi.ts.LangVers::run,0,r,true,0,,false,0,0
+src/abap/2_statements/combi.ts.LangVersNot::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.LangVersNot::run/body/s0/body/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.Optional::run,0,r,true,1,,false,0,1
+src/abap/2_statements/combi.ts.OptionalPriority::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.Permutation::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.Plus::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.Plus::run/body/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.PlusPriority::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.PlusPriority::run/body/s0/x/arg0,true,0,1
+src/abap/2_statements/combi.ts.Regex::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.Sequence::run,0,r,true,1,,false,0,1
+src/abap/2_statements/combi.ts.Star::run,0,r,false,0,var at src/abap/2_statements/combi.ts.Star::run/body/s0/x,true,2,2
+src/abap/2_statements/combi.ts.StarPriority::run,0,r,false,0,var at src/abap/2_statements/combi.ts.StarPriority::run/body/s0/x,true,2,2
+src/abap/2_statements/combi.ts.StopBefore1::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.StopBefore2::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.Token::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.Vers::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.Vers::run/body/s0/body/s0/body/s0/x/arg0,true,0,3
+src/abap/2_statements/combi.ts.Word::run,0,r,true,1,,true,0,1
+src/abap/2_statements/combi.ts.WordSequence::run,0,r,false,0,virtual argument at src/abap/2_statements/combi.ts.WordSequence::run/body/s0/x/arg0,true,0,1
+src/abap/2_statements/statement_parser.ts.StatementParser::tokensToNodes,0,tokens,true,1,,true,0,1
+src/abap/3_structures/structure_result.ts.IStructureResult::constructor,0,issues,false,0,assign value at src/abap/3_structures/structure_result.ts.IStructureResult::constructor/body/s0/y,true,0,0
+src/abap/3_structures/structures/_match.ts.IMatch::constructor,0,matched,false,0,assign value at src/abap/3_structures/structures/_match.ts.IMatch::constructor/body/s0/y,true,0,0
+src/abap/5_syntax/_current_scope.ts.CurrentScope::addFormDefinitions,0,f,true,1,,false,0,1
+src/abap/5_syntax/expressions/_check_database_fields.ts.module::checkDatabaseFields,1,dbSources,false,0,array.length receiver/operand at src/abap/5_syntax/expressions/_check_database_fields.ts.module::checkDatabaseFields/body/s0/s0/x/0/0,true,0,2
+src/abap/5_syntax/expressions/method_def_returning.ts.MethodDefReturning::runSyntax,2,meta,false,0,conditional operand at src/abap/5_syntax/expressions/method_def_returning.ts.MethodDefReturning::runSyntax/body/s8/body/s0/x/arg3/1,true,0,2
+src/abap/types/basic/structure_type.ts.StructureType::constructor,0,components,false,1,array.length receiver/operand at src/abap/types/basic/structure_type.ts.StructureType::constructor/body/s1/x/0/0,true,0,2
+src/abap/types/method_parameters.ts.MethodParameters::add,3,meta,false,0,array.includes receiver/operand at src/abap/types/method_parameters.ts.MethodParameters::add/body/s0/body/s3/else/x/0,true,0,3
+src/registry.ts.Registry::_addFiles,0,files,true,1,,true,0,1
+src/registry.ts.Registry::addFiles,0,files,false,0,virtual argument at src/registry.ts.Registry::addFiles/body/s0/x/arg0,true,0,1
+tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.8f9108e347ad289a33aa5df99962abce4e6d371906c6508e3a0fcfd0983f8809.98b7639e585fae5238ff43662490d7623581819bd94f3e3d769d74b4152b48ee::constructor,2,f2,false,0,assign value at tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.8f9108e347ad289a33aa5df99962abce4e6d371906c6508e3a0fcfd0983f8809.98b7639e585fae5238ff43662490d7623581819bd94f3e3d769d74b4152b48ee::constructor/body/s2/y,true,0,0
