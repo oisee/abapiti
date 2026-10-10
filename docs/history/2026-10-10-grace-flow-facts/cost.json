@@ -1,0 +1,52 @@
+{
+  "inline": {
+    "before": {
+      "seconds": [
+        0.425288353,
+        0.44459333,
+        0.492106578
+      ],
+      "median_seconds": 0.44459333
+    },
+    "after": {
+      "seconds": [
+        0.754084816,
+        0.622114554,
+        0.814663201
+      ],
+      "median_seconds": 0.754084816
+    }
+  },
+  "build": {
+    "before": {
+      "seconds": [
+        31.76,
+        30.17,
+        32.08
+      ],
+      "median_seconds": 31.76
+    },
+    "after": {
+      "seconds": [
+        31.77,
+        35.58,
+        27.73
+      ],
+      "median_seconds": 31.77
+    }
+  },
+  "baseline_commit": "5de8670",
+  "analysis_code_commit": "309f30e",
+  "gomaxprocs": 4,
+  "manifest_files": 6336,
+  "manifest_sha256": "b53e24c12df5dc9a02890f731aa9d7d10cf60447bfe315e35ced3b00bb46ffa7",
+  "manifest_equal": true,
+  "inline_sites": 1487,
+  "inline_callees": 190,
+  "whole_build_percent_change": 0.031486146095716094,
+  "pass_delta_as_percent_of_before_build": 0.9744694143576825,
+  "reference_support_commit": "1a69af9",
+  "reference_support_changes_production_code": false,
+  "candidate_guard_commit": "514d021",
+  "candidate_guard_changes_production_inline": false
+}
