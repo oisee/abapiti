@@ -230,6 +230,7 @@ func count(p *hir.Program, db *rewrite.DB, literalSource func(string) bool) ([]s
 		sites = append(sites, row)
 		if chain {
 			row.Form = "chained"
+			row.Verdict = "not-singleton"
 			sites = append(sites, row)
 		}
 	}

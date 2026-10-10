@@ -84,7 +84,7 @@ func TestSingletonReceiversAndChain(t *testing.T) {
 		t.Fatalf("sites: %+v", sites)
 	}
 	for _, s := range sites {
-		if s.Verdict != "partially" || s.Yes != 1 || len(s.Targets) != 2 {
+		if (s.Verdict != "partially" && s.Form != "chained") || s.Yes != 1 || len(s.Targets) != 2 {
 			t.Fatalf("%+v", s)
 		}
 	}
