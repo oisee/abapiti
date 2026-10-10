@@ -482,8 +482,6 @@ func (e *emitter) class(c *hir.Class) {
 }
 
 type body struct {
-	integerConstants             map[string]int64
-	integerBounds                bool
 	e                            *emitter
 	c                            *hir.Class
 	m                            *hir.Method
@@ -2316,47 +2314,33 @@ func (b *body) constantDeclarations() string {
 	for _, k := range keys {
 		out.WriteString(b.constants[k])
 	}
-	if b.integerBounds {
-		init := &body{}
-		init.line("DATA range_int8_bound_min TYPE int8.")
-		init.line("DATA range_int8_bound_max TYPE int8.")
-		init.int8Lit("range_int8_bound_min", -9007199254740991)
-		init.int8Lit("range_int8_bound_max", 9007199254740991)
-		out.WriteString(init.code.String())
-	}
-	keys = keys[:0]
-	for name := range b.integerConstants {
-		keys = append(keys, name)
-	}
-	sort.Strings(keys)
-	for _, name := range keys {
-		init := &body{}
-		init.line("DATA " + name + " TYPE int8.")
-		init.int8Lit(name, b.integerConstants[name])
-		out.WriteString(init.code.String())
-	}
 	return out.String()
 }
 
 // The opt-in integer contract must reject loss of JS integer precision long
 // before native int8 overflows, including in bigint-backed runtimes.
 func (b *body) integerOverflow(n string) {
-	b.integerBounds = true
-	low, high := "range_int8_bound_min", "range_int8_bound_max"
+	low, high := b.int8Constant("range_int8_bound_min", -9007199254740991), b.int8Constant("range_int8_bound_max", 9007199254740991)
 	b.line("IF " + n + " < " + low + " OR " + n + " > " + high + ".")
 	b.line("RAISE EXCEPTION TYPE cx_sy_arithmetic_overflow.")
 	b.line("ENDIF.")
 }
 
 func (b *body) integerConstant(name string, value int64) string {
-	if b.integerConstants == nil {
-		b.integerConstants = map[string]int64{}
-	}
 	prefix := "range_int_"
 	if len(prefix)+len(name) > 30 {
 		prefix = "range_i_"
 	}
-	name = prefix + name
-	b.integerConstants[name] = value
+	return b.int8Constant(prefix+name, value)
+}
+
+// int8Constant declares an int8 CONSTANTS once per method. The value is a
+// text literal, converted when the method is compiled, not rebuilt from i
+// pieces on every call (6 statements per call in hot methods before).
+func (b *body) int8Constant(name string, value int64) string {
+	if b.constants == nil {
+		b.constants = map[string]string{}
+	}
+	b.constants[name] = fmt.Sprintf("CONSTANTS %s TYPE int8 VALUE '%d'.\n", name, value)
 	return name
 }
