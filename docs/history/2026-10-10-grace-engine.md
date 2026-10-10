@@ -41,3 +41,34 @@ joins remain for step 2.
 Raw pass seconds / KiB: 6.073294 / 584440, 6.263578 / 591328,
 6.090076 / 592788. Raw build seconds / KiB: 17.39 / 611808,
 17.08 / 617420, 15.98 / 609140.
+
+## Step 2
+
+The interpreter interns symbols into integer IDs, keys ordinary tuples with fixed
+arrays, and uses composite hash indexes selected from rule-body bindings. Wide
+user tuples retain exact keys through a packed overflow representation. Each
+semi-naive pivot consumes its delta first; subsequent joins prefer bound-column
+selectivity and relation cardinality. One reusable binding array and undo stack
+replace per-candidate map copies. The initial round evaluates each conjunction
+once rather than once per pivot. Minimum proof depths and negation strata remain.
+
+The HIR adapter retains only matched nodes for inline actions, omits paths during
+shape walks, avoids constructing paths for nil children, and indexes method names
+for variant detection. The unrestricted diagnostic extraction API retains all
+its facts. Unused template conversion is skipped under demand selection.
+
+| Step | Pass seconds | Pass RSS MiB | Whole build seconds | Build RSS MiB |
+|---|---:|---:|---:|---:|
+| 2: indexed interpreter | 0.273982 | 169.17 | 9.87 | 380.69 |
+
+Raw pass seconds / KiB: 0.272817 / 173228, 0.273982 / 173788,
+0.277580 / 173004. Raw build seconds / KiB: 10.10 / 390608,
+9.87 / 383200, 9.64 / 389824. The target is reached without a rule compiler.
+The pass is about 7.7 times the historical hir.Inline median (stretch target 5).
+
+Validation: short suite and pinned lint gate (0 issues, 5/5); synthetic reference
+checks include repeated bindings and ten-column tuples; all three builds match
+all 6,336 output files and emitted stats. Pass stats are 1,487 / 190.
+A preliminary CPU profile before eliminating redundant initial pivots showed
+joins, verification, and GC as the remaining costs; final profiling follows the
+incremental round implementation.

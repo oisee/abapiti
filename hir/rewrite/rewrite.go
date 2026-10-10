@@ -136,6 +136,7 @@ type runner struct {
 	total, changed int
 	inline         *inlineAction
 	err            error
+	plans          []*joinPlan
 }
 
 // Rewrite applies rules deterministically, in operand order and callee-first for
@@ -176,6 +177,11 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 		if err := r.validate(); err != nil {
 			return r.stats, err
 		}
+		r.plans = nil
+		for _, rr := range r.rules.rewrites {
+			c := clause{head: rr.action, body: rr.where, bound: -1}
+			r.plans = append(r.plans, planJoin(r.db, c, -1, rr.match.args))
+		}
 		r.done = map[*hir.Method]bool{}
 		r.changed = 0
 		r.inline = newInlineAction(r)
@@ -207,7 +213,7 @@ func (r *runner) validate() error {
 			if comparison(a.pred) && len(a.args) != 2 {
 				return fmt.Errorf("%s needs two terms", a.pred)
 			}
-			if t := r.db.tables[a.pred]; t != nil && len(t.index) != len(a.args) {
+			if t := r.db.tables[a.pred]; t != nil && t.arity != len(a.args) {
 				return fmt.Errorf("%s: inconsistent arity", a.pred)
 			}
 		}
@@ -215,6 +221,16 @@ func (r *runner) validate() error {
 	return nil
 }
 func (r *runner) index() error {
+	kinds := map[string]bool{}
+	allNodes := r.rules == nil
+	if r.rules != nil {
+		for _, rr := range r.rules.rewrites {
+			if rr.action.pred == "replace" || rr.match.args[1].variable || rr.match.args[1].wild {
+				allNodes = true
+			}
+			kinds[rr.match.args[1].value] = true
+		}
+	}
 	var addErr error
 	addNode := func(path, kind string) {
 		if addErr == nil {
@@ -239,9 +255,15 @@ func (r *runner) index() error {
 			r.methods[m] = id
 			r.byID[id] = m
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, path string) {
+				if !allNodes {
+					return
+				}
 				r.nodes[path] = rewriteNode{path, nil, s, m}
 				addNode(path, string(s.Kind))
 			}, func(e *hir.Expr, path string) {
+				if !allNodes && !kinds[string(e.Kind)] {
+					return
+				}
 				r.nodes[path] = rewriteNode{path, e, nil, m}
 				r.ids[e] = path
 				addNode(path, string(e.Kind))
@@ -256,11 +278,23 @@ func visitTree(s *hir.Stmt, path string, fs func(*hir.Stmt, string), fx func(*hi
 	if s == nil {
 		return
 	}
+	if path == "" {
+		walkSyntax(s, fs, fx)
+		return
+	}
 	fs(s, path)
-	visitExpr(s.X, path+"/x", fs, fx)
-	visitExpr(s.Y, path+"/y", fs, fx)
-	visitTree(s.Body, path+"/body", fs, fx)
-	visitTree(s.Else, path+"/else", fs, fx)
+	if s.X != nil {
+		visitExpr(s.X, path+"/x", fs, fx)
+	}
+	if s.Y != nil {
+		visitExpr(s.Y, path+"/y", fs, fx)
+	}
+	if s.Body != nil {
+		visitTree(s.Body, path+"/body", fs, fx)
+	}
+	if s.Else != nil {
+		visitTree(s.Else, path+"/else", fs, fx)
+	}
 	for i, v := range s.List {
 		visitTree(v, fmt.Sprintf("%s/s%d", path, i), fs, fx)
 	}
@@ -270,9 +304,15 @@ func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hi
 		return
 	}
 	fx(e, path)
-	visitExpr(e.X, path+"/0", fs, fx)
-	visitExpr(e.Y, path+"/1", fs, fx)
-	visitExpr(e.Z, path+"/2", fs, fx)
+	if e.X != nil {
+		visitExpr(e.X, path+"/0", fs, fx)
+	}
+	if e.Y != nil {
+		visitExpr(e.Y, path+"/1", fs, fx)
+	}
+	if e.Z != nil {
+		visitExpr(e.Z, path+"/2", fs, fx)
+	}
 	for i, a := range e.Args {
 		visitExpr(a, fmt.Sprintf("%s/arg%d", path, i), fs, fx)
 	}
@@ -336,7 +376,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 	if !original {
 		return nil, nil
 	}
-	for _, rr := range r.rules.rewrites {
+	for ri, rr := range r.rules.rewrites {
 		if rr.bound >= 0 && depth >= rr.bound {
 			continue
 		}
@@ -345,8 +385,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 			continue
 		}
 		var choices []Tuple
-		c := clause{head: rr.action, body: rr.where, bound: -1}
-		join(r.db, r.db, c, -1, 0, env, 0, func(a Tuple, _ int) { choices = append(choices, a) })
+		r.plans[ri].run(r.db, r.db, env, func(a Tuple, _ int) { choices = append(choices, append(Tuple(nil), a...)) })
 		for _, args := range choices {
 			var out *hir.Expr
 			var stmt *hir.Stmt
@@ -372,4 +411,36 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 }
 func inert(e *hir.Expr) bool {
 	return e != nil && (e.Kind == hir.Lit || e.Kind == hir.Local || e.Kind == hir.This)
+}
+
+// walkSyntax omits structural path construction for shape-only adapter walks.
+func walkSyntax(s *hir.Stmt, fs func(*hir.Stmt, string), fx func(*hir.Expr, string)) {
+	if s == nil {
+		return
+	}
+	fs(s, "")
+	walkSyntaxExpr(s.X, fs, fx)
+	walkSyntaxExpr(s.Y, fs, fx)
+	walkSyntax(s.Body, fs, fx)
+	walkSyntax(s.Else, fs, fx)
+	for _, child := range s.List {
+		walkSyntax(child, fs, fx)
+	}
+}
+func walkSyntaxExpr(e *hir.Expr, fs func(*hir.Stmt, string), fx func(*hir.Expr, string)) {
+	if e == nil {
+		return
+	}
+	fx(e, "")
+	walkSyntaxExpr(e.X, fs, fx)
+	walkSyntaxExpr(e.Y, fs, fx)
+	walkSyntaxExpr(e.Z, fs, fx)
+	for _, child := range e.Args {
+		walkSyntaxExpr(child, fs, fx)
+	}
+	if e.Stmt != nil {
+		for _, child := range e.Stmt.List {
+			walkSyntax(child, fs, fx)
+		}
+	}
 }

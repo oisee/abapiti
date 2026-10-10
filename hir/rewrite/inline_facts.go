@@ -21,6 +21,12 @@ func (r *runner) addInlineFacts() error {
 	for _, c := range r.p.Classes {
 		classes[c.Name] = c
 	}
+	names := map[string]bool{}
+	for _, c := range r.p.Classes {
+		for _, m := range c.Methods {
+			names[m.Name] = true
+		}
+	}
 	for _, c := range r.p.Classes {
 		for k := c; k != nil; k = classes[k.Super] {
 			add("inline_ancestor", c.Name, k.Name)
@@ -28,18 +34,17 @@ func (r *runner) addInlineFacts() error {
 		for _, m := range c.Methods {
 			id := r.methods[m]
 			add("inline_decl", c.Name, m.Name, id)
-			for _, other := range c.Methods {
-				if strings.HasPrefix(other.Name, m.Name+"_instantiated_") {
-					add("inline_variant", c.Name, m.Name)
+			// Every declared base name, including inherited methods, blocks variants.
+			for start := 0; start < len(m.Name); {
+				pos := strings.Index(m.Name[start:], "_instantiated_")
+				if pos < 0 {
+					break
 				}
-			}
-			// Variants of inherited methods also block dispatch.
-			for _, d := range r.p.Classes {
-				for _, base := range d.Methods {
-					if strings.HasPrefix(m.Name, base.Name+"_instantiated_") {
-						add("inline_variant", c.Name, base.Name)
-					}
+				pos += start
+				if names[m.Name[:pos]] {
+					add("inline_variant", c.Name, m.Name[:pos])
 				}
+				start = pos + 1
 			}
 			add("inline_owner", id, c.Name)
 			if m.Virtual {
@@ -62,7 +67,7 @@ func (r *runner) addInlineFacts() error {
 				add("inline_block", id)
 			}
 			size := 0
-			visitTree(m.Body, id+"/body", func(s *hir.Stmt, _ string) {
+			visitTree(m.Body, "", func(s *hir.Stmt, _ string) {
 				add("inline_stmt", id, string(s.Kind))
 				if s.Kind == hir.VarDecl && s.X == nil {
 					add("inline_uninitialized", id)
@@ -81,8 +86,10 @@ func (r *runner) addInlineFacts() error {
 				}
 			})
 			add("inline_size", id, strconv.Itoa(size))
-			if _, ok := makeTemplate(m); ok {
-				add("inline_template", id)
+			if r.db.demanded == nil || r.db.demanded["inline_template"] {
+				if _, ok := makeTemplate(m); ok {
+					add("inline_template", id)
+				}
 			}
 		}
 	}
