@@ -181,3 +181,37 @@ func TestAccumulatorSeparateSignatures(t *testing.T) {
 		t.Fatal("unrelated signature changed")
 	}
 }
+
+func TestAccumulatorWholeAppendFastPath(t *testing.T) {
+	for _, extra := range []bool{false, true} {
+		t.Run(map[bool]string{false: "whole-append", true: "additional-read"}[extra], func(t *testing.T) {
+			p, _, c := accumulatorFixture()
+			loop := c.Body.List[1]
+			call := loop.X
+			loop.X = hir.V("temp", c.Result)
+			decl := &hir.Stmt{Kind: hir.VarDecl, Name: "temp", Type: c.Result, X: call}
+			n := c.Result.Args[0]
+			branch := &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: n, X: hir.V("temp", c.Result)}, Y: hir.L(n, 1)}, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.push", Type: n, X: hir.V("out", c.Result), Args: []*hir.Expr{{Kind: hir.IndexGet, Type: n, X: hir.V("temp", c.Result), Y: hir.L(n, 0)}}}}), Else: hir.B(loop)}
+			c.Body.List = []*hir.Stmt{c.Body.List[0], decl, branch, c.Body.List[2]}
+			if extra {
+				c.Body.List = append(c.Body.List[:3], append([]*hir.Stmt{{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: n, X: hir.V("temp", c.Result)}}}, c.Body.List[3:]...)...)
+			}
+			db, err := rewrite.Analyze(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
+			st, err := rewrite.Accumulator(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := 1
+			if extra {
+				want = 0
+			}
+			if len(st.Sites) != want {
+				t.Fatal(st)
+			}
+		})
+	}
+}

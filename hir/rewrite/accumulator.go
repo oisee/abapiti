@@ -61,6 +61,17 @@ func Accumulator(p *hir.Program) (AccumulatorStats, error) {
 		return st, err
 	}
 	hir.AssignSiteIDs(p)
+	// Index read bindings and complete dispatch proofs once; Facts returns copies.
+	refs := map[string]string{}
+	for _, r := range db.Facts("local_ref") {
+		refs[r[0]] = r[1]
+	}
+	noThrow := map[string]bool{}
+	for _, r := range db.Facts("calls") {
+		safe := db.Has("defined", r[1]) && !db.Has("may_throw", r[1])
+		previous, seen := noThrow[r[2]]
+		noThrow[r[2]] = safe && (!seen || previous)
+	}
 	families := map[string][]*hir.Method{}
 	owners := map[*hir.Method]*hir.Class{}
 	blocked := map[string]bool{}
@@ -127,7 +138,7 @@ func Accumulator(p *hir.Program) (AccumulatorStats, error) {
 			}, func(e *hir.Expr, path string) { ids[e] = path })
 			safe := map[string]bool{}
 			for bid, decl := range bindings {
-				if db.Has("fresh", id, bid) && accumulatorPrivate(m.Body, decl.Name) && accumulatorOwned(bid, id, db, bindings, ids) {
+				if db.Has("fresh", id, bid) && accumulatorPrivate(m.Body, decl.Name) && accumulatorOwned(bid, id, db, bindings, ids, refs) {
 					safe[bid] = true
 				}
 			}
@@ -144,42 +155,28 @@ func Accumulator(p *hir.Program) (AccumulatorStats, error) {
 							decl = loop
 							loop = s.List[i+1]
 						}
-						call, out, ok := accumulatorConsumer(loop)
+						call, out, lastReads, uses, ok := accumulatorAppend(loop)
 						if ok && decl != nil {
 							if call.Kind != hir.Local || call.Name != decl.Name {
 								ok = false
 							} else {
-								bid := ""
-								for _, r := range db.Facts("local_ref") {
-									if r[0] == ids[call] {
-										bid = r[1]
-									}
+								bid := refs[ids[call]]
+								ok = db.Has("use_count", bid, fmt.Sprint(uses))
+								for _, read := range lastReads {
+									ok = ok && db.Has("not_read_after", bid, ids[read])
 								}
-								ok = db.Has("use_count", bid, "1") && db.Has("not_read_after", bid, ids[call])
 								call = decl.X
 							}
 						}
 						if ok && call != nil && call.Kind == hir.VirtualCall && available[accumulatorCallSignature(call)] {
-							bid := ""
-							for _, r := range db.Facts("local_ref") {
-								if r[0] == ids[out] {
-									bid = r[1]
-								}
-							}
+							bid := refs[ids[out]]
 							// A private fresh local cannot be reachable through args, fields or statics.
 							if safe[bid] && call.Type.Equal(out.Type) {
-								targets := 0
-								noThrow := true
-								for _, r := range db.Facts("calls") {
-									if r[0] == id && r[2] == ids[call] {
-										targets++
-										noThrow = noThrow && db.Has("defined", r[1]) && !db.Has("may_throw", r[1])
-									}
-								}
+								noRaise, resolved := noThrow[ids[call]]
 								guard := ""
-								if targets > 0 && noThrow {
+								if resolved && noRaise {
 									guard = "may_throw=false"
-								} else if targets > 0 && !accumulatorHandlers(m.Body) {
+								} else if resolved && !accumulatorHandlers(m.Body) {
 									guard = "fresh local dead on exception"
 								}
 								if guard != "" {
@@ -274,6 +271,59 @@ func accumulatorConsumer(s *hir.Stmt) (*hir.Expr, *hir.Expr, bool) {
 	return s.X, push.X, true
 }
 
+// The pinned combinators use a singleton fast path. Both branches append the
+// entire result, so the length test is only a choice of equivalent append code.
+// Tests that influence control flow or choose different values do not match.
+func accumulatorAppend(s *hir.Stmt) (*hir.Expr, *hir.Expr, []*hir.Expr, int, bool) {
+	if call, out, ok := accumulatorConsumer(s); ok {
+		return call, out, []*hir.Expr{call}, 1, true
+	}
+	if s == nil || s.Kind != hir.If || s.X == nil || s.X.Kind != hir.Binary || s.X.Op != "==" {
+		return nil, nil, nil, 0, false
+	}
+	length, one := s.X.X, s.X.Y
+	for length != nil && length.Kind == hir.NumericConvert {
+		length = length.X
+	}
+	if length == nil || length.Kind != hir.RuntimeOp || length.Op != "array.length" || length.X == nil || length.X.Kind != hir.Local || !accumulatorInteger(one, 1) {
+		return nil, nil, nil, 0, false
+	}
+	body := s.Body
+	if body != nil && body.Kind == hir.Block && len(body.List) == 1 {
+		body = body.List[0]
+	}
+	if body == nil || body.Kind != hir.ExprStmt || body.X == nil {
+		return nil, nil, nil, 0, false
+	}
+	push := body.X
+	if push.Kind != hir.RuntimeOp || push.Op != "array.push" || push.X == nil || push.X.Kind != hir.Local || len(push.Args) != 1 {
+		return nil, nil, nil, 0, false
+	}
+	index := push.Args[0]
+	if index.Kind != hir.IndexGet || index.X == nil || index.X.Kind != hir.Local || index.X.Name != length.X.Name || !accumulatorInteger(index.Y, 0) {
+		return nil, nil, nil, 0, false
+	}
+	other := s.Else
+	if other != nil && other.Kind == hir.Block {
+		if len(other.List) == 1 {
+			other = other.List[0]
+		} else if len(other.List) == 2 && accumulatorSpreadLengths(other)[other.List[1]] {
+			other = other.List[0]
+		}
+	}
+	call, out, ok := accumulatorConsumer(other)
+	if !ok || call.Kind != hir.Local || call.Name != length.X.Name || out.Name != push.X.Name || !out.Type.Equal(push.X.Type) {
+		return nil, nil, nil, 0, false
+	}
+	return call, out, []*hir.Expr{index.X, call}, 3, true
+}
+func accumulatorInteger(e *hir.Expr, n int) bool {
+	if e != nil && e.Kind == hir.RuntimeOp && e.Op == "number.index" {
+		e = e.X
+	}
+	return e != nil && e.Kind == hir.Lit && (e.Type.Kind == hir.I32 || e.Type.Kind == hir.I64 || e.Type.Kind == hir.Number) && fmt.Sprint(e.Value) == fmt.Sprint(n)
+}
+
 // Private identity: no assignments, aliases, closures, field/static stores or
 // call operands. Direct returns are allowed only because they leave the caller.
 func accumulatorPrivate(body *hir.Stmt, name string) bool {
@@ -313,7 +363,7 @@ func accumulatorHandlers(body *hir.Stmt) bool {
 // The frontend lowers [] to `var tmp = new Array; var result = tmp`.
 // Only single-use, last-use initializer links may be collapsed; other aliases
 // prevent both the direct clone and the private caller-array proof.
-func accumulatorOwned(bid, method string, db *DB, bindings map[string]*hir.Stmt, ids map[*hir.Expr]string) bool {
+func accumulatorOwned(bid, method string, db *DB, bindings map[string]*hir.Stmt, ids map[*hir.Expr]string, refs map[string]string) bool {
 	seen := map[string]bool{}
 	for !seen[bid] {
 		seen[bid] = true
@@ -328,21 +378,13 @@ func accumulatorOwned(bid, method string, db *DB, bindings map[string]*hir.Stmt,
 		if e.Kind != hir.Local {
 			return false
 		}
-		source := accumulatorLocal(db, ids[e])
-		if !db.Has("use_count", source, "1") || !db.Has("not_read_after", source, ids[e]) {
+		source := refs[ids[e]]
+		if !db.Has("must_alias", method, bid, source) || !db.Has("use_count", source, "1") || !db.Has("not_read_after", source, ids[e]) {
 			return false
 		}
 		bid = source
 	}
 	return false
-}
-func accumulatorLocal(db *DB, path string) string {
-	for _, r := range db.Facts("local_ref") {
-		if r[0] == path {
-			return r[1]
-		}
-	}
-	return ""
 }
 
 type accumulatorResultShape struct {
@@ -529,7 +571,7 @@ func accumulatorAnalysis(p *hir.Program) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	selected, demand := grace.SelectDemand([]*Rules{rules}, []string{"fresh", "local_ref", "use_count", "not_read_after", "calls", "defined", "may_throw"})
+	selected, demand := grace.SelectDemand([]*Rules{rules}, []string{"fresh", "local_ref", "use_count", "not_read_after", "calls", "defined", "may_throw", "must_alias"})
 	db := extractDemanded(p, demand)
 	if err := Evaluate(db, selected); err != nil {
 		return nil, err
