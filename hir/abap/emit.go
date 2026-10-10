@@ -1784,6 +1784,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.parseInt10(n, a, length)
 		case "string.localeCompareNames":
 			b.localeCompareNames(n, a, args[0], length)
+		default:
+			// A new verified HIR string op is not automatically implemented
+			// on every target. Never leave its result silently initial.
+			b.e.err = fmt.Errorf("node %d (%s): unsupported ABAP runtime op %s", x.ID, x.Source, x.Op)
 		}
 		return
 	}
