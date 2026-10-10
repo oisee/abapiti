@@ -20,7 +20,8 @@ type RegistryFile struct {
 // it with the given config and compares the printed issues with the Node
 // oracle's SHA-256. Inputs are base64 literals split into small methods,
 // decoded by the driver itself (pinned osgo has no decode_base64).
-func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string, wantIssues int, names *hir.Names) string {
+func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string, wantIssues int, names *hir.Names) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	type part struct{ lines []string }
@@ -154,7 +155,8 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 // RegistryRunTest always fails with the driver's report line (verdict,
 // timings, hash), the same convention as the structures benchmark: the
 // runner's message carries the measurement; ok=X is the acceptance.
-func RegistryRunTest(class, trap string) string {
+func RegistryRunTest(class, trap string) (source string) {
+	defer formatABAP(&source)
 	trapCatch := ""
 	if trap != "" {
 		trapCatch = "CATCH " + trap + " INTO DATA(trapped).\nreport = |TRAP { trapped->source_location }|.\n"
@@ -166,7 +168,8 @@ func RegistryRunTest(class, trap string) string {
 // ZABAPITI_CORPUS table (sets ZABAPGIT and DEPS, SHA-256 verified on load),
 // progress goes to SLG1 through ZCL_ABAPITI_LOG. Dependency members are
 // stored as src/<path>; Node names them relative to deps/src.
-func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, names *hir.Names) string {
+func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, names *hir.Names) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	harness := names.Get("harness/registry_run.ts.RegistryRun")
@@ -270,7 +273,8 @@ func RegistryRunCorpusClass(class, wantSHA string, negative *RegistryNegative, n
 
 // RegistryRunReport runs the corpus driver as a background job and prints
 // its report line to the spool.
-func RegistryRunReport(program, class string, negative bool) string {
+func RegistryRunReport(program, class string, negative bool) (source string) {
+	defer formatABAP(&source)
 	flag := "abap_false"
 	if negative {
 		flag = "abap_true"
@@ -291,7 +295,8 @@ type RegistryNegative struct {
 // its selection screen becomes the command line, so the translated abaplint
 // checks a file from disk with a given abaplint.json and optional
 // dependencies (a text file listing one path per line).
-func RegistryCLIReport(program string, names *hir.Names) string {
+func RegistryCLIReport(program string, names *hir.Names) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	addFile := func(target, path, name string) {

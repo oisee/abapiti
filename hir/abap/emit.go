@@ -91,7 +91,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		e.traceCasts()
 	}
 	for file, src := range e.files {
-		out, err := wrap(src)
+		out, err := Format(src)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", file, err)
 		}
@@ -2141,6 +2141,7 @@ func (b *body) stmt(s *hir.Stmt) {
 func wrap(src string) (string, error) {
 	var out strings.Builder
 	for _, line := range strings.Split(strings.TrimSuffix(src, "\n"), "\n") {
+		prefix := line[:len(line)-len(strings.TrimLeft(line, " "))]
 		for len(line) > 255 {
 			quote := byte(0)
 			cut := -1
@@ -2162,11 +2163,11 @@ func wrap(src string) (string, error) {
 					cut = i
 				}
 			}
-			if cut <= 0 {
+			if cut <= len(prefix) {
 				return "", fmt.Errorf("unbreakable source line (%s bytes)", strconv.Itoa(len(line)))
 			}
 			out.WriteString(line[:cut] + "\n")
-			line = strings.TrimLeft(line[cut:], " ")
+			line = prefix + strings.TrimLeft(line[cut:], " ")
 		}
 		out.WriteString(line + "\n")
 	}

@@ -49,6 +49,12 @@ func TestConstantSetHas(t *testing.T) {
 	lexer := files[names.Get("Lexer")+".clas.abap"]
 	split := lexer[strings.Index(lexer, "METHOD "+names.Get("member.isSplit")):]
 	split = split[:strings.Index(split, "ENDMETHOD.")]
+	// This assertion concerns the comparison chain, not its block indentation.
+	parts := strings.Split(split, "\n")
+	for i := range parts {
+		parts[i] = strings.TrimLeft(parts[i], " ")
+	}
+	split = strings.Join(parts, "\n")
 	if !strings.Contains(split, " = 32\nOR ") || !strings.Contains(split, " = 46\nOR ") || !strings.Contains(split, " = 10\n).") {
 		t.Fatal("constant set has() is not a comparison chain:\n" + split)
 	}
