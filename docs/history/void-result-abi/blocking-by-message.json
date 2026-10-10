@@ -1,0 +1,551 @@
+{
+  "base": "69c79ee73d7d04a70bb0e20826876d1b0e995e3f",
+  "files": 1538,
+  "reachability": false,
+  "assume_int": false,
+  "blocking": {
+    "before": 644,
+    "after": 625
+  },
+  "hir_errors": {
+    "before": 392,
+    "after": 386
+  },
+  "groups": [
+    {
+      "message": "?? needs an optional or tagged left operand",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "KindFunctionDeclaration is not lowered",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "message": "KindLabeledStatement is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "Math.min requires two arguments in this phase",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "Math.min/max requires proven integers in this phase; exceptional numbers and signed zero need runtime support",
+      "before": 9,
+      "after": 9
+    },
+    {
+      "message": "assignment to abap is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "assignment to code is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "assignment to fix1 is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "assignment to indentation is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "assignment to match is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "async body must be excluded by validated workload coverage",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "binary operator KindInKeyword is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "call to KindIdentifier is not lowered",
+      "before": 3,
+      "after": 1
+    },
+    {
+      "message": "call to KindParenthesizedExpression is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "callback KindPropertyAccessExpression is not an arrow function",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "callback block must have exactly one return",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "checker type DocumentSymbol is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "checker type RegExpExecArray is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "checker type RegExpMatchArray is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "constructor of the object root is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "delete supports ordinary lowered records only",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "element access on classref is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "every needs a source-pinned dense/stable receiver proof",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "find on primitive arrays needs an absence-preserving callback ABI",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "forEach needs a source-pinned dense/stable receiver proof",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier Date is not a lowered local or module value",
+      "before": 32,
+      "after": 32
+    },
+    {
+      "message": "identifier JSON is not a lowered local or module value",
+      "before": 6,
+      "after": 6
+    },
+    {
+      "message": "identifier Math is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier Object is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "message": "identifier RegExp is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier XMLParser is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier XMLValidator is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier abap is not a lowered local or module value",
+      "before": 7,
+      "after": 7
+    },
+    {
+      "message": "identifier bodyCode is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier candidates is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier carriage is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier cleanOldName is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "identifier code is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "message": "identifier column is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "message": "identifier crypto is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier ctor is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier data is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier end is not a lowered local or module value",
+      "before": 15,
+      "after": 15
+    },
+    {
+      "message": "identifier escaped is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier fileNewName is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier fix is not a lowered local or module value",
+      "before": 31,
+      "after": 31
+    },
+    {
+      "message": "identifier fix1 is not a lowered local or module value",
+      "before": 25,
+      "after": 25
+    },
+    {
+      "message": "identifier fix2 is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier found is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "message": "identifier hash is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier icfServices is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier importing is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier indent is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "identifier indentation is not a lowered local or module value",
+      "before": 67,
+      "after": 67
+    },
+    {
+      "message": "identifier index is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier isException is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier issue is not a lowered local or module value",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "identifier label is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier match is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "message": "identifier message is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier outlineFor is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "message": "identifier packedLength is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier paramName is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier parsed is not a lowered local or module value",
+      "before": 8,
+      "after": 8
+    },
+    {
+      "message": "identifier pattern is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "identifier range is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier regex is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier res is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier result is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier spaces is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier splitAt is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier start is not a lowered local or module value",
+      "before": 21,
+      "after": 21
+    },
+    {
+      "message": "identifier symbol is not a lowered local or module value",
+      "before": 7,
+      "after": 7
+    },
+    {
+      "message": "identifier text is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier typeInformation is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier updatedUrl is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "identifier usedForbiddenToken is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "identifier value is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "message": "identifier workspace is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "message": "method create on classvalue is not lowered",
+      "before": 13,
+      "after": 13
+    },
+    {
+      "message": "method create on map is not lowered",
+      "before": 15,
+      "after": 15
+    },
+    {
+      "message": "method delete on map is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "method exec on regexp is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "method flat on array is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "method getParameters on dynamic is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "method getStr on classref is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "method is on map is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "method match on string is not lowered",
+      "before": 31,
+      "after": 31
+    },
+    {
+      "message": "method repeat on string is not lowered",
+      "before": 40,
+      "after": 40
+    },
+    {
+      "message": "method replace on map is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "message": "method toLocaleLowerCase on string is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "method toLocaleUpperCase on string is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "method trimEnd on string is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "new RegExp is not a lowered class",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "new XMLParser is not a lowered class",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "object literal needs a named lowered shape",
+      "before": 17,
+      "after": 17
+    },
+    {
+      "message": "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "replace with a non-literal pattern is not lowered",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "top-level KindModuleDeclaration is not lowered",
+      "before": 81,
+      "after": 81
+    },
+    {
+      "message": "typeof comparison on optional<string> is not lowered",
+      "before": 6,
+      "after": 6
+    },
+    {
+      "message": "unary KindPlusPlusToken is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "message": "void local requires a value-preserving result ABI",
+      "before": 16,
+      "after": 0
+    }
+  ]
+}

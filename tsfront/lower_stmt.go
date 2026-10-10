@@ -147,6 +147,19 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			}
 			return &hir.Stmt{Kind: hir.Return, Node: l.node(n)}
 		}
+		if l.method != nil && l.method.Result.Kind == hir.Void {
+			// A no-result ABI still evaluates the returned expression, including
+			// assignments and updates, before exiting this function.
+			l.hint = l.method.Result
+			effect := l.expressionStatement(r.Expression)
+			l.hint = hir.Type{}
+			if effect != nil && effect.Kind == hir.ExprStmt && effect.X != nil && effect.X.Type.Kind == hir.Void {
+				// Returning a no-result call already has the correct ABI. Keep
+				// its established HIR shape and emitted site locations.
+				return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: effect.X}
+			}
+			return hir.B(effect, &hir.Stmt{Kind: hir.Return, Node: l.node(n)})
+		}
 		l.hint = l.method.Result
 		x := l.expr(r.Expression)
 		l.hint = hir.Type{}
@@ -166,6 +179,14 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			return nil
 		}
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
+	case ast.KindFunctionDeclaration:
+		if n.Name() != nil && l.pendingFns[n.Name().Text()] != nil {
+			l.declare(n.Name().Text(), hir.T(hir.Void))
+			return nil
+		}
+		if n.Name() != nil && l.localFns[n.Name().Text()] != nil {
+			return nil
+		}
 	case ast.KindEmptyStatement:
 		return nil
 	case ast.KindThrowStatement:
@@ -266,6 +287,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 		typ = x.Type
 	default:
+		beforeType := len(l.diags)
 		switch {
 		case d.Type() != nil:
 			typ = l.mapTypeNode(d.Type())
@@ -278,18 +300,35 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			return nil
 		}
 		if typ.Kind == hir.Void {
-			// A source-pinned intrinsic can expose an evaluated undefined
-			// result even though its library signature is void. Ordinary void
-			// implementations may return values: never erase their initializer.
+			typeFailed := hasBlocking(l.diags[beforeType:])
 			if init != nil {
 				x = l.expr(init)
-				if x != nil && x.Type.Equal(hir.T(hir.Optional, hir.T(hir.Dynamic))) {
-					l.declare(name, x.Type)
-					return []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: x.Type, X: x}}
+				// Keep the value exposed by a pinned intrinsic or a concrete
+				// implementation with a value-returning signature.
+				if x != nil && x.Type.Kind != hir.Void && !typeFailed {
+					return []*hir.Stmt{l.localDeclaration(d, name, x.Type, x)}
 				}
 			}
-			l.diagf(d, "unsupported-binding", "void local requires a value-preserving result ABI")
-			return nil
+			if typeFailed {
+				// Void is also the failed-type sentinel. Its original diagnostic
+				// already explains this binding; it is not a no-result ABI failure.
+				return nil
+			}
+			if !isIntrinsicVoid(l.ck.GetTypeOfSymbol(sym)) {
+				l.diagf(d, "unsupported-binding", "local %s has no lowered value type", name)
+				return nil
+			}
+			if init != nil && x == nil {
+				return nil
+			}
+			// A true no-result call runs once, then the local holds undefined.
+			typ = hir.T(hir.Optional, hir.T(hir.Dynamic))
+			value := &hir.Expr{Kind: hir.Lit, Node: l.node(d), Type: typ}
+			if x != nil {
+				value = &hir.Expr{Kind: hir.Seq, Node: l.node(d), Type: typ,
+					Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(init), X: x}), Y: value}
+			}
+			return []*hir.Stmt{l.localDeclaration(d, name, typ, value)}
 		}
 		if typ.Kind != hir.Optional && init != nil {
 			// An initializer that may be undefined makes the local optional.
@@ -335,13 +374,17 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	if x != nil {
 		x = l.coerce(x, typ)
 	}
+	return append(stmts, l.localDeclaration(d, name, typ, x))
+}
+
+func (l *lowerer) localDeclaration(d *ast.Node, name string, typ hir.Type, x *hir.Expr) *hir.Stmt {
 	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: name, Type: typ, X: x}
 	if l.declSymbols == nil {
 		l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
 	}
 	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(d.Name())
 	l.declare(name, typ)
-	return append(stmts, decl)
+	return decl
 }
 
 // arrayLiteral lowers [a, b, ...] in a statement context into a fresh array
