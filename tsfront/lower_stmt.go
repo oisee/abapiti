@@ -87,7 +87,12 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			}
 		}
 	}
+	if control := l.labeledControl[n]; control != nil {
+		return control
+	}
 	switch n.Kind {
+	case ast.KindLabeledStatement:
+		return l.labeledStatement(n)
 	case ast.KindBlock:
 		l.push()
 		list := []*hir.Stmt{}
@@ -169,6 +174,10 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		x = l.presentValue(r.Expression, x, l.method.Result)
 		return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: l.coerce(x, l.method.Result)}
 	case ast.KindBreakStatement:
+		if n.AsBreakStatement().Label != nil {
+			l.diagf(n, "unsupported-statement", "unknown break label")
+			return nil
+		}
 		if flag, ok := l.breakViaFlag[n]; ok {
 			return hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: flag, Y: hir.L(hir.T(hir.Bool), true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})
 		}

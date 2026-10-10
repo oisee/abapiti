@@ -131,6 +131,16 @@ func (s jsString) split(sep jsString) *array[jsString] {
 func jsWhitespace(c int32) bool {
 	return c == 9 || c == 10 || c == 11 || c == 12 || c == 13 || c == 32 || c == 160 || c == 0x1680 || c >= 0x2000 && c <= 0x200a || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f || c == 0x3000 || c == 0xfeff
 }
+func (s jsString) trimStart() jsString {
+ a,b:=int32(0),s.length()
+ for a<b && jsWhitespace(s.charCodeAt(a)) { a++ }
+ return s[2*a:]
+}
+func (s jsString) trimEnd() jsString {
+ b:=s.length()
+ for b>0 && jsWhitespace(s.charCodeAt(b-1)) { b-- }
+ return s[:2*b]
+}
 func (s jsString) trim() jsString {
 	a, b := int32(0), s.length()
 	for a < b && jsWhitespace(s.charCodeAt(a)) {

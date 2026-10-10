@@ -374,40 +374,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		return l.prefixUnary(n)
 	case ast.KindPostfixUnaryExpression:
 		u := n.AsPostfixUnaryExpression()
-		switch u.Operator {
-		case ast.KindPlusPlusToken, ast.KindMinusMinusToken:
-			op := "+"
-			if u.Operator == ast.KindMinusMinusToken {
-				op = "-"
-			}
-			target := l.assignTarget(u.Operand)
-			if target == nil {
-				return nil
-			}
-			if target.Type.Kind != hir.Number && target.Type.Kind != hir.I32 {
-				l.diagf(n, "unsupported-expr", "postfix %s needs a native numeric operand", op)
-				return nil
-			}
-			// Preserve the reference before reading its value. A receiver or index
-			// may call user code and must execute once, before the read/write.
-			switch target.Kind {
-			case hir.FieldGet:
-				target.X = l.tempInit(n, target.X.Type, target.X)
-			case hir.IndexGet:
-				target.X = l.tempInit(n, target.X.Type, target.X)
-				target.Y = l.tempInit(n, target.Y.Type, target.Y)
-			case hir.Local, hir.StaticGet:
-			default:
-				l.diagf(n, "unsupported-expr", "postfix %s target is not lowered", op)
-				return nil
-			}
-			previous := l.tempInit(n, target.Type, target)
-			l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
-				Y: &hir.Expr{Kind: hir.Binary, Type: target.Type, Op: op, X: previous, Y: hir.L(target.Type, 1)}})
-			return previous
-		}
-		l.diagf(n, "unsupported-expr", "postfix %s is not lowered", u.Operator.String())
-		return nil
+		return l.updateExpression(n, u.Operand, u.Operator, false)
 	case ast.KindConditionalExpression:
 		c := n.AsConditionalExpression()
 		x := l.condition(c.Condition)
@@ -1273,9 +1240,15 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			a, b := two()
 			return l.rtOp("string.substr", recv, str, a, b), true
-		case "trim":
-			return l.rtOp("string.trim", recv, str), true
-		case "toUpperCase":
+		case "trim", "trimStart", "trimEnd":
+			return l.rtOp("string."+name, recv, str), true
+		// Locale arguments are intentionally unsupported: core uses the
+		// locale-independent default Unicode case mapping.
+		case "toUpperCase", "toLocaleUpperCase":
+			if name == "toLocaleUpperCase" && len(args) != 0 {
+				l.diagf(n, "unsupported-call", "explicit locale case mapping is not lowered")
+				return nil, true
+			}
 			return l.rtOp("string.toUpperCase", recv, str), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
@@ -1287,7 +1260,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("string.endsWith", recv, boolT, one()), true
 		case "indexOf":
 			return l.rtOp("string.indexOf", recv, i32, one()), true
-		case "toLowerCase":
+		case "toLowerCase", "toLocaleLowerCase":
+			if name == "toLocaleLowerCase" && len(args) != 0 {
+				l.diagf(n, "unsupported-call", "explicit locale case mapping is not lowered")
+				return nil, true
+			}
 			return l.rtOp("string.toLowerCase", recv, str), true
 		case "split":
 			return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
@@ -1328,6 +1305,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	case hir.Array:
 		switch name {
+		case "flat":
+			return l.flatArray(n, recv, args), true
 		case "reverse":
 			if len(args) != 0 {
 				return nil, false
@@ -1415,6 +1394,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
 			return l.rtOp("map.has", recv, boolT, one()), true
+		case "delete":
+			return l.rtOp("map.delete", recv, boolT, one()), true
 		case "size":
 			return l.rtOp("map.size", recv, i32), true
 		}
@@ -1839,6 +1820,8 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		l.diagf(n, "unsupported-number", "Number division requires a non-zero literal divisor")
 		return nil
+	case ast.KindInKeyword:
+		return l.inOperator(n, b)
 	case ast.KindInstanceOfKeyword:
 		return l.instanceOf(n)
 	case ast.KindQuestionQuestionToken:
@@ -1848,8 +1831,8 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		x = l.narrowedOperand(b.Left, x)
 		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic {
-			l.diagf(n, "unsupported-expr", "?? needs an optional or tagged left operand")
-			return nil
+			// The checker proves absence impossible; do not evaluate the RHS.
+			return x
 		}
 		x = l.tempInit(n, x.Type, x)
 		base := x.Type
@@ -2083,6 +2066,8 @@ func (l *lowerer) isUndefinedType(n *ast.Node) bool {
 func (l *lowerer) prefixUnary(n *ast.Node) *hir.Expr {
 	u := n.AsPrefixUnaryExpression()
 	switch u.Operator {
+	case ast.KindPlusPlusToken, ast.KindMinusMinusToken:
+		return l.updateExpression(n, u.Operand, u.Operator, true)
 	case ast.KindExclamationToken:
 		x := l.condition(u.Operand)
 		if x == nil {

@@ -20,6 +20,7 @@ var supportedOps = map[string]bool{
 
 	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
 	"array.push": true, "array.get": true, "array.length": true,
+	"map.delete": true, "string.trimStart": true, "string.trimEnd": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
 	"string.length": true, "string.concat": true, "string.substring": true, "string.charCodeAt": true,
@@ -66,7 +67,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	code := ""
 	switch x.Op {
-	case "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
+	case "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "record.delete":
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
@@ -96,8 +97,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".Source"
 	case "regexp.toString":
 		code = a + ".toString()"
-	case "string.trim":
-		code = a + ".trim()"
+	case "string.trim", "string.trimStart", "string.trimEnd":
+		code = a + "." + strings.TrimPrefix(x.Op, "string.") + "()"
 	case "string.toLowerCase":
 		code = a + ".lower()"
 	case "string.toUpperCase":
