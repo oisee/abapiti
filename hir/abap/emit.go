@@ -747,6 +747,14 @@ func (b *body) expr(x *hir.Expr) string {
 				break
 			}
 			b.int8Lit(target, value)
+		case hir.I32:
+			// A numeric literal: a quoted one is text the runtime converts on every pass.
+			value, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 32)
+			if err != nil {
+				e.err = fmt.Errorf("node %d (%s): invalid I32 literal: %w", x.ID, x.Source, err)
+				break
+			}
+			b.line(target + " = " + strconv.FormatInt(value, 10) + ".")
 		default:
 			if f, err := strconv.ParseFloat(fmt.Sprint(x.Value), 64); err == nil && (math.IsNaN(f) || math.IsInf(f, 0)) {
 				e.err = fmt.Errorf("node %d (%s): ABAP f cannot represent non-finite Number", x.ID, x.Source)
