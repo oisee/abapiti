@@ -40,12 +40,15 @@ func NewReadableNames(p *Program, project string) *Names {
 	}
 	sort.Slice(decls, func(a, b int) bool { return decls[a].id < decls[b].id })
 	levels := []func(id, prefix string) string{
-		func(id, prefix string) string { return fitName(prefix, "", simpleSnake(id), "") },
-		func(id, prefix string) string { return fitName(prefix, "", keptSnake(id), "") },
-		func(id, prefix string) string { return fitName(prefix, area(id), simpleSnake(id), "") },
-		func(id, prefix string) string { return fitName(prefix, area(id)+folder(id), simpleSnake(id), "") },
-		func(id, prefix string) string { return fitName(prefix, area(id)+file(id), simpleSnake(id), "") },
-		func(id, prefix string) string { return fitName(prefix, area(id), simpleSnake(id), "_"+hash4(id)) },
+		func(id, prefix string) string { return fitName(prefix, "", simpleSnake(id, prefix), "") },
+		func(id, prefix string) string { return fitName(prefix, area(id), simpleSnake(id, prefix), "") },
+		func(id, prefix string) string {
+			return fitName(prefix, area(id)+folder(id), simpleSnake(id, prefix), "")
+		},
+		func(id, prefix string) string { return fitName(prefix, area(id)+file(id), simpleSnake(id, prefix), "") },
+		func(id, prefix string) string {
+			return fitName(prefix, area(id), simpleSnake(id, prefix), "_"+hash4(id))
+		},
 	}
 	// The harness objects around the translated classes (tsfront Drivers)
 	// take these names; a translated class never does.
@@ -151,11 +154,13 @@ func exceptionClasses(p *Program) map[string]bool {
 // A module class (a file's top-level code) is named after its file; a
 // synthesized type without a source (union., shape., tuple., ...) after its
 // kind and 8 hex of its identity.
-func simpleSnake(id string) string { return declSnake(id, true) }
-
-// keptSnake keeps TypeScript's I glued to the name (ICONFIG): the fallback
-// when dropping it collides (IConfig next to a class Config).
-func keptSnake(id string) string { return declSnake(id, false) }
+// simpleSnake names a class or interface after its own TS name. TypeScript's
+// I prefix goes for ZIF_ (it already says interface); a TS interface lowered
+// to a class (a data shape) keeps it glued to its first word, acronym
+// included: IConfig -> ICONFIG, IAOConfig -> IAOCONFIG.
+func simpleSnake(id, prefix string) string {
+	return declSnake(id, strings.HasPrefix(prefix, "ZIF_"))
+}
 
 func declSnake(id string, drop bool) string {
 	if ts := strings.Index(id, ".ts."); ts >= 0 {
@@ -167,15 +172,13 @@ func declSnake(id string, drop bool) string {
 			return snake(file) + "_MODULE"
 		}
 		name := id[ts+4:]
-		bare := dropInterfacePrefix(name)
+		if !interfacePrefixed(name) {
+			return snake(name)
+		}
 		if drop {
-			return snake(bare)
+			return snake(name[1:])
 		}
-		if bare != name {
-			// IConfig next to a class Config: ICONFIG, one word
-			return "I" + snake(bare)
-		}
-		return snake(name)
+		return gluedSnake(name)
 	}
 	if i := strings.IndexByte(id, '.'); i > 0 {
 		h := sha256.Sum256([]byte(id))
@@ -184,16 +187,26 @@ func declSnake(id string, drop bool) string {
 	return snake(id)
 }
 
-// dropInterfacePrefix removes TypeScript's I of IConfig / IABAPLexerResult:
-// ABAP already says interface with ZIF_, and a data-shape interface lowered to
-// a class needs no I either. Issue, Integer, Interface keep theirs.
-func dropInterfacePrefix(name string) string {
-	// I + Word (IConfig, ICandidate); IACBinaryData, IAMApp, IABAPLexerResult
-	// keep the I: there it is part of an acronym (IAC, IAM) or ambiguous.
-	if len(name) > 2 && name[0] == 'I' && name[1] >= 'A' && name[1] <= 'Z' && name[2] >= 'a' && name[2] <= 'z' {
-		return name[1:]
+// interfacePrefixed: TypeScript's IName convention (I + capital letter).
+func interfacePrefixed(name string) bool {
+	return len(name) > 2 && name[0] == 'I' && name[1] >= 'A' && name[1] <= 'Z'
+}
+
+// gluedSnake keeps the leading capitals and the first word as one word
+// (IAOConfig -> IAOCONFIG, IACBinaryData -> IACBINARY_DATA).
+func gluedSnake(name string) string {
+	i := 0
+	for i < len(name) && name[i] >= 'A' && name[i] <= 'Z' {
+		i++
 	}
-	return name
+	for i < len(name) && (name[i] >= 'a' && name[i] <= 'z' || name[i] >= '0' && name[i] <= '9') {
+		i++
+	}
+	head := strings.ToUpper(name[:i])
+	if i == len(name) {
+		return head
+	}
+	return head + "_" + snake(name[i:])
 }
 
 // area is a two-letter tag for the id's layer, from its path under src/.
