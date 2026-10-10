@@ -41,6 +41,7 @@ func NewReadableNames(p *Program, project string) *Names {
 	sort.Slice(decls, func(a, b int) bool { return decls[a].id < decls[b].id })
 	levels := []func(id, prefix string) string{
 		func(id, prefix string) string { return fitName(prefix, "", simpleSnake(id), "") },
+		func(id, prefix string) string { return fitName(prefix, "", keptSnake(id), "") },
 		func(id, prefix string) string { return fitName(prefix, area(id), simpleSnake(id), "") },
 		func(id, prefix string) string { return fitName(prefix, area(id)+folder(id), simpleSnake(id), "") },
 		func(id, prefix string) string { return fitName(prefix, area(id)+file(id), simpleSnake(id), "") },
@@ -150,7 +151,13 @@ func exceptionClasses(p *Program) map[string]bool {
 // A module class (a file's top-level code) is named after its file; a
 // synthesized type without a source (union., shape., tuple., ...) after its
 // kind and 8 hex of its identity.
-func simpleSnake(id string) string {
+func simpleSnake(id string) string { return declSnake(id, true) }
+
+// keptSnake keeps TypeScript's I: the fallback when dropping it collides
+// (IConfig next to a class Config).
+func keptSnake(id string) string { return declSnake(id, false) }
+
+func declSnake(id string, drop bool) string {
 	if ts := strings.Index(id, ".ts."); ts >= 0 {
 		if id[ts+4:] == "module" {
 			file := id[:ts]
@@ -159,13 +166,29 @@ func simpleSnake(id string) string {
 			}
 			return snake(file) + "_MODULE"
 		}
-		return snake(id[ts+4:])
+		name := id[ts+4:]
+		if drop {
+			name = dropInterfacePrefix(name)
+		}
+		return snake(name)
 	}
 	if i := strings.IndexByte(id, '.'); i > 0 {
 		h := sha256.Sum256([]byte(id))
 		return snake(id[:i]) + "_" + strings.ToUpper(fmt.Sprintf("%x", h[:4]))
 	}
 	return snake(id)
+}
+
+// dropInterfacePrefix removes TypeScript's I of IConfig / IABAPLexerResult:
+// ABAP already says interface with ZIF_, and a data-shape interface lowered to
+// a class needs no I either. Issue, Integer, Interface keep theirs.
+func dropInterfacePrefix(name string) string {
+	// I + Word (IConfig, ICandidate); IACBinaryData, IAMApp, IABAPLexerResult
+	// keep the I: there it is part of an acronym (IAC, IAM) or ambiguous.
+	if len(name) > 2 && name[0] == 'I' && name[1] >= 'A' && name[1] <= 'Z' && name[2] >= 'a' && name[2] <= 'z' {
+		return name[1:]
+	}
+	return name
 }
 
 // area is a two-letter tag for the id's layer, from its path under src/.
