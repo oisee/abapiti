@@ -9,23 +9,26 @@ import (
 	"github.com/oisee/abapiti/hir/rewrite"
 )
 
-// inline runs the HIR inlining pass (ABAPITI_INLINE=grace selects Grace,
-// ABAPITI_INLINE=0 disables it) and
-// verifies its result. ABAPITI_INLINE_STATS=1 prints the inlined callees.
+// inline runs the HIR inlining pass and verifies its result. Grace's
+// inlining rule is the default; ABAPITI_INLINE=classic runs hir.Inline, the
+// oracle Grace is checked against (same output), and ABAPITI_INLINE=0
+// disables the pass. ABAPITI_INLINE_STATS=1 prints the inlined callees.
 func inline(p *hir.Program) error {
-	if os.Getenv("ABAPITI_INLINE") == "0" {
-		return nil
-	}
 	var n int
 	var stats map[string]int
-	if os.Getenv("ABAPITI_INLINE") == "grace" {
+	switch mode := os.Getenv("ABAPITI_INLINE"); mode {
+	case "0":
+		return nil
+	case "classic":
+		n, stats = hir.InlineStats(p)
+	case "", "1", "grace":
 		s, err := rewrite.Inline(p)
 		if err != nil {
-			return fmt.Errorf("Grace HIR inlining: %w", err)
+			return fmt.Errorf("Grace HIR inlining (ABAPITI_INLINE=classic runs hir.Inline): %w", err)
 		}
 		n, stats = s.CallSites, s.Callees
-	} else {
-		n, stats = hir.InlineStats(p)
+	default:
+		return fmt.Errorf("ABAPITI_INLINE=%q: use grace (default), classic or 0", mode)
 	}
 	if os.Getenv("ABAPITI_INLINE_STATS") != "" {
 		keys := make([]string, 0, len(stats))

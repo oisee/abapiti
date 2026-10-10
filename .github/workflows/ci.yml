@@ -180,10 +180,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  # Grace's inlining is the default, so its equality with hir.Inline on the
+  # emit tests' programs is a required check.
   gracecheck:
-    name: Grace checks (advisory)
+    name: Grace checks
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 35
     env:
       ABAPITI_GRACECHECK: '1'

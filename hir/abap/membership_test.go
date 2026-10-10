@@ -19,7 +19,9 @@ func TestConstantSetHas(t *testing.T) {
 		}
 		return append(out, &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: field, Type: setT}, Y: local(tmp, setT)})
 	}
-	static := func(n string, ty hir.Type) *hir.Expr { return &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: n, Type: ty} }
+	static := func(n string, ty hir.Type) *hir.Expr {
+		return &hir.Expr{Kind: hir.StaticGet, Owner: "Mod", Name: n, Type: ty}
+	}
 	has := func(field string, x *hir.Expr) *hir.Expr {
 		return &hir.Expr{Kind: hir.RuntimeOp, Op: "set.has", Type: boolean, X: static(field, setT), Args: []*hir.Expr{x}}
 	}

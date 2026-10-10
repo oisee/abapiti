@@ -8,10 +8,11 @@ abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, a
 abapiti abaplint -o out --target native      # one target only: all (default), a4h, osg, native
 ```
 
-The ABAP emitter uses `hir.Inline` by default. Set `ABAPITI_INLINE=grace`
-to use the embedded Grace inline rules, or `ABAPITI_INLINE=0` to disable
-inlining. `ABAPITI_INLINE_STATS=1` prints the call-site total and per-callee
-counts in the same format for both inliners.
+The ABAP emitter inlines small methods with Grace's inline rules by default.
+`ABAPITI_INLINE=classic` runs `hir.Inline` instead, the oracle Grace is checked
+against (CI requires both to give the same program), and `ABAPITI_INLINE=0`
+disables inlining. `ABAPITI_INLINE_STATS=1` prints the call-site total and
+per-callee counts in the same format for both inliners.
 
 ## Input
 

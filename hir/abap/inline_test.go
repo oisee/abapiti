@@ -297,3 +297,36 @@ func TestInlineDisabled(t *testing.T) {
 		}
 	}
 }
+
+// Grace's inlining rule is the default and must give the same program and
+// the same ABAP as hir.Inline, its oracle (ABAPITI_INLINE=classic).
+func TestInlineGraceMatchesClassic(t *testing.T) {
+	emit := func(mode string) (string, map[string]string) {
+		t.Setenv("ABAPITI_INLINE", mode)
+		p := inlineFixture().p
+		files, err := Emit(p)
+		if err != nil {
+			t.Fatal(mode, err)
+		}
+		return hir.Dump(p), files
+	}
+	classicHIR, classic := emit("classic")
+	for _, mode := range []string{"", "grace"} {
+		graceHIR, grace := emit(mode)
+		if graceHIR != classicHIR {
+			t.Fatalf("ABAPITI_INLINE=%q: HIR differs from classic", mode)
+		}
+		if len(grace) != len(classic) {
+			t.Fatalf("ABAPITI_INLINE=%q: %d files, classic %d", mode, len(grace), len(classic))
+		}
+		for name, src := range classic {
+			if grace[name] != src {
+				t.Fatalf("ABAPITI_INLINE=%q: %s differs from classic", mode, name)
+			}
+		}
+	}
+	t.Setenv("ABAPITI_INLINE", "yes")
+	if _, err := Emit(inlineFixture().p); err == nil || !strings.Contains(err.Error(), "classic") {
+		t.Fatalf("unknown ABAPITI_INLINE value accepted: %v", err)
+	}
+}
