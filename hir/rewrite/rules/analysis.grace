@@ -105,11 +105,9 @@
  (base (allocation ?m _)) (base (unknown_summary ?m))
  (tail (calls ?m ?n _) (allocates ?n)))
 (rule may-raise 0 (head (may_raise ?m)) (base (may_throw ?m)))
-(rule call-path 0 (head (call_path ?m ?n))
- (base (calls ?m ?n _)) (tail (calls ?m ?x _) (call_path ?x ?n)))
 (rule may-diverge 0 (head (may_diverge ?m))
  (base (diverge_seed ?m)) (base (unknown_summary ?m))
- (base (call_path ?m ?m)) (tail (calls ?m ?n _) (may_diverge ?n)))
+ (base (recursive_call ?m)) (tail (calls ?m ?n _) (may_diverge ?n)))
 
 ; A declared target with no available body cannot supply an effect proof.
 (rule missing-body-effects 0 (head (unknown_effect ?m))
