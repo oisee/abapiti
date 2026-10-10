@@ -52,7 +52,8 @@ func LoadStatementsCorpus(dir string) ([]StatementCase, error) {
 // One test method avoids the runtime's test-method limit. Data methods keep
 // large independent oracle dumps out of the executable comparison method.
 // Assertions run after all cases, so partial equality and exceptions are counted.
-func StatementsTestClass(cases []StatementCase, p DriverParams, tokens, statements string) string {
+func StatementsTestClass(cases []StatementCase, p DriverParams, tokens, statements string) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	line("CLASS ltcl_statements_diff DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.")

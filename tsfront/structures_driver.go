@@ -26,7 +26,8 @@ type StructureCase struct {
 // StructuresBenchmarkClass emits harness code, not a transformation of the
 // upstream parser. Source data is base64-encoded and quoted by the same literal builder as the
 // differential corpus and never interpreted as executable ABAP.
-func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, names *hir.Names) string {
+func StructuresBenchmarkClass(c StructureCase, lexerSHA, statementsSHA string, names *hir.Names) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(s string, args ...any) { fmt.Fprintf(&b, s+"\n", args...) }
 	input := abapStringBuild("raw", "ch", base64.StdEncoding.EncodeToString([]byte(c.Abap)))
@@ -145,11 +146,13 @@ func benchmarkHash(b *strings.Builder, target string) {
 	fmt.Fprintf(b, "%s = to_lower( %s ).\n", target, target)
 }
 
-func StructuresBenchmarkReport() string {
+func StructuresBenchmarkReport() (source string) {
+	defer formatABAP(&source)
 	return "REPORT zphase3_structures_bench.\nDATA ok TYPE abap_bool.\nDATA report TYPE string.\nok = zcl_phase3_benchmark=>run( EXPORTING print = abap_true IMPORTING report = report ).\n"
 }
 
-func StructuresBenchmarkTest() string {
+func StructuresBenchmarkTest() (source string) {
+	defer formatABAP(&source)
 	return `CLASS ltcl_benchmark DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.
 PRIVATE SECTION.
 METHODS benchmark FOR TESTING.

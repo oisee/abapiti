@@ -65,7 +65,8 @@ type DriverParams struct {
 // dumps: one test method, one block per case (osgo limits the method count).
 // The comparison itself is lowered TypeScript (LexerDump.firstDiff), so
 // trailing blanks and code units count exactly.
-func LexerTestClass(cases []LexerCase, p DriverParams) string {
+func LexerTestClass(cases []LexerCase, p DriverParams) (source string) {
+	defer formatABAP(&source)
 	var b strings.Builder
 	line := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
 	line("CLASS ltcl_lexer_diff DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.")
