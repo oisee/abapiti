@@ -1,4 +1,4 @@
-package rewrite
+package grace
 
 import (
 	"fmt"

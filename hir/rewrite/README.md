@@ -87,7 +87,10 @@ and rules here are fresh; MinZ's Grace, Datalog and ISLE supplied syntax ideas
 only. The test oracle invokes main's HIR inliner on an independent deep copy.
 
 The public entry points are `Parse`, `Evaluate`, `NewDB`, and (with extraction)
-`Analyze` and `Report`. The package uses only HIR and the Go standard library.
+`Analyze` and `Report`. The HIR adapter imports the [IR-independent Grace core](../../grace/README.md).
+`DB`, `Rules`, and `Tuple` alias core types; `Parse`, `Evaluate`, `NewDB`, and
+`Report` retain their existing signatures as compatibility wrappers. The core
+uses only the Go standard library and has no transitive HIR dependency.
 A DB exposes string tuples and sorted-copy reads. Internally it interns symbols
 into integer IDs, memoises packed tuple keys, and builds composite hash indexes
 from the bound columns of rule bodies. The interpreter reuses binding arrays

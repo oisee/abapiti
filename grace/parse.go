@@ -1,4 +1,4 @@
-package rewrite
+package grace
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ type clause struct {
 // Rules is an immutable parsed set of fact and rewrite rules.
 type Rules struct {
 	clauses  []clause
-	rewrites []rewriteRule
+	rewrites []RewriteRule
 }
 type sexpr struct {
 	text   string
@@ -134,9 +134,9 @@ func parseAtom(n sexpr) (atom, error) {
 	return a, nil
 }
 
-// Parse accepts facts and (rule name priority (head ...) (base ...) (tail ...)
+// ParseRules accepts facts and (rule name priority (head ...) (base ...) (tail ...)
 // (bound depth N)). Each base/tail is an alternative conjunction.
-func Parse(src string) (*DB, *Rules, error) {
+func ParseRules(src string) (*DB, *Rules, error) {
 	nodes, err := parseSexpr(src)
 	if err != nil {
 		return nil, nil, err

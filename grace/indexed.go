@@ -1,4 +1,4 @@
-package rewrite
+package grace
 
 import (
 	"math/bits"
@@ -128,8 +128,8 @@ func planJoin(db *DB, c clause, pivot int, initial []term) *joinPlan {
 	}
 	p.head = compile(c.head).terms
 	if selection, ok := db.selections[c.head.pred]; ok {
-		p.region = p.head[selection.column]
-		p.selected = selection.contains
+		p.region = p.head[selection.Column]
+		p.selected = selection.Contains
 	}
 	p.env = make([]uint32, len(p.vars))
 	p.undo = make([]int, 0, len(p.vars))

@@ -75,7 +75,7 @@ func Extract(p *hir.Program) *DB {
 
 func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 	db := NewDB()
-	db.demanded = demanded
+	db.SetDemand(demanded)
 	x := &extractor{db: db, classes: map[string]*hir.Class{}}
 	for _, c := range p.Classes {
 		x.classes[c.Name] = c

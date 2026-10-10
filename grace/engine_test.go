@@ -1,4 +1,4 @@
-package rewrite
+package grace
 
 import (
 	"reflect"
@@ -12,7 +12,7 @@ func TestFixedPoint(t *testing.T) {
  (rule bounded 0 (head (near ?a ?b)) (bound depth 2)
  (base (edge ?a ?b)) (tail (near ?a ?x) (edge ?x ?b)))
  (rule missing 0 (head (missing ?a ?b)) (base (edge ?a ?b) (not (edge ?b ?a))))`
-	d, r, e := Parse(src)
+	d, r, e := ParseRules(src)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -32,7 +32,7 @@ func TestFixedPoint(t *testing.T) {
 }
 func TestRejectInvalid(t *testing.T) {
 	for _, src := range []string{`(`, `(fact x ?a)`, `(rule x 0 (head (x ?a)) (base (y ?b)))`, `(rule x 0 (head (x a)) (base (not (x a))))`, `(fact x a) (fact x a b)`, `(rule x 0 (head (x _)) (base (y a)))`, `(rule x 0 (head (x a)) (bound depth -1) (base))`} {
-		d, r, e := Parse(src)
+		d, r, e := ParseRules(src)
 		if e == nil {
 			e = Evaluate(d, r)
 		}
@@ -42,7 +42,7 @@ func TestRejectInvalid(t *testing.T) {
 	}
 }
 func TestQuotedConstants(t *testing.T) {
-	d, r, e := Parse(`; comment
+	d, r, e := ParseRules(`; comment
 (fact name "?literal" "a b\\c") (rule x 0 (head (ok ?x)) (base (name "?literal" ?x)))`)
 	if e != nil {
 		t.Fatal(e)
@@ -56,7 +56,7 @@ func TestQuotedConstants(t *testing.T) {
 }
 
 func TestZeroArityAndShorterProof(t *testing.T) {
-	d, r, e := Parse(`(fact ready)
+	d, r, e := ParseRules(`(fact ready)
  (rule long 10 (head (middle a)) (base (ready)))
  (rule longer 9 (head (seed a)) (base (middle a)))
  (rule short 0 (head (seed a)) (base (ready)))
@@ -73,7 +73,7 @@ func TestZeroArityAndShorterProof(t *testing.T) {
 }
 
 func TestComparisonGuards(t *testing.T) {
-	db, rs, err := Parse(`
+	db, rs, err := ParseRules(`
   (fact size small 3) (fact size big 13) (fact size unknown "?")
   (rule large 0 (head (large ?m)) (base (size ?m ?n) (not (le ?n 12))))`)
 	if err != nil {
