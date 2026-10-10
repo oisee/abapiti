@@ -96,3 +96,50 @@ source operands; the source line still points to the copying operation.
 `loop_depth` counts surrounding loops. An R1 ForEach at depth zero is a loop
 outside any outer loop; an R1 in-loop row describes a nested loop. For R2/R3,
 the same depth describes the producer/copy operation's surrounding loops.
+
+Value-object screening is a separate analysis mode:
+
+```sh
+GOCACHE="$HOME/.cache/abapiti-go-cache" GOFLAGS=-buildvcs=false \
+GOTMPDIR="$HOME/.cache/grace-tmp" TMPDIR="$HOME/.cache/grace-tmp" \
+  go run ./cmd/grace-counts -value-objects -output "$HOME/.cache/value-objects"
+```
+
+It uses the same verified 1,538-file closure and Grace flow/write summaries.
+The separate `value_objects.grace` rules do not participate in optimization.
+Outputs are `value-objects.csv` (every non-module class),
+`value-allocations.csv` (each static class New with caller stage, including combi
+class, provenance and loop depth), `value-facts.json` (first witnesses per blocker
+category and nullable type, every allocation), `value-names.json` (stable class
+identities from the same `hir.Names` algorithm as ABAP `names.json`), and
+`value-tables.txt` (requested candidates and any qualifying parser opportunities).
+No ABAP or other backend is invoked. Generated record classes are included in
+CSV/facts so nested object allocations are visible.
+
+`fail:unproven` is a conservative proof failure, not a witnessed semantic
+violation. The `cN_first_definite` columns distinguish witnessed blockers from
+potential dynamic/supertype uses and unresolved effects. Every such uncertainty
+prevents qualification. C4 is informational: an Optional reference requires an
+explicit absent flag and does not disqualify a representation supporting it.
+C5's declared heuristic is at most 64 inline bytes and four reference slots;
+these are handle/descriptor estimates excluding referenced heap payloads and
+are not measured ABAP row layouts. Strings use a 16-byte descriptor estimate;
+object/container fields remain references and their allocations are not removed.
+
+Ranking counts static sites in lexer, statements and structures. `parser_hot_sites`
+is the conditional opportunity if a class qualified; `qualifying_hot_sites_removed`
+is zero for every rejected/uncertain class. Ties in the latter are ordered by
+conditional opportunity, then class identity. Neither column is an execution
+count or a prediction of the reported 22–32 seconds. Dynamic constructor
+operations are reported separately as `dynamic_new_potential` and are excluded
+from savings because the concrete class is not a static `new C` proof.
+
+The opt-in full reference gate compares these rules against the independent
+reference evaluator on full-closure facts:
+
+```sh
+GOCACHE="$HOME/.cache/abapiti-go-cache" GOFLAGS=-buildvcs=false \
+GOTMPDIR="$HOME/.cache/grace-tmp" TMPDIR="$HOME/.cache/grace-tmp" \
+ABAPITI_VALUE_OBJECTS_FULL=1 go test ./cmd/grace-counts \
+  -run '^TestValueObjectsFullClosure$' -count=1 -v -timeout=30m
+```

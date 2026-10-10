@@ -23,7 +23,7 @@ func Analyze(p *hir.Program) (*DB, error) {
 	}
 	var source strings.Builder
 	for _, e := range entries {
-		if e.Name() == "inline.grace" {
+		if e.Name() == "inline.grace" || e.Name() == "value_objects.grace" {
 			continue
 		}
 		b, err := ruleFiles.ReadFile("rules/" + e.Name())

@@ -27,17 +27,20 @@ func main() {
 	}
 	out := flag.String("output", filepath.Join(home, ".cache/grace-counts"), "output directory")
 	closure := flag.String("closure", os.Getenv("REGISTRY_CLOSURE"), "optional verified closure directory; otherwise unpack embedded sources")
+	values := flag.Bool("value-objects", false, "screen value objects only; no rewrites or backend emission")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		fatal(fmt.Errorf("unexpected positional arguments"))
 	}
-	if err := run(*out, *closure); err != nil {
+	if err := runWithOptions(*out, *closure, *values, nil); err != nil {
 		fatal(err)
 	}
 }
 func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
 
-func run(out, dir string) error {
+func run(out, dir string) error { return runWithOptions(out, dir, false, nil) }
+
+func runWithOptions(out, dir string, values bool, check func(*rewrite.DB) error) error {
 	start := time.Now()
 	var err error
 	out, err = filepath.Abs(out)
@@ -114,6 +117,9 @@ func run(out, dir string) error {
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "Grace: %d methods, %d receiver facts (%s)\n", db.Count("defined"), db.Count("receivers"), time.Since(start))
+	if values {
+		return writeValueOutputs(out, dir, p, db, check)
+	}
 	sites, methods := count(p, db, literalSource)
 	for i := range sites {
 		sites[i].Source = strings.TrimPrefix(sites[i].Source, dir+string(filepath.Separator))
