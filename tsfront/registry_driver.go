@@ -3,6 +3,7 @@ package tsfront
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -365,4 +366,19 @@ func RegistryCLIReport(program string, names *hir.Names) string {
 	line("WRITE: / |refused: { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.")
 	line("ENDTRY.")
 	return b.String()
+}
+
+// DriverNames are the harness objects around the translated classes. They
+// follow the class names: ABAPITI_NAMES=readable puts them under the project
+// code (ZCL_LNT_*, ZLNT_*), so both builds can live on one system. The SLG1
+// log class and the corpus table stay shared (ZCL_ABAPITI_LOG, ZABAPITI_CORPUS).
+type DriverNames struct {
+	OSGRun, A4HClass, RunReport, CleanReport, NegReport string
+}
+
+func Drivers() DriverNames {
+	if os.Getenv("ABAPITI_NAMES") == "readable" {
+		return DriverNames{"zcl_lnt_registry_run", "zcl_lnt_registry_a4h", "zlnt_registry_run", "zlnt_registry_clean", "zlnt_registry_neg"}
+	}
+	return DriverNames{"zcl_abapiti_registry_run", "zcl_abapiti_registry_a4h", "zabapiti_registry_run", "zabapiti_registry_clean", "zabapiti_registry_neg"}
 }
