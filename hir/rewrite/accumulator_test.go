@@ -147,6 +147,11 @@ func TestAccumulatorFrontendTemporary(t *testing.T) {
 		decl.X = hir.V("tmp", decl.Type)
 		method.Body.List = append([]*hir.Stmt{temp}, method.Body.List...)
 	}
+	db, err := rewrite.Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
 	st, err := rewrite.Accumulator(p)
 	if err != nil || st.Clones != 1 || len(st.Sites) != 1 {
 		t.Fatalf("%v %v", st, err)
@@ -259,6 +264,35 @@ func TestAccumulatorOtherCallRejectsResult(t *testing.T) {
 	m.Body.List = append(m.Body.List[:1], append([]*hir.Stmt{{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.DirectCall, Owner: "C", Name: "take", Type: hir.T(hir.Void), Args: []*hir.Expr{hir.V("result", m.Result)}}}}, m.Body.List[1:]...)...)
 	st, err := rewrite.Accumulator(p)
 	if err != nil || len(st.Sites) != 0 {
+		t.Fatalf("%v %v", st, err)
+	}
+}
+
+func TestAccumulatorBindingCollisions(t *testing.T) {
+	for _, binding := range []string{"unused-acc", "catch-result"} {
+		t.Run(binding, func(t *testing.T) {
+			p, m, _ := accumulatorFixture()
+			var stmt *hir.Stmt
+			if binding == "unused-acc" {
+				stmt = &hir.Stmt{Kind: hir.VarDecl, Name: "acc", Type: hir.T(hir.I32), X: hir.L(hir.T(hir.I32), 0)}
+			} else {
+				stmt = &hir.Stmt{Kind: hir.Try, Name: "result", Type: m.Result, Body: hir.B(), Else: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.V("result", m.Result)})}
+			}
+			m.Body.List = append(m.Body.List[:1], append([]*hir.Stmt{stmt}, m.Body.List[1:]...)...)
+			st, err := rewrite.Accumulator(p)
+			if err != nil || len(st.Sites) != 0 {
+				t.Fatalf("%v %v", st, err)
+			}
+		})
+	}
+}
+
+func TestAccumulatorNilStatements(t *testing.T) {
+	p, m, c := accumulatorFixture()
+	m.Body.List = append(m.Body.List[:1], append([]*hir.Stmt{nil}, m.Body.List[1:]...)...)
+	c.Body.List = append([]*hir.Stmt{nil}, append(c.Body.List, nil)...)
+	st, err := rewrite.Accumulator(p)
+	if err != nil || len(st.Sites) != 1 {
 		t.Fatalf("%v %v", st, err)
 	}
 }

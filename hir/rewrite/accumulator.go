@@ -150,6 +150,9 @@ func Accumulator(p *hir.Program) (AccumulatorStats, error) {
 				if s.Kind == hir.Block {
 					for i := 0; i < len(s.List); i++ {
 						loop := s.List[i]
+						if loop == nil {
+							continue
+						}
 						var decl *hir.Stmt
 						if loop.Kind == hir.VarDecl && i+1 < len(s.List) {
 							decl = loop
@@ -398,7 +401,7 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 		return fail
 	}
 	decl := m.Body.List[0]
-	if decl.Kind != hir.VarDecl || decl.X == nil || decl.X.Kind != hir.New || !decl.Type.Equal(m.Result) || len(decl.X.Args) != 0 {
+	if decl == nil || decl.Kind != hir.VarDecl || decl.X == nil || decl.X.Kind != hir.New || !decl.Type.Equal(m.Result) || len(decl.X.Args) != 0 {
 		return fail
 	}
 	prefix := 1
@@ -406,7 +409,7 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 	allowed := map[*hir.Expr]bool{}
 	for prefix < len(m.Body.List) {
 		next := m.Body.List[prefix]
-		if next.Kind != hir.VarDecl || next.X == nil || next.X.Kind != hir.Local || next.X.Name != decl.Name || !next.Type.Equal(m.Result) {
+		if next == nil || next.Kind != hir.VarDecl || next.X == nil || next.X.Kind != hir.Local || next.X.Name != decl.Name || !next.Type.Equal(m.Result) {
 			break
 		}
 		bid := fmt.Sprintf("%s/body/s%d/local/%s", id, prefix-1, decl.Name)
@@ -427,6 +430,9 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 	returns := 0
 	good := true
 	visitTree(m.Body, "", func(s *hir.Stmt, _ string) {
+		if (s.Kind == hir.VarDecl || s.Kind == hir.ForEach || s.Kind == hir.Try) && s.Name == "acc" {
+			good = false
+		}
 		if s.Kind == hir.Return {
 			if s.X == nil || s.X.Kind != hir.Local || s.X.Name != decl.Name {
 				good = false
@@ -435,7 +441,7 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 				returns++
 			}
 		}
-		if (s.Kind == hir.VarDecl || s.Kind == hir.ForEach) && names[s.Name] {
+		if (s.Kind == hir.VarDecl || s.Kind == hir.ForEach || s.Kind == hir.Try) && names[s.Name] {
 			isPrefix := false
 			for _, d := range m.Body.List[:prefix] {
 				isPrefix = isPrefix || s == d
@@ -458,7 +464,7 @@ func accumulatorResult(m *hir.Method, id string, db *DB) accumulatorResultShape 
 		}
 	})
 	last := m.Body.List[len(m.Body.List)-1]
-	if !good || returns == 0 || last.Kind != hir.Return {
+	if !good || returns == 0 || last == nil || last.Kind != hir.Return {
 		return fail
 	}
 	return accumulatorResultShape{decl.Name, prefix}
@@ -476,7 +482,7 @@ func accumulatorSpreadLengths(body *hir.Stmt) map[*hir.Stmt]bool {
 		for i := 1; i < len(s.List); i++ {
 			prev, read := s.List[i-1], s.List[i]
 			_, out, ok := accumulatorConsumer(prev)
-			if ok && read.Kind == hir.ExprStmt && read.X != nil && read.X.Kind == hir.RuntimeOp && read.X.Op == "array.length" && read.X.X != nil && read.X.X.Kind == hir.Local && read.X.X.Name == out.Name && read.Source != "" && read.Source == prev.Source {
+			if ok && read != nil && read.Kind == hir.ExprStmt && read.X != nil && read.X.Kind == hir.RuntimeOp && read.X.Op == "array.length" && read.X.X != nil && read.X.X.Kind == hir.Local && read.X.X.Name == out.Name && read.Source != "" && read.Source == prev.Source {
 				ignored[read] = true
 			}
 		}
