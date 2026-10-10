@@ -20,7 +20,7 @@ func TestRewriteDependencies(t *testing.T) {
 			t.Fatalf("missing dependency %s", p)
 		}
 	}
-	for _, p := range []string{"pure", "escapes", "receivers", "calls", "inline_template"} {
+	for _, p := range []string{"pure", "escapes", "receivers", "calls", "inline_template", "loop", "in_body", "use", "def", "next", "live_in", "not_read_after", "writes", "allocates", "may_raise", "may_diverge"} {
 		if needed[p] {
 			t.Fatalf("unused dependency %s", p)
 		}
