@@ -36,6 +36,8 @@ for byte against the supplied kit. SHA-256:
 | 3: discard copies + capacity | seeded | 12.10 | 11.968 | 38.33 | 2.365 | 66.846 | 582.5 | 2.563 |
 | 4: unused class source slots | clean | 10.90 | 10.783 | 38.56 | 2.160 | 63.101 | 580.4 | 2.530 |
 | 4: unused class source slots | seeded | 10.86 | 10.721 | 37.60 | 2.280 | 65.854 | 572.5 | 2.537 |
+| 5: leaf pointer arrays | clean | 11.00 | 10.872 | 35.67 | 2.017 | 68.086 | 511.8 | 2.172 |
+| 5: leaf pointer arrays | seeded | 10.61 | 10.469 | 36.81 | 1.984 | 65.623 | 506.1 | 2.177 |
 
 Raw per-run measurements: [baseline](2026-10-10-hir-golang-alloc/baseline.json).
 Executables, generated sources, profiles and logs are preserved under
@@ -130,3 +132,77 @@ The complete uncached guard and all six full-check output hashes passed. Exact
 allocated bytes fall a further ~27 MB, to about 26.1% below baseline. This does
 not remove the required ResultNode instances or their distinct identities.
 Raw step data: [step 4](2026-10-10-hir-golang-alloc/step4.json).
+
+Step 5 (this commit): an initial erased emission records value, cast, sequence,
+dynamic, interface and override boundaries. Leaf class arrays with no crossing
+use pointer elements in the final emission; any crossing keeps that class's
+arrays on the shared erased ABI throughout the program. A replay check rejects
+an unrecorded crossing. No HIR nodes or types are modified. Existing optional
+reference storage stays compatible. Snapshot conversion is skipped when the
+collection's native array already has the selected typed representation.
+
+The full closure has 101 additional named pointer-array element types (105
+versus 4 in baseline), including Result. Those slots shrink from 16 to 8 bytes;
+a coallocated one-Result array shrinks from a 48-byte allocation to 32 bytes.
+The positive probe checks identity, disjoint views and mutation; covariance and
+dynamic near-misses check that widened aliases still share the original
+container. Every required uncached Go gate passed again, as did all six full
+check hashes. Exact allocated bytes are **36.5% lower** than baseline on both
+inputs, exceeding the lost attempt's approximately 25% saving. Sampled bytes
+fall about 37–39%; sampled objects fall about 10–14%. No speedup is claimed
+under the changing contention described above.
+Raw step data: [step 5](2026-10-10-hir-golang-alloc/step5.json).
+
+The first clean profiles before and after, aggregating each runtime operation
+across all Go element shapes, give this flat allocator comparison. Literal
+buffer allocation moves into the combinator's coallocated header allocation,
+so increased Sequence/Expression flat attribution is not increased total
+allocation. Object counts are sampled, not an exact census; ResultNode instance
+creation and identity remain unchanged.
+
+| Flat allocator / TS call site | Before GiB | After GiB | Before objects M | After objects M |
+|---|---:|---:|---:|---:|
+| array.push | 1.405 | 0.314 | 21.019 | 11.943 |
+| array.concat | 0.123 | 0.118 | 0.184 | 0.075 |
+| array.slice2 | 0.288 | 0.098 | 2.994 | 3.718 |
+| Sequence.run | 0.248 | 0.306 | 11.076 | 11.715 |
+| Expression.run | 0.157 | 0.194 | 7.012 | 7.493 |
+| OptionalPriority.run | 0.059 | 0.070 | 2.621 | 2.703 |
+| Token.run | 0.066 | 0.068 | 2.949 | 3.058 |
+| ResultNode constructor | 0.081 | 0.052 | 2.720 | 2.337 |
+| string-array.join | 0.060 | 0.067 | 0.054 | 0.063 |
+
+Decoded top-40 profiles for bytes and objects are checked in beside each step's
+JSON. Exact-unit aggregate values are in
+[allocator-comparison.json](2026-10-10-hir-golang-alloc/allocator-comparison.json).
+Saved runtime-op caller stacks and annotated combinator source lines are under
+`$HOME/.cache/hir-alloc/{baseline,stepN}/measure`.
+
+Remaining work: small empty result headers and escaped result/node objects;
+erased buffers for covariant and dynamic arrays; copying slices still required
+for independent mutation; string assembly in StatementNode/ExpressionNode and
+string-array join. Some snapshot conversions still copy to the erased ABI.
+Array push growth is far smaller but still allocates. General unshift moves
+existing elements; it reuses tail capacity, not a dedicated front buffer.
+Coallocated buffers and disjoint views can retain their backing allocation until
+the last header dies. No pooling, identity reuse, source edits or HIR rewrites
+were introduced.
+
+Green checkpoints were committed as Alice V. <ooisee@gmail.com> and immediately
+pushed to `origin:refs/heads/proto/hir-golang-alloc`:
+
+- step 1: `41d45d6` — one-slot push, single-copy concat;
+- step 2: `c67453d` — small literal coallocation;
+- step 3: `e5c01a6` — discarded results and capacity reuse;
+- step 4: `01c99ed` — materialization-rooted source slots;
+- step 5: this implementation/report commit — proven leaf pointer arrays.
+
+Reproduction uses the user's kit and commands, with separate emitted directories
+per step. The cache runner holds flock across guards, build and measurement;
+all six checks use `--metrics --cpu-profile FILE --mem-profile FILE`. Compile:
+`go run ./cmd/abapiti abaplint --target go -o DIR`, then
+`(cd DIR/go && go build -o ../zabaplint .)`.
+Run from the kit directory with `--file zabapgit_standalone.prog.abap --config
+abaplint.json --deps deps.txt` (replace the file with `seeded/...` for seeded).
+Profile with `go tool pprof -alloc_space` and `-alloc_objects`, using `-top`,
+`-peek` and `-list` on the emitted binary and saved allocation profile.

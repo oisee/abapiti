@@ -1,0 +1,48 @@
+File: zabaplint
+Build ID: dd04a267a35ee7f67e6bae055df83dbe292710ed
+Type: alloc_objects
+Time: 2026-10-10 14:16:01 UTC
+Showing nodes accounting for 64249998, 94.37% of 68086489 total
+Dropped 439 nodes (cum <= 340432)
+Showing top 40 nodes out of 255
+      flat  flat%   sum%        cum   cum%
+  11714583 17.21% 17.21%   53974756 79.27%  main.src/abap/2_statements/combi.ts.Sequence.run
+   7492949 11.01% 28.21%   51726351 75.97%  main.src/abap/2_statements/combi.ts.Expression.run
+   6696880  9.84% 38.05%    6696880  9.84%  main.(*array[go.shape.*uint8]).push (inline)
+   5007770  7.36% 45.40%    5007770  7.36%  main.(*array[go.shape.interface {}]).push (inline)
+   3717898  5.46% 50.86%    3717898  5.46%  main.(*array[go.shape.interface {}]).slice2 (inline)
+   3058322  4.49% 55.35%    3833832  5.63%  main.src/abap/2_statements/combi.ts.Token.run
+   2730658  4.01% 59.36%    3659087  5.37%  main.src/abap/2_statements/combi.ts.Word.run
+   2703369  3.97% 63.33%   26206166 38.49%  main.src/abap/2_statements/combi.ts.OptionalPriority.run
+   2534056  3.72% 67.06%    5066735  7.44%  main.src/abap/2_statements/combi.ts.Vers.run
+   2337429  3.43% 70.49%    2337429  3.43%  main.src/abap/2_statements/result.ts.ResultNode constructor (inline)
+   2293741  3.37% 73.86%   49491059 72.69%  main.src/abap/2_statements/combi.ts.AlternativePriority.run
+   2195461  3.22% 77.08%    2195461  3.22%  unicode/utf8.AppendRune (inline)
+   1507340  2.21% 79.30%    1507340  2.21%  main.src/abap/2_statements/result.ts.Result constructor (inline)
+   1179658  1.73% 81.03%    1179658  1.73%  main.src/abap/nodes/expression_node.ts.ExpressionNode constructor (inline)
+   1048587  1.54% 82.57%    1048587  1.54%  main.src/abap/nodes/token_node.ts.TokenNode constructor (inline)
+   1048566  1.54% 84.11%    6889721 10.12%  main.src/abap/2_statements/combi.ts.Regex.run
+    939362  1.38% 85.49%    2024812  2.97%  main.src/abap/nodes/statement_node.ts.StatementNode.toTokens
+    842157  1.24% 86.73%     842157  1.24%  internal/bytealg.MakeNoZero
+    720906  1.06% 87.78%     720906  1.06%  main.src/position.ts.Position constructor
+    557057  0.82% 88.60%     557057  0.82%  main.src/abap/nodes/token_node_regex.ts.TokenNodeRegex constructor (inline)
+    513388  0.75% 89.36%     772806  1.14%  main.src/abap/1_lexer/tokens/identifier.ts.Identifier constructor
+    393218  0.58% 89.93%     393218  0.58%  regexp.(*Regexp).doOnePass
+    393217  0.58% 90.51%     396196  0.58%  regexp.(*Regexp).backtrack
+    350231  0.51% 91.03%     535969  0.79%  main.str
+    283986  0.42% 91.44%     447826  0.66%  main.src/abap/nodes/expression_node.ts.ExpressionNode.toTokens
+    278530  0.41% 91.85%     849246  1.25%  main.src/abap/3_structures/structures/_combi.ts.SubStatement.run
+    262142  0.39% 92.24%   34462523 50.62%  main.src/abap/2_statements/combi.ts.Alternative.run
+    254678  0.37% 92.61%    1052490  1.55%  main.src/abap/nodes/statement_node.ts.StatementNode.concatTokens
+    196611  0.29% 92.90%    1307004  1.92%  main.src/abap/2_statements/statement_parser.ts.WorkArea.tokensToNodes
+    185688  0.27% 93.17%    2967472  4.36%  main.src/abap/2_statements/statement_parser.ts.StatementParser.process
+    169302  0.25% 93.42%    5965663  8.76%  main.src/abap/2_statements/combi.ts.Optional.run
+    131075  0.19% 93.61%   54474473 80.01%  main.src/abap/2_statements/combi.ts.Combi.run.func2
+    131074  0.19% 93.81%    2468571  3.63%  main.src/abap/nodes/statement_node.ts.StatementNode.getTokens
+     87381  0.13% 93.94%    8604320 12.64%  main.src/abap/2_statements/combi.ts.Star.run.func2
+     87380  0.13% 94.06%     740006  1.09%  main.src/abap/nodes/expression_node.ts.ExpressionNode.getTokens
+     63353 0.093% 94.16%     803359  1.18%  main.src/abap/nodes/expression_node.ts.ExpressionNode.concatTokens
+     43691 0.064% 94.22%    4247511  6.24%  main.src/abap/2_statements/combi.ts.Permutation.run
+     43690 0.064% 94.29%    1554329  2.28%  main.src/abap/3_structures/structures/_combi.ts.Alternative.run
+     32769 0.048% 94.33%    1540010  2.26%  main.src/abap/types/method_parameters.ts.MethodParameters.parse
+     21845 0.032% 94.37%    1554329  2.28%  main.src/abap/3_structures/structures/_combi.ts.Sequence.run

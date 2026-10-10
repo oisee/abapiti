@@ -1,0 +1,50 @@
+{
+  "baseline": {
+    "alloc_space": {
+      "array.push": 1508486393,
+      "array.concat": 132031283,
+      "array.slice2": 309694316,
+      "Sequence.run": 265820100,
+      "Expression.run": 168300300,
+      "OptionalPriority.run": 62916000,
+      "Token.run": 70780500,
+      "ResultNode constructor": 87034464,
+      "string-array.join": 64595067
+    },
+    "alloc_objects": {
+      "array.push": 21019124,
+      "array.concat": 183702,
+      "array.slice2": 2993775,
+      "Sequence.run": 11075515,
+      "Expression.run": 7012283,
+      "OptionalPriority.run": 2621440,
+      "Token.run": 2949107,
+      "ResultNode constructor": 2719767,
+      "string-array.join": 53909
+    }
+  },
+  "step5": {
+    "alloc_space": {
+      "array.push": 337088174,
+      "array.concat": 127235597,
+      "array.slice2": 105387948,
+      "Sequence.run": 328213236,
+      "Expression.run": 208672280,
+      "OptionalPriority.run": 74975208,
+      "Token.run": 73402000,
+      "ResultNode constructor": 56100100,
+      "string-array.join": 71420266
+    },
+    "alloc_objects": {
+      "array.push": 11943145,
+      "array.concat": 74850,
+      "array.slice2": 3717898,
+      "Sequence.run": 11714583,
+      "Expression.run": 7492949,
+      "OptionalPriority.run": 2703369,
+      "Token.run": 3058322,
+      "ResultNode constructor": 2337429,
+      "string-array.join": 62991
+    }
+  }
+}

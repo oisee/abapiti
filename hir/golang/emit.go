@@ -27,7 +27,11 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if errs := hir.Verify(p); len(errs) > 0 {
 		return nil, errs[0]
 	}
-	e := &emitter{p: p, names: hir.NewNames()}
+	return emitArrayPackage(p, pkg, nil, map[string]bool{})
+}
+
+func emitArrayPackage(p *hir.Program, pkg string, typed, blocked map[string]bool) (map[string]string, error) {
+	e := &emitter{p: p, names: hir.NewNames(), typedArrays: typed, arrayBlocked: blocked, arraySeen: map[string]bool{}}
 	e.characterSets()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
@@ -62,6 +66,24 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
+	if typed == nil {
+		e.arrayABIBoundaries()
+		typed = map[string]bool{}
+		for name := range e.arraySeen {
+			if e.classBy(name) != nil && e.concreteClass(name) && !blocked[name] {
+				typed[name] = true
+			}
+		}
+		if len(typed) > 0 {
+			return emitArrayPackage(p, pkg, typed, blocked)
+		}
+	} else {
+		for name := range typed {
+			if blocked[name] {
+				return nil, fmt.Errorf("typed array crossed an unrecorded boundary: %s", name)
+			}
+		}
+	}
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
@@ -82,6 +104,9 @@ type emitter struct {
 	err            error
 	extra          strings.Builder
 	materializers  map[string]bool
+	typedArrays    map[string]bool
+	arrayBlocked   map[string]bool
+	arraySeen      map[string]bool
 	stringLiterals map[string]string
 	classifiers    map[string]string
 }
@@ -129,14 +154,17 @@ func (e *emitter) fieldOwner(c *hir.Class, n string) *hir.Class {
 	}
 	return nil
 }
-func arrayStorage(t hir.Type) hir.Type {
-	if t.Kind == hir.Array && t.Args[0].IsRef() {
-		return hir.T(hir.Array, hir.Ref(hir.RootObject))
-	}
-	return t
-}
 func (e *emitter) typ(t hir.Type) string {
-	t = arrayStorage(t)
+	if t.Kind == hir.Array {
+		elem := t.Args[0]
+		if elem.Kind == hir.Optional {
+			elem = elem.Args[0]
+		}
+		if elem.Kind == hir.ClassRef {
+			e.arraySeen[elem.Name] = true
+		}
+	}
+	t = e.arrayStorage(t)
 	switch t.Kind {
 	case hir.Void:
 		return ""
@@ -411,11 +439,12 @@ func (b *body) temp(t hir.Type, code string) string {
 	return n
 }
 func (b *body) value(x *hir.Expr, t hir.Type) string {
+	b.e.arrayBoundary(x.Type, t)
 	v := b.expr(x)
 	if t.Kind == hir.Optional && x.Type.Kind != hir.Optional && !t.Args[0].IsRef() {
 		return "present(" + v + ")"
 	}
-	if t.Kind == hir.Array && !arrayStorage(t).Equal(arrayStorage(x.Type)) {
+	if t.Kind == hir.Array && !b.e.arrayStorage(t).Equal(b.e.arrayStorage(x.Type)) {
 		b.e.unsupported(x.Node, "covariant array view")
 	}
 	return v
@@ -511,7 +540,7 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		code = a + ".get(" + i + ").Value"
-		if x.X.Type.Args[0].IsRef() {
+		if x.X.Type.Args[0].IsRef() && e.typ(t) != e.typ(e.arrayStorage(x.X.Type).Args[0]) {
 			code = "castRef[" + e.typ(t) + "](" + code + ")"
 		}
 	case hir.New:
@@ -535,7 +564,7 @@ func (b *body) expr(x *hir.Expr) string {
 				code = "newRegExp(" + a[0] + "," + flags + ")"
 			}
 			if t.Kind == hir.Array && len(a) > 0 {
-				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{Items:make([]" + e.typ(arrayStorage(t).Args[0]) + "," + a[0] + ")}"
+				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{Items:make([]" + e.typ(e.arrayStorage(t).Args[0]) + "," + a[0] + ")}"
 			}
 		}
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
@@ -586,6 +615,8 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.Binary:
 		a := b.expr(x.X)
 		if x.Op == "&&" || x.Op == "||" {
+			e.arrayBoundary(x.X.Type, t)
+			e.arrayBoundary(x.Y.Type, t)
 			n := b.temp(t, a)
 			condition := n
 			if x.Op == "||" {
@@ -675,6 +706,7 @@ func (b *body) expr(x *hir.Expr) string {
 		a := b.expr(x.X)
 		code = b.truth(a, x.X.Type)
 	case hir.Narrow, hir.Cast:
+		e.arrayBoundary(x.X.Type, t)
 		a := b.expr(x.X)
 		src := x.X.Type
 		if src.Kind == hir.Optional {
@@ -683,7 +715,7 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			src = src.Args[0]
 		}
-		if src.Equal(t) || src.Kind == hir.Array && t.Kind == hir.Array && arrayStorage(src).Equal(arrayStorage(t)) {
+		if src.Equal(t) || src.Kind == hir.Array && t.Kind == hir.Array && e.arrayStorage(src).Equal(e.arrayStorage(t)) {
 			code = a
 		} else if b.freshOptionalArray(x) {
 			code = "presentArray(" + a + ")"
@@ -717,6 +749,7 @@ func (b *body) expr(x *hir.Expr) string {
 		a, v := b.expr(x.X), b.expr(x.Y)
 		code = x.Op + "(" + a + "," + v + ")"
 	case hir.Seq:
+		e.arrayBoundary(x.Y.Type, t)
 		old := b.locals
 		b.locals = clone(old)
 		n := b.fresh()
@@ -761,7 +794,7 @@ func (b *body) stmtList(list []*hir.Stmt) {
 			b.stmt(s)
 			continue
 		}
-		elem := b.e.typ(arrayStorage(s.Type).Args[0])
+		elem := b.e.typ(b.e.arrayStorage(s.Type).Args[0])
 		holder, local := b.fresh(), b.fresh()
 		b.line("%s:=&struct {Header array[%s];Buffer [%d]%s}{}", holder, elem, n, elem)
 		b.line("%s.Header.Items=%s.Buffer[:0]", holder, holder)
@@ -861,7 +894,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		index := b.fresh()
 		b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
 		code := a + ".Items[" + index + "]"
-		if s.Type.IsRef() {
+		if s.Type.IsRef() && e.typ(s.Type) != e.typ(e.arrayStorage(s.X.Type).Args[0]) {
 			code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
 		}
 		n := b.temp(s.Type, code)

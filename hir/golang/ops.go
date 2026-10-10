@@ -54,6 +54,12 @@ func (b *body) runtime(x *hir.Expr, discard bool) string {
 		b.e.unsupported(x.Node, x.Op)
 		return ""
 	}
+	if x.Op == "dynamic.of" {
+		b.e.blockArrayTypes(x.X.Type)
+	}
+	if x.Op == "dynamic.asRef" {
+		b.e.blockArrayTypes(x.Type)
+	}
 	a := b.expr(x.X)
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
@@ -190,17 +196,17 @@ func (b *body) runtime(x *hir.Expr, discard bool) string {
 	}
 	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift" || x.Op == "map.get") && x.Type.Args[0].IsRef() {
 		code += ".Value"
-		if x.X.Type.Kind == hir.Array && x.Type.Args[0].IsRef() {
+		if x.X.Type.Kind == hir.Array && x.Type.Args[0].IsRef() && b.e.typ(x.Type) != b.e.typ(b.e.arrayStorage(x.X.Type).Args[0]) {
 			code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
 		}
 	}
 	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {
 		code += ".Value"
 	}
-	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values") && x.Type.Args[0].IsRef() {
+	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values") && x.Type.Args[0].IsRef() && b.e.arrayStorage(x.Type).Args[0].Equal(hir.Ref(hir.RootObject)) {
 		code = "referenceArray(" + code + ")"
 	}
-	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {
+	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() && b.e.arrayStorage(x.Args[0].Type).Args[0].Equal(hir.Ref(hir.RootObject)) {
 		code = "referenceSetFromArray(" + a + "," + args[0] + ")"
 	}
 	if x.Op == "set.has" && x.X.Kind == hir.StaticGet {
