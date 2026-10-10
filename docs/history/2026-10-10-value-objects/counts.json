@@ -1,0 +1,25 @@
+{
+  "closure_files": 1538,
+  "classes": 1927,
+  "interfaces": 73,
+  "method_bodies": 6257,
+  "receiver_facts": 42766,
+  "non_module_class_rows": 1858,
+  "static_new_sites": 2803,
+  "selected_candidates": 92,
+  "selected_static_new_sites": 727,
+  "all_value_object_qualifiers": 0,
+  "fact_counts": {
+    "vo_absent_flag": 1927,
+    "vo_blocked": 5874,
+    "vo_class": 1927,
+    "vo_condition": 5,
+    "vo_dynamic_new": 2887,
+    "vo_field": 3792,
+    "vo_new": 2803,
+    "vo_optional": 13212,
+    "vo_pass": 3761,
+    "vo_size": 1927,
+    "vo_violation": 94002
+  }
+}

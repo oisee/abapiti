@@ -1,0 +1,13 @@
+lowered 1538 files + harness: 1927 classes, 73 interfaces; no blocking/verification errors (27.184108188s)
+Grace: 6257 methods, 42766 receiver facts (1m29.420225955s)
+    value_objects_test.go:45: full closure independent evaluator agrees; 260965 premises
+--- PASS: TestValueObjectsFullClosure (163.67s)
+PASS
+ok  	github.com/oisee/abapiti/cmd/grace-counts	163.793s
+go vet ./...: PASS
+go test -short ./...: PASS
+Synthetic fixtures: Cartesian + independently hashed reference equality; HIR unchanged.
+Artifact audit: 92 candidate rows; 727 matching allocation rows; every stage, loop and hot count reconciled; unique full-closure allocation paths; no absolute temporary paths.
+Command fact JSON matches the full reference-run fact JSON byte for byte.
+Analysis implementation commit: 1cd4481 (Alice V. <ooisee@gmail.com>).
+No emitter changes or backend emission.
