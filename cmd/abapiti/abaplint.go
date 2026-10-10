@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/oisee/abapiti/hir/abap"
+	gohir "github.com/oisee/abapiti/hir/golang"
 	"github.com/oisee/abapiti/tsfront"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +24,7 @@ const zabapgitRunSHA = "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a
 
 var abaplintCmd = &cobra.Command{
 	Use:   "abaplint [path-to-abaplint-checkout] -o <outdir>",
-	Short: "Translate abaplint (TypeScript) into ABAP classes",
+	Short: "Translate abaplint (TypeScript) into ABAP classes or Go",
 	Long: `Translate the core of abaplint (github.com/abaplint/abaplint, commit
 577f875e, @abaplint/core 2.120.56) into ABAP, without Node.
 
@@ -40,7 +42,8 @@ Outputs under <outdir>:
   a4h/      abapGit zip: classes + ZCL_ABAPITI_REGISTRY_A4H + ZABAPITI_REGISTRY_RUN
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
-  native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build`,
+  native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
+  go/       with --target go: TS-HG@Go module + zabaplint executable when Go is on PATH`,
 	Example: `  abapiti abaplint -o out
   abapiti abaplint ~/src/abaplint -o out --target native
   abapiti abaplint -o out --target osg --input zabapgit/in --deps zabapgit/deps/src --config ci-abaplint.json`,
@@ -51,7 +54,7 @@ Outputs under <outdir>:
 func init() {
 	f := abaplintCmd.Flags()
 	f.StringP("output", "o", "", "Output directory (required)")
-	f.String("target", "all", "Targets to write: all, a4h, osg or native (comma-separated)")
+	f.String("target", "all", "Targets to write: all (ABAP targets), a4h, osg, native or go (comma-separated)")
 	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip")
 	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
 	f.String("deps", "", "osg: folder of dependency files")
@@ -89,10 +92,10 @@ func parseTargets(s string) (map[string]bool, error) {
 		switch t = strings.TrimSpace(strings.ToLower(t)); t {
 		case "all":
 			targets["a4h"], targets["osg"], targets["native"] = true, true, true
-		case "a4h", "osg", "native":
+		case "a4h", "osg", "native", "go":
 			targets[t] = true
 		default:
-			return nil, fmt.Errorf("--target %q: use all, a4h, osg or native", t)
+			return nil, fmt.Errorf("--target %q: use all, a4h, osg, native or go", t)
 		}
 	}
 	return targets, nil
@@ -141,7 +144,11 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	n := &narrator{w: cmd.ErrOrStderr(), quiet: quiet, start: time.Now()}
 	began := n.start
 	pin := tsfront.RegistryUpstreamPin[:8]
-	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.56) from TypeScript into ABAP", version, pin)
+	destination := "ABAP"
+	if targets["go"] && len(targets) == 1 {
+		destination = "Go"
+	}
+	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.56) from TypeScript into %s", version, pin, destination)
 
 	// 1. source
 	var src *abaplintSource
@@ -218,6 +225,33 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. ABAP
+	if targets["go"] {
+		files, err := gohir.Emit(lowering.Prog)
+		if err != nil {
+			return err
+		}
+		files["main.go"] = tsfront.RegistryGoCLI()
+		files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
+		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
+			return err
+		}
+		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))
+		n.say("TS-HG@Go generation: %.3fs", time.Since(began).Seconds())
+		if goTool, lookupErr := exec.LookPath("go"); lookupErr == nil {
+			build := exec.CommandContext(cmd.Context(), goTool, "build", "-o", "zabaplint", ".")
+			build.Dir = filepath.Join(out, "go")
+			build.Env = append(os.Environ(), "GOFLAGS=-buildvcs=false")
+			if output, buildErr := build.CombinedOutput(); buildErr != nil {
+				return fmt.Errorf("TS-HG@Go build: %w\n%s", buildErr, output)
+			}
+			n.step("TS-HG@Go built: %s", filepath.Join(out, "go", "zabaplint"))
+		} else {
+			n.say("Go is absent from PATH; build the module with: cd %s && go build -o zabaplint .", filepath.Join(out, "go"))
+		}
+		if len(targets) == 1 {
+			return nil
+		}
+	}
 	emitted, names, err := lowering.Emit()
 	if err != nil {
 		return err

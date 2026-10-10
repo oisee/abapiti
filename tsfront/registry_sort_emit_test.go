@@ -65,10 +65,10 @@ func TestEmitRegistrySorts(t *testing.T) {
 	if errors := hir.Verify(prog); len(errors) > 0 {
 		t.Fatal(errors, hir.Dump(prog))
 	}
-	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
 	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
 		gracecheck.Check(t, prog)
 	}
+	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "sorts", "SortProbe") })
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

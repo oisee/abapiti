@@ -82,6 +82,23 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	if len(cases) != 6 {
 		t.Fatal("missing oracle cases")
 	}
+	t.Run("Go", func(t *testing.T) {
+		lexerCore(t)
+		main := "out:=[]string{};"
+		for _, c := range cases {
+			main += fmt.Sprintf("out=append(out,%s(str(%q),str(%q),float64(%g),%t).String());", goEntry("probe.ts.Probe", "run"), c.Raw, c.Needle, c.N, c.Flag)
+		}
+		main += "b,_:=json.Marshal(out);fmt.Println(string(b))"
+		var got []string
+		if err := json.Unmarshal([]byte(runGoHIR(t, prog, main)), &got); err != nil {
+			t.Fatal(err)
+		}
+		for i, c := range cases {
+			if got[i] != c.Expected {
+				t.Errorf("case %d: got %q want %q", i, got[i], c.Expected)
+			}
+		}
+	})
 	class := names.Get("probe.ts.Probe")
 	var b strings.Builder
 	line := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
