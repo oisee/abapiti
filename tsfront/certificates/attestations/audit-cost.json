@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "audits": [
+    {
+      "round": 1,
+      "model": "gpt-6.1-sol",
+      "seconds": 179,
+      "cli_reported_tokens": 179581
+    },
+    {
+      "round": 1,
+      "model": "zai/glm-5.3",
+      "seconds": 269,
+      "cli_reported_tokens": 537917
+    },
+    {
+      "round": 2,
+      "model": "gpt-6.1-sol",
+      "seconds": 223,
+      "cli_reported_tokens": 128154
+    },
+    {
+      "round": 2,
+      "model": "zai/glm-5.3",
+      "seconds": 278,
+      "cli_reported_tokens": 195802
+    },
+    {
+      "round": 3,
+      "model": "gpt-6.1-sol",
+      "seconds": 131,
+      "cli_reported_tokens": 178661
+    },
+    {
+      "round": 3,
+      "model": "zai/glm-5.3",
+      "seconds": 266,
+      "cli_reported_tokens": 257492
+    }
+  ],
+  "sum_cli_reported_tokens": 1477607,
+  "token_caveat": "CLI counters, including cached prompt tokens; resumed session counters can overlap. These are not a billing or dollar estimate.",
+  "blindness": "Separate read-only model processes; identical read-only source snapshots, no auditor answers in snapshots. Each follow-up resumed only that auditor's own session.",
+  "round1": "Both UNKNOWN due unavailable/truncated inspection material and sandbox limitations. Retained, not counted as acceptance.",
+  "json_normalization": "GLM rounds 2 and 3 emitted four surplus outer braces. Only those braces were removed for JSON parsing. Every field, claim, verdict and binding is unchanged; raw outputs are retained.",
+  "differential_seconds": 212.306
+}

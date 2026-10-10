@@ -106,7 +106,7 @@ func PilotCertificateReport() (string, error) {
 	if err := rewrite.Evaluate(db, rules); err != nil {
 		return "", err
 	}
-	s := "Certified facts pilot: TS-HG@Go only; no parallel execution.\n\n"
+	s := "Certified facts pilot: TS-HG@Go only; conditional on successful guarded warm-up; no parallel execution.\n\n"
 	for _, row := range db.Facts("cert_discharge") {
 		s += fmt.Sprintf("%s: %s %s rests on %s (%s %s SHA-256 %s)\n", row[0], row[1], row[2], row[3], row[4], row[5], row[6])
 	}

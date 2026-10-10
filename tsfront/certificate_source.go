@@ -50,7 +50,7 @@ func PilotCertificateSource() (certificates.Source, map[overrides.Key]string, er
 			}
 		}
 	}
-	src := certificates.Source{UpstreamSHA256: overrides.Fingerprint(string(EmbeddedAbaplintArchive())), Span: func(k overrides.Key) (string, error) {
+	src := certificates.Source{UpstreamPin: RegistryUpstreamPin, UpstreamSHA256: overrides.Fingerprint(string(EmbeddedAbaplintArchive())), Span: func(k overrides.Key) (string, error) {
 		v, ok := spans[k]
 		if !ok || v == "" {
 			return "", fmt.Errorf("missing/ambiguous certificate target: %v", k)

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "upstream_sha256": "5ea3cd76e2058563ca5311dcc50707e78df5fd04bcb0ce84255ccbd3d0c8be4b",
+  "monitor_sha256": "07edc3581bdb3a5b076712ac1ea0f5b36f41e16d639e2735c789621e6115c640",
+  "prestore_negatives": {
+    "StructureParser.singletons": "PASS",
+    "Alternative.map": "PASS",
+    "SubStructure.matcher": "PASS",
+    "sub.singletons": "PASS"
+  },
+  "differentials": {
+    "clean": "PASS",
+    "seeded": "PASS",
+    "abapgit-src": "PASS"
+  },
+  "abap_diff": "PASS",
+  "upstream_pin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e"
+}

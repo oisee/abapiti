@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "id": "alternative-setup-map",
-  "status": "proposed",
+  "status": "accepted",
   "target": {
     "key": {
       "File": "src/abap/3_structures/structures/_combi.ts",
@@ -3922,8 +3922,8 @@
     }
   ],
   "dynamic_validation": {
-    "path": "",
-    "sha256": ""
+    "path": "pilot-validation.json",
+    "sha256": "a6326c4fe2ac84c36541683b9a9c0b2980ceb516c52fa2d6f4bd210d7f68bd63"
   },
   "monitor": "structures-cache-prestore-v1",
   "hosts": [

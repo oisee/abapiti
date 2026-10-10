@@ -73,6 +73,7 @@ type Source struct {
 	Receivers      func() ([]string, error)
 	UpstreamSHA256 string
 	MonitorSHA256  string
+	UpstreamPin    string
 }
 type Loaded struct{ Certificates []Certificate }
 
@@ -206,7 +207,7 @@ func Load(f fs.FS, src Source) (*Loaded, error) {
 		if err := decode(f, c.Validation.Path, &validation); err != nil {
 			return nil, err
 		}
-		if validation.Schema != Schema || validation.UpstreamSHA256 != src.UpstreamSHA256 || validation.MonitorSHA256 == "" || validation.MonitorSHA256 != src.MonitorSHA256 || validation.ABAPDiff != "PASS" {
+		if validation.Schema != Schema || validation.UpstreamSHA256 != src.UpstreamSHA256 || validation.UpstreamPin == "" || validation.UpstreamPin != src.UpstreamPin || validation.MonitorSHA256 == "" || validation.MonitorSHA256 != src.MonitorSHA256 || validation.ABAPDiff != "PASS" {
 			return nil, fmt.Errorf("pilot dynamic validation stale/incomplete: %s", c.ID)
 		}
 		for _, key := range []string{"StructureParser.singletons", "Alternative.map", "SubStructure.matcher", "sub.singletons"} {
@@ -229,6 +230,17 @@ func Load(f fs.FS, src Source) (*Loaded, error) {
 func (l *Loaded) Axioms() (*rewrite.DB, error) {
 	db := rewrite.NewDB()
 	for _, c := range l.Certificates {
+		for _, condition := range c.Claim.Preconditions {
+			if err := db.Add("cert_requires", c.ID, condition); err != nil {
+				return nil, err
+			}
+		}
+		if err := db.Add("cert_monitor", c.ID, c.Monitor, Host); err != nil {
+			return nil, err
+		}
+		if err := db.Add("cert_source_closure", c.ID, c.UpstreamSHA256, c.ReceiverSHA256); err != nil {
+			return nil, err
+		}
 		if err := db.Add("cert_cache_stable", c.Claim.Region, c.Claim.Cache, c.ID, c.Target.Key.File, c.Target.Key.Symbol, c.Target.SHA256); err != nil {
 			return nil, err
 		}
@@ -238,6 +250,7 @@ func (l *Loaded) Axioms() (*rewrite.DB, error) {
 
 // Validation is a source-and-monitor-bound dynamic gate, not an arbitrary blob.
 type Validation struct {
+	UpstreamPin    string            `json:"upstream_pin"`
 	Schema         int               `json:"schema"`
 	UpstreamSHA256 string            `json:"upstream_sha256"`
 	MonitorSHA256  string            `json:"monitor_sha256"`
