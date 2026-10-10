@@ -9,7 +9,7 @@ verification errors. No `hir/golang` dependency is used.
 Run with:
 
 ```sh
-flock /tmp/abapiti-heavy.lock go test ./tsfront -run '^TestGraceFullRegistryClosure$' -count=1 -v -timeout=60m
+ABAPITI_GRACE_FULL=1 flock /tmp/abapiti-heavy.lock go test ./tsfront -run '^TestGraceFullRegistryClosure$' -count=1 -v -timeout=60m
 ```
 
 `-short` skips this slow test. `GRACE_FULL_FACTS_OUT=/path/report.txt` exports

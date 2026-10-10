@@ -371,7 +371,7 @@ would conflict with byte-identical oracle compatibility.
 ```sh
 go test -short ./hir/... ./tsfront/... ./internal/gracecheck -count=1
 ABAPITI_GRACECHECK=1 go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
-go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 60m
+ABAPITI_GRACE_FULL=1 go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 60m
 ```
 
 The full test skips under `-short`. It uses `REGISTRY_CLOSURE` when provided,

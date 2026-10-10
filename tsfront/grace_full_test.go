@@ -15,11 +15,13 @@ import (
 	"github.com/oisee/abapiti/internal/gracecheck"
 )
 
-// The full closure uses the production CLI lowering inputs. Skip it with
-// -short: independent reference joins are expensive on thousands of methods.
+// The full closure uses the production CLI lowering inputs. Independent
+// reference joins are expensive on thousands of methods (about 13 minutes,
+// far more under -race), so the test runs only with ABAPITI_GRACE_FULL=1, in
+// its own advisory CI job, never in the shared test shards.
 func TestGraceFullRegistryClosure(t *testing.T) {
-	if testing.Short() {
-		t.Skip("full pinned 1538-file closure requires non-short tests")
+	if testing.Short() || os.Getenv("ABAPITI_GRACE_FULL") != "1" {
+		t.Skip("full pinned 1538-file closure runs only with ABAPITI_GRACE_FULL=1 and without -short")
 	}
 	t.Setenv("ABAPITI_ASSUME_INT", "1")
 	start := time.Now()
