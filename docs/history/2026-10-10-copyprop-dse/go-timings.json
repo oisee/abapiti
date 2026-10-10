@@ -1,5 +1,5 @@
 {
-  "implementation_commit": "8f0d5eb",
+  "implementation_commit": "c5633f7",
   "instrument": "tools/go-target-check.py (time.perf_counter, raw stdout equality)",
   "runs_per_variant": 3,
   "GOMAXPROCS": 4,
@@ -7,21 +7,21 @@
   "before": {
     "clean": {
       "seconds": [
-        10.290327426977456,
-        10.605455676093698,
-        10.411797210108489
+        10.403977916575968,
+        10.342121604830027,
+        10.528861341066658
       ],
-      "median_seconds": 10.411797210108489,
+      "median_seconds": 10.403977916575968,
       "byte_identical": true,
       "issues": 0
     },
     "seeded": {
       "seconds": [
-        10.274327441118658,
-        10.316431718878448,
-        10.293559486977756
+        10.308804522734135,
+        10.397765162866563,
+        10.395258242730051
       ],
-      "median_seconds": 10.293559486977756,
+      "median_seconds": 10.395258242730051,
       "byte_identical": true,
       "issues": 5
     }
@@ -29,27 +29,27 @@
   "after": {
     "clean": {
       "seconds": [
-        10.332107337657362,
-        10.286803016904742,
-        10.282618721015751
+        10.489888609852642,
+        11.007637406233698,
+        10.745102326851338
       ],
-      "median_seconds": 10.286803016904742,
+      "median_seconds": 10.745102326851338,
       "byte_identical": true,
       "issues": 0
     },
     "seeded": {
       "seconds": [
-        10.381937271915376,
-        10.353612679056823,
-        10.336239698342979
+        10.492852990981191,
+        10.417911410797387,
+        10.381889278069139
       ],
-      "median_seconds": 10.353612679056823,
+      "median_seconds": 10.417911410797387,
       "byte_identical": true,
       "issues": 5
     }
   },
   "cached_build_seconds": {
-    "before": 41.23,
-    "after": 42.65
+    "before": 20.39,
+    "after": 20.94
   }
 }

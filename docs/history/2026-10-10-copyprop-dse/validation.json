@@ -1,0 +1,47 @@
+{
+  "implementation_commit": "c5633f7",
+  "vet": true,
+  "short_flag_off": true,
+  "short_flag_on": true,
+  "lint": {
+    "version": "2.13.2",
+    "new_issues": 0,
+    "canaries_passed": 5,
+    "canaries_total": 5
+  },
+  "full_closure": {
+    "ABAPITI_GRACE_FULL": "1",
+    "ABAPITI_COPYPROP": "1",
+    "passed": true,
+    "seconds": 2606.73,
+    "inert_store_candidates_checked": 1970,
+    "reference_premises": [
+      435383414,
+      443152814
+    ]
+  },
+  "executable_oracles": {
+    "ABAPITI_COPYPROP": "1",
+    "passed": true,
+    "lexer_cases": 44,
+    "mutation_rejected": true,
+    "registry": [
+      "JSON",
+      "XML",
+      "arrays",
+      "iterators",
+      "features",
+      "sorts"
+    ],
+    "seconds": 8.468
+  },
+  "kit": {
+    "runs_per_workload_per_flag": 3,
+    "raw_output_equal": true,
+    "clean_issues": 0,
+    "seeded_issues": 5
+  },
+  "ABAP_equality_established": false,
+  "ABAP_equality_owner": "abapiti A4H/OSGO",
+  "PR_opened": false
+}

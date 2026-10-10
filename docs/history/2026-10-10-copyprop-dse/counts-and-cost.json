@@ -1,0 +1,34 @@
+{
+  "go": {
+    "seconds": [
+      1.016241004,
+      1.005704327,
+      0.964487559
+    ],
+    "median_seconds": 1.005704327,
+    "copies": 116,
+    "dead_stores": 655,
+    "rounds": 3
+  },
+  "abap": {
+    "seconds": [
+      1.3717105090000001,
+      1.356082427,
+      1.348773542
+    ],
+    "median_seconds": 1.356082427,
+    "copies": 118,
+    "dead_stores": 961,
+    "rounds": 3
+  },
+  "go_pass_percent_of_cached_build": 4.9323409857773415,
+  "cached_go_build_before_seconds": 20.39,
+  "emitted_abap_statements": {
+    "before": 568019,
+    "after": 564916,
+    "removed": 3103
+  },
+  "input_files": 1538,
+  "classes": 1927,
+  "interfaces": 73
+}

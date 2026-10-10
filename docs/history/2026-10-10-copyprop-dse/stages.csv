@@ -1,0 +1,7 @@
+stage,go_copyprop,go_dse,abap_copyprop,abap_dse
+lexer,0,2,0,2
+statements,101,15,102,16
+structures,6,4,6,6
+syntax,5,461,6,714
+rules,2,34,2,34
+other,2,139,2,189

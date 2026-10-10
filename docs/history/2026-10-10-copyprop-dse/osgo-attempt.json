@@ -1,0 +1,72 @@
+{
+  "implementation_commit": "c5633f7",
+  "runner_commit": "6e10128eebb08704f62c3371a55cd598884ba0cf",
+  "tooling": ".github/ci/osgo-unit.sh setup; npm run osgo:unit -- --json --jobs 4 --class ZCL_ABAPITI_REGISTRY_RUN",
+  "timeout_seconds": 1200,
+  "expected_dump": "0",
+  "expected_sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+  "node_heap_mib": 8192,
+  "equality_established": false,
+  "before": {
+    "classes": 0,
+    "compiled": 0,
+    "rows": [
+      {
+        "source": "harness",
+        "status": "ERROR",
+        "message": "invalid unit result (exit 1)"
+      }
+    ],
+    "timingMs": {},
+    "provenance": {
+      "database": "modernc.org/sqlite",
+      "heap": "--max-old-space-size=8192 MiB",
+      "versions": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    "warnings": [],
+    "totals": {
+      "success": 0,
+      "failure": 0,
+      "not_compiled": 0,
+      "error": 1,
+      "tests": 0
+    },
+    "overrides": []
+  },
+  "after": {
+    "classes": 0,
+    "compiled": 0,
+    "rows": [
+      {
+        "source": "harness",
+        "status": "ERROR",
+        "message": "invalid unit result (exit 1)"
+      }
+    ],
+    "timingMs": {},
+    "provenance": {
+      "database": "modernc.org/sqlite",
+      "heap": "--max-old-space-size=8192 MiB",
+      "versions": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    "warnings": [],
+    "totals": {
+      "success": 0,
+      "failure": 0,
+      "not_compiled": 0,
+      "error": 1,
+      "tests": 0
+    },
+    "overrides": []
+  }
+}
