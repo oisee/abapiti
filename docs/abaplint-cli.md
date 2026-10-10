@@ -104,3 +104,96 @@ against fresh pinned Node output (44/44 plus a mutation check), checks the regis
 array/sort/iterator/feature/JSON/XML oracles, and compares clean and seeded output
 byte for byte against `zabapgit-check-kit.zip` from release v0.1.1. Go is cached and
 the job has a 15-minute timeout. Branch protection is left to the maintainer.
+
+### Stable site maps and profiling certificates
+
+A run that includes `--target go` writes `sites.json` next to `go/`. Its
+`schema` is `sites/1`; `sites` is an ordered array of emitted occurrences:
+
+```json
+{
+  "schema": "sites/1",
+  "sites": [{
+    "site_id": "src%2Fprobe.ts.Probe.run|src%2Fprobe.ts%3A4%3A3|virtual|0",
+    "kind": "virtual_call",
+    "source": "src/probe.ts:4:3",
+    "method": "src/probe.ts.Probe.run",
+    "inline_path": [],
+    "locations": {
+      "go": {"file": "hir.go", "line": 120},
+      "go_profile": {"file": "hir_profile.go", "line": 135}
+    }
+  }]
+}
+```
+
+`site_id` consists of URL query-escaped qualified owning method and original
+HIR `Source`, followed by HIR node kind and zero-based ordinal, separated by
+`|`. The ordinal counts nodes of the same kind and source within that method
+in pre-order (statement, X/Y expressions, Body/Else, List; expression,
+X/Y/Z, Args, Seq statements). It never uses global serial IDs. Source paths
+are frontend-relative, with one-based TS line and column. Synthetic nodes
+whose source is a name or empty string omit source from the identity and
+use owner/kind/ordinal. The map uses the enclosing method location when
+available, otherwise their descriptive synthetic source. Closure
+owners derive from the enclosing qualified method plus the arrow location,
+so the legacy serial-based generated class name does not enter the ID.
+Declarations outside a method use their qualified class/interface as owner.
+
+Kinds of interest are `call` (including super calls), `virtual_call`, `loop`
+(`while`/`foreach` in the ID), `new`, and `runtime_op`. Inlining preserves the
+callee's original ID, source and owner. `inline_path` contains the ordered
+call-site SiteID chain from outermost caller to the callee, excluding the
+callee's own ID. Multiple emitted occurrences may share an ID; the path
+identifies their inline context. Profile counts aggregate those occurrences
+by original SiteID. A location is one-based and relative to `out/go`; it
+points to the first emitted token of the operation or its evaluation prelude.
+
+`hir.AssignSiteIDs` is the frontend/transform hook. Backends can use
+`hir.NewSiteMap`, `SiteMap.Add` and `Site.Locations` to attach additional
+locations. The ABAP backend can attach `locations.abap` with `file`, `class`,
+`method`, and `line` without changing IDs or the schema. Metadata has no
+influence on target semantics or spelling. `golang.EmitWithSites` exposes
+source and location emission together; ordinary `golang.Emit` stays unchanged.
+
+Build the opt-in profiler and run it on the kit:
+
+```sh
+cd out/go
+go build -tags profile_sites -o zabaplint-go-profile .
+./zabaplint-go-profile --profile-sites profile.json \
+  --file /path/to/kit/zabapgit_standalone.prog.abap \
+  --config /path/to/kit/abaplint.json --deps /path/to/kit/deps.txt
+```
+
+The default build selects `hir.go` and `site_profile_off.go`; the profiling
+build selects `hir_profile.go` and `site_profile.go`. There are no counter
+calls, receiver inspections, loop counters or profiling closures in the
+default generated method bodies. Passing `--profile-sites` to that build
+fails explicitly. The profiling variant counts even when no output path is
+specified; supply the flag to save the certificate. Profiling leaves normal
+stdout unchanged.
+
+Certificates have schema `site-profile/1`, `input_sha256`, `binary_sha256`,
+and a `sites` object keyed by SiteID. Call counters contain `calls`; virtual
+calls also contain `receivers`, mapping fully qualified TS class names to
+counts. Allocation sites contain `allocations`. Loops contain `invocations`,
+`trips` and `histogram` invocation counts in buckets `0`, `1`, `2-3`, `4-7`,
+`8+`. Zero-valued scalar counters may be omitted; histogram buckets are
+always present for executed loop sites. Unexecuted sites are absent. An
+invocation records actual body entries, including early break, return and
+exception exits; it does not predict trips from an array's initial length.
+
+The input hash covers every successful host read, in order: config, primary
+ABAP input, dependency list (if present), then dependency contents. Each read
+is framed as decimal basename-byte-length, `:`, basename, decimal content-byte-length,
+`:`, content. This binds both configuration and dependency data and avoids
+absolute-path dependence. The binary hash is SHA-256 of the executed binary's
+bytes. Output-file errors are fatal; stdout remains the ordinary issue dump.
+
+To join a certificate back to TS names and print the full receiver histograms,
+loop distribution and top allocations:
+
+```sh
+python3 tools/site-profile-report.py out/sites.json out/go/profile.json
+```

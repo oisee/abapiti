@@ -21,13 +21,19 @@ func Emit(p *hir.Program) (map[string]string, error) { return EmitPackage(p, "ma
 
 // EmitPackage selects the package name. Output contains only standard-library dependencies.
 func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
+	files, _, err := emitPackage(p, pkg, false)
+	return files, err
+}
+
+func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *emitter, error) {
 	if !token.IsIdentifier(pkg) || token.Lookup(pkg).IsKeyword() || pkg == "_" {
-		return nil, fmt.Errorf("invalid Go package name %q", pkg)
+		return nil, nil, fmt.Errorf("invalid Go package name %q", pkg)
 	}
 	if errs := hir.Verify(p); len(errs) > 0 {
-		return nil, errs[0]
+		return nil, nil, errs[0]
 	}
-	e := &emitter{p: p, names: hir.NewNames()}
+	hir.AssignSiteIDs(p)
+	e := &emitter{p: p, names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
 	e.characterSets()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
@@ -38,7 +44,7 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		}
 	}
 	if e.err != nil {
-		return nil, e.err
+		return nil, nil, e.err
 	}
 	e.line("package %s", pkg)
 	interfaces := append([]*hir.Interface(nil), p.Interfaces...)
@@ -56,7 +62,7 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		e.class(c)
 	}
 	if e.err != nil {
-		return nil, e.err
+		return nil, nil, e.err
 	}
 	e.line("var goSources = map[string]string{")
 	for _, c := range classes {
@@ -79,11 +85,11 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
-			return nil, fmt.Errorf("format %s: %w", n, err)
+			return nil, nil, fmt.Errorf("format %s: %w", n, err)
 		}
 		files[n] = string(b)
 	}
-	return files, nil
+	return files, e, nil
 }
 
 // Match the ABAP source-map convention without modifying the shared HIR.
@@ -98,6 +104,10 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	profile        bool
+	sites          []emittedSite
+	profileIndices map[string]int
+	profileNodes   []hir.Site
 	p              *hir.Program
 	names          *hir.Names
 	code           strings.Builder
@@ -368,7 +378,7 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		result = "(result " + e.typ(m.Result) + ")"
 	}
 	e.line("func %s(%s) %s {", e.body(c.Name, m.Name), params, result)
-	if hasReturnBoundary(m.Body) {
+	if hasReturnBoundary(m.Body) || e.profile {
 		if m.Result.Kind == hir.Void {
 			e.line("defer func(){if x:=recover();x!=nil {if _,ok:=x.(returnedVoid);!ok {panic(x)}}}()")
 		} else {
@@ -610,6 +620,10 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			code = e.body(c.Name, m.Name) + "(" + strings.Join(a, ",") + ")"
 		}
+		if e.profile && x.Kind == hir.VirtualCall {
+			e.mark(x.Node, "virtual_call")
+			b.line("siteHit(%d,%s)", e.profileIndex(x.Node, "virtual_call"), recv)
+		}
 	case hir.Binary:
 		a := b.expr(x.X)
 		if x.Op == "&&" || x.Op == "||" {
@@ -765,10 +779,19 @@ func (b *body) expr(x *hir.Expr) string {
 		b.locals = old
 		return n
 	case hir.RuntimeOp:
+		e.mark(x.Node, "runtime_op")
 		return b.runtime(x)
 	default:
 		e.unsupported(x.Node, string(x.Kind))
 		code = "*new(" + e.typ(t) + ")"
+	}
+	if kind := hir.SiteKind(x.Kind); kind != "" {
+		if !e.profile || x.Kind != hir.VirtualCall {
+			e.mark(x.Node, kind)
+		}
+		if e.profile && x.Kind != hir.VirtualCall {
+			b.line("siteHit(%d,nil)", e.profileIndex(x.Node, kind))
+		}
 	}
 	return b.temp(t, code)
 }
@@ -832,9 +855,15 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("}")
 	case hir.While:
+		finish, trips := b.profileLoop(s)
+		defer finish()
+		e.mark(s.Node, "loop")
 		b.line("for {")
 		a := b.expr(s.X)
 		b.line("if !%s {break}", a)
+		if e.profile {
+			b.line("%s++", trips)
+		}
 		b.beginLoop(s.Body)
 		old := b.locals
 		b.locals = clone(old)
@@ -843,9 +872,15 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.endLoop()
 		b.line("}")
 	case hir.ForEach:
+		finish, trips := b.profileLoop(s)
+		defer finish()
 		a := b.expr(s.X)
 		index := b.fresh()
+		e.mark(s.Node, "loop")
 		b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
+		if e.profile {
+			b.line("%s++", trips)
+		}
 		code := a + ".Items[" + index + "]"
 		if s.Type.IsRef() {
 			code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
