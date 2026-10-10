@@ -272,6 +272,11 @@ func (l *lowerer) assumeIntegerTypes() {
 			e.Value = int64(v)
 		}
 		if e.Kind == hir.RuntimeOp {
+			if e.X == nil {
+				// Preserve incomplete lowering for verification, rather than
+				// crashing while trying to specialize its missing receiver.
+				return e
+			}
 			switch e.Op {
 			case "number.fromI32":
 				return checkedInteger(e.X, e.Type)

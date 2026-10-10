@@ -30,6 +30,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.slice": {String, 2, false}, "string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
 	"string.charAt": {String, 1, false}, "string.substr": {String, 2, false},
+	"string.repeat":       {String, 1, false},
 	"string.repeatIndent": {String, 1, false}, "string.trim": {String, 0, false}, "string.toUpperCase": {String, 0, false},
 	"string.replaceAll": {String, 2, false}, "i32.toString": {I32, 0, false},
 	"string.startsWith": {String, 1, false}, "string.endsWith": {String, 1, false},
@@ -104,7 +105,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Number), true
 	case "string.length", "array.length", "map.size", "set.size":
 		return nil, i, true
-	case "string.repeatIndent":
+	case "string.repeat", "string.repeatIndent":
 		return []Type{T(Number)}, T(String), true
 	case "string.concat":
 		return []Type{T(String)}, T(String), true

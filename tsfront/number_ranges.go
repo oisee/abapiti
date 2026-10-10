@@ -1283,6 +1283,11 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 	case hir.Seq:
 		e.Type = e.Y.Type
 	case hir.RuntimeOp:
+		if e.X == nil {
+			// A previous lowering diagnostic may have left an incomplete
+			// receiver. The verifier must report it; do not crash first.
+			return e
+		}
 		if e.Op == "number.fromI32" {
 			info.exprs[e.X] = r
 			return e.X

@@ -218,20 +218,47 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}
 			break
 		}
-		if e.Type.Args[0].Kind != hir.ClassValue || want != "function" {
+		// Evaluate once even when the present tag can be folded. Optional
+		// primitives have a different tag when absent; narrowing must stay
+		// under the presence test, not in an eagerly evaluated operand.
+		present := l.tempInit(n, e.Type, e)
+		absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}
+		base := e.Type.Args[0]
+		if base.Kind == hir.Dynamic {
+			tag := &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: present}, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
+			test = &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: absent, Y: hir.L(hir.T(hir.Bool), want == "undefined"), Z: tag}
+			break
+		}
+		tag := map[hir.Kind]string{hir.String: "string", hir.Number: "number", hir.I32: "number", hir.I64: "number", hir.Bool: "boolean", hir.ClassValue: "function", hir.Array: "object", hir.OrderedMap: "object", hir.OrderedSet: "object", hir.RegExp: "object"}[base.Kind]
+		if base.Kind == hir.InterfaceRef && base.Name == thunkInterfaceName {
+			tag = "function"
+		}
+		// Closure objects represent JavaScript functions, not ordinary
+		// objects. Broad structural object references can hold callable
+		// values too; do not assume their tag from the HIR reference kind.
+		if base.Kind == hir.ClassRef {
+			if c := l.classByName(base.Name); c != nil {
+				for _, impl := range c.Implements {
+					if impl == thunkInterfaceName {
+						tag = "function"
+					}
+				}
+			}
+		}
+		if tag == "" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type)
 			return nil
 		}
-		test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: e}}
+		test = &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: absent, Y: hir.L(hir.T(hir.Bool), want == "undefined"), Z: hir.L(hir.T(hir.Bool), tag == want)}
 	case hir.String:
 		test = hir.L(hir.T(hir.Bool), want == "string")
 	case hir.ClassValue:
 		l.diagf(n, "note-typeof-classvalue", "typeof on a class value is always \"function\"")
 		test = hir.L(hir.T(hir.Bool), want == "function")
-	case hir.Number, hir.I32, hir.Bool, hir.ClassRef, hir.InterfaceRef:
+	case hir.Number, hir.I32, hir.I64, hir.Bool, hir.ClassRef, hir.InterfaceRef:
 		// A statically typed operand has a fixed tag; a reference is never
 		// a primitive (whether it is null decides only "object", not folded).
-		tag := map[hir.Kind]string{hir.Number: "number", hir.I32: "number", hir.Bool: "boolean"}[e.Type.Kind]
+		tag := map[hir.Kind]string{hir.Number: "number", hir.I32: "number", hir.I64: "number", hir.Bool: "boolean"}[e.Type.Kind]
 		if tag == "" && want == "object" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type.Kind)
 			return nil

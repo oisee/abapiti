@@ -33,7 +33,7 @@ func (l *lowerer) thunkType() hir.Type {
 }
 
 // isThunkType reports a checker type with exactly one call signature that
-// takes no parameters and returns void.
+// takes no parameters and returns void (or never, an always-throwing thunk).
 func (l *lowerer) isThunkType(t *checker.Type) bool {
 	if t == nil {
 		return false
@@ -43,7 +43,7 @@ func (l *lowerer) isThunkType(t *checker.Type) bool {
 		return false
 	}
 	ret := l.ck.GetReturnTypeOfSignature(sigs[0])
-	return ret != nil && ret.Flags()&checker.TypeFlagsVoid != 0
+	return ret != nil && ret.Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsNever) != 0
 }
 
 // closureValue lowers an arrow function used as a value.
@@ -230,14 +230,34 @@ func (l *lowerer) assignedAfter(fn *ast.Node, name string) bool {
 	return found
 }
 
-// thunkCall lowers `d()` for a local holding a thunk.
+// thunkCall lowers a parameterless thunk held in a local or object field.
 func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
-	if callee.Kind != ast.KindIdentifier || len(n.Arguments()) != 0 {
+	if len(n.Arguments()) != 0 {
 		return nil, false
 	}
-	t, ok := l.lookup(callee.Text())
-	if !ok || t.Kind != hir.InterfaceRef || t.Name != thunkInterfaceName {
+	// Named functions have their own direct-call path; only stored values
+	// use the thunk interface. Do not re-evaluate a method's receiver here.
+	if callee.Kind == ast.KindIdentifier {
+		t, ok := l.lookup(callee.Text())
+		if !ok || t.Kind != hir.InterfaceRef || t.Name != thunkInterfaceName {
+			return nil, false
+		}
+	} else if callee.Kind == ast.KindPropertyAccessExpression {
+		if sym := l.resolve(callee); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
+			return nil, false
+		}
+		if !l.isThunkType(l.ck.GetTypeAtLocation(callee)) {
+			return nil, false
+		}
+	} else {
 		return nil, false
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: hir.T(hir.Void), X: hir.V(callee.Text(), t)}, true
+	x := l.expr(callee)
+	if x == nil {
+		return nil, true
+	}
+	if x.Type.Kind != hir.InterfaceRef || x.Type.Name != thunkInterfaceName {
+		return nil, false
+	}
+	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: hir.T(hir.Void), X: x}, true
 }
