@@ -341,7 +341,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			key = l.primitiveString(n, key)
 		}
 		if base.Kind != hir.OrderedMap || !base.Args[0].Equal(key.Type) {
-			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
+			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only; nominal fields need configurable own-property presence and omission semantics")
 			return nil
 		}
 		if receiver.Type.Kind == hir.Optional {
@@ -807,7 +807,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		// x.constructor is the run-time class; compared with a class value or
 		// asked for its name.
 		if recv.Type.Kind == hir.ClassRef && recv.Type.Name == hir.RootObject {
-			l.diagf(n, "unsupported-expr", "constructor of the object root is not lowered")
+			l.diagf(n, "unsupported-expr", "constructor of the object root is not lowered: erased dynamic references need a runtime constructor identity/name table")
 			return nil
 		}
 		if recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef {
@@ -870,9 +870,21 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-call", "call without a callee")
 		return nil
 	}
+	if x, handled := l.xmlSubsetCall(n, callee); handled {
+		return x
+	}
+	if x, handled := l.iifeCall(n, callee); handled {
+		return x
+	}
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
+		if name == "parseFloat" {
+			if f := l.fileOfSymbol(l.resolve(callee)); f != nil && l.prog.prog.IsSourceFileDefaultLibrary(f.Path()) {
+				l.diagf(n, "unsupported-call", "global parseFloat needs a binary64 longest-prefix parser preserving NaN, Infinity and signed zero; integer parsing is not equivalent")
+				return nil
+			}
+		}
 		if lf, ok := l.localFns[name]; ok {
 			return l.localFnCall(n, lf, callee)
 		}
@@ -1378,6 +1390,27 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("array.splice"+itoa(len(args)), recv, recv.Type, lowered...), true
 		case "pop", "shift":
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
+		case "lastIndexOf":
+			if len(args) != 1 {
+				l.diagf(n, "unsupported-call", "array.lastIndexOf currently requires one search value (fromIndex is not lowered)")
+				return nil, true
+			}
+			array := l.tempInit(n, recv.Type, recv)
+			needle := one()
+			if needle == nil {
+				return nil, true
+			}
+			needle = l.tempInit(n, needle.Type, needle)
+			// Reverse a copy, never the receiver. Evaluate the search value
+			// before taking the snapshot, as JavaScript does.
+			copy := l.rtOp("array.slice0", array, array.Type)
+			reversed := l.rtOp("array.reverse", copy, array.Type)
+			index := l.tempInit(n, hir.T(hir.Number), l.coerce(l.rtOp("array.indexOf", reversed, i32, needle), hir.T(hir.Number)))
+			length := l.coerce(l.rtOp("array.length", array, i32), index.Type)
+			return &hir.Expr{Kind: hir.Conditional, Type: index.Type,
+				X: &hir.Expr{Kind: hir.Binary, Op: "<", Type: boolT, X: index, Y: hir.L(index.Type, 0)},
+				Y: hir.L(index.Type, -1),
+				Z: &hir.Expr{Kind: hir.Binary, Op: "-", Type: index.Type, X: &hir.Expr{Kind: hir.Binary, Op: "-", Type: index.Type, X: length, Y: hir.L(index.Type, 1)}, Y: index}}, true
 		case "indexOf":
 			return l.rtOp("array.indexOf", recv, i32, one()), true
 		case "includes":
@@ -2410,6 +2443,13 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
 	case hir.Dynamic:
 		return l.rtOp("dynamic.toString", x, s)
+	case hir.Array:
+		// Lowered string arrays have the standard Array.prototype.toString
+		// (own method/prototype mutation is outside the array model).
+		// This is join with the default comma, not JSON serialization.
+		if x.Type.Args[0].Kind == hir.String {
+			return l.rtOp("array.join", x, s, &hir.Expr{Kind: hir.Lit, Type: hir.T(hir.Optional, s)})
+		}
 	case hir.Optional:
 		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break
@@ -2426,7 +2466,7 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		return &hir.Expr{Kind: hir.Seq, Type: s, Stmt: hir.B(pre...), Y: &hir.Expr{Kind: hir.Conditional, Type: s,
 			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: v}, Y: hir.L(s, "undefined"), Z: payload}}
 	}
-	l.diagf(at, "unsupported-expr", "string coercion of %s requires JavaScript ToPrimitive", x.Type)
+	l.diagf(at, "unsupported-expr", "string coercion of %s requires JavaScript ToPrimitive hook dispatch (valueOf/toString); only primitive and standard string-array coercion is supported", x.Type)
 	return nil
 }
 

@@ -28,7 +28,7 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 		return hm
 	}
 	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
-		l.diagf(fn, "unsupported-async", "async body must be excluded by validated workload coverage")
+		l.diagf(fn, "unsupported-async", "async body must be excluded by validated workload coverage: synchronous drain needs a settled-Promise/progress scheduler ABI")
 		return nil
 	}
 	if l.methodFailed(hm) {
@@ -113,10 +113,19 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 			return
 		}
 		if x.Kind == ast.KindFunctionDeclaration {
-			if x.Name() != nil && x.Body() != nil {
-				l.pendingFns[x.Name().Text()] = x
+			if x.Parent != body {
+				l.diagf(x, "unsupported-local-function", "block-scoped local declaration needs a lexical function-binding table")
+				return
 			}
-			return
+			if x.Name() != nil && x.Body() != nil {
+				name := x.Name().Text()
+				if l.pendingFns[name] != nil || l.localFns[name] != nil {
+					l.diagf(x, "unsupported-local-function", "shadowed local declaration %s needs symbol-keyed function bindings", name)
+					return
+				}
+				l.pendingFns[name] = x
+			}
+			return // declarations are hoisted, but their bodies have their own scope
 		}
 		if x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindArrowFunction {
 			return // do not descend into nested closures
@@ -144,6 +153,33 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	if lf, ok := l.localFns[name]; ok {
 		return lf
+	}
+	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 || (fn.Kind == ast.KindFunctionDeclaration && fn.AsFunctionDeclaration().AsteriskToken != nil) || (fn.Kind == ast.KindFunctionExpression && fn.AsFunctionExpression().AsteriskToken != nil) {
+		l.diagf(fn, "unsupported-local-function", "async/generator local function needs a suspension ABI")
+		return nil
+	}
+	if fn.Kind == ast.KindFunctionDeclaration {
+		if fn.Body() == nil {
+			l.diagf(fn, "unsupported-local-function", "local declaration without an implementation cannot be lifted")
+			return nil
+		}
+		if touchesThis(fn.Body()) {
+			l.diagf(fn, "unsupported-local-function", "local function declaration using this needs dynamic call-receiver semantics (not lexical arrow this)")
+			return nil
+		}
+		recursive := false
+		var walk func(*ast.Node)
+		walk = func(n *ast.Node) {
+			if n.Kind == ast.KindIdentifier && n.Text() == name && n != fn.Name() {
+				recursive = true
+			}
+			n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+		}
+		walk(fn.Body())
+		if recursive {
+			l.diagf(fn, "unsupported-local-function", "recursive local declaration %s needs a recursive capture ABI", name)
+			return nil
+		}
 	}
 	// Captures: free identifiers that resolve to locals of the enclosing
 	// method and are never assigned.
@@ -179,7 +215,15 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			seen[capture.symbol] = true
 		}
 	}
-	m := &hir.Method{Node: l.node(fn), Name: "fn_" + name, Virtual: true, Result: hir.T(hir.Void)}
+	methodName := "fn_" + name
+	for _, existing := range l.class.Methods {
+		if existing.Name == methodName {
+			l.serial++
+			methodName += "_" + itoa(l.serial)
+			break
+		}
+	}
+	m := &hir.Method{Node: l.node(fn), Name: methodName, Virtual: true, Result: hir.T(hir.Void)}
 	if l.method != nil && l.method.Static {
 		m.Static = true
 		m.Virtual = false

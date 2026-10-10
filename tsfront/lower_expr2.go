@@ -102,6 +102,10 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		}
 		return l.rtOp("string.at", recv, hir.T(hir.Optional, hir.T(hir.String)), l.indexValue(k))
 	}
+	if recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef {
+		l.diagf(n, "unsupported-expr", "element access on %s needs a heterogeneous own/prototype property lookup ABI (unknown keys cannot be treated as undefined)", recv.Type.Kind)
+		return nil
+	}
 	l.diagf(n, "unsupported-expr", "element access on %s is not lowered", recv.Type.Kind)
 	return nil
 }

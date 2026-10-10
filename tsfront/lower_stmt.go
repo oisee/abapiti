@@ -88,6 +88,15 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		}
 	}
 	switch n.Kind {
+	case ast.KindFunctionDeclaration:
+		if n.Name() != nil {
+			_, lifted := l.localFns[n.Name().Text()]
+			if l.pendingFns[n.Name().Text()] == n || lifted {
+				return nil // declaration may occur after its first (hoisted) call
+			}
+		}
+		l.diagf(n, "unsupported-local-function", "local declaration is not registered for lifting")
+		return nil
 	case ast.KindBlock:
 		l.push()
 		list := []*hir.Stmt{}

@@ -554,6 +554,10 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				return hir.Ref(c.Name)
 			}
 		}
+		if t.Symbol() != nil && t.Symbol().Name == "Generator" {
+			l.diagf(n, "unsupported-type", "checker type %s needs a lazy iterator ABI; snapshot adapters do not prove this consumer drains without membership mutation", l.ck.TypeToString(t))
+			return hir.T(hir.Void)
+		}
 		l.diagf(n, "unsupported-type", "checker type %s is not a lowered declaration", l.ck.TypeToString(t))
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsNonPrimitive != 0:

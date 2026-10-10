@@ -610,7 +610,7 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 		return
 	}
 	if m.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
-		l.diagf(m, "unsupported-async", "async body must be excluded by validated workload coverage")
+		l.diagf(m, "unsupported-async", "async body must be excluded by validated workload coverage: synchronous drain needs a settled-Promise/progress scheduler ABI")
 		return
 	}
 	if m.Body() == nil {
