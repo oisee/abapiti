@@ -48,16 +48,26 @@ The build is pruned to the code paths that checking `zabapgit_standalone` with a
 
 ```sh
 abapiti abaplint -o out --target go
-# Go 1.26 on PATH: out/go/zabaplint is built automatically.
+# Go 1.26 on PATH: out/go/zabaplint-go is built automatically.
 # Otherwise only the buildable module is written:
-(cd out/go && GOFLAGS=-buildvcs=false go build -o zabaplint .)
-# Run from the directory containing deps.txt; dependency paths are relative to it:
-/path/to/out/go/zabaplint --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
+(cd out/go && GOFLAGS=-buildvcs=false go build -o zabaplint-go .)
+# Dependency paths are relative to deps.txt; the binary can run from any directory:
+/path/to/out/go/zabaplint-go --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
 ```
 
 TS-HG@Go translates TypeScript → HIR → Go directly, before ABAP inlining. The
 module (`hir.go`, `runtime.go`, `main.go`, `go.mod`) needs only the Go standard
 library. The executable prints the same issue dump as the ABAP native driver.
+Read access defaults to the directory trees containing the paths passed to
+`--file`, `--config` and `--deps`, plus the directory trees containing each
+path listed in `deps.txt`. Relative dependency entries resolve against the list's
+directory. No other directory is granted access automatically. Repeat
+`-allow-read DIR` (or `--allow-read DIR`) to grant additional directory trees.
+Paths are made absolute and symlinks resolved before checking containment, so
+`..` and symlinks cannot escape an allowed root. A denied read exits nonzero with
+`refused: read access denied for "PATH" (resolved to "RESOLVED"); use -allow-read "DIR" to allow it`.
+The kit's `check.sh` and `check.ps1` can also pass their existing `-allow-read .`.
+
 `--times`, `--metrics`, `--cpu-profile` and `--mem-profile` add observations.
 `--input/--deps/--config` on the generation command still configure the osg target;
 pass the executable's flags to check files with Go.

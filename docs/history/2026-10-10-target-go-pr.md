@@ -1,7 +1,7 @@
 # Draft PR: Add TS-HG@Go as an abaplint CLI target
 
 `abapiti abaplint --target go -o out` now writes a standalone standard-library
-Go module and builds `out/go/zabaplint` when Go is on PATH. Without Go, it leaves
+Go module and builds `out/go/zabaplint-go` when Go is on PATH. Without Go, it leaves
 buildable sources and reports the build command. This exposes the direct
 TypeScript → HIR → Go backend as TS-HG@Go, using main's pinned closure, overrides
 and reachability manifest. Existing default and `all` ABAP targets are retained;

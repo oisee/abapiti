@@ -586,5 +586,5 @@ jobs:
         run: |
           gh release download v0.1.1 --repo oisee/abapiti --pattern zabapgit-check-kit.zip --dir .tmp
           unzip -q .tmp/zabapgit-check-kit.zip -d .tmp/kit
-      - name: Go build, lexer 44/44, registry oracles, clean and seeded kit
+      - name: zabaplint-go build, read policy, lexer 44/44, oracles, kit from another cwd
         run: .github/ci/go-target.sh .tmp/go-target .tmp/kit/zabapgit-check-kit

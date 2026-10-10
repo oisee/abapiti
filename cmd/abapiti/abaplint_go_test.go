@@ -53,7 +53,7 @@ func TestGoFullClosure(t *testing.T) {
 	if err = writeSources(dir, files); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("go", "build", "-o", filepath.Join(dir, "zabaplint"), ".")
+	cmd := exec.Command("go", "build", "-o", filepath.Join(dir, "zabaplint-go"), ".")
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GOWORK=off", "GOFLAGS=-buildvcs=false")
 	if out, err := cmd.CombinedOutput(); err != nil {

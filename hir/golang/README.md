@@ -78,14 +78,16 @@ The complete CLI closure compiles directly from HIR, without `hir.Inline`:
 
 ```sh
 go run ./cmd/abapiti abaplint --target go -o /tmp/abaplint-go
-# If Go is on PATH, /tmp/abaplint-go/go/zabaplint is built automatically.
-# Otherwise: cd /tmp/abaplint-go/go && GOFLAGS=-buildvcs=false go build -o zabaplint .
+# If Go is on PATH, /tmp/abaplint-go/go/zabaplint-go is built automatically.
+# Otherwise: cd /tmp/abaplint-go/go && GOFLAGS=-buildvcs=false go build -o zabaplint-go .
 ```
 
 `--file`, `--config`, `--deps` and `--times` use the same RegistryRun harness
 as the ABAP native command. `--cpu-profile`, `--mem-profile` and `--metrics`
 collect full-check observations. The binary reads dependency list paths relative
-to its working directory, as the release check kit does.
+to the list file. Reads are limited to the directory trees containing the named
+inputs and listed dependencies; repeat `-allow-read DIR` for additional roots.
+Symlinks are resolved before checking access.
 
 `ABAPITI_GO_FULL_TEST=1 go test ./cmd/abapiti -run TestGoFullClosure` compiles
 all 1,927 classes and 73 interfaces from the verified 1,538-file source closure,

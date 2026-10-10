@@ -1,0 +1,40 @@
+
+// readPolicy stores canonical directory roots. Every read resolves the complete
+// path again, so a link inside an allowed directory cannot grant outside access.
+type readPolicy struct { roots []string }
+func canonicalReadPath(path string) (string, error) {
+ absolute, err := filepath.Abs(path)
+ if err != nil { return "", err }
+ resolved, err := filepath.EvalSymlinks(absolute)
+ if os.IsNotExist(err) {
+  // Resolve the existing ancestors even for a missing leaf. Access denial must
+  // still precede a missing-file error when the requested path is outside.
+  parent := filepath.Dir(absolute)
+  if parent != absolute {
+   root, parentErr := canonicalReadPath(parent)
+   if parentErr != nil { return "", parentErr }
+   return filepath.Join(root, filepath.Base(absolute)), nil
+  }
+ }
+ return resolved, err
+}
+func (p *readPolicy) allow(dir string) error {
+ root, err := canonicalReadPath(dir)
+ if err != nil { return err }
+ info, err := os.Stat(root)
+ if err != nil { return err }
+ if !info.IsDir() { return fmt.Errorf("-allow-read %q: not a directory", dir) }
+ p.roots = append(p.roots, root)
+ return nil
+}
+func (p *readPolicy) read(path string) ([]byte, error) {
+ resolved, err := canonicalReadPath(path)
+ if err != nil { return nil, err }
+ for _, root := range p.roots {
+  relative, err := filepath.Rel(root, resolved)
+  if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative) {
+   return os.ReadFile(resolved)
+  }
+ }
+ return nil, fmt.Errorf("read access denied for %q (resolved to %q); use -allow-read %q to allow it", path, resolved, filepath.Dir(resolved))
+}
