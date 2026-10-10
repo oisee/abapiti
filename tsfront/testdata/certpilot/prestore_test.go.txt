@@ -1,0 +1,18 @@
+package main
+import("testing";"os";"bytes";"encoding/json")
+func blocked(t *testing.T,cache string,f func()){t.Helper();defer func(){x:=recover();v,ok:=x.(pilotViolation);if !ok||v.Cache!=cache{t.Fatalf("wanted prestore %s violation, got %#v",cache,x)}}();f();t.Fatal("late write passed")}
+func TestPilotPrestoreAndUnchangedCaches(t *testing.T){
+ pilotEnabled=true;pilotWarmup();if !pilotFrozen||!pilotWarmed{t.Fatal("not fully warmed and frozen")}
+ roots:=len(z_static_src_a_77ea182690f5aa.Entries);subs:=len(z_static_src_a_df7ec8e7110f17.Entries)
+ for _,cache:=range []string{"StructureParser.singletons","Alternative.map","SubStructure.matcher","sub.singletons"}{t.Run(cache,func(t *testing.T){t.Setenv("ABAPITI_CERT_LATE_WRITE",cache);blocked(t,cache,pilotNegative)})}
+ if len(z_static_src_a_77ea182690f5aa.Entries)!=roots||len(z_static_src_a_df7ec8e7110f17.Entries)!=subs{t.Fatal("shared cache was modified before refusal")}
+ a:=&z_struct_src_a_1bcb4d345e7deb{z_member_list_484fd43dd9f8d0:&array[any]{}};blocked(t,"Alternative.map",func(){z_body_src_aba_889b989603531e(a)});if a.z_member_map_dd23ae04a8f1b1!=nil{t.Fatal("Alternative published map before guard")}
+ s:=&z_struct_src_a_1f123c28e1d63d{z_member_s_f3835518d3428a:z_new_src_abap_be0ea62f45a891()};blocked(t,"SubStructure.matcher",func(){z_body_src_aba_e5235ac11f7658(s)});if !nilRef(s.z_member_match_73a95351950243){t.Fatal("SubStructure published matcher before guard")}
+ old:=len(z_static_src_a_77ea182690f5aa.Entries);blocked(t,"StructureParser.singletons",func(){z_static_src_a_77ea182690f5aa.set(str("late"),nil)});if len(z_static_src_a_77ea182690f5aa.Entries)!=old{t.Fatal("map alias wrote before guard")}
+ if len(pilotAlternatives)==0{t.Fatal("no warmed alternatives")}
+ a1:=pilotAlternatives[0].(*z_struct_src_a_1bcb4d345e7deb)
+ for _,e:=range a1.z_member_map_dd23ae04a8f1b1.Entries{before:=len(e.Value.Items);blocked(t,"Alternative.map",func(){e.Value.push(nil)});if len(e.Value.Items)!=before{t.Fatal("array alias wrote before guard")};break}
+}
+func TestPilotVanillaDoesNotFreeze(t *testing.T){if os.Getenv("ABAPITI_PILOT_VANILLA_TEST")==""{t.Skip("run in fresh process with ABAPITI_PILOT_VANILLA_TEST=1")};pilotEnabled=false;pilotWarmup();if pilotFrozen||pilotWarmed{t.Fatal("vanilla froze caches")}}
+
+func TestPilotSnapshotPreservesRawBytes(t *testing.T){raw:=[]byte{0xff,0xfe,0,13,10};input:=pilotSnapshot{Config:raw,Files:[]pilotInput{{Name:"raw.prog.abap",Raw:raw}},Dependencies:[]pilotInput{{Name:"raw.xml",Raw:raw}}};encoded,err:=json.Marshal(input);if err!=nil{t.Fatal(err)};var output pilotSnapshot;if err:=json.Unmarshal(encoded,&output);err!=nil{t.Fatal(err)};if !bytes.Equal(raw,output.Config)||!bytes.Equal(raw,output.Files[0].Raw)||!bytes.Equal(raw,output.Dependencies[0].Raw){t.Fatal("snapshot changed raw inputs")}}

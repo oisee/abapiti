@@ -12,13 +12,13 @@ func RegistryGoCLI() string {
 	return strings.NewReplacer("@new@", n.Get("new.harness/registry_run.ts.RegistryRun"), "@addFile@", n.Get("member.addFile"), "@addDependency@", n.Get("member.addDependency"), "@parse@", n.Get("member.parse"), "@report@", n.Get("member.report"), "@timings@", n.Get("member.timings")).Replace(`package main
 import("bufio";"encoding/json";"flag";"fmt";"os";"path/filepath";"runtime";"runtime/pprof";rmetrics "runtime/metrics";"strings";"time")
 func main(){
- file:=flag.String("file","","ABAP file");config:=flag.String("config","","abaplint.json");deps:=flag.String("deps","","dependency path list");times:=flag.Bool("times",false,"print stage milliseconds");cpu:=flag.String("cpu-profile","","CPU profile path");mem:=flag.String("mem-profile","","allocation profile path");metrics:=flag.Bool("metrics",false,"print resource metrics to stderr");flag.Parse()
- if *file==""||*config==""{fmt.Fprintln(os.Stderr,"usage: --file FILE --config CONFIG [--deps LIST] [--times]");os.Exit(2)}
+ file:=flag.String("file","","ABAP file");files:=flag.String("files-list","","ordered ABAP path list");config:=flag.String("config","","abaplint.json");deps:=flag.String("deps","","dependency path list");times:=flag.Bool("times",false,"print stage milliseconds");cpu:=flag.String("cpu-profile","","CPU profile path");mem:=flag.String("mem-profile","","allocation profile path");metrics:=flag.Bool("metrics",false,"print resource metrics to stderr");flag.Parse()
+ if (*file=="")==(*files=="")||*config==""{fmt.Fprintln(os.Stderr,"usage: --file FILE --config CONFIG [--deps LIST] [--times]");os.Exit(2)}
  defer func(){if x:=recover();x!=nil{fmt.Fprintf(os.Stderr,"refused: %v\n",x);os.Exit(1)}}()
  read:=func(path string)string{raw,err:=os.ReadFile(path);if err!=nil{panic(err)};return string(raw)}
  h:=@new@()
  add:=func(path string,dependency bool){name:=filepath.Base(strings.ReplaceAll(path,"\\","/"));raw:=read(path);if dependency{h.@addDependency@(str(name),str(raw))}else{h.@addFile@(str(name),str(raw))}}
- cfg:=read(*config);add(*file,false)
+ cfg:=read(*config);if *file!=""{add(*file,false)}else{s:=bufio.NewScanner(strings.NewReader(read(*files)));for s.Scan(){p:=strings.TrimSuffix(s.Text(),"\r");if p!=""{add(p,false)}};if err:=s.Err();err!=nil{panic(err)}}
  if *deps!=""{f,err:=os.Open(*deps);if err!=nil{panic(err)};scan:=bufio.NewScanner(f);for scan.Scan(){p:=strings.TrimSuffix(scan.Text(),"\r");if p!=""{add(p,true)}};err=scan.Err();f.Close();if err!=nil{panic(err)}}
  if *cpu!=""{f,err:=os.Create(*cpu);if err!=nil{panic(err)};if err=pprof.StartCPUProfile(f);err!=nil{panic(err)};defer func(){pprof.StopCPUProfile();f.Close()}()}
  start:=time.Now();reg:=h.@parse@(str(cfg));dump:=h.@report@(reg);elapsed:=time.Since(start)

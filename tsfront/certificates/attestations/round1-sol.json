@@ -1,0 +1,141 @@
+{
+  "certificates": [
+    {
+      "id": "structure-parser-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "UNKNOWN",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "StructureParser.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+        "coverage": {
+          "reads": "structure_parser.ts runFile tests and reads singletons[structure.constructor.name], then dispatches matcher.run. These supplied reads were inspected; transitive node/file implementations and emitted reads were unavailable.",
+          "writes": "StructureParser initializes singletons to {}; runFile assigns structure.getMatcher() only on an undefined entry. No other write appears in the supplied TS. Whole-archive write searches were unavailable.",
+          "aliases": "runFile dispatches through the cached matcher without returning the dictionary. Matcher objects share module sub singletons through their constructed graphs. Supplied factories were inspected; transitive alias behavior was unavailable.",
+          "escapes": "runFile returns parent StructureNode, which is constructed with structure; SubStructure.run similarly stores its structure in a node. StructureNode implementation was not supplied, so those escapes were not fully inspected.",
+          "exceptions": "runFile constructs parent before checking the cache and evaluates getMatcher before storing. Constructor or matcher exceptions can interrupt initialization. Successful warm-up excludes interrupted setup; transitive exception paths were unavailable.",
+          "init": "findStructureForFile selects Any, ClassGlobal, InterfaceGlobal or DynproLogic. pilotWarmup populates these four root entries and walks each matcher before setting pilotWarmed and pilotFrozen. Emitted initialization bodies were unavailable.",
+          "identity": "TS keys are constructor.name; the pilot uses classOf(root).Name. The supplied four root class names are distinct, and the walk uses object identity in seen. classOf and emitted descriptor identity were unavailable for verification.",
+          "virtual_targets": "Supplied root factories and all supplied structures combinators/factories were inspected. The walk handles Sequence, Alternative, Optional, Star, SubStructure and SubStatement and rejects unknown matcher types. Transitive node, token, statement and Go runtime targets were unavailable; this is not loop receiver completeness."
+        },
+        "failure_scenario": "No counterexample established with all preconditions satisfied. Warming only Any leaves other root keys absent; a subsequent .clas.abap file would require a store. That violates the specified warm-up and population preconditions. Incomplete transitive and host coverage requires UNKNOWN.",
+        "monitor": "RegistryGoCertificatePilot prepends a frozen-cache miss check to emitted runFile, before RHS construction, and tags the root orderedMap after ensureIndex. Driver buffers child stdout and retries exit 86 in a fresh vanilla child using the retained snapshot. Collection runtime and emitted code were unavailable. Other post-warm-up panics exit 1 and do not trigger fallback.",
+        "negative_test": "pilotNegative injects pilotLateRoot with descriptor name pilot-late-root into runFile; the entry guard should panic before construction/store. Vanilla mode disables the injection. Injection source inspected; no test executed."
+      }
+    },
+    {
+      "id": "alternative-setup-map",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "UNKNOWN",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "Alternative.map",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+        "coverage": {
+          "reads": "structures/_combi.ts setupMap checks undefined and existing buckets; run reads map[token] and map[\"\"] after setupMap. Supplied reads inspected; emitted orderedMap lookup behavior was unavailable.",
+          "writes": "setupMap publishes {}, assigns [i] buckets and pushes i into existing buckets, all inside the undefined branch. Supplied run methods do not mutate buckets. Archive-wide mutation searches and generated collection bodies were unavailable.",
+          "aliases": "Bucket arrays retain the same matcher objects as Alternative.list; constructors retain list references. run iterates buckets without returning them. The pilot tags both the map and each bucket array, but underlying runtime alias/mutation behavior was unavailable.",
+          "escapes": "Alternative.map and buckets have no explicit return in supplied TS; child matcher calls receive statements and parent. Node implementations and other transitive callees were unavailable, preventing complete escape inspection.",
+          "exceptions": "setupMap publishes the empty map before calling child.first(), so an exception can leave a nonundefined partial map. Retrying setupMap alone would silently skip completion. Successful completion of every setupMap is essential; a nonnil map or absence of a guard violation does not prove it.",
+          "init": "Alternative constructor leaves map undefined. pilotWarmup calls setupMap, walks every list child, builds the Go lookup index and tags buckets before freezing. Successful walk completion is conditional; actual emitted initialization and collection indexing were unavailable.",
+          "identity": "The walk records seen[node] before traversal, preserving cycles through shared SubStructure objects. Factories allocate fresh Alternatives only while constructing matchers in the supplied graph. Go interface comparability and emitted object identity were unavailable.",
+          "virtual_targets": "setupMap calls IStructureRunnable.first: Sequence forwards to its first child, SubStructure initializes/delegates, Alternative/Optional/Star return [\"\"], and SubStatement calls statement getMatcher().first(). Supplied structures and statement combi implementations were inspected; concrete statement/expression factories reached by first were unavailable."
+        },
+        "failure_scenario": "No counterexample established under the complete successful-warm-up preconditions. A child.first exception after map publication can leave partially populated buckets; reusing that failed attempt would be unsafe and is excluded by completion and quarantine requirements. Missing transitive first targets and collection runtime require UNKNOWN.",
+        "monitor": "The setupMap entry guard calls pilotStore when map is nil; pilotStore panics only when frozen. Warm-up tags the orderedMap and all bucket arrays. Runtime instrumentation detects receiver-selector assignments syntactically, which alone does not establish coverage of built-in mutations or indirect storage writes; actual collection methods were unavailable.",
+        "negative_test": "pilotNegative constructs a fresh Alternative with an empty list and invokes setupMap. Its nil-map guard should fire before allocation. This tests the miss path, not mutation through an already populated bucket alias or partial initialization. Source inspected; no test executed."
+      }
+    },
+    {
+      "id": "substructure-setup-matcher",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "UNKNOWN",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "SubStructure.matcher",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+        "coverage": {
+          "reads": "SubStructure.setupMatcher tests matcher === undefined; first and run call setupMatcher and then read matcher to dispatch first/run. Supplied reads inspected; emitted nilRef and virtual dispatch implementations were unavailable.",
+          "writes": "setupMatcher assigns this.s.getMatcher() only on undefined. Constructor assigns s but leaves matcher uninitialized. No other matcher assignment appears in supplied TS; archive-wide indirect-write inspection was unavailable.",
+          "aliases": "Cached matchers contain shared module SubStructure objects returned by sub; Sequence/Alternative lists and Optional/Star obj fields retain those references. All supplied factories were inspected; transitive aliases and emitted representation were unavailable.",
+          "escapes": "SubStructure.run constructs StructureNode(this.s) and adds it to parent after matching. matcher is not directly returned, but s escapes into nodes. Node constructors/addChild implementations were unavailable for complete inspection.",
+          "exceptions": "getMatcher evaluates before the matcher assignment, so a thrown factory leaves matcher undefined while module sub construction may already have occurred. first or run can subsequently throw. Successful setup completion and discarded failed attempts are required; transitive exceptions were unavailable.",
+          "init": "pilotWarmup calls setupMatcher and walks its stored matcher. Body->Normal->If->Body and recursive Data/Types/Constants/ClassData graphs share wrappers through sub; seen prevents traversal repetition. Emitted constructors and initialization bodies were unavailable.",
+          "identity": "s is retained by the wrapper; module caching uses class names while traversal uses wrapper/matcher object identity. Supplied getMatcher factories do not replace existing wrappers. Emitted class descriptors and interface identity were unavailable.",
+          "virtual_targets": "s.getMatcher dispatches to supplied structure factories; cached matcher first/run dispatches to the six supplied combinator classes. All supplied factories inspected. Concrete statement first targets, node methods and emitted runtime dispatch remained uncovered."
+        },
+        "failure_scenario": "No counterexample established when every reachable setupMatcher has completed successfully. A walk that skips Optional/Star children can leave a reachable wrapper uninitialized and cause a late store during run; the supplied pilot traverses those children, and the hypothetical incomplete walk violates the claim. Remaining transitive coverage requires UNKNOWN.",
+        "monitor": "The emitted setupMatcher entry check tests nilRef(matcher) before calling its body; frozen misses panic before s.getMatcher constructs a graph. pilotWarmup converts recovered warm-up panics to pilotViolation and freezes only after traversal. Direct later field writes outside that method would need separate coverage; supplied TS shows none, but complete emitted code was unavailable.",
+        "negative_test": "pilotNegative constructs a fresh SubStructure holding Any and invokes setupMatcher. The nil matcher guard should panic before Any.getMatcher. It does not test every virtual factory or interrupted initialization. Source inspected; no test executed."
+      }
+    },
+    {
+      "id": "module-sub-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "UNKNOWN",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "sub.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "da06b61d77e481fd74403bd3a9a96bd29c8a1d6f45ac68dc0e7b2c3b4086c7da",
+        "coverage": {
+          "reads": "structures/_combi.ts sub checks singletons[s.name] against undefined and returns that entry. Supplied factories call sub with concrete structure constructors. Emitted orderedMap get and constructor-name semantics were unavailable.",
+          "writes": "Module singletons initializes to {}; sub stores new SubStructure(new s()) only on undefined. Supplied structure run methods invoke cached matcher graphs without calling sub directly. Whole-archive searches for additional or indirect writes were unavailable.",
+          "aliases": "sub explicitly returns cached SubStructure objects, which multiple factory graphs retain. The dictionary itself is not returned. Shared wrapper aliases were inspected in supplied factories; full transitive alias behavior and Go collection storage were unavailable.",
+          "escapes": "Cached wrappers escape into matcher lists and obj fields; their s values escape into StructureNode during SubStructure.run. Supplied combinators do not expose the dictionary, but node implementations were unavailable.",
+          "exceptions": "new s() and new SubStructure evaluate before dictionary assignment; later setupMatcher can fail after the wrapper is already cached. Failed attempts must be discarded rather than treated as populated complete graphs. Concrete statement factory and node exceptions were unavailable.",
+          "init": "Four root getMatcher calls plus traversal of every SubStructure.matcher construct the supplied closed graph. pilotWarmup builds the module map index and tags it before freezing. Emitted init functions and proof of their idempotence were unavailable.",
+          "identity": "sub uses constructor names rather than constructor identity. Supplied structure class names are distinct; recursive factories reuse cached wrappers, enabling a finite identity walk. Name collisions/new implementations are excluded by preconditions; actual Go descriptors were unavailable.",
+          "virtual_targets": "Supplied sub arguments cover ordinary, class/interface and dynpro structure factories, including recursive Body/Normal and declaration structures. All supplied factories inspected. Concrete statement/expression first targets and node/runtime methods were unavailable; receiver enumeration is an envelope, not a loop completeness proof."
+        },
+        "failure_scenario": "No counterexample established under complete successful warm-up and the closed graph. Invoking a previously unwarmed factory after freezing could introduce a missing sub key, but would violate the specified population/envelope assumptions. Missing transitive sources and runtime coverage require UNKNOWN.",
+        "monitor": "The emitted sub entry guard checks the frozen map for p0.Name before constructor evaluation, and the module orderedMap is tagged for collection barriers. Driver retries pilotViolation exit 86 in a fresh vanilla child with unchanged snapshot bytes. Actual emitted map methods were unavailable; arbitrary post-warm-up exceptions exit 1 without fallback.",
+        "negative_test": "pilotNegative calls sub with a descriptor named pilot-late-sub and an Any factory. The entry guard should panic before the factory runs or the map stores. This deliberately introduces a new key outside the envelope to test refusal. Source inspected; no test executed."
+      }
+    }
+  ],
+  "cost": {
+    "tokens": null,
+    "seconds": null
+  },
+  "notes": "Independent read-only inspection of all supplied TS and Go source; no delegation, other auditor output, file changes or tests. Normal shell execution failed during sandbox initialization; read-only escalated listing showed an empty workspace. The pinned archive, concrete statement/expression factories, node implementations, emitted Go and collection runtime were unavailable. Supplied binding digests are reproduced verbatim, not independently recomputed or validated against archive bytes. CertificateSpans uses token-start through AST end; PilotCertificateSource binds the archive digest; loader compares claims exactly and checks binding digests. Those mechanisms bind evidence but do not prove its truth or fill inspection gaps. Conditional source reasoning supports the shown miss-only behavior, but incomplete coverage mandates UNKNOWN. No purity, parallel-loop or receiver-completeness claim is attested."
+}

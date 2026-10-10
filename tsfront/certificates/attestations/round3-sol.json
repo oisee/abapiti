@@ -1,0 +1,147 @@
+{
+  "certificates": [
+    {
+      "id": "structure-parser-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "StructureParser.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+        "coverage": {
+          "reads": "Rechecked structure_parser.ts:33-52 and emitted-hir.go:189511-189603: filename selection reaches the four warmed roots, and runFile reads the cached matcher.",
+          "writes": "Rechecked original undefined-only store at structure_parser.ts:49-50, generated store at emitted-hir.go:189579, and closure-wide singletons searches. Initialization and this miss path remain the only root-cache writers.",
+          "aliases": "Generated local map aliases use orderedMap.get/set. Rechecked emitted-runtime.go:549-589: index creation and stores have pre-store barriers; warm-up initializes indexes before freezing. External aliases remain excluded.",
+          "escapes": "Prior independent inspection of StructureNode and AbstractNode established that returned nodes expose structure descriptors and children, not this cache container. The retained Interface sequencing body returns ABAPFile references in a fresh array and does not expose the cache.",
+          "exceptions": "Rechecked emit.go:887-923: source catches accept typed payloads and rethrow pilotViolation. emitted-cert_pilot.go:27-31 converts warm-up errors to quarantine. emitted-main.go:19-32 buffers stdout, recognizes exit 86, discards the guarded output and reruns vanilla in a fresh child.",
+          "init": "Rechecked emitted-cert_pilot.go:71-119: module initialization, four root-cache populations, recursive walking, index initialization and tagging precede freezing. emitted-hir.go:339397-339406 places warm-up before the structures loop.",
+          "identity": "Root keys remain constructor names; the recursive walk uses actual matcher identities and marks seen before descent. The four root constructors match the original filename branches inspected in this audit.",
+          "virtual_targets": "Prior independent inspection covered all structure factories and six combinators; original bindings were recomputed unchanged. Newly retained objects/Interface.getSequencedFiles and its getMainABAPFile source were inspected and introduce no cache-graph target. Whole-loop receiver completeness is outside this claim."
+        },
+        "failure_scenario": "No counterexample under the supplied preconditions. A late root miss is refused before getMatcher or cache publication; the failed private attempt is quarantined.",
+        "monitor": "Rechecked emitted-hir.go:189512-189517: the miss guard precedes RHS construction and store. Tagged orderedMap.set independently guards alias writes. The final CLI retains file/config/dependency bytes as []byte, serializes one snapshot and supplies that same snapshot to both fresh child attempts.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:135-136 exercises real runFile with pilotLateRoot; emitted-cert_pilot_test.go:3-11 asserts the violation and unchanged cache sizes, including a map-alias store. Line 18 asserts bit-for-bit JSON round-trip retention for file/config/dependency bytes containing invalid UTF-8 and NUL."
+      }
+    },
+    {
+      "id": "alternative-setup-map",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "Alternative.map",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+        "coverage": {
+          "reads": "Rechecked _combi.ts:108-163: run calls setupMap and iterates cached token/default buckets. Prior inspection of generated Alternative.run confirmed bucket arrays are distinct from the statement arrays passed to candidate.run.",
+          "writes": "Rechecked _combi.ts:81-92 and emitted-hir.go:189902-190024: map publication, bucket push and bucket insertion all remain inside the undefined branch. Generated receiver-qualified searches found only this map publisher.",
+          "aliases": "Rechecked emitted-cert_pilot.go:53-57: every bucket array and its map are tagged. Rechecked emitted-runtime.go collection mutators: guards precede map or array mutation; slice/concat copy backing elements. External aliases and direct external Go-field writes remain excluded.",
+          "escapes": "Original Alternative is module-private; its first method returns a fresh array, and run returns match results rather than buckets. Prior node/result inspection found no bucket-to-input escape. The newly retained Interface sequencing array contains ABAPFiles, not cache buckets.",
+          "exceptions": "Original setupMap publishes before first traversal, so a failed warm-up can leave partial state. Successful completion remains required; emitted-cert_pilot.go:27-31 quarantines warm-up errors. Rechecked typed-payload catch lowering, which rethrows pilotViolation.",
+          "init": "Rechecked original constructor and emitted warm-up: setupMap remains lazy, list children are recursively walked, the map index and bucket tags are established, then the global freeze occurs.",
+          "identity": "Rechecked mark-before-descent pointer-identity walking. Prior independent inspection covered recursive Body/Normal, If/Try, Data, Types, Constants and ClassData factories. Successful completion requires setupMap to finish for each reachable Alternative identity.",
+          "virtual_targets": "Prior independent inspection covered all structure factory bodies, six combinators and statement-combinator first methods. The final generator retains the same cache graph and adds only the separate Interface sequencing body. No whole-loop virtual-target or statement-matcher purity claim is made."
+        },
+        "failure_scenario": "No counterexample under the supplied preconditions. A late Alternative miss is blocked before map allocation/publication; mutation through a tagged bucket-array alias is blocked before mutation.",
+        "monitor": "Rechecked emitted-hir.go:189903-189906 and generated runtime barriers. golang_cert_pilot.go:246-255 now checks the injection declaration type and returns an error on mismatch; guard placement remains unchanged. The final byte-preserving supervisor discards failed guarded stdout and reruns vanilla from the same retained snapshot.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:137-138 calls real setupMap. emitted-cert_pilot_test.go:9 asserts the late map remains nil; lines 12-14 obtain a real warmed bucket-array alias, attempt push, assert Alternative.map violation and unchanged length. Line 18 checks raw-byte snapshot retention."
+      }
+    },
+    {
+      "id": "substructure-setup-matcher",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "SubStructure.matcher",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+        "coverage": {
+          "reads": "Rechecked _combi.ts:276-298: first and run read matcher after setupMatcher. Prior generated-body inspection confirmed cached first/run dispatch.",
+          "writes": "Rechecked _combi.ts:282-285 and emitted-hir.go:191446-191490: the sole matcher assignment remains miss-only. Receiver-qualified generated searches found no other SubStructure.matcher assignment.",
+          "aliases": "The field references a shared runnable graph; it is not a collection. Prior inspection covered the graph's downstream miss sites and found no field setter/invalidation. External cache aliases remain excluded.",
+          "escapes": "Rechecked _combi.ts:289-298: StructureNode receives s, not the wrapper or matcher field. Prior StructureNode inspection covered that descriptor escape. The retained Interface sequencing body does not expose matcher references.",
+          "exceptions": "RHS getMatcher may fail before assignment; traversal may fail afterward. Successful warm-up remains mandatory, and warm-up errors quarantine the private attempt. Rechecked emit.go typed-payload catches and final CLI recovery: pilotViolation propagates to exit 86 and fresh-process fallback.",
+          "init": "Constructor leaves matcher undefined. Rechecked emitted-cert_pilot.go:62-64: setupMatcher precedes walking its matcher, with freezing only after all roots finish.",
+          "identity": "Rechecked actual matcher-identity seen map and mark-before-descent behavior. Prior transitive source inspection established recursive reconnection through cached sub wrappers. Successful completion includes every reachable setupMatcher.",
+          "virtual_targets": "Prior inspection covered IStructure/IStructureRunnable, all structure getMatcher factories and generated six-combinator dispatch. The final Interface sequencing retention is outside this graph. Completeness of all receivers throughout the structures loop is not attested."
+        },
+        "failure_scenario": "No counterexample under the supplied preconditions. A late wrapper with an undefined matcher is refused before s.getMatcher and before assigning matcher.",
+        "monitor": "Rechecked emitted-hir.go:191447-191450: the guard precedes getMatcher at 191484 and publication at 191486. Final generator type-assertion checks preserve this placement. Final CLI retains exact raw snapshot bytes and reruns vanilla in a fresh child on the quarantine signal.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:139-140 exercises real setupMatcher; emitted-cert_pilot_test.go:10 requires SubStructure.matcher violation and asserts the field remains nil. Line 18 checks bit-for-bit raw-byte retention across snapshot serialization."
+      }
+    },
+    {
+      "id": "module-sub-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "sub.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "da06b61d77e481fd74403bd3a9a96bd29c8a1d6f45ac68dc0e7b2c3b4086c7da",
+        "coverage": {
+          "reads": "Rechecked _combi.ts:384-388 and emitted-hir.go:191758-191835: sub checks and returns the constructor-name-keyed cached wrapper.",
+          "writes": "Rechecked original undefined-only insertion and generated Factory/new-wrapper/set sequence. Closure-wide source and generated static-symbol searches found only initialization and sub's miss-path insertion.",
+          "aliases": "Generated map aliases share the same orderedMap; returned wrappers alias values, not the container. Rechecked orderedMap pre-store barriers and warm-up index initialization. External cache aliases remain excluded.",
+          "escapes": "Original module singletons is private and never returned. Wrappers escape into the matcher graph through sub; their inspected methods do not replace/delete module entries. New Interface.getSequencedFiles returns file references, not these wrappers.",
+          "exceptions": "Constructor failure precedes insertion. Warm-up recovery quarantines incomplete initialization; typed-payload source catches rethrow pilotViolation. Final emitted-main.go:19-32 retains the same byte-preserving snapshot for fresh-process vanilla fallback and withholds failed guarded stdout.",
+          "init": "Original {} initialization and prior generated once-only initializer inspection remain applicable. Rechecked emitted-cert_pilot.go:71-119: initialization, reachable factory/setup construction, index initialization and tagging all precede freeze.",
+          "identity": "Keys remain s.name/p0.Name; repeated sub calls return the same wrapper identity. Rechecked generated return and pointer-identity graph walk. No claim is made about arbitrary external constructor-name collisions or new implementations.",
+          "virtual_targets": "Prior independent inspection covered all structure factories and sub constructor dispatch. Rechecked Factory invocation at emitted-hir.go:191813. The retained objects/Interface sequencing method creates no structure-cache target. Whole-loop receiver completeness remains separate."
+        },
+        "failure_scenario": "No counterexample under the supplied preconditions. A late constructor-name miss is refused before Factory execution, wrapper construction or cache insertion.",
+        "monitor": "Rechecked emitted-hir.go:191759-191764: guard precedes Factory/new/set at 191813-191817. Tagged orderedMap.set independently blocks alias stores. The final CLI uses retained []byte file/config/dependency data and the same serialized snapshot for guarded and fresh vanilla children.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:141-142 calls real sub with pilot-late-sub; emitted-cert_pilot_test.go:3-8 asserts the matching violation and unchanged shared-cache sizes. Line 18 asserts exact retention of invalid UTF-8, NUL and CR/LF bytes for every raw snapshot category."
+      }
+    }
+  ],
+  "cost": {
+    "tokens": null,
+    "seconds": null
+  },
+  "notes": [
+    "Continued only my own independent audit. Used read-only pilot_source tools; no other auditor answers, delegation, shell commands or test execution.",
+    "All four check_bindings results recomputed 478 declarations without span errors and matched receiver digest 0f103474ab338af1e51d5ca27366599c6270aeab066950dd05fe694bb5dc1471 and archive digest 5ea3cd76e2058563ca5311dcc50707e78df5fd04bcb0ce84255ccbd3d0c8be4b. Exact binding hashes are recorded per certificate. Reinspected certificate_spans.go: declaration spans use original bytes from scanner.GetTokenPosOfNode(n,f,false) to n.End(), qualified declaration keys and duplicate-key ambiguity rejection. Binding establishes attribution, not truth.",
+    "Inspected complete changed golang_cert_driver.go, golang_cert_pilot.go and emitted-main.go. Raw file/config/dependency fields now use []byte; JSON base64 transport and byte/string conversion preserve the retained bytes, including invalid UTF-8 and NUL. Each attempt receives the same retained serialized snapshot. Runtime str subsequently converts text to UTF-16 through runes; both children perform that same conversion. Raw retention does not assert that parser text preserves invalid UTF-8 verbatim.",
+    "Inspected original objects/Interface.getSequencedFiles, its getMainABAPFile source and emitted-hir.go:401880-401938. It returns an empty or freshly allocated single-file array and adds no writer or alias to the four caches. Its retention exception is in Go pilot coverage. Checked injection FuncDecl/StructType assertions fail explicitly on mismatches; pre-store semantics are unchanged.",
+    "No uncovered envelope remains for these four conditional cache-stability claims. Every provided precondition is retained. These attestations do not establish loop purity, input ownership, whole-loop virtual-receiver completeness, general lowering equivalence or parallelism safety. Successful warm-up is required; tests were inspected only."
+  ]
+}

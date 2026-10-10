@@ -1,0 +1,30 @@
+{
+  "auditor": "gpt-6.1-sol",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "SubStructure.matcher",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+  "coverage": {
+    "reads": "Rechecked _combi.ts:276-298: first and run read matcher after setupMatcher. Prior generated-body inspection confirmed cached first/run dispatch.",
+    "writes": "Rechecked _combi.ts:282-285 and emitted-hir.go:191446-191490: the sole matcher assignment remains miss-only. Receiver-qualified generated searches found no other SubStructure.matcher assignment.",
+    "aliases": "The field references a shared runnable graph; it is not a collection. Prior inspection covered the graph's downstream miss sites and found no field setter/invalidation. External cache aliases remain excluded.",
+    "escapes": "Rechecked _combi.ts:289-298: StructureNode receives s, not the wrapper or matcher field. Prior StructureNode inspection covered that descriptor escape. The retained Interface sequencing body does not expose matcher references.",
+    "exceptions": "RHS getMatcher may fail before assignment; traversal may fail afterward. Successful warm-up remains mandatory, and warm-up errors quarantine the private attempt. Rechecked emit.go typed-payload catches and final CLI recovery: pilotViolation propagates to exit 86 and fresh-process fallback.",
+    "init": "Constructor leaves matcher undefined. Rechecked emitted-cert_pilot.go:62-64: setupMatcher precedes walking its matcher, with freezing only after all roots finish.",
+    "identity": "Rechecked actual matcher-identity seen map and mark-before-descent behavior. Prior transitive source inspection established recursive reconnection through cached sub wrappers. Successful completion includes every reachable setupMatcher.",
+    "virtual_targets": "Prior inspection covered IStructure/IStructureRunnable, all structure getMatcher factories and generated six-combinator dispatch. The final Interface sequencing retention is outside this graph. Completeness of all receivers throughout the structures loop is not attested."
+  },
+  "failure_scenario": "No counterexample under the supplied preconditions. A late wrapper with an undefined matcher is refused before s.getMatcher and before assigning matcher.",
+  "monitor": "Rechecked emitted-hir.go:191447-191450: the guard precedes getMatcher at 191484 and publication at 191486. Final generator type-assertion checks preserve this placement. Final CLI retains exact raw snapshot bytes and reruns vanilla in a fresh child on the quarantine signal.",
+  "negative_test": "Inspected, not executed: emitted-cert_pilot.go:139-140 exercises real setupMatcher; emitted-cert_pilot_test.go:10 requires SubStructure.matcher violation and asserts the field remains nil. Line 18 checks bit-for-bit raw-byte retention across snapshot serialization."
+}

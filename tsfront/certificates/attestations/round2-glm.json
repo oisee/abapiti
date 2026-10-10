@@ -1,0 +1,141 @@
+{
+  "certificates": [
+    {
+      "id": "structure-parser-singletons",
+      "attestation": {
+        "auditor": "zai/glm-5.3",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "StructureParser.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+        "coverage": {
+          "reads": "structure_parser.ts:16-28 selects the filename root and runFile reads singletons; findStructureForFile:33-45 yields exactly Any, ClassGlobal, InterfaceGlobal, or DynproLogic. abap_parser.ts:77-89 contains the audited structures loop and is the sole StructureParser.run caller found in pinned source.",
+          "writes": "The only original write is structure_parser.ts:47-52: miss reads getMatcher() then stores by constructor.name. Generated emitted-hir.go:189511-189579 contains that write, with a frozen/nil pre-store barrier at 189512-189517. A whole-closure search found no other assignment or deletion to this singleton cache.",
+          "aliases": "StructureParser.singletons is private static and no source export or aliasing site was found beyond runFile's local map view. emitted-runtime.go:543-579 tags orderedMap and pre-checks set/delete; emitted-cert_pilot_test.go:11 exercises a direct set alias and verifies entry count is unchanged. Direct mutation of unexported Go Entries/index would require external alias or monkey patching, both expressly excluded.",
+          "escapes": "No cache object escapes through the checked source module; only matchers returned by the graph do. The generated root cache is package-level, but external mutation, invalidation, monkey patching, and new receiver implementations are excluded preconditions. This conditional finding does not prove ownership of matcher arrays or whole-loop receiver completeness.",
+          "exceptions": "The miss barrier precedes initializer, cache read, and RHS getMatcher construction. setupMatcher/setupMap exceptions therefore occur before a late root-cache store; emitted-cert_pilot.go:23-31 converts any warm-up panic into pilotViolation, and emitted-main.go:21-29 discards guarded stdout and reruns vanilla on exit 86. Original try/catch lowering in host/emit.go:907-923 recovers only matching typed payloads and repanics others, so a pilot panic is not silently converted into a completed warm-up.",
+          "init": "emitted-hir.go:189357-189365 initializes the cache exactly once and emitted-hir.go:189782-189803 creates the empty orderedMap. Warmup calls this initializer before roots at emitted-cert_pilot.go:71-81, populates all four roots, tags the map at 113-116, then freezes at 117-119. check_bindings independently matched the target span, 478-declaration receiver set, archive, and exact binding hash.",
+          "identity": "Warmup walks the actual matcher object graph using a seen set keyed by node identity and recursively traverses Sequence/Alternative/Optional/Star/SubStructure/SubStatement in emitted-cert_pilot.go:32-70, handling cycles before the four filename roots at 73-112. A successful walk reaches every concrete matcher reachable from the only four possible filename roots.",
+          "virtual_targets": "The original root cache dispatch is structure.getMatcher(); warmup instantiates and dispatches each of the four concrete filename roots. check_bindings reports receiver-set and archive digests matching. No other StructureParser.run caller or source receiver implementation was found; externally supplied new implementations are excluded by precondition."
+        },
+        "failure_scenario": "No counterexample found under the stated preconditions: a post-freeze miss in runFile reaches pilotStore before getMatcher or map mutation, producing exit 86 and a fresh vanilla rerun. The remaining obligations excluded by the claim include external mutation and proving every structures-loop invocation overall is correct rather than cache-stable.",
+        "monitor": "emitted-hir.go:189512-189517 checks pilotFrozen plus a missing constructor-name cache entry before the original miss body; emitted-runtime.go:564-568 and 818-822 block tagged-map alias writes before set/delete; emitted-main.go:21-29 quarantines exit 86 and reruns sequentially from one marshaled snapshot.",
+        "negative_test": "emitted-cert_pilot_test.go:5-11 warms/freezes, invokes the real runFile miss with a synthetic root, requires the exact pre-store violation, and checks root and sub cache lengths unchanged; it also invokes a direct map alias set and checks no entry was added. Source audit only; tests were not run."
+      }
+    },
+    {
+      "id": "alternative-setup-map",
+      "attestation": {
+        "auditor": "zai/glm-5.3",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "Alternative.map",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+        "coverage": {
+          "reads": "_combi.ts:68-163 defines Alternative; run calls setupMap at line 109 before reading token-indexed map entries. The graph walker calls the real emitted setupMap for every Alternative before traversing children, so successful warmup makes every reachable map non-nil.",
+          "writes": "The only original field mutation is _combi.ts:79-93: a nil map is assigned once, then first()/push populate it. A closure-wide structures search found no other .map assignment. Generated emitted-hir.go:189902-189947 places the frozen nil-field barrier before the original nil test and map allocation.",
+          "aliases": "Alternative and its map are private to _combi.ts and are not exported. emitted-cert_pilot.go:53-57 tags both the map and every value array; emitted-runtime.go:475-523 and 630-838 pre-check tagged-array and map mutations. emitted-cert_pilot_test.go:9,13-14 tests that setupMap publishes no map and that pushing through a real warmed value-array alias is blocked without changing length. Direct mutation of exported Go fields by an external alias is excluded.",
+          "escapes": "Alternative.run returns match results, not this.map; graph matchers are shared by identity but no map-valued getter/export was found. The conditional proof excludes external aliasing, monkey patching, input ownership, and a parallel-map safety argument.",
+          "exceptions": "setupMap's generated barrier precedes nil evaluation and allocation. Calls to child.first() that may recursively construct matchers occur only after the barrier, so a post-freeze miss cannot publish a partial map before pilotStore. Warmup recovers and rethrows every panic as a warm-up refusal, preventing freeze on partial success; host/emit.go:907-923 preserves original try/catch payload typing rather than broadly swallowing panics.",
+          "init": "Alternative instances begin with an undefined map by construction in _combi.ts:68-77; there is no class-level initializer or reset. Warmup invokes setupMap before walking children and tags the completed collections before pilotFrozen is set at emitted-cert_pilot.go:47-57,113-119. check_bindings matched the exact method span, receiver set, archive, and binding hash across 478 declarations.",
+          "identity": "emitted-cert_pilot.go:32-70 marks each matcher pointer before recursion, preventing cycle revisits and duplicate setup. Every Alternative child is visited after setupMap; an Alternative reachable from any of the four filename-root matchers is therefore non-nil before freeze.",
+          "virtual_targets": "Alternative is module-private; alt() is its only construction path in _combi.ts:363-365. Dispatch through the concrete class cannot select an unaudited source implementation, and the receiver-set digest matches the pinned closure. New dynamic implementations or field monkey patching are excluded."
+        },
+        "failure_scenario": "No counterexample found under the stated preconditions: a reachable post-freeze Alternative already has a map, while an unreachable or injected receiver with nil map trips the field barrier before RHS work. The claim does not establish purity of run or completeness for unrelated matcher objects outside the closed graph.",
+        "monitor": "emitted-hir.go:189902-189906 checks pilotFrozen, non-nil receiver, and nil map before the original body; emitted-cert_pilot.go:53-57 labels the map and each value array; emitted-runtime.go guards collection mutators before mutation; exit 86 triggers fresh-process quarantine and vanilla rerun in emitted-main.go:21-29.",
+        "negative_test": "emitted-cert_pilot_test.go:5-9 invokes setupMap on a real Alternative-shaped receiver and requires the exact Alternative.map pre-store violation plus map===nil; lines 13-14 separately push through a real warmed value-array alias and verify length is unchanged. Source audit only; tests were not run."
+      }
+    },
+    {
+      "id": "substructure-setup-matcher",
+      "attestation": {
+        "auditor": "zai/glm-5.3",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "SubStructure.matcher",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+        "coverage": {
+          "reads": "_combi.ts:260-299 defines SubStructure; first() and run() both call setupMatcher before reading matcher. The warm walker visits every SubStructure, calls its real setupMatcher, then recursively walks the resulting matcher, covering both lazy entry paths before the structures loop.",
+          "writes": "The sole original matcher assignment is _combi.ts:281-286. No other matcher assignment/deletion was found in the structures source. emitted-hir.go:191446-191490 injects the frozen/nil receiver-field barrier before the original nil test and expensive getMatcher RHS assignment.",
+          "aliases": "SubStructure is module-private and not exported; sub() returns the shared object but never exposes the matcher field. The walker records object identity and setupMatcher is the only field writer found. External mutation of an escaped SubStructure pointer, monkey patching, or a new implementation is excluded by precondition.",
+          "escapes": "SubStructure objects appear throughout the matcher graph by design, but no source accessor returns this.matcher directly. The proof is conditional on the original closed object graph and excludes external pointer mutation; it is not an input-ownership or whole-loop receiver-completeness result.",
+          "exceptions": "The generated field barrier runs before nil evaluation and s.getMatcher(), so a late miss cannot partially publish a matcher. During warmup, cycle traversal and unknown matcher types panic before freeze; emitted-cert_pilot.go:27-31 converts recovered warm-up failures into a refusal. host/emit.go:907-923 confirms original catch lowering only intercepts its typed payload and repanics other values.",
+          "init": "SubStructure starts with undefined matcher at _combi.ts:260-266 and has no reset path. Warmup calls setupMatcher at emitted-cert_pilot.go:62-64 before recursively traversing the populated field, and freeze occurs only after all roots finish at 113-119. check_bindings independently matched the exact method span, receiver set, archive, and binding hash over 478 declarations.",
+          "identity": "emitted-cert_pilot.go:32-70 uses pointer identity in seen and recursively handles every concrete matcher node, including cycles. Since module sub() itself is initialized first at line 71 and every graph SubStructure is walked, successful completion leaves every reachable matcher field populated.",
+          "virtual_targets": "setupMatcher dispatches this.s.getMatcher() through IStructure. The successful object walk validates the concrete target actually returned by each pinned receiver and follows its output; receiver-set and archive digests match. New IStructure implementations, monkey patched getMatcher, and external replacements are excluded."
+        },
+        "failure_scenario": "No counterexample found under the stated preconditions: every reachable SubStructure is non-nil after successful warmup, and any post-freeze nil receiver field reaches pilotStore before getMatcher. A malformed or throwing graph instead refuses warm-up rather than freezing.",
+        "monitor": "emitted-hir.go:191446-191450 checks pilotFrozen, non-nil receiver, and nil matcher before the original body. A violation exits 86; emitted-main.go:21-29 discards guarded output and reruns vanilla from the same serialized input/config/dependency snapshot in a fresh child.",
+        "negative_test": "emitted-cert_pilot_test.go:5,10 invokes the real setupMatcher path on a SubStructure containing Any and requires the exact SubStructure.matcher violation while asserting the field remains nil. Source audit only; tests were not run."
+      }
+    },
+    {
+      "id": "module-sub-singletons",
+      "attestation": {
+        "auditor": "zai/glm-5.3",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "sub.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "da06b61d77e481fd74403bd3a9a96bd29c8a1d6f45ac68dc0e7b2c3b4086c7da",
+        "coverage": {
+          "reads": "_combi.ts:383-389 reads module-private singletons by constructor name on every sub() call. All audited structures invoke sub() only while constructing getMatcher graphs; the four-root warmup recursively follows the resulting SubStructure matchers.",
+          "writes": "The sole original write is _combi.ts:384-388: on miss it constructs new SubStructure(new s()) and stores it. A closure-wide search found no other assignment, deletion, or reset. emitted-hir.go:191758-191835 contains the write with a frozen/missing-name pre-store barrier at 191759-191764.",
+          "aliases": "singletons is module-private and not exported. emitted-cert_pilot.go:113-116 tags the orderedMap; emitted-runtime.go:564-568 and 818-822 block tagged set/delete aliases before mutation. emitted-cert_pilot_test.go:8 checks the sub cache length after all four real miss paths and line 11 analogously checks a direct root-map alias set. External access to unexported Go fields is excluded.",
+          "escapes": "sub() returns only the cached SubStructure, never the cache. Pointer sharing of matcher nodes is intended and handled by identity traversal; this does not prove input ownership or protect against excluded external invalidation or monkey patching.",
+          "exceptions": "The injected barrier tests the cache before initializer, cache read, and RHS construction. Thus a post-freeze unknown constructor cannot create and store a SubStructure first. Warmup catches any construction/traversal panic and rethrows it as a refusal before pilotFrozen is set. host/emit.go:907-923 preserves typed original catch semantics and repropagates unrelated panics.",
+          "init": "emitted-hir.go:191590-191599 initializes this cache once and 191840-191861 allocates the empty map. Warmup explicitly invokes the module initializer at emitted-cert_pilot.go:71-72, then follows every sub-created node and tags/freezes the cache at 113-119. check_bindings matched the function span, 478-declaration receiver digest, archive digest, and exact binding hash.",
+          "identity": "Warmup uses object-pointer identity to terminate cycles. Because setupMatcher is called before traversing each SubStructure, every SubStructure reachable from the four root matchers was produced through the already-populated module cache; successful completion leaves no reachable key miss. Constructor-name collisions could affect semantic sharing but cannot create a post-warmup write to an already-present key and are outside this cache-stability predicate.",
+          "virtual_targets": "sub() receives constructor descriptors but immediately materializes IStructure receivers through the pinned source. The concrete matcher graph is followed by identity, and receiver-set/archive digests match. Injected constructor descriptors or new IStructure implementations are excluded by precondition."
+        },
+        "failure_scenario": "No counterexample found under the stated preconditions: a key absent after successful warmup reaches pilotStore before new s() or map set; a key present causes no write. This does not claim that the structures loop visits every possible semantic receiver outside the four-root closed graph.",
+        "monitor": "emitted-hir.go:191759-191764 checks pilotFrozen and the missing constructor-name entry before the original miss body; emitted-runtime collection guards cover tagged map aliases; emitted-main.go:21-29 discards the guarded attempt and reruns vanilla from unchanged snapshot bytes after exit 86.",
+        "negative_test": "emitted-cert_pilot_test.go:5-8 invokes the real sub miss with a synthetic constructor name, requires the exact sub.singletons pre-store violation, and verifies root and sub cache lengths remain unchanged after all four late paths. Source audit only; tests were not run."
+      }
+    }
+  ],
+  "cost": {
+    "tokens": null,
+    "seconds": null
+  },
+  "notes": "Read-only source audit using inventory/read/search/check_bindings only. All four exact binding hashes, receiver-set digests, and archive digest matched; certificate_spans.go uses parser token positions from identifier through node end, with duplicate declarations blanked. Coverage is conditional on all supplied preconditions and does not assert purity, input ownership, structures-loop receiver completeness, or parallel-map safety. No tests were run."
+}

@@ -1,0 +1,146 @@
+{
+  "certificates": [
+    {
+      "id": "structure-parser-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "StructureParser.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+        "coverage": {
+          "reads": "Original structure_parser.ts:33-65 selects four filename roots and reads the cached matcher for run. Emitted-hir.go:189453-189603 preserves root selection, name lookup and cached dispatch.",
+          "writes": "Original structure_parser.ts:49-50 is the sole entry-write path, conditional on undefined. Closure-wide singletons searches and emitted static-symbol searches found initialization plus this miss path, with no invalidation.",
+          "aliases": "Emitted-hir.go:189539,189567,189587 creates local aliases of the same orderedMap. Emitted-runtime.go:549-589 guards index construction and set; warm-up constructs the index before freezing. Direct external Go-field manipulation is excluded by the stated preconditions.",
+          "escapes": "runFile returns issues and a StructureNode, not the cache container. Inspected structure_node.ts and _abstract_node.ts show structure/node references and node-child mutation; these do not expose the root matcher cache. External cache aliases remain an explicit exclusion.",
+          "exceptions": "No original catch occurs in structure_parser.ts or structures/_combi.ts. Inspected original statement-combinator catches and host/emit.go:887-923: generated catches accept typed payloads and rethrow other panics, including pilotViolation. emitted-cert_pilot.go:27-31 quarantines warm-up errors; emitted-main.go:19-32 discards failed guarded stdout and starts vanilla from the retained serialized snapshot.",
+          "init": "Original static initializer is {}. Emitted-hir.go:189360-189365 initializes once; emitted-cert_pilot.go:71-119 initializes modules, populates and walks all four root matchers, constructs indexes, then freezes. Emitted-hir.go:339397-339406 places warm-up before the structures loop.",
+          "identity": "Keys remain structure.constructor.name/classOf(root).Name. Confirmed generated descriptors and filename branches for Any, ClassGlobal, InterfaceGlobal and DynproLogic. The walk uses actual matcher pointer identities, marking seen before descent.",
+          "virtual_targets": "Inspected structures interfaces, index exports, root factories and transitive structure factories. Cached run dispatch follows the six concrete combinators in _combi.ts. This establishes conditional cache stability, not completeness of every virtual receiver in the entire structures loop."
+        },
+        "failure_scenario": "No counterexample under all supplied preconditions. An unexpected root cache miss after freezing reaches the entry guard before getMatcher or publication; the private attempt is quarantined.",
+        "monitor": "Emitted-hir.go:189512-189517 checks the real root miss before RHS construction. Tagged orderedMap.set independently blocks alias writes before mutation. pilotStore panics when frozen; the supervisor reruns vanilla in a fresh child using the same retained snapshot.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:135-136 invokes real runFile with pilotLateRoot. emitted-cert_pilot_test.go:3-11 requires the matching violation, unchanged shared-cache entry counts, and unchanged root-map size after a direct map-alias set."
+      }
+    },
+    {
+      "id": "alternative-setup-map",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "Alternative.map",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+        "coverage": {
+          "reads": "Original _combi.ts:108-163 calls setupMap and iterates token and empty-string candidate arrays. Emitted-hir.go:190076-190348 reads those arrays and passes statements separately to candidate.run.",
+          "writes": "Original _combi.ts:81-92 contains all map writes: publication of {}, candidate-array push, and bucket insertion, all inside the undefined branch. Emitted-hir.go:189902-190024 preserves this nesting. Receiver-qualified generated assignment searches found no other Alternative.map publisher.",
+          "aliases": "Original bucket arrays alias runnable identities from list; run only iterates them. Inspected generated local map/bucket aliases and runtime collection mutators. emitted-cert_pilot.go:53-57 indexes and tags both the map and every bucket array. External aliases and raw Go-field writes are outside the supplied preconditions.",
+          "escapes": "Alternative is module-private; combinator factories return IStructureRunnable. first returns a fresh empty-string array, while run returns match results rather than its map or bucket arrays. Inspected node/result flow does not transfer bucket arrays into statement inputs.",
+          "exceptions": "setupMap publishes its map before first traversal, so an unsuccessful warm-up could leave partial state. Such attempts are excluded by successful-completion preconditions and converted to pilotViolation by emitted-cert_pilot.go:27-31. Original combinator catches and emit.go:887-923 show that pilotViolation is not swallowed as a source exception.",
+          "init": "Original constructor initializes list but leaves map undefined. Warm-up calls setupMap lazily, recursively walks all list children, initializes its map index and tags buckets before the final freeze; inspected emitted-cert_pilot.go:32-69,113-119.",
+          "identity": "The graph walk marks actual matcher identities before recursion. Inspected recursive factories including Body/Normal, If/Try, Data, Types, Constants and ClassData; existing sub wrappers reconnect cycles. After successful traversal, each reachable Alternative identity has completed setupMap.",
+          "virtual_targets": "Inspected all structure factory files and six structure combinators. setupMap's first dispatch can initialize SubStructure and invoke statement matcher first methods; inspected statement combi.ts first implementations and confirmed no structures-cache imports in the statement subtree. Warm-up success is required; no general statement-matcher purity claim is made."
+        },
+        "failure_scenario": "No counterexample under all supplied preconditions. A fresh late Alternative with an undefined map is refused before map allocation/publication. Attempts through tagged map or bucket-array aliases are also refused before mutation.",
+        "monitor": "Emitted-hir.go:189903-189906 guards the real undefined-map branch before its first store. emitted-runtime.go guards orderedMap.set/delete/index construction and array mutators, including push, put and splice. Warm-up initializes indexes before freezing.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:137-138 invokes real setupMap on a late Alternative. emitted-cert_pilot_test.go:9 asserts its map remains nil. Lines 12-14 obtain a real warmed map bucket array alias, attempt push, require Alternative.map violation and assert unchanged length."
+      }
+    },
+    {
+      "id": "substructure-setup-matcher",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "SubStructure.matcher",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+        "coverage": {
+          "reads": "Original _combi.ts:276-298 reads matcher after setupMatcher in first and run. Emitted-hir.go:191430-191519 preserves setup followed by cached first/run dispatch.",
+          "writes": "Original _combi.ts:282-285 assigns matcher only when undefined. Emitted-hir.go:191446-191490 preserves the miss condition and single store. Generated receiver-qualified assignment searches found no additional SubStructure.matcher writer.",
+          "aliases": "The matcher field points to a shared runnable graph, including recursive module-sub identities. The field is not a collection; downstream cache writes occur through separately audited Alternative and SubStructure miss sites. The field itself has no source setter or invalidator.",
+          "escapes": "Original SubStructure.run creates StructureNode(this.s), exposing the structure descriptor through the node rather than the wrapper or matcher field. Inspected structure_node.ts and _abstract_node.ts. Module sub returns the wrapper as IStructureRunnable; external cache aliases remain excluded.",
+          "exceptions": "getMatcher can fail before assignment or during subsequent traversal. Successful warm-up excludes incomplete initialization; emitted-cert_pilot.go:27-31 converts recoverable warm-up failure into quarantine. Inspected original statement catches and generated typed-payload catch lowering; pilotViolation propagates.",
+          "init": "Original SubStructure constructor stores s and leaves matcher undefined. emitted-cert_pilot.go:62-64 calls setupMatcher before walking the resulting matcher; freezing occurs only after all roots finish.",
+          "identity": "Seen uses concrete matcher object identity, not class name. Sub wrappers are cached by constructor name and reconnect recursive graph edges. Mark-before-descent prevents the graph walker from revisiting cycles; successful completion separately requires every setupMatcher to finish.",
+          "virtual_targets": "Inspected IStructure/IStructureRunnable, all structure getMatcher factory bodies, module sub construction, and six generated combinator dispatches. No alternative receiver implementation is introduced in this closed graph. Whole-loop virtual-receiver completeness remains outside this attestation."
+        },
+        "failure_scenario": "No counterexample under all supplied preconditions. A late wrapper with an undefined matcher reaches the guard before invoking s.getMatcher and before assigning matcher.",
+        "monitor": "Emitted-hir.go:191447-191450 tests the real matcher miss and calls pilotStore before RHS construction at 191484 and field publication at 191486. The generated supervisor quarantines the violation and reruns vanilla from the retained snapshot.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:139-140 calls real setupMatcher on a late SubStructure. emitted-cert_pilot_test.go:10 requires SubStructure.matcher violation and asserts matcher remains nil."
+      }
+    },
+    {
+      "id": "module-sub-singletons",
+      "attestation": {
+        "auditor": "gpt-6.1-sol",
+        "verdict": "YES",
+        "claim": {
+          "predicate": "cache-stable-after-warmup",
+          "cache": "sub.singletons",
+          "region": "structure-files",
+          "preconditions": [
+            "original pinned upstream and closed structures matcher graph",
+            "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+            "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+            "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+            "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+          ]
+        },
+        "binding_sha256": "da06b61d77e481fd74403bd3a9a96bd29c8a1d6f45ac68dc0e7b2c3b4086c7da",
+        "coverage": {
+          "reads": "Original _combi.ts:384-388 checks and returns singletons[s.name]. Emitted-hir.go:191758-191835 preserves constructor-name lookup and wrapper return.",
+          "writes": "Original _combi.ts:385-386 is the sole entry-write path, conditional on undefined. Closure-wide singletons searches found no other writer for this module cache. Generated static-symbol searches found its initialization plus sub's miss-path set.",
+          "aliases": "Generated sub creates local aliases to the same orderedMap before lookup/set. The returned SubStructure aliases a cached value, not the map container. emitted-runtime.go:549-589 guards map writes through aliases; warm-up constructs the index before tagging/freezing.",
+          "escapes": "The original singletons object is module-private and never returned. Cached wrappers escape into the matcher graph through sub; inspected their methods, factories and node construction. Those methods do not replace or delete module-cache entries. External cache aliases are explicitly excluded.",
+          "exceptions": "Original new s()/SubStructure construction can throw before insertion. Warm-up errors quarantine the entire private attempt. Inspected original combinator catches, emit.go:887-923 and generated payload catch example: pilotViolation is rethrown rather than consumed. emitted-main.go:19-32 handles fresh-process fallback.",
+          "init": "Original module initializes {} once. Emitted-hir.go:191593-191598 uses an initialization flag; emitted-cert_pilot.go:71-72 initializes it before walking roots. All reachable factories execute their sub calls during construction/setup; the module index is initialized and tagged before freeze.",
+          "identity": "Cache key remains s.name/p0.Name, and repeated sub calls return the same wrapper identity. Inspected recursive factory references and warm-up's seen map. The proof requires the supplied closed graph and absence of new receiver implementations; it does not infer uniqueness of arbitrary external constructor names.",
+          "virtual_targets": "Inspected structure index exports, all structure getMatcher factories, sub's constructor dispatch and generated class Factory call at emitted-hir.go:191813. These create the fixed SubStructure graph used by the four roots. This is not an attestation of all receivers or effects elsewhere in the structures loop."
+        },
+        "failure_scenario": "No counterexample under all supplied preconditions. A previously unseen constructor name after freezing is refused before its Factory call, SubStructure allocation or cache insertion.",
+        "monitor": "Emitted-hir.go:191759-191764 checks the real module-sub miss before construction at 191813-191815 and store at 191817. Tagged orderedMap.set adds an alias-write barrier. pilotStore raises the quarantine signal before mutation.",
+        "negative_test": "Inspected, not executed: emitted-cert_pilot.go:141-142 invokes real sub with pilot-late-sub. emitted-cert_pilot_test.go:3-8 requires the matching violation and asserts shared root/sub cache entry counts remain unchanged."
+      }
+    }
+  ],
+  "cost": {
+    "tokens": null,
+    "seconds": null
+  },
+  "notes": [
+    "Independent read-only inspection used only pilot_source inventory, read, search and check_bindings. No delegation, shell, tests, other audits or conversations were used.",
+    "For each certificate, check_bindings recomputed 478 declaration spans with no span errors, matching receiver set/digest and archive digest, and returned the exact binding recorded above. Inspected host/certificate_spans.go:14-45 independently: original source is parsed; keys use file, qualified declaration symbol and AST kind; spans run from scanner.GetTokenPosOfNode(n,f,false) to n.End(); duplicate keys become ambiguous. These bindings establish attribution, not semantic truth.",
+    "The verdicts retain every supplied precondition and apply only after successful warm-up. Failed or partial warm-up is quarantined. The supervisor buffers child stdout and reuses the same serialized input/config/dependency snapshot for its fresh vanilla child; it does not reread those files between attempts.",
+    "These four conditional cache proofs do not establish purity, input ownership, completeness of virtual receivers throughout the structures loop, general lowering equivalence, arbitrary-byte serialization fidelity, or safety of parallel execution. Statement-array splicing, node construction, result mutation and file-information work remain separate whole-loop obligations. No runtime parallelism is assumed."
+  ]
+}

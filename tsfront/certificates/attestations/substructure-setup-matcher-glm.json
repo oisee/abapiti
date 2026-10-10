@@ -1,0 +1,30 @@
+{
+  "auditor": "zai/glm-5.3",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "SubStructure.matcher",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "080022296c05badcd70f5ea1a5affae3b7f70bb5be83e907fb04f59e04cff665",
+  "coverage": {
+    "reads": "_combi.ts:260-299 defines SubStructure; both first() at :276-279 and run() at :289-298 call setupMatcher before reading matcher. The graph walker visits every SubStructure, invokes its real setupMatcher, and follows the populated matcher, covering both lazy entry paths before the structures loop.",
+    "writes": "The only original matcher assignment is _combi.ts:281-286. No other matcher assignment or deletion was found in the structures closure. emitted-hir.go:191446-191490 injects the frozen/non-nil-receiver/nil-field barrier before the original nil test and getMatcher RHS assignment.",
+    "aliases": "SubStructure is private to _combi.ts; sub() returns the shared object but does not expose matcher. Object pointers escape through the matcher graph by design, but source has no accessor returning the field. This conditional proof relies on the exclusion of external pointer mutation, monkey patching, and new implementations; it is not an input-ownership result.",
+    "escapes": "The graph identity traversal intentionally follows every escaped SubStructure. Warmup tracks and completes it; after freeze, any nil field reaches the miss-site barrier. No whole-loop purity, receiver completeness, or parallel mutation claim is made.",
+    "exceptions": "The barrier at emitted-hir.go:191447-191450 precedes nil evaluation and this.s.getMatcher(), so a late miss cannot publish before pilotStore. Warmup nil/unknown/other panics are converted to warm-up refusal before freeze. host/emit.go:907-923 implements original catch by matching only the declared typed payload and repanics everything else.",
+    "init": "SubStructure starts with undefined matcher at _combi.ts:260-266 and has no reset. Warmup initializes root/sub caches, invokes setupMatcher at emitted-cert_pilot.go:62-64, recursively walks the result, and freezes last at :113-119. check_bindings found no span errors and matched receiver, archive, and exact binding hashes over all 478 declarations.",
+    "identity": "seen uses matcher pointer identity before marking and recursion at emitted-cert_pilot.go:34-41, preventing cycle revisits. Module sub singletons are initialized first at :71-72, so successful traversal covers every SubStructure reachable from all four filename-root graphs.",
+    "virtual_targets": "setupMatcher dispatches through this.s.getMatcher(), but warmup follows the concrete matcher object actually returned by each pinned receiver. Receiver-set and archive digests match; externally supplied new IStructure implementations or patched dispatch are excluded by the exact supplied precondition."
+  },
+  "failure_scenario": "No counterexample found: successful warmup leaves every reachable matcher non-nil; a post-freeze nil field trips the barrier before getMatcher. A malformed graph refuses warm-up rather than freezing. Final Interface sequencing changes which files enter parsing but add no cache-graph receiver outside the original four-root closure.",
+  "monitor": "emitted-hir.go:191447-191450 performs the pre-RHS field-miss check. pilotStore panics only after warmup has frozen; the child converts it to exit 86, while emitted-main.go:19-29 buffers/discards guarded stdout and reruns vanilla from the same byte-exact snapshot in a new process.",
+  "negative_test": "emitted-cert_pilot_test.go:5,10 invokes the real setupMatcher on a SubStructure containing Any, requires the exact SubStructure.matcher violation, and asserts the field remains nil. Audit is source-only; no execution is claimed."
+}

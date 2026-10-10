@@ -1,0 +1,30 @@
+{
+  "auditor": "zai/glm-5.3",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "Alternative.map",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+  "coverage": {
+    "reads": "_combi.ts:68-163 defines module-private Alternative; run calls setupMap at :109 before reading the token-keyed buckets. Warmup invokes the real emitted setupMap for every Alternative before recursively walking children, so successful completion makes every map reachable from the four roots non-nil.",
+    "writes": "The sole original field write is _combi.ts:79-93: nil map assignment followed by first()/push population. No other Alternative map assignment was found in the structures source. emitted-hir.go:189902 onward preserves that body; :189902-189906 injects the frozen/non-nil-receiver/nil-map barrier before nil evaluation and allocation.",
+    "aliases": "Alternative and map are not exported. emitted-cert_pilot.go:53-57 tags both the completed map and every value array. emitted-runtime.go:475-523 and :630-838 pre-check tagged array/map mutators. emitted-cert_pilot_test.go:9 checks no map publication and :12-14 checks push through a real warmed value-array alias leaves its length unchanged. External direct mutation of escaped Go fields is excluded by precondition.",
+    "escapes": "Alternative.run returns IMatch values, not the map. Matcher nodes are intentionally shared by graph identity; this audit does not claim ownership of all input arrays, loop purity, or safety under parallel mutation. The final Interface sequencing change does not expose this private field.",
+    "exceptions": "The field barrier precedes the original nil test, map allocation, and recursive first() calls, preventing partial publication on a post-freeze miss. Warmup wraps all traversal/setup panics and rethrows them as refusal before freeze at emitted-cert_pilot.go:23-31,113-119. host/emit.go:907-923 confirms typed catch lowering and repropagation of unrelated panics.",
+    "init": "Alternative begins with undefined map at _combi.ts:68-77 and has no reset path. Warmup calls setupMap at emitted-cert_pilot.go:47-57, tags collections, then freezes only after all roots complete at :113-119. check_bindings matched the exact method span, 478-declaration receiver set, upstream archive, and binding hash with no span errors.",
+    "identity": "seen is keyed by matcher object identity at emitted-cert_pilot.go:32-41. Cycles return before recursion; each Alternative is setup before its children are traversed. Therefore successful completion covers every Alternative reachable from Any, ClassGlobal, InterfaceGlobal, and DynproLogic.",
+    "virtual_targets": "Alternative is private and alt() at _combi.ts:363-365 is its sole source constructor. The walker dispatches on the exact generated concrete pointer types; receiver-set and archive digests match. Injected new dynamic objects or monkey patched first/run implementations are excluded by precondition."
+  },
+  "failure_scenario": "No counterexample found under the stated envelope: a reachable post-freeze Alternative already has a map; a nil-map receiver reaches pilotStore before RHS work. Interface.getSequencedFiles can change file ordering/content processed by the loop but cannot add an unaudited Alternative receiver in the original closed graph.",
+  "monitor": "emitted-hir.go:189902-189906 checks pilotFrozen, receiver non-nil, and map nil before the original body. emitted-cert_pilot.go tags the map and every value array; emitted-runtime.go pre-checks all tagged collection mutators. A pilotViolation exits 86 and emitted-main.go:21-29 discards buffered guarded output before the fresh vanilla child uses the same raw snapshot.",
+  "negative_test": "emitted-cert_pilot_test.go:4-9 invokes the real setupMap path on an Alternative and asserts the exact Alternative.map violation plus map===nil; :12-14 obtains a real warmed Alternative and verifies value-array alias push is blocked without length change. No test execution is claimed."
+}

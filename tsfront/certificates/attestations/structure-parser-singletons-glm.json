@@ -1,0 +1,30 @@
+{
+  "auditor": "zai/glm-5.3",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "StructureParser.singletons",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+  "coverage": {
+    "reads": "structure_parser.ts:16-28 reads the filename-selected root and delegates to runFile; findStructureForFile:33-45 can select only Any, ClassGlobal, InterfaceGlobal, or DynproLogic. abap_parser.ts:77-89 is the audited structures loop. The final Interface.getSequencedFiles retention in golang_cert_pilot.go:266-269 and interface.ts:19-25 changes file sequencing only and introduces no fifth filename-root matcher type.",
+    "writes": "The sole original write is structure_parser.ts:47-52: a missing constructor-name entry calls getMatcher() and then stores the result. emitted-hir.go:189511-189579 preserves that write, preceded by the frozen/nil barrier at 189512-189517. Closure searches found no other assignment, replacement, or deletion for this singleton cache.",
+    "aliases": "StructureParser.singletons is private static, and StructureParser has only the source caller found through abap_parser.ts. emitted-runtime.go:543-579 tags orderedMap and pre-checks set; :818-838 pre-checks delete. emitted-cert_pilot_test.go:11 also invokes a direct root-map set alias and verifies unchanged entry count. Direct mutation of exported Go collection fields remains outside the envelope and is excluded by the no-external-alias/monkey-patching precondition.",
+    "escapes": "No cache object is returned or exported by the source module. Generated package-level visibility permits host-internal access, but the audited Go paths perform no post-freeze direct-field mutation. This is a conditional cache-stability result, not input ownership, loop purity, receiver completeness for the structures loop, or a parallel-map proof.",
+    "exceptions": "The generated miss barrier precedes initializer, cache read, and getMatcher RHS construction. A late miss therefore panics before publication. emitted-cert_pilot.go:23-31 converts every recovered warm-up panic into a warm-up refusal before pilotFrozen is set. host/emit.go:907-923 preserves typed original try/catch semantics and repanics nonmatching values. emitted-main.go:31-38 converts a pilotViolation child failure into quarantine plus a sequential vanilla rerun.",
+    "init": "emitted-hir.go:189357-189365 initializes the root cache once and :189782-189803 creates its empty map. Warmup initializes root and sub modules, walks all four filename roots, tags both maps, then sets pilotWarmed and pilotFrozen at emitted-cert_pilot.go:71-119. check_bindings recomputed all 478 declaration spans with no errors and matched the exact receiver, archive, and binding digests.",
+    "identity": "emitted-cert_pilot.go:32-70 uses object identity in seen before recursively traversing Sequence, Alternative, Optional, Star, SubStructure, and SubStatement. The four root walks at :73-112 cover every filename-root graph reachable in the original closed source before the loop at emitted-hir.go:339395-339400.",
+    "virtual_targets": "Warmup dispatches getMatcher on concrete Any, ClassGlobal, InterfaceGlobal, and DynproLogic objects. The receiver-set and archive digests match, and no other source StructureParser.run caller was found. New dynamic IStructure implementations and monkey patched methods remain excluded preconditions."
+  },
+  "failure_scenario": "No counterexample found under the retained preconditions: a post-freeze missing root key reaches pilotStore before getMatcher or map mutation; a present key performs no write. Interface sequencing can alter which raw files are parsed, but every parser root still lies in the warmed four-root receiver set. This does not prove correctness or purity of the whole structures loop.",
+  "monitor": "emitted-hir.go:189512-189517 checks pilotFrozen plus nil root-cache value before the original body. emitted-runtime.go:564-568 and :818-822 block tagged alias writes before set/delete. A violation exits 86; emitted-main.go:19-25 buffers and discards guarded stdout and starts a fresh sequential vanilla child from the same one-byte-slice snapshot.",
+  "negative_test": "emitted-cert_pilot_test.go:4-11 enables and completes warmup, invokes the real runFile miss through pilotNegative, requires the exact StructureParser.singletons pilotViolation, checks root/sub lengths after all four late paths, and directly checks the tagged root-map alias. Source inspection only; no test execution is claimed."
+}

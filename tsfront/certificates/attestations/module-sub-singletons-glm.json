@@ -1,0 +1,30 @@
+{
+  "auditor": "zai/glm-5.3",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "sub.singletons",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "da06b61d77e481fd74403bd3a9a96bd29c8a1d6f45ac68dc0e7b2c3b4086c7da",
+  "coverage": {
+    "reads": "_combi.ts:383-389 reads module-private singletons by constructor-name on every sub() call. All source sub() calls found in the structures closure occur while constructing original matcher graphs; warmup recursively follows the resulting SubStructure nodes.",
+    "writes": "The sole original write is _combi.ts:384-388: on a missing key it constructs new SubStructure(new s()) and stores it. No other assignment, replacement, deletion, or reset was found. emitted-hir.go:191758-191835 preserves the write, with the frozen/missing-key barrier at :191759-191764 before initializer and RHS construction.",
+    "aliases": "singletons is module-private and never exported. emitted-cert_pilot.go:113-116 tags the orderedMap; emitted-runtime.go:564-568 and :818-822 block tagged set/delete before mutation. emitted-cert_pilot_test.go:8 checks sub-cache length after all four late paths. Direct external mutation of unexported collection internals remains excluded.",
+    "escapes": "sub() returns only the cached SubStructure, not its cache. Shared matcher pointers are intended and traversed by identity. This finding does not assert input ownership, whole-loop correctness, or a parallel-map proof.",
+    "exceptions": "The injected barrier runs before module initializer, cache read, and new s(), so a late unknown key cannot construct before panic. Warmup converts any recovered construction/traversal failure into warm-up refusal before freeze. Original typed catch lowering in host/emit.go:907-923 repanics unrelated values rather than accepting partial completion.",
+    "init": "emitted-hir.go:191590-191599 initializes the module cache once; :191840-191861 allocates its empty map. Warmup explicitly invokes both module initializers at emitted-cert_pilot.go:71-72, walks all four graphs, tags the cache, then freezes at :113-119. The exact function span, receiver-set digest, archive digest, and binding hash all matched across 478 checked declarations.",
+    "identity": "The seen set is keyed by matcher object identity. Every SubStructure reachable from the four roots is setup and recursively traversed. A constructor-name collision could alter semantic sharing but would still read an existing key and cause no post-warmup write; cache-stability does not assert collision-free semantics.",
+    "virtual_targets": "sub() accepts constructor descriptors but immediately instantiates IStructure in the pinned source. Warmup follows the actual returned concrete matcher graphs. Receiver and archive digests match; injected descriptors or new receiver implementations are excluded by precondition."
+  },
+  "failure_scenario": "No counterexample found: any key absent after successful warmup reaches pilotStore before new s() and map set; an existing key causes no write. Final raw-byte and Interface-kit changes affect snapshot transport/file sequencing, not this miss path or receiver envelope.",
+  "monitor": "emitted-hir.go:191759-191764 checks the missing cache key while frozen and before the original body. Tagged orderedMap mutation methods pre-check pilotStore. Exit 86 causes emitted-main.go:22-29 to discard guarded output and rerun vanilla from the same serialized byte snapshot in a fresh process.",
+  "negative_test": "emitted-cert_pilot_test.go:4-8 invokes the real sub miss with a synthetic constructor name, requires the exact sub.singletons violation, and verifies root and sub cache lengths remain unchanged across all four late-path injections. Source audit only; no test run is claimed."
+}

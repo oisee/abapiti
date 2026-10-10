@@ -72,6 +72,7 @@ type Source struct {
 	Span           func(overrides.Key) (string, error)
 	Receivers      func() ([]string, error)
 	UpstreamSHA256 string
+	MonitorSHA256  string
 }
 type Loaded struct{ Certificates []Certificate }
 
@@ -201,6 +202,23 @@ func Load(f fs.FS, src Source) (*Loaded, error) {
 		if _, err := evidence(f, c.Validation); err != nil {
 			return nil, err
 		}
+		var validation Validation
+		if err := decode(f, c.Validation.Path, &validation); err != nil {
+			return nil, err
+		}
+		if validation.Schema != Schema || validation.UpstreamSHA256 != src.UpstreamSHA256 || validation.MonitorSHA256 == "" || validation.MonitorSHA256 != src.MonitorSHA256 || validation.ABAPDiff != "PASS" {
+			return nil, fmt.Errorf("pilot dynamic validation stale/incomplete: %s", c.ID)
+		}
+		for _, key := range []string{"StructureParser.singletons", "Alternative.map", "SubStructure.matcher", "sub.singletons"} {
+			if validation.Negatives[key] != "PASS" {
+				return nil, fmt.Errorf("missing caught pre-store negative: %s", key)
+			}
+		}
+		for _, key := range []string{"clean", "seeded", "abapgit-src"} {
+			if validation.Differentials[key] != "PASS" {
+				return nil, fmt.Errorf("pilot differential not green: %s", key)
+			}
+		}
 		out.Certificates = append(out.Certificates, c)
 	}
 	return out, nil
@@ -216,4 +234,14 @@ func (l *Loaded) Axioms() (*rewrite.DB, error) {
 		}
 	}
 	return db, nil
+}
+
+// Validation is a source-and-monitor-bound dynamic gate, not an arbitrary blob.
+type Validation struct {
+	Schema         int               `json:"schema"`
+	UpstreamSHA256 string            `json:"upstream_sha256"`
+	MonitorSHA256  string            `json:"monitor_sha256"`
+	Negatives      map[string]string `json:"prestore_negatives"`
+	Differentials  map[string]string `json:"differentials"`
+	ABAPDiff       string            `json:"abap_diff"`
 }

@@ -29,13 +29,13 @@ func fixture(t *testing.T) (fstest.MapFS, Source) {
 	for _, auditor := range []string{"sol", "glm"} {
 		c.Attestations = append(c.Attestations, put(auditor+".json", Attestation{Auditor: auditor, Verdict: "YES", Claim: c.Claim, BindingSHA256: BindingDigest(c), Coverage: coverage, Failure: "late store", Monitor: "pre-store", NegativeTest: "force miss"}))
 	}
-	c.Validation = put("validation.json", map[string]string{"result": "pass"})
+	c.Validation = put("validation.json", Validation{Schema: 1, UpstreamSHA256: "pin", MonitorSHA256: "host", ABAPDiff: "PASS", Negatives: map[string]string{"StructureParser.singletons": "PASS", "Alternative.map": "PASS", "SubStructure.matcher": "PASS", "sub.singletons": "PASS"}, Differentials: map[string]string{"clean": "PASS", "seeded": "PASS", "abapgit-src": "PASS"}})
 	put("test.json", c)
 	put("registry-certificates.json", Registry{Schema: 1, Certificates: []string{"test.json"}})
-	return f, Source{Span: func(overrides.Key) (string, error) { return "exact declaration", nil }, Receivers: func() ([]string, error) { return []string{"A"}, nil }, UpstreamSHA256: "pin"}
+	return f, Source{Span: func(overrides.Key) (string, error) { return "exact declaration", nil }, Receivers: func() ([]string, error) { return []string{"A"}, nil }, UpstreamSHA256: "pin", MonitorSHA256: "host"}
 }
 func TestLoaderRefusalsAndProvenance(t *testing.T) {
-	for _, mode := range []string{"accepted", "span", "receivers", "upstream", "revoked", "unknown", "claim", "duplicate-auditor", "evidence", "dependency", "schema", "missing-target"} {
+	for _, mode := range []string{"accepted", "span", "receivers", "upstream", "revoked", "unknown", "claim", "duplicate-auditor", "evidence", "dependency", "schema", "missing-target", "monitor", "validation"} {
 		t.Run(mode, func(t *testing.T) {
 			f, s := fixture(t)
 			var c Certificate
@@ -43,6 +43,11 @@ func TestLoaderRefusalsAndProvenance(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch mode {
+			case "monitor":
+				s.MonitorSHA256 = "changed"
+			case "validation":
+				f["validation.json"].Data = []byte(`{"schema":1}`)
+				c.Validation.SHA256 = overrides.Fingerprint(string(f["validation.json"].Data))
 			case "span":
 				s.Span = func(overrides.Key) (string, error) { return "exact declaration ", nil }
 			case "missing-target":

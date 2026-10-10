@@ -1,0 +1,30 @@
+{
+  "auditor": "gpt-6.1-sol",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "StructureParser.singletons",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "534f1bc624c8117cf3b20f02170e01d0ae8ba91b306cbc8918bb1ddd4475c94b",
+  "coverage": {
+    "reads": "Rechecked structure_parser.ts:33-52 and emitted-hir.go:189511-189603: filename selection reaches the four warmed roots, and runFile reads the cached matcher.",
+    "writes": "Rechecked original undefined-only store at structure_parser.ts:49-50, generated store at emitted-hir.go:189579, and closure-wide singletons searches. Initialization and this miss path remain the only root-cache writers.",
+    "aliases": "Generated local map aliases use orderedMap.get/set. Rechecked emitted-runtime.go:549-589: index creation and stores have pre-store barriers; warm-up initializes indexes before freezing. External aliases remain excluded.",
+    "escapes": "Prior independent inspection of StructureNode and AbstractNode established that returned nodes expose structure descriptors and children, not this cache container. The retained Interface sequencing body returns ABAPFile references in a fresh array and does not expose the cache.",
+    "exceptions": "Rechecked emit.go:887-923: source catches accept typed payloads and rethrow pilotViolation. emitted-cert_pilot.go:27-31 converts warm-up errors to quarantine. emitted-main.go:19-32 buffers stdout, recognizes exit 86, discards the guarded output and reruns vanilla in a fresh child.",
+    "init": "Rechecked emitted-cert_pilot.go:71-119: module initialization, four root-cache populations, recursive walking, index initialization and tagging precede freezing. emitted-hir.go:339397-339406 places warm-up before the structures loop.",
+    "identity": "Root keys remain constructor names; the recursive walk uses actual matcher identities and marks seen before descent. The four root constructors match the original filename branches inspected in this audit.",
+    "virtual_targets": "Prior independent inspection covered all structure factories and six combinators; original bindings were recomputed unchanged. Newly retained objects/Interface.getSequencedFiles and its getMainABAPFile source were inspected and introduce no cache-graph target. Whole-loop receiver completeness is outside this claim."
+  },
+  "failure_scenario": "No counterexample under the supplied preconditions. A late root miss is refused before getMatcher or cache publication; the failed private attempt is quarantined.",
+  "monitor": "Rechecked emitted-hir.go:189512-189517: the miss guard precedes RHS construction and store. Tagged orderedMap.set independently guards alias writes. The final CLI retains file/config/dependency bytes as []byte, serializes one snapshot and supplies that same snapshot to both fresh child attempts.",
+  "negative_test": "Inspected, not executed: emitted-cert_pilot.go:135-136 exercises real runFile with pilotLateRoot; emitted-cert_pilot_test.go:3-11 asserts the violation and unchanged cache sizes, including a map-alias store. Line 18 asserts bit-for-bit JSON round-trip retention for file/config/dependency bytes containing invalid UTF-8 and NUL."
+}

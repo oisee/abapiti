@@ -1,0 +1,30 @@
+{
+  "auditor": "gpt-6.1-sol",
+  "verdict": "YES",
+  "claim": {
+    "predicate": "cache-stable-after-warmup",
+    "cache": "Alternative.map",
+    "region": "structure-files",
+    "preconditions": [
+      "original pinned upstream and closed structures matcher graph",
+      "successful cycle-aware identity walk from Any/ClassGlobal/InterfaceGlobal/DynproLogic before the structures region",
+      "every reachable Alternative.setupMap and SubStructure.setupMatcher completed; module sub and root singletons populated",
+      "no external cache aliases, invalidation, monkey patching or new receiver implementations",
+      "pre-store guard active; failed private attempt quarantined and vanilla rerun from retained raw inputs in fresh process"
+    ]
+  },
+  "binding_sha256": "1775f83ef70adf676900ff40307d21fffb7a6f03b2f0e664a0da2389a04b0916",
+  "coverage": {
+    "reads": "Rechecked _combi.ts:108-163: run calls setupMap and iterates cached token/default buckets. Prior inspection of generated Alternative.run confirmed bucket arrays are distinct from the statement arrays passed to candidate.run.",
+    "writes": "Rechecked _combi.ts:81-92 and emitted-hir.go:189902-190024: map publication, bucket push and bucket insertion all remain inside the undefined branch. Generated receiver-qualified searches found only this map publisher.",
+    "aliases": "Rechecked emitted-cert_pilot.go:53-57: every bucket array and its map are tagged. Rechecked emitted-runtime.go collection mutators: guards precede map or array mutation; slice/concat copy backing elements. External aliases and direct external Go-field writes remain excluded.",
+    "escapes": "Original Alternative is module-private; its first method returns a fresh array, and run returns match results rather than buckets. Prior node/result inspection found no bucket-to-input escape. The newly retained Interface sequencing array contains ABAPFiles, not cache buckets.",
+    "exceptions": "Original setupMap publishes before first traversal, so a failed warm-up can leave partial state. Successful completion remains required; emitted-cert_pilot.go:27-31 quarantines warm-up errors. Rechecked typed-payload catch lowering, which rethrows pilotViolation.",
+    "init": "Rechecked original constructor and emitted warm-up: setupMap remains lazy, list children are recursively walked, the map index and bucket tags are established, then the global freeze occurs.",
+    "identity": "Rechecked mark-before-descent pointer-identity walking. Prior independent inspection covered recursive Body/Normal, If/Try, Data, Types, Constants and ClassData factories. Successful completion requires setupMap to finish for each reachable Alternative identity.",
+    "virtual_targets": "Prior independent inspection covered all structure factory bodies, six combinators and statement-combinator first methods. The final generator retains the same cache graph and adds only the separate Interface sequencing body. No whole-loop virtual-target or statement-matcher purity claim is made."
+  },
+  "failure_scenario": "No counterexample under the supplied preconditions. A late Alternative miss is blocked before map allocation/publication; mutation through a tagged bucket-array alias is blocked before mutation.",
+  "monitor": "Rechecked emitted-hir.go:189903-189906 and generated runtime barriers. golang_cert_pilot.go:246-255 now checks the injection declaration type and returns an error on mismatch; guard placement remains unchanged. The final byte-preserving supervisor discards failed guarded stdout and reruns vanilla from the same retained snapshot.",
+  "negative_test": "Inspected, not executed: emitted-cert_pilot.go:137-138 calls real setupMap. emitted-cert_pilot_test.go:9 asserts the late map remains nil; lines 12-14 obtain a real warmed bucket-array alias, attempt push, assert Alternative.map violation and unchanged length. Line 18 checks raw-byte snapshot retention."
+}

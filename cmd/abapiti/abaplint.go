@@ -63,6 +63,7 @@ func init() {
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
 	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
+	f.Bool("cert-pilot", false, "Go only: validate structures cache certificates and emit guarded warm-up pilot")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
 	_ = abaplintCmd.MarkFlagRequired("output")
 	rootCmd.AddCommand(abaplintCmd)
@@ -122,6 +123,10 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	targets, err := parseTargets(targetFlag)
 	if err != nil {
 		return err
+	}
+	certPilot, _ := flags.GetBool("cert-pilot")
+	if certPilot && (!targets["go"] || len(targets) != 1) {
+		return fmt.Errorf("--cert-pilot requires --target go alone; certificates are never consumed by ABAP")
 	}
 	embedRun := input != "" || deps != "" || config != ""
 	if embedRun && (input == "" || deps == "" || config == "") {
@@ -204,6 +209,9 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if certPilot {
+		coverage = tsfront.PilotWarmupCoverage(coverage)
+	}
 	lowering, err := tsfront.LowerRegistry(work, files, registry, coverage)
 	if err != nil {
 		return fmt.Errorf("front end: %v", err)
@@ -232,6 +240,26 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		}
 		files["main.go"] = tsfront.RegistryGoCLI()
 		files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
+		if certPilot {
+			_, err := tsfront.LoadPilotCertificates()
+			if err != nil {
+				return fmt.Errorf("certificate pilot refused: %w", err)
+			}
+			if err := tsfront.RegistryGoCertificatePilot(files); err != nil {
+				return err
+			}
+		}
+		if certPilot {
+			accepted, err := tsfront.LoadPilotCertificates()
+			if err != nil {
+				return err
+			}
+			uses, err := tsfront.PilotCertificateUses(accepted, files)
+			if err != nil {
+				return err
+			}
+			files["names.json"] = uses
+		}
 		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
 			return err
 		}

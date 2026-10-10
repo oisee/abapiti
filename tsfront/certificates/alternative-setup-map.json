@@ -3911,7 +3911,16 @@
     ]
   },
   "rationale": "After successful cycle-aware warm-up of the pinned reachable matcher graph, this cache receives no further writes within the guarded structures region. This is not purity, input ownership, or loop completeness.",
-  "attestations": [],
+  "attestations": [
+    {
+      "path": "attestations/alternative-setup-map-sol.json",
+      "sha256": "d5075c35ec5e51efdc4e73ce2a22117eeee120221f58040fcabfdc32b475bb44"
+    },
+    {
+      "path": "attestations/alternative-setup-map-glm.json",
+      "sha256": "28c93ccd3b0519eb3e81491ee31665e9d9e6dedac7db09e0c651cf5a9bd19e2e"
+    }
+  ],
   "dynamic_validation": {
     "path": "",
     "sha256": ""
