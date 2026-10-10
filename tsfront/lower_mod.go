@@ -235,6 +235,12 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 				continue
 			}
 			vars = true
+		case ast.KindModuleDeclaration:
+			if !lspFile(f) {
+				l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
+			}
+			// External LSP namespaces are type declarations; supported calls
+			// are checked individually by lspCall, not emitted as modules.
 		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
 			l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())

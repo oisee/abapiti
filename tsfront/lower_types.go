@@ -126,6 +126,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	if sym != nil {
 		name = sym.Name
 	}
+	if c := l.lspShape(sym); c != nil {
+		return hir.Ref(c.Name)
+	}
 	targs := n.TypeArguments()
 	arg := func(i int) hir.Type {
 		if len(targs) <= i {
@@ -507,6 +510,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			}
 		}
 		if t.Symbol() != nil {
+			if c := l.lspShape(t.Symbol()); c != nil {
+				return hir.Ref(c.Name)
+			}
 			if t.Symbol().Name == "RegExp" && l.classOf(t.Symbol()) == nil {
 				l.diagf(n, "note-regex-type", "RegExp lowered to the RegExp runtime type")
 				return hir.T(hir.RegExp)

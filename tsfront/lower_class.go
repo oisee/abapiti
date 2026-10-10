@@ -89,6 +89,9 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 					continue
 				}
 				base := l.classOf(sym)
+				if base == nil {
+					base = l.lspShape(sym)
+				}
 				if base != nil && base.Ctor == nil && len(sym.Declarations) > 0 && sym.Declarations[0].Kind == ast.KindInterfaceDeclaration {
 					decl := sym.Declarations[0]
 					saved := l.file
