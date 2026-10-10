@@ -9,9 +9,10 @@ import (
 
 type Tuple []string
 type row struct {
-	args  Tuple
-	depth int
-	ids   []uint32
+	args   Tuple
+	depth  int
+	ids    []uint32
+	region string
 }
 type table struct {
 	rows  []*row
@@ -22,9 +23,12 @@ type table struct {
 
 // DB is a set of memoised relations. Public reads are sorted copies.
 type DB struct {
-	tables   map[string]*table
-	demanded map[string]bool
-	symbols  *symbols
+	tables         map[string]*table
+	demanded       map[string]bool
+	symbols        *symbols
+	regionFor      func(string, Tuple) string
+	evaluateRegion func(string, Tuple) bool
+	selections     map[string]regionSelection
 }
 
 // Symbols and tuples are IR-independent. Zero is reserved for unbound variables.
@@ -67,7 +71,9 @@ func pack(ids []uint32, mask uint64) packedTuple {
 func NewDB() *DB {
 	return &DB{tables: map[string]*table{}, symbols: &symbols{ids: map[string]uint32{}, values: []string{""}}}
 }
-func (d *DB) empty() *DB { return &DB{tables: map[string]*table{}, symbols: d.symbols} }
+func (d *DB) empty() *DB {
+	return &DB{tables: map[string]*table{}, symbols: d.symbols, regionFor: d.regionFor}
+}
 func (d *DB) put(pred string, args Tuple, depth int) (bool, error) {
 	if d.demanded != nil && !d.demanded[pred] {
 		return false, nil
@@ -103,6 +109,9 @@ func (d *DB) put(pred string, args Tuple, depth int) (bool, error) {
 		canonical[i] = d.symbols.values[id]
 	}
 	r := &row{args: canonical, depth: depth, ids: append([]uint32(nil), ids...)}
+	if d.regionFor != nil {
+		r.region = d.regionFor(pred, canonical)
+	}
 	t.keys[k] = r
 	t.rows = append(t.rows, r)
 	for mask, index := range t.joins {

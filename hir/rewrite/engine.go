@@ -99,7 +99,7 @@ func Evaluate(db *DB, rules *Rules) error {
 				}
 				var emitErr error
 				emit := func(args Tuple, depth int) {
-					if emitErr == nil {
+					if emitErr == nil && (db.evaluateRegion == nil || db.evaluateRegion(c.head.pred, args)) {
 						_, emitErr = next.put(c.head.pred, args, depth)
 					}
 				}

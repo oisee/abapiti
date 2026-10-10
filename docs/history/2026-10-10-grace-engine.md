@@ -72,3 +72,65 @@ all 6,336 output files and emitted stats. Pass stats are 1,487 / 190.
 A preliminary CPU profile before eliminating redundant initial pivots showed
 joins, verification, and GC as the remaining costs; final profiling follows the
 incremental round implementation.
+
+## Step 3
+
+Multiple rounds of the fixed inline rules retain immutable declarations/hierarchy
+and unaffected method proofs. Changed methods are marked by successful actions;
+the adapter supplies their transitive reverse-call dependency closure and the
+ownership of method/site relations. Only these methods' node and syntax facts
+are extracted again. The generic engine invalidates their base and derived rows,
+rebuilds affected indexes, and prunes joins as soon as the regional head binding
+is known to be unaffected. Shared `inline_overridden` proofs are conservatively
+recomputed. Neither the indexed interpreter nor generic region invalidation
+imports HIR. The existing adapter entry points are unchanged.
+
+`ABAPITI_GRACE_RECOMPUTE=full` forces full recomputation between rounds. Custom
+rule sets retain full recomputation because they can relate arbitrary regions.
+The production Inline API still uses one round, so this step adds multi-round
+support rather than changing its rewrite policy.
+
+| Step | Pass seconds | Pass RSS MiB | Whole build seconds | Build RSS MiB |
+|---|---:|---:|---:|---:|
+| 3: incremental rounds | 0.302252 | 170.95 | 10.59 | 377.62 |
+
+Raw pass seconds / KiB: 0.309882 / 175052, 0.301496 / 171768,
+0.302252 / 175356. Raw build seconds / KiB: 10.59 / 391628,
+10.78 / 380304, 10.48 / 386684. Three full CLI builds again match all 6,336
+regular files, including emitted ABAP and the zip, and emitted stats.
+
+Current hir.Inline baseline (same capture, three processes): 0.031429 / 91736,
+0.035928 / 91592, 0.032095 / 91688. The final Grace pass is approximately
+80 times faster than the original Grace baseline, and 9.4 times this current
+hir.Inline median. The time/RSS targets are met; the 5-times stretch is not.
+Step 4 is therefore not needed: no generated rule compiler was added, and
+all rule execution continues through the interpreter.
+
+On the closure with four rounds allowed (two actually verified), incremental
+refresh takes median 0.449842 s / 214.98 MiB versus full recomputation at
+0.513026 s / 216.26 MiB. Raw incremental seconds / KiB:
+0.443155 / 220244, 0.449842 / 213112, 0.488321 / 220136.
+Raw full seconds / KiB: 0.513026 / 223060, 0.521826 / 221156,
+0.491697 / 221452. This measurement includes both verified rounds and is separate
+from the production single-round pass target.
+
+Tests compare per-round relations, HIR and stats for a fixture which becomes
+eligible in round two; they verify an unrelated proof retains its identity,
+negative proofs are invalidated, and cyclic reverse dependencies terminate.
+All 32 seeded graphs compare full/incremental HIR and stats. The full closure
+also compares the two paths: both terminate after two rounds with 1,487 sites.
+Short tests and pinned lint gate pass (0 issues; 5/5).
+
+Final CPU profile (a short 0.304-second sample, cumulative costs overlap):
+verification about 100 ms, fact insertion and structural walking about 70 ms
+each, native inline facts about 60 ms, evaluation about 50 ms, and background GC
+about 70 ms. Verification, adapter walks/fact storage, and GC are the remaining
+hot spots; relation joins are no longer dominant. Profile and raw logs are in
+`/tmp/grace-perf`.
+
+Final gate: `ABAPITI_GRACE_FULL=1 go test ./tsfront -run
+'^TestGraceFullRegistryClosure$' -count=1 -v -timeout=60m` passed in 188.97 s
+under the heavy lock. Analysis and inline reference equality, reevaluation,
+phased preparation, positive monotonicity, declaration determinism, depth/growth
+budgets, verified termination, idempotence, and incremental/full equality are
+all green. Logs: `/tmp/grace-perf/full-final-test.log`.

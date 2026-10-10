@@ -2,6 +2,7 @@ package rewrite
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/oisee/abapiti/hir"
@@ -137,12 +138,19 @@ type runner struct {
 	inline         *inlineAction
 	err            error
 	plans          []*joinPlan
+	refresh        map[*hir.Method]bool
+	dirty          map[string]bool
 }
 
 // Rewrite applies rules deterministically, in operand order and callee-first for
-// inline actions. A round visits only its input nodes. Analysis is discarded and
-// rebuilt after mutations; no derived table survives a rewrite round.
+// inline actions. A round visits only its input nodes. Embedded inline rules
+// refresh changed method regions and their call dependants between rounds.
+// Other rules, or ABAPITI_GRACE_RECOMPUTE=full, use full recomputation.
 func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
+	return rewriteObserved(p, rules, limits, nil)
+}
+
+func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*DB)) (Stats, error) {
 	r := &runner{p: p, rules: rules, limits: limits, stats: Stats{Callees: map[string]int{}}, growth: map[*hir.Method]int{}}
 	if limits.Rounds < 0 || limits.MethodGrowth < 0 || limits.ProgramGrowth < 0 {
 		return r.stats, fmt.Errorf("negative rewrite limit")
@@ -163,8 +171,35 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 	if err != nil {
 		return r.stats, err
 	}
+	incremental := r.limits.Rounds > 1 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" && isInlineRules(rules)
 	for round := 0; round < r.limits.Rounds; round++ {
-		r.db = extractDemanded(p, demanded)
+		if !incremental || round == 0 {
+			r.db = extractDemanded(p, demanded)
+			r.refresh = nil
+			if incremental {
+				r.db.regionFor = r.inlineRegion
+			}
+		} else {
+			affected := r.inlineDependants(r.dirty)
+			r.refresh = map[*hir.Method]bool{}
+			for id := range affected {
+				if m := r.byID[id]; m != nil {
+					r.refresh[m] = true
+				}
+			}
+			r.db.invalidateRegions(affected, selected)
+			r.db.selections = map[string]regionSelection{}
+			for _, c := range selected.clauses {
+				pred := c.head.pred
+				if inlineRegionalHead(pred) {
+					r.db.selections[pred] = regionSelection{column: 0, contains: func(value string) bool { return affected[r.inlineRegionValue(pred, value)] }}
+				}
+			}
+			r.db.evaluateRegion = func(pred string, args Tuple) bool {
+				region := r.inlineRegion(pred, args)
+				return region == "" || affected[region]
+			}
+		}
 		if err := r.index(); err != nil {
 			return r.stats, err
 		}
@@ -182,6 +217,10 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 			c := clause{head: rr.action, body: rr.where, bound: -1}
 			r.plans = append(r.plans, planJoin(r.db, c, -1, rr.match.args))
 		}
+		if observe != nil {
+			observe(r.db)
+		}
+		r.dirty = map[string]bool{}
 		r.done = map[*hir.Method]bool{}
 		r.changed = 0
 		r.inline = newInlineAction(r)
@@ -200,7 +239,11 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 			return r.stats, fmt.Errorf("rewrite round %d: %v", round+1, es)
 		}
 		r.stats.Rounds++
-		r.db = nil // invalidate all regions and their transitive dependents
+		r.db.evaluateRegion = nil
+		r.db.selections = nil
+		if !incremental {
+			r.db = nil
+		}
 		if r.changed == 0 {
 			break
 		}
@@ -237,16 +280,30 @@ func (r *runner) index() error {
 			addErr = r.db.Add("node", path, kind)
 		}
 	}
-	r.nodes = map[string]rewriteNode{}
-	r.ids = map[*hir.Expr]string{}
-	r.methods = map[*hir.Method]string{}
-	r.byID = map[string]*hir.Method{}
+	if r.refresh == nil {
+		r.nodes = map[string]rewriteNode{}
+		r.ids = map[*hir.Expr]string{}
+		r.methods = map[*hir.Method]string{}
+		r.byID = map[string]*hir.Method{}
+	} else {
+		for id, node := range r.nodes {
+			if r.refresh[node.method] {
+				delete(r.nodes, id)
+				if node.expr != nil {
+					delete(r.ids, node.expr)
+				}
+			}
+		}
+	}
 	for _, c := range r.p.Classes {
 		ms := append([]*hir.Method{}, c.Methods...)
 		if c.Ctor != nil {
 			ms = append(ms, c.Ctor)
 		}
 		for _, m := range ms {
+			if r.refresh != nil && !r.refresh[m] {
+				continue
+			}
 			name := m.Name
 			if m == c.Ctor {
 				name = "constructor"
@@ -403,6 +460,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 			if out == nil && stmt == nil {
 				continue
 			}
+			r.dirty[r.methods[m]] = true
 			r.changed++
 			return out, stmt
 		}

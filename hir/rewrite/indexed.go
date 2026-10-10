@@ -20,15 +20,17 @@ type joinAtom struct {
 	pivot    bool
 }
 type joinPlan struct {
-	pivot  int
-	bound  int
-	vars   map[string]int
-	head   []joinTerm
-	atoms  []joinAtom
-	guards []joinAtom
-	env    []uint32
-	undo   []int
-	output Tuple
+	pivot    int
+	bound    int
+	vars     map[string]int
+	head     []joinTerm
+	atoms    []joinAtom
+	guards   []joinAtom
+	env      []uint32
+	undo     []int
+	output   Tuple
+	region   joinTerm
+	selected func(string) bool
 }
 
 func planJoin(db *DB, c clause, pivot int, initial []term) *joinPlan {
@@ -125,6 +127,10 @@ func planJoin(db *DB, c clause, pivot int, initial []term) *joinPlan {
 		}
 	}
 	p.head = compile(c.head).terms
+	if selection, ok := db.selections[c.head.pred]; ok {
+		p.region = p.head[selection.column]
+		p.selected = selection.contains
+	}
 	p.env = make([]uint32, len(p.vars))
 	p.undo = make([]int, 0, len(p.vars))
 	p.output = make(Tuple, len(p.head))
@@ -237,6 +243,11 @@ func (p *joinPlan) run(db, delta *DB, initial map[string]string, emit func(Tuple
 	p.walk(db, delta, 0, 0, emit)
 }
 func (p *joinPlan) walk(db, delta *DB, pos, depth int, emit func(Tuple, int)) {
+	if p.selected != nil {
+		if id := p.value(p.region); id != 0 && !p.selected(db.symbols.values[id]) {
+			return
+		}
+	}
 	if pos == len(p.atoms) {
 		for _, a := range p.guards {
 			if comparison(a.pred) {

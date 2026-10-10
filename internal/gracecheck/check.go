@@ -1,6 +1,7 @@
 package gracecheck
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/rand"
 	"os"
@@ -119,6 +120,9 @@ func check(t *testing.T, p *hir.Program, full bool) {
 	start := time.Now()
 	if es := hir.Verify(p); len(es) > 0 {
 		t.Fatal(es)
+	}
+	if full {
+		IncrementalRounds(t, p)
 	}
 	beforeInput := hir.Dump(p)
 	rewriteBase, e := rewrite.ExtractRewriteFacts(p)
@@ -454,4 +458,31 @@ func alphaDump(p *hir.Program) string {
 		}
 	}
 	return hir.Dump(p)
+}
+
+// IncrementalRounds checks the adapter's region and reverse-call dependency
+// contract against the full recomputation debug path on independent HIR copies.
+func IncrementalRounds(t *testing.T, p *hir.Program) {
+	t.Helper()
+	original := os.Getenv("ABAPITI_GRACE_RECOMPUTE")
+	defer t.Setenv("ABAPITI_GRACE_RECOMPUTE", original)
+	_, rules, err := rewrite.Parse(Source(t, "inline"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(mode string) (rewrite.Stats, [32]byte) {
+		t.Setenv("ABAPITI_GRACE_RECOMPUTE", mode)
+		q := Clone(t, p)
+		stats, err := rewrite.Rewrite(q, rules, rewrite.Limits{Rounds: 4})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return stats, sha256.Sum256([]byte(hir.Dump(q)))
+	}
+	full, fullHIR := run("full")
+	incremental, incrementalHIR := run("")
+	if !reflect.DeepEqual(full, incremental) || fullHIR != incrementalHIR {
+		t.Fatalf("incremental/full recomputation differ: full=%+v incremental=%+v", full, incremental)
+	}
+	t.Logf("incremental/full recomputation equality: %d rounds, %d sites", full.Rounds, full.CallSites)
 }
