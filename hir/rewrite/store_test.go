@@ -348,3 +348,19 @@ func TestStoreSharedMethod(t *testing.T) {
 		}
 	}
 }
+
+func TestStoreParameterScope(t *testing.T) {
+	i := hir.T(hir.I32)
+	p := &hir.Program{Classes: []*hir.Class{{Name: "src/local/demo.C", Methods: []*hir.Method{{Name: "run", Static: true, Params: []hir.Param{{Name: "p", Type: i}}, Result: i, Body: hir.B(
+		&hir.Stmt{Kind: hir.Assign, X: hir.V("p", i), Y: hir.L(i, 2)},
+		&hir.Stmt{Kind: hir.Return, X: hir.L(i, 0)},
+	)}}}}}
+	before := hir.Dump(p)
+	stats, err := CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites+stats.DeadStores != 0 || hir.Dump(p) != before {
+		t.Fatal("source path treated a parameter as a local declaration")
+	}
+}

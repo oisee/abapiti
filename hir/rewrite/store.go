@@ -143,13 +143,18 @@ func (r *runner) addStoreFacts() error {
 	refs := map[string]string{}
 	if rows := r.db.Facts("local_ref"); len(rows) > 0 {
 		for _, row := range rows {
-			refs[row[0]] = row[1]
+			if r.localStoreBinding(row[1]) {
+				refs[row[0]] = row[1]
+			}
 		}
 	}
 	defs := map[string][]string{}
 	if rows := r.db.Facts("def"); len(rows) > 0 {
 		for _, row := range rows {
 			n := r.nodes[row[1]]
+			if !r.localStoreBinding(row[0]) {
+				continue
+			}
 			if n.stmt != nil && n.stmt.Kind == hir.VarDecl && n.stmt.X == nil {
 				continue
 			}
@@ -159,7 +164,9 @@ func (r *runner) addStoreFacts() error {
 	uses := map[string][]string{}
 	if rows := r.db.Facts("use"); len(rows) > 0 {
 		for _, row := range rows {
-			uses[row[0]] = append(uses[row[0]], row[1])
+			if r.localStoreBinding(row[0]) {
+				uses[row[0]] = append(uses[row[0]], row[1])
+			}
 		}
 	}
 	type position struct {
@@ -190,7 +197,7 @@ func (r *runner) addStoreFacts() error {
 			typ = n.stmt.X.Type
 		}
 		// Parameters and catch/iteration bindings are not local declarations.
-		if !strings.Contains(binding, "/local/") {
+		if !r.localStoreBinding(binding) {
 			continue
 		}
 		if storeInert(rhs) && typ.Equal(rhs.Type) {
@@ -462,8 +469,8 @@ func (r *runner) addStoreEdges() error {
 // ordinary frontend trees and shared immutable literals need no copying.
 func detachStoreSyntax(p *hir.Program, rules *Rules) {
 	hasStores := false
-	for _, rule := range rules.rewrites {
-		if rule.action.pred == "substitute-use" || rule.action.pred == "remove-statement" {
+	for _, rule := range rules.Rewrites() {
+		if rule.Action() == "substitute-use" || rule.Action() == "remove-statement" {
 			hasStores = true
 		}
 	}
@@ -575,4 +582,15 @@ func storeType(s *hir.Stmt) hir.Type {
 		return s.X.Type
 	}
 	return s.Type
+}
+
+// A local binding must point to its actual VarDecl, rather than a marker in an
+// owning source path. This also works for read-only extraction of shared syntax.
+func (r *runner) localStoreBinding(binding string) bool {
+	marker := strings.LastIndex(binding, "/local/")
+	if marker < 0 {
+		return false
+	}
+	decl := r.nodes[binding[:marker]].stmt
+	return decl != nil && decl.Kind == hir.VarDecl && decl.Name == binding[marker+len("/local/"):]
 }

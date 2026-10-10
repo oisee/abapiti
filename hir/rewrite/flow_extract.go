@@ -1,7 +1,6 @@
 package rewrite
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/oisee/abapiti/hir"
@@ -58,7 +57,7 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 	if e.Kind == hir.Seq && e.Stmt != nil {
 		env = copyScope(env)
 		for i, s := range e.Stmt.List {
-			f.bindStmt(s, fmt.Sprintf("%s/seq/s%d", path, i), env, loops)
+			f.bindStmt(s, path+"/seq/s"+strconv.Itoa(i), env, loops)
 		}
 	}
 	if !f.compact {
@@ -70,7 +69,7 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 		}
 	}
 	for i, c := range e.Args {
-		f.bindExpr(c, fmt.Sprintf("%s/arg%d", path, i), env, loops)
+		f.bindExpr(c, path+"/arg"+strconv.Itoa(i), env, loops)
 	}
 	if e.Kind == hir.Local || e.Kind == hir.This {
 		name := e.Name
@@ -96,7 +95,7 @@ func (f *flowExtractor) bindExpr(e *hir.Expr, path string, env scope, loops []st
 		if len(effect.Writes) > 4 && effect.Writes[:4] == "Arg(" {
 			i, err := strconv.Atoi(effect.Writes[4 : len(effect.Writes)-1])
 			if err == nil && i < len(e.Args) {
-				target = f.value(e.Args[i], fmt.Sprintf("%s/arg%d", path, i))
+				target = f.value(e.Args[i], path+"/arg"+strconv.Itoa(i))
 			}
 		}
 		if target != "" {
@@ -128,7 +127,7 @@ func (f *flowExtractor) bindStmt(s *hir.Stmt, path string, env scope, loops []st
 	if s.Kind == hir.Block {
 		env = copyScope(env)
 		for i, b := range s.List {
-			f.bindStmt(b, fmt.Sprintf("%s/s%d", path, i), env, loops)
+			f.bindStmt(b, path+"/s"+strconv.Itoa(i), env, loops)
 		}
 		return
 	}
@@ -223,7 +222,7 @@ func (f *flowExtractor) expr(e *hir.Expr, path, next, ex, brk, cont string, read
 	}
 	entry := path
 	for i := len(e.Args) - 1; i >= 0; i-- {
-		entry = f.expr(e.Args[i], fmt.Sprintf("%s/arg%d", path, i), entry, ex, brk, cont, true)
+		entry = f.expr(e.Args[i], path+"/arg"+strconv.Itoa(i), entry, ex, brk, cont, true)
 	}
 	if e.Z != nil {
 		entry = f.expr(e.Z, path+"/2", entry, ex, brk, cont, true)
@@ -236,7 +235,7 @@ func (f *flowExtractor) expr(e *hir.Expr, path, next, ex, brk, cont string, read
 	}
 	if e.Kind == hir.Seq && e.Stmt != nil {
 		for i := len(e.Stmt.List) - 1; i >= 0; i-- {
-			entry = f.stmt(e.Stmt.List[i], fmt.Sprintf("%s/seq/s%d", path, i), entry, brk, cont, ex)
+			entry = f.stmt(e.Stmt.List[i], path+"/seq/s"+strconv.Itoa(i), entry, brk, cont, ex)
 		}
 	}
 	return entry
@@ -248,7 +247,7 @@ func (f *flowExtractor) stmt(s *hir.Stmt, path, next, brk, cont, ex string) stri
 	if s.Kind == hir.Block {
 		entry := next
 		for i := len(s.List) - 1; i >= 0; i-- {
-			entry = f.stmt(s.List[i], fmt.Sprintf("%s/s%d", path, i), entry, brk, cont, ex)
+			entry = f.stmt(s.List[i], path+"/s"+strconv.Itoa(i), entry, brk, cont, ex)
 		}
 		f.edge(path, entry)
 		return path

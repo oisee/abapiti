@@ -254,7 +254,9 @@ func (r *runner) index() error {
 				}
 				r.nodes[path] = rewriteNode{path, nil, s, m}
 				r.stmtIDs[s] = path
-				addNode(path, string(s.Kind))
+				if !r.storeOnly || s.Kind != hir.Block {
+					addNode(path, string(s.Kind))
+				}
 			}, func(e *hir.Expr, path string) {
 				if r.storeOnly && e.Kind != hir.Local && e.Kind != hir.New && e.Kind != hir.DirectCall && e.Kind != hir.VirtualCall {
 					return
@@ -263,8 +265,10 @@ func (r *runner) index() error {
 					return
 				}
 				r.nodes[path] = rewriteNode{path, e, nil, m}
-				r.ids[e] = path
-				addNode(path, string(e.Kind))
+				if !r.storeOnly || e.Kind == hir.Local {
+					r.ids[e] = path
+					addNode(path, string(e.Kind))
+				}
 			})
 		}
 	}
@@ -294,7 +298,7 @@ func visitTree(s *hir.Stmt, path string, fs func(*hir.Stmt, string), fx func(*hi
 		visitTree(s.Else, path+"/else", fs, fx)
 	}
 	for i, v := range s.List {
-		visitTree(v, fmt.Sprintf("%s/s%d", path, i), fs, fx)
+		visitTree(v, path+"/s"+strconv.Itoa(i), fs, fx)
 	}
 }
 func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hir.Expr, string)) {
@@ -312,11 +316,11 @@ func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hi
 		visitExpr(e.Z, path+"/2", fs, fx)
 	}
 	for i, a := range e.Args {
-		visitExpr(a, fmt.Sprintf("%s/arg%d", path, i), fs, fx)
+		visitExpr(a, path+"/arg"+strconv.Itoa(i), fs, fx)
 	}
 	if e.Stmt != nil {
 		for i, s := range e.Stmt.List {
-			visitTree(s, fmt.Sprintf("%s/seq/s%d", path, i), fs, fx)
+			visitTree(s, path+"/seq/s"+strconv.Itoa(i), fs, fx)
 		}
 	}
 }
