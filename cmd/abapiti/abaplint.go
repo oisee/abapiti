@@ -54,7 +54,7 @@ Outputs under <outdir>:
 
 func init() {
 	f := abaplintCmd.Flags()
-	f.StringP("output", "o", "", "Output directory (required)")
+	f.StringP("output", "o", "", "Output directory (required unless --full, which defaults to out)")
 	f.String("target", "all", "Targets to write: all (ABAP targets), a4h, osg, native or go (comma-separated)")
 	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip")
 	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
@@ -64,8 +64,8 @@ func init() {
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
 	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
+	f.Bool("full", false, "Measure the whole closure without pruning; write evidence instead of emitting targets")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
-	_ = abaplintCmd.MarkFlagRequired("output")
 	rootCmd.AddCommand(abaplintCmd)
 }
 
@@ -120,6 +120,13 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		os.Setenv("ABAPITI_ASSUME_INT", "")
 	}
 	evidence, _ := flags.GetBool("evidence")
+	full, _ := flags.GetBool("full")
+	if out == "" {
+		if !full {
+			return fmt.Errorf("required flag(s) \"output\" not set")
+		}
+		out = "out"
+	}
 	targets, err := parseTargets(targetFlag)
 	if err != nil {
 		return err
@@ -205,16 +212,31 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if full {
+		coverage = nil
+	}
 	lowering, err := tsfront.LowerRegistry(work, files, registry, coverage)
 	if err != nil {
 		return fmt.Errorf("front end: %v", err)
 	}
-	if evidence {
+	if evidence || full {
 		if err := writeEvidence(filepath.Join(out, "evidence"), lowering); err != nil {
 			return err
 		}
 	}
 	n.step("front end (tsgo checker + lowering): %d classes, %d interfaces, %d blocking diagnostics", len(lowering.Prog.Classes), len(lowering.Prog.Interfaces), len(lowering.Blocking))
+	if full {
+		summary := summarizeGaps(lowering)
+		data, err := json.MarshalIndent(summary, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(out, "evidence", "gap-summary.json"), append(data, '\n'), 0644); err != nil {
+			return err
+		}
+		n.say("full: %d blocking (%d root, %d cascade), %d HIR errors in %d files", summary.Blocking, summary.RootBlocking, summary.CascadeBlocking, summary.HIRErrors, summary.Files)
+		return nil
+	}
 	if err := lowering.Err(); err != nil {
 		return err
 	}

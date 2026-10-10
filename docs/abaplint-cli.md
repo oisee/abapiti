@@ -40,6 +40,21 @@ In both cases every source file of the closure (1,538 files reachable from `regi
 
 The output is deterministic. The same pinned input gives byte-identical files on every run and from any directory, and they are the same files that the `TestRegistryClosureGate` test path emits. `--evidence` also writes the lowering evidence (the overrides applied, the trapped bodies, and the blocking diagnostics, of which there are none).
 
+## Full-closure measurement
+
+`abapiti abaplint --full [-o out]` lowers the entire pinned closure without
+reachability pruning or coverage traps, then exits successfully even when
+lowering or HIR verification reports gaps. It does not emit target code.
+Evidence is always written to `<out>/evidence` (default `out`), including
+`registry-blocking.json`, `registry-verify.txt`, and `gap-summary.json`.
+The summary counts blockers by category and source area, lists the top 30
+normalised root messages, and separates root blockers from unresolved-local
+cascades caused by an earlier failed declaration in the same function.
+`files` counts distinct files with blocking or HIR diagnostics. The default
+integer assumption is supported; use `--assume-int=false` to measure binary64
+lowering instead. `--quiet` suppresses the narration, not the evidence.
+Source/IO failures remain errors; without `--full` the normal build is unchanged.
+
 ## Limits
 
 The build is pruned to the code paths that checking `zabapgit_standalone` with abapGit's `ci/abaplint.json` executes (release v702, six rules). These are the paths recorded in `tsfront/testdata/registrycorpus/reachability.json`. Function bodies outside them are compiled as traps. Other inputs or rules may reach such a trap. In that case the check is refused, and the refusal names the TypeScript location of the missing code (for example `refused: this build has no code for src/rules/….ts:42`). It never gives a silently wrong answer.

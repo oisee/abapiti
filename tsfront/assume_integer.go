@@ -173,7 +173,7 @@ func integerType(t hir.Type) hir.Type {
 }
 
 func checkedInteger(e *hir.Expr, t hir.Type) *hir.Expr {
-	if e == nil || e.Type.Equal(t) {
+	if e == nil || e.Type.Kind == "" || e.Type.Equal(t) {
 		return e
 	}
 	if e.Type.Kind == hir.I32 && t.Kind == hir.I64 {
@@ -193,7 +193,7 @@ func integerFloat(e *hir.Expr) *hir.Expr {
 	if floatingIntegerBoundary(e) {
 		return e.X
 	}
-	if e == nil || e.Type.Kind == hir.Number {
+	if e == nil || e.Type.Kind == "" || e.Type.Kind == hir.Number {
 		return e
 	}
 	// Binary64 boundaries accept only the safe integer domain, so conversion is exact.
@@ -216,7 +216,7 @@ func (l *lowerer) assumeIntegerTypes() {
 		stmt(e.Stmt)
 		e.Type = integerType(e.Type)
 		e.CheckIntegerOverflow = e.Type.Kind == hir.I64 && (e.Kind == hir.Binary && (e.Op == "+" || e.Op == "-" || e.Op == "*") || e.Kind == hir.Unary && e.Op == "-")
-		if e.Kind == hir.NumericConvert || e.Kind == hir.CheckedNumericConvert {
+		if (e.Kind == hir.NumericConvert || e.Kind == hir.CheckedNumericConvert) && e.X != nil {
 			if e.X.Type.Equal(e.Type) {
 				return e.X
 			}
@@ -231,13 +231,13 @@ func (l *lowerer) assumeIntegerTypes() {
 			e.Type = hir.T(hir.Number)
 			e.X, e.Y = integerFloat(e.X), integerFloat(e.Y)
 			// The backend's literal-divisor contract remains intact.
-			if e.Y.Kind == hir.NumericConvert && e.Y.X.X.Kind == hir.Lit {
+			if e.Y != nil && e.Y.Kind == hir.NumericConvert && e.Y.X != nil && e.Y.X.X != nil && e.Y.X.X.Kind == hir.Lit {
 				e.Y = e.Y.X.X
 				e.Y.Type = hir.T(hir.Number)
 			}
 			return checkedInteger(e, integerType(original))
 		}
-		if e.Kind == hir.Binary && numberType(e.X.Type) && numberType(e.Y.Type) && (floatingIntegerBoundary(e.X) || floatingIntegerBoundary(e.Y)) {
+		if e.Kind == hir.Binary && e.X != nil && e.Y != nil && numberType(e.X.Type) && numberType(e.Y.Type) && (floatingIntegerBoundary(e.X) || floatingIntegerBoundary(e.Y)) {
 			e.X, e.Y = integerFloat(e.X), integerFloat(e.Y)
 			e.CheckIntegerOverflow = false
 			if numberType(original) {
@@ -278,6 +278,9 @@ func (l *lowerer) assumeIntegerTypes() {
 			case "number.index":
 				return checkedInteger(e.X, hir.T(hir.I32))
 			case "number.toString":
+				if e.X == nil {
+					break
+				}
 				if e.X.Type.Kind == hir.I32 {
 					e.Op = "i32.toString"
 				} else {
@@ -293,9 +296,15 @@ func (l *lowerer) assumeIntegerTypes() {
 					e.X = checkedInteger(e.X, hir.T(hir.I64))
 				}
 			}
-			if ps, result, ok := hir.RuntimeSignature(e.Op, e.X.Type); ok {
+			// Failed lowering can leave a missing receiver or argument. Keep
+			// the incomplete HIR for verification, without inventing a type.
+			var receiver hir.Type
+			if e.X != nil {
+				receiver = e.X.Type
+			}
+			if ps, result, ok := hir.RuntimeSignature(e.Op, receiver); ok {
 				for i := range e.Args {
-					if i < len(ps) && numberType(ps[i]) && numberType(e.Args[i].Type) {
+					if i < len(ps) && e.Args[i] != nil && numberType(ps[i]) && numberType(e.Args[i].Type) {
 						e.Args[i] = checkedInteger(e.Args[i], ps[i])
 					}
 				}
