@@ -81,6 +81,7 @@ func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*
 		return r.stats, err
 	}
 	r.storeOnly = isStoreRules(rules)
+	detachStoreSyntax(p, rules)
 	incremental := r.limits.Rounds > 1 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" && isInlineRules(rules)
 	for round := 0; round < r.limits.Rounds; round++ {
 		if r.storeOnly && round > 0 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" {

@@ -493,10 +493,12 @@ runtime writes are barriers, so alias writes and unknown method summaries
 cannot justify motion. An effectful or raising expression only moves into the
 whole expression of the immediately following statement. Loop, branch,
 try/finally crossings and lowered closure captures are rejected. Changed RHS
-plans are deferred to a new round.
+plans are deferred to a new round. Shared syntax is detached before mutation so
+each local binding is rewritten independently.
 
 DSE accepts only positively reviewed inert expressions: no calls, identity
-allocation, numeric arithmetic that can overflow, casts or unknown runtime operations. The CFG
+allocation, numeric arithmetic that can overflow, nullable runtime receivers,
+casts or unknown runtime operations. The CFG
 includes exception/finally paths. `store_next` contracts that CFG to the first
 read or definition of the candidate binding on each path, and Grace derives
 `not_read_after` from those boundaries. Declarations remain to bind emitter

@@ -165,12 +165,13 @@ func (r *runner) addStoreFacts() error {
 	type position struct {
 		block *hir.Stmt
 		index int
+		path  string
 	}
-	positions := map[*hir.Stmt]position{}
-	for _, n := range r.nodes {
+	positions := map[string]position{}
+	for path, n := range r.nodes {
 		if n.stmt != nil && n.stmt.Kind == hir.Block {
-			for i, s := range n.stmt.List {
-				positions[s] = position{n.stmt, i}
+			for i := range n.stmt.List {
+				positions[fmt.Sprintf("%s/s%d", path, i)] = position{n.stmt, i, path}
 			}
 		}
 	}
@@ -220,13 +221,13 @@ func (r *runner) addStoreFacts() error {
 		if use == nil || !use.Type.Equal(typ) {
 			continue
 		}
-		pos, ok := positions[n.stmt]
+		pos, ok := positions[id]
 		if !ok {
 			continue
 		}
 		for j := pos.index + 1; j < len(pos.block.List); j++ {
 			s := pos.block.List[j]
-			sid := r.stmtIDs[s]
+			sid := fmt.Sprintf("%s/s%d", pos.path, j)
 			if strings.HasPrefix(useID, sid+"/") && sid != "" {
 				if s.Kind != hir.VarDecl && s.Kind != hir.Assign && s.Kind != hir.Return && s.Kind != hir.ExprStmt {
 					break
@@ -454,4 +455,70 @@ func (r *runner) addStoreEdges() error {
 		}
 	}
 	return nil
+}
+
+// AST pointer sharing has no runtime meaning, but path-indexed actions must
+// distinguish each occurrence. Detach only methods with shared mutable syntax;
+// ordinary frontend trees and shared immutable literals need no copying.
+func detachStoreSyntax(p *hir.Program, rules *Rules) {
+	hasStores := false
+	for _, rule := range rules.rewrites {
+		if rule.action.pred == "substitute-use" || rule.action.pred == "remove-statement" {
+			hasStores = true
+		}
+	}
+	if !hasStores {
+		return
+	}
+	// A Method may also be reused as syntax by multiple owning classes.
+	owners := map[*hir.Method]bool{}
+	unique := func(m *hir.Method) *hir.Method {
+		if m == nil {
+			return nil
+		}
+		if owners[m] {
+			copy := *m
+			m = &copy
+		}
+		owners[m] = true
+		return m
+	}
+	for _, c := range p.Classes {
+		for i, m := range c.Methods {
+			c.Methods[i] = unique(m)
+		}
+		c.Ctor = unique(c.Ctor)
+	}
+	statements := map[*hir.Stmt]*hir.Method{}
+	locals := map[*hir.Expr]*hir.Method{}
+	shared := map[*hir.Method]bool{}
+	for _, c := range p.Classes {
+		methods := append([]*hir.Method{}, c.Methods...)
+		if c.Ctor != nil {
+			methods = append(methods, c.Ctor)
+		}
+		for _, m := range methods {
+			visitTree(m.Body, "", func(s *hir.Stmt, _ string) {
+				if prev := statements[s]; prev != nil {
+					shared[prev] = true
+					shared[m] = true
+				} else {
+					statements[s] = m
+				}
+			}, func(e *hir.Expr, _ string) {
+				if e.Kind != hir.Local {
+					return
+				}
+				if prev := locals[e]; prev != nil {
+					shared[prev] = true
+					shared[m] = true
+				} else {
+					locals[e] = m
+				}
+			})
+		}
+	}
+	for m := range shared {
+		m.Body = snapshotStmt(m.Body)
+	}
 }

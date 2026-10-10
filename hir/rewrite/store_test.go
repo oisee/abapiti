@@ -270,3 +270,64 @@ func TestStoreUninitializedRuntimeReceiver(t *testing.T) {
 		t.Fatal("removed a potentially nil receiver dereference")
 	}
 }
+
+func TestStoreSharedSyntax(t *testing.T) {
+	i := hir.T(hir.I32)
+	local := hir.V("v", i)
+	makeMethod := func(name string, n int) *hir.Method {
+		return &hir.Method{Name: name, Static: true, Result: i, Body: hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "v", Type: i, X: hir.L(i, n)}, &hir.Stmt{Kind: hir.Return, X: local})}
+	}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{makeMethod("a", 1), makeMethod("b", 2)}}}}
+	stats, err := CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites != 2 {
+		t.Fatal(StoreReport(stats))
+	}
+	for j, m := range p.Classes[0].Methods {
+		if m.Body.List[1].X.Kind != hir.Lit || m.Body.List[1].X.Value != j+1 {
+			t.Fatal("shared local crossed method bindings")
+		}
+	}
+	shared := &hir.Stmt{Kind: hir.VarDecl, Name: "v", Type: i, X: hir.L(i, 7)}
+	p = &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{
+		{Name: "a", Static: true, Result: i, Body: hir.B(shared, &hir.Stmt{Kind: hir.Return, X: hir.V("v", i)})},
+		{Name: "b", Static: true, Result: i, Body: hir.B(shared, &hir.Stmt{Kind: hir.Return, X: hir.L(i, 0)})},
+	}}}}
+	stats, err = CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites != 1 || stats.DeadStores != 1 || p.Classes[0].Methods[0].Body.List[1].X.Value != 7 {
+		t.Fatal("shared statement lost a live store")
+	}
+	before := hir.Dump(p)
+	stats, err = CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites+stats.DeadStores != 0 || hir.Dump(p) != before {
+		t.Fatal("shared syntax not idempotent")
+	}
+}
+
+func TestStoreSharedMethod(t *testing.T) {
+	i := hir.T(hir.I32)
+	method := &hir.Method{Name: "run", Static: true, Params: []hir.Param{{Name: "x", Type: i}}, Result: i, Body: hir.B(
+		&hir.Stmt{Kind: hir.VarDecl, Name: "v", Type: i, X: hir.V("x", i)}, &hir.Stmt{Kind: hir.Return, X: hir.V("v", i)})}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "A", Methods: []*hir.Method{method}}, {Name: "B", Methods: []*hir.Method{method}}}}
+	stats, err := CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites != 2 || len(stats.Methods) != 2 {
+		t.Fatal(StoreReport(stats))
+	}
+	for _, c := range p.Classes {
+		ret := c.Methods[0].Body.List[1].X
+		if ret.Kind != hir.Local || ret.Name != "x" {
+			t.Fatal("lost the frame parameter")
+		}
+	}
+}
