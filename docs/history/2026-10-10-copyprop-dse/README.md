@@ -1,6 +1,6 @@
 # Opt-in Grace copy propagation and dead-store elimination
 
-Implementation through `c5633f7`, based on `0d49b50`. No PR opened.
+Implementation through `57ae1ca`, rebased onto `f56ae28` (origin/main). No PR opened.
 `ABAPITI_COPYPROP=1` enables both rules before ABAP and Go emission; default off.
 
 The adapter proves one definition/read, identical HIR types, and safe motion in
@@ -41,24 +41,27 @@ Combi is a subset of statements: Go [1, 6], ABAP [1, 7] (copy, DSE).
 Both targets converge in three rounds. See [methods.csv](methods.csv).
 
 Emitted ABAP statement terminators outside strings/comments:
-568,019 → 564,916, removing 3,103
-(0.546%).
-The 58 requested hot methods total 7,258 → 7,228 (30 removed).
+493,853 → 491,697, removing 2,156
+(0.437%).
+The 58 requested hot methods total 6,702 → 6,682 (20 removed).
 Changed methods follow; [hot-statements.csv](hot-statements.csv) includes unchanged rows.
 
 | Method | Before | After | Removed |
 | --- | ---: | ---: | ---: |
-| Lexer::add | 1639 | 1633 | 6 |
-| Expression::run | 157 | 154 | 3 |
-| Expression::run_one | 153 | 150 | 3 |
-| StarPriority::run | 159 | 156 | 3 |
-| StopBefore1::run | 113 | 110 | 3 |
-| StopBefore2::run | 207 | 204 | 3 |
-| Result::constructor | 48 | 45 | 3 |
-| Result::getNodes | 115 | 112 | 3 |
-| Result::wrapConsumed | 129 | 126 | 3 |
+| Lexer::add | 1565 | 1561 | 4 |
+| Expression::run | 137 | 135 | 2 |
+| Expression::run_one | 132 | 130 | 2 |
+| StarPriority::run | 140 | 138 | 2 |
+| StopBefore1::run | 103 | 101 | 2 |
+| StopBefore2::run | 185 | 183 | 2 |
+| Result::constructor | 43 | 41 | 2 |
+| Result::getNodes | 99 | 97 | 2 |
+| Result::wrapConsumed | 109 | 107 | 2 |
 
 ## Go timing and build cost
+
+The timings below were measured before the rebase. Fresh correctness checks and
+exact rebase commands are recorded in [rebase-validation.md](rebase-validation.md).
 
 The unchanged `tools/go-target-check.py` checks raw bytes against the zabapgit
 release kit. All twelve runs are byte-identical: clean zero issues, seeded five.
@@ -79,7 +82,8 @@ See [counts-and-cost.json](counts-and-cost.json).
 
 ## Validation
 
-Passed `go vet ./...`, `go test -short ./...` with the flag off and on,
+Fresh rebase checks are in [rebase-validation.md](rebase-validation.md).
+The pre-rebase validation below passed `go vet ./...`, `go test -short ./...` with the flag off and on,
 and `./.github/ci/lint.sh gate origin/main` (golangci-lint 2.13.2, zero new
 issues, 5/5 canaries). `ABAPITI_GRACE_FULL=1 ABAPITI_COPYPROP=1` full closure
 passed in 2,606.73 seconds, including independent comparisons of 435,383,414

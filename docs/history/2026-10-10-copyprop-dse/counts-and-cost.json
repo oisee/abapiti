@@ -24,11 +24,13 @@
   "go_pass_percent_of_cached_build": 4.9323409857773415,
   "cached_go_build_before_seconds": 20.39,
   "emitted_abap_statements": {
-    "before": 568019,
-    "after": 564916,
-    "removed": 3103
+    "before": 493853,
+    "after": 491697,
+    "removed": 2156
   },
   "input_files": 1538,
   "classes": 1927,
-  "interfaces": 73
+  "interfaces": 73,
+  "counts_base": "f9d5f8c0688b167c96399eca8c332351db0376b3",
+  "timings_note": "Historical pre-rebase timings; statement totals refreshed after rebase."
 }

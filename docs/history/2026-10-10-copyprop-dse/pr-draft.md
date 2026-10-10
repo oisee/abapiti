@@ -12,9 +12,9 @@ syntax, and verify HIR after every bounded round. Later rounds refresh changed
 methods and are checked against full recomputation.
 
 The full closure rewrites Go 116 copies/655 stores and ABAP 118 copies/961
-stores. ABAP statements decrease 568,019→564,916;
-requested hot methods decrease 7,258→7,228. Go kit clean and seeded outputs are
-byte-identical in all twelve runs. Median checks are
+stores. ABAP statements decrease 493,853→491,697;
+requested hot methods decrease 6,702→6,682. Go kit clean and seeded outputs are
+byte-identical in all twelve runs. The following timings are historical pre-rebase measurements. Median checks are
 10.404→10.745s clean and
 10.395→10.418s seeded.
 The measured Go pass costs 1.006s,

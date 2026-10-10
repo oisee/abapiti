@@ -1,0 +1,139 @@
+{
+  "base": "f56ae28d4929d0d16ddd1cc6bc6568a74f885f9e",
+  "implementation": "57ae1ca8c2cbf4e2a2a37eee7672b80323f85c20",
+  "vet": {
+    "off": true,
+    "on": true
+  },
+  "lexer": {
+    "passed": 44,
+    "total": 44,
+    "mutation_rejected": true
+  },
+  "tests": {
+    "off": {
+      "all_cases": {
+        "pass": 1129,
+        "skip": 21
+      },
+      "top_level": {
+        "pass": 391,
+        "skip": 19
+      },
+      "packages": {
+        "pass": 18,
+        "skip": 50
+      }
+    },
+    "on": {
+      "all_cases": {
+        "pass": 1129,
+        "skip": 21
+      },
+      "top_level": {
+        "pass": 391,
+        "skip": 19
+      },
+      "packages": {
+        "pass": 18,
+        "skip": 50
+      }
+    }
+  },
+  "diff_r": {
+    "all": {
+      "exit_code": 0,
+      "output_bytes": 0,
+      "same_emission_path": true
+    },
+    "go": {
+      "exit_code": 0,
+      "output_bytes": 0,
+      "same_emission_path": true
+    }
+  },
+  "sites": {
+    "off_matches_main": true,
+    "on_survivors_keep_ids": true,
+    "off_sites": 38198,
+    "on_sites": 38198,
+    "removed_occurrences": 0,
+    "off_unique_ids": 38191,
+    "on_unique_ids": 38191
+  },
+  "site_removal_regression": {
+    "test": "hir/golang.TestCopyPropSiteIDs",
+    "before_sites": 2,
+    "after_sites": 1,
+    "survivor_keeps_id": true
+  },
+  "kit": {
+    "off": {
+      "clean": {
+        "seconds": [
+          10.798919130116701,
+          11.425847493577749,
+          11.733423474710435
+        ],
+        "median_seconds": 11.425847493577749,
+        "byte_identical": true,
+        "issues": 0
+      },
+      "seeded": {
+        "seconds": [
+          11.183008696883917,
+          11.493902903981507,
+          11.259405083023012
+        ],
+        "median_seconds": 11.259405083023012,
+        "byte_identical": true,
+        "issues": 5
+      }
+    },
+    "on": {
+      "clean": {
+        "seconds": [
+          21.457853937987238,
+          17.04649855615571,
+          13.411577371880412
+        ],
+        "median_seconds": 17.04649855615571,
+        "byte_identical": true,
+        "issues": 0
+      },
+      "seeded": {
+        "seconds": [
+          13.856199218891561,
+          12.957993079908192,
+          11.563191644847393
+        ],
+        "median_seconds": 12.957993079908192,
+        "byte_identical": true,
+        "issues": 5
+      }
+    }
+  },
+  "timing_note": "Fresh correctness runs on a shared host; these samples do not establish a runtime speedup or regression.",
+  "counts": {
+    "go": {
+      "copy": 116,
+      "dse": 655,
+      "rounds": 3
+    },
+    "abap": {
+      "copy": 118,
+      "dse": 961,
+      "rounds": 3
+    }
+  },
+  "initial_emission_base": "f9d5f8c0688b167c96399eca8c332351db0376b3",
+  "final_docs_only_rebase": {
+    "files": [
+      "README.md",
+      "docs/glossary.md"
+    ],
+    "main_binary_sha256": "eca11a5a853821e9e51f494b8cb4578cd1ce454caf01ebf931bc1fa09a3fdd64",
+    "branch_binary_sha256": "cfa9670848b5496de7a37e575966f56da7333edccb7e499eecec741f34e27e85",
+    "both_identical_to_initial_validation": true
+  }
+}
