@@ -60,6 +60,30 @@ func TestValueObjects(t *testing.T) {
 		p.Classes[0].Methods = []*hir.Method{{Name: "equals", Result: hir.T(hir.Bool), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Node: hir.Node{Source: "fixture.ts:8:1"}, Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: hir.L(hir.T(hir.I32), 1), Y: hir.L(hir.T(hir.I32), 1)}})}}
 	}})
 
+	cases = append(cases, struct {
+		name, condition string
+		change          func(*hir.Program)
+	}{"array-reference-membership", "2", func(p *hir.Program) {
+		at := hir.T(hir.Array, hir.Ref("C"))
+		p.Classes[0].Methods = []*hir.Method{{Name: "contains", Static: true, Params: []hir.Param{{Name: "a", Type: at}, {Name: "item", Type: hir.Ref("C")}}, Result: hir.T(hir.Bool), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Node: hir.Node{Source: "fixture.ts:8:1"}, Kind: hir.RuntimeOp, Op: "array.includes", Type: hir.T(hir.Bool), X: hir.V("a", at), Args: []*hir.Expr{hir.V("item", hir.Ref("C"))}}})}}
+	}})
+
+	cases = append(cases, struct {
+		name, condition string
+		change          func(*hir.Program)
+	}{"optional-container-positive", "", func(p *hir.Program) {
+		p.Classes[0].Methods = []*hir.Method{{Name: "container", Static: true, Params: []hir.Param{{Name: "a", Type: hir.T(hir.Optional, hir.T(hir.Array, hir.Ref("C")))}}, Result: hir.T(hir.Void), Body: hir.B()}}
+	}})
+
+	cases = append(cases, struct {
+		name, condition string
+		change          func(*hir.Program)
+	}{"static-field-mutation", "1", func(p *hir.Program) {
+		c := p.Classes[0]
+		c.Fields = append(c.Fields, hir.Field{Name: "counter", Type: hir.T(hir.I32), Static: true})
+		c.Methods = []*hir.Method{{Name: "count", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Node: hir.Node{Source: "fixture.ts:8:1"}, Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "C", Name: "counter", Type: hir.T(hir.I32)}, Y: hir.L(hir.T(hir.I32), 2)})}}
+	}})
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := valueFixture()
@@ -88,6 +112,9 @@ func TestValueObjects(t *testing.T) {
 				if !found {
 					t.Fatal("missing source provenance")
 				}
+			}
+			if tc.name == "optional-container-positive" && db.Has("vo_absent_flag", "C") {
+				t.Fatal("container absence incorrectly applied to its rows")
 			}
 			if tc.name == "optional-positive" && !db.Has("vo_absent_flag", "C") {
 				t.Fatal("missing absent flag")

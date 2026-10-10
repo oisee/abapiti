@@ -51,7 +51,7 @@ func valueRows(p *hir.Program, db *rewrite.DB, dir string) []valueRow {
 			}
 			r.Fields += f[1] + ":" + f[2]
 			r.FieldCount++
-			if strings.Contains(f[2], "classref") || strings.Contains(f[2], "interfaceref") || strings.Contains(f[2], "array") || strings.Contains(f[2], "map") || strings.Contains(f[2], "set") {
+			if strings.Contains(f[2], "classref") || strings.Contains(f[2], "interfaceref") || strings.Contains(f[2], "array") || strings.Contains(f[2], "map") || strings.Contains(f[2], "set") || strings.Contains(f[2], "regexp") || strings.Contains(f[2], "dynamic") || strings.Contains(f[2], "classvalue") {
 				if r.ObjectFields != "" {
 					r.ObjectFields += "; "
 				}
@@ -85,9 +85,19 @@ func valueRows(p *hir.Program, db *rewrite.DB, dir string) []valueRow {
 			}
 		}
 	}
+	nullablePriority := map[string]int{}
 	for _, f := range db.Facts("vo_optional") {
-		if r := rows[f[0]]; r != nil && r.First[3] == "" {
-			r.First[3] = rel(f[2]) + " " + f[3] + " (explicit absent flag required)"
+		if r := rows[f[0]]; r != nil {
+			priority := 1
+			if strings.Contains(f[3], "classref<"+r.Class+">") {
+				priority = 3
+			} else if !strings.Contains(f[3], "dynamic") && !strings.Contains(f[3], "builtin.object") {
+				priority = 2
+			}
+			if r.First[3] == "" || priority > nullablePriority[r.Class] {
+				r.First[3] = rel(f[2]) + " " + f[3] + " (explicit absent flag required)"
+				nullablePriority[r.Class] = priority
+			}
 		}
 	}
 	for _, f := range db.Facts("vo_new") {

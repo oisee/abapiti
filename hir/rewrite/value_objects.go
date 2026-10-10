@@ -61,7 +61,7 @@ func ExtractValueObjects(p *hir.Program, flow *DB) *DB {
 				bytes += size
 				refs += ref
 				v.add("vo_field", c.Name, cl.Name+"."+f.Name, f.Type.String(), strconv.Itoa(size), strconv.Itoa(ref), f.Source)
-				v.optional(f.Type, f.Source, cl.Name+"."+f.Name, false)
+				v.optional(f.Type, f.Source, cl.Name+"."+f.Name)
 				v.polymorphic(f.Type, f.Source, cl.Name+"."+f.Name)
 				if f.Type.Kind == hir.OrderedMap && len(f.Type.Args) > 0 {
 					v.collectionIdentity(f.Type.Args[0], cl.Name+"."+f.Name, f.Source, "map key type")
@@ -87,10 +87,10 @@ func ExtractValueObjects(p *hir.Program, flow *DB) *DB {
 			}
 			id := c.Name + "::" + name
 			for _, par := range m.Params {
-				v.optional(par.Type, m.Source, id+"/param/"+par.Name, false)
+				v.optional(par.Type, m.Source, id+"/param/"+par.Name)
 				v.polymorphic(par.Type, m.Source, id+"/param/"+par.Name)
 			}
-			v.optional(m.Result, m.Source, id+"/result", false)
+			v.optional(m.Result, m.Source, id+"/result")
 			v.stmt(m.Body, id+"/body", 0, c, m)
 		}
 		if c.Ctor != nil {
@@ -237,12 +237,9 @@ func (v *valueScreen) possible(t hir.Type) []string {
 	}
 	return v.types[t.Name]
 }
-func (v *valueScreen) optional(t hir.Type, source, path string, opt bool) {
+func (v *valueScreen) optional(t hir.Type, source, path string) {
 	if t.Kind == hir.Optional {
-		opt = true
-	}
-	if opt {
-		for _, c := range v.possible(t) {
+		for _, c := range v.possible(t.Args[0]) {
 			key := c + "\x00" + t.String()
 			old := v.optionals[key]
 			if old == nil || valueSourceOrder(source) < valueSourceOrder(old[2]) || (source == old[2] && path < old[1]) {
@@ -250,8 +247,10 @@ func (v *valueScreen) optional(t hir.Type, source, path string, opt bool) {
 			}
 		}
 	}
+	// Optional<Array<C>> makes the container absent, not each C element. Only
+	// an Optional directly around a compatible object reference flags that row.
 	for _, a := range t.Args {
-		v.optional(a, source, path, opt)
+		v.optional(a, source, path)
 	}
 }
 func (v *valueScreen) polymorphic(t hir.Type, source, path string) {
@@ -282,13 +281,15 @@ func (v *valueScreen) store(t hir.Type, e *hir.Expr, path, source string) {
 			}
 			for _, cn := range v.possible(e.Type) {
 				if accepted[cn] {
-					reason := "assigned to mixed supertype/interface " + target.String()
+					reason := "potential assigned to mixed supertype/interface " + target.String()
 					from := e.Type
 					if from.Kind == hir.Optional {
 						from = from.Args[0]
 					}
 					if from.Kind != hir.ClassRef || from.Name != cn {
-						reason = "potential " + reason
+						if !strings.HasPrefix(reason, "potential ") {
+							reason = "potential " + reason
+						}
 					}
 					v.block(cn, "3", path, source, reason)
 				}
@@ -309,9 +310,15 @@ func (v *valueScreen) stmt(s *hir.Stmt, path string, loop int, c *hir.Class, m *
 			source = m.Source
 		}
 	}
-	v.optional(s.Type, source, path, false)
+	v.optional(s.Type, source, path)
 	if s.Kind == hir.Assign && s.X != nil {
 		v.store(s.X.Type, s.Y, path, source)
+		if s.X.Kind == hir.StaticGet && !(m == c.Ctor && s.X.Owner == c.Name) && !(m.Name == "class_constructor" && s.X.Owner == c.Name) {
+			if v.classes[s.X.Owner] != nil {
+				v.block(s.X.Owner, "1", path, source, "static field write outside constructor/initializer: "+s.X.Owner+"."+s.X.Name)
+			}
+		}
+
 		if s.X.Kind == hir.FieldGet && s.X.X != nil {
 			for _, cn := range v.possible(s.X.X.Type) {
 				isOwn := s.X.X.Kind == hir.This || v.own[v.refs[path+"/x/0"]]
@@ -357,7 +364,7 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 	if source == "" {
 		source = c.Source
 	}
-	v.optional(e.Type, source, path, false)
+	v.optional(e.Type, source, path)
 	operands := []valueOperand{}
 	for i, x := range []*hir.Expr{e.X, e.Y, e.Z} {
 		if x != nil {
@@ -425,7 +432,9 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 				for _, cn := range append(v.possible(fromType), v.possible(target)...) {
 					reason := "checked reference downcast/class test: " + fromType.String() + " -> " + target.String()
 					if fromType.Kind == hir.Dynamic || fromType.Name == hir.RootObject {
-						reason = "potential " + reason
+						if !strings.HasPrefix(reason, "potential ") {
+							reason = "potential " + reason
+						}
 					}
 					v.block(cn, "2", path, source, reason)
 				}
@@ -451,6 +460,15 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 				for _, cn := range v.possible(arg.e.Type) {
 					v.block(cn, "2", path, source, "potential reference equality through dynamic.strictEquals")
 				}
+			}
+		}
+		if (e.Op == "array.includes" || e.Op == "array.indexOf") && len(e.Args) > 0 {
+			for _, cn := range v.possible(e.Args[0].Type) {
+				reason := "reference membership comparison: " + e.Op
+				if untypedValueType(e.Args[0].Type) {
+					reason = "potential " + reason
+				}
+				v.block(cn, "2", path, source, reason)
 			}
 		}
 		key := []*hir.Expr{}
@@ -484,7 +502,9 @@ func (v *valueScreen) expr(e *hir.Expr, path string, loop int, c *hir.Class, m *
 						from = from.Args[0]
 					}
 					if from.Kind != hir.ClassRef || from.Name != cn {
-						reason = "potential " + reason
+						if !strings.HasPrefix(reason, "potential ") {
+							reason = "potential " + reason
+						}
 					}
 					v.block(cn, "2", path, source, reason)
 				}
@@ -557,6 +577,11 @@ func (v *valueScreen) constructor(c *hir.Class) {
 				scan(b, fmt.Sprintf("%s/s%d", path, i), definite)
 			}
 			return
+		}
+		if len(pending) > 0 && s.Kind == hir.Assign && s.X != nil && s.Y != nil && (s.Y.Kind == hir.This || v.own[v.refs[path+"/y"]]) {
+			if s.X.Kind == hir.StaticGet || s.X.Kind == hir.IndexGet || (s.X.Kind == hir.FieldGet && s.X.X != nil && s.X.X.Kind != hir.This && !v.own[v.refs[path+"/x/0"]]) {
+				v.block(c.Name, "1", path, s.Source, "this leaked before definite field initialization")
+			}
 		}
 		inspect(s.X, path+"/x", s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.FieldGet)
 		inspect(s.Y, path+"/y", false)
