@@ -1,0 +1,229 @@
+Singleton argument sites (one row per call/parameter; chained iterations excluded from S1)
+Caller stage/class | in-loop | outside | all | some | none | chained
+lexer | 0 | 0 | 0 | 0 | 0 | 0
+other | 0 | 6 | 1 | 0 | 5 | 0
+rules | 0 | 0 | 0 | 0 | 0 | 0
+statements | 1 | 2 | 2 | 0 | 1 | 0
+statements/combi.Alternative* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Combi | 0 | 1 | 0 | 1 | 0 | 0
+statements/combi.Expression* | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Optional* | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.OptionalPriority | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Permutation* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Plus* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Sequence* | 1 | 0 | 0 | 1 | 0 | 1
+statements/combi.Star* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Token* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Vers* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Word* | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.WordSequence* | 0 | 0 | 0 | 0 | 0 | 0
+structures | 0 | 3 | 0 | 0 | 3 | 0
+syntax | 2 | 2 | 1 | 0 | 3 | 0
+Total S1 sites: 21
+Receiver methods (* profile #5 hot class; parameter details in methods.csv)
+Receiver method | only iterated | first blocker
+Alternative::run*[0] | false | virtual argument
+AlternativePriority::run[0] | false | virtual argument
+Expression::run*[0] | true | 1 foreach uses
+FailCombinator::run[0] | true | 0 foreach uses
+LangVers::run[0] | true | 0 foreach uses
+LangVersNot::run[0] | false | virtual argument
+Optional::run*[0] | true | 1 foreach uses
+OptionalPriority::run[0] | true | 1 foreach uses
+Permutation::run*[0] | false | virtual argument
+Plus::run*[0] | false | virtual argument
+PlusPriority::run[0] | false | virtual argument
+Regex::run[0] | true | 1 foreach uses
+Sequence::run*[0] | true | 1 foreach uses
+Star::run*[0] | false | var
+StarPriority::run[0] | false | var
+StopBefore1::run[0] | true | 1 foreach uses
+StopBefore2::run[0] | true | 1 foreach uses
+Token::run*[0] | true | 1 foreach uses
+Vers::run*[0] | false | virtual argument
+Word::run*[0] | true | 1 foreach uses
+WordSequence::run*[0] | false | virtual argument
+StatementParser::tokensToNodes[0] | true | 1 foreach uses
+IStructureResult::constructor[0] | false | assign value
+IMatch::constructor[0] | false | assign value
+CurrentScope::addFormDefinitions[0] | true | 1 foreach uses
+module::checkDatabaseFields[1] | false | array.length receiver/operand
+MethodDefReturning::runSyntax[2] | false | conditional operand
+StructureType::constructor[0] | false | array.length receiver/operand
+MethodParameters::add[3] | false | array.includes receiver/operand
+Registry::_addFiles[0] | true | 1 foreach uses
+Registry::addFiles[0] | false | virtual argument
+tuple::constructor[2] | false | assign value
+Hot-class S1 coverage: 0/3 (0.0%) all receivers; 3/3 partially covered.
+Partial sites can use m_one(e)=m([e]) for uncovered receivers. Static site counts are not execution-weighted savings; chained calls have no singleton guarantee.
+
+R1 candidates (static HIR sites)
+Caller stage/class | in-loop | outside | all | some | none | value yes | ref yes
+lexer | 0 | 0 | 0 | 0 | 0 | 0 | 0
+other | 56 | 167 | 7 | 0 | 216 | 4 | 3
+rules | 10 | 26 | 2 | 0 | 34 | 1 | 1
+statements | 5 | 40 | 0 | 0 | 45 | 0 | 0
+statements/combi.Alternative | 1 | 2 | 0 | 0 | 3 | 0 | 0
+statements/combi.AlternativePriority | 1 | 2 | 0 | 0 | 3 | 0 | 0
+statements/combi.Combi | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.Expression | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.Optional | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.OptionalPriority | 2 | 1 | 0 | 0 | 3 | 0 | 0
+statements/combi.Permutation | 3 | 0 | 0 | 0 | 3 | 0 | 0
+statements/combi.Plus | 0 | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Regex | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Sequence | 2 | 1 | 0 | 0 | 3 | 0 | 0
+statements/combi.Star | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.StarPriority | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.StopBefore1 | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.StopBefore2 | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Token | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Vers | 0 | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Word | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.WordSequence | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.module | 0 | 8 | 4 | 0 | 4 | 0 | 4
+structures | 3 | 5 | 0 | 0 | 8 | 0 | 0
+syntax | 40 | 289 | 13 | 0 | 316 | 5 | 8
+
+R2 candidates (static HIR sites)
+Caller stage/class | in-loop | outside | all | some | none | value yes | ref yes
+lexer | 0 | 1 | 0 | 0 | 1 | 0 | 0
+other | 44 | 212 | 3 | 0 | 253 | 0 | 0
+rules | 3 | 242 | 0 | 0 | 245 | 0 | 0
+statements | 19 | 2557 | 0 | 0 | 2576 | 0 | 0
+statements/combi.Alternative | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.AlternativePriority | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.Combi | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.Expression | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.LangVersNot | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Optional | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.OptionalPriority | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.Permutation | 1 | 2 | 0 | 0 | 3 | 0 | 0
+statements/combi.Plus | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.PlusPriority | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Regex | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Sequence | 2 | 1 | 0 | 0 | 3 | 0 | 0
+statements/combi.Star | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.StarPriority | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.StopBefore1 | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.StopBefore2 | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Token | 0 | 1 | 0 | 0 | 1 | 0 | 0
+statements/combi.Vers | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.Word | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.WordSequence | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.module | 0 | 8 | 0 | 0 | 8 | 0 | 0
+structures | 4 | 54 | 0 | 0 | 58 | 0 | 0
+syntax | 28 | 187 | 0 | 0 | 215 | 0 | 0
+
+R3 candidates (static HIR sites)
+Caller stage/class | in-loop | outside | all | some | none | value yes | ref yes
+lexer | 0 | 1 | 0 | 0 | 1 | 0 | 0
+other | 169 | 187 | 2 | 0 | 354 | 2 | 0
+rules | 29 | 437 | 0 | 0 | 466 | 0 | 0
+statements | 54 | 2623 | 0 | 0 | 2677 | 0 | 0
+statements/combi.Alternative | 3 | 1 | 1 | 0 | 3 | 1 | 0
+statements/combi.AlternativePriority | 3 | 1 | 1 | 0 | 3 | 1 | 0
+statements/combi.Combi | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.Expression | 3 | 0 | 0 | 0 | 3 | 0 | 0
+statements/combi.Optional | 4 | 0 | 0 | 0 | 4 | 0 | 0
+statements/combi.OptionalPriority | 5 | 0 | 0 | 0 | 5 | 0 | 0
+statements/combi.Permutation | 3 | 1 | 0 | 0 | 4 | 0 | 0
+statements/combi.Plus | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.PlusPriority | 0 | 2 | 0 | 0 | 2 | 0 | 0
+statements/combi.Regex | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.Sequence | 5 | 0 | 0 | 0 | 5 | 0 | 0
+statements/combi.Star | 4 | 0 | 0 | 0 | 4 | 0 | 0
+statements/combi.StarPriority | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.StopBefore1 | 2 | 0 | 0 | 0 | 2 | 0 | 0
+statements/combi.StopBefore2 | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.Token | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.Vers | 0 | 0 | 0 | 0 | 0 | 0 | 0
+statements/combi.Word | 1 | 1 | 0 | 0 | 2 | 0 | 0
+statements/combi.WordSequence | 1 | 0 | 0 | 0 | 1 | 0 | 0
+statements/combi.module | 8 | 8 | 0 | 0 | 16 | 0 | 0
+structures | 9 | 347 | 0 | 0 | 356 | 0 | 0
+syntax | 155 | 487 | 6 | 0 | 636 | 6 | 0
+
+Top 20 lexer + statements sites per rule (qualifying value gains first, then references, then blocked; in-loop first within each group)
+R1 | src/abap/2_statements/combi.ts.module::alt/body/s0/s1/x/seq/s0 | depth=0 | object-reference |  -> foreach | qualifies |  | src/abap/2_statements/combi.ts:1151:3
+R1 | src/abap/2_statements/combi.ts.module::altPrio/body/s0/s1/x/seq/s0 | depth=0 | object-reference |  -> foreach | qualifies |  | src/abap/2_statements/combi.ts:1156:3
+R1 | src/abap/2_statements/combi.ts.module::per/body/s0/s1/x/seq/s0 | depth=0 | object-reference |  -> foreach | qualifies |  | src/abap/2_statements/combi.ts:1167:3
+R1 | src/abap/2_statements/combi.ts.module::seq/body/s0/s1/x/seq/s0 | depth=0 | object-reference |  -> foreach | qualifies |  | src/abap/2_statements/combi.ts:1146:3
+R1 | src/abap/2_statements/_select_reclassify.ts.module::scanForExprTypes/body/s0/s0/body/s4 | depth=1 | unknown |  -> foreach | none | possible external alias write at src/abap/2_statements/_select_reclassify.ts.module::scanForExprTypes/body/s0/s0/body/s4/body/s0/body/s0/x | src/abap/2_statements/_select_reclassify.ts:56:5
+R1 | src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s1/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s1/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:907:9
+R1 | src/abap/2_statements/combi.ts.AlternativePriority::run/body/s1/body/s1/body/s0/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.AlternativePriority::run/body/s1/body/s1/body/s0/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:981:11
+R1 | src/abap/2_statements/combi.ts.Expression::run/body/s2/body/s1 | depth=1 | object-reference |  -> foreach | none | row escapes | src/abap/2_statements/combi.ts:712:7
+R1 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s2/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s2/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:375:9
+R1 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/body/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/body/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:324:9
+R1 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/else/else/body/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/else/else/body/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:328:9
+R1 | src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:785:9
+R1 | src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/body/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/body/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:790:11
+R1 | src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s3/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:792:11
+R1 | src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s2 | depth=1 | object-reference |  -> foreach | none | row escapes | src/abap/2_statements/combi.ts:614:7
+R1 | src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s3/body/s0/else/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s3/body/s0/else/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:629:11
+R1 | src/abap/2_statements/combi.ts.Star::run/body/s1/body/s2/s0/body/s0/s3/else/else/s0/x/seq/s0 | depth=1 | object-reference |  -> foreach | none | iterated array/alias written at src/abap/2_statements/combi.ts.Star::run/body/s1/body/s2/s0/body/s0/s3/else/else/s0/x/seq/s0/body/s0/x | src/abap/2_statements/combi.ts:431:11
+R1 | src/abap/2_statements/combi.ts.StarPriority::run/body/s3/s0/body/s0/s1/body/s0/body/s1 | depth=1 | object-reference |  -> foreach | none | row escapes | src/abap/2_statements/combi.ts:487:11
+R1 | src/abap/2_statements/expand_macros.ts.ExpandMacros::handleMacros/body/s1/s3/body/s1/body/s1/body/s3/body/s3 | depth=1 | object-reference |  -> foreach | none | possible external alias write at src/abap/2_statements/expand_macros.ts.ExpandMacros::handleMacros/body/s1/s3/body/s1/body/s1/body/s3/body/s3/body/s0/x | src/abap/2_statements/expand_macros.ts:158:13
+R1 | src/abap/2_statements/statement_parser.ts.StatementMap::constructor/body/s1/body/s2 | depth=1 | value |  -> foreach | none | possible external alias write at src/abap/2_statements/statement_parser.ts.StatementMap::constructor/body/s1/body/s2/body/s0/body/s0/x | src/abap/2_statements/statement_parser.ts:35:7
+R2 | src/abap/2_statements/combi.ts.Expression::run/body/s2/body/s0/x/arg0/seq/s0/x | depth=1 |  | new ->  | none | array or alias escapes | src/abap/2_statements/combi.ts:710:38
+R2 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s1/x/arg0/seq/s0/x | depth=1 |  | new ->  | none | array or alias escapes | src/abap/2_statements/combi.ts:371:37
+R2 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s0/x/arg0/seq/s0/x | depth=1 |  | new ->  | none | array or alias escapes | src/abap/2_statements/combi.ts:322:37
+R2 | src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s2/x | depth=1 |  | array.splice2 -> expr | none | nonfusable use at src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s2/x | src/abap/2_statements/combi.ts:788:9
+R2 | src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s0/x/seq/s0/x | depth=1 |  | new -> array.length;concat-source;foreach;index;virtual | none | array or alias escapes | src/abap/2_statements/combi.ts:612:18
+R2 | src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s3/body/s0/body/s0/y | depth=1 |  | array.concat -> concat-source at src/abap/2_statements/combi.ts.Sequence::run/body/s1/body/s3/body/s0/body/s0/y | none | array or alias escapes | src/abap/2_statements/combi.ts:625:20
+R2 | src/abap/2_statements/combi.ts.Star::run/body/s1/body/s2/s0/body/s0/s3/body/s0/y | depth=1 |  | array.concat -> array.length;assign;concat-source;foreach;index;return;virtual | none | array or alias escapes | src/abap/2_statements/combi.ts:427:20
+R2 | src/abap/2_statements/combi.ts.StarPriority::run/body/s3/s0/body/s0/s1/body/s0/body/s1/body/s0/body/s0/y/seq/s0/x | depth=2 |  | new -> array.length;conditional;narrow;return;undefined;virtual | none | array or alias escapes | src/abap/2_statements/combi.ts:489:24
+R2 | src/abap/2_statements/expand_macros.ts.ExpandMacros::find/body/s1/s5/s1/body/s0/s2/body/s2/y | depth=1 |  | new -> assign;virtual | none | multiple possible producers | src/abap/2_statements/expand_macros.ts:103:20
+R2 | src/abap/2_statements/expand_macros.ts.ExpandMacros::find/body/s1/s5/s1/body/s0/s2/else/body/s2/body/s2/body/s0/x/arg0/seq/s0/x | depth=1 |  | new -> concat-source at src/abap/2_statements/expand_macros.ts.ExpandMacros::find/body/s1/s5/s1/body/s0/s2/else/body/s2/body/s2/body/s0/x/arg0/seq/s1/x | none | array or alias escapes | src/abap/2_statements/expand_macros.ts:114:23
+R2 | src/abap/2_statements/expand_macros.ts.ExpandMacros::find/body/s1/s5/s1/body/s0/s2/else/body/s2/body/s2/body/s0/x/arg0/seq/s1/x | depth=1 |  | array.concat ->  | none | array or alias escapes | 
+R2 | src/abap/2_statements/expand_macros.ts.Macros::constructor/body/s1/body/s0/x/arg1/arg0/1 | depth=1 |  | new -> conditional | none | array or alias escapes | src/abap/2_statements/expand_macros.ts:28:21
+R2 | src/abap/2_statements/expressions/sql_function.ts.SQLFunction::fn_namedFn/body/s1/x/seq/s1/body/s0/x/arg0/seq/s2/x | depth=1 |  | new -> call | none | array or alias escapes | src/abap/2_statements/expressions/sql_function.ts:398:35
+R2 | src/abap/2_statements/statement_parser.ts.StatementMap::constructor/body/s1/body/s2/body/s0/else/s0/x/arg1/seq/s0/x | depth=2 |  | new ->  | none | array or alias escapes | src/abap/2_statements/statement_parser.ts:39:29
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg0/1/seq/s0/x | depth=1 |  | new -> concat-source at src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg0/1/seq/s1/x | none | array or alias escapes | src/abap/2_statements/statement_parser.ts:187:26
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg0/1/seq/s1/x | depth=1 |  | array.concat ->  | none | array or alias escapes | 
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg1/1 | depth=1 |  | array.splice1 -> conditional | none | array or alias escapes | src/abap/2_statements/statement_parser.ts:187:47
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg1/1/0/seq/s0/x | depth=1 |  | new -> concat-source at src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg1/1/0/seq/s1/x | none | array or alias escapes | src/abap/2_statements/statement_parser.ts:187:47
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::buildSplits/body/s3/s1/body/s0/s0/body/s0/x/arg0/arg1/1/0/seq/s1/x | depth=1 |  | array.concat ->  | none | array or alias escapes | 
+R2 | src/abap/2_statements/statement_parser.ts.StatementParser::nativeSQL/body/s1/s1/body/s0/s2/else/body/s0/else/s1/body/s1/x/arg0 | depth=1 |  | array.slice2 -> virtual | none | array or alias escapes | src/abap/2_statements/statement_parser.ts:214:52
+R3 | src/abap/2_statements/combi.ts.Alternative::first/body/s6/x/seq/s0/body/s0/x/copy0 | depth=1 | value | array.push -> append-value | qualifies |  | src/abap/2_statements/combi.ts:942:5
+R3 | src/abap/2_statements/combi.ts.AlternativePriority::first/body/s6/x/seq/s0/body/s0/x/copy0 | depth=1 | value | array.push -> append-value | qualifies |  | src/abap/2_statements/combi.ts:1018:5
+R3 | src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s1/body/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:905:9
+R3 | src/abap/2_statements/combi.ts.Alternative::run/body/s1/body/s1/else/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:907:9
+R3 | src/abap/2_statements/combi.ts.AlternativePriority::run/body/s1/body/s1/body/s0/body/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:979:11
+R3 | src/abap/2_statements/combi.ts.AlternativePriority::run/body/s1/body/s1/body/s0/else/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:981:11
+R3 | src/abap/2_statements/combi.ts.Combi::listKeywords/body/s1/y/seq/s3/body/s1/body/s0/x/copy0 | depth=1 | value | array.push -> append-value | none | value source ownership/sharing unproved | 
+R3 | src/abap/2_statements/combi.ts.Expression::run/body/s2/body/s0/x/arg0/seq/s1/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | 
+R3 | src/abap/2_statements/combi.ts.Expression::run/body/s2/body/s1/body/s1/body/s1/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:716:11
+R3 | src/abap/2_statements/combi.ts.Expression::run/body/s2/body/s1/body/s1/else/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:718:11
+R3 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:370:7
+R3 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s1/x/arg0/seq/s1/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | 
+R3 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s2/body/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:373:9
+R3 | src/abap/2_statements/combi.ts.Optional::run/body/s1/body/s2/else/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:375:9
+R3 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s0/x/arg0/seq/s1/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | 
+R3 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/body/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:324:9
+R3 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/else/body/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:326:9
+R3 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/else/else/body/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:328:9
+R3 | src/abap/2_statements/combi.ts.OptionalPriority::run/body/s1/body/s1/else/else/else/s0/x/copy0 | depth=1 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:330:9
+R3 | src/abap/2_statements/combi.ts.Permutation::run/body/s2/s1/body/s0/s1/body/s0/x/seq/s0/body/s0/x/copy0 | depth=2 |  | array.push -> append-value | none | source ownership unproved | src/abap/2_statements/combi.ts:785:9
+
+Ranking by eligible static sites (R1 value rows only; references give no kernel gain):
+statements: R3 (2) > R1 (0) = R2 (0)
+statements investigation order by screened sites: R3 (2741), R2 (2619), R1 (83); not a savings estimate
+lexer: R1 (0) = R2 (0) = R3 (0)
+lexer investigation order by screened sites: R2 (1), R3 (1), R1 (0); not a savings estimate
+
+Flow fact counts (read-only analysis)
+loop | 679
+in_body | 29275
+def | 26790
+use | 36032
+use_count | 26057
+not_read_after | 20038
+writes_value | 10021
+writes_param | 1365
+site_writes | 27021
+must_alias | 495
+allocates | 2229
+may_raise | 3767
+may_diverge | 1312
+Method writes: none=3565 own_fields=1229 any=1463 total=6257
