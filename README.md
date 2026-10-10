@@ -17,16 +17,19 @@ flowchart LR
   A -->|osabap| N["zabaplint<br/>native command"]
 ```
 
-**Status, 10 Oct 2026 ([v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0)).** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json). Every host gives Node's issues byte for byte (SHA-256 of all issues):
+**Status, 10 Oct 2026 ([v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0)).** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json). On every host the issues equal vanilla abaplint on Node byte for byte (SHA-256 of all issues):
 
-| Host | v0.1 | v0.2 |
+| Run | v0.1 | v0.2 |
 |---|---|---|
-| SAP 7.58 kernel (A4H), background job | 221 s | **206.6 s** |
-| open-steamgate Go (osgo) | 91 s | **61.3 s** |
-| `zabaplint`, native command (Go, linux-amd64) | 92 s | **62 s** |
-| Node abaplint 2.120.56 | 13.5 s | reference |
+| TS-HA@A4H: SAP 7.58 kernel, background job | 221 s | **206.6 s** |
+| TS-HA@OSGO: open-steamgate Go runtime | 91 s | **61.3 s** |
+| TS-HA@OSGB: `zabaplint`, one executable (linux-amd64) | 92 s | **62 s** |
+| TS-HA@OSGJ: open-steamgate JS runtime | did not finish | did not finish; main since 2026-10-10 with open-steamgate 6e10128e: equal, 85 min |
+| TS@Node: abaplint 2.120.56 (vanilla) | 13.5 s | reference |
 
-A seeded variant with one error per rule gives Node's issues on every host too. What made v0.2 faster, the stage-by-stage breakdown and the effect of each change are in the [v0.2.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
+TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti; the names are explained in the [glossary](docs/glossary.md).
+
+A seeded variant with one error per rule equals vanilla on every host too. What made v0.2 faster, the stage-by-stage breakdown and the effect of each change are in the [v0.2.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
 > **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
 
