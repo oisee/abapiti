@@ -281,7 +281,7 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 	return nil, false
 }
 
-// globalCall lowers calls of the global functions parseInt and isNaN.
+// globalCall lowers calls of the global functions String, parseInt and isNaN.
 func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	if callee.Kind != ast.KindIdentifier {
 		return nil, false
@@ -298,6 +298,19 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	}
 	args := n.Arguments()
 	switch callee.Text() {
+	case "String":
+		if len(args) == 0 {
+			return hir.L(hir.T(hir.String), ""), true
+		}
+		if len(args) != 1 {
+			l.diagf(n, "unsupported-call", "String accepts at most one argument")
+			return nil, true
+		}
+		x := l.expr(args[0])
+		if x == nil {
+			return nil, true
+		}
+		return l.primitiveString(args[0], x), true
 	case "parseInt":
 		if len(args) != 2 || args[1].Kind != ast.KindNumericLiteral || args[1].Text() != "10" {
 			l.diagf(n, "unsupported-call", "parseInt is lowered only with an explicit radix 10")

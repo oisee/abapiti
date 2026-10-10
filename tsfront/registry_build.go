@@ -222,6 +222,12 @@ type RegistryLowering struct {
 // LowerRegistry loads dir/tsconfig.json and lowers files (relative to dir)
 // with the given overrides and optional reachability manifest.
 func LowerRegistry(dir string, files []string, registry *overrides.Registry, coverage *Reachability) (*RegistryLowering, error) {
+	return LowerRegistryWithOptions(dir, files, registry, coverage, LowerOptions{AssumeOnlyIntegerCalculations: os.Getenv("ABAPITI_ASSUME_INT") == "1"})
+}
+
+// LowerRegistryWithOptions is the same complete closure lowering with an
+// explicit numeric policy, independent of the caller's environment.
+func LowerRegistryWithOptions(dir string, files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*RegistryLowering, error) {
 	if coverage != nil && coverage.UpstreamPin != RegistryUpstreamPin {
 		return nil, fmt.Errorf("coverage upstream pin mismatch")
 	}
@@ -229,7 +235,7 @@ func LowerRegistry(dir string, files []string, registry *overrides.Registry, cov
 	if err != nil {
 		return nil, err
 	}
-	prog, diags, err := p.LowerWithReachability(files, registry, coverage)
+	prog, diags, err := p.lowerWithOptions(files, registry, coverage, options)
 	if err != nil {
 		return nil, err
 	}
