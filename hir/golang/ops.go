@@ -65,6 +65,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		args = append(args, b.value(v, typ))
 	}
 	code := ""
+	if b.e.resultDebug != nil && (strings.HasPrefix(x.Op, "array.") || strings.HasPrefix(x.Op, "map.") || strings.HasPrefix(x.Op, "set.")) {
+		b.line("resultDebugSite(%q)", relativeSource(x.Source))
+	}
 	switch x.Op {
 	case "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"

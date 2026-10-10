@@ -21,6 +21,16 @@ func Emit(p *hir.Program) (map[string]string, error) { return EmitPackage(p, "ma
 
 // EmitPackage selects the package name. Output contains only standard-library dependencies.
 func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
+	return emitPackage(p, pkg, false)
+}
+
+// EmitResultDebug adds Go-only source/store metadata for the Result experiment.
+// Normal emission never calls this path. HIR is read only.
+func EmitResultDebug(p *hir.Program) (map[string]string, error) {
+	return emitPackage(p, "main", true)
+}
+
+func emitPackage(p *hir.Program, pkg string, resultDebug bool) (map[string]string, error) {
 	if !token.IsIdentifier(pkg) || token.Lookup(pkg).IsKeyword() || pkg == "_" {
 		return nil, fmt.Errorf("invalid Go package name %q", pkg)
 	}
@@ -28,6 +38,10 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		return nil, errs[0]
 	}
 	e := &emitter{p: p, names: hir.NewNames()}
+	if resultDebug {
+		e.resultDebug = map[string]map[string]ResultDebugLocal{}
+		e.initResultDebugTypes()
+	}
 	e.characterSets()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
@@ -83,6 +97,23 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 		}
 		files[n] = string(b)
 	}
+	if resultDebug {
+		data, err := json.MarshalIndent(e.resultDebug, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		files["result-debug-locals.json"] = string(data) + "\n"
+		shapes, err := json.Marshal(e.resultDebugShapes())
+		if err != nil {
+			return nil, err
+		}
+		files["result-debug-shapes.json"] = string(shapes) + "\n"
+		pairs, err := json.Marshal(e.names.Pairs())
+		if err != nil {
+			return nil, err
+		}
+		files["result-debug-names.json"] = string(pairs) + "\n"
+	}
 	return files, nil
 }
 
@@ -97,15 +128,25 @@ func relativeSource(source string) string {
 	return source
 }
 
+// ResultDebugLocal identifies a HIR local store (distinct from expression temporaries).
+type ResultDebugLocal struct {
+	Name, Source string
+	Root, Borrow bool
+}
+
 type emitter struct {
-	p              *hir.Program
-	names          *hir.Names
-	code           strings.Builder
-	err            error
-	extra          strings.Builder
-	materializers  map[string]bool
-	stringLiterals map[string]string
-	classifiers    map[string]string
+	resultDebugClassIndex map[string]*hir.Class
+	resultDebugTypeCache  map[string]bool
+	resultDebug           map[string]map[string]ResultDebugLocal
+	resultDebugTypes      map[string]bool
+	p                     *hir.Program
+	names                 *hir.Names
+	code                  strings.Builder
+	err                   error
+	extra                 strings.Builder
+	materializers         map[string]bool
+	stringLiterals        map[string]string
+	classifiers           map[string]string
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }
@@ -121,6 +162,9 @@ func (e *emitter) member(s string) string  { return e.name("member." + s) }
 func (e *emitter) getter(s string) string  { return e.name("base." + s) }
 func (e *emitter) body(c, m string) string { return e.name("body." + c + "." + m) }
 func (e *emitter) classBy(n string) *hir.Class {
+	if e.resultDebugClassIndex != nil {
+		return e.resultDebugClassIndex[n]
+	}
 	for _, c := range e.p.Classes {
 		if c.Name == n {
 			return c
@@ -387,6 +431,9 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 	}
 	b := &body{e: e, c: c, m: m, locals: map[string]string{}}
 	b.initialized = map[string]string{}
+	if !m.Static {
+		b.debugLocal("self", "this", m.Source, hir.Ref(c.Name), true)
+	}
 	// Local flags track actual execution through branches, loops and catches.
 	// Declaring them has no initialization effects; the first access still runs
 	// the reentrant global guard at its original evaluation point.
@@ -402,6 +449,7 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 	})
 	for i, p := range m.Params {
 		b.locals[p.Name] = fmt.Sprintf("p%d", i)
+		b.debugLocal(fmt.Sprintf("p%d", i), p.Name, m.Source, p.Type, false)
 		e.line("_ = p%d", i)
 	}
 	b.stmt(m.Body)
@@ -422,7 +470,17 @@ type body struct {
 }
 
 func (b *body) line(f string, a ...any) { b.e.line(f, a...) }
-func (b *body) fresh() string           { b.next++; return fmt.Sprintf("v%d", b.next) }
+func (b *body) debugLocal(goName, tsName, source string, t hir.Type, borrow bool) {
+	if b.e.resultDebug == nil {
+		return
+	}
+	key := b.e.body(b.c.Name, b.m.Name)
+	if b.e.resultDebug[key] == nil {
+		b.e.resultDebug[key] = map[string]ResultDebugLocal{}
+	}
+	b.e.resultDebug[key][goName] = ResultDebugLocal{Name: tsName, Source: relativeSource(source), Root: b.e.resultMayHold(t), Borrow: borrow}
+}
+func (b *body) fresh() string { b.next++; return fmt.Sprintf("v%d", b.next) }
 func (b *body) temp(t hir.Type, code string) string {
 	if t.Kind == hir.Void {
 		b.line("%s", code)
@@ -430,6 +488,7 @@ func (b *body) temp(t hir.Type, code string) string {
 	}
 	n := b.fresh()
 	b.line("var %s %s = %s; _ = %s", n, b.e.typ(t), code, n)
+	b.debugLocal(n, "(evaluation temporary)", b.m.Source, t, true)
 	return n
 }
 func (b *body) value(x *hir.Expr, t hir.Type) string {
@@ -601,6 +660,13 @@ func (b *body) expr(x *hir.Expr) string {
 					break
 				}
 			}
+		}
+		if e.resultDebug != nil && (x.Name == "wrapConsumed" || x.Name == "popNode" || x.Name == "setNodes") && owner == "src/abap/2_statements/result.ts.Result" {
+			receiverLocal := ""
+			if x.X != nil && x.X.Kind == hir.Local {
+				receiverLocal = b.locals[x.X.Name]
+			}
+			b.line("resultDebugMutation(%q,%q)", relativeSource(x.Source), receiverLocal)
 		}
 		if x.Kind == hir.VirtualCall {
 			code = recv + "." + e.member(x.Name) + "(" + strings.Join(a, ",") + ")"
@@ -805,14 +871,21 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("var %s %s%s; _=%s", n, e.typ(s.Type), v, n)
 		b.locals[s.Name] = n
+		b.debugLocal(n, s.Name, s.Source, s.Type, false)
 	case hir.Assign:
 		if s.X.Kind == hir.IndexGet {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
+			if e.resultDebug != nil {
+				b.line("resultDebugSite(%q)", relativeSource(s.Source))
+			}
 			b.line("%s.put(%s,%s)", a, i, v)
 		} else {
 			a := b.lvalue(s.X)
 			v := b.value(s.Y, s.X.Type)
+			if e.resultDebug != nil {
+				b.line("resultDebugSite(%q)", relativeSource(s.Source))
+			}
 			b.line("%s=%s", a, v)
 		}
 	case hir.ExprStmt:
@@ -854,6 +927,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		old := b.locals
 		b.locals = clone(old)
 		b.locals[s.Name] = n
+		b.debugLocal(n, s.Name, s.Source, s.Type, false)
 		b.beginLoop(s.Body)
 		b.stmt(s.Body)
 		b.endLoop()
@@ -910,6 +984,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.locals = clone(old)
 		n := b.temp(s.Type, "caught.Value")
 		b.locals[s.Name] = n
+		b.debugLocal(n, s.Name, s.Source, s.Type, false)
 		b.tryDepth++
 		b.stmt(s.Else)
 		b.tryDepth--

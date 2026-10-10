@@ -63,6 +63,7 @@ func init() {
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
 	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
+	f.String("result-debug", "", "Go only: debug Result ownership or value semantics")
 	f.Bool("cert-pilot", false, "Go only: validate structures cache certificates and emit guarded warm-up pilot")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
 	_ = abaplintCmd.MarkFlagRequired("output")
@@ -124,7 +125,14 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	resultDebug, _ := flags.GetString("result-debug")
+	if resultDebug != "" && (len(targets) != 1 || !targets["go"] || (resultDebug != "ownership" && resultDebug != "value")) {
+		return fmt.Errorf("--result-debug requires --target go alone and ownership|value")
+	}
 	certPilot, _ := flags.GetBool("cert-pilot")
+	if certPilot && resultDebug != "" {
+		return fmt.Errorf("--result-debug builds are independent of --cert-pilot; use separate outputs")
+	}
 	if certPilot && (!targets["go"] || len(targets) != 1) {
 		return fmt.Errorf("--cert-pilot requires --target go alone; certificates are never consumed by ABAP")
 	}
@@ -234,7 +242,13 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 
 	// 4. ABAP
 	if targets["go"] {
-		files, err := gohir.Emit(lowering.Prog)
+		var files map[string]string
+		var err error
+		if resultDebug != "" {
+			files, err = gohir.EmitResultDebug(lowering.Prog)
+		} else {
+			files, err = gohir.Emit(lowering.Prog)
+		}
 		if err != nil {
 			return err
 		}
@@ -260,13 +274,23 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			}
 			files["names.json"] = uses
 		}
+		if resultDebug != "" {
+			if err := tsfront.RegistryGoResultDebug(files, resultDebug); err != nil {
+				return err
+			}
+		}
 		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
 			return err
 		}
 		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))
 		n.say("TS-HG@Go generation: %.3fs", time.Since(began).Seconds())
 		if goTool, lookupErr := exec.LookPath("go"); lookupErr == nil {
-			build := exec.CommandContext(cmd.Context(), goTool, "build", "-o", "zabaplint", ".")
+			buildArgs := []string{"build", "-o", "zabaplint"}
+			if resultDebug == "ownership" {
+				buildArgs = append(buildArgs, "-gcflags=-l")
+			}
+			buildArgs = append(buildArgs, ".")
+			build := exec.CommandContext(cmd.Context(), goTool, buildArgs...)
 			build.Dir = filepath.Join(out, "go")
 			build.Env = append(os.Environ(), "GOFLAGS=-buildvcs=false")
 			if output, buildErr := build.CombinedOutput(); buildErr != nil {
