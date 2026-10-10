@@ -34,6 +34,20 @@ A seeded variant with one error per rule equals vanilla on every host too. What 
 
 > **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
 
+### Goal: 100 % of abaplint
+
+The next goal is the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files and 11,060 mocha tests; on Node all of them pass. The test files themselves are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run first on TS-HG@Go, the fastest host. The other hosts follow, and nothing goes to A4H before it passes on OSGO/OSGB. Optimisations wait until this is done.
+
+Where it stands (10 Oct 2026):
+
+| Measure | Today | Target |
+|---|---|---|
+| abaplint tests passing on the compiled abaplint (TS-HG@Go) | being wired up | 11,060 / 11,060 |
+| Functions the suite and all rules need that are still traps ([`tools/fit-gap.mjs`](tools/fit-gap.mjs)) | 529 of 3,366 | 0 |
+| Blocking diagnostics when lowering all of core without pruning (`abapiti abaplint --full`) | 635 at the start, falling with each batch | 0 |
+
+The lexer and file-information layers are already fully covered. Most of the gap is in the rules (191 functions, 75 of them in `downport`), the objects (111) and `abap/types` (49).
+
 ## Quick start: three abaplints with one command
 
 Download `abapiti` for your platform from the [latest release](https://github.com/oisee/abapiti/releases/latest), then:
