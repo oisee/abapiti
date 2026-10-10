@@ -75,6 +75,19 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	l.serial++
 	name := "closure." + itoa(l.serial)
 	c := &hir.Class{Node: l.node(n), Name: name, Implements: []string{l.thunkType().Name}}
+	// Preserve the legacy serial-based target name, but identify the thunk by
+	// its enclosing qualified method and original TS location for certificates.
+	owner := l.relFile(l.file)
+	if l.class != nil {
+		owner = l.class.Name
+		if l.class.SiteOwner != "" {
+			owner = l.class.SiteOwner
+		}
+	}
+	if l.method != nil {
+		owner += "." + l.method.Name
+	}
+	c.SiteOwner = owner + ".[closure@" + l.prog.siteSource(l.locOf(n)) + "]"
 	ctor := &hir.Method{Node: l.node(n), Name: "constructor", Result: hir.T(hir.Void)}
 	var init []*hir.Stmt
 	var args []*hir.Expr

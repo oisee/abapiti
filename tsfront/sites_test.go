@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
@@ -18,7 +19,7 @@ func TestSiteIDsStableAcrossLoweringAndUnrelatedEdit(t *testing.T) {
 		}
 	}
 	write("tsconfig.json", `{"compilerOptions":{"strict":true},"files":["other.ts","probe.ts"]}`)
-	write("probe.ts", `export class Probe { run(xs: number[]): number { let n = 0; for (const x of xs) { n += x; } return n; } call(): number { return this.run([1,2]); } }`)
+	write("probe.ts", `export class Probe { run(xs: number[]): number { let n = 0; for (const x of xs) { n += x; } return n; } call(): number { return this.run([1,2]); } make(): () => void { return () => { this.run([1]); }; } }`)
 	write("other.ts", `export class Other { run(): number { return 1; } }`)
 	lower := func() map[string]string {
 		t.Helper()
@@ -64,12 +65,22 @@ func TestSiteIDsStableAcrossLoweringAndUnrelatedEdit(t *testing.T) {
 				stmt(c)
 			}
 		}
+		foundClosure := false
 		for _, c := range h.Classes {
-			if c.Name == "probe.ts.Probe" {
+			if strings.HasPrefix(c.SiteOwner, "probe.ts.Probe.make.[closure@") {
+				foundClosure = true
+			}
+			if c.Name == "probe.ts.Probe" || strings.HasPrefix(c.SiteOwner, "probe.ts.Probe.") {
+				if c.Ctor != nil {
+					stmt(c.Ctor.Body)
+				}
 				for _, m := range c.Methods {
 					stmt(m.Body)
 				}
 			}
+		}
+		if !foundClosure {
+			t.Fatal("no closure sites")
 		}
 		if len(sites) == 0 {
 			t.Fatal("no probe sites")
@@ -83,5 +94,17 @@ func TestSiteIDsStableAcrossLoweringAndUnrelatedEdit(t *testing.T) {
 	write("other.ts", `export class Other { run(): number { const extra = [1,2,3]; let n = 0; for (const x of extra) { n += x; } return n; } another(): number { return this.run(); } }`)
 	if c := lower(); !reflect.DeepEqual(a, c) {
 		t.Fatal("unrelated edit changed probe sites")
+	}
+	previous := dir
+	dir = t.TempDir()
+	for _, name := range []string{"tsconfig.json", "probe.ts", "other.ts"} {
+		raw, err := os.ReadFile(filepath.Join(previous, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(name, string(raw))
+	}
+	if relocated := lower(); !reflect.DeepEqual(a, relocated) {
+		t.Fatal("temporary root changed IDs")
 	}
 }

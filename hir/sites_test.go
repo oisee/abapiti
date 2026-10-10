@@ -42,3 +42,13 @@ func TestInlineNodeChain(t *testing.T) {
 		t.Fatal("path aliases call")
 	}
 }
+
+func TestSyntheticSitesUseOwnerKindOrdinal(t *testing.T) {
+	a := &Expr{Node: Node{Source: "synthetic.one"}, Kind: New}
+	b := &Expr{Node: Node{Source: "synthetic.two"}, Kind: New}
+	p := &Program{Classes: []*Class{{Name: "C", Methods: []*Method{{Name: "run", Body: B(&Stmt{Kind: ExprStmt, X: a}, &Stmt{Kind: ExprStmt, X: b})}}}}}
+	AssignSiteIDs(p)
+	if a.SiteID != "C.run||new|0" || b.SiteID != "C.run||new|1" {
+		t.Fatalf("%s %s", a.SiteID, b.SiteID)
+	}
+}

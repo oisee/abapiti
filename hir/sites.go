@@ -3,23 +3,35 @@ package hir
 import (
 	"fmt"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 // AssignSiteIDs stamps unstamped nodes in deterministic pre-order. Counters
 // are local to an owning qualified method, source and kind; serial IDs are
 // deliberately excluded. Call before transformations that copy nodes.
-func AssignSiteIDs(p *Program) {
+func AssignSiteIDs(p *Program) { AssignSiteIDsWithSource(p, func(s string) string { return s }) }
+
+// AssignSiteIDsWithSource normalizes frontend paths in metadata only. Existing
+// Node.Source and target names remain untouched. A class SiteOwner hint can
+// supply a stable owner for serial-named synthetic declarations.
+func AssignSiteIDsWithSource(p *Program, normalize func(string) string) {
 	stampOwner := func(owner string, visit func(func(*Node, string))) {
 		counts := map[string]int{}
 		visit(func(n *Node, kind string) {
-			key := n.Source + "\x00" + kind
+			source := normalize(n.Source)
+			identitySource := source
+			if !sitePosition(source) {
+				identitySource = ""
+			}
+			key := identitySource + "\x00" + kind
 			ordinal := counts[key]
 			counts[key]++
 			if n.SiteID != "" {
 				return
 			}
-			n.SiteOwner, n.SiteSource = owner, n.Source
-			n.SiteID = fmt.Sprintf("%s|%s|%s|%d", url.QueryEscape(owner), url.QueryEscape(n.Source), kind, ordinal)
+			n.SiteOwner, n.SiteSource = owner, source
+			n.SiteID = fmt.Sprintf("%s|%s|%s|%d", url.QueryEscape(owner), url.QueryEscape(identitySource), kind, ordinal)
 		})
 	}
 	method := func(owner string, m *Method) {
@@ -32,15 +44,19 @@ func AssignSiteIDs(p *Program) {
 		})
 	}
 	for _, c := range p.Classes {
-		stampOwner(c.Name, func(stamp func(*Node, string)) {
+		owner := c.SiteOwner
+		if owner == "" {
+			owner = c.Name
+		}
+		stampOwner(owner, func(stamp func(*Node, string)) {
 			stamp(&c.Node, "class")
 			for i := range c.Fields {
 				stamp(&c.Fields[i].Node, "field_decl")
 			}
 		})
-		method(c.Name, c.Ctor)
+		method(owner, c.Ctor)
 		for _, m := range c.Methods {
-			method(c.Name, m)
+			method(owner, m)
 		}
 	}
 	for _, c := range p.Interfaces {
@@ -49,6 +65,24 @@ func AssignSiteIDs(p *Program) {
 			method(c.Name, m)
 		}
 	}
+}
+
+// sitePosition recognizes the two numeric suffixes of file:line:column.
+func sitePosition(source string) bool {
+	end := strings.LastIndexByte(source, ':')
+	if end < 0 {
+		return false
+	}
+	col, err := strconv.Atoi(source[end+1:])
+	if err != nil || col < 1 {
+		return false
+	}
+	start := strings.LastIndexByte(source[:end], ':')
+	if start < 0 {
+		return false
+	}
+	line, err := strconv.Atoi(source[start+1 : end])
+	return err == nil && line > 0 && start > 0
 }
 
 // InlineNode preserves legacy diagnostics while carrying the original callee
