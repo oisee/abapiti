@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/rewrite"
 )
 
 // Emit emits one package named main. Add a main function to execute an entry point.
@@ -31,6 +32,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if errs := hir.Verify(p); len(errs) > 0 {
 		return nil, nil, errs[0]
+	}
+	if err := rewrite.PrepareAccumulator(p); err != nil {
+		return nil, nil, err
 	}
 	hir.AssignSiteIDs(p)
 	e := &emitter{p: p, names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
