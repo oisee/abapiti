@@ -112,7 +112,7 @@ func TestStoreTypeAndAliasGuards(t *testing.T) {
 			&hir.Stmt{Kind: hir.VarDecl, Name: "alias", Type: a, X: hir.V("a", a)},
 			&hir.Stmt{Kind: hir.VarDecl, Name: "v", Type: i, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: i, X: hir.V("a", a)}},
 			&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.push", Type: i, X: hir.V("alias", a), Args: []*hir.Expr{hir.L(i, 3)}}},
-			&hir.Stmt{Kind: hir.Return, X: hir.V("v", i)}), []hir.Param{{Name: "a", Type: a}}, i, 1, 0},
+			&hir.Stmt{Kind: hir.Return, X: hir.V("v", i)}), []hir.Param{{Name: "a", Type: a}}, i, 0, 0},
 		{"unused-allocation", hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: "v", Type: a, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.slice0", Type: a, X: hir.V("a", a)}}, &hir.Stmt{Kind: hir.Return, X: hir.L(i, 0)}), []hir.Param{{Name: "a", Type: a}}, i, 0, 0},
 	}
 	for _, tc := range cases {
@@ -251,5 +251,22 @@ func TestStoreNativeArithmeticRaises(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestStoreUninitializedRuntimeReceiver(t *testing.T) {
+	i := hir.T(hir.I32)
+	arr := hir.T(hir.Array, i)
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: []*hir.Method{{Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(
+		&hir.Stmt{Kind: hir.VarDecl, Name: "a", Type: arr},
+		&hir.Stmt{Kind: hir.VarDecl, Name: "unused", Type: i, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "array.length", Type: i, X: hir.V("a", arr)}},
+	)}}}}}
+	before := hir.Dump(p)
+	stats, err := CopyProp(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CopySites+stats.DeadStores != 0 || hir.Dump(p) != before {
+		t.Fatal("removed a potentially nil receiver dereference")
 	}
 }

@@ -52,6 +52,11 @@ func storeInert(e *hir.Expr) bool {
 		return true
 	case hir.RuntimeOp:
 		effect, ok := RuntimeEffects[e.Op]
+		// A non-optional HIR reference can still be an uninitialized local. The
+		// operation table does not prove a valid receiver for this expression.
+		if e.X != nil && (e.X.Type.IsRef() || e.X.Type.Kind == hir.Optional) {
+			return false
+		}
 		if !ok || effect.Writes != "None" || effect.Allocates || effect.MayRaise != "None" || effect.Reads.Global || effect.Conservative != "" {
 			return false
 		}
