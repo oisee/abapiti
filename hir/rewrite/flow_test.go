@@ -205,3 +205,26 @@ func TestOrderedReadsAcrossEmptyTransfers(t *testing.T) {
 	}
 	gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
 }
+
+func TestRecursiveCallSeeds(t *testing.T) {
+	void := hir.T(hir.Void)
+	call := func(owner, name string) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.DirectCall, Owner: owner, Name: name, Type: void}}
+	}
+	methods := []*hir.Method{{Name: "a", Static: true, Result: void, Body: hir.B(call("C", "b"))}, {Name: "b", Static: true, Result: void, Body: hir.B(call("C", "a"))}, {Name: "entry", Static: true, Result: void, Body: hir.B(call("C", "a"))}, {Name: "leaf", Static: true, Result: void, Body: hir.B()}}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "C", Methods: methods}}}
+	db, err := rewrite.Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a", "b"} {
+		if !db.Has("recursive_call", "C::"+name) || !db.Has("may_diverge", "C::"+name) {
+			t.Fatal("cycle missing")
+		}
+	}
+	if db.Has("recursive_call", "C::entry") || !db.Has("may_diverge", "C::entry") || db.Has("may_diverge", "C::leaf") {
+		t.Fatal("cycle predecessor/leaf classification")
+	}
+	gracecheck.CheckRecursiveSeeds(t, db)
+	gracecheck.Equal(t, db, gracecheck.Evaluate(t, rewrite.Extract(p), gracecheck.Source(t, "analysis")))
+}

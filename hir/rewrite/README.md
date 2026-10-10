@@ -460,3 +460,7 @@ remains separate: an escaping element can conservatively mark its container as
 escaping. Kernel candidate reports treat uncertainty as a blocker. The default
 inliner still demands only its existing syntax relations and evaluates none of
 these new facts; no rewrite or emitter rule consumes them.
+
+`recursive_call(Method)` supplies closed-world SCC cycle membership without an
+all-pairs reachability table. An independent DFS in test support checks these
+seeds against Grace's resolved call relation, including virtual/initializer edges.

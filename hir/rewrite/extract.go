@@ -175,6 +175,9 @@ func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 			}
 		}
 	}
+	if !syntaxOnly {
+		x.recursiveCalls()
+	}
 	return x.db
 }
 func assignedNames(s *hir.Stmt, out map[string]bool) {
