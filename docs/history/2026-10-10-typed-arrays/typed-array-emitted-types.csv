@@ -1,0 +1,135 @@
+element_type,allocations,reads,casts,removable_same_view,no_cross_view,hot_class_reads,shared_allocations,shared_reads,proof_categories
+classref<builtin.object>,0,0,0,0,0,0,0,0,
+classref<shape.02852a7f4246688b3f14697008cf69c06cf781cdc4ffd9ca59d21f90a03488b9>,0,0,0,0,0,0,0,0,
+classref<shape.06a1d4f5c04f974480b81aea8a7f0d8f276c8fd0f4e203212758f1df69de797f>,0,0,0,0,0,0,0,0,
+classref<shape.0adceb99073db09f4701195584c11e7787d425833ecefca44f213f7edbedaa85>,1,0,0,0,0,0,1,0,exact
+classref<shape.0c21b215a8ec99b06f4a3babffabfb13313afa4decaeb1efc6f5c5033cd9f923>,1,0,0,0,0,0,1,0,no non-null rows resolved (not an exact proof)
+classref<shape.0e2a55b560b2070de0d4f42adce6818b9548a0f0a33ea5ae139ebb198c63252a>,0,0,0,0,0,0,0,0,
+classref<shape.0e610234a61c59728f9f67694a386e1b3a2f7dc5de0a2d3b1efe237fc1aa716c>,0,1,1,1,0,0,0,1,unknown native/unresolved flow
+classref<shape.0eae1ba652600774df287924ca9c04933ca1d6434c241ccf77b12ad82fb82ca5>,0,0,0,0,0,0,0,0,
+classref<shape.1151944adac9f18a8849f542a5c47c372b7f92aca79cd05aecd892bffd63ed2b>,0,0,0,0,0,0,0,0,
+classref<shape.17f22d80434cb867441f2fccb92b8d8bf72640249ffbeb5f272c352c876cfe2f>,0,0,0,0,0,0,0,0,
+classref<shape.26075853820ac3c29e636045eff99267436001784ab55247f897ecb68d257014>,5,1,1,1,1,0,5,1,no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<shape.473586f1dc44c79d419996faa2ead4c9e89cb998867ac438e617815967c3af7d>,1,1,1,1,1,0,1,1,exact
+classref<shape.579d8e7c65abdbd91061ac54815a210af5a5eab8e42a49cb0785a38e014e6a12>,0,0,0,0,0,0,0,0,
+classref<shape.596776dd783529cbd7aa471163cc95976664d520942f5d8f3a251de46285a5dd>,0,0,0,0,0,0,0,0,
+classref<shape.668af6faebd97357d1640deac893f912b72bcd1cf26d888041b0bdfa60120d83>,0,0,0,0,0,0,0,0,
+classref<shape.6787ec6bd565f704fe6c22a21fe4235b1ec166557fa7ab9551cc770f0c5a1c61>,1,14,14,14,14,0,1,14,exact
+classref<shape.6be70910bc78606319e3c0d3635b9fa2886522706a55e71f3817baf856ac3f60>,0,0,0,0,0,0,0,0,
+classref<shape.741665cded50d564a824bb81b6869fb36630b092374ff1337a12e1fd68376bd2>,0,0,0,0,0,0,0,0,
+classref<shape.7caff569122e6588e8b867a5e0823708654b34e9047b3ef84247ffdad970636a>,0,0,0,0,0,0,0,0,
+classref<shape.7e8c4203d26cc50517941a28b5cbce37cdb0fb6abdee06ebaa72071cab7d32db>,5,4,4,4,4,0,5,4,exact;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<shape.98af2be8ec00ffea2ce4f8f894a6ccab6eeec900282ac0f45951da0218529bfd>,0,0,0,0,0,0,0,0,
+classref<shape.9a2880cecfba4feed82205266048b869927e166885e968a525748e506407e01a>,1,0,0,0,0,0,1,0,no non-null rows resolved (not an exact proof)
+classref<shape.a67a15173c1437619ae004d157dd6f567d1a423733059ab10e3d151b9d38c218>,0,0,0,0,0,0,0,0,
+classref<shape.c0bf7470c0d65134bf2c2bc5006ff32978968e3b9f5cd00ad621be3facd4fa63>,0,0,0,0,0,0,0,0,
+classref<shape.c41b7491225505bc1de20777f7e89571cd56cd4c4c6efa031f2f1afc14e9a1e0>,0,0,0,0,0,0,0,0,
+classref<shape.cc2b695581659623e924161c8df8ce8d129ee97f428a2bd0b6d8ebbe5beb9126>,0,0,0,0,0,0,0,0,
+classref<shape.ccab811d0a1e0685eff885023de8dd53dc44941f932922e40ef82a276678e954>,0,0,0,0,0,0,0,0,
+classref<shape.cdf309a87d061faba64a110dae8efc4199711cfab57b7b7f9b4c35ec5658d6e0>,0,0,0,0,0,0,0,0,
+classref<shape.cf26b458fc74140e407e7b8f31dd4a4da28eafde8af9d9d2f64c729d6d65a81c>,0,0,0,0,0,0,0,0,
+classref<shape.d184d639b396286a74f614f4fc726acfc24441b4971c69640385ddf95d828f31>,2,5,5,5,5,0,2,5,exact
+classref<shape.d7262d2c4a49cced07fd6bf34dd385987b433e7bdc221b387876c69238930036>,0,0,0,0,0,0,0,0,
+classref<shape.da3d528f34bcd63cd8dd8058576555174e7e961dfef89951a813f3513b086ed9>,0,0,0,0,0,0,0,0,
+classref<shape.dd44bc035e4c4e168337ddd005068db21044dc68e68eaa08e83ca7f9852155c1>,1,5,5,5,5,0,1,5,exact
+classref<shape.e017bc2b8bf633c43e0328ef39a8431775f8fc68308abba251576386fa52f3b3>,0,0,0,0,0,0,0,0,
+classref<shape.e35eec429dc1d9d6b5cf2d167d9211e2f25c45a515255fdd6b6668ef5138b6d5>,0,0,0,0,0,0,0,0,
+classref<shape.ee3582a671520d5f971e43bff998c5f375f7c56beec50668926f0c6b4c5e0b98>,0,0,0,0,0,0,0,0,
+classref<shape.fdbf434f7f7dbe66107f55ec17e8fb62eb662a8c5ce24298759590708e7d888b>,0,0,0,0,0,0,0,0,
+classref<src/_config.ts.IDependency>,1,0,0,0,0,0,1,0,exact
+classref<src/_iddic_references.ts.IObjectAndToken>,13,2,2,2,2,0,13,2,no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/_imacro_references.ts.IFilenameAndToken>,5,1,1,1,1,0,5,1,no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/abap/1_lexer/lexer_result.ts.IABAPLexerResult>,1,1,1,1,1,0,1,1,exact
+classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>,31,53,53,53,53,9,31,53,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+classref<src/abap/2_statements/expressions/sql_function.ts.SQLNamedParam>,19,1,1,1,1,0,19,1,exact
+classref<src/abap/2_statements/result.ts.Result>,46,36,36,36,36,13,46,36,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/2_statements/statement_parser.ts.WorkArea>,1,3,3,3,3,0,1,3,exact
+classref<src/abap/2_statements/statement_result.ts.IStatementResult>,1,1,1,1,1,0,1,1,exact
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoAlias>,2,3,3,3,3,0,2,3,exact
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoAttribute>,3,2,2,2,2,0,3,2,exact
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoClassDefinition>,3,3,3,3,3,0,3,3,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoClassImplementation>,3,1,1,1,1,0,3,1,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoConstant>,2,2,2,2,2,0,2,2,exact
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoFormDefinition>,3,0,0,0,0,0,3,0,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoImplementing>,1,4,4,4,4,0,1,4,exact
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoInterfaceDefinition>,3,2,2,2,2,0,3,2,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoMethodDefinition>,4,5,5,5,5,0,4,5,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/4_file_information/_abap_file_information.ts.InfoMethodParameter>,1,0,0,0,0,0,1,0,exact
+classref<src/abap/4_file_information/_identifier.ts.Identifier>,1,3,3,3,3,0,1,3,exact
+classref<src/abap/5_syntax/_reference.ts.IReference>,1,1,1,1,1,0,1,1,exact
+classref<src/abap/5_syntax/_spaghetti_scope.ts.IScopeVariable>,0,0,0,0,0,0,0,0,
+classref<src/abap/5_syntax/expressions/method_parameters.ts.IListItemS>,2,1,1,1,1,0,2,1,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/5_syntax/expressions/method_parameters.ts.IListItemT>,2,2,2,2,2,0,2,2,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/5_syntax/expressions/select.ts.DatabaseSourceInfo>,2,3,3,3,3,0,2,3,exact
+classref<src/abap/5_syntax/spaghetti_scope.ts.SpaghettiScopeNode>,1,1,1,1,0,0,1,1,exact
+classref<src/abap/5_syntax/statements/perform.ts.Parameter>,4,1,1,1,1,0,4,1,exact
+classref<src/abap/abap_file.ts.ABAPFile>,8,22,22,22,22,0,8,22,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/artifacts.ts.IKeyword>,1,0,0,0,0,0,1,0,no non-null rows resolved (not an exact proof)
+classref<src/abap/nodes/expression_node.ts.ExpressionNode>,31,244,244,244,243,0,31,244,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/abap/nodes/statement_node.ts.StatementNode>,33,46,46,46,45,0,33,46,exact;hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/abap/nodes/structure_node.ts.StructureNode>,5,9,8,8,8,0,4,8,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+classref<src/abap/nodes/token_node.ts.TokenNode>,5,0,0,0,0,0,5,0,exact
+classref<src/abap/types/_interface_definition.ts.IImplementing>,4,17,17,17,17,0,4,17,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/types/_type_definitions.ts.TypeDefinitionsEntry>,1,5,5,5,5,0,1,5,exact
+classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>,24,43,43,43,39,0,24,43,exact;hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/abap/types/alias.ts.Alias>,7,9,9,9,9,0,7,9,exact;no non-null rows resolved (not an exact proof)
+classref<src/abap/types/basic/_abstract_type.ts.AbstractType>,2,13,0,0,0,0,0,0,hierarchy/mixed upper bound
+classref<src/abap/types/basic/structure_type.ts.IStructureComponent>,22,20,20,20,20,0,22,20,exact;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/abap/types/basic/table_type.ts.ITableKey>,1,1,1,1,1,0,1,1,exact
+classref<src/abap/types/class_attribute.ts.ClassAttribute>,3,6,6,6,3,0,3,6,exact
+classref<src/abap/types/class_constant.ts.ClassConstant>,1,4,4,4,0,0,1,4,exact
+classref<src/abap/types/function_module_definition.ts.FunctionModuleDefinition>,0,0,0,0,0,0,0,0,
+classref<src/abap/types/function_module_definition.ts.IFunctionModuleParameter>,0,0,0,0,0,0,0,0,
+classref<src/abap/types/message.ts.Message>,0,0,0,0,0,0,0,0,
+classref<src/abap/types/method_implementation.ts.MethodImplementation>,0,0,0,0,0,0,0,0,
+classref<src/edit_helper.ts.IRange>,0,0,0,0,0,0,0,0,
+classref<src/edit_helper.ts.ITextEdit>,20,0,0,0,0,0,20,0,exact;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/files/memory_file.ts.MemoryFile>,2,0,0,0,0,0,2,0,exact
+classref<src/issue.ts.Fix>,0,0,0,0,0,0,0,0,
+classref<src/issue.ts.Issue>,35,13,13,13,13,0,35,13,exact;hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+classref<src/lsp/semantic.ts.Token>,0,0,0,0,0,0,0,0,
+classref<src/objects/_abap_object.ts.ABAPObject>,2,3,3,3,3,0,2,3,no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+classref<src/objects/_abap_object.ts.ITranslationTextElements>,0,0,0,0,0,0,0,0,
+classref<src/objects/_abstract_object.ts.AbstractObject>,0,0,0,0,0,0,0,0,
+classref<src/objects/_dynpros.ts.DynproField>,1,0,0,0,0,0,1,0,exact
+classref<src/objects/_dynpros.ts.DynproHeader>,2,0,0,0,0,0,2,0,exact;no non-null rows resolved (not an exact proof)
+classref<src/objects/domain.ts.DomainValue>,0,0,0,0,0,0,0,0,
+classref<src/objects/domain.ts.DomainValueTranslation>,0,0,0,0,0,0,0,0,
+classref<src/objects/enhancement_spot.ts.IBadiDefinition>,0,0,0,0,0,0,0,0,
+classref<src/objects/program.ts.Program>,1,1,1,1,1,0,1,1,no non-null rows resolved (not an exact proof)
+classref<src/objects/proxy_object.ts.ProxyDataItem>,0,0,0,0,0,0,0,0,
+classref<src/objects/table.ts.SecondaryIndex>,0,0,0,0,0,0,0,0,
+classref<src/position.ts.Position>,0,0,0,0,0,0,0,0,
+classref<src/rules/align_parameters.ts.ICandidate>,0,0,0,0,0,0,0,0,
+classref<src/rules/align_parameters.ts.IParameterData>,0,0,0,0,0,0,0,0,
+classref<src/rules/cds_check_syntax.ts.Source>,0,0,0,0,0,0,0,0,
+classref<src/rules/constant_classes.ts.DomainClassMapping>,1,0,0,0,0,0,1,0,no non-null rows resolved (not an exact proof)
+classref<src/rules/function_module_recommendations.ts.Recommendations>,1,0,0,0,0,0,1,0,exact
+classref<src/rules/implement_methods.ts.IMethod>,1,1,1,1,1,0,1,1,exact
+classref<src/rules/keyword_case.ts.TokenAndKeyword>,0,0,0,0,0,0,0,0,
+classref<src/utils/cyclomatic_complexity_stats.ts.ICyclomaticComplexityResult>,2,0,0,0,0,0,2,0,exact;no non-null rows resolved (not an exact proof)
+classref<src/utils/include_graph.ts.IVertex>,1,2,2,2,2,0,1,2,no non-null rows resolved (not an exact proof)
+classref<src/utils/method_length_stats.ts.IMethodLengthResult>,6,0,0,0,0,0,6,0,exact;no non-null rows resolved (not an exact proof)
+classref<src/version.ts.ABAPRelease>,1,1,1,1,1,0,1,1,exact
+classref<tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.12886f9d00055adf24c40579e22d31b2b45f2023f892954ffd5567beb60825f8.8f9108e347ad289a33aa5df99962abce4e6d371906c6508e3a0fcfd0983f8809>,3,3,3,3,3,0,3,3,exact
+classref<tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.8f9108e347ad289a33aa5df99962abce4e6d371906c6508e3a0fcfd0983f8809.98b7639e585fae5238ff43662490d7623581819bd94f3e3d769d74b4152b48ee>,1,1,1,1,1,0,1,1,exact
+classref<tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.8f9108e347ad289a33aa5df99962abce4e6d371906c6508e3a0fcfd0983f8809>,1,1,1,1,1,0,1,1,exact
+classref<tuple.473287f8298dba7163a897908958f7c0eae733e25d2e027992ea2edc9bed2fa8.9392c2913985a8d9dece285370a034dbfd0b9818f6378b05362544daf2088e35>,1,2,2,2,2,0,1,2,exact
+interfaceref<closure.thunk>,5,1,1,1,1,0,5,1,hierarchy/mixed upper bound
+interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>,33,33,33,33,33,6,33,33,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>,1,1,1,1,1,0,1,1,no non-null rows resolved (not an exact proof)
+interfaceref<src/abap/3_structures/structures/_structure_runnable.ts.IStructureRunnable>,43,5,5,5,5,0,43,5,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof);unknown native/unresolved flow
+interfaceref<src/abap/5_syntax/_spaghetti_scope.ts.ISpaghettiScopeNode>,0,1,1,1,0,0,0,1,hierarchy/mixed upper bound
+interfaceref<src/abap/nodes/_inode.ts.INode>,5,33,33,33,6,0,5,33,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<src/abap/types/_class_definition.ts.IClassDefinition>,0,0,0,0,0,0,0,0,
+interfaceref<src/abap/types/_event_definition.ts.IEventDefinition>,4,7,7,7,7,0,4,7,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<src/abap/types/_form_definition.ts.IFormDefinition>,3,3,3,3,3,0,3,3,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition>,0,0,0,0,0,0,0,0,
+interfaceref<src/abap/types/_method_definition.ts.IMethodDefinition>,3,8,8,8,8,0,3,8,no non-null rows resolved (not an exact proof)
+interfaceref<src/files/_ifile.ts.IFile>,5,11,11,11,9,0,5,11,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<src/objects/_iobject.ts.IObject>,3,17,17,17,17,0,3,17,no non-null rows resolved (not an exact proof)
+interfaceref<src/rules/_irule.ts.IRule>,2,10,10,10,10,0,2,10,no non-null rows resolved (not an exact proof)
+interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>,11,85,85,85,12,0,11,85,hierarchy/mixed upper bound;no non-null rows resolved (not an exact proof)
+interfaceref<union.a4d0ccb535ead84cf0a3fba4afdbd09580e2c7b3f2e611d359e2cec125f49f13>,4,12,6,6,6,0,0,0,no non-null rows resolved (not an exact proof)
+interfaceref<union.b0b6a58b84dc8bc589d0501b1bd3651c334e7360f1d90cb261317c96490bb097>,2,3,3,3,3,0,2,3,no non-null rows resolved (not an exact proof)
+interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>,0,13,13,13,0,0,0,13,hierarchy/mixed upper bound

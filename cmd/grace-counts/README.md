@@ -96,3 +96,62 @@ source operands; the source line still points to the copying operation.
 `loop_depth` counts surrounding loops. An R1 ForEach at depth zero is a loop
 outside any outer loop; an R1 in-loop row describes a nested loop. For R2/R3,
 the same depth describes the producer/copy operation's surrounding loops.
+
+`-typed-arrays` runs a separate analysis-only reference-array census. It scans
+both the original lowering and a clone after the production ABAP emitter's
+Singleton/Inline passes. The emitter and its settings are unchanged. Outputs
+are `typed-array-{lowered,emitted}-{sites,types}.csv`, `typed-array-tables.txt`,
+`names.json`, `profile-6-loops.csv`, the six profiled class sources, and the
+shared object-array source. The profile IDs are resolved by their hash prefixes
+in names.json; every hot-class HIR ForEach is cross-checked against its emitted
+ABAP LOOP AT line and following cast, including string loops with zero casts.
+
+The site CSV separates shared object tables from Optional reference tables,
+which already have typed rows. Allocation sites are explicit New arrays and
+fresh array-producing runtime operations (including slice/concat/splice,
+map/set values/keys); reverse is an alias, not an allocation. Call sites returning
+arrays are not counted as fresh allocations unless their runtime contract says
+so. Reads are element-producing ForEach, IndexGet, get/pop/shift and the hidden
+set.fromArray iteration. Index assignment is a write, not a read. Internal
+indexOf/includes searches, reverse swaps, bulk table copying and runtime
+implementation statements are not expanded into extra caller row-read sites;
+they do not cast an object row to a declared class/interface. Loop depth counts
+executing loops, so a ForEach read has depth at least one. Source expressions
+retain surrounding depth; the source ForEach operation is included in its row's
+depth. The report contains all element types, caller stages with combi per class,
+and a top 20 sorted by profile class, removable cast, depth, and stable HIR path.
+No execution counts or time savings are inferred from the profile class list.
+
+The closed-world proof is a context-insensitive inclusion fixed point, distinct
+from Grace's general value-dependence flow. It propagates array allocation
+identities and row classes through lexical locals, assignments, casts,
+conditionals, fields (merged by declaring owner), parameters, returns,
+constructors, indexed stores, push/unshift/splice writes and slices/concat.
+Class dispatch uses the nominal hierarchy; interface dispatch uses implementors
+and compatible structural interface views. This overapproximates dispatch,
+merges all invocations of a method and all instances' same declared field, and
+is not a path-sensitive reachability proof. Unknown calls/native producers and
+unknown mutations contribute explicit unknown rows. A missing non-null row
+solution is reported as unresolved, never as an exact-type proof. Allocation
+sites aggregate all their dynamic instances; an exact row class means every
+resolved non-null row has that class, with no unknown producer in its flow.
+Interface rows report implementing classes, rather than treating an interface
+as an instantiated class. Coverage-trapped bodies and external inputs have the
+same scope as production LowerRegistry; this is a proof about that lowered
+program, not every possible future TypeScript workload.
+
+`casts_removed_same_view` is potential saving if the read's declared element
+view becomes the storage type. A narrower row type retains its cast. The
+`casts_without_cross_view` column additionally requires resolved container
+identities and a single element view across their aliases; it is a conservative
+screen for covariance concerns, not a complete representation-change legality
+proof. A subtype row still assigns directly to a typed base/interface reference,
+so subtype contents alone do not require the current object-to-view cast.
+Different element views must preserve shared array identity and writes.
+
+The line estimate copies the measured shared array class's current full method
+surface per nominal element type, retaining a generic fallback. The existing
+builtin.object class is subtracted from added objects. It excludes wrapper or
+bridge code, metadata, optional variants and build costs, and is not a minimal
+specialized runtime design. "Hot pipeline stages" includes lexer, statements,
+structures, syntax and rules; the six profile #6 classes are reported separately.

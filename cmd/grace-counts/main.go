@@ -27,17 +27,20 @@ func main() {
 	}
 	out := flag.String("output", filepath.Join(home, ".cache/grace-counts"), "output directory")
 	closure := flag.String("closure", os.Getenv("REGISTRY_CLOSURE"), "optional verified closure directory; otherwise unpack embedded sources")
+	typed := flag.Bool("typed-arrays", false, "analyze typed reference-array storage and current emitted sites")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		fatal(fmt.Errorf("unexpected positional arguments"))
 	}
-	if err := run(*out, *closure); err != nil {
+	if err := runMode(*out, *closure, *typed); err != nil {
 		fatal(err)
 	}
 }
 func fatal(err error) { fmt.Fprintln(os.Stderr, err); os.Exit(1) }
 
-func run(out, dir string) error {
+func run(out, dir string) error { return runMode(out, dir, false) }
+
+func runMode(out, dir string, typed bool) error {
 	start := time.Now()
 	var err error
 	out, err = filepath.Abs(out)
@@ -106,6 +109,14 @@ func run(out, dir string) error {
 		return fmt.Errorf("changed closure: %d classes, %d interfaces", len(p.Classes), len(p.Interfaces))
 	}
 	fmt.Fprintf(os.Stderr, "lowered 1538 files + harness: %d classes, %d interfaces; no blocking/verification errors (%s)\n", len(p.Classes), len(p.Interfaces), time.Since(start))
+	if typed {
+		report, err := typedArrays(p, out, dir)
+		if err != nil {
+			return err
+		}
+		fmt.Print(report)
+		return nil
+	}
 	if os.Getenv("GRACE_COUNTS_MEASURE_INLINE") == "1" {
 		return measureInline(p)
 	}
