@@ -381,7 +381,7 @@ func (a *array[T]) reserve(n int) {
 // allocation for large reference arrays while keeping every array independent.
 func (a *array[T]) push(v T) int32 {
  if len(a.Items)==cap(a.Items) {
-  items:=make([]T,len(a.Items),max(4,2*cap(a.Items)))
+  items:=make([]T,len(a.Items),max(1,2*cap(a.Items)))
   copy(items,a.Items)
   a.Items=items
  }
@@ -507,9 +507,12 @@ func (a *array[T]) unshift(v T) int32 {
 	return int32(len(a.Items))
 }
 func (a *array[T]) concat(b *array[T]) *array[T] {
-	out := a.slice0()
-	out.Items = append(out.Items, b.Items...)
-	return out
+ // Build the independent result once. Headroom on a growing left operand
+ // avoids a second allocation when a caller appends to the concatenation.
+ n:=len(a.Items)+len(b.Items)
+ items:=make([]T,n,max(n,2*len(a.Items)))
+ copy(items,a.Items);copy(items[len(a.Items):],b.Items)
+ return &array[T]{Items:items}
 }
 func (a *array[T]) slice0() *array[T]        { return a.slice2(0, int32(len(a.Items))) }
 func (a *array[T]) slice1(i int32) *array[T] { return a.slice2(i, int32(len(a.Items))) }

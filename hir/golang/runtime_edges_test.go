@@ -270,3 +270,23 @@ func TestImmutableCharacterMembershipEdges(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayGrowthAndConcatIndependence(t *testing.T) {
+	main := `
+ check:=func(ok bool){if !ok{panic("array growth alias")}}
+ for _,n:=range []int{0,1,2,3,4,8,17} {
+  a:=&array[int32]{};b:=&array[int32]{}
+  for i:=0;i<n;i++ {a.push(int32(i));b.push(int32(100+i))}
+  alias:=a;c:=a.concat(b);d:=a.concat(a)
+  check(c!=a && c!=b && len(c.Items)==2*n && len(d.Items)==2*n)
+  for i:=0;i<n;i++ {check(c.Items[i]==int32(i) && c.Items[n+i]==int32(100+i) && d.Items[n+i]==int32(i))}
+  a.push(7);b.push(8);c.push(9);d.push(10)
+  check(alias==a && len(a.Items)==n+1 && len(b.Items)==n+1 && len(c.Items)==2*n+1)
+  if n>0 {c.put(0,-1);c.reverse();d.put(0,-2);check(a.Items[0]==0 && b.Items[0]==100)}
+  a.put(int32(n+3),42);check(len(a.Items)==n+4 && a.Items[n+1]==0 && a.Items[n+3]==42)
+ }
+ fmt.Println("ok")`
+	if got := execute(t, &hir.Program{}, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}

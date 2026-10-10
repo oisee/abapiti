@@ -1,0 +1,80 @@
+[
+  {
+    "step": "baseline",
+    "variant": "clean",
+    "run": 1,
+    "seconds": 9.658510578,
+    "wall": 9.81,
+    "gc": 0.4224086279209107,
+    "gib": 3.2195179983973503,
+    "objects": 75353961,
+    "rss": 627.49609375,
+    "totalAllocGiB": 3.420970566570759,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "step": "baseline",
+    "variant": "seeded",
+    "run": 1,
+    "seconds": 9.770414208,
+    "wall": 9.92,
+    "gc": 0.4153201675643327,
+    "gib": 3.249343571253121,
+    "objects": 76272120,
+    "rss": 637.921875,
+    "totalAllocGiB": 3.4274200797080994,
+    "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+  },
+  {
+    "step": "baseline",
+    "variant": "clean",
+    "run": 2,
+    "seconds": 9.79526008,
+    "wall": 9.94,
+    "gc": 0.41466346153846156,
+    "gib": 3.2318656807765365,
+    "objects": 77488162,
+    "rss": 639.17578125,
+    "totalAllocGiB": 3.4210199043154716,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "step": "baseline",
+    "variant": "seeded",
+    "run": 2,
+    "seconds": 9.751916436,
+    "wall": 9.9,
+    "gc": 0.42360695026962253,
+    "gib": 3.2117998087778687,
+    "objects": 76143726,
+    "rss": 624.92578125,
+    "totalAllocGiB": 3.427352413535118,
+    "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+  },
+  {
+    "step": "baseline",
+    "variant": "clean",
+    "run": 3,
+    "seconds": 9.751014106,
+    "wall": 9.89,
+    "gc": 0.41881366087477534,
+    "gib": 3.1238990779966116,
+    "objects": 73278903,
+    "rss": 632.01953125,
+    "totalAllocGiB": 3.42107480019331,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "step": "baseline",
+    "variant": "seeded",
+    "run": 3,
+    "seconds": 9.698023006,
+    "wall": 9.83,
+    "gc": 0.42035928143712575,
+    "gib": 3.256671465933323,
+    "objects": 75981454,
+    "rss": 625.91015625,
+    "totalAllocGiB": 3.4275941848754883,
+    "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+  }
+]
