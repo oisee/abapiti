@@ -17,16 +17,16 @@ flowchart LR
   A -->|osabap| N["zabaplint<br/>native command"]
 ```
 
-**Status, 9 Oct 2026.** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json):
+**Status, 10 Oct 2026 ([v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0)).** The translated abaplint checks `zabapgit_standalone.prog.abap` (159K lines) plus [abaplint/deps](https://github.com/abaplint/deps), using abapGit's [`ci/abaplint.json`](https://github.com/abapGit/abapGit/blob/main/ci/abaplint.json). Every host gives Node's issues byte for byte (SHA-256 of all issues):
 
-| Host | Check time | Result |
+| Host | v0.1 | v0.2 |
 |---|---|---|
-| SAP 7.58 kernel (A4H), background job | 221 s | = Node abaplint, byte for byte (SHA-256 of all issues) |
-| open-steamgate Go (osgo) | 91 s | = Node |
-| `zabaplint`, native command (Go) | ~100 s | = Node |
+| SAP 7.58 kernel (A4H), background job | 221 s | **206.6 s** |
+| open-steamgate Go (osgo) | 91 s | **61.3 s** |
+| `zabaplint`, native command (Go, linux-amd64) | 92 s | **62 s** |
 | Node abaplint 2.120.56 | 13.5 s | reference |
 
-A seeded variant with one error per rule gives Node's issues on every host. The stage-by-stage breakdown and how the time came down are in the [v0.1.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.1.0).
+A seeded variant with one error per rule gives Node's issues on every host too. What made v0.2 faster, the stage-by-stage breakdown and the effect of each change are in the [v0.2.0 release notes](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
 > **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
 
@@ -87,6 +87,13 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 <summary><b>Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
+
+**2026-10-10 — v0.2.0: the translated abaplint is 1.5× faster off-stack and 7% faster on the kernel.**
+- **Inlining.** A HIR→HIR pass puts the bodies of small, never-overridden methods in place of their calls: 1,487 call sites, verified again afterwards. osgo goes from 70.4 s to 64.8 s; the kernel from 226.9 s to 212.5 s.
+- **Integers instead of floats.** TypeScript `number` becomes `int8` where the code only computes with integers, and `i` where range inference proves it fits. About 1.3× on osgo.
+- **Readable ABAP.** Literal constants are `CONSTANTS`, calls are functional (`x = obj->m( … ).`) and `names.json` maps every ABAP name back to its TypeScript declaration.
+- **Checked twice.** A critic found one silent miscompile in the inliner before the release (a local without initializer inlined into a loop kept its value). It is fixed and has a test. Two open-steamgate gaps found on the way went upstream ([#698](https://github.com/oisee/open-steamgate/pull/698), [#700](https://github.com/oisee/open-steamgate/pull/700)).
+- One archive per platform, `abaplint-abap-<os>-<arch>`, holds `zabaplint`, `abapiti` and a check kit that compares both zabapgit runs with Node's output.
 
 **2026-10-03 — three small programs run on the kernel bit for bit; JavaScript engines compared.**
 - A QR-code encoder (Nayuki's qrcodegen, 16 KB of wasm), the Lua 5.4 interpreter (710 KB, five classes, 8/8 scripts) and Andy Sloane's donut.c (doubles, sin/cos) run on A4H and osgo and give the native answers, once signed division is exact (#23). The QR below came out of the SAP spool and scans; the donut frame too.
