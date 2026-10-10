@@ -34,6 +34,8 @@ for byte against the supplied kit. SHA-256:
 | 2: small array coallocation | seeded | 12.49 | 12.279 | 39.76 | 2.443 | 64.658 | 600.3 | 2.741 |
 | 3: discard copies + capacity | clean | 13.22 | 13.030 | 38.68 | 2.372 | 67.134 | 578.3 | 2.557 |
 | 3: discard copies + capacity | seeded | 12.10 | 11.968 | 38.33 | 2.365 | 66.846 | 582.5 | 2.563 |
+| 4: unused class source slots | clean | 10.90 | 10.783 | 38.56 | 2.160 | 63.101 | 580.4 | 2.530 |
+| 4: unused class source slots | seeded | 10.86 | 10.721 | 37.60 | 2.280 | 65.854 | 572.5 | 2.537 |
 
 Raw per-run measurements: [baseline](2026-10-10-hir-golang-alloc/baseline.json).
 Executables, generated sources, profiles and logs are preserved under
@@ -115,3 +117,16 @@ then passed, with all required Go oracle counts unchanged. All six full checks
 match the kit hashes. Exact allocated bytes are now about 25.3% below baseline;
 small headers and pointer element storage remain the next targets.
 Raw step data: [step 3](2026-10-10-hir-golang-alloc/step3.json).
+
+Step 4 (this commit): build the actual recursive materializers before declaring
+class storage. Only data shapes reached by those materializers retain their
+source pointer. Other shapes keep normal distinct object identity without a
+permanently nil source slot. ResultNode shrinks from 32 to 24 bytes on this
+amd64 layout. Materialized root and nested objects still box back to their
+original dynamic object, including unknown JSON fields; a dedicated probe checks
+that and independent ordinary shape instances.
+
+The complete uncached guard and all six full-check output hashes passed. Exact
+allocated bytes fall a further ~27 MB, to about 26.1% below baseline. This does
+not remove the required ResultNode instances or their distinct identities.
+Raw step data: [step 4](2026-10-10-hir-golang-alloc/step4.json).

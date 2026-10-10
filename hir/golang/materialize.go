@@ -63,3 +63,23 @@ func (e *emitter) materializer(t hir.Type) string {
 	e.extra.WriteString(b.String())
 	return name
 }
+
+// Discover the actual materialization roots before declaring class storage.
+// Recursive materializer construction marks every nested data shape. Ordinary
+// instances of those shapes retain source identity; shapes never materialized
+// by this program need no permanently nil dynamic-source pointer.
+func (e *emitter) prepareMaterializers() {
+	visit := func(x, _ *hir.Expr) {
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
+			e.materializer(x.Type)
+		}
+	}
+	for _, c := range e.p.Classes {
+		for _, m := range c.Methods {
+			walkStmt(m.Body, func(*hir.Stmt) {}, visit)
+		}
+		if c.Ctor != nil {
+			walkStmt(c.Ctor.Body, func(*hir.Stmt) {}, visit)
+		}
+	}
+}

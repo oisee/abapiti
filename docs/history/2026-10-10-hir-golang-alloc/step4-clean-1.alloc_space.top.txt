@@ -1,0 +1,48 @@
+File: zabaplint
+Build ID: fa4bd0b6732dfc742584bd1e5fcb9ac0a680ce4f
+Type: alloc_space
+Time: 2026-10-10 14:11:19 UTC
+Showing nodes accounting for 2090.88MB, 94.52% of 2212.15MB total
+Dropped 349 nodes (cum <= 11.06MB)
+Showing top 40 nodes out of 209
+      flat  flat%   sum%        cum   cum%
+  376.51MB 17.02% 17.02%  1377.58MB 62.27%  main.src/abap/2_statements/combi.ts.Sequence.run
+  339.05MB 15.33% 32.35%   339.05MB 15.33%  main.(*array[go.shape.interface {}]).push (partial-inline)
+  269.01MB 12.16% 44.51%  1309.08MB 59.18%  main.src/abap/2_statements/combi.ts.Expression.run
+  249.68MB 11.29% 55.79%   249.68MB 11.29%  main.(*array[go.shape.interface {}]).concat (inline)
+   96.51MB  4.36% 60.16%    96.51MB  4.36%  main.(*array[go.shape.interface {}]).slice2 (inline)
+      87MB  3.93% 64.09%   649.03MB 29.34%  main.src/abap/2_statements/combi.ts.OptionalPriority.run
+   61.50MB  2.78% 66.87%    73.50MB  3.32%  main.src/abap/2_statements/combi.ts.Token.run
+   54.50MB  2.46% 69.33%    54.50MB  2.46%  main.src/abap/2_statements/result.ts.ResultNode constructor (inline)
+   50.08MB  2.26% 71.60%    50.58MB  2.29%  main.(*array[go.shape.string]).join
+      49MB  2.22% 73.81%  1233.08MB 55.74%  main.src/abap/2_statements/combi.ts.AlternativePriority.run
+   48.50MB  2.19% 76.01%      101MB  4.57%  main.src/abap/2_statements/combi.ts.Vers.run
+      45MB  2.03% 78.04%    67.50MB  3.05%  main.src/abap/2_statements/combi.ts.Word.run
+   44.07MB  1.99% 80.03%       58MB  2.62%  main.str
+   40.50MB  1.83% 81.86%    40.50MB  1.83%  unicode/utf8.AppendRune (inline)
+   38.50MB  1.74% 83.60%    38.50MB  1.74%  main.src/abap/2_statements/result.ts.Result constructor (inline)
+      38MB  1.72% 85.32%       38MB  1.72%  main.src/abap/nodes/expression_node.ts.ExpressionNode constructor (inline)
+   23.01MB  1.04% 86.36%    23.01MB  1.04%  main.(*array[go.shape.string]).push (inline)
+      22MB  0.99% 87.36%   120.04MB  5.43%  main.src/abap/2_statements/combi.ts.Regex.run
+   21.01MB  0.95% 88.31%    34.51MB  1.56%  main.src/abap/nodes/statement_node.ts.StatementNode.concatTokens
+   17.50MB  0.79% 89.10%    19.50MB  0.88%  main.src/abap/1_lexer/tokens/identifier.ts.Identifier constructor
+      15MB  0.68% 89.77%       33MB  1.49%  main.src/abap/nodes/statement_node.ts.StatementNode.toTokens
+      15MB  0.68% 90.45%       15MB  0.68%  main.src/abap/nodes/token_node.ts.TokenNode constructor (inline)
+   13.93MB  0.63% 91.08%    13.93MB  0.63%  unicode/utf16.Encode
+   13.50MB  0.61% 91.69%    13.50MB  0.61%  internal/bytealg.MakeNoZero
+   10.50MB  0.47% 92.17%  1400.08MB 63.29%  main.src/abap/2_statements/combi.ts.Combi.run.func2
+    9.50MB  0.43% 92.60%   173.51MB  7.84%  main.src/abap/2_statements/combi.ts.Optional.run
+    9.50MB  0.43% 93.03%    25.50MB  1.15%  main.src/abap/3_structures/structures/_combi.ts.SubStatement.run
+    7.50MB  0.34% 93.37%   928.05MB 41.95%  main.src/abap/2_statements/combi.ts.Alternative.run
+    6.50MB  0.29% 93.66%   224.51MB 10.15%  main.src/abap/2_statements/combi.ts.Star.run.func2
+    6.50MB  0.29% 93.95%   138.15MB  6.25%  main.src/abap/2_statements/statement_parser.ts.StatementParser.process
+    3.50MB  0.16% 94.11%    63.51MB  2.87%  main.src/abap/nodes/statement_node.ts.StatementNode.getTokens
+       3MB  0.14% 94.25%    37.01MB  1.67%  main.src/abap/2_statements/statement_parser.ts.WorkArea.tokensToNodes
+    2.50MB  0.11% 94.36%    49.59MB  2.24%  main.src/abap/3_structures/structures/_combi.ts.Sequence.run
+       2MB  0.09% 94.45%      124MB  5.61%  main.src/abap/2_statements/combi.ts.Permutation.run
+    0.50MB 0.023% 94.47%   192.51MB  8.70%  main.src/abap/2_statements/combi.ts.StarPriority.run
+    0.50MB 0.023% 94.50%    49.09MB  2.22%  main.src/abap/3_structures/structures/_combi.ts.Alternative.run
+    0.50MB 0.023% 94.52%    27.51MB  1.24%  main.src/abap/4_file_information/abap_file_information_parser.ts.ABAPFileInformationParser.parseMethodDefinition
+         0     0% 94.52%       83MB  3.75%  main.(*array[go.shape.interface {}]).slice0 (inline)
+         0     0% 94.52%    47.53MB  2.15%  main.(*jsRegExp).test
+         0     0% 94.52%  2144.60MB 96.95%  main.(*z_struct_harne_b2d92464ca8bd3).z_member_parse_7f46d20444b185

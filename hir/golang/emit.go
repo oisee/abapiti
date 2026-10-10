@@ -40,6 +40,10 @@ func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	if e.err != nil {
 		return nil, e.err
 	}
+	e.prepareMaterializers()
+	if e.err != nil {
+		return nil, e.err
+	}
 	e.line("package %s", pkg)
 	interfaces := append([]*hir.Interface(nil), p.Interfaces...)
 	sort.Slice(interfaces, func(i, j int) bool { return interfaces[i].Name < interfaces[j].Name })
@@ -212,9 +216,9 @@ func (e *emitter) effective(c *hir.Class) []string {
 func (e *emitter) class(c *hir.Class) {
 	e.descriptor(c)
 	e.line("type %s struct {", e.obj(c.Name))
-	// Only materializable data shapes can acquire a dynamic source. Other
-	// objects still escape normally, but need no permanently nil source slot.
-	source := c.Super == "" && !c.Abstract && len(c.Methods) == 0 && c.Ctor != nil && len(c.Ctor.Params) == len(c.Fields)
+	// Only shapes reached by an actual materialization operation acquire a
+	// dynamic source. Recursive materializers mark all nested shapes first.
+	source := e.materializers[e.name("materialize."+hir.Ref(c.Name).String())]
 	if source {
 		e.line("source *dynamic")
 	}
