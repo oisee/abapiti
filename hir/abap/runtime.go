@@ -677,9 +677,11 @@ ENDCLASS.
 `
 }
 
-// telemetryRuntime accumulates signed i microsecond readings through rollover.
-// Float arithmetic avoids overflowing i when subtracting opposite signs. It
-// is telemetry only; no issue or deterministic observation depends on it.
+// telemetryRuntime accumulates microsecond readings through rollover. The
+// kernel counter wraps modulo 2^31 and stays non-negative (measured on A4H,
+// open-steamgate inbox 045), so a backward step adds 2^31. Float arithmetic
+// avoids overflowing i. It is telemetry only; no issue or deterministic
+// observation depends on it.
 func (e *emitter) telemetryRuntime() {
 	id := "runtime.telemetry"
 	if e.types[id] {
@@ -707,7 +709,7 @@ previous = reading.
 ELSE.
 delta = CONV f( reading ) - CONV f( previous ).
 IF delta < 0.
-delta = delta + 4294967296.
+delta = delta + 2147483648.
 ENDIF.
 elapsed = elapsed + delta.
 previous = reading.
