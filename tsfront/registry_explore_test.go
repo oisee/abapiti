@@ -101,7 +101,8 @@ func TestRegistryClosureGate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		class := "zcl_abapiti_registry_run"
+		d := Drivers()
+		class := d.OSGRun
 		if err := os.WriteFile(filepath.Join(out, class+".clas.abap"), []byte(RegistryRunClass(class, inputs, string(config), want, 0, names)), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -109,7 +110,7 @@ func TestRegistryClosureGate(t *testing.T) {
 			t.Fatal(err)
 		}
 		if os.Getenv("REGISTRY_RUN_CORPUS") != "" {
-			a4h := "zcl_abapiti_registry_a4h"
+			a4h := d.A4HClass
 			var negative *RegistryNegative
 			if path := os.Getenv("REGISTRY_RUN_NEGATIVE"); path != "" {
 				data, err := os.ReadFile(path)
@@ -124,11 +125,13 @@ func TestRegistryClosureGate(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(out, a4h+".clas.abap"), []byte(RegistryRunCorpusClass(a4h, want, negative, names)), 0644); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(out, "zabapiti_registry_run.prog.abap"), []byte(RegistryRunReport("zabapiti_registry_run", a4h, false)), 0644); err != nil {
-				t.Fatal(err)
+			for _, report := range []string{d.RunReport, d.CleanReport} {
+				if err := os.WriteFile(filepath.Join(out, report+".prog.abap"), []byte(RegistryRunReport(report, a4h, false)), 0644); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if negative != nil {
-				if err := os.WriteFile(filepath.Join(out, "zabapiti_registry_neg.prog.abap"), []byte(RegistryRunReport("zabapiti_registry_neg", a4h, true)), 0644); err != nil {
+				if err := os.WriteFile(filepath.Join(out, d.NegReport+".prog.abap"), []byte(RegistryRunReport(d.NegReport, a4h, true)), 0644); err != nil {
 					t.Fatal(err)
 				}
 			}

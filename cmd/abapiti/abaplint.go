@@ -39,7 +39,7 @@ may be refused with the TypeScript location, never answered silently wrong.
 
 Outputs under <outdir>:
   classes/  the translated classes and interfaces
-  a4h/      abapGit zip: classes + ZCL_ABAPITI_REGISTRY_A4H + ZABAPITI_REGISTRY_RUN
+  a4h/      abapGit zip: classes + the A4H driver + reports _CLEAN (timings) and _RUN (profiles)
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
   native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
@@ -282,11 +282,13 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if targets["a4h"] {
 		dir := filepath.Join(out, "a4h")
 		sources := copyMap(emitted)
-		a4h := "zcl_abapiti_registry_a4h"
+		d := tsfront.Drivers()
+		a4h := d.A4HClass
 		sources[a4h+".clas.abap"] = tsfront.RegistryRunCorpusClass(a4h, runSHA, negative, names)
-		sources["zabapiti_registry_run.prog.abap"] = tsfront.RegistryRunReport("zabapiti_registry_run", a4h, false)
+		sources[d.RunReport+".prog.abap"] = tsfront.RegistryRunReport(d.RunReport, a4h, false)
+		sources[d.CleanReport+".prog.abap"] = tsfront.RegistryRunReport(d.CleanReport, a4h, false)
 		if negative != nil {
-			sources["zabapiti_registry_neg.prog.abap"] = tsfront.RegistryRunReport("zabapiti_registry_neg", a4h, true)
+			sources[d.NegReport+".prog.abap"] = tsfront.RegistryRunReport(d.NegReport, a4h, true)
 		}
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -296,7 +298,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		line := fmt.Sprintf("a4h/     abapGit zip, %d objects. Import it with abapGit (New Offline, package %s), then run ZABAPITI_REGISTRY_RUN as a background job (SM36 or F9 in SE38); it reads zabapgit from the ZABAPITI_CORPUS table (ZCL_ABAPITI_CORPUS, ZCL_ABAPITI_LOG must be installed) and prints ok=X when the issues match Node's.", objects, pkg)
+		line := fmt.Sprintf("a4h/     abapGit zip, %d objects. Import it with abapGit (New Offline, package %s), then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from the ZABAPITI_CORPUS table (ZCL_ABAPITI_CORPUS, ZCL_ABAPITI_LOG must be installed) and prints ok=X when the issues match Node's.", objects, pkg, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
 		if err := os.WriteFile(filepath.Join(dir, "README.txt"), []byte(line+"\n"), 0644); err != nil {
 			return err
 		}
@@ -316,10 +318,10 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			run := "zcl_abapiti_registry_run"
+			run := tsfront.Drivers().OSGRun
 			sources[run+".clas.abap"] = tsfront.RegistryRunClass(run, inputs, string(cfg), runSHA, 0, names)
 			sources[run+".clas.testclasses.abap"] = tsfront.RegistryRunTest(run, "")
-			what = fmt.Sprintf("the classes + ZCL_ABAPITI_REGISTRY_RUN with %d embedded files (its unit test fails with the report line; ok=X is the verdict)", len(inputs))
+			what = fmt.Sprintf("the classes + %s with %d embedded files (its unit test fails with the report line; ok=X is the verdict)", strings.ToUpper(run), len(inputs))
 		}
 		if err := writeSources(dir, sources); err != nil {
 			return err

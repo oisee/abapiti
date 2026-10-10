@@ -4,6 +4,7 @@ package abap
 import (
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,7 +57,11 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
-	e := &emitter{p: p, names: hir.NewNames(), files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
+	names := hir.NewNames()
+	if os.Getenv("ABAPITI_NAMES") == "readable" {
+		names = hir.NewReadableNames(p, "LNT")
+	}
+	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.scanUsage()
 	e.findStaticConstants()
 	e.findConstSets()
