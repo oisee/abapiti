@@ -410,3 +410,21 @@ class. See [the full-closure results](../../docs/grace-full-closure.md).
 
 Measured engine changes and the retained relation list are recorded in
 [the performance report](../../docs/history/2026-10-10-grace-engine.md).
+
+## Milestone 5, step 1: parallel proof only
+
+The opt-in [parallel proof package](parallel/README.md) evaluates
+`mark_parallel(Loop)` and named preconditions without invoking an action,
+rewriting HIR, or running workers. Complete, contextual effect certificates cover
+calls, virtual alternatives, mutable graphs returned into private result slots,
+shared reads/writes, strict memo and counter obligations, initialization, ordered
+appends, and throwing iterations. Missing coverage blocks proof. These source
+certificates supplement the conservative HIR escape facts; they do not weaken
+`pure`, `confined`, or the existing static-write shape classifiers.
+
+`go run ./cmd/grace-parallel` verifies the pinned archive identity and prints the
+seven source-audited candidates. The lexer per-file map is conditionally proven;
+other regions retain dependency or analysis-gap witnesses. See the
+[candidate report](../../docs/grace-parallel.md) for the ownership argument,
+complete warm-up contract, blockers, counts and gates. The default inliner does
+not import this package and does not evaluate these proof rules.
