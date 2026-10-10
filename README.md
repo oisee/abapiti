@@ -49,12 +49,17 @@ abaplint 577f875e is built into the binary (every file checked against its recor
 | `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
-An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint` when Go is on PATH:
+An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:
 
 ```sh
 abapiti abaplint -o out --target go
-out/go/zabaplint --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
+out/go/zabaplint-go --file zabapgit_standalone.prog.abap --config abaplint.json --deps deps.txt
 ```
+
+TS-HG@Go permits reads in the directory trees containing the named file, config,
+deps list and each listed dependency. Dependency paths are relative to `deps.txt`;
+repeat `-allow-read DIR` to grant more roots. Symlinks and `..` cannot escape those
+roots.
 
 `all` retains the three ABAP targets: the automatic Go build would add a toolchain dependency and change the default command’s behavior. TS-HG@Go uses the same pinned sources, overrides and pruned workload; see [its limits](docs/abaplint-cli.md#ts-hggo).
 

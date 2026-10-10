@@ -9,6 +9,7 @@ export GOFLAGS=-buildvcs=false
 : "${TSFRONT_ABAPLINT:?set TSFRONT_ABAPLINT to the built pinned packages/core}"
 go build -o "$work/abapiti" ./cmd/abapiti
 "$work/abapiti" abaplint --target go -o "$work/out"
+go test -count=1 -v ./tsfront -run '^TestRegistryGoReadPolicy$'
 go test -count=1 -timeout 8m -v ./tsfront \
   -run '^(TestGoLexerDifferential|TestGoRegistryJSON|TestGoRegistryXML|TestEmitRegistry(Arrays|Sorts|Iterators|Features))$' \
   | tee "$work/oracles.log"
@@ -22,4 +23,4 @@ for name in ('TestGoRegistryJSON', 'TestGoRegistryXML', 'TestEmitRegistryArrays/
     if '--- PASS: ' + name + ' (' not in text:
         raise SystemExit('missing registry oracle: ' + name)
 PY
-python3 tools/go-target-check.py "$kit" "$work/out/go/zabaplint" --output "$work/check.json"
+python3 tools/go-target-check.py "$kit" "$work/out/go/zabaplint-go" --output "$work/check.json"

@@ -26,8 +26,8 @@ for variant in ("clean", "seeded"):
     for run in range(args.runs):
         start = time.perf_counter()
         result = subprocess.run(
-            [str(binary), "--file", source, "--config", "abaplint.json", "--deps", "deps.txt"],
-            cwd=kit, capture_output=True, check=True,
+            [str(binary), "--file", str(kit / source), "--config", str(kit / "abaplint.json"), "--deps", str(kit / "deps.txt")],
+            cwd=binary.parent, capture_output=True, check=True,
         )
         samples.append(time.perf_counter() - start)
         if result.stdout != expected:
