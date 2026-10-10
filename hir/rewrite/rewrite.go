@@ -2,6 +2,7 @@ package rewrite
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/oisee/abapiti/hir"
@@ -136,12 +137,20 @@ type runner struct {
 	total, changed int
 	inline         *inlineAction
 	err            error
+	plans          []*joinPlan
+	refresh        map[*hir.Method]bool
+	dirty          map[string]bool
 }
 
 // Rewrite applies rules deterministically, in operand order and callee-first for
-// inline actions. A round visits only its input nodes. Analysis is discarded and
-// rebuilt after mutations; no derived table survives a rewrite round.
+// inline actions. A round visits only its input nodes. Embedded inline rules
+// refresh changed method regions and their call dependants between rounds.
+// Other rules, or ABAPITI_GRACE_RECOMPUTE=full, use full recomputation.
 func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
+	return rewriteObserved(p, rules, limits, nil)
+}
+
+func rewriteObserved(p *hir.Program, rules *Rules, limits Limits, observe func(*DB)) (Stats, error) {
 	r := &runner{p: p, rules: rules, limits: limits, stats: Stats{Callees: map[string]int{}}, growth: map[*hir.Method]int{}}
 	if limits.Rounds < 0 || limits.MethodGrowth < 0 || limits.ProgramGrowth < 0 {
 		return r.stats, fmt.Errorf("negative rewrite limit")
@@ -158,11 +167,38 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 	if es := hir.Verify(p); len(es) > 0 {
 		return r.stats, fmt.Errorf("invalid HIR: %v", es)
 	}
+	selected, demanded, err := rewriteDependencies(rules)
+	if err != nil {
+		return r.stats, err
+	}
+	incremental := r.limits.Rounds > 1 && os.Getenv("ABAPITI_GRACE_RECOMPUTE") != "full" && isInlineRules(rules)
 	for round := 0; round < r.limits.Rounds; round++ {
-		var err error
-		r.db, err = Analyze(p)
-		if err != nil {
-			return r.stats, err
+		if !incremental || round == 0 {
+			r.db = extractDemanded(p, demanded)
+			r.refresh = nil
+			if incremental {
+				r.db.regionFor = r.inlineRegion
+			}
+		} else {
+			affected := r.inlineDependants(r.dirty)
+			r.refresh = map[*hir.Method]bool{}
+			for id := range affected {
+				if m := r.byID[id]; m != nil {
+					r.refresh[m] = true
+				}
+			}
+			r.db.invalidateRegions(affected, selected)
+			r.db.selections = map[string]regionSelection{}
+			for _, c := range selected.clauses {
+				pred := c.head.pred
+				if inlineRegionalHead(pred) {
+					r.db.selections[pred] = regionSelection{column: 0, contains: func(value string) bool { return affected[r.inlineRegionValue(pred, value)] }}
+				}
+			}
+			r.db.evaluateRegion = func(pred string, args Tuple) bool {
+				region := r.inlineRegion(pred, args)
+				return region == "" || affected[region]
+			}
 		}
 		if err := r.index(); err != nil {
 			return r.stats, err
@@ -170,12 +206,21 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 		if err := r.addInlineFacts(); err != nil {
 			return r.stats, err
 		}
-		if err := Evaluate(r.db, rules); err != nil {
+		if err := Evaluate(r.db, selected); err != nil {
 			return r.stats, err
 		}
 		if err := r.validate(); err != nil {
 			return r.stats, err
 		}
+		r.plans = nil
+		for _, rr := range r.rules.rewrites {
+			c := clause{head: rr.action, body: rr.where, bound: -1}
+			r.plans = append(r.plans, planJoin(r.db, c, -1, rr.match.args))
+		}
+		if observe != nil {
+			observe(r.db)
+		}
+		r.dirty = map[string]bool{}
 		r.done = map[*hir.Method]bool{}
 		r.changed = 0
 		r.inline = newInlineAction(r)
@@ -194,7 +239,11 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 			return r.stats, fmt.Errorf("rewrite round %d: %v", round+1, es)
 		}
 		r.stats.Rounds++
-		r.db = nil // invalidate all regions and their transitive dependents
+		r.db.evaluateRegion = nil
+		r.db.selections = nil
+		if !incremental {
+			r.db = nil
+		}
 		if r.changed == 0 {
 			break
 		}
@@ -207,7 +256,7 @@ func (r *runner) validate() error {
 			if comparison(a.pred) && len(a.args) != 2 {
 				return fmt.Errorf("%s needs two terms", a.pred)
 			}
-			if t := r.db.tables[a.pred]; t != nil && len(t.index) != len(a.args) {
+			if t := r.db.tables[a.pred]; t != nil && t.arity != len(a.args) {
 				return fmt.Errorf("%s: inconsistent arity", a.pred)
 			}
 		}
@@ -215,22 +264,46 @@ func (r *runner) validate() error {
 	return nil
 }
 func (r *runner) index() error {
+	kinds := map[string]bool{}
+	allNodes := r.rules == nil
+	if r.rules != nil {
+		for _, rr := range r.rules.rewrites {
+			if rr.action.pred == "replace" || rr.match.args[1].variable || rr.match.args[1].wild {
+				allNodes = true
+			}
+			kinds[rr.match.args[1].value] = true
+		}
+	}
 	var addErr error
 	addNode := func(path, kind string) {
 		if addErr == nil {
 			addErr = r.db.Add("node", path, kind)
 		}
 	}
-	r.nodes = map[string]rewriteNode{}
-	r.ids = map[*hir.Expr]string{}
-	r.methods = map[*hir.Method]string{}
-	r.byID = map[string]*hir.Method{}
+	if r.refresh == nil {
+		r.nodes = map[string]rewriteNode{}
+		r.ids = map[*hir.Expr]string{}
+		r.methods = map[*hir.Method]string{}
+		r.byID = map[string]*hir.Method{}
+	} else {
+		for id, node := range r.nodes {
+			if r.refresh[node.method] {
+				delete(r.nodes, id)
+				if node.expr != nil {
+					delete(r.ids, node.expr)
+				}
+			}
+		}
+	}
 	for _, c := range r.p.Classes {
 		ms := append([]*hir.Method{}, c.Methods...)
 		if c.Ctor != nil {
 			ms = append(ms, c.Ctor)
 		}
 		for _, m := range ms {
+			if r.refresh != nil && !r.refresh[m] {
+				continue
+			}
 			name := m.Name
 			if m == c.Ctor {
 				name = "constructor"
@@ -239,9 +312,15 @@ func (r *runner) index() error {
 			r.methods[m] = id
 			r.byID[id] = m
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, path string) {
+				if !allNodes {
+					return
+				}
 				r.nodes[path] = rewriteNode{path, nil, s, m}
 				addNode(path, string(s.Kind))
 			}, func(e *hir.Expr, path string) {
+				if !allNodes && !kinds[string(e.Kind)] {
+					return
+				}
 				r.nodes[path] = rewriteNode{path, e, nil, m}
 				r.ids[e] = path
 				addNode(path, string(e.Kind))
@@ -256,11 +335,23 @@ func visitTree(s *hir.Stmt, path string, fs func(*hir.Stmt, string), fx func(*hi
 	if s == nil {
 		return
 	}
+	if path == "" {
+		walkSyntax(s, fs, fx)
+		return
+	}
 	fs(s, path)
-	visitExpr(s.X, path+"/x", fs, fx)
-	visitExpr(s.Y, path+"/y", fs, fx)
-	visitTree(s.Body, path+"/body", fs, fx)
-	visitTree(s.Else, path+"/else", fs, fx)
+	if s.X != nil {
+		visitExpr(s.X, path+"/x", fs, fx)
+	}
+	if s.Y != nil {
+		visitExpr(s.Y, path+"/y", fs, fx)
+	}
+	if s.Body != nil {
+		visitTree(s.Body, path+"/body", fs, fx)
+	}
+	if s.Else != nil {
+		visitTree(s.Else, path+"/else", fs, fx)
+	}
 	for i, v := range s.List {
 		visitTree(v, fmt.Sprintf("%s/s%d", path, i), fs, fx)
 	}
@@ -270,9 +361,15 @@ func visitExpr(e *hir.Expr, path string, fs func(*hir.Stmt, string), fx func(*hi
 		return
 	}
 	fx(e, path)
-	visitExpr(e.X, path+"/0", fs, fx)
-	visitExpr(e.Y, path+"/1", fs, fx)
-	visitExpr(e.Z, path+"/2", fs, fx)
+	if e.X != nil {
+		visitExpr(e.X, path+"/0", fs, fx)
+	}
+	if e.Y != nil {
+		visitExpr(e.Y, path+"/1", fs, fx)
+	}
+	if e.Z != nil {
+		visitExpr(e.Z, path+"/2", fs, fx)
+	}
 	for i, a := range e.Args {
 		visitExpr(a, fmt.Sprintf("%s/arg%d", path, i), fs, fx)
 	}
@@ -336,7 +433,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 	if !original {
 		return nil, nil
 	}
-	for _, rr := range r.rules.rewrites {
+	for ri, rr := range r.rules.rewrites {
 		if rr.bound >= 0 && depth >= rr.bound {
 			continue
 		}
@@ -345,8 +442,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 			continue
 		}
 		var choices []Tuple
-		c := clause{head: rr.action, body: rr.where, bound: -1}
-		join(r.db, r.db, c, -1, 0, env, 0, func(a Tuple, _ int) { choices = append(choices, a) })
+		r.plans[ri].run(r.db, r.db, env, func(a Tuple, _ int) { choices = append(choices, append(Tuple(nil), a...)) })
 		for _, args := range choices {
 			var out *hir.Expr
 			var stmt *hir.Stmt
@@ -364,6 +460,7 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 			if out == nil && stmt == nil {
 				continue
 			}
+			r.dirty[r.methods[m]] = true
 			r.changed++
 			return out, stmt
 		}
@@ -372,4 +469,36 @@ func (r *runner) fire(e *hir.Expr, s *hir.Stmt, m *hir.Method, depth int) (*hir.
 }
 func inert(e *hir.Expr) bool {
 	return e != nil && (e.Kind == hir.Lit || e.Kind == hir.Local || e.Kind == hir.This)
+}
+
+// walkSyntax omits structural path construction for shape-only adapter walks.
+func walkSyntax(s *hir.Stmt, fs func(*hir.Stmt, string), fx func(*hir.Expr, string)) {
+	if s == nil {
+		return
+	}
+	fs(s, "")
+	walkSyntaxExpr(s.X, fs, fx)
+	walkSyntaxExpr(s.Y, fs, fx)
+	walkSyntax(s.Body, fs, fx)
+	walkSyntax(s.Else, fs, fx)
+	for _, child := range s.List {
+		walkSyntax(child, fs, fx)
+	}
+}
+func walkSyntaxExpr(e *hir.Expr, fs func(*hir.Stmt, string), fx func(*hir.Expr, string)) {
+	if e == nil {
+		return
+	}
+	fx(e, "")
+	walkSyntaxExpr(e.X, fs, fx)
+	walkSyntaxExpr(e.Y, fs, fx)
+	walkSyntaxExpr(e.Z, fs, fx)
+	for _, child := range e.Args {
+		walkSyntaxExpr(child, fs, fx)
+	}
+	if e.Stmt != nil {
+		for _, child := range e.Stmt.List {
+			walkSyntax(child, fs, fx)
+		}
+	}
 }

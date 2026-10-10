@@ -88,8 +88,10 @@ only. The test oracle invokes main's HIR inliner on an independent deep copy.
 
 The public entry points are `Parse`, `Evaluate`, `NewDB`, and (with extraction)
 `Analyze` and `Report`. The package uses only HIR and the Go standard library.
-A DB is a set of string tuples indexed by predicate and argument; reads return
-lexicographically sorted copies. Duplicate tuples are memoised.
+A DB exposes string tuples and sorted-copy reads. Internally it interns symbols
+into integer IDs, memoises packed tuple keys, and builds composite hash indexes
+from the bound columns of rule bodies. The interpreter reuses binding arrays
+and undo stacks instead of allocating a map for each candidate tuple.
 
 ```lisp
 (fact edge "A" "B")
@@ -273,9 +275,21 @@ Zero-valued `Limits` choose one round, 100,000 added nodes per method and
 1,000,000 per program. Growth counts statements plus expressions, charging only
 positive growth, across all rounds. A budget-rejected expansion consumes no
 serial number or call-site counter. User limits must be nonnegative. Every round
-runs `hir.Verify`. Its snapshot tables are discarded wholesale, invalidating
-rewritten regions and all transitive dependencies; subsequent rounds rebuild
-facts and derived tables. A round without actions terminates the run early.
+runs `hir.Verify`. Rewrite evaluates only the transitive relations required by
+its match and guards, including negative dependencies. Inline requires no derived
+analysis relations: its analysis inputs are `dispatch`, `defined`, and `static`.
+The full `Analyze` API and diagnostic extraction retain their complete facts.
+
+For multiple rounds of the embedded inline rules, changed methods and their
+transitive callers are refreshed. Method-local base and derived facts are
+invalidated together; unaffected proofs and immutable hierarchy/declaration facts
+survive. The shared `inline_overridden` relation is conservatively recomputed.
+Region ownership and the reverse call graph are supplied by the HIR adapter;
+the tuple evaluator and region invalidation have no HIR dependency. Custom rules
+can connect arbitrary regions, so they use full recomputation. Set
+`ABAPITI_GRACE_RECOMPUTE=full` to force the reference recomputation path for the
+embedded rules too. Per-round fact equality, final HIR and stats equality, and
+stale negative proofs are tested. A round without actions terminates early.
 These safety limits can intentionally differ from the unbounded reference on
 larger inputs; the checked fixtures do not reach them.
 
@@ -393,3 +407,6 @@ The test logs the facts summary, inline oracle counters, per-check runtimes and
 verified rewrite rounds. Set `GRACE_FULL_FACTS_OUT` to export the complete sorted
 facts report, including method sets, virtual receivers and static writes by
 class. See [the full-closure results](../../docs/grace-full-closure.md).
+
+Measured engine changes and the retained relation list are recorded in
+[the performance report](../../docs/history/2026-10-10-grace-engine.md).

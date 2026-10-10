@@ -38,6 +38,7 @@ func TestSeededEnginePrograms(t *testing.T) {
 		t.Run(fmt.Sprintf("seed_%02d", seed), func(t *testing.T) {
 			p := graph(seed, 8, 1+int(seed%4))
 			gracecheck.Check(t, p)
+			gracecheck.IncrementalRounds(t, p)
 		})
 	}
 }

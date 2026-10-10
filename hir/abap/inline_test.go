@@ -1,11 +1,67 @@
 package abap
 
 import (
+	"io"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/rewrite"
 )
+
+func TestInlineGrace(t *testing.T) {
+	want := inlineFixture().p
+	n, callees := hir.InlineStats(want)
+	p := inlineFixture().p
+	stats, err := rewrite.Inline(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.CallSites != n || !reflect.DeepEqual(stats.Callees, callees) {
+		t.Fatalf("Grace stats %+v, want %d sites, %v", stats, n, callees)
+	}
+	t.Setenv("ABAPITI_INLINE_STATS", "1")
+	var outputs []string
+	for _, mode := range []string{"", "grace"} {
+		t.Setenv("ABAPITI_INLINE", mode)
+		p := inlineFixture().p
+		func() {
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer r.Close()
+			stderr := os.Stderr
+			os.Stderr = w
+			defer func() { os.Stderr = stderr }()
+			err = inline(p)
+			_ = w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			outputs = append(outputs, string(out))
+		}()
+		if hir.Dump(p) != hir.Dump(want) {
+			t.Fatalf("mode %q changed inline output", mode)
+		}
+	}
+	if outputs[0] != outputs[1] || !strings.HasPrefix(outputs[1], "inline: 13 call sites, 5 callees\n") {
+		t.Fatalf("inline stats differ: %q / %q", outputs[0], outputs[1])
+	}
+	// Grace checks input before rewriting, even when there are no call sites.
+	// This distinguishes flag selection from accidentally using hir.Inline.
+	t.Setenv("ABAPITI_INLINE", "grace")
+	bad := &hir.Program{Classes: []*hir.Class{{Name: "Duplicate"}, {Name: "Duplicate"}}}
+	if err := inline(bad); err == nil || !strings.Contains(err.Error(), "Grace HIR inlining") {
+		t.Fatalf("flag did not select Grace: %v", err)
+	}
+}
 
 // inlineFixture exercises the inlining pass at run time (TestFixtures runs it
 // on both OSG runtimes through hir-unit.sh): a guarded-return chain, local

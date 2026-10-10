@@ -2,8 +2,6 @@ package rewrite
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 )
 
 // Evaluate grows db to a stratified fixed point. Each join after the initial
@@ -13,7 +11,7 @@ func Evaluate(db *DB, rules *Rules) error {
 	levels := map[string]int{}
 	arity := map[string]int{}
 	for p, t := range db.tables {
-		arity[p] = len(t.index)
+		arity[p] = t.arity
 		levels[p] = 0
 	}
 	for _, c := range rules.clauses {
@@ -73,6 +71,17 @@ func Evaluate(db *DB, rules *Rules) error {
 			return fmt.Errorf("unstratified negation")
 		}
 	}
+	plans := make([][]*joinPlan, len(rules.clauses))
+	for i, c := range rules.clauses {
+		for pivot, a := range c.body {
+			if !a.negative && !comparison(a.pred) {
+				plans[i] = append(plans[i], planJoin(db, c, pivot, nil))
+			}
+		}
+		if len(plans[i]) == 0 {
+			plans[i] = append(plans[i], planJoin(db, c, -1, nil))
+		}
+	}
 	maxLevel := 0
 	for _, n := range levels {
 		if n > maxLevel {
@@ -83,33 +92,30 @@ func Evaluate(db *DB, rules *Rules) error {
 		delta := db
 		first := true
 		for {
-			next := NewDB()
-			for _, c := range rules.clauses {
+			next := db.empty()
+			for ci, c := range rules.clauses {
 				if levels[c.head.pred] != level {
 					continue
 				}
 				var emitErr error
 				emit := func(args Tuple, depth int) {
-					if emitErr == nil {
+					if emitErr == nil && (db.evaluateRegion == nil || db.evaluateRegion(c.head.pred, args)) {
 						_, emitErr = next.put(c.head.pred, args, depth)
 					}
 				}
-				positive := false
-				for pivot, a := range c.body {
-					if a.negative || comparison(a.pred) {
-						continue
+				for pi, plan := range plans[ci] {
+					if first && pi > 0 {
+						break
 					}
-					positive = true
-					join(db, delta, c, pivot, 0, map[string]string{}, 0, emit)
-				}
-				if !positive && first {
-					join(db, delta, c, -1, 0, map[string]string{}, 0, emit)
+					if plan.pivot >= 0 || first {
+						plan.run(db, delta, nil, emit)
+					}
 				}
 				if emitErr != nil {
 					return emitErr
 				}
 			}
-			fresh := NewDB()
+			fresh := db.empty()
 			for _, p := range next.Predicates() {
 				for _, r := range next.tables[p].rows {
 					changed, e := db.put(p, r.args, r.depth)
@@ -161,109 +167,26 @@ func candidates(d *DB, a atom, env map[string]string) []*row {
 	if t == nil {
 		return nil
 	}
-	out := t.rows
-	for i, v := range a.args {
-		s, ok := env[v.value]
-		if !v.variable && !v.wild {
-			s = v.value
-			ok = true
+	var k packedTuple
+	mask := uint64(0)
+	for col, term := range a.args {
+		if col >= 8 || term.wild {
+			continue
 		}
-		if ok && len(t.index[i][s]) < len(out) {
-			out = t.index[i][s]
+		value := term.value
+		bound := !term.variable
+		if term.variable {
+			value, bound = env[value]
 		}
-	}
-	return out
-}
-func join(db, delta *DB, c clause, pivot, pos int, env map[string]string, depth int, emit func(Tuple, int)) {
-	if pos == len(c.body) {
-		// Negatives are checked after positive bindings, independently of source order.
-		for _, a := range c.body {
-			if comparison(a.pred) {
-				if !compare(a, env) {
-					return
-				}
-				continue
-			}
-			if a.negative {
-				for _, r := range candidates(db, a, env) {
-					if _, ok := matches(a, r, env); ok {
-						return
-					}
-				}
-			}
-		}
-		depth++
-		if c.bound >= 0 && depth > c.bound {
-			return
-		}
-		var args Tuple
-		for _, t := range c.head.args {
-			v := t.value
-			if t.variable {
-				v = env[v]
-			}
-			args = append(args, v)
-		}
-		emit(args, depth)
-		return
-	}
-	a := c.body[pos]
-	if a.negative || comparison(a.pred) {
-		join(db, delta, c, pivot, pos+1, env, depth, emit)
-		return
-	}
-	source := db
-	if pos == pivot {
-		source = delta
-	}
-	for _, r := range candidates(source, a, env) {
-		if e, ok := matches(a, r, env); ok {
-			n := depth
-			if r.depth > n {
-				n = r.depth
-			}
-			join(db, delta, c, pivot, pos+1, e, n, emit)
+		if bound {
+			mask |= 1 << col
+			k.ids[col] = d.symbols.ids[value]
 		}
 	}
+	if mask == 0 {
+		return t.rows
+	}
+	return t.ensureIndex(mask)[k]
 }
 
 func comparison(p string) bool { return p == "le" || p == "neq" || p == "contains" }
-func compare(a atom, env map[string]string) bool {
-	if len(a.args) != 2 {
-		return false
-	}
-	v := make([]string, 2)
-	for i, t := range a.args {
-		v[i] = t.value
-		if t.variable {
-			var ok bool
-			v[i], ok = env[t.value]
-			if !ok {
-				return false
-			}
-		}
-		if t.wild {
-			return false
-		}
-	}
-	var result bool
-	switch a.pred {
-	case "contains":
-		result = strings.Contains(v[0], v[1])
-	case "neq":
-		result = v[0] != v[1]
-	case "le":
-		x, e := strconv.Atoi(v[0])
-		y, f := strconv.Atoi(v[1])
-		if e != nil || f != nil {
-			return false
-		}
-		result = x <= y
-	default:
-		return false
-	}
-	if a.negative {
-		result = !result
-	}
-	return result
-}

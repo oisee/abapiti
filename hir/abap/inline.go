@@ -6,15 +6,27 @@ import (
 	"sort"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/rewrite"
 )
 
-// inline runs the HIR inlining pass (ABAPITI_INLINE=0 disables it) and
+// inline runs the HIR inlining pass (ABAPITI_INLINE=grace selects Grace,
+// ABAPITI_INLINE=0 disables it) and
 // verifies its result. ABAPITI_INLINE_STATS=1 prints the inlined callees.
 func inline(p *hir.Program) error {
 	if os.Getenv("ABAPITI_INLINE") == "0" {
 		return nil
 	}
-	n, stats := hir.InlineStats(p)
+	var n int
+	var stats map[string]int
+	if os.Getenv("ABAPITI_INLINE") == "grace" {
+		s, err := rewrite.Inline(p)
+		if err != nil {
+			return fmt.Errorf("Grace HIR inlining: %w", err)
+		}
+		n, stats = s.CallSites, s.Callees
+	} else {
+		n, stats = hir.InlineStats(p)
+	}
 	if os.Getenv("ABAPITI_INLINE_STATS") != "" {
 		keys := make([]string, 0, len(stats))
 		for k := range stats {
