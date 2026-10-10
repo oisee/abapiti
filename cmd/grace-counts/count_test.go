@@ -91,6 +91,28 @@ func TestSingletonReceiversAndChain(t *testing.T) {
 	if sites[0].Form != "chained" || sites[1].Form != "local-first" {
 		t.Fatalf("%+v", sites)
 	}
+	// Production lowering wraps literal construction in Seq, yielding a Local.
+	seq := &hir.Expr{Kind: hir.Seq, Type: ints, Stmt: hir.B(fresh, push), Y: local("t")}
+	alias.X = seq
+	caller.Body = hir.B(alias, chain)
+	db, err = rewrite.Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sites, _ = count(p, db, nil)
+	if len(sites) != 2 || sites[1].Form != "local-first" {
+		t.Fatalf("Seq local chain: %+v", sites)
+	}
+	caller.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: makeCall(seq)})
+	db, err = rewrite.Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sites, _ = count(p, db, nil)
+	if len(sites) != 1 || sites[0].Form != "literal" {
+		t.Fatalf("Seq literal: %+v", sites)
+	}
+	alias.X = local("t")
 	// A second push is not a singleton; a prior escaping call is not proven S1.
 	caller.Body = hir.B(fresh, push, push, alias, chain)
 	db, err = rewrite.Analyze(p)
