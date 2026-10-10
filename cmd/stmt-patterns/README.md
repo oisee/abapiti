@@ -56,3 +56,20 @@ families overlap and must not be added. No profile call counts are invented.
 Tests cover statement boundaries, literal/comment handling, nested loops,
 single-use rejection, branch/read barriers, boolean forwarding, overwritten
 CLEAR, normalized identities, and template-expression uses.
+
+For the full-corpus, analysis-only peephole census (no TS checkout needed):
+
+```sh
+export TMPDIR="$PWD/.local/peephole/tmp"
+export GOCACHE="$HOME/.cache/abapiti-go-cache"
+export GOFLAGS=-buildvcs=false
+mkdir -p "$TMPDIR"
+go run ./cmd/stmt-patterns -peephole -input out -output .local/peephole/export
+python3 tools/peephole-mine.py
+```
+
+The export contains all emitted class methods, concrete and normalized lexical
+statements, original ABAP lines, loop depth, and names.json identities. Mining
+writes the complete 2..4-window census, candidate ranking, occurrences, manifest,
+top-20 report and pending ledger under docs/history. Counts are opportunities,
+not proofs. The original selected-method analysis remains the default mode.

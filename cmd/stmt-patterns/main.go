@@ -52,6 +52,13 @@ func main() {
 	hirFlag := flag.Bool("hir", false, "also lower the pinned closure and count HIR nodes (uses -work)")
 	work := flag.String("work", ".local/stmt-patterns/hir", "workspace for optional HIR lowering")
 	flag.Parse()
+	if *peepholeFlag {
+		if err := exportPeepholes(*input, *output); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := run(*input, *source, *output, *work, *hirFlag); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
