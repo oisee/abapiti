@@ -18,9 +18,11 @@ const constructs = {inline: false, instance: false};
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
 for (const n of files) {
   const src = readFileSync(join(dir, n), "utf8");
-  for (const line of src.split("\n")) {
-    if (Buffer.byteLength(line) > 255 || /^\s*\*/.test(line)) throw new Error(`${n}: generation rule`);
-  }
+  // The only comment allowed is the TypeScript origin as the first line.
+  src.split("\n").forEach((line, i) => {
+    const origin = i === 0 && /^\* TS: \S+ \S+$/.test(line);
+    if (Buffer.byteLength(line) > 255 || (/^\s*\*/.test(line) && !origin)) throw new Error(`${n}: generation rule`);
+  });
   const code = src.replace(/'(?:''|[^'])*'|`(?:``|[^`])*`|\|(?:\\.|[^|])*\|/g, "");
   if (code.includes('"')) throw new Error(`${n}: comment`);
   if (n.endsWith(".clas.abap")) {
