@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     env:
       TEST_SHARD: ${{ matrix.shard }}
       # -shuffle runs each package's tests in a random order, so a test that
@@ -103,11 +103,17 @@ jobs:
 
       - name: Select tests
         run: |
+          # Shards 1-2 split ./wasm, shards 3-4 split ./tsfront in halves;
+          # shard 3 also runs every other package.
           if [ "$TEST_SHARD" -lt 3 ]; then
             go test -list . ./wasm > "$OUT/wasm-list.txt"
             python3 .github/ci/test-shards.py split "$OUT/wasm-list.txt" "$OUT" "$TEST_SHARD"
           else
-            go list ./... | grep -vx 'github.com/oisee/abapiti/wasm' > "$OUT/packages.txt"
+            go test -list . ./tsfront > "$OUT/tsfront-list.txt"
+            python3 .github/ci/test-shards.py split "$OUT/tsfront-list.txt" "$OUT" "$((TEST_SHARD - 2))" tsfront
+          fi
+          if [ "$TEST_SHARD" -eq 3 ]; then
+            go list ./... | grep -vx -e 'github.com/oisee/abapiti/wasm' -e 'github.com/oisee/abapiti/tsfront' > "$OUT/packages.txt"
           fi
 
       # -race: the wasm tests run their inputs in wazero as the reference, and
@@ -121,21 +127,32 @@ jobs:
         run: |
           echo "shuffle seed $SHUFFLE_SEED"
           status=0
+          run() {
+            local tag=$1; shift
+            go test -race -shuffle="$SHUFFLE_SEED" -timeout 25m -json -coverprofile="$OUT/cover-$tag.out" "$@" > "$OUT/test-$tag.json" || status=$?
+            printf 'reproduce with: go test -race -shuffle=%s -timeout 25m ' "$SHUFFLE_SEED"
+            printf '%q ' "$@"
+            echo
+          }
           if [ "$TEST_SHARD" -lt 3 ]; then
-            selection=(-run "$(cat "$OUT/wasm-run.txt")" ./wasm)
+            run wasm -run "$(cat "$OUT/wasm-run.txt")" ./wasm
           else
-            mapfile -t selection < "$OUT/packages.txt"
-            [ "${#selection[@]}" -gt 0 ]
+            run tsfront -run "$(cat "$OUT/tsfront-run.txt")" ./tsfront
           fi
-          go test -race -shuffle="$SHUFFLE_SEED" -timeout 25m -json -coverprofile="$OUT/cover.out" "${selection[@]}" > "$OUT/test.json" || status=$?
+          if [ "$TEST_SHARD" -eq 3 ]; then
+            mapfile -t packages < "$OUT/packages.txt"
+            [ "${#packages[@]}" -gt 0 ]
+            run packages "${packages[@]}"
+          fi
+          cat "$OUT"/test-*.json > "$OUT/test.json"
+          covers=("$OUT"/cover-*.out)
+          python3 .github/ci/test-shards.py merge "$OUT/cover.out" "${covers[@]}"
+          rm -f "$OUT"/test-*.json "${covers[@]}"
           jq -rsj '(map(select(.Action == "fail" and .Test != null) | .Package + " " + .Test)) as $failed
             | .[] | select(.Action == "output" or .Action == "build-output")
             | select(.Test == null or ((.Package + " " + .Test) as $k | $failed | index($k)))
             | select(.Output | startswith("-test.shuffle ") | not)
             | .Output' "$OUT/test.json"
-          printf 'reproduce with: go test -race -shuffle=%s -timeout 25m ' "$SHUFFLE_SEED"
-          printf '%q ' "${selection[@]}"
-          echo
           exit $status
 
       # Tests write generated ABAP to t.TempDir(); the tree must stay clean. A
