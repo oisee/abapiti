@@ -23,6 +23,8 @@ HIR is abapiti's typed object IR. Grace is the rule engine over it; since #70 it
 | **OSGB** | open-steamgate's Go runtime in one executable: `osabap` compiles the ABAP plus a report into a binary. For abaplint that binary is the command **`zabaplint`** |
 | **Go** | a plain Go build of TS-HG |
 
+**osabap** is the compiler (open-steamgate `tools/gogen/osabap.mjs`): ABAP → one Go executable; its output is the host OSGB.
+
 `zabaplint` is the name of the command we ship (TS-HA@OSGB), not of a host. "Native" is not used: it read as "vanilla".
 
 ## Results, 2026-10-10
