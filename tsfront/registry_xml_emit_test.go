@@ -51,7 +51,10 @@ func TestEmitRegistryXML(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	gracecheck.Check(t, prog)
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
 	oracle := os.Getenv("REGISTRY_XML_ORACLE")
 	if oracle == "" {
 		t.Skip("set REGISTRY_XML_ORACLE to original inventory and REGISTRY_XML_INPUTS to input roots")

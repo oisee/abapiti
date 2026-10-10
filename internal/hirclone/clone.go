@@ -51,5 +51,9 @@ func Clone(p *hir.Program) *hir.Program {
 			return v
 		}
 	}
-	return copy(reflect.ValueOf(p)).Interface().(*hir.Program)
+	out, ok := copy(reflect.ValueOf(p)).Interface().(*hir.Program)
+	if !ok {
+		panic("hirclone: copy changed program type")
+	}
+	return out
 }

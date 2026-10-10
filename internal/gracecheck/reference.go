@@ -445,17 +445,6 @@ func reference(base *rewrite.DB, source string, cap int, hashed bool) (*rewrite.
 	}
 	return out, steps, nil
 }
-func equal(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
 
 // PositiveSource keeps the positive alternatives of the same parsed Grace
 // rules. Negated comparisons are value filters and remain monotone. Removing

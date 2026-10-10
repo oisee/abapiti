@@ -332,8 +332,12 @@ func Monotonicity(t *testing.T, base *rewrite.DB, src string) {
 		t.Fatal(e)
 	}
 	for _, a := range base.Facts("defined") {
-		after.Add("throws", a[0], "monotonicity-added")
-		after.Add("writes_static", a[0], "monotonicity-class", "field")
+		if e := after.Add("throws", a[0], "monotonicity-added"); e != nil {
+			t.Fatal(e)
+		}
+		if e := after.Add("writes_static", a[0], "monotonicity-class", "field"); e != nil {
+			t.Fatal(e)
+		}
 	}
 	if e := rewrite.Evaluate(after, rs); e != nil {
 		t.Fatal(e)

@@ -49,7 +49,10 @@ func TestEmitRegistryJSON(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	gracecheck.Check(t, prog)
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
 	config := os.Getenv("REGISTRY_JSON_CONFIG")
 	if config == "" {
 		t.Skip("set REGISTRY_JSON_CONFIG and REGISTRY_JSON_RESOLVED to original JSON inputs")

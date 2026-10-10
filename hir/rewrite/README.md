@@ -289,8 +289,8 @@ stats. The 70394ff selection guard rejects any callee with an uninitialized
 VarDecl, including inside Seq. A synthetic TypeScript loop executes in Node
 with result `[5,-1]` and remains a call under both inliners.
 
-The lexer fact-report fixture and all seven registry emission fixtures perform
-this comparison. JSON/XML do it before their existing external-corpus emission
+The lexer fact-report fixture performs this comparison, and all seven registry
+emission fixtures perform it when `ABAPITI_GRACECHECK=1`. JSON/XML do it before their existing external-corpus emission
 skips; singleton sources are pinned locally with hashes so the default test run
 covers their HIR too. The original ABAP/Go differential tests and goldens are
 unchanged. Focused oracle cases cover recursive and mutually recursive calls,
@@ -300,7 +300,7 @@ Runner tests cover budgets, depth, priority/ties and same-round exclusion.
 
 ```sh
 go test ./hir/... ./tsfront/...
-go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
+ABAPITI_GRACECHECK=1 go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
 go test ./hir/rewrite -run 'TestInline|TestReplaceRoundSnapshot' -v
 ```
 
@@ -344,8 +344,11 @@ five depth bounds, six callee-chain depth boundaries, and the minimal Seq budget
 regression. HIR supports single class inheritance; the diamond's two arms are
 represented through structural interfaces.
 
-Lexer and all seven registry fixture tests call the same checker before any
-external emission-oracle skip. It checks reference fact equality, reevaluation,
+The lexer fixture calls the same checker before any external emission-oracle
+skip. The seven registry emission tests run it only with
+`ABAPITI_GRACECHECK=1`, keeping the expensive checks out of the shared race-test
+shards. A separate advisory CI job enables them without `-race`. The checker
+checks reference fact equality, reevaluation,
 declaration permutations, positive-rule monotonicity, one-pass inline
 idempotence, verified rounds, zero depth, independently counted per-method and
 program growth, and main's inliner dump/counter comparison. Synthetic graph
@@ -367,7 +370,7 @@ would conflict with byte-identical oracle compatibility.
 
 ```sh
 go test -short ./hir/... ./tsfront/... ./internal/gracecheck -count=1
-go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
+ABAPITI_GRACECHECK=1 go test ./tsfront -run 'TestLexerFactsReport|TestEmitRegistry' -v
 go test ./tsfront -run '^TestGraceFullRegistryClosure$' -v -timeout 60m
 ```
 

@@ -11,7 +11,12 @@ import (
 // The extractor records syntax and hierarchy, not an inlining decision. Shape
 // conversion is shared with the inline action so template guards are exact.
 func (r *runner) addInlineFacts() error {
-	add := func(p string, a ...string) { r.db.Add(p, a...) }
+	var addErr error
+	add := func(p string, a ...string) {
+		if addErr == nil {
+			addErr = r.db.Add(p, a...)
+		}
+	}
 	classes := map[string]*hir.Class{}
 	for _, c := range r.p.Classes {
 		classes[c.Name] = c
@@ -89,7 +94,7 @@ func (r *runner) addInlineFacts() error {
 		add("inline_call", r.methods[n.method], n.id, e.X.Type.Name, e.Name)
 		add("inline_arguments", n.id, strconv.Itoa(len(e.Args)))
 	}
-	return nil
+	return addErr
 }
 
 // Inline runs the embedded Grace inliner. Its policy is entirely in inline.grace.
@@ -114,7 +119,9 @@ func ExtractRewriteFacts(p *hir.Program) (*DB, error) {
 		return nil, fmt.Errorf("invalid HIR: %v", es)
 	}
 	r := &runner{p: p, db: Extract(p)}
-	r.index()
+	if err := r.index(); err != nil {
+		return nil, err
+	}
 	if err := r.addInlineFacts(); err != nil {
 		return nil, err
 	}

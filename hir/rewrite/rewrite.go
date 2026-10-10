@@ -164,7 +164,9 @@ func Rewrite(p *hir.Program, rules *Rules, limits Limits) (Stats, error) {
 		if err != nil {
 			return r.stats, err
 		}
-		r.index()
+		if err := r.index(); err != nil {
+			return r.stats, err
+		}
 		if err := r.addInlineFacts(); err != nil {
 			return r.stats, err
 		}
@@ -212,7 +214,13 @@ func (r *runner) validate() error {
 	}
 	return nil
 }
-func (r *runner) index() {
+func (r *runner) index() error {
+	var addErr error
+	addNode := func(path, kind string) {
+		if addErr == nil {
+			addErr = r.db.Add("node", path, kind)
+		}
+	}
 	r.nodes = map[string]rewriteNode{}
 	r.ids = map[*hir.Expr]string{}
 	r.methods = map[*hir.Method]string{}
@@ -232,14 +240,15 @@ func (r *runner) index() {
 			r.byID[id] = m
 			visitTree(m.Body, id+"/body", func(s *hir.Stmt, path string) {
 				r.nodes[path] = rewriteNode{path, nil, s, m}
-				r.db.Add("node", path, string(s.Kind))
+				addNode(path, string(s.Kind))
 			}, func(e *hir.Expr, path string) {
 				r.nodes[path] = rewriteNode{path, e, nil, m}
 				r.ids[e] = path
-				r.db.Add("node", path, string(e.Kind))
+				addNode(path, string(e.Kind))
 			})
 		}
 	}
+	return addErr
 }
 
 // visitTree uses the fact extractor's site paths, including Seq statement paths.

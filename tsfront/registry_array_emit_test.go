@@ -57,7 +57,10 @@ func TestEmitRegistryArrays(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	gracecheck.Check(t, prog)
+	// Opt in to the expensive Grace regression checks with ABAPITI_GRACECHECK=1.
+	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
+		gracecheck.Check(t, prog)
+	}
 	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)

@@ -88,16 +88,25 @@ func Evaluate(db *DB, rules *Rules) error {
 				if levels[c.head.pred] != level {
 					continue
 				}
+				var emitErr error
+				emit := func(args Tuple, depth int) {
+					if emitErr == nil {
+						_, emitErr = next.put(c.head.pred, args, depth)
+					}
+				}
 				positive := false
 				for pivot, a := range c.body {
 					if a.negative || comparison(a.pred) {
 						continue
 					}
 					positive = true
-					join(db, delta, c, pivot, 0, map[string]string{}, 0, func(args Tuple, depth int) { next.put(c.head.pred, args, depth) })
+					join(db, delta, c, pivot, 0, map[string]string{}, 0, emit)
 				}
 				if !positive && first {
-					join(db, delta, c, -1, 0, map[string]string{}, 0, func(args Tuple, depth int) { next.put(c.head.pred, args, depth) })
+					join(db, delta, c, -1, 0, map[string]string{}, 0, emit)
+				}
+				if emitErr != nil {
+					return emitErr
 				}
 			}
 			fresh := NewDB()
@@ -108,7 +117,9 @@ func Evaluate(db *DB, rules *Rules) error {
 						return e
 					}
 					if changed {
-						fresh.put(p, r.args, r.depth)
+						if _, e := fresh.put(p, r.args, r.depth); e != nil {
+							return e
+						}
 					}
 				}
 			}
