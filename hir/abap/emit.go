@@ -355,7 +355,7 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 		b.line("result" + op + result + ".")
 	}
 	b.line("RETURN.")
-	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
 func (e *emitter) class(c *hir.Class) {
@@ -529,7 +529,7 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		body = kept
 	}
 	b.stmt(body)
-	return "METHOD " + name + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + name + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
 func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) string {
@@ -550,7 +550,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 		b.line(n + " = " + b.convert(e.param(slot.Params[j].Name), slot.Params[j].Type, p.Type) + ".")
 	}
 	b.stmt(impl.Body)
-	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
+	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
 // Explicit lazy initialization avoids eager module constructors calling a
