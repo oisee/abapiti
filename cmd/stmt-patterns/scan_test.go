@@ -95,3 +95,12 @@ func TestConstantLiteralAndMix(t *testing.T) {
 		t.Fatal("DO not counted as loop")
 	}
 }
+
+func TestLiteralAggregateCandidates(t *testing.T) {
+	m := parseMethods(`METHOD m. DATA(t1) = VALUE ty( sign = 'I' option = 'EQ' low = 1 ). APPEND VALUE ty( sign = 'I' option = 'EQ' low = 2 ) TO ranges. DATA(t2) = VALUE ty( low = input ). ENDMETHOD.`)[0]
+	m.Patterns = map[string][2]int{}
+	detect(m)
+	if m.Patterns["literal_constructor"][0] != 1 || m.Patterns["literal_range_build"][0] != 1 {
+		t.Fatal(m.Patterns)
+	}
+}

@@ -1,0 +1,9 @@
+{
+  "Pin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "ClassesSHA256": "ee2a753c55119a8db9af7453d07d9d4b69b4e147b190baf66bf8cfa2498793b9",
+  "NamesSHA256": "5f3fd4eaca759419fbae4d0c402619817db6eba5645a513d365e3e94d00a8fa3",
+  "Classes": 2035,
+  "HIR": true,
+  "InlineMode": "grace (default)",
+  "SingletonMode": "enabled (default)"
+}

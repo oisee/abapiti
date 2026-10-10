@@ -339,8 +339,14 @@ func detect(m *method) []occurrence {
 				add("table_read_copy", i, s.Text+" "+next)
 			}
 		}
-		if strings.HasPrefix(strings.ToUpper(s.Text), "APPEND VALUE ") && literalConstructor(strings.TrimSuffix(strings.TrimPrefix(s.Text, "APPEND "), ".")) {
-			add("literal_range_build", i, s.Text)
+		if strings.HasPrefix(strings.ToUpper(s.Text), "APPEND VALUE ") {
+			expr := strings.TrimSpace(s.Text[len("APPEND "):])
+			if at := strings.LastIndex(strings.ToUpper(expr), " TO "); at >= 0 {
+				expr = expr[:at]
+			}
+			if literalConstructor(expr) {
+				add("literal_range_build", i, s.Text)
+			}
 		}
 	}
 	return out

@@ -1,0 +1,270 @@
+hir v1
+class src/abap/2_statements/combi.ts.Regex
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((seq ((numeric_convert((array.length(((inl_35_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_35_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 == (0):i64):bool
+        continue
+      end if
+      var token:classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> = (seq (((inl_36_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>[((inl_36_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32]):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>
+      if ((regexp.test(((this):classref<src/abap/2_statements/combi.ts.Regex>.regexp):regexp, (seq ((inl_37_self):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>.str):string):string)):bool == (true):bool):bool
+        (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (seq (call src/abap/2_statements/result.ts.Result.fromChain(((inl_38_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>, ((numeric_convert(((inl_38_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64 + (1):i64):i64, (if (true):bool then (new classref<src/abap/2_statements/result.ts.ResultNode>((inl_38_node):interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>, ((inl_38_self):classref<src/abap/2_statements/result.ts.Result>.nodes):optional<classref<src/abap/2_statements/result.ts.ResultNode>>)):classref<src/abap/2_statements/result.ts.ResultNode> else (undefined):optional<classref<src/abap/2_statements/result.ts.ResultNode>>):optional<classref<src/abap/2_statements/result.ts.ResultNode>>, (((inl_38_self):classref<src/abap/2_statements/result.ts.Result>.nodeCount):i64 + (1):i64):i64)):classref<src/abap/2_statements/result.ts.Result>):classref<src/abap/2_statements/result.ts.Result>)):i32
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  (this):classref<src/abap/2_statements/combi.ts.Regex>.run((seq (singleton_arg):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Word
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      if (((seq ((numeric_convert((array.length(((inl_39_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_39_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 != (0):i64):bool && ((seq ((inl_41_self):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>.strUpper):string):string == ((this):classref<src/abap/2_statements/combi.ts.Word>.s):string):bool):bool
+        (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (seq (call src/abap/2_statements/result.ts.Result.fromChain(((inl_43_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>, ((numeric_convert(((inl_43_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64 + (1):i64):i64, (if (true):bool then (new classref<src/abap/2_statements/result.ts.ResultNode>((inl_43_node):interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>, ((inl_43_self):classref<src/abap/2_statements/result.ts.Result>.nodes):optional<classref<src/abap/2_statements/result.ts.ResultNode>>)):classref<src/abap/2_statements/result.ts.ResultNode> else (undefined):optional<classref<src/abap/2_statements/result.ts.ResultNode>>):optional<classref<src/abap/2_statements/result.ts.ResultNode>>, (((inl_43_self):classref<src/abap/2_statements/result.ts.Result>.nodeCount):i64 + (1):i64):i64)):classref<src/abap/2_statements/result.ts.Result>):classref<src/abap/2_statements/result.ts.Result>)):i32
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    var input:classref<src/abap/2_statements/result.ts.Result> = (x):classref<src/abap/2_statements/result.ts.Result>
+    if (((seq ((numeric_convert((array.length(((inl_44_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_44_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 != (0):i64):bool && ((seq ((inl_46_self):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>.strUpper):string):string == ((this):classref<src/abap/2_statements/combi.ts.Word>.s):string):bool):bool
+      (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (seq (call src/abap/2_statements/result.ts.Result.fromChain(((inl_48_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>, ((numeric_convert(((inl_48_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64 + (1):i64):i64, (if (true):bool then (new classref<src/abap/2_statements/result.ts.ResultNode>((inl_48_node):interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>, ((inl_48_self):classref<src/abap/2_statements/result.ts.Result>.nodes):optional<classref<src/abap/2_statements/result.ts.ResultNode>>)):classref<src/abap/2_statements/result.ts.ResultNode> else (undefined):optional<classref<src/abap/2_statements/result.ts.ResultNode>>):optional<classref<src/abap/2_statements/result.ts.ResultNode>>, (((inl_48_self):classref<src/abap/2_statements/result.ts.Result>.nodeCount):i64 + (1):i64):i64)):classref<src/abap/2_statements/result.ts.Result>):classref<src/abap/2_statements/result.ts.Result>)):i32
+    end if
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Token
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      if (((seq ((numeric_convert((array.length(((inl_49_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_49_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 != (0):i64):bool && ((object.classOf((seq (((inl_50_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>[((inl_50_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32]):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>)):classvalue == ((this):classref<src/abap/2_statements/combi.ts.Token>.tokenType):classvalue):bool):bool
+        (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (seq (call src/abap/2_statements/result.ts.Result.fromChain(((inl_52_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>, ((numeric_convert(((inl_52_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64 + (1):i64):i64, (if (true):bool then (new classref<src/abap/2_statements/result.ts.ResultNode>((inl_52_node):interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>, ((inl_52_self):classref<src/abap/2_statements/result.ts.Result>.nodes):optional<classref<src/abap/2_statements/result.ts.ResultNode>>)):classref<src/abap/2_statements/result.ts.ResultNode> else (undefined):optional<classref<src/abap/2_statements/result.ts.ResultNode>>):optional<classref<src/abap/2_statements/result.ts.ResultNode>>, (((inl_52_self):classref<src/abap/2_statements/result.ts.Result>.nodeCount):i64 + (1):i64):i64)):classref<src/abap/2_statements/result.ts.Result>):classref<src/abap/2_statements/result.ts.Result>)):i32
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    var input:classref<src/abap/2_statements/result.ts.Result> = (x):classref<src/abap/2_statements/result.ts.Result>
+    if (((seq ((numeric_convert((array.length(((inl_53_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_53_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 != (0):i64):bool && ((object.classOf((seq (((inl_54_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>[((inl_54_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32]):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>)):classvalue == ((this):classref<src/abap/2_statements/combi.ts.Token>.tokenType):classvalue):bool):bool
+      (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (seq (call src/abap/2_statements/result.ts.Result.fromChain(((inl_56_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>, ((numeric_convert(((inl_56_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64 + (1):i64):i64, (if (true):bool then (new classref<src/abap/2_statements/result.ts.ResultNode>((inl_56_node):interfaceref<union.66719939903e43ae9586894a3271d3c1e0bc1a87886c0b01d3e32f95e19d70c3>, ((inl_56_self):classref<src/abap/2_statements/result.ts.Result>.nodes):optional<classref<src/abap/2_statements/result.ts.ResultNode>>)):classref<src/abap/2_statements/result.ts.ResultNode> else (undefined):optional<classref<src/abap/2_statements/result.ts.ResultNode>>):optional<classref<src/abap/2_statements/result.ts.ResultNode>>, (((inl_56_self):classref<src/abap/2_statements/result.ts.Result>.nodeCount):i64 + (1):i64):i64)):classref<src/abap/2_statements/result.ts.Result>):classref<src/abap/2_statements/result.ts.Result>)):i32
+    end if
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Optional
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (input):classref<src/abap/2_statements/result.ts.Result>)):i32
+      var res:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  ((this):classref<src/abap/2_statements/combi.ts.Optional>.optional):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run_one((input):classref<src/abap/2_statements/result.ts.Result>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((array.length((res):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+        (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((res):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+      else
+        (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    var input:classref<src/abap/2_statements/result.ts.Result> = (x):classref<src/abap/2_statements/result.ts.Result>
+    (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, (input):classref<src/abap/2_statements/result.ts.Result>)):i32
+    var res:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  ((this):classref<src/abap/2_statements/combi.ts.Optional>.optional):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run_one((input):classref<src/abap/2_statements/result.ts.Result>)):array<classref<src/abap/2_statements/result.ts.Result>>
+    if ((array.length((res):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+      (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((res):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+    else
+      (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+    end if
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Star
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (r):array<classref<src/abap/2_statements/result.ts.Result>>
+    try
+      var res:array<classref<src/abap/2_statements/result.ts.Result>> = (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      var input:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+      while (true):bool
+        (input):array<classref<src/abap/2_statements/result.ts.Result>> = (res):array<classref<src/abap/2_statements/result.ts.Result>>
+        (res):array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  ((this):classref<src/abap/2_statements/combi.ts.Star>.sta):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((input):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+        if ((array.length((res):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (0):i32):bool
+          break
+        end if
+        if ((array.length((res):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 > (1000):i32):bool
+          (result):array<classref<src/abap/2_statements/result.ts.Result>> = (array.concat((result):array<classref<src/abap/2_statements/result.ts.Result>>, (res):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+        else
+          if ((array.length((res):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+            (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((res):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+          else
+            (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+          end if
+        end if
+      end while
+    catch err:classref<builtin.Error>
+      if ((err):classref<builtin.Error> instanceof src/abap/2_statements/combi.ts.FailStarError):bool
+        return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+      end if
+      throw (err):classref<builtin.Error>
+    end try
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  (this):classref<src/abap/2_statements/combi.ts.Star>.run((seq (singleton_arg):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Plus
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  ((this):classref<src/abap/2_statements/combi.ts.Plus>.sub):classref<src/abap/2_statements/combi.ts.Sequence>.run((r):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (seq (virtual  ((this):classref<src/abap/2_statements/combi.ts.Plus>.sub):classref<src/abap/2_statements/combi.ts.Sequence>.run((inl_65_r):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Sequence
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (seq (t30039):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+      var match:bool = (true):bool
+      foreach sequence:interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> in ((this):classref<src/abap/2_statements/combi.ts.Sequence>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+        (temp):array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (sequence):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+        if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (0):i32):bool
+          (match):bool = (false):bool
+          break
+        end if
+      end foreach
+      if ((match):bool == (true):bool):bool
+        if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 > (1000):i32):bool
+          (result):array<classref<src/abap/2_statements/result.ts.Result>> = (array.concat((result):array<classref<src/abap/2_statements/result.ts.Result>>, (temp):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+        else
+          if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+            (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((temp):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+          else
+            (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+          end if
+        end if
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    var input:classref<src/abap/2_statements/result.ts.Result> = (x):classref<src/abap/2_statements/result.ts.Result>
+    var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (seq (t30039):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var match:bool = (true):bool
+    foreach sequence:interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> in ((this):classref<src/abap/2_statements/combi.ts.Sequence>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+      (temp):array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (sequence):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (0):i32):bool
+        (match):bool = (false):bool
+        break
+      end if
+    end foreach
+    if ((match):bool == (true):bool):bool
+      if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 > (1000):i32):bool
+        (result):array<classref<src/abap/2_statements/result.ts.Result>> = (array.concat((result):array<classref<src/abap/2_statements/result.ts.Result>>, (temp):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      else
+        if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+          (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((temp):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+        else
+          (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+        end if
+      end if
+    end if
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Expression
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var results:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    if (seq (undefined((t30148):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>)):bool):bool
+      ((this):classref<src/abap/2_statements/combi.ts.Expression>.runnable):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> = (if (true):bool then (virtual  (this):classref<src/abap/2_statements/combi.ts.Expression>.getRunnable()):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> else (undefined):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+    end if
+    foreach input:classref<src/abap/2_statements/result.ts.Result> in (r):array<classref<src/abap/2_statements/result.ts.Result>>
+      var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (narrow ((this):classref<src/abap/2_statements/combi.ts.Expression>.runnable):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> to interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run_one((input):classref<src/abap/2_statements/result.ts.Result>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      foreach t:classref<src/abap/2_statements/result.ts.Result> in (temp):array<classref<src/abap/2_statements/result.ts.Result>>
+        var consumed:i64 = ((seq ((numeric_convert((array.length(((inl_68_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_68_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 - (seq ((numeric_convert((array.length(((inl_69_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_69_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64):i64
+        if ((consumed):i64 > (0):i64):bool
+          var re:classref<src/abap/nodes/expression_node.ts.ExpressionNode> = (new classref<src/abap/nodes/expression_node.ts.ExpressionNode>((this):classref<src/abap/2_statements/combi.ts.Expression>)):classref<src/abap/nodes/expression_node.ts.ExpressionNode>
+          (array.push((results):array<classref<src/abap/2_statements/result.ts.Result>>, (virtual  (t):classref<src/abap/2_statements/result.ts.Result>.wrapConsumed((consumed):i64, (re):classref<src/abap/nodes/expression_node.ts.ExpressionNode>)):classref<src/abap/2_statements/result.ts.Result>)):i32
+        else
+          (array.push((results):array<classref<src/abap/2_statements/result.ts.Result>>, (t):classref<src/abap/2_statements/result.ts.Result>)):i32
+        end if
+      end foreach
+    end foreach
+    return (results):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var results:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    if (seq (undefined((t30148):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>)):bool):bool
+      ((this):classref<src/abap/2_statements/combi.ts.Expression>.runnable):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> = (if (true):bool then (virtual  (this):classref<src/abap/2_statements/combi.ts.Expression>.getRunnable()):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> else (undefined):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+    end if
+    var input:classref<src/abap/2_statements/result.ts.Result> = (x):classref<src/abap/2_statements/result.ts.Result>
+    var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (narrow ((this):classref<src/abap/2_statements/combi.ts.Expression>.runnable):optional<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> to interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run_one((input):classref<src/abap/2_statements/result.ts.Result>)):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach t:classref<src/abap/2_statements/result.ts.Result> in (temp):array<classref<src/abap/2_statements/result.ts.Result>>
+      var consumed:i64 = ((seq ((numeric_convert((array.length(((inl_70_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_70_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64 - (seq ((numeric_convert((array.length(((inl_71_self):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((inl_71_self):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64):i64):i64
+      if ((consumed):i64 > (0):i64):bool
+        var re:classref<src/abap/nodes/expression_node.ts.ExpressionNode> = (new classref<src/abap/nodes/expression_node.ts.ExpressionNode>((this):classref<src/abap/2_statements/combi.ts.Expression>)):classref<src/abap/nodes/expression_node.ts.ExpressionNode>
+        (array.push((results):array<classref<src/abap/2_statements/result.ts.Result>>, (virtual  (t):classref<src/abap/2_statements/result.ts.Result>.wrapConsumed((consumed):i64, (re):classref<src/abap/nodes/expression_node.ts.ExpressionNode>)):classref<src/abap/2_statements/result.ts.Result>)):i32
+      else
+        (array.push((results):array<classref<src/abap/2_statements/result.ts.Result>>, (t):classref<src/abap/2_statements/result.ts.Result>)):i32
+      end if
+    end foreach
+    return (results):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Permutation
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    var copy:array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> = (array.slice0(((this):classref<src/abap/2_statements/combi.ts.Permutation>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>)):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+    var index:i32 = (0):i32
+    while ((index):i32 < (array.length(((this):classref<src/abap/2_statements/combi.ts.Permutation>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>)):i32):bool
+      var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (((this):classref<src/abap/2_statements/combi.ts.Permutation>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>[(index):i32]):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((r):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 != (0):i32):bool
+        (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+        var left:array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>> = (copy):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+        (array.splice2((left):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>, (index):i32, (1):i32)):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+        if ((array.length((left):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>)):i32 == (1):i32):bool
+          (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+        else
+          (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+        end if
+      end if
+      (index):i32 = ((index):i32 + (1):i32):i32
+    end while
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  (this):classref<src/abap/2_statements/combi.ts.Permutation>.run((seq (singleton_arg):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.Alternative
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach sequ:interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> in ((this):classref<src/abap/2_statements/combi.ts.Alternative>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+      var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (sequ):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((r):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+        (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((temp):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+      else
+        (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  (this):classref<src/abap/2_statements/combi.ts.Alternative>.run((seq (singleton_arg):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/combi.ts.AlternativePriority
+  method run virtual(r:array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>
+    var result:array<classref<src/abap/2_statements/result.ts.Result>> = (new array<classref<src/abap/2_statements/result.ts.Result>>()):array<classref<src/abap/2_statements/result.ts.Result>>
+    foreach sequ:interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> in ((this):classref<src/abap/2_statements/combi.ts.AlternativePriority>.list):array<interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>>
+      var temp:array<classref<src/abap/2_statements/result.ts.Result>> = (virtual  (sequ):interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable>.run((r):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+      if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 > (0):i32):bool
+        if ((array.length((temp):array<classref<src/abap/2_statements/result.ts.Result>>)):i32 == (1):i32):bool
+          (array.push((result):array<classref<src/abap/2_statements/result.ts.Result>>, ((temp):array<classref<src/abap/2_statements/result.ts.Result>>[(0):i32]):classref<src/abap/2_statements/result.ts.Result>)):i32
+        else
+          (seq (array.length((result):array<classref<src/abap/2_statements/result.ts.Result>>)):i32):i32
+        end if
+        break
+      end if
+    end foreach
+    return (result):array<classref<src/abap/2_statements/result.ts.Result>>
+  method run_one virtual(x:classref<src/abap/2_statements/result.ts.Result>):array<classref<src/abap/2_statements/result.ts.Result>>
+    return (virtual  (this):classref<src/abap/2_statements/combi.ts.AlternativePriority>.run((seq (singleton_arg):array<classref<src/abap/2_statements/result.ts.Result>>):array<classref<src/abap/2_statements/result.ts.Result>>)):array<classref<src/abap/2_statements/result.ts.Result>>
+class src/abap/2_statements/result.ts.Result
+  method peek virtual():classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>
+    return (((this):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>[((this):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32]):classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>
+  method remainingLength virtual():i64
+    return ((numeric_convert((array.length(((this):classref<src/abap/2_statements/result.ts.Result>.tokens):array<classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>>)):i32)):i64 - (numeric_convert(((this):classref<src/abap/2_statements/result.ts.Result>.tokenIndex):i32)):i64):i64
+class src/abap/2_statements/statement_parser.ts.StatementParser
+  method run virtual(input:array<classref<src/abap/1_lexer/lexer_result.ts.IABAPLexerResult>>, globalMacros:array<string>):array<classref<src/abap/2_statements/statement_result.ts.IStatementResult>>
+    var macros:classref<src/abap/2_statements/expand_macros.ts.ExpandMacros> = (new classref<src/abap/2_statements/expand_macros.ts.ExpandMacros>((globalMacros):array<string>, ((this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.release):classref<src/version.ts.ABAPRelease>, ((this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.reg):optional<interfaceref<src/_iregistry.ts.IRegistry>>, (if (true):bool then ((this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.languageVersion):string else (undefined):optional<string>):optional<string>)):classref<src/abap/2_statements/expand_macros.ts.ExpandMacros>
+    var wa:array<classref<src/abap/2_statements/statement_parser.ts.WorkArea>> = (seq (t45471):array<classref<src/abap/2_statements/statement_parser.ts.WorkArea>>):array<classref<src/abap/2_statements/statement_parser.ts.WorkArea>>
+    foreach w:classref<src/abap/2_statements/statement_parser.ts.WorkArea> in (wa):array<classref<src/abap/2_statements/statement_parser.ts.WorkArea>>
+      (virtual  (this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.process((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>)):void
+      (virtual  (this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.categorize((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>)):void
+      (virtual  (macros):classref<src/abap/2_statements/expand_macros.ts.ExpandMacros>.find(((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>.statements):array<classref<src/abap/nodes/statement_node.ts.StatementNode>>, ((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>.file):interfaceref<src/files/_ifile.ts.IFile>, (undefined):optional<bool>)):void
+    end foreach
+    foreach w:classref<src/abap/2_statements/statement_parser.ts.WorkArea> in (wa):array<classref<src/abap/2_statements/statement_parser.ts.WorkArea>>
+      var res:classref<shape.859df1ada61dae887a32b020d02fbfb71ae31388135681ee5955fb458d381116> = (virtual  (macros):classref<src/abap/2_statements/expand_macros.ts.ExpandMacros>.handleMacros(((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>.statements):array<classref<src/abap/nodes/statement_node.ts.StatementNode>>, ((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>.file):interfaceref<src/files/_ifile.ts.IFile>, (undefined):optional<set<string>>)):classref<shape.859df1ada61dae887a32b020d02fbfb71ae31388135681ee5955fb458d381116>
+      ((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>.statements):array<classref<src/abap/nodes/statement_node.ts.StatementNode>> = ((res):classref<shape.859df1ada61dae887a32b020d02fbfb71ae31388135681ee5955fb458d381116>.statements):array<classref<src/abap/nodes/statement_node.ts.StatementNode>>
+      if (((res):classref<shape.859df1ada61dae887a32b020d02fbfb71ae31388135681ee5955fb458d381116>.containsUnknown):bool == (true):bool):bool
+        (virtual  (this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.lazyUnknown((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>)):void
+      end if
+      (virtual  (this):classref<src/abap/2_statements/statement_parser.ts.StatementParser>.nativeSQL((w):classref<src/abap/2_statements/statement_parser.ts.WorkArea>)):void
+    end foreach
+    return (seq (t45533):array<classref<src/abap/2_statements/statement_result.ts.IStatementResult>>):array<classref<src/abap/2_statements/statement_result.ts.IStatementResult>>
