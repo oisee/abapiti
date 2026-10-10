@@ -17,6 +17,10 @@
  (base (virtual_call ?m _ _ ?s) (not (resolved ?s))))
 (rule unknown-throw 0 (head (raises ?m ?s))
  (base (virtual_call ?m _ _ ?s) (not (resolved ?s))))
+; Runtime raising is selected from reviewed adapter effects, including SpecialOps.
+(rule runtime-raise 0 (head (raises ?m ?s))
+ (base (runtime_op ?s ?op) (site_method ?s ?m) (op_may_raise ?op ?kind)
+       (neq ?kind None)))
 (rule may-throw 0 (head (may_throw ?m))
  (base (throws ?m _)) (base (trap ?m)) (base (raises ?m _))
  (tail (calls ?m ?n _) (may_throw ?n)))
@@ -50,7 +54,7 @@
 (rule memo-store 0 (head (memo_store ?m ?c ?f))
  (base (memo_shape ?m ?c ?f ?compute) (pure ?compute)))
 (rule lazy-init 0 (head (lazy_init ?c))
- (base (implicit_init ?c)) (base (flag_init ?c)))
+ (base (implicit_init ?c)) (base (flag_init ?c _)))
 
 (rule counter 0 (head (counter_store ?m ?c ?f))
  (base (counter_shape ?m ?c ?f) (not (noncounter_write ?m ?c ?f))))

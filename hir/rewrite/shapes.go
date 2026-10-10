@@ -55,7 +55,7 @@ func (x *extractor) shapes(body *hir.Stmt) {
 				}
 				target := x.resolve(compute.Owner, compute.Name)
 				if target != "" {
-					x.add("memo_shape", x.method, x.fieldOwner(ret.X.Owner, ret.X.Name), ret.X.Name, target)
+					x.add("memo_shape", x.method, x.fieldOwner(ret.X.Owner, ret.X.Name, true), ret.X.Name, target)
 				}
 			}
 		}
@@ -68,7 +68,7 @@ func (x *extractor) shapes(body *hir.Stmt) {
 		if cond != nil && cond.Kind == hir.Unary && cond.Op == "!" && cond.X != nil && cond.X.Kind == hir.StaticGet && cond.X.Type.Kind == hir.Bool && len(bs) > 0 {
 			last := bs[len(bs)-1]
 			if last.Kind == hir.Assign && same(last.X, cond.X) && last.Y != nil && last.Y.Kind == hir.Lit && last.Y.Value == true {
-				x.add("flag_init", x.fieldOwner(cond.X.Owner, cond.X.Name))
+				x.add("flag_init", x.fieldOwner(cond.X.Owner, cond.X.Name, true), cond.X.Name)
 			}
 		}
 	}

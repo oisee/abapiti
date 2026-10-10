@@ -231,9 +231,9 @@ func TestInlinePreparesRejectedTemplateBeforeLaterCall(t *testing.T) {
 	gracecheck.Check(t, p)
 }
 
-// TS: late(k) { let r; if (k > 0) r = k; return r === undefined ? -1 : r }
-// Calling late for [5, -1] in a loop must yield [5, -1], with a fresh frame.
-// A hoisted inlined declaration would retain 5 on the second iteration.
+// The uninitialized-local shape from 70394ff needs a fresh call frame. A
+// hoisted declaration would retain 5 on a later iteration. The TypeScript
+// regression in tsfront separately executes the undefined case as [5,-1].
 func TestInlineRejectsUninitializedDeclarationInLoop(t *testing.T) {
 	i, ref := hir.T(hir.I32), hir.Ref("C")
 	late := &hir.Method{Name: "late", Virtual: true, Params: []hir.Param{{Name: "k", Type: i}}, Result: i,

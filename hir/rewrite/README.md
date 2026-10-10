@@ -1,7 +1,7 @@
 # Grace — rules over abapiti's HIR
 
 Adapted from the Grace design draft (2026-10-09). Reviewer: abapiti.
-Home: package `hir/rewrite` in oisee/abapiti, branch `proto/grace-v2`.
+Home: package `hir/rewrite` in oisee/abapiti, branch `proto/grace`.
 Milestones 1 and 2 implement the fact layer and the bounded rewrite layer,
 including the Grace inliner. Backend integration remains separate.
 
@@ -23,7 +23,9 @@ Two layers, one small language (S-expressions, like MinZ's Grace):
 - `reads_field(M, C, F)`, `writes_field(M, C, F)`, `reads_static(M, C, F)`, `writes_static(M, C, F)`
 - `throws(M, Site)`, `trap(M)`, `try(M, Region)`
 - `local(M, V, Type)`, `assign(M, V, Expr)`, `returns(M, Expr)`, `param(M, I, V)`
-- `runtime_op(Site, Op)` with the catalogue's `Mutates` flag
+- `runtime_op(Site, Op)` and the adapter's `op_reads`, `op_writes`,
+  `op_allocates`, `op_may_raise`, `op_aliases` records
+- `ensure_init(Method, Site, Class)` for emitter-derived lazy initialization guards
 
 ## First derived facts
 
@@ -82,7 +84,7 @@ E-graphs and per-target cost extraction (only when rules start to conflict); ISL
 `Analyze`, `Extract`, `Evaluate` and `Report` remain read-only. Milestone 2 adds
 mutation through `Rewrite` and `Inline`, as described below. All engine source
 and rules here are fresh; MinZ's Grace, Datalog and ISLE supplied syntax ideas
-only. The reference inliner is relocated exclusively into test support.
+only. The test oracle invokes main's HIR inliner on an independent deep copy.
 
 The public entry points are `Parse`, `Evaluate`, `NewDB`, and (with extraction)
 `Analyze` and `Report`. The package uses only HIR and the Go standard library.
@@ -127,8 +129,8 @@ for the receiver. `new` records class allocations. Interfaces enter through
 
 Support relations (`concrete`, `defined`, `dispatch`, `interface_subtype`, `site_type`, `narrowed`,
 `exact_receiver`, `expr`, `flow`, `alias`, `argument`, `sink`, `fresh`, `mutation`,
-`static_origin`, `field_origin`, `site_method`, `runtime_mutates`, `raises`,
-`unknown_effect`, `implicit_init`, `flag_init`, `memo_shape`, `counter_shape`,
+`static_origin`, `field_origin`, `site_method`, `raises`,
+`unknown_effect`, `ensure_init`, `implicit_init`, `flag_init`, `memo_shape`, `counter_shape`,
 `noncounter_write`) describe HIR identities, shapes and effects. The seven
 requested derived relations are evaluated from the embedded `.grace` rules.
 `flow(M,destination,source)` tracks possible value dependence for escape/alias
@@ -141,14 +143,26 @@ checked views and conditional unions narrow the candidate classes. Any local
 name assigned elsewhere in the method disables that narrowing (including loops
 and Seq); mutable locals and parameter/field/return flow fall back to CHA. This
 is deliberately conservative and not an interprocedural points-to analysis.
-Constructor calls and implicit class constructors on allocations, static member
-access and static calls enter the call graph. Empty virtual dispatch is unknown.
+Constructor calls and emitter-derived `ensure_init(Method,Site,Class)` guards
+enter the call graph. Guards cover non-constant static reads, static writes,
+class allocations, and static-method/constructor entry (excluding the initializer
+itself). Constant-only or empty initializers need no guard. The adapter mirrors
+`hir/abap/constants.go`; static/field facts retain separate owner and name columns,
+and constant tracking uses a `FieldKey{Owner,Name}` key. Empty virtual dispatch is unknown.
 
 `may_throw` includes explicit throws, traps, transitive calls, checked casts,
 checked conversions, potential Number arithmetic failures and runtime operations
-outside a reviewed non-raising whitelist. HIR's runtime catalogue has `Mutates`
-but no `MayRaise`; no target-independent non-throwing guarantee can be inferred
-from `Mutates=false`. Catch regions are recorded but do not suppress may-throw:
+selected by the explicit adapter effects table in `effects.go`. Every catalogue
+operation and SpecialOp has Reads (Receiver/Args/Global), Writes
+(None/Receiver/Arg(i)), Allocates, MayRaise (None/Trap/Catchable), and Aliases
+(None/Receiver). Base relations are `op_reads(Op,Source)`, `op_writes(Op,Target)`,
+`op_allocates(Op,Bool)`, `op_may_raise(Op,Kind)`, and `op_aliases(Op,Source)`.
+`op_conservative(Op,Reason)` marks unresolved target behavior. Allocates alone
+does not prove confinement (Optional boxes may contain existing references).
+Invoked constructors in classvalue.new/materialize retain unknown effects until
+separate call-target analysis resolves them. `may_throw`
+uses `op_may_raise`, independently of the HIR catalogue's calling-convention
+`Mutates` bit. Only clock.telemetry reads Global. Catch regions are recorded but do not suppress may-throw:
 this milestone does not prove handler coverage. Allocation failure is excluded.
 
 Purity means no field/static writes, no external or unknown effects, and calls
@@ -197,7 +211,7 @@ by method and class. Write totals count distinct `(method,class,field)` tuples,
 not dynamic events or individual store sites. A field may therefore have more
 than one classification across methods. The original lexer differential and
 backend goldens remain unchanged. The milestone 2 test also compares independent
-HIR copies with the pinned reference inliner before reporting the original facts.
+HIR copies with main's reference inliner before reporting the original facts.
 
 ### Open HIR interface questions for abapiti
 
@@ -267,13 +281,13 @@ larger inputs; the checked fixtures do not reach them.
 
 ### Oracle and reproducibility
 
-`internal/inlineoracle` pins `hir/inline.go` from `origin/wip/hir-inline` at
-`1f84049419b22f062573ebbe7f30c48cfcecfae2`. Only the package, HIR import and private
-class-constructor constant are mechanically adapted. Only tests import it;
-production rewrite code has no oracle dependency. Its README records the source
-SHA-256. Each comparison makes two type-preserving copies, compares `hir.Dump`
-byte for byte and compares total/per-callee `InlineStats`. Failures print the
-first differing line or stats. No golden or production HIR is replaced.
+`internal/inlineoracle` calls main's real `hir.InlineStats`. Only tests import
+it; production rewrite code has no oracle dependency. Each comparison makes two
+independent type-preserving deep copies, compares `hir.Dump` byte for byte and
+compares total/per-callee counters. Failures print the first differing line or
+stats. The 70394ff selection guard rejects any callee with an uninitialized
+VarDecl, including inside Seq. A synthetic TypeScript loop executes in Node
+with result `[5,-1]` and remains a call under both inliners.
 
 The lexer fact-report fixture and all seven registry emission fixtures perform
 this comparison. JSON/XML do it before their existing external-corpus emission
@@ -296,11 +310,10 @@ sorts 10, XML 1. The lexer corpus still contains 44 cases.
 
 ### Size and language boundary
 
-Physical line counts (including comments/blanks, excluding tests and the oracle):
-rewrite runner 366 Go lines, inline action/return lowering 411, inline facts 103,
-and inline rules 66: 946 lines for the new runner/action/facts/rules files.
-The full package is 2,144 Go lines plus 127 Grace lines, including milestone 1.
-The pinned original inliner is 743 lines and is counted separately.
+The rewrite runner, native inline action/return lowering, and fact extractor
+are Go. Selection and derived analysis live in the small Grace rule files.
+Runtime effects and emitter initialization guards live in adapter Go files.
+The oracle uses the main HIR inliner directly; no implementation is vendored.
 
 No reference selection criterion is omitted. Return-template feasibility is a
 native shape fact (`inline_template`), and template lowering, effect bindings,
@@ -335,7 +348,7 @@ Lexer and all seven registry fixture tests call the same checker before any
 external emission-oracle skip. It checks reference fact equality, reevaluation,
 declaration permutations, positive-rule monotonicity, one-pass inline
 idempotence, verified rounds, zero depth, independently counted per-method and
-program growth, and the pinned inliner dump/counter comparison. Synthetic graph
+program growth, and main's inliner dump/counter comparison. Synthetic graph
 cycles are virtual calls; embedded rules reject recursive candidates rather
 than unrolling them. The Seq budget regression fixes an omitted enclosing block
 in the native node counter; default fixture oracle results are unchanged.
@@ -347,7 +360,7 @@ stratified rules are covered by the independent evaluator. Executable statement
 order is semantic, and structural fact site IDs encode that order. Statement
 permutation tests use independent literals. Declaration permutation facts must
 be exactly equal, while rewritten dumps are compared after sorting declarations
-and alpha-normalising generated local names. The pinned oracle numbers those
+and alpha-normalising generated local names. The main oracle numbers those
 names by traversal order. `TestInlineOracleNamesFollowDeclarationOrder` keeps a
 minimal demonstration that literal dump invariance under method permutations
 would conflict with byte-identical oracle compatibility.

@@ -3,6 +3,7 @@ package rewrite
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/oisee/abapiti/hir"
 )
@@ -17,6 +18,8 @@ type extractor struct {
 	classes       map[string]*hir.Class
 	owner, method string
 	assigned      map[string]bool
+	constants     map[FieldKey]bool
+	initializers  map[string]bool
 }
 type scope map[string]binding
 
@@ -46,10 +49,10 @@ func (x *extractor) resolve(c, m string) string {
 	}
 	return ""
 }
-func (x *extractor) fieldOwner(c, f string) string {
+func (x *extractor) fieldOwner(c, f string, static bool) string {
 	for cl := x.classes[c]; cl != nil; cl = x.classes[cl.Super] {
 		for _, ff := range cl.Fields {
-			if ff.Name == f {
+			if ff.Name == f && ff.Static == static {
 				return cl.Name
 			}
 		}
@@ -57,13 +60,11 @@ func (x *extractor) fieldOwner(c, f string) string {
 	return c
 }
 func (x *extractor) init(c, site string) {
-	for cl := x.classes[c]; cl != nil; cl = x.classes[cl.Super] {
-		for _, m := range cl.Methods {
-			if m.Name == "class_constructor" {
-				x.add("calls", x.method, methodID(cl.Name, m.Name), site+"/init/"+cl.Name)
-			}
-		}
+	if !x.initializers[c] {
+		return
 	}
+	x.add("ensure_init", x.method, site, c)
+	x.add("calls", x.method, methodID(c, "class_constructor"), site+"/init/"+c)
 }
 
 // Extract expects verified HIR. Site identities are method-qualified structural
@@ -73,6 +74,8 @@ func Extract(p *hir.Program) *DB {
 	for _, c := range p.Classes {
 		x.classes[c.Name] = c
 	}
+	x.findInitializers(p)
+	x.addEffects()
 	for _, a := range p.Interfaces {
 		for _, b := range p.Interfaces {
 			if interfaceAccepts(a, b) {
@@ -139,6 +142,9 @@ func Extract(p *hir.Program) *DB {
 				env[p.Name] = b
 				x.add("param", x.method, strconv.Itoa(i), b.id)
 				x.add("local", x.method, b.id, p.Type.String())
+			}
+			if (m.Static || m == c.Ctor || name == "constructor") && name != "class_constructor" {
+				x.init(c.Name, x.method+"/entry")
 			}
 			x.assigned = map[string]bool{}
 			assignedNames(m.Body, x.assigned)
@@ -244,14 +250,16 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 	}
 	switch e.Kind {
 	case hir.FieldGet:
-		owner = x.fieldOwner(owner, e.Name)
+		owner = x.fieldOwner(owner, e.Name, false)
 		x.add("reads_field", x.method, owner, e.Name)
 		x.add("field_origin", path, owner, e.Name)
 	case hir.StaticGet:
-		owner = x.fieldOwner(e.Owner, e.Name)
+		owner = x.fieldOwner(e.Owner, e.Name, true)
 		x.add("reads_static", x.method, owner, e.Name)
 		x.add("static_origin", path, owner, e.Name)
-		x.init(owner, path)
+		if !x.constants[FieldKey{e.Owner, e.Name}] {
+			x.init(e.Owner, path)
+		}
 	case hir.VirtualCall:
 		x.add("virtual_call", x.method, ids[0], e.Name, path)
 		x.add("site_type", path, owner)
@@ -282,8 +290,6 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			x.add("argument", path, "this", ids[0])
 		} else if e.Kind == hir.SuperCall {
 			x.add("argument", path, "this", env["this"].id)
-		} else {
-			x.init(owner, path)
 		}
 	case hir.New:
 		if e.Type.Kind == hir.ClassRef {
@@ -296,33 +302,38 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 	case hir.RuntimeOp:
 		x.add("runtime_op", path, e.Op)
 		x.add("site_method", path, x.method)
-		spec, known := hir.RuntimeSpecs[e.Op]
-		if known {
-			x.add("runtime_mutates", e.Op, strconv.FormatBool(spec.Mutates))
-		}
-		if spec.Mutates {
-			if e.Type.IsRef() {
-				x.add("alias", x.method, path, ids[0])
-			}
+		effect, known := RuntimeEffects[e.Op]
+		if effect.Writes == "Receiver" {
 			x.add("mutation", x.method, ids[0])
 			for i := range e.Args {
 				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
 			}
-		}
-		if !known || e.Op == "clock.telemetry" {
-			for i := range e.Args {
-				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
+		} else if strings.HasPrefix(effect.Writes, "Arg(") {
+			i, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(effect.Writes, "Arg("), ")"))
+			if err == nil && i < len(e.Args) {
+				x.add("mutation", x.method, fmt.Sprintf("%s/arg%d", path, i))
 			}
+		}
+		if effect.Aliases == "Receiver" && referenceType(e.Type) {
+			x.add("alias", x.method, path, ids[0])
+		}
+		// Allocation may be only an Optional wrapper around an existing ref.
+		// op_allocates alone does not prove ownership or confinement.
+		if !known || effect.Reads.Global || e.Op == "classvalue.new" || e.Op == "dynamic.materialize" {
 			x.add("unknown_effect", x.method)
 			for _, id := range ids {
 				if id != "" {
 					x.add("sink", x.method, id)
 				}
 			}
+			for i := range e.Args {
+				x.add("sink", x.method, fmt.Sprintf("%s/arg%d", path, i))
+			}
 		}
-		if !safeRuntime(e.Op) {
+		if !known {
 			x.add("raises", x.method, path)
 		}
+
 	case hir.Cast, hir.CheckedNumericConvert:
 		if e.Kind == hir.Cast {
 			x.add("alias", x.method, path, ids[0])
@@ -335,6 +346,10 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 		if e.Type.IsRef() && e.X != nil && !e.Type.Equal(e.X.Type) {
 			x.add("raises", x.method, path)
 		}
+	case hir.Unary:
+		if e.CheckIntegerOverflow {
+			x.add("raises", x.method, path)
+		}
 	case hir.Binary:
 		if e.Type.Kind == hir.Number && (e.Op == "+" || e.Op == "-" || e.Op == "*" || e.Op == "/") || e.Op == "/" || e.Op == "%" || e.CheckIntegerOverflow {
 			x.add("raises", x.method, path)
@@ -343,15 +358,6 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 	return path
 }
 
-// No HIR MayRaise catalogue exists. These reviewed operations have no semantic
-// raising path; all others conservatively may raise (allocation failure excluded).
-func safeRuntime(op string) bool {
-	switch op {
-	case "string.length", "string.charAt", "string.at", "string.substring", "string.slice", "string.substr", "string.concat", "string.trim", "string.toUpperCase", "string.toLowerCase", "string.replaceAll", "string.startsWith", "string.endsWith", "string.indexOf", "string.split", "i32.toString", "i64.toString", "number.index", "number.fromI32", "number.remainder2", "i64.remainder2", "array.length", "array.get", "array.push", "array.unshift", "array.pop", "array.shift", "array.reverse", "array.includes", "array.indexOf", "array.slice0", "array.slice1", "array.slice2", "map.get", "map.has", "map.set", "map.size", "map.keys", "map.values", "set.has", "set.add", "set.delete", "set.size", "set.values":
-		return true
-	}
-	return false
-}
 func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 	if s == nil {
 		return
@@ -381,7 +387,14 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 		}
 		return
 	}
-	a := x.expr(s.X, path+"/x", env)
+	a := ""
+	if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.StaticGet {
+		// The emitter guards the write; its LHS is not a static read.
+		a = path + "/x"
+		x.add("expr", x.method, a, string(s.X.Kind), s.X.Type.String())
+	} else {
+		a = x.expr(s.X, path+"/x", env)
+	}
 	b := x.expr(s.Y, path+"/y", env)
 	switch s.Kind {
 	case hir.Assign:
@@ -393,7 +406,10 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 				x.add("alias", x.method, a, b)
 			}
 		case hir.StaticGet:
-			owner := x.fieldOwner(s.X.Owner, s.X.Name)
+			owner := x.fieldOwner(s.X.Owner, s.X.Name, true)
+			if !x.constants[FieldKey{s.X.Owner, s.X.Name}] || x.method != methodID(s.X.Owner, "class_constructor") {
+				x.init(s.X.Owner, path)
+			}
 			x.add("writes_static", x.method, owner, s.X.Name)
 			x.add("sink", x.method, b)
 			pred := "noncounter_write"
@@ -402,7 +418,7 @@ func (x *extractor) stmt(s *hir.Stmt, path string, env scope) {
 			}
 			x.add(pred, x.method, owner, s.X.Name)
 		case hir.FieldGet:
-			x.add("writes_field", x.method, x.fieldOwner(s.X.X.Type.Name, s.X.Name), s.X.Name)
+			x.add("writes_field", x.method, x.fieldOwner(s.X.X.Type.Name, s.X.Name, false), s.X.Name)
 			x.add("sink", x.method, b)
 		case hir.IndexGet:
 			recv := x.expr(s.X.X, path+"/index_receiver", env)

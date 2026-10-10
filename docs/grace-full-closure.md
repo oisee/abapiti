@@ -9,7 +9,7 @@ verification errors. No `hir/golang` dependency is used.
 Run with:
 
 ```sh
-go test ./tsfront -run '^TestGraceFullRegistryClosure$' -count=1 -v -timeout=60m
+flock /tmp/abapiti-heavy.lock go test ./tsfront -run '^TestGraceFullRegistryClosure$' -count=1 -v -timeout=60m
 ```
 
 `-short` skips this slow test. `GRACE_FULL_FACTS_OUT=/path/report.txt` exports
@@ -24,7 +24,7 @@ class owning the static field. The memo/counter/other categories are the
 current Grace rule classifications.
 
 ```text
-  methods pure=3493 may_throw=3776 defined=6257
+  methods pure=3498 may_throw=3767 defined=6257
   virtual sites single=3902 total=5062
   static writes memo=0 counter=0 other=166
   node_modules/vscode-languageserver-types/lib/umd/main.d.ts.module memo=0 counter=0 other=1
@@ -107,10 +107,15 @@ current Grace rule classifications.
 
 ## Inline oracle
 
-Grace and `internal/inlineoracle` produce byte-identical HIR dumps and identical
-per-callee counters: **1,487 call sites across 190 callees**. Both outputs pass
-`hir.Verify`. The pinned `oracle.go` remains unchanged. Comparison runtime:
-27.49 seconds.
+Grace and main's real `hir.InlineStats` produce byte-identical HIR dumps and
+identical per-callee counters: **1,487 call sites across 190 callees**. Both
+outputs pass `hir.Verify`. `internal/inlineoracle` now contains only the
+comparison harness; it deep-copies the program twice before either mutating
+inliner runs. The old pinned implementation is removed. Comparison runtime:
+28.59 seconds. Main includes the 70394ff guard; Grace also rejects callees with
+any VarDecl lacking an initializer, including declarations inside Seq. The
+synthetic TypeScript loop executes in Node with result `[5,-1]` and stays a
+call under both inliners.
 
 ```text
 src/abap/1_lexer/lexer.ts.Lexer.run 1
@@ -316,40 +321,81 @@ exact range.
 The first completed inline comparison found equal call-site totals (1,487) but a
 dump difference at line 31,780 in generated local names. The `inline_template`
 guard skipped eager preparation of eligible callees whose original return shape
-could not be flattened. The pinned oracle prepares those callees first, including
+could not be flattened. The reference inliner prepares those callees first, including
 their own calls, then rejects expansion if needed. Grace now follows that order;
 a small shadowed-declaration fixture locks the behavior. The full oracle dump and
 all per-callee counters then matched exactly.
 
+## Adapter effects and initialization
+
+`hir/rewrite/effects.go` covers **87/87 catalogue operations and 6/6 SpecialOps**.
+There are 93 records: MayRaise None=68, Trap=4, Catchable=21. Nine records mark
+conservative numeric parsing, regex, replacement or invoked-constructor behavior, with reasons. Only telemetry
+reads Global. Optional lookups do not raise; charCodeAt and localeCompareNames
+trap outside their domains. Wrong dynamic tags and classvalue.new/materialize
+raise catchable exceptions. set.fromArray allocates without writing its input;
+splice1_view may alias its receiver. Native Cast/Narrow checks and checked
+integer arithmetic also contribute to may_throw (including unary arithmetic).
+Allocates is a descriptive fact, not a confinement proof: an Optional wrapper
+can contain an existing reference. A regression ensures mutating such a
+reference remains impure.
+
+The table is exposed as op_reads, op_writes, op_allocates, op_may_raise and
+op_aliases base facts. Coverage fails when any catalogue or SpecialOp lacks a
+record. The full input has 137 op_reads facts, 93 of each other effect predicate,
+and nine op_conservative facts.
+
+On the rebased pre-change adapter, the same full closure gives **3,776
+may_throw methods**; with the new effects and initializer guards it gives
+**3,767**, a reduction of nine. Pure methods change from 3,493 to 3,498. These
+are possible-effect classifications, not a handler-coverage proof. The baseline
+was measured from an isolated snapshot of rebased commit 08075da, with only its
+colliding pinned-oracle symbols replaced to allow compilation; the baseline
+analysis was unchanged (27.58 seconds including lowering and reporting).
+
+The adapter emits **2,470 ensure_init(Method,Site,Class) facts** from the emitter's
+rules: non-constant static reads, static writes, class New, and static-method or
+constructor entry. The initializer itself sets its flag rather than guarding
+its own entry. Constant-only and empty initializers have no guards. Literal
+promotion mirrors hir/abap/constants.go. An assignment LHS is a write, not a
+static read. There is no EnsureInit HIR node. Static/field facts retain separate
+owner/name columns, flag_init includes the field name, and constant tracking
+uses a structured FieldKey; collision and inherited-owner tests cover identity.
+
 ## Verification and runtimes
 
-Measured on this clone with the build cache warm. The successful run lowered in
-9.96 seconds; oracle comparison took 27.49 seconds. Analysis reference equality
-examined 63,917,630 premises in 105.33 seconds; the combined analysis/inline
-comparison examined 71,686,643 premises in 206.59 seconds. These comparison times
-include reference evaluation, engine evaluation and fact equality. Reevaluation
-and phased preparation also passed.
+The branch was rebased without conflicts onto origin/main e8e8c35 (abapiti
+v0.2.0). Every heavy run uses flock /tmp/abapiti-heavy.lock. This shared machine's
+/tmp was nearly full and its build cache was read-only inside the sandbox, so
+successful runs use the existing Go cache and disk-backed build/test temporary
+files under /var/tmp/abapiti-grace-build.
 
-The final `go test -short ./...` suite passed (`tsfront`: 34.16 seconds;
-`hir/rewrite` cached, preceding uncached focused run: 1.92 seconds).
+The final `go test -short ./...` passed in **32.30 seconds** wall time
+(`hir/rewrite`: 4.73 seconds; `tsfront`: 25.00 seconds). The lexer facts golden
+was reviewed and refreshed: may_throw stays at 20 methods, pure changes from 64
+to 70, and constant-only initialization calls and assignment-LHS reads are
+removed. The new source loop, native Cast/Narrow/overflow, Optional reference
+allocation, constructor-effect, field-identity and EnsureInit regressions pass.
 
-Positive-rule monotonicity passed after adding throw and static-write facts.
-Declaration-order determinism passed for extracted and derived facts and for
-inline output after sorting declarations and alpha-normalizing temporary names.
-Executable statement order was preserved.
+The complete `TestGraceFullRegistryClosure` passed in **13m 1.596s**
+(Go test: 781.69 seconds for the test, 781.855 for the package). Successful-run
+phase measurements:
 
-Zero-depth, method-growth, program-growth and mixed-budget checks passed in
-378.19 seconds. Growth was measured independently from actual statement and
-expression counts across methods, with up to four rounds per configuration.
-The rewrite runner enforces `hir.Verify` after every round.
+| Phase | Runtime | Evidence |
+| --- | ---: | --- |
+| Lowering and input verification | 8.21s | 1,538 files; zero blocking diagnostics or HIR verification errors |
+| Real main inliner oracle | 28.59s | 1,487 sites, 190 callees; identical bytes and counters |
+| Independent analysis comparison | 93.15s | 64,811,461 premises; equal facts and engine termination |
+| Independent combined comparison | 130.59s | 72,580,861 premises; equal analysis and inline facts |
+| Depth/method/program budgets | 186.09s | Independent actual statement/expression growth checks |
+| All Grace checks | 12m 35.113s | Every invariant passed; one verified fixed-point round |
 
-Single-pass idempotence passed: the second `Inline` changed no call sites or HIR.
-The subsequent fixed-point rewrite terminated in one verified round (below the
-16-round bound), and another `Inline` again changed no call sites or HIR.
-All Grace checks passed in **21m 8.894s**; the full test including materialization,
-lowering and the initial facts report passed in **21m 40.079s** (Go test reports
-1300.35 seconds for the test and 1300.682 seconds for the package).
+Reevaluation and phased preparation passed. Positive-rule monotonicity passed
+after adding throws and static writes. Declaration-order determinism passed for
+base and derived facts and for inline output after sorting declarations and
+alpha-normalizing generated locals. Executable statement order was preserved.
 
-All requested full-closure checks are green. The ordinary short suite is also
-green. This branch was rebased cleanly onto `origin/main` (`8c6e0ab`) before these
-changes; no push was performed.
+A second Inline changed no sites or HIR. The bounded rewrite reached a verified
+fixed point in one round (below its 16-round limit), and another Inline again
+changed no sites or HIR. All requested full-closure checks are green. No push or
+PR creation was performed.

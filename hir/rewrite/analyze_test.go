@@ -133,7 +133,8 @@ func TestRuntimeAndInitialization(t *testing.T) {
 	assertFact(t, d, true, "writes_static_transitive", "C::use", "C", "values")
 	assertFact(t, d, true, "may_throw", "C::bounds")
 	assertFact(t, d, false, "may_throw", "C::length")
-	assertFact(t, d, true, "pure", "C::length")
+	assertFact(t, d, false, "pure", "C::length")
+	assertFact(t, d, true, "ensure_init", "C::length", "C::length/entry", "C")
 	assertFact(t, d, false, "pure", "C::use")
 	flag := get("Flag", "ready", hir.T(hir.Bool))
 	f := &hir.Class{Name: "Flag", Fields: []hir.Field{{Name: "ready", Static: true, Type: hir.T(hir.Bool)}}, Methods: []*hir.Method{method("init", &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: flag}, Body: hir.B(store(flag, hir.L(hir.T(hir.Bool), true)))})}}

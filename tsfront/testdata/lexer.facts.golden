@@ -2,12 +2,13 @@ fact counts
   alias 115
   argument 420
   assign 100
-  calls 345
+  calls 200
   class 59
   concrete 58
   counter_store 0
   defined 135
   dispatch 414
+  ensure_init 8
   escapes 784
   exact_receiver 13
   expr 1368
@@ -18,7 +19,7 @@ fact counts
   fresh 69
   implements 1
   implicit_init 2
-  impure 71
+  impure 65
   interface_subtype 1
   lazy_init 2
   local 170
@@ -29,21 +30,26 @@ fact counts
   narrowed 13
   new 58
   noncounter_write 32
+  op_aliases 93
+  op_allocates 93
+  op_conservative 9
+  op_may_raise 93
+  op_reads 137
+  op_writes 93
   param 216
-  pure 64
-  raises 35
+  pure 70
+  raises 36
   reads_field 86
-  reads_static 81
+  reads_static 60
   receivers 280
-  resolved 344
+  resolved 199
   returns 138
-  runtime_mutates 16
   runtime_op 88
   sink 252
   site_method 88
   site_type 84
   static 42
-  static_origin 490
+  static_origin 458
   subtype 108
   throws 1
   trap 0
@@ -51,7 +57,7 @@ fact counts
   virtual_call 84
   writes_field 34
   writes_static 32
-  writes_static_transitive 201
+  writes_static_transitive 148
 may_throw
   harness/lexer_dump.ts.LexerDump::dump
   harness/lexer_dump.ts.LexerDump::firstDiff
@@ -84,10 +90,16 @@ pure
   src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::countIsEven
   src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::get
   src/abap/1_lexer/lexer_buffer.ts.LexerBuffer::length
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::charCodeAt
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::currentChar
   src/abap/1_lexer/lexer_stream.ts.LexerStream::getCol
   src/abap/1_lexer/lexer_stream.ts.LexerStream::getOffset
   src/abap/1_lexer/lexer_stream.ts.LexerStream::getRaw
   src/abap/1_lexer/lexer_stream.ts.LexerStream::getRow
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::nextNextChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevChar
+  src/abap/1_lexer/lexer_stream.ts.LexerStream::prevPrevChar
   src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::debugDescription
   src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getCol
   src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken::getRow
@@ -257,7 +269,7 @@ static writes (unique method/class/field)
   src/abap/1_lexer/lexer_stream.ts.module::class_constructor src/abap/1_lexer/lexer_stream.ts.module.EOF other
   src/abap/1_lexer/lexer_stream.ts.module::class_constructor src/abap/1_lexer/lexer_stream.ts.module.NL other
 summary
-  methods pure=64 may_throw=20 defined=135
+  methods pure=70 may_throw=20 defined=135
   virtual sites single=68 total=84
   static writes memo=0 counter=0 other=32
   harness/lexer_dump.ts.LexerDump memo=0 counter=0 other=1
