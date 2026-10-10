@@ -132,7 +132,11 @@ func dumpExpr(e *Expr) string {
 			s = "undefined"
 		}
 	case NumericMinMax:
-		s = "Math." + e.Op + "(" + dumpExpr(e.X) + ", " + dumpExpr(e.Y) + ")"
+		if e.Y == nil {
+			s = "Math." + e.Op + "(..." + dumpExpr(e.X) + ")"
+		} else {
+			s = "Math." + e.Op + "(" + dumpExpr(e.X) + ", " + dumpExpr(e.Y) + ")"
+		}
 	case CheckedNumericConvert:
 		if e.Range == nil {
 			s = "checked_integer[invalid](" + dumpExpr(e.X) + ")"

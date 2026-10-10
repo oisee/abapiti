@@ -1132,9 +1132,6 @@ func (l *lowerer) inferNumberRanges() {
 			p.current = info
 			p.rewriteStmt(m.Body, env, info)
 			walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
-				if !l.integerOptions.AssumeOnlyIntegerCalculations && e.Kind == hir.NumericMinMax && e.Type.Kind == hir.Number {
-					l.diags = append(l.diags, LowerDiagnostic{Category: "unsupported-number", Loc: e.Source, Message: "Math.min/max requires proven integers in this phase; exceptional numbers and signed zero need runtime support"})
-				}
 				if e.Kind == hir.Binary && e.Op == "%" && e.Type.Kind == hir.Number {
 					l.diags = append(l.diags, LowerDiagnostic{Category: "unsupported-number", Loc: e.Source, Message: "remainder needs a proven nonnegative integral dividend (negative zero must remain binary64)"})
 				}
@@ -1252,6 +1249,10 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 			e.Value = r.lo
 		}
 	case hir.NumericMinMax:
+		if e.Y == nil {
+			e.Type = e.X.Type.Args[0]
+			break
+		}
 		e.Type = numericJoinType(hir.T(r.kind()), numericJoinType(e.X.Type, e.Y.Type))
 		e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 		e.Y = rangeConversion(e.Y, e.Type, info.exprs[e.Y])

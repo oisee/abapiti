@@ -755,8 +755,29 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		code = e.typ(t) + "(" + a + ")"
 	case hir.NumericMinMax:
-		a, v := b.expr(x.X), b.expr(x.Y)
-		code = x.Op + "(" + a + "," + v + ")"
+		helper := "numberMin"
+		if x.Op == "max" {
+			helper = "numberMax"
+		}
+		a := b.expr(x.X)
+		if x.Y == nil {
+			if t.Kind == hir.Number {
+				code = helper + "Array(" + a + ".Items)"
+			} else {
+				n := b.temp(t, "0")
+				b.line("if len(%s.Items)==0 {panic(newRangeFault())}", a)
+				b.line("%s=%s.Items[0]", n, a)
+				b.line("for _,v:=range %s.Items { %s=%s(%s,v) }", a, n, x.Op, n)
+				return n
+			}
+		} else {
+			v := b.expr(x.Y)
+			if t.Kind == hir.Number {
+				code = helper + "(" + a + "," + v + ")"
+			} else {
+				code = x.Op + "(" + a + "," + v + ")"
+			}
+		}
 	case hir.Seq:
 		old := b.locals
 		b.locals = clone(old)

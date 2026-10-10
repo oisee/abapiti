@@ -210,19 +210,32 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 	case hir.Dynamic:
 		test = &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", e, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
 	case hir.Optional:
-		if e.Type.Args[0].Kind == hir.Dynamic && want != "undefined" {
-			// Absent never matches a concrete tag; present dispatches on it.
-			present := l.tempInit(n, e.Type, e)
-			tag := &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
-			defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}}
-			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}
+		// Preserve the established class-descriptor path and its emitted code.
+		if e.Type.Args[0].Kind == hir.ClassValue && want == "function" {
+			test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: e}}
 			break
 		}
-		if e.Type.Args[0].Kind != hir.ClassValue || want != "function" {
+		present := l.tempInit(n, e.Type, e)
+		undefined := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: present}
+		defined := &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: undefined}
+		if e.Type.Args[0].Kind == hir.Dynamic {
+			// Absent never matches a concrete tag; present dispatches on it.
+			tag := &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Dynamic), X: present}, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
+			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}
+			if want == "undefined" {
+				test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "||", X: undefined, Y: test}
+			}
+			break
+		}
+		tag := staticTypeofTag(e.Type.Args[0].Kind)
+		if want == "undefined" {
+			test = undefined
+		} else if tag == "" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type)
 			return nil
+		} else {
+			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: hir.L(hir.T(hir.Bool), tag == want)}
 		}
-		test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: e}}
 	case hir.String:
 		test = hir.L(hir.T(hir.Bool), want == "string")
 	case hir.ClassValue:
@@ -246,6 +259,23 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 	}
 	return test
+}
+
+// staticTypeofTag describes present values; null is not currently a HIR type.
+func staticTypeofTag(k hir.Kind) string {
+	switch k {
+	case hir.String:
+		return "string"
+	case hir.Number, hir.I32, hir.I64:
+		return "number"
+	case hir.Bool:
+		return "boolean"
+	case hir.ClassValue:
+		return "function"
+	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
+		return "object"
+	}
+	return ""
 }
 
 // regexLiteral lowers /pattern/flags to a runtime RegExp construction.

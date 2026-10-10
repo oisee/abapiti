@@ -319,6 +319,7 @@ func (v *verifier) accepts(dst, src Type) bool {
 	}
 	return false
 }
+
 // crossCastable reports whether a checked cast between a class and an
 // interface can succeed: some lowered class is a subtype of both (the
 // emitter routes such casts through the object root and `?=` raises when
@@ -356,6 +357,7 @@ func (v *verifier) body(c *Class, m *Method) {
 		v.fail(m.Node, "method may fall through without return")
 	}
 }
+
 // exits reports a return, break or continue anywhere in the block.
 func exits(s *Stmt) bool {
 	if s == nil {
@@ -807,9 +809,17 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		}
 		eq(t, T(ClassValue))
 	case NumericMinMax:
-		a, b := check(e.X), check(e.Y)
-		eq(a, b)
-		eq(a, t)
+		a := check(e.X)
+		if e.Y == nil {
+			if a.Kind != Array || len(a.Args) != 1 {
+				v.fail(e.Node, "numeric min/max requires a numeric array")
+			} else {
+				eq(a.Args[0], t)
+			}
+		} else {
+			eq(a, check(e.Y))
+			eq(a, t)
+		}
 		if !numeric(t) || (e.Op != "min" && e.Op != "max") {
 			v.fail(e.Node, "invalid numeric min/max")
 		}

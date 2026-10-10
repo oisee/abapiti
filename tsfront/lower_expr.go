@@ -905,9 +905,59 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			file := l.fileOfSymbol(sym)
 			if file != nil && l.prog.prog.IsSourceFileDefaultLibrary(file.Path()) {
 				args := n.Arguments()
-				if len(args) != 2 {
-					l.diagf(n, "unsupported-call", "Math.%s requires two arguments in this phase", name)
-					return nil
+				spread := false
+				for _, arg := range args {
+					spread = spread || arg.Kind == ast.KindSpreadElement
+				}
+				if len(args) > 0 && len(args) != 2 && !spread {
+					// Save all arguments before reducing: calls are evaluated exactly once,
+					// left to right, and integral proofs can still use the binary path.
+					values := make([]*hir.Expr, 0, len(args))
+					for _, arg := range args {
+						v := l.expr(arg)
+						if v == nil {
+							return nil
+						}
+						if !numberType(v.Type) {
+							l.diagf(arg, "unsupported-call", "Math.%s requires numeric operands", name)
+							return nil
+						}
+						values = append(values, l.tempInit(arg, v.Type, v))
+					}
+					result := values[0]
+					for _, v := range values[1:] {
+						result = &hir.Expr{Kind: hir.NumericMinMax, Node: l.node(n), Op: name, Type: hir.T(hir.Number), X: result, Y: v}
+					}
+					return result
+				}
+				if len(args) != 2 || args[0].Kind == ast.KindSpreadElement || args[1].Kind == ast.KindSpreadElement {
+					// Materialize in source order, including snapshots of spreads.
+					typ := hir.T(hir.Array, hir.T(hir.Number))
+					arr := l.tempVar(n, typ)
+					for _, arg := range args {
+						if arg.Kind == ast.KindSpreadElement {
+							v := l.expr(arg.Expression())
+							if v == nil {
+								return nil
+							}
+							if v.Type.Kind != hir.Array || !numberType(v.Type.Args[0]) {
+								l.diagf(arg, "unsupported-call", "Math.%s spread requires a numeric array", name)
+								return nil
+							}
+							arr = l.tempInit(arg, typ, l.rtOp("array.concat", arr, typ, v))
+						} else {
+							v := l.expr(arg)
+							if v == nil {
+								return nil
+							}
+							if !numberType(v.Type) {
+								l.diagf(arg, "unsupported-call", "Math.%s requires numeric operands", name)
+								return nil
+							}
+							l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(arg), X: l.rtOp("array.push", arr, hir.T(hir.I32), l.coerce(v, hir.T(hir.Number)))})
+						}
+					}
+					return &hir.Expr{Kind: hir.NumericMinMax, Node: l.node(n), Op: name, Type: hir.T(hir.Number), X: arr}
 				}
 				x, y := l.expr(args[0]), l.expr(args[1])
 				if x == nil || y == nil {
