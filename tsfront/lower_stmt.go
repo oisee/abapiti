@@ -586,8 +586,11 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		}
 		switch recv.Type.Kind {
 		case hir.OrderedMap:
-			if recv.Type.Args[0].Kind == hir.String && arg.Type.Kind == hir.Number {
+			if recv.Type.Args[0].Kind == hir.String && arg.Type.Kind != hir.String {
 				arg = l.primitiveString(lhs, arg)
+				if arg == nil {
+					return nil
+				}
 			}
 			return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "map.set", Type: recv.Type,
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering

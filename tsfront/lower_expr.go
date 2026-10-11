@@ -1539,7 +1539,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":
-			return l.rtOp("array.concat", recv, recv.Type, one()), true
+			return l.arrayConcat(n, recv, args), true
 		case "slice":
 			a := one()
 			if a == nil {

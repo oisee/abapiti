@@ -1,0 +1,298 @@
+{
+  "base": "392aecaa1967cdaacec393a061154aadaafc9286",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "command": "GOMAXPROCS=2 <compiler> abaplint --full -o <evidence-dir>",
+  "compilerSourcesSHA256": {
+    "tsfront/lower_concat.go": "2d4bc482cee0ce8dc152660a3a531da66fd6a71df94d16f8d82f49df455625e5",
+    "tsfront/lower_expr.go": "720e8a43b28eddb9c7025435cb2e4cc6cec3c7f5db9c39437f7008a482fb84f7",
+    "tsfront/lower_expr2.go": "86ba23fb8ba4c6592c3bd446a63a0dd52dfb343aef032de472c717d74e9111d6",
+    "tsfront/lower_stmt.go": "dec1bae2f96aaabfe8de770799dd4cc98a32b139202c2590ee4b7677e94f78d9"
+  },
+  "before": {
+    "summary": {
+      "blocking": 44,
+      "rootBlocking": 31,
+      "cascadeBlocking": 13,
+      "hirErrors": 103,
+      "byCategory": {
+        "assume-integer": 10,
+        "unsupported-call": 4,
+        "unsupported-callback": 1,
+        "unsupported-expr": 20,
+        "unsupported-json": 2,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 1,
+        "unsupported-regex": 1
+      },
+      "byArea": {
+        "lsp": 14,
+        "objects": 4,
+        "rules": 8,
+        "src": 18
+      },
+      "byRootMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 9
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "new X requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "files": 28
+    },
+    "blockingByMessage": {
+      "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported": 2,
+      "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 9,
+      "callback KindPropertyAccessExpression is not an arrow function": 1,
+      "delete supports ordinary lowered records only": 1,
+      "find on primitive arrays needs an absence-preserving callback ABI": 1,
+      "identifier XMLParser is not a lowered local or module value": 1,
+      "identifier importing is not a lowered local or module value": 2,
+      "identifier packedLength is not a lowered local or module value": 9,
+      "identifier regex is not a lowered local or module value": 1,
+      "identifier text is not a lowered local or module value": 1,
+      "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+      "method getParameters on dynamic is not lowered": 1,
+      "method getStr on classref is not lowered": 2,
+      "new RegExp requires a lowered string pattern": 1,
+      "new XMLParser is not a lowered class": 1,
+      "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+      "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+      "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+      "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+      "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+    },
+    "hirErrorsByMessage": {
+      "assignment type mismatch": 6,
+      "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+      "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+      "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+      "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+      "call argument type mismatch: i64 <- void in runtime .": 2,
+      "call argument type mismatch: string <- dynamic in runtime .": 5,
+      "call argument type mismatch: string <- regexp in runtime .": 2,
+      "call argument type mismatch: string <- void in runtime .": 5,
+      "condition must be bool": 5,
+      "invalid assignment target": 1,
+      "invalid checked integer conversion": 42,
+      "invalid literal": 1,
+      "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 4,
+      "method may fall through without return": 5,
+      "missing expression": 12,
+      "non-numeric arithmetic": 1,
+      "unresolved field newText": 1,
+      "unresolved field range": 6
+    }
+  },
+  "after": {
+    "summary": {
+      "blocking": 44,
+      "rootBlocking": 31,
+      "cascadeBlocking": 13,
+      "hirErrors": 98,
+      "byCategory": {
+        "assume-integer": 10,
+        "unsupported-call": 4,
+        "unsupported-callback": 1,
+        "unsupported-expr": 20,
+        "unsupported-json": 2,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 1,
+        "unsupported-regex": 1
+      },
+      "byArea": {
+        "lsp": 14,
+        "objects": 4,
+        "rules": 8,
+        "src": 18
+      },
+      "byRootMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 9
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "new X requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "files": 27
+    },
+    "blockingByMessage": {
+      "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported": 2,
+      "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 9,
+      "callback KindPropertyAccessExpression is not an arrow function": 1,
+      "delete supports ordinary lowered records only": 1,
+      "find on primitive arrays needs an absence-preserving callback ABI": 1,
+      "identifier XMLParser is not a lowered local or module value": 1,
+      "identifier importing is not a lowered local or module value": 2,
+      "identifier packedLength is not a lowered local or module value": 9,
+      "identifier regex is not a lowered local or module value": 1,
+      "identifier text is not a lowered local or module value": 1,
+      "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+      "method getParameters on dynamic is not lowered": 1,
+      "method getStr on classref is not lowered": 2,
+      "new RegExp requires a lowered string pattern": 1,
+      "new XMLParser is not a lowered class": 1,
+      "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+      "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+      "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+      "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+      "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+    },
+    "hirErrorsByMessage": {
+      "assignment type mismatch": 6,
+      "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+      "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+      "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+      "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+      "call argument type mismatch: i64 <- void in runtime .": 2,
+      "call argument type mismatch: string <- regexp in runtime .": 2,
+      "call argument type mismatch: string <- void in runtime .": 5,
+      "condition must be bool": 5,
+      "invalid assignment target": 1,
+      "invalid checked integer conversion": 42,
+      "invalid literal": 1,
+      "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 4,
+      "method may fall through without return": 5,
+      "missing expression": 12,
+      "non-numeric arithmetic": 1,
+      "unresolved field newText": 1,
+      "unresolved field range": 6
+    }
+  }
+}
