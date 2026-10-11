@@ -21,7 +21,7 @@ func (e *emitter) liveView(t hir.Type) string {
 	var b strings.Builder
 	line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
 	line("func %s(d *dynamic) %s {", name, e.typ(t))
-	line("if d==nil {panic(newRangeFault())};if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
+	line("if d==nil {return nil};if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
 	if !hir.DataClassView(e.p, t.Name) {
 		line("panic(newTrap(%q))", "structural class view requires data-only public ancestry: "+t.Name)
 	} else {

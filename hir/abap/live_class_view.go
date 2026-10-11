@@ -187,7 +187,7 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 	d := e.name("runtime.dynamic")
 	trap := e.name("view.refusal")
 	// Native success remains identity-preserving even for behaviour-bearing classes.
-	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
+	b.line("IF " + a + " IS BOUND.")
 	b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
 	b.line("IF " + n + " IS NOT BOUND.")
 	if !hir.DataClassView(e.p, x.Type.Name) {
@@ -211,7 +211,7 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 		}
 		b.line(n + " = NEW " + native + "( " + strings.Join(args, " ") + " ).")
 	}
-	b.line("ENDIF.")
+	b.line("ENDIF.\nENDIF.")
 }
 func (b *body) liveBox(n, a string, t hir.Type) {
 	e := b.e

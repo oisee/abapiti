@@ -1,0 +1,464 @@
+{
+  "ownedRoots": [
+    {
+      "source": "test/abap/nesting.ts",
+      "before": 31,
+      "after": 0
+    },
+    {
+      "source": "src/objects/domain.ts",
+      "before": 23,
+      "after": 19
+    },
+    {
+      "source": "src/config.ts",
+      "before": 22,
+      "after": 0
+    },
+    {
+      "source": "src/pretty_printer/pretty_printer.ts",
+      "before": 15,
+      "after": 0
+    }
+  ],
+  "ownedRecovery": 72,
+  "selectedRecovery": 75,
+  "matchedRecoveredCases": [
+    {
+      "shard": "abap-statements",
+      "title": "ASSIGN KeyUser allowed variants statement version, \"ASSIGN lv->(lv_comp) TO <fs>.\" should be ASSIGN KeyUser allowed variants",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "AT PF falls back to At under Cloud statement version, \"AT PF1.\" should be AT PF falls back to At under Cloud",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "CHECK SELECT-OPTIONS falls back to Check under Cloud statement version, \"CHECK SELECT-OPTIONS.\" should be CHECK SELECT-OPTIONS falls back to Check under Cloud",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "EXPORT KeyUser allowed statement version, \"EXPORT foo TO DATA BUFFER lv_buf.\" should be EXPORT KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "EXPORT KeyUser allowed statement version, \"EXPORT foo TO INTERNAL TABLE lt_tab.\" should be EXPORT KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "IMPORT statement version, \"IMPORT data = ls_file_item FROM DATA BUFFER lv_result.\" should be IMPORT",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "IMPORT KeyUser allowed statement version, \"IMPORT foo FROM DATA BUFFER lv_buf.\" should be IMPORT KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "IMPORT KeyUser allowed statement version, \"IMPORT foo FROM INTERNAL TABLE lt_tab.\" should be IMPORT KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "MESSAGE statement version, \"MESSAGE e100(/foo/bar) WITH <fs>-sdf <fs>-sdf <fs>-sdf INTO l_message.\" should be MESSAGE",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "MESSAGE statement version, \"MESSAGE e099(zcustom) RAISING input_not_valid.\" should be MESSAGE",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "MESSAGE statement version, \"MESSAGE s443(zcustom) INTO l_message WITH lv_lines |sdfsdf|.\" should be MESSAGE",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "MESSAGE statement version, \"MESSAGE ID l_return-id\n  TYPE l_return-type\n  NUMBER l_return-number\n  WITH l_return-message_v1 l_return-message_v2 l_return-message_v3 l_return-message_v4\n  INTO l_message.\" should be MESSAGE",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "MODIFY SCREEN falls back to ModifyInternal under Cloud statement version, \"MODIFY SCREEN.\" should be MODIFY SCREEN falls back to ModifyInternal under Cloud",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "RAISE KeyUser allowed statement version, \"RAISE EXCEPTION TYPE zcx_foo.\" should be RAISE KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "RAISE KeyUser allowed statement version, \"RAISE EXCEPTION NEW zcx_foo( ).\" should be RAISE KeyUser allowed",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "SELECT PRIVILEGED ACCESS LEVEL statement version, \"SELECT * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_lvl INTO TABLE @DATA(lt).\" should be SELECT PRIVILEGED ACCESS LEVEL",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "SELECT PRIVILEGED ACCESS LEVEL statement version, \"SELECT SINGLE * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_lvl INTO @DATA(ls).\" should be SELECT PRIVILEGED ACCESS LEVEL",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "SELECT PRIVILEGED ACCESS LEVEL statement version, \"SELECT * FROM ztab INTO TABLE @DATA(lt) PRIVILEGED ACCESS LEVEL @lv_lvl.\" should be SELECT PRIVILEGED ACCESS LEVEL",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "SELECT loop UP TO ROWS ORDER BY DESCENDING statement version, \"SELECT * FROM tadir\n    UP TO 1 ROWS\n    INTO @row\n    ORDER BY obj_name DESCENDING.\" should be SELECT loop UP TO ROWS ORDER BY DESCENDING",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-statements",
+      "title": "TYPES statement version, \"TYPES !ty_moo TYPE string.\" should be TYPES",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case REPORT zfoo.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case report zfoo.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case write report.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case data(foo) = 2.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case WRITE foo.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case CALL FUNCTION 'FOOBAR' EXCEPTIONS OTHERS = 1.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, keywords upper case DEFINE _pretty1.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, indent code parser error.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, indent code REPORT zfoo.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, indent code REPORT zfoo.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Pretty printer, indent code IF foo = bar.",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "lsp",
+      "title": "LSP, formatting format",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "lsp",
+      "title": "LSP, formatting update and format",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "lsp",
+      "title": "LSP, formatting no update, all good",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "lsp",
+      "title": "LSP, formatting dont mess with empty lines",
+      "before": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"one\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"two\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"IF\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"FORM\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"CLASS\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"multiple FORM\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"CASE\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"CASE2\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"DO\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"WHILE\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"WHEN\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"ELSE\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"ELSE2\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"IF2\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"PRIVATE SECTION\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"PROTECTED SECTION\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"PUBLIC SECTION\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"Combined SECTIONs\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"DEFINE\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"LOOP\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"Class Sections\" should be undefined top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"START OF SELECTION\" should be 3 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"START-OF-SELECTION 2\" should be 3 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"INITIALIZATION\" should be 3 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"INITIALIZATION2\" should be 4 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"INITIALIZATION3\" should be 4 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"Class with write after\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"TRY\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"TRY, double CATCH\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"AT NEW\" should be 1 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap",
+      "title": "count top nesting \"AT SELECTION-SCREEN\" should be 2 top statements",
+      "before": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse AFF json CharacterType",
+      "before": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse AFF json fixed values",
+      "before": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse AFF json getIdentifier",
+      "before": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse AFF json decimals",
+      "before": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-expressions",
+      "title": "SELECT privileged access level statement version, \"SELECT * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_level INTO TABLE @DATA(lt).\" should be SELECT privileged access level",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    },
+    {
+      "shard": "abap-expressions",
+      "title": "SELECT privileged access level statement version, \"SELECT SINGLE * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_level INTO @DATA(ls).\" should be SELECT privileged access level",
+      "before": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain",
+      "after": "passed"
+    }
+  ],
+  "additionalRulesRecovery": {
+    "count": 3,
+    "evidence": "Rules aggregate: 2752 -> 2755 passing, 395 -> 392 trapped. Baseline per-case rules artifact was not retained before scratch cleanup, so these three titles and prior messages are not attributed."
+  }
+}
