@@ -621,6 +621,11 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 		l.declare(p.Name, p.Type)
 	}
 	l.asyncMethods[hm] = m.ModifierFlags()&ast.ModifierFlagsAsync != 0
+	if isGeneratorFunction(m) {
+		l.lowerGeneratorBody(m, hm)
+		l.pop()
+		return
+	}
 	defaults := l.applyDefaults(m, hm)
 	restore := l.withLocalFns(m.Body())
 	body := l.block(m.Body())

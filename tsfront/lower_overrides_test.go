@@ -84,8 +84,20 @@ func TestPinnedAnnotationPatternsAndMethodSignatures(t *testing.T) {
 			t.Fatal(err)
 		}
 		if test.unadapted {
-			if !hasBlocking(diags) {
-				t.Fatal("unadapted Generator was globally erased")
+			if hasBlocking(diags) {
+				t.Fatal(diags)
+			}
+			other := false
+			for _, i := range prog.Interfaces {
+				if strings.HasSuffix(i.Name, ".Other") {
+					other = true
+					if len(i.Methods) != 1 || i.Methods[0].Result.Kind != hir.InterfaceRef || !strings.HasPrefix(i.Methods[0].Result.Name, "generator.iterator.") {
+						t.Fatal("unadapted Generator lost its iterator ABI", i)
+					}
+				}
+			}
+			if !other {
+				t.Fatal("Other interface missing")
 			}
 		} else {
 			if hasBlocking(diags) {

@@ -82,5 +82,8 @@ func registryIterators() []Entry {
 	} {
 		entries = append(entries, Entry{ID: spec.id, Key: Key{spec.file, spec.symbol, "KindMethodSignature"}, SHA256: spec.sha, Rationale: reason, Result: func() hir.Type { return hir.T(hir.Array, spec.element) }})
 	}
+	for index := range entries {
+		entries[index].GeneratorSnapshot = true
+	}
 	return entries
 }

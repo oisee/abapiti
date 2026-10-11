@@ -218,6 +218,9 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindSwitchStatement:
 		return l.switchStatement(n)
 	case ast.KindForInStatement:
+		if l.generatorYield != nil {
+			return l.generatorForIn(n)
+		}
 		return l.forInStatement(n)
 	}
 	l.diagf(n, "unsupported-statement", "%s is not lowered", n.Kind.String())
@@ -431,6 +434,9 @@ func (l *lowerer) arrayLiteral(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
 
 // expressionStatement handles assignments (including compound) and calls.
 func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
+	if n.Kind == ast.KindYieldExpression {
+		return l.generatorYieldStatement(n)
+	}
 	if n == nil {
 		return nil
 	}
@@ -691,9 +697,24 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		return nil
 	}
 	elem := l.mapCheckerType(decls[0], elemT)
+	if loop, ok := l.optionalGeneratorForOf(n, decls[0]); ok {
+		return loop
+	}
 	x := l.expr(f.Expression)
 	if x == nil {
 		return nil
+	}
+	if abi := l.generatorABIFor(x.Type); abi != nil {
+		if decls[0].Name().Kind != ast.KindIdentifier {
+			l.diagf(n, "unsupported-generator", "generator for-of needs an identifier binding")
+			return nil
+		}
+		name := decls[0].Name().Text()
+		l.push()
+		l.declare(name, abi.element)
+		body := l.scopeBlock(f.Statement)
+		l.pop()
+		return l.generatorLoop(x, name, body)
 	}
 	if x.Type.Kind == hir.OrderedSet {
 		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))

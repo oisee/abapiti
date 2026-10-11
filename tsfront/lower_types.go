@@ -137,6 +137,12 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		}
 		return l.mapTypeNode(targs[i])
 	}
+	if l.generatorEnabled && name == "Iterable" && l.librarySymbol(sym) {
+		return l.ensureGeneratorABI(arg(0)).iterator
+	}
+	if l.generatorEnabled && name == "Generator" && l.librarySymbol(sym) {
+		return l.generatorTypeNode(n)
+	}
 	switch name {
 	case "Promise":
 		if l.librarySymbol(sym) {
@@ -354,6 +360,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	}
 	l.mappingTypes[t] = true
 	defer delete(l.mappingTypes, t)
+	if mapped, ok := l.generatorResultCheckerType(n, t); ok {
+		return mapped
+	}
 	if t.IsUnion() {
 		optional := false
 		var parts []hir.Type
@@ -487,6 +496,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				}
 			}
 			return hir.Ref(l.opaquePromise())
+		}
+		if mapped, ok := l.generatorCheckerType(n, t); ok {
+			return mapped
 		}
 		// Array and library-collection reference types.
 		if l.ck.IsArrayType(t) || (t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlySet" || t.Symbol().Name == "ReadonlyMap")) {
