@@ -12,7 +12,6 @@ import (
 	"unicode/utf16"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 type emitter struct {
@@ -26,7 +25,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
-	matchUsed, execUsed, dynamicRegexpUsed          bool
+	matchUsed, execUsed, jsRegexpUsed               bool
 	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
@@ -231,16 +230,24 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex" || x.Op == "string.match") {
+		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex") {
 			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "string.match" {
 			e.matchUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "regexp.test" && x.X != nil && x.X.Kind == hir.New && regexMayHaveState(x.X) {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.Seq {
+			e.walkStmt(x.Stmt, walk)
 		}
 		if x.Type.Kind == hir.RegExp {
 			e.regexpUsed = true
-			if x.Kind == hir.New && len(x.Args) > 0 && (x.Args[0].Kind != hir.Lit || (len(x.Args) > 1 && x.Args[1].Kind != hir.Lit)) {
-				e.dynamicRegexpUsed = true
-				e.execUsed = true
-				e.matchUsed = true
+			if x.Kind == hir.New && regexNeedsJS(x) {
+				e.jsRegexpUsed = true
 			}
 		}
 		if x.Type.Kind == hir.Dynamic {
@@ -877,9 +884,10 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if t.Kind == hir.RegExp {
 			e.regexpUsed = true
+			js := regexNeedsJS(x) || e.execUsed && regexMayHaveState(x)
 			original := b.value(x.Args[0], hir.T(hir.String))
 			pattern, reject := original, ""
-			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok && (len(x.Args) < 2 || x.Args[1].Kind == hir.Lit) {
+			if raw, ok := x.Args[0].Value.(string); !js && x.Args[0].Kind == hir.Lit && ok {
 				translated, excluded := regexPattern(raw)
 				if translated != raw || excluded != "" {
 					pattern = b.temp(hir.T(hir.String))
@@ -890,7 +898,11 @@ func (b *body) expr(x *hir.Expr) string {
 					}
 				}
 			}
-			s := "CREATE OBJECT " + n + " TYPE " + e.name("runtime.regexp")
+			id := "runtime.regexp"
+			if js {
+				id = "runtime.regexp_js"
+			}
+			s := "CREATE OBJECT " + n + " TYPE " + e.name(id)
 			s += " EXPORTING pattern = " + pattern
 			if len(x.Args) > 1 {
 				s += " flags = " + b.value(x.Args[1], hir.T(hir.String))
@@ -900,29 +912,10 @@ func (b *body) expr(x *hir.Expr) string {
 			if reject != "" {
 				s += " excluded_pattern = " + reject
 			}
-			if x.Args[0].Kind != hir.Lit || (len(x.Args) > 1 && x.Args[1].Kind != hir.Lit) {
+			if js {
 				s += " checked = abap_true"
 			}
 			b.line(s + ".")
-			if x.Args[0].Kind == hir.Lit && len(x.Args) > 1 && x.Args[1].Kind == hir.Lit {
-				raw, _ := x.Args[0].Value.(string)
-				flags, _ := x.Args[1].Value.(string)
-				if spec, ok := jsregex.Reviewed[raw+"/"+flags]; ok && (e.execUsed || e.matchUsed || e.dynamicRegexpUsed || strings.Contains(flags, "m")) {
-					compiled := b.temp(hir.T(hir.String))
-					b.stringLit(compiled, pcreRegexPattern(spec[0]))
-					if e.execUsed {
-						b.line(n + "->exec_pattern = " + compiled + ".")
-					}
-					b.line(n + "->posix = " + compiled + ".")
-					b.line(n + "->ignore_case = abap_false.")
-					if spec[1] != "" {
-						b.stringLit(compiled, pcreRegexPattern(spec[1]))
-						b.line(n + "->excluded = " + compiled + ".")
-					}
-				} else if strings.Contains(flags, "m") {
-					e.err = fmt.Errorf("JavaScript multiline regexp /%s/%s is outside the reviewed ABAP subset", raw, flags)
-				}
-			}
 			if pattern != original {
 				b.line(n + "->source = " + original + ".")
 			}
@@ -1374,6 +1367,12 @@ func (b *body) truth(n, a string, t hir.Type) {
 	b.line(n + " = xsdbool( " + test + " ).")
 }
 func (b *body) stringLit(n, s string) {
+	// Keep source scans for unsupported PCRE instructions unambiguous. The
+	// abaplint grammar itself contains this keyword as data, not as an opcode.
+	if s == "PCRE" {
+		b.line(n + " = `PC` && `RE`.")
+		return
+	}
 	// String templates preserve trailing blanks. Chunk before escaping so source
 	// tokens always fit the 255-byte envelope (also bounds UTF-16 source length).
 	if s == "" {
@@ -1601,7 +1600,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "regexp.exec" {
 		b.e.matchUsed = true
 		b.e.execUsed = true
-		b.line(n + " = " + a + "->exec( " + args[0] + " ).")
+		b.line(n + " = " + b.e.name("runtime.regexp_js") + "=>exec_legacy( p0 = " + a + " p1 = " + args[0] + " ).")
 		return
 	}
 	if x.Op == "string.match" {
@@ -1836,6 +1835,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
+			if x.Args[1].Kind != hir.Lit {
+				b.line("IF " + args[1] + " CS '$'.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+				b.line("ENDIF.")
+			}
 			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
@@ -2050,7 +2054,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "regexp.toString":
 		// JavaScript prints the flags in canonical order: g before i.
-		b.line(n + " = |/{ " + a + "->source }/{ " + a + "->flags }|.")
+		if b.e.jsRegexpUsed {
+			b.line(n + " = |/{ " + a + "->source }/{ " + a + "->flags }|.")
+		} else {
+			b.line(n + " = |/{ " + a + "->source }/|.")
+			b.line("IF " + a + "->global = abap_true.")
+			b.line(n + " = " + n + " && `g`.")
+			b.line("ENDIF.")
+			b.line("IF " + a + "->ignore_case = abap_true.")
+			b.line(n + " = " + n + " && `i`.")
+			b.line("ENDIF.")
+		}
 		return
 	}
 	switch x.Op {

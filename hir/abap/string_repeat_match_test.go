@@ -35,6 +35,9 @@ func TestEmitStringRepeatAndMatch(t *testing.T) {
 	for _, s := range files {
 		text += s
 	}
+	if strings.Contains(text, "PCRE") {
+		t.Fatal("ordinary match must retain the legacy runtime")
+	}
 	// Compare without the indentation the formatter adds.
 	lines := strings.Split(text, "\n")
 	for i, l := range lines {

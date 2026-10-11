@@ -41,11 +41,28 @@ A variable string pattern replaces the first literal occurrence, including the
 empty needle. Replacement callbacks and dollar substitutions remain unsupported;
 dynamic replacement strings are checked at execution.
 
-ABAP reuses the shared translations with **PCRE, requiring ABAP 7.55+**.
-Legacy FIND REGEX is longest-match, implicitly multiline/dotall, and rejects
-lazy quantifiers; it cannot stand in for JS exec. The general corpus retains
-its v750 lint gate; regex feature suites select v755 when PCRE is present.
-Generated A4H output reports the minimum release (the project's A4H is 7.58).
+ABAP reuses the shared translations with **PCRE, requiring ABAP 7.55+**,
+only in the separately emitted `runtime.regexp_js` subclass. Legacy FIND REGEX
+is longest-match, implicitly multiline/dotall, and rejects lazy quantifiers;
+it cannot stand in for materialized JS exec. Materialized exec converts a
+legacy receiver on demand, carrying lastIndex back to the original object.
+Sticky/multiline, lookaround outside the legacy exclusion subset, and lazy
+literal syntax select the JS subclass at construction. Observed exec/lastIndex
+state also selects it for global constructors. Unknown runtime flags use the
+checked JS constructor. The usage scan includes Seq preludes and sees only
+bodies remaining after pruning/lowering, not regex type declarations or traps.
+
+Ordinary String.match does **not** activate JS exec globally. Existing dynamic
+configuration/name patterns with fixed i/g flags keep their pre-branch POSIX
+contract unless state requires the JS path; arbitrary dynamic JS regex syntax
+is not claimed by that legacy contract. Checked constructors and the shared
+translation/validation table live exclusively in the JS subclass. A mixed
+program still constructs ordinary literals with the legacy runtime.
+
+The general corpus retains its v750 lint gate; regex feature suites select
+v755 when PCRE is present. The default pruned abaplint build remains 7.50 and
+contains no PCRE instructions. A4H output reports the newer minimum only when
+needed (the project's A4H is 7.58).
 
 The regex subject is a BMP unit view: supplementary/lone surrogate units become
 one U+FFFD each, like Go's unitText. Offsets still select captures from the
@@ -74,20 +91,16 @@ otherwise panics in `assume_integer.go:298`.
   4 -> 0; unsupported new RegExp: 1 -> 0.
 * ObjectNaming's pattern local still cascades from unsupported classref config
   indexing at line 120. This change does not claim to fix that separate root.
-* Default a4h lowering remains 0 blockers/0 HIR errors. The source diff is **85
-  source classes plus 3 runtime classes** (one new exception class): reviewed
-  constructor translations/state setup, truthiness-only exec becoming the common
-  exec ABI, absence-preserving match-array reads and associated temporaries,
-  array absence metadata, control-character-safe literals, and runtime
-  pattern/replacement guards. The a4h README reports the ABAP 7.55 minimum;
-  the deterministic source archive changes accordingly. These are intentional;
-  byte identity is not claimed.
+* The initial exec commit changed 88 default class files. That was a regression,
+  not an intentional default-runtime upgrade. The [OSGO compatibility follow-up](../docs/regexp-osgo-compatibility.md)
+  removes it and records the complete remaining output diff and fresh full-build
+  measurements.
 
 The Node-generated fixture oracle is committed. Go/tsfront/ABAP unit tests and
 `go vet ./tsfront/... ./hir/... ./cmd/...` pass. The feature ABAP corpus also has
 zero v755 parser/check_syntax issues against the pinned open-steamgate
-open-abap-core dependencies. The old String.match fixture's untyped result-table
-and FIND FIRST into-table forms were corrected while bringing up this gate.
+open-abap-core dependencies. The JS-runtime result-table types and FIND FIRST result forms were corrected
+while bringing up this gate; the legacy default-runtime ABI is unchanged.
 Both regex fixture OSG-JS tests pass against Node. CI records the pinned osgo
 negative-lookbehind refusal as a narrowly checked known gap (NOT_COMPILED,
 not a passing native test); any other failure remains fatal.

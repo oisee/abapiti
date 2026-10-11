@@ -200,12 +200,15 @@ func (e *emitter) support() {
 	if e.regexpUsed {
 		e.regexpRuntime()
 	}
-	if e.matchUsed {
+	if e.matchUsed || e.jsRegexpUsed {
 		// Match metadata is absent from ordinary array runtimes.
 		e.typ(hir.T(hir.Array, hir.T(hir.String)))
 		file := e.name("runtime."+hir.T(hir.Array, hir.T(hir.String)).String()) + ".clas.abap"
-		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
-		e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
+		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
+		if e.jsRegexpUsed {
+			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
+			e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
+		}
 	}
 	if e.dynamicUsed {
 		e.classvalueRuntime()
@@ -388,7 +391,14 @@ func tsName(className string) string {
 // source) and translated to POSIX classes at construction (see the stage-0
 // probe: \w and \d differ between JavaScript and ABAP regexes).
 func (e *emitter) regexpRuntime() {
-	id := "runtime.regexp"
+	e.buildRegexpRuntime("runtime.regexp", false)
+	if e.jsRegexpUsed {
+		e.buildRegexpRuntime("runtime.regexp_js", true)
+		e.regexpJSSubclass()
+	}
+}
+
+func (e *emitter) buildRegexpRuntime(id string, js bool) {
 	if e.types[id] {
 		return
 	}
@@ -577,7 +587,7 @@ ENDIF.
 ENDMETHOD.
 ENDCLASS.
 `
-	if e.matchUsed {
+	if e.matchUsed || e.jsRegexpUsed {
 		arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
 		file := name + ".clas.abap"
 		e.files[file] = strings.Replace(e.files[file], "METHODS test IMPORTING", "METHODS match IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE "+arr+".\nMETHODS test IMPORTING", 1)
@@ -635,14 +645,17 @@ ENDMETHOD.
 ENDCLASS.
 `
 	}
-	if e.execUsed {
+	if js {
+		// This runtime always implements full JS state, even if only a lazy
+		// literal's match/replace was the reason it was reached.
+		old := e.execUsed
+		e.execUsed = true
 		e.regexpExecRuntime(name)
-	}
-	if e.dynamicRegexpUsed {
 		e.regexpDynamicRuntime(name)
-	}
-	if e.matchUsed || e.dynamicRegexpUsed {
 		e.regexpPCRERuntime(name)
+		e.execUsed = old
+	} else {
+		e.regexpLegacyRuntime(name)
 	}
 }
 

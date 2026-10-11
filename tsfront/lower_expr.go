@@ -1357,6 +1357,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "test":
 			return l.rtOp("regexp.test", recv, boolT, one()), true
 		case "exec":
+			// Discarded captures retain the pre-exec test ABI. The ABAP
+			// emitter selects the JS runtime when state/advanced syntax is
+			// observed; Go's test already uses its stateful exec engine.
+			if isConditionOnly(n) {
+				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
+				return l.rtOp("regexp.test", recv, boolT, one()), true
+			}
 			if len(args) == 1 {
 				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), one()), true
 			}
