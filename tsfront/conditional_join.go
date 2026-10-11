@@ -167,6 +167,9 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		// element changes require a live generic view we cannot prove here.
 		return src.Args[0].IsRef() && dst.Args[0].IsRef() && l.acceptsType(dst, src)
 	}
+	if src.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef && dst.Name != hir.RootObject {
+		return l.interfaceHasClassBase(src.Name, dst) || l.unionPartsAccepted(src.Name, dst)
+	}
 	return l.acceptsType(dst, src)
 }
 
@@ -190,6 +193,15 @@ func (l *lowerer) conditionalConversion(n *ast.Node, x *hir.Expr, dst hir.Type) 
 	}
 	if x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional {
 		return l.conditionalAbsent(x.Node, dst)
+	}
+	// Reuse existing proven nominal/interface conversions before decomposing
+	// an optional. Only optional boxing needs our presence-preserving path.
+	boxingOptional := x.Type.Kind == hir.Optional && (dst.Kind == hir.Dynamic || dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic)
+	if !boxingOptional {
+		converted := l.coerce(x, dst)
+		if l.acceptsType(dst, converted.Type) {
+			return converted
+		}
 	}
 	if x.Type.Kind == hir.Optional && (dst.Kind == hir.Optional || dst.Kind == hir.Dynamic) {
 		target := dst

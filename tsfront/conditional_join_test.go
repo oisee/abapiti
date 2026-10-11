@@ -111,3 +111,24 @@ func TestConditionalJoinCollectionIdentity(t *testing.T) {
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
 }
+
+func TestConditionalJoinNarrowedUnionClassBase(t *testing.T) {
+	source := `class Base {value():string{return "base";}}
+ class A extends Base {row():Base{return new Base();}}
+ class B extends Base {value():string{return "b";}}
+ class C extends Base {value():string{return "c";}}
+ export class Probe {
+ static choose(t:Base|undefined):Base|undefined {
+  if(!(t instanceof A) && !(t instanceof B) && !(t instanceof C)){return undefined;}
+  return t instanceof A?t.row():t;
+ }
+ static run():string {
+  const b=new B();const c=new C();
+  return (Probe.choose(b)===b)+":"+(Probe.choose(c)===c)+":"+(Probe.choose(undefined)===undefined);
+ }}`
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+	conditionalMatchesNode(t, source, p, "Probe")
+}
