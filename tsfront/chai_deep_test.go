@@ -15,7 +15,7 @@ import (
 
 func TestChaiDeepNodeOracle(t *testing.T) {
 	// Use upstream's actual Chai, not node:assert or the shim as its own oracle.
-	chai := "/home/alice/dev/abaplint/node_modules/chai"
+	chai := upstreamChaiModule(t)
 	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}

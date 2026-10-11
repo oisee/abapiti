@@ -35,7 +35,7 @@ func writeChaiClosure(t *testing.T, dir string, sources map[string]string) {
 }
 
 func TestChaiSmallNodeOracle(t *testing.T) {
-	chai := "/home/alice/dev/abaplint/node_modules/chai"
+	chai := upstreamChaiModule(t)
 	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}
@@ -88,4 +88,23 @@ func TestChaiSmallNodeOracle(t *testing.T) {
 	if got.Results[1].Status != "failed" || !strings.Contains(got.Results[1].Message, "payload") {
 		t.Fatal(got.Results)
 	}
+}
+
+// Imported batch-E oracles must work with a pinned checkout outside one home.
+func upstreamChaiModule(t *testing.T) string {
+	t.Helper()
+	root := os.Getenv("ABAPITI_TESTS_UPSTREAM")
+	if root == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			t.Fatal(err)
+		}
+		root = filepath.Join(home, "dev", "abaplint")
+	}
+	for _, path := range []string{filepath.Join(root, "node_modules", "chai"), filepath.Join(root, "packages", "core", "node_modules", "chai")} {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	return filepath.Join(root, "node_modules", "chai")
 }
