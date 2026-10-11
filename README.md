@@ -5,16 +5,19 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
-> **Progress towards [100 % of abaplint](#goal-100--of-abaplint)** — every abaplint test passing on abaplint compiled by abapiti (TS-HG@Go first). Updated 11 Oct 2026.
+> **9,022 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
+>
+> Progress towards [100 % of abaplint](#goal-100--of-abaplint). Updated 11 Oct 2026.
+>
+> 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17)
 >
 > | | Now | Target |
 > |---|---:|---:|
-> | abaplint tests passing, first four test directories | **6,515** of 8,461 | 8,461 |
-> | of which lexer / statements / structures / rules | **200** / **4,942** / **138** / **1,235** | 200 / 4,962 / 140 / 3,159 |
+> | abaplint tests passing, all 17 shards | **9,022** of 11,060 | 11,060 |
 > | wrong answers (tests that run and disagree with Node) | **0** | 0 |
-> | Blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **35** (635 at the start) | 0 |
+> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **33** (644 → 33) | 0 |
 >
-> All 625 test files (11,060 tests) are wired; the full-suite number comes with the next integration train. The next big step is the `abap/syntax` test directory (about 1,380 tests), unblocked by a compiler fix now in review.
+> All 625 test files were measured against the original Node suite: 1,765 tests trapped, 0 async-pending, and 273 active tests not-run. Node also has 32 pending tests (305 not-run including those). All gates pass.
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -49,13 +52,13 @@ A seeded variant with one error per rule equals vanilla on every host too. What 
 
 The next goal is the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files and 11,060 mocha tests; on Node all of them pass. The test files themselves are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run first on TS-HG@Go, the fastest host. The other hosts follow, and nothing goes to A4H before it passes on OSGO/OSGB. Optimisations wait until this is done.
 
-Where it stands (10 Oct 2026):
+Where it stands (11 Oct 2026):
 
 | Measure | Today | Target |
 |---|---|---|
-| abaplint tests passing on the compiled abaplint (TS-HG@Go) | being wired up | 11,060 / 11,060 |
+| abaplint tests passing on the compiled abaplint (TS-HG@Go) | **9,022 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
 | Functions the suite and all rules need that are still traps ([`tools/fit-gap.mjs`](tools/fit-gap.mjs)) | 529 of 3,366 | 0 |
-| Blocking diagnostics when lowering all of core without pruning (`abapiti abaplint --full`) | 635 at the start, falling with each batch | 0 |
+| Unique blocking diagnostics when lowering all of core without pruning (`abapiti abaplint --full`) | **33** (644 → 33) | 0 |
 
 The lexer and file-information layers are already fully covered. Most of the gap is in the rules (191 functions, 75 of them in `downport`), the objects (111) and `abap/types` (49).
 
