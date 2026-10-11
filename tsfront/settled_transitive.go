@@ -305,7 +305,11 @@ func (l *lowerer) proveSettledBody(d *ast.Node, seen map[*ast.Node]bool, returni
 	if !exists {
 		parent := l.settledActive
 		l.settledActive = &key
+		// Proof notes must use the inspected producer's file, not the caller's.
+		callerFile := l.file
+		l.file = ast.GetSourceFileOfNode(d)
 		safe := l.checkSettledBody(d, seen, returning)
+		l.file = callerFile
 		l.settledActive = parent
 		if !safe {
 			reason := l.settledLabel(d) + " is not provably already-settled"
@@ -362,7 +366,13 @@ func (l *lowerer) indexSettlementWorld() {
 
 func (l *lowerer) settledWorldFailure(n *ast.Node, target *checker.Type, name string, cache map[*checker.Type]bool) string {
 	matches := func(t *checker.Type) bool {
-		if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown|checker.TypeFlagsNever) != 0 {
+		if t == nil {
+			return false
+		}
+		t = l.ck.GetNonNullableType(t)
+		// Removing undefined/null can produce never, which is assignable to
+		// every interface but is not a provider. Require the actual method too.
+		if t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown|checker.TypeFlagsNever|checker.TypeFlagsVoid|checker.TypeFlagsUndefined|checker.TypeFlagsNull) != 0 || l.ck.GetPropertyOfType(t, name) == nil {
 			return false
 		}
 		if value, ok := cache[t]; ok {

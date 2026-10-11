@@ -209,3 +209,41 @@ func TestSettledTransitiveInheritedPendingInitializer(t *testing.T) {
 	}
 	t.Fatal(ds)
 }
+
+func TestSettledTransitiveAbsentValueIsNotProvider(t *testing.T) {
+	_, ds := asyncProbe(t, `declare function absent():undefined; function ignored():void {absent();}
+ class Worker {async work():Promise<number>{return 1;}}
+ export class Probe {static async run():Promise<number>{const worker=new Worker();return await worker.work();}}`)
+	for _, d := range ds {
+		if d.Category == "unsupported-async" {
+			t.Fatal(ds)
+		}
+	}
+}
+
+func TestSettledTransitiveCrossFileProgressNote(t *testing.T) {
+	dir := t.TempDir()
+	sources := map[string]string{
+		"tsconfig.json": `{"compilerOptions":{"strict":true,"target":"es2020"},"files":["consumer.ts","producer.ts"]}`,
+		"consumer.ts":   `import {Producer} from "./producer"; export async function run():Promise<number>{return await new Producer().parse();}`,
+		"producer.ts":   `export interface IProgress {tick():Promise<void>} export class Producer {async parse(p?:IProgress):Promise<number>{` + strings.Repeat("/* padding */", 100) + `await p?.tick();return 1;}}`,
+	}
+	for name, source := range sources {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	program, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, ds, err := program.Lower([]string{"consumer.ts", "producer.ts"})
+	if err != nil || hasBlocking(ds) {
+		t.Fatal(err, ds)
+	}
+	for _, d := range ds {
+		if d.Category == "note-settled-progress" && !strings.Contains(d.Loc, "producer.ts:") {
+			t.Fatal(d)
+		}
+	}
+}
