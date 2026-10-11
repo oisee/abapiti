@@ -16,8 +16,8 @@ Structure matching shifted the token array with `splice`, which made that stage 
 
 ## Shape and types (makes HIR exact, removes refusals)
 
-### S1. Same method, different arity across union members: `parseType`
-`Domain.parseType(reg, dataElement?, description?)` takes three parameters, while `Table.parseType(reg)` and `DataElement.parseType(reg)` take one; `FindGlobalDefinitions` calls `o.parseType(this.reg)` through the union. TypeScript accepts it, but an object IR needs one ABI per method name. abapiti now widens the union ABI, which took a fixed-point pass and blocked ~6,000 tests until then. Giving all `parseType` implementations the same optional parameters (or one shared interface method) would make it a plain virtual call.
+### S1. Same method name, different parameter lists: `parseType` — **issue** [#4426](https://github.com/abaplint/abaplint/issues/4426)
+Eight DDIC object classes have `parseType(reg)`, while `Domain.parseType(reg, dataElement?, description?)` takes three parameters (only `DDIC.lookupDomain` passes them). TypeScript is fine with it, and upstream `FindGlobalDefinitions` never calls Domain's variant. But in an object model where one method name has one ABI, abapiti had to bridge it, and until then that blocked ~6,000 tests in our build. Proposed: small shared interfaces (`IParseType`, plus `IDomainType.parseDomainType` for Domain), or just renaming the 3-argument variant.
 
 ### S2. `Config.getDefault()` round-trips through JSON
 `getDefault()` builds an object literal and returns `new Config(JSON.stringify(config))`, and the constructor parses it again. A JSON round trip has to be modelled exactly (key order, `undefined` dropping, number formatting), which blocked ~6,000 tests until abapiti implemented a V8-exact version. A typed constructor taking the configuration object (with a deep copy where needed) would be simpler and faster on Node too.
