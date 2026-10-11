@@ -1,6 +1,21 @@
 # abaplint's own tests on TS-HG@Go
 
-## Latest N/total — all directories
+## CDS silent-miscompile fix
+
+The grouped-switch-label fix changes the fresh CDS result from **3 passed,
+10 failed, 345 trapped, one not-run** to **12 passed, zero failed, 346 trapped,
+one not-run**, with all 359 titles reconciled against original Node (358 active,
+one pending). Nine lexer mismatches now pass; the parser token-count mismatch
+now reaches an existing unsupported-regexp trap. Genuine CDS assertion
+mismatches are **zero**. The whole-suite baseline below is historical until a
+new full measurement replaces it; do not add focused results to it as though
+all directories were rerun.
+
+See [root cause, regression, other affected sites, default-output diff and full
+zabapgit validation](cds-lexer-miscompile.md). The fix is shared frontend HIR,
+not a CDS override or a Go-only runtime workaround.
+
+## All-directory baseline — before grouped switch fix
 
 **769/11,060 active Node tests (6.95%).** All **625 files** are selected in
 **17 directory shards**, including `test/*.ts` and files directly in `test/abap/`.
