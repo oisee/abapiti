@@ -1682,7 +1682,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if base.Kind == hir.Optional {
 				base = base.Args[0]
 			}
-			if base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0 {
+			emptyArray := base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0
+			emptyRecord := base.Kind == hir.OrderedMap && b.Right.Kind == ast.KindObjectLiteralExpression && len(b.Right.AsObjectLiteralExpression().Properties.Nodes) == 0
+			if emptyArray || emptyRecord {
 				l.hint = base
 			}
 			y := l.expr(b.Right)
@@ -1691,7 +1693,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			var typ hir.Type
-			if base.Kind == hir.Array && base.Equal(y.Type) {
+			if (base.Kind == hir.Array || emptyRecord) && base.Equal(y.Type) {
 				typ = base
 			} else {
 				typ = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
@@ -2101,9 +2103,8 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	return x
 }
 
-// objectLiteral lowers { ... } whose contextual type is a named alias shape,
-// by constructing the synthesized class; spread properties copy the fields of
-// the spread value first.
+// objectLiteral constructs a named or synthesized structural data class.
+// Spread properties copy the fields of the spread value first.
 func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
@@ -2136,10 +2137,31 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 		if t := l.ck.GetTypeAtLocation(n); t != nil {
 			before := len(l.diags)
 			mapped := l.mapCheckerType(n, t)
-			if len(l.diags) == before && mapped.Kind != hir.Void {
+			if !hasBlocking(l.diags[before:]) && mapped.Kind != hir.Void {
 				l.hint = mapped
+				if mapped.Kind == hir.OrderedMap {
+					return l.recordLiteral(n, mapped)
+				}
+				if mapped.Kind == hir.Dynamic {
+					return l.dynamicRecordLiteral(n)
+				}
 				target = shapeClassOf(l.out.Classes, mapped)
 			} else {
+				l.diags = l.diags[:before]
+			}
+		}
+	}
+	if target == nil {
+		// A fresh type may contain never[] (or an untyped nested {}) even
+		// though its contextual type supplies the full structural layout.
+		// Try it only after ordinary mapping fails, preserving existing ABIs.
+		if t := l.ck.GetContextualType(n, checker.ContextFlagsNone); t != nil {
+			before := len(l.diags)
+			mapped := l.mapCheckerType(n, t)
+			if !hasBlocking(l.diags[before:]) {
+				target = shapeClassOf(l.out.Classes, mapped)
+			}
+			if target == nil {
 				l.diags = l.diags[:before]
 			}
 		}
@@ -2168,7 +2190,7 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
-			if t := l.ck.GetTypeAtLocation(n); t != nil && t.Symbol() == nil {
+			if t := l.ck.GetTypeAtLocation(n); t != nil {
 				if c := l.synthFromProperties(n, l.ck.GetPropertiesOfType(t)); c != nil {
 					args := []*hir.Expr{}
 					for _, p := range c.Ctor.Params {
