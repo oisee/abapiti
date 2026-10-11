@@ -1,6 +1,89 @@
 # abaplint's own tests on TS-HG@Go
 
-## Final batch B — all 17 shards
+## Final batch D — registration roots, all 17 shards
+
+**8,680/11,060 active Node tests (78.48%), FAIL 0.** Fresh executions of all
+17 shards reproduce the base's **8,576** and add **104 passing tests**.
+**164 registrations were restored:** 104 pass and 60 reach honest typed traps.
+Not-run falls **305 → 141**, with unregistered **279 → 115** and the existing
+26 skipped/focused records unchanged. This does **not** claim all 279 losses
+were eliminated: the remaining unregistered set includes six Node-pending cases.
+
+Initialization refusals fall **37 → 9 actions**, across **11 → 7 files**.
+The largest fixed root was immutable module function aliases used to construct
+combinator tables; the other was lost structural context for heterogeneous
+literal registration rows. A module title arrow blocked pretty-printer tables
+as well. No genuine upstream assertion mismatch was encountered or relabeled.
+The runner now also stops on failed initialization records and checks borrowed
+executions before ownership filtering.
+
+Implementation: `789bc0d` plus proof-name guards in `5d7ba01`.
+[Root semantics, explicit refusal boundaries and Node/Go regressions](registrations-d-roots.md).
+[Every failed baseline file and every exact initialization refusal, grouped by
+root](registrations-d-initialization.md).
+Machine-readable [fresh base](abaplint-tests-registrations-base.json) and
+[fresh final](abaplint-tests-latest.json) retain all exact per-action refusals.
+Both runs select **625 files**, exclude none, build and execute every shard,
+and reconcile owned titles against an independent whole-suite original-Mocha
+oracle: **11,060 passed, zero failed, 32 pending**. There are zero unmatched
+titles, wiring failures or async-pending cases.
+
+| Shard under `test/` | Files | Base passed | D passed | FAIL | Trapped | Not-run before → after | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 52 | 156 | 0 | 60 | 139 → 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 41 | 41 | 0 | 9 | 57 → 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 200 | 0 | 0 | 0 → 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 2 | 0 | 0 | 0 → 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 4,942 | 0 | 20 | 0 → 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 138 | 0 | 0 | 2 → 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,274 | 1,274 | 0 | 50 | 49 → 49 | 1,332 | 1,363 + 10 |
+| `abap/types` | 6 | 21 | 21 | 0 | 8 | 0 → 0 | 29 | 29 + 0 |
+| root `*.ts` | 12 | 35 | 35 | 0 | 59 | 0 → 0 | 94 | 94 + 0 |
+| `cds` | 2 | 334 | 334 | 0 | 24 | 1 → 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 4 | 4 | 0 | 28 | 0 → 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 55 | 55 | 0 | 133 | 5 → 5 | 193 | 188 + 5 |
+| `objects` | 26 | 30 | 30 | 0 | 114 | 1 → 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 0 | 31 | 0 → 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 0 | 0 | 0 | 31 | 29 → 0 | 31 | 31 + 0 |
+| `rules` | 192 | 1,448 | 1,448 | 0 | 1,689 | 22 → 22 | 3,147 | 3,149 + 10 |
+| `utils` | 3 | 0 | 0 | 0 | 15 | 0 → 0 | 15 | 15 + 0 |
+| **Unique total** | **625** | **8,576** | **8,680** | **0** | **2,271** | **305 → 141** | **10,977** | **11,060 + 32** |
+
+The suspected root/objects/rename/utils/DDL/LSP/CDS initialization losses were
+already repaired at this task's actual base. Batch D does not claim those gains
+again. Remaining active registration blockers are the Dell-owned nominal/closure
+ABI paths, batch C's conversion domains, and one unsupported local class.
+A mutable module binding still refuses initialization without losing any test
+registrations. No filesystem/path shim, upstream edit or manufactured test was
+needed.
+
+### Top 10 remaining initialization refusals
+
+There are only **eight distinct exact messages** (nine actions). Counts below
+are initialization actions, not reached test traps. All have status `trapped`.
+Exact messages, including verifier node IDs, are preserved in the final JSON.
+
+| Actions | File / action | Refusal root |
+| ---: | --- | --- |
+| 2 | `test/rules/keyword_case.ts:289:1`, `:304:1` | `src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain` — batch C |
+| 1 | `test/abap/expressions/reuse.ts:10:1` | HIR verification: `optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .` — Dell ABI |
+| 1 | `test/abap/expressions/reuse.ts:70:1` | HIR verification: `unresolved field test.ready.tests` — cascade of the refused table |
+| 1 | `test/abap/structure_errors.ts:15:1` | HIR verification: invalid narrowing `shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c` to `shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414` — Dell ABI, skipped suite |
+| 1 | `test/abap/structures/_combi.ts:276:1` | `KindClassDeclaration is not lowered`; `identifier Normal is not a lowered local or module value` |
+| 1 | `test/abap/syntax/syntax.ts:16428:1` | HIR verification: `classref<test/abap/syntax/syntax.ts.module> / classref<closure.72232>` expression type mismatch — Dell closure ABI |
+| 1 | `test/abap/types/form_definition.ts:8:1` | `mutable module variables are not lowered` — no registration loss |
+| 1 | `test/rules/line_length.ts:17:1` | `src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain` — batch C |
+
+**Final gates passed:** `go test ./... -short`; Grace-enabled
+`go test ./tsfront/... ./hir/... ./cmd/...`; `go vet ./...`; both all-shard/report
+unit scripts. All Go runs use `ABAPITI_GRACECHECK=1`, `GOTOOLCHAIN=go1.26.0`,
+`GOFLAGS=-buildvcs=false` and `$HOME/.cache/go-build`. Default `abaplint` output
+is **byte-identical to `2169c5d`**, including its zip: same emission path,
+`diff -r` exit **0**, empty diff. Compiler/runtime source was frozen before the
+final whole-suite rebuild. Generated closures, Go modules, binaries and release
+kits were deleted after their runs. No transpiler clone or push.
+
+## Historical batch B — all 17 shards
 
 **8,576/11,060 active Node tests (77.54%), FAIL 0.** This is **+434** from the
 repaired integration base's 8,142, not a sum of focused reruns. All **625 files**
@@ -51,7 +134,8 @@ after a shard with FAIL, prints its actual failures, and cleans generated builds
 Not-run is **26 skipped/focused + 279 unregistered**, not omitted source files.
 Registration losses remain unsupported; they are not estimated as passes.
 
-Machine-readable final evidence: [`abaplint-tests-latest.json`](abaplint-tests-latest.json).
+Batch B's final outcome, independently reproduced at batch D's base:
+[`abaplint-tests-registrations-base.json`](abaplint-tests-registrations-base.json).
 Complete repaired-base evidence, including its **top 20 reached traps** and empty
 failure list: [`abaplint-tests-traps-b-base.json`](abaplint-tests-traps-b-base.json).
 Both report actual whole-suite executions; the initial stopped run is not
