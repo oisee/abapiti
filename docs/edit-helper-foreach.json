@@ -1,0 +1,1523 @@
+{
+  "codeRevision": "6a7781cb9e3e6f56687183f0d345c0ff3fdcc139",
+  "base": "ce2f789946c6fe17259856e433145c3eeaa7258e",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "full": {
+    "before": {
+      "summary": {
+        "blocking": 35,
+        "rootBlocking": 29,
+        "cascadeBlocking": 6,
+        "hirErrors": 151,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-call": 3,
+          "unsupported-callback": 1,
+          "unsupported-expr": 19,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 17,
+          "objects": 6,
+          "rules": 10,
+          "src": 2
+        },
+        "byRootMessage": [
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 7
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 41
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "hirByMessage": {
+        "assignment type mismatch": 17,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 7,
+        "condition must be bool": 6,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "foreach requires matching array": 3,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 42,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "invalid narrowing optional<optional<string>> to optional<string>": 2,
+        "method may fall through without return": 5,
+        "missing expression": 15,
+        "nested optional": 3,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4,
+        "unsupported collection key dynamic": 5
+      }
+    },
+    "after": {
+      "summary": {
+        "blocking": 35,
+        "rootBlocking": 29,
+        "cascadeBlocking": 6,
+        "hirErrors": 148,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-call": 3,
+          "unsupported-callback": 1,
+          "unsupported-expr": 19,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 17,
+          "objects": 6,
+          "rules": 10,
+          "src": 2
+        },
+        "byRootMessage": [
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 7
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 38
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "hirByMessage": {
+        "assignment type mismatch": 17,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 7,
+        "condition must be bool": 6,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 42,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "invalid narrowing optional<optional<string>> to optional<string>": 2,
+        "method may fall through without return": 5,
+        "missing expression": 15,
+        "nested optional": 3,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4,
+        "unsupported collection key dynamic": 5
+      }
+    }
+  },
+  "shards": [
+    {
+      "name": "rules",
+      "roots": [
+        "test/rules/7bit_ascii.ts",
+        "test/rules/_utils.ts",
+        "test/rules/abapdoc.ts",
+        "test/rules/add_test_attributes.ts",
+        "test/rules/aff_and_xml.ts",
+        "test/rules/align_parameters.ts",
+        "test/rules/align_pseudo_comments.ts",
+        "test/rules/align_type_expressions.ts",
+        "test/rules/allowed_object_naming.ts",
+        "test/rules/ambiguous_statement.ts",
+        "test/rules/avoid_use.ts",
+        "test/rules/begin_end_names.ts",
+        "test/rules/begin_single_include.ts",
+        "test/rules/call_transaction_authority_check.ts",
+        "test/rules/catch_and_raise.ts",
+        "test/rules/cds_association_name.ts",
+        "test/rules/cds_check_syntax.ts",
+        "test/rules/cds_comment_style.ts",
+        "test/rules/cds_field_order.ts",
+        "test/rules/cds_legacy_view.ts",
+        "test/rules/cds_naming.ts",
+        "test/rules/cds_parser_error.ts",
+        "test/rules/chain_mainly_declarations.ts",
+        "test/rules/change_if_to_case.ts",
+        "test/rules/check_abstract.ts",
+        "test/rules/check_comments.ts",
+        "test/rules/check_ddic.ts",
+        "test/rules/check_include.ts",
+        "test/rules/check_subrc.ts",
+        "test/rules/check_syntax.ts",
+        "test/rules/check_text_elements.ts",
+        "test/rules/check_transformation_exists.ts",
+        "test/rules/class_attribute_names.ts",
+        "test/rules/classic_exceptions_overlap.ts",
+        "test/rules/clear_exporting_parameters.ts",
+        "test/rules/cloud_types.ts",
+        "test/rules/colon_missing_space.ts",
+        "test/rules/commented_code.ts",
+        "test/rules/constant_classes.ts",
+        "test/rules/constructor_visibility_public.ts",
+        "test/rules/contains_tab.ts",
+        "test/rules/cyclic_oo.ts",
+        "test/rules/cyclomatic_complexity.ts",
+        "test/rules/dangerous_statement.ts",
+        "test/rules/db_operation_in_loop.ts",
+        "test/rules/definitions_top.ts",
+        "test/rules/description_empty.ts",
+        "test/rules/double_space.ts",
+        "test/rules/downport.ts",
+        "test/rules/dynpro_checks.ts",
+        "test/rules/easy_to_find_messages.ts",
+        "test/rules/empty_event.ts",
+        "test/rules/empty_line_in_statement.ts",
+        "test/rules/empty_statement.ts",
+        "test/rules/empty_structure.ts",
+        "test/rules/exit_or_check.ts",
+        "test/rules/expand_macros.ts",
+        "test/rules/exporting.ts",
+        "test/rules/forbidden_identifier.ts",
+        "test/rules/forbidden_pseudo_and_pragma.ts",
+        "test/rules/forbidden_void_type.ts",
+        "test/rules/form_tables_obsolete.ts",
+        "test/rules/fully_type_constants.ts",
+        "test/rules/fully_type_itabs.ts",
+        "test/rules/function_module_recommendations.ts",
+        "test/rules/functional_writing.ts",
+        "test/rules/global_class.ts",
+        "test/rules/identical_conditions.ts",
+        "test/rules/identical_contents.ts",
+        "test/rules/identical_descriptions.ts",
+        "test/rules/identical_form_names.ts",
+        "test/rules/identical_move.ts",
+        "test/rules/if_in_if.ts",
+        "test/rules/implement_methods.ts",
+        "test/rules/implicit_start_of_selection.ts",
+        "test/rules/in_statement_indentation.ts",
+        "test/rules/indentation.ts",
+        "test/rules/index_completely_contained.ts",
+        "test/rules/inline_data_old_versions.ts",
+        "test/rules/intf_referencing_clas.ts",
+        "test/rules/invalid_table_index.ts",
+        "test/rules/keep_single_parameter_on_one_line.ts",
+        "test/rules/keyword_case.ts",
+        "test/rules/line_break_multiple_parameters.ts",
+        "test/rules/line_break_style.ts",
+        "test/rules/line_length.ts",
+        "test/rules/line_only_punc.ts",
+        "test/rules/local_class_naming.ts",
+        "test/rules/local_testclass_consistency.ts",
+        "test/rules/local_variable_names.ts",
+        "test/rules/macro_naming.ts",
+        "test/rules/main_file_contents.ts",
+        "test/rules/many_parentheses.ts",
+        "test/rules/max_one_method_parameter_per_line.ts",
+        "test/rules/max_one_statement.ts",
+        "test/rules/message_exists.ts",
+        "test/rules/method_implemented_twice.ts",
+        "test/rules/method_length.ts",
+        "test/rules/method_overwrites_builtin.ts",
+        "test/rules/method_parameter_names.ts",
+        "test/rules/mix_returning.ts",
+        "test/rules/modify_only_own_db_tables.ts",
+        "test/rules/msag_consistency.ts",
+        "test/rules/names_no_dash.ts",
+        "test/rules/nesting.ts",
+        "test/rules/newline_between_methods.ts",
+        "test/rules/no_aliases.ts",
+        "test/rules/no_chained_assignment.ts",
+        "test/rules/no_comments_between_methods.ts",
+        "test/rules/no_dynamic_stuff.ts",
+        "test/rules/no_exclamation_escape.ts",
+        "test/rules/no_external_form_calls.ts",
+        "test/rules/no_inline_in_optional_branches.ts",
+        "test/rules/no_macros.ts",
+        "test/rules/no_mandt_in_database_operations.ts",
+        "test/rules/no_prefixes.ts",
+        "test/rules/no_public_attributes.ts",
+        "test/rules/no_yoda_conditions.ts",
+        "test/rules/object_naming.ts",
+        "test/rules/obsolete_statement.ts",
+        "test/rules/omit_parameter_name.ts",
+        "test/rules/omit_preceding_zeros.ts",
+        "test/rules/omit_receiving.ts",
+        "test/rules/parser_702_chaining.ts",
+        "test/rules/parser_bad_exceptions.ts",
+        "test/rules/parser_error.ts",
+        "test/rules/parser_missing_space.ts",
+        "test/rules/pragma_style.ts",
+        "test/rules/prefer_abap_bool.ts",
+        "test/rules/prefer_corresponding.ts",
+        "test/rules/prefer_inline.ts",
+        "test/rules/prefer_insert_into_table.ts",
+        "test/rules/prefer_is_not.ts",
+        "test/rules/prefer_pragmas.ts",
+        "test/rules/prefer_raise_exception_new.ts",
+        "test/rules/prefer_returning_to_exporting.ts",
+        "test/rules/prefer_xsdbool.ts",
+        "test/rules/preferred_compare_operator.ts",
+        "test/rules/prefix_is_current_class.ts",
+        "test/rules/reduce_procedural_code.ts",
+        "test/rules/reduce_string_templates.ts",
+        "test/rules/redundant_conversion.ts",
+        "test/rules/release_idoc.ts",
+        "test/rules/remove_descriptions.ts",
+        "test/rules/rfc_error_handling.ts",
+        "test/rules/select_add_order_by.ts",
+        "test/rules/select_performance.ts",
+        "test/rules/select_single_full_key.ts",
+        "test/rules/selection_screen_naming.ts",
+        "test/rules/selection_screen_texts_missing.ts",
+        "test/rules/sequential_blank.ts",
+        "test/rules/short_case.ts",
+        "test/rules/sicf_consistency.ts",
+        "test/rules/slow_parameter_passing.ts",
+        "test/rules/smim_consistency.ts",
+        "test/rules/space_before_colon.ts",
+        "test/rules/space_before_dot.ts",
+        "test/rules/sql_escape_host_variables.ts",
+        "test/rules/sql_value_conversion.ts",
+        "test/rules/start_at_tab.ts",
+        "test/rules/static_call_via_instance.ts",
+        "test/rules/strict_sql.ts",
+        "test/rules/superclass_final.ts",
+        "test/rules/superfluous_value.ts",
+        "test/rules/sy_modification.ts",
+        "test/rules/sy_read_restriction.ts",
+        "test/rules/tables_declared_locally.ts",
+        "test/rules/try_without_catch.ts",
+        "test/rules/type_begin_single_include.ts",
+        "test/rules/type_form_parameters.ts",
+        "test/rules/types_naming.ts",
+        "test/rules/uncaught_exception.ts",
+        "test/rules/unknown_types.ts",
+        "test/rules/unnecessary_chaining.ts",
+        "test/rules/unnecessary_pragma.ts",
+        "test/rules/unnecessary_return.ts",
+        "test/rules/unreachable_code.ts",
+        "test/rules/unsecure_fae.ts",
+        "test/rules/unused_ddic.ts",
+        "test/rules/unused_macros.ts",
+        "test/rules/unused_methods.ts",
+        "test/rules/unused_types.ts",
+        "test/rules/unused_variables.ts",
+        "test/rules/use_bool_expression.ts",
+        "test/rules/use_class_based_exceptions.ts",
+        "test/rules/use_line_exists.ts",
+        "test/rules/use_new.ts",
+        "test/rules/when_others_last.ts",
+        "test/rules/whitespace_end.ts",
+        "test/rules/wrong_abapdoc_position.ts",
+        "test/rules/xml_bom.ts",
+        "test/rules/xml_consistency.ts"
+      ],
+      "closureFiles": 1732,
+      "nodeOracle": {
+        "total": 3159,
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "before": {
+        "total": 3159,
+        "passed": 1235,
+        "failed": 0,
+        "trapped": 1902,
+        "notRun": 22,
+        "registered": 3147,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 10,
+          "unregistered": 12
+        },
+        "unmatched": []
+      },
+      "after": {
+        "total": 3159,
+        "passed": 1371,
+        "failed": 0,
+        "trapped": 1766,
+        "notRun": 22,
+        "registered": 3147,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 10,
+          "unregistered": 12
+        },
+        "unmatched": []
+      },
+      "transitions": {
+        "not-run -> not-run": 10,
+        "passed -> passed": 1235,
+        "trapped -> passed": 136,
+        "trapped -> trapped": 1766
+      },
+      "targeted": 139,
+      "targetedAfter": {
+        "passed": 136,
+        "trapped": 3
+      },
+      "nextTraps": {
+        "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain": 3
+      },
+      "regressions": [],
+      "targetedResults": [
+        {
+          "title": "Rule: align_parameters quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_parameters quick fix 2",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_pseudo_comments err1, fix insert spaces",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_pseudo_comments err1, fix removes spaces",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_type_expressions Align TYPEs, insert spaces",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_type_expressions Align TYPEs, remove spaces",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: align_type_expressions Align EVENTS TYPE",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test avoid_use rule fixes Fix \"DESCRIBE TABLE foo LINES bar.\"",
+          "after": "trapped",
+          "message": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "title": "test avoid_use rule fixes Fix \"DESCRIBE TABLE foo-bar LINES bar.\"",
+          "after": "trapped",
+          "message": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "title": "test avoid_use rule fixes Fix \"describe table foo-bar lines bar.\"",
+          "after": "trapped",
+          "message": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "title": "test begin_end_names rule fixes Fix \"TYPES: BEGIN OF moo, dsf TYPE string, END OF bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test begin_end_names rule fixes Fix \"TYPES: BEGIN OF ENUM moo, blah, END OF ENUM bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test begin_end_names rule fixes Fix \"DATA: BEGIN OF foo, BEGIN OF bar2, f TYPE string, END OF bar1, END OF foo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test begin_end_names rule fixes Fix \"DATA: BEGIN OF foo, BEGIN OF bar2, f TYPE string, END OF bar2, END OF fooaaa.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test chain_mainly_declarations rule fixes Fix \"SORT: foo,\n  bar,\n  xxx.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test chain_mainly_declarations rule fixes Fix \"SORT: foo,bar, xxx.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test commented_code rule fixes Fix \"* CONTINUE.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test commented_code rule fixes Fix \"\" ASSERT 0 = 1.\nWRITE: / ex->get_longtext( ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test contains_tab rule fixes Fix \"IF 1 = 1.\t\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test contains_tab rule fixes Fix \"data: lt_file\ttype solix_tab.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test contains_tab rule fixes Fix \"\t\t\tIF foo = bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test contains_tab rule fixes Fix \"IF foo\t\t\t = bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test double_space rule fixes Fix \"DATA:  foo TYPE c.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test double_space rule fixes Fix \"call( var     ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test double_space rule fixes Fix \"call(     var ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test double_space rule fixes Fix \"REPORT     zfoobar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test double_space rule fixes Fix \"IF ( foo = bar AND\n       moo IS NOT INITIAL                    ) OR\n     boo IS INITIAL.\nENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test empty_line_in_statement rule fixes Fix \"\nWRITE\n\nbar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test empty_statement rule fixes Fix \"types f1 type c.  .\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test empty_statement rule fixes Fix \"types f2 type c.\n  .\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test empty_statement rule fixes Fix \"types f3 type c..\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test empty_statement rule fixes Fix \"  .\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes quick fix, something after",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes multi line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes BIT-AND",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes chained macro call, first step",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes chained macro call, second step",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: expand_macros, quick fixes nested, two parameters",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test exporting rule fixes Fix \"methodname( EXPORTING iv_foo = '1' ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test exporting rule fixes Fix \"methodname( EXPORTING  iv_foo = '2' ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test exporting rule fixes Fix \"methodname(  EXPORTING iv_foo = '3' ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test exporting rule fixes Fix \"methodname( EXPORTING\niv_foo = '4' ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test exporting rule fixes Fix \"methodname( EXPORTING\n\niv_foo = '5' ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar( ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar( EXPORTING iv_param = '1' CHANGING cv_param = lt_foo ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar EXPORTING iv_param = '1' CHANGING cv_param = lt_foo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: if in f test fix",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rules, implement_methods normal class, quickfix",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test in_statement_indentation rule fixes Fix \"IF foo = bar\n  AND moo = loo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: indentation, test quick fix top level",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: indentation, test quick fix inside IF",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keep_single_parameter_on_one_line rule fixes Fix \"DATA(unique_list) = remove_duplicates(\n    list ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keep_single_parameter_on_one_line rule fixes Fix \"remove_duplicates(\n  CHANGING\n    list = list ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keyword_case rule fixes Fix \"write bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keyword_case rule fixes Fix \"WRITE BAR.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keyword_case rule fixes Fix \"write BAR.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keyword_case rule fixes Fix \"write\nBAR.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test keyword_case rule fixes Fix \"call\nfunction\n'BAR'.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test line_break_multiple_parameters rule fixes Fix \"method( para1 = value para2 = value ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test many_parentheses rule fixes Fix \"IF ( destination IS INITIAL ). ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test many_parentheses rule fixes Fix \"IF ( ldate > ldate ) OR ( ldate = ldate AND ltime > ltime ). ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test many_parentheses rule fixes Fix \"IF <field> IS INITIAL OR ( 1 = 2 ). ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: many_parentheses, quick fixes quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test max_one_statement rule fixes Fix \"WRITE 'hello'.WRITE 'world'.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: no_chained_assignment quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test no_exclamation_escape rule fixes Fix \"DATA !foo TYPE i.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test no_exclamation_escape rule fixes Fix \"methods CONVERT changing !CO_sdf type ref to ZCL_sdf optional.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: omit_parameter_name, quick fixes quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"DATA foo TYPE xfeld.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"DATA foo TYPE XFELD.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"CLASS lcl DEFINITION. PUBLIC SECTION. CLASS-DATA foo TYPE sap_bool. ENDCLASS. CLASS lcl IMPLEMENTATION. ENDCLASS.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"CONSTANTS c TYPE boole_d VALUE 'X'.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"TYPES ty TYPE flag.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_abap_bool rule fixes Fix \"FIELD-SYMBOLS <fs> TYPE xfeld.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline testfix, Simple, data in FORM",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline testfix, first use is move",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline testfix, field symbol",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND row TO itab.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND LINES OF itab2 TO itab.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND INITIAL LINE TO itab.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND INITIAL LINE TO itab ASSIGNING <fs>.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND INITIAL LINE TO itab REFERENCE INTO ref.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND row TO itab ASSIGNING <fs>.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND row TO itab ASSIGNING <fs> CASTING.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_insert_into_table rule fixes Fix \"APPEND LINES OF itab2 FROM 1 TO 3 TO itab.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"foo = boolc( NOT variable = 42 ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF foo = bar AND NOT variable = 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable = 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable <> 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable < 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable > 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable <= 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable >= 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable IS INITIAL. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"WHILE NOT variable IS INITIAL. ENDWHILE.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable BETWEEN 42 AND 42. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_is_not rule fixes Fix \"IF NOT variable IN range. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error\n  EXPORTING\n    previous = exception.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error\n  EXPORTING\n    previous = exception\n    something = nothing.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test prefer_xsdbool rule fixes Fix \"DATA(sdf) = boolc( 1 = 2 ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo EQ bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo NE bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo >< bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo GT bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo GE bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo LE bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo LT bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"SELECT * FROM foo INTO TABLE bar WHERE moo EQ boo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo = bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo <> bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo > bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo >= bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo <= bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"IF foo < bar. ENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test preferred_compare_operator rule fixes Fix \"SELECT * FROM foo INTO TABLE bar WHERE moo = boo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test redundant_conversion rule fixes Fix \"DATA source TYPE string.\nDATA target TYPE string.\ntarget = CONV string( source ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test redundant_conversion rule fixes Fix \"DATA source TYPE i.\nDATA target TYPE i.\ntarget = CONV i( source + 1 ) * 2.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test redundant_conversion rule fixes Fix \"CLASS lcl DEFINITION.\n  PUBLIC SECTION.\n    CLASS-METHODS run IMPORTING value TYPE string.\nENDCLASS.\nCLASS lcl IMPLEMENTATION.\n  METHOD run.\n  ENDMETHOD.\nENDCLASS.\nDATA source TYPE string.\nlcl=>run( CONV #( source ) ).\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test sequential_blank rule fixes Fix \"REPORT zfoo.\n\n\n\n\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test sequential_blank rule fixes Fix \"REPORT zfoo.\n\n\n\n\t\t\t\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test sequential_blank rule fixes Fix \"REPORT zfoo.\n\n\n\n\nWRITE 1.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test sequential_blank rule fixes Fix \"REPORT zfoo.\n\n\n\n\n\t\t\t\nWRITE 1.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: slow_parameter_passing test slow_parameter_passing rule fixes Fix \"CLASS lcl DEFINITION.\n  PUBLIC SECTION.\n    METHODS bar IMPORTING VALUE(sdf) TYPE string.\nENDCLASS.\nCLASS lcl IMPLEMENTATION.\n  METHOD bar.\n    WRITE sdf.\n  ENDMETHOD.\nENDCLASS.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: space_before_colon quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: sql_escape_host_variables quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: strict_sql, quick fixes quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: strict_sql, quick fixes quick fix 2",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: strict_sql, quick fixes quick fix 3",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Rule: unnecessary_chaining quick fix 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_bool_expression rule fixes Fix \"\nIF lv_state IS INITIAL.\n  rv_bool = abap_false.\nELSE.\n  rv_bool = abap_true.\nENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_bool_expression rule fixes Fix \"\nIF lv_state IS INITIAL.\n  rv_bool = abap_true.\nELSE.\n  rv_bool = abap_false.\nENDIF.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_new rule fixes Fix \"CREATE OBJECT ro_upload TYPE zcl_abapgit_ecatt_val_obj_upl.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar EXPORTING foo = bar.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar EXPORTING foo = bar boo = moo.\"",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "rule, xml_bom adds a BOM with its quick fix",
+          "after": "passed",
+          "message": ""
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "edit-helper",
+      "roots": [
+        "test/edit_helper.ts"
+      ],
+      "closureFiles": 1541,
+      "nodeOracle": {
+        "total": 14,
+        "passed": 14,
+        "failed": 0,
+        "pending": 0
+      },
+      "before": {
+        "total": 14,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 14,
+        "notRun": 0,
+        "registered": 14,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 0,
+          "unregistered": 0
+        },
+        "unmatched": []
+      },
+      "after": {
+        "total": 14,
+        "passed": 14,
+        "failed": 0,
+        "trapped": 0,
+        "notRun": 0,
+        "registered": 14,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 0,
+          "unregistered": 0
+        },
+        "unmatched": []
+      },
+      "transitions": {
+        "trapped -> passed": 14
+      },
+      "targeted": 14,
+      "targetedAfter": {
+        "passed": 14
+      },
+      "nextTraps": {},
+      "regressions": [],
+      "targetedResults": [
+        {
+          "title": "Edit Helper something",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper multiple edits, same line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, normal",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, only one statement in chain",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, first statement in chain",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, last statement in chain",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, first statement in chain, multi line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, last statement in chain, multi line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, middle statement in chain, multi line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, middle statement in chain, single line",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, multiple chained, 1",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, multiple chained, 2",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, multiple chained, 3",
+          "after": "passed",
+          "message": ""
+        },
+        {
+          "title": "Edit Helper deleteStatement, non chained",
+          "after": "passed",
+          "message": ""
+        }
+      ],
+      "initialization": []
+    },
+    {
+      "name": "syntax-caller",
+      "roots": [
+        "test/abap/syntax/syntax.ts"
+      ],
+      "closureFiles": 1543,
+      "nodeOracle": {
+        "total": 1153,
+        "passed": 1143,
+        "failed": 0,
+        "pending": 10
+      },
+      "before": {
+        "total": 1153,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 1104,
+        "notRun": 49,
+        "registered": 1112,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 8,
+          "unregistered": 41
+        },
+        "unmatched": []
+      },
+      "after": {
+        "total": 1153,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 1104,
+        "notRun": 49,
+        "registered": 1112,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 8,
+          "unregistered": 41
+        },
+        "unmatched": []
+      },
+      "transitions": {
+        "not-run -> not-run": 8,
+        "trapped -> trapped": 1104
+      },
+      "targeted": 0,
+      "targetedAfter": {},
+      "nextTraps": {},
+      "regressions": [],
+      "targetedResults": [],
+      "initialization": [
+        {
+          "file": "test/abap/syntax/syntax.ts",
+          "action": "test/abap/syntax/syntax.ts:16428:1",
+          "message": "test/abap/syntax/syntax.ts:16428:61: lowering trap: test/abap/syntax/syntax.ts:16428:61: HIR verification: node N (test/abap/syntax/syntax.ts:16428:61): expression type mismatch: classref<test/abap/syntax/syntax.ts.module> / classref<closure.62948>",
+          "status": "trapped"
+        }
+      ]
+    }
+  ],
+  "fullSyntaxShard": {
+    "roots": "all test/abap/syntax/**/*.ts, sorted",
+    "oracle": {
+      "total": 1379,
+      "passed": 1369,
+      "failed": 0,
+      "pending": 10
+    },
+    "before": {
+      "passed": 0,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 1379,
+      "registered": 0
+    },
+    "after": {
+      "passed": 0,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 1379,
+      "registered": 0
+    },
+    "blocker": "compiler panic before execution: Unhandled case in Node.Text: *ast.QualifiedName, via typeRefName at tsfront/lower_types.go:1017"
+  },
+  "gates": {
+    "vet": true,
+    "shortWithGrace": true,
+    "backendCoverage": true,
+    "defaultOutputFiles": 6348,
+    "defaultDiffEmpty": true,
+    "originMain": "23b364090e3b9c699ddb768e5a795fa283ca105b",
+    "defaultDiffAgainstOriginMainEmpty": true,
+    "verifierIndexEquivalenceChecks": 1158
+  }
+}

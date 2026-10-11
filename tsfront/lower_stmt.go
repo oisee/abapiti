@@ -740,6 +740,13 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if x.Type.Kind == hir.OrderedSet {
 		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
 	}
+	// Indexed record reads use map.get's absence-preserving result even
+	// when TypeScript's index signature says the value is an array. A
+	// for-of consumes that array directly; retain the checked reference
+	// view rather than handing an optional array to HIR ForEach.
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Array {
+		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(f.Expression), Type: x.Type.Args[0], X: x}
+	}
 	if x.Type.Kind == hir.Array {
 		elem = x.Type.Args[0]
 	}
