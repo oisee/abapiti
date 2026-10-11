@@ -39,6 +39,9 @@ try {
   assert.ifError(old.error);
   assert.equal(old.status, 1);
   assert.match(old.stderr, /must contain inline DATA and IS INSTANCE OF/);
+  const fixture = spawnSync(process.execPath, [gate.pathname, dir, osg, "--fixture"], {encoding: "utf8"});
+  assert.ifError(fixture.error);
+  assert.equal(fixture.status, 0, fixture.stderr + fixture.stdout);
   for (const section of ["PUBLIC", "PROTECTED", "PRIVATE"]) {
     writeFileSync(join(dir, "z_hir_lint_test.clas.abap"), original.replace(`  ${section} SECTION.\n`, ""));
     const missing = spawnSync(process.execPath, [gate.pathname, dir, osg], {encoding: "utf8"});

@@ -106,6 +106,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"string.parseInt10":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Unbounded decimal accumulation may overflow the target numeric representation."},
 	"string.parseInt10i64":      {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Decimal accumulation or conversion to int8 may overflow."},
 	"string.repeatIndent":       {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
+	"string.repeat":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"string.replaceAll":         {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "ABAP REPLACE ALL has no empty-needle guard; conservatively allow target replacement errors."},
 	"string.replaceFirst":       {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"string.replaceRegex":       {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Unsupported patterns or replacement syntax may raise in a target runtime."},

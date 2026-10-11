@@ -21,6 +21,7 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	}
 	l.class = owner
 	l.method = hm
+	defer l.trapBodyDiagnostics(fn, hm, len(l.diags))
 	if l.trapUnexecuted(fn, hm) {
 		return hm
 	}
@@ -178,6 +179,9 @@ func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	if l.localFns == nil {
+		l.localFns = map[string]*localFn{}
+	}
 	if lf, ok := l.localFns[name]; ok {
 		return lf
 	}
@@ -216,6 +220,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		}
 	}
 	m := &hir.Method{Node: l.node(fn), Name: l.localFnMemberName(name, fn), Virtual: true, Result: hir.T(hir.Void)}
+	defer l.trapBodyDiagnostics(fn, m, len(l.diags))
 	if l.method != nil && l.method.Static {
 		m.Static = true
 		m.Virtual = false
@@ -500,6 +505,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}
 		}
+	}
+	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.ClassValue {
+		return l.rtOp("dynamic.asClassValue", x, dst)
 	}
 	if x.Type.Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
 		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]

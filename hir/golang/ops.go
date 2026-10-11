@@ -14,7 +14,7 @@ var supportedOps = map[string]bool{
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
-	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
+	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.repeat": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
 	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
 
@@ -75,7 +75,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "int32(len(" + a + ".Items))"
 	case "map.size":
 		code = "int32(len(" + a + ".Entries))"
-	case "string.startsWith", "string.endsWith", "string.indexOf", "string.at", "string.replaceFirst", "string.repeatIndent", "string.parseInt10", "string.parseInt10i64", "string.substr", "string.slice", "string.charAt", "string.replaceAll", "string.split":
+	case "string.startsWith", "string.endsWith", "string.indexOf", "string.at", "string.replaceFirst", "string.repeatIndent", "string.repeat", "string.parseInt10", "string.parseInt10i64", "string.substr", "string.slice", "string.charAt", "string.replaceAll", "string.split":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.compareRegistryKey":
 		code = "compareDomain(" + a + "," + args[0] + `,"_0123456789abcdefghijklmnopqrstuvwxyz")`
@@ -181,7 +181,13 @@ func (b *body) runtime(x *hir.Expr) string {
 	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift" || x.Op == "map.get") && x.Type.Args[0].IsRef() {
 		code += ".Value"
 		if x.X.Type.Kind == hir.Array && x.Type.Args[0].IsRef() {
-			code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			if x.Type.Args[0].Kind == hir.Dynamic {
+				// Reference-array storage is erased. A view as any[] boxes
+				// the actual element, rather than requiring a pre-existing box.
+				code = "box(" + code + ")"
+			} else {
+				code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			}
 		}
 	}
 	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {

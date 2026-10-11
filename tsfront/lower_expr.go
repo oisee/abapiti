@@ -230,6 +230,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 			}
 		}
 	}
+	if l.integerOptions.TrapOnFailure && l.testShapeView(x.Type, typ) {
+		// Contextual row construction retains its storage layout and object
+		// identity. A narrower checker view is applied at each field read.
+		return x
+	}
 	if keepAbsence && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
@@ -640,7 +645,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 			for _, f := range mod.Fields {
 				if f.Name == fieldName {
-					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: mod.Name, Name: fieldName, Type: f.Type}
+					return l.testModuleRead(n, mod, fieldName, f.Type)
 				}
 			}
 		}
@@ -689,6 +694,38 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	sym := l.resolve(n)
+	if sym != nil {
+		for _, declaration := range sym.Declarations {
+			if declaration.Kind != ast.KindGetAccessor {
+				continue
+			}
+			if getter := l.methodOf(sym); getter != nil {
+				if getter.Static {
+					owner := l.classOf(sym.Parent)
+					// Static bodies have no dynamic `this` ABI. An inherited
+					// getter must not silently run with the declaring class as
+					// receiver when JavaScript would bind the derived class.
+					if owner != nil && p.Expression.Kind == ast.KindIdentifier && l.classOf(l.resolve(p.Expression)) == owner {
+						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: owner.Name, Name: getter.Name, Type: getter.Result}
+					}
+					l.diagf(n, "unsupported-expr", "static getter needs its declaring class as receiver")
+					return nil
+				} else {
+					if p.Expression.Kind == ast.KindSuperKeyword {
+						return &hir.Expr{Kind: hir.SuperCall, Node: l.node(n), Name: getter.Name, Type: getter.Result}
+					}
+					recv := l.expr(p.Expression)
+					if recv == nil {
+						return nil
+					}
+					if recv.Type.Kind == hir.Optional {
+						recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+					}
+					return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), X: recv, Name: getter.Name, Type: getter.Result}
+				}
+			}
+		}
+	}
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
 		if f.Static {
@@ -856,6 +893,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.generatorNextCall(n); ok {
 		return x
 	}
+	if x, ok := l.testRuntimeCall(n); ok {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
@@ -898,6 +938,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, ok := l.thunkCall(n, callee); ok {
+		return x
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
@@ -1192,9 +1235,6 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		}
 		return x
 	}
-	if x, ok := l.thunkCall(n, callee); ok {
-		return x
-	}
 	if x, ok := l.globalCall(n, callee); ok {
 		return x
 	}
@@ -1220,6 +1260,26 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	switch recv.Type.Kind {
 	case hir.String:
 		switch name {
+		case "repeat":
+			if len(args) > 1 {
+				l.diagf(n, "unsupported-call", "string.repeat accepts at most one count")
+				return nil, true
+			}
+			count := hir.L(hir.T(hir.Number), 0)
+			if len(args) == 1 {
+				// Count lowering may enqueue statements; the receiver must
+				// already have been evaluated, in JavaScript source order.
+				recv = l.tempInit(n, recv.Type, recv)
+				count = l.expr(args[0])
+			}
+			if count == nil {
+				return nil, true
+			}
+			if !numberType(count.Type) {
+				l.diagf(n, "unsupported-call", "string.repeat requires a numeric count")
+				return nil, true
+			}
+			return l.rtOp("string.repeat", recv, str, count), true
 		case "includes":
 			if len(args) != 1 {
 				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")
@@ -1338,6 +1398,10 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 		}
 	case hir.Dynamic:
+		if name == "forEach" && l.pinnedTestRows(n) {
+			array := hir.T(hir.Array, hir.T(hir.Dynamic))
+			return l.denseCallbackLoop(n, name, l.rtOp("dynamic.asRef", recv, array), args), true
+		}
 		// A string method on a tagged value reads the box's string; any other
 		// tag fails loudly where JavaScript raises a TypeError (boxed graphs
 		// carry no functions).
@@ -2445,10 +2509,16 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		return l.rtOp("number.toString", x, s)
 	case hir.I32:
 		return l.rtOp("i32.toString", x, s)
+	case hir.I64:
+		return l.rtOp("i64.toString", x, s)
 	case hir.Bool:
 		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
 	case hir.Dynamic:
 		return l.rtOp("dynamic.toString", x, s)
+	case hir.ClassRef:
+		if x.Type.Name == "builtin.Error" {
+			return l.errorToString(at, x)
+		}
 	case hir.Optional:
 		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break

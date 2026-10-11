@@ -1,0 +1,60 @@
+{
+  "base": "6d081fd8585f93a1b11e3f47efb55dc9573bca9f",
+  "gates": {
+    "grace_go_test": 0,
+    "go_vet": 0,
+    "a4h_diff_bytes": 0,
+    "syntax_oracle": "regenerated with tools/syntax-features-oracle.mjs; unchanged",
+    "node_report_tests": "passed",
+    "node_runtime_contract": "6 scenarios passed"
+  },
+  "shards": [
+    {
+      "name": "rules",
+      "total": 3159,
+      "passed": 5,
+      "failed": 0,
+      "trapped": 1601,
+      "notRun": 1553,
+      "registered": 3074
+    },
+    {
+      "name": "abap/lexer",
+      "total": 200,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 0,
+      "registered": 200
+    },
+    {
+      "name": "abap/statements",
+      "total": 4962,
+      "passed": 433,
+      "failed": 21,
+      "trapped": 4508,
+      "notRun": 0,
+      "registered": 4962
+    },
+    {
+      "name": "abap/structures",
+      "total": 140,
+      "passed": 23,
+      "failed": 1,
+      "trapped": 114,
+      "notRun": 2,
+      "registered": 139
+    }
+  ],
+  "totals": {
+    "passed": 661,
+    "failed": 22,
+    "trapped": 6223,
+    "notRun": 1555,
+    "registered": 8375,
+    "total": 8461,
+    "asyncOrDone": 1458,
+    "unregistered": 86
+  },
+  "resolution": "Retained both main generatorNextCall and harness testRuntimeCall in tsfront/lower_expr.go. Regenerated syntax oracle: unchanged, including main generator probes. Exported lexer facts using absolute GRACE_FACTS_OUT with ABAPITI_GRACECHECK=1: golden unchanged; branch versus main differs only in runtime catalogue counts. All CI suites retained; feature lint uses --fixture. Neither side had osgo-known-gaps handling in hir-unit.sh; existing osgo-unit.sh handling retained. This base has no hir/abap/ops.go or backend coverage guard; main small builtins emission tests retained, harness string.repeat is catalogued in Go supportedOps (harness emits Go only). Fresh four-shard runs confirm 661 passes. Default A4H builds used identical output path spelling; diff -r empty. Generated builds deleted; compact evidence in .local/rebase-current."
+}
