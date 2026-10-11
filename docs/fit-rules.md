@@ -39,6 +39,7 @@ not as independent void ABI fixes.
 | Primitive find: parser_702_chaining and short_case | 113 → 108 (root group 5 → 0) | 635 → 630 | 394 → 390 |
 | Reference `Class || undefined`: intf_referencing_clas | 108 → 105 (root group 3 → 0) | 630 → 627 | 390 → 388 |
 | Record Object.entries: xml_consistency | 105 → 103 (root group 2 → 0) | 627 → 625 | 388 → 386 |
+| Dense forEach: uncaught_exception | 103 → 102 (root group 1 → 0) | 625 → 624 | 386 → 386 |
 
 Primitive find uses the existing optional-result dense callback mechanism with
 new source fingerprints for these two consumers. The parser receiver is a
@@ -115,3 +116,12 @@ names. A generated-Go regression checks two same-named callbacks with distinct
 captures. This avoids the newly exposed error and removes two pre-existing HIR
 errors in that class; no new verification errors remain. Required vet/short
 tests pass and the same-path all,go default diff is empty.
+
+UncaughtException's forEach has a source-pinned consumer proof plus a
+fingerprinted MethodDefinition producer guard. The producer initializes a
+private array and only pushes string names; its getter returns a readonly
+view, and closure consumers only read it. The callback writes a freshly
+initialized independent sink array. Generated Go agrees with Node for both a
+present and absent optional sink, ABAP emission is checked, and both producer
+and consumer fingerprints reject stale source. No producer body is replaced.
+Required vet/short tests pass and the same-path all,go default diff is empty.

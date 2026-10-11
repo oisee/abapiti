@@ -18,6 +18,8 @@ import (
 
 func TestRulesCallbackSourcePins(t *testing.T) {
 	specs := []struct{ file, symbol, kind, start, end string }{
+		{"src/rules/uncaught_exception.ts", "UncaughtException.setSinkedFromMethod", "KindMethodDeclaration", "private setSinkedFromMethod(", "\n  }"},
+		{"src/abap/types/method_definition.ts", "MethodDefinition", "KindClassDeclaration", "export class MethodDefinition ", "\n}"},
 		{"src/rules/parser_702_chaining.ts", "Parser702Chaining.ensureSourceHasNoProceduralKeywords", "KindMethodDeclaration", "private ensureSourceHasNoProceduralKeywords(", "\n  }"},
 		{"src/rules/short_case.ts", "ShortCase", "KindClassDeclaration", "export class ShortCase extends", "\n}"},
 	}
@@ -67,7 +69,7 @@ func TestRulesCallbackSourcePins(t *testing.T) {
 			if !ok || err != nil {
 				t.Fatal(ok, err)
 			}
-			if entry.Patterns == nil || len(entry.Patterns.DenseCallbacks) == 0 {
+			if entry.Patterns == nil || len(entry.Patterns.DenseCallbacks) == 0 && !entry.Patterns.SourceGuard {
 				t.Fatal("missing proof")
 			}
 			for call := range entry.Patterns.DenseCallbacks {
@@ -141,5 +143,56 @@ func TestRulesDenseFindGoMatchesNode(t *testing.T) {
 	}
 	if !hasBlocking(unproven) {
 		t.Fatal("unproven receiver accepted")
+	}
+}
+
+func TestRulesDenseForEachGoMatchesNode(t *testing.T) {
+	source := `export class Provider {
+  private values: string[] = [];
+  constructor() { this.values.push("A"); this.values.push("B"); }
+  getRaising(): readonly string[] { return this.values; }
+ }
+export class Probe {
+ private sinked: string[] | undefined;
+ collect(present: boolean): string {
+  const def = new Provider();
+  this.sinked = present ? [] : undefined;
+  def.getRaising().forEach(r => this.sinked?.push(r));
+  return this.sinked ? this.sinked.join(",") : "absent";
+ }
+ static run(): string { const probe = new Probe(); return probe.collect(true) + "/" + probe.collect(false); }
+}`
+	dir := sourceProbe(t, source)
+	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := strings.Index(source, "export class Probe")
+	registry, err := overrides.New(overrides.Entry{ID: "rules-forEach-fixture", Key: overrides.Key{File: "input.ts", Symbol: "Probe", Kind: "KindClassDeclaration"}, SHA256: overrides.Fingerprint(source[start:]), Rationale: "producer constructs a private dense array, callback writes a fresh independent sink; optional sink short circuits", Patterns: &overrides.Patterns{DenseCallbacks: map[string]bool{"def.getRaising().forEach(r => this.sinked?.push(r))": true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithOverrides([]string{"input.ts"}, registry)
+	if err != nil || hasBlocking(diags) {
+		t.Fatal(err, diags)
+	}
+	if errs := hir.Verify(prog); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if _, err := abap.Emit(prog); err != nil {
+		t.Fatal(err)
+	}
+	got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")
+	oracle := filepath.Join(dir, "oracle.ts")
+	if err := os.WriteFile(oracle, []byte(source+"\nconsole.log(Probe.run());\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("node", oracle)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Node: %v: %s", err, out)
+	}
+	if want := strings.TrimSpace(string(out)); got != want {
+		t.Fatalf("Go %q, Node %q", got, want)
 	}
 }
