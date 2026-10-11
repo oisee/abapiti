@@ -112,6 +112,12 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 		if x == nil {
 			return
 		}
+		if x.Kind == ast.KindFunctionDeclaration {
+			if x.Name() != nil && x.Body() != nil {
+				l.pendingFns[x.Name().Text()] = x
+			}
+			return
+		}
 		if x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindArrowFunction {
 			return // do not descend into nested closures
 		}
@@ -144,7 +150,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	captures := []localCapture{}
 	seen := map[*ast.Symbol]bool{}
 	for _, capture := range l.freeLocals(fn) {
-		if capture.symbol == nil || capture.typ.Kind == hir.Void {
+		if capture.symbol == nil {
 			l.diagf(capture.node, "unsupported-call", "capture %s has no checked binding", capture.name)
 			return nil
 		}
@@ -163,6 +169,10 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 				}
 			}
 			continue
+		}
+		if capture.typ.Kind == hir.Void {
+			l.diagf(capture.node, "unsupported-call", "capture %s has no checked binding", capture.name)
+			return nil
 		}
 		if !seen[capture.symbol] {
 			captures = append(captures, capture)
@@ -209,6 +219,26 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			m.Result = l.mapCheckerType(fn, l.ck.GetReturnTypeOfSignature(sig[0]))
 		}
 	}
+	if t := l.ck.GetContextualType(fn, 0); t != nil {
+		if sigs := l.ck.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 && isIntrinsicVoid(l.ck.GetReturnTypeOfSignature(sigs[0])) {
+			m.Result = hir.T(hir.Void)
+		}
+	}
+	// Distinct lexical functions may share a source name in this class.
+	baseName := m.Name
+	for suffix := 2; ; suffix++ {
+		used := false
+		for _, existing := range l.class.Methods {
+			if existing.Name == m.Name {
+				used = true
+				break
+			}
+		}
+		if !used {
+			break
+		}
+		m.Name = baseName + "_" + itoa(suffix)
+	}
 	// Lower the body now, while the captures are in scope.
 	savedMethod := l.method
 	l.method = m
@@ -218,12 +248,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		return nil
 	}
 	restoreFns := l.withLocalFns(body)
-	var inner *hir.Stmt
-	if body.Kind == ast.KindBlock {
-		inner = l.block(body)
-	} else {
-		inner = hir.B(&hir.Stmt{Kind: hir.Return, Node: l.node(body), X: l.expr(body)})
-	}
+	inner := l.functionBody(body)
 	restoreFns()
 	l.applyFnDefaults(sigParams, m)
 	m.Body = inner
@@ -233,6 +258,24 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	l.localFns[name] = lf
 	l.class.Methods = append(l.class.Methods, m)
 	return lf
+}
+
+// functionBody keeps expression-body preludes inside the function. Void
+// arrows evaluate their expression for effects and have no return value.
+func (l *lowerer) functionBody(body *ast.Node) *hir.Stmt {
+	saved := l.pend
+	l.pend = nil
+	defer func() { l.pend = saved }()
+	if body.Kind == ast.KindBlock {
+		return l.block(body)
+	}
+	var stmt *hir.Stmt
+	if l.method.Result.Kind == hir.Void {
+		stmt = l.expressionStatement(body)
+	} else {
+		stmt = &hir.Stmt{Kind: hir.Return, Node: l.node(body), X: l.expr(body)}
+	}
+	return hir.B(append(l.pend, stmt)...)
 }
 
 // Lifted defaults are rejected until their capture offsets and evaluation
@@ -305,6 +348,9 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 				return
 			}
 		case ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindFunctionDeclaration:
+			if x.Name() != nil && x.Name().Kind == ast.KindIdentifier {
+				declared[x.Name().Text()] = true
+			}
 			x.ForEachChild(func(c *ast.Node) bool { walk(c, true); return false })
 			return
 		}
