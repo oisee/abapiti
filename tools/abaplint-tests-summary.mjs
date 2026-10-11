@@ -59,7 +59,7 @@ const result = {upstreamPin:pin, codeCommit:execFileSync('git',['rev-parse','HEA
  mainCommit:execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim(),
  artifacts:directory, artifactPrefix:prefix, shards, uniqueTotal:totals, nodeTotal:nodeTotals,
  ...(wholeSuite ? {wholeSuite} : {}),
- countingRule:'Lowering and runtime refusals are trapped; assertion mismatches are failed; unresolved asynchronous tests are asyncPending.',
+ countingRule:'Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.',
  asyncInitializationFailures:shards.flatMap(s => s.initialization).filter(r => r.message.includes('unsupported-async')).length,
  registrationParity:shards.every(s => s.registered === s.total && s.unmatched === 0),
  top20Traps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)).slice(0,20)};

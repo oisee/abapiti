@@ -31,6 +31,13 @@ export function discoverShards(upstream) {
  return {upstreamPin, files, shards:[...groups].map(([name, roots]) => ({name, id:name.replaceAll('/', '-'), roots})), excluded:[]};
 }
 
+// Never continue trap work past an assertion mismatch (or other genuine
+// failed throw). Runtime/lowering refusals already have typed trap statuses.
+export function assertNoFailures(name, run) {
+ const failures = run.results.filter(r => r.status === 'failed');
+ if (failures.length) throw new Error(`STOP: ${name}: ${failures.length} genuine FAIL(s)\n${JSON.stringify(failures, null, 2)}`);
+}
+
 function main() {
  const [upstreamArg = join(homedir(), 'dev/abaplint'), outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
  const upstream = resolve(upstreamArg), output = resolve(outputArg);
@@ -85,6 +92,7 @@ function main() {
    writeFileSync(join(run,`node-${id}.json`), JSON.stringify(node));
    writeFileSync(join(run,`go-${id}.json`), JSON.stringify(result));
    command(process.execPath, [join(tools,'abaplint-tests-report.mjs'), join(run,`node-${id}.json`), join(run,`go-${id}.json`), join(run,`report-${id}.json`)], {stdio:['ignore','ignore','inherit']});
+   assertNoFailures(name, result);
   }
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
