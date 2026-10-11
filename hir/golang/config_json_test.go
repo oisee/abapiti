@@ -11,7 +11,7 @@ import (
 
 func configJSONFixture() *hir.Program {
 	c := &hir.Class{Name: "src/_config.ts.IConfig"}
-	op := &hir.Expr{Kind: hir.RuntimeOp, Op: "json.stringifyConfig", Type: hir.T(hir.String), X: &hir.Expr{Kind: hir.This, Type: hir.Ref(c.Name)}}
+	op := &hir.Expr{Kind: hir.RuntimeOp, Op: "json.stringifyConfig", Type: hir.T(hir.String), X: &hir.Expr{Kind: hir.This, Type: hir.Ref(c.Name)}, Args: []*hir.Expr{hir.L(hir.T(hir.Optional, hir.T(hir.Dynamic)), nil), hir.L(hir.T(hir.Optional, hir.T(hir.String)), nil)}}
 	c.Methods = []*hir.Method{{Name: "write", Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: op})}}
 	return &hir.Program{Classes: []*hir.Class{c}}
 }
@@ -65,6 +65,35 @@ func TestConfigJSONNativeGraph(t *testing.T) {
 	main += `c:=&` + obj(conf.Name) + `{` + obj(base.Name) + `:` + obj(base.Name) + `{` + f("exclude") + `:&array[jsString]{},` + f("severity") + `:str("Error")},` + f("enabled") + `:true};rules:=&orderedMap[jsString,*dynamic]{};rules.set(str("probe"),box(c));`
 	main += `original:=&` + obj(root.Name) + `{` + f("global") + `:g,` + f("rules") + `:rules};text:=stringifyConfig(original);copy:=parseJSON(text);g.` + f("files") + `=str("changed");c.` + f("enabled") + `=false;if copy.get(str("global")).get(str("files")).Value.(jsString)!=str("/src/**/*.*") {panic("clone aliased original")};fmt.Println(stringifyConfig(copy).String());`
 	want := "{\"global\":{\"files\":\"/src/**/*.*\",\"exclude\":[],\"noIssues\":[],\"skipGeneratedBOPFInterfaces\":false},\"rules\":{\"probe\":{\"exclude\":[],\"severity\":\"Error\",\"enabled\":true}}}\n"
+	if got := execute(t, p, main); got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestConfigJSONTypedVersionProjection(t *testing.T) {
+	p := configJSONFixture()
+	shape := func(name string, fields []hir.Field) *hir.Class {
+		c := &hir.Class{Name: name, Fields: fields, Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}}
+		for _, f := range fields {
+			c.Ctor.Params = append(c.Ctor.Params, hir.Param{Name: f.Name, Type: f.Type})
+			c.Ctor.Body.List = append(c.Ctor.Body.List, &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, Type: f.Type, Name: f.Name, X: &hir.Expr{Kind: hir.This, Type: hir.Ref(name)}}, Y: hir.V(f.Name, f.Type)})
+		}
+		return c
+	}
+	strT, dynT := hir.T(hir.String), hir.T(hir.Dynamic)
+	version := shape("src/version.ts.VersionNew", []hir.Field{{Name: "release", Type: strT}, {Name: "language", Type: strT}})
+	syntax := shape("src/_config.ts.ISyntaxSettings", []hir.Field{{Name: "version", Type: dynT}, {Name: "errorNamespace", Type: strT}})
+	graph := &hir.Expr{Kind: hir.RuntimeOp, Op: "json.parseSubset", Type: dynT, X: hir.V("text", strT)}
+	project := &hir.Expr{Kind: hir.RuntimeOp, Op: "dynamic.materialize", Type: hir.Ref(syntax.Name), X: graph}
+	p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "parse", Static: true, Params: []hir.Param{{Name: "text", Type: strT}}, Result: project.Type, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: project})})
+	p.Classes = append(p.Classes, version, syntax)
+	n := hir.NewNames()
+	field := func(s string) string { return n.Get("member." + s) }
+	parse := entry(p.Classes[0].Name, "parse")
+	main := `s:=` + parse + `(str("{\"version\":{\"release\":\"792\",\"language\":\"Normal\"},\"errorNamespace\":\".*\"}"));v:=castRef[` + n.Get("ref."+version.Name) + `](dynRef(s.` + field("version") + `));if v.` + field("release") + `!=str("792")||v.` + field("language") + `!=str("Normal") {panic("typed version projection")};fmt.Println(stringifyConfig(s).String());`
+	main += `old:=` + parse + `(str("{\"version\":\"v702\",\"errorNamespace\":\".*\"}"));if old.` + field("version") + `.Tag!=1 {panic("string version changed")};missing:=` + parse + `(str("{\"errorNamespace\":\".*\"}"));if missing.` + field("version") + `!=nil {panic("absent version changed")};`
+	main += `v.source=nil;func(){defer func(){if _,ok:=recover().(trap);!ok {panic("unproven native version order must trap")}}();stringifyConfigChecked(s,box(v),optional[jsString]{})}();`
+	want := "{\"version\":{\"release\":\"792\",\"language\":\"Normal\"},\"errorNamespace\":\".*\"}\n"
 	if got := execute(t, p, main); got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}

@@ -115,6 +115,16 @@ const configJSONRuntimeSource = `
 type configJSONWriter struct { active map[any]bool }
 func (w *configJSONWriter) enter(v any) {if w.active[v] {panic(newTrap("cyclic config JSON graph"))};w.active[v]=true}
 func (w *configJSONWriter) leave(v any) {delete(w.active,v)}
+// A supplied native version object has no retained literal key order. Only
+// the function's freshly built version literal or a tagged JSON input is proven.
+func stringifyConfigChecked(v any, ver *dynamic, lang optional[jsString]) jsString {
+ if !lang.Has && ver!=nil && ver.Tag==2 {
+  if native,ok:=ver.Value.(interface{dynamicSource()*dynamic});ok && native.dynamicSource()==nil {
+   panic(newTrap("config JSON native version input own-key order is unproven"))
+  }
+ }
+ return stringifyConfig(v)
+}
 func stringifyConfig(v any) jsString {w:=&configJSONWriter{active:map[any]bool{}};s,ok:=w.value(v);if !ok {panic(newTrap("undefined config JSON root"))};return s}
 func (v optional[T]) configJSONOptional() (any,bool) {return v.Value,v.Has}
 func (a *array[T]) configJSON(w *configJSONWriter) jsString {

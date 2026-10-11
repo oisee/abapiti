@@ -52,7 +52,16 @@ func (e *emitter) materializer(t hir.Type) string {
 				e.unsupported(c.Node, "materialization requires field constructor ABI: "+t.String())
 				return name
 			}
-			args = append(args, call(f.Type, fmt.Sprintf("d.get(str(%q))", f.Name)))
+			input := fmt.Sprintf("d.get(str(%q))", f.Name)
+			value := call(f.Type, input)
+			// The pinned config union is String | VersionNew. Parsed objects
+			// must project to the same native shape its narrowed TS reads use.
+			// Keep the full source graph on that shape for JSON serialization.
+			if e.configJSON && c.Name == "src/_config.ts.ISyntaxSettings" && f.Name == "version" && f.Type.Kind == hir.Dynamic {
+				project := e.materializer(hir.Ref("src/version.ts.VersionNew"))
+				value = "func() *dynamic {v:=" + input + ";if v!=nil && v.Tag==tagObject {return &dynamic{Tag:2,Value:" + project + "(v)}};return v}()"
+			}
+			args = append(args, value)
 		}
 		line("out:=%s(%s);out.%s().source=d;return out", e.name("new."+c.Name), strings.Join(args, ","), e.getter(c.Name))
 	default:

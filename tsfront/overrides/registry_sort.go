@@ -85,7 +85,7 @@ func registrySorts() []Entry {
 				}))
 			},
 			"JSON.stringify(config)": func() *hir.Expr {
-				return &hir.Expr{Kind: hir.RuntimeOp, Op: "json.stringifyConfig", Type: hir.T(hir.String), X: hir.V("config", hir.Ref("src/_config.ts.IConfig"))}
+				return &hir.Expr{Kind: hir.RuntimeOp, Op: "json.stringifyConfig", Type: hir.T(hir.String), X: hir.V("config", hir.Ref("src/_config.ts.IConfig")), Args: []*hir.Expr{hir.V("ver", hir.T(hir.Optional, hir.T(hir.Dynamic))), hir.V("langVer", hir.T(hir.Optional, hir.T(hir.String)))}}
 			},
 		}}},
 		{ID: "abaplint-object-name-stable-sort", Key: Key{"src/abap/5_syntax/global_definitions/find_global_definitions.ts", "FindGlobalDefinitions.run", "KindMethodDeclaration"}, SHA256: "b483f60a676a128f3a478f237e8fef250a0526649a1af1c384bb12f9c1d83b3d", Rationale: "getName is a pure stored uppercase name getter; stable ICU-root [A-Z0-9_/] ordering with guard; generalise later", Expressions: map[string]func() *hir.Expr{

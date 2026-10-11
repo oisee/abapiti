@@ -929,7 +929,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")
 		}
 		eq(t, T(String))
-		args(nil)
+		args([]Type{T(Optional, T(Dynamic)), T(Optional, T(String))})
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")

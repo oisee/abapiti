@@ -142,7 +142,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
 	case "json.stringifyConfig":
-		code = "stringifyConfig(" + a + ")"
+		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
 	case "dynamic.null":
