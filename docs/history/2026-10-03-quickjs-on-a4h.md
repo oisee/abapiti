@@ -65,3 +65,5 @@ Same folder, same 9 tests: 9/9. ABAP frontend 156 s, Go build 36 s, run 89 s.
   for private memory, each checked against A4H oracles.
 
 Not checked yet: QuickJS on OSG-JS (the abaplint JavaScript runtime).
+
+Speed on five runtimes (native, wazero JIT and interpreter, osgo, A4H): [2026-10-03-quickjs-speed.md](2026-10-03-quickjs-speed.md).
