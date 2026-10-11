@@ -12,6 +12,7 @@ type settledDispatchKey struct {
 	receiver *checker.Type
 	name     string
 	exact    bool
+	audit    bool
 }
 type settledDispatchResult struct {
 	bodies []*ast.Node
@@ -105,6 +106,10 @@ func (l *lowerer) settledReceiver(n *ast.Node, seen map[*ast.Node]bool) *checker
 // An implementation outside the translated closure or without a source body
 // refuses the site. Cache the inventory, never a cross-build type contract.
 func (l *lowerer) settledDispatch(n *ast.Node) ([]*ast.Node, string) {
+	return l.settledDispatchWithAudit(n, true)
+}
+
+func (l *lowerer) settledDispatchWithAudit(n *ast.Node, audit bool) ([]*ast.Node, string) {
 	callee := n.Expression()
 	sym := l.resolve(callee)
 	if sym == nil {
@@ -147,7 +152,7 @@ func (l *lowerer) settledDispatch(n *ast.Node) ([]*ast.Node, string) {
 	if typ == nil || typ.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return nil, "virtual receiver is not closed"
 	}
-	key := settledDispatchKey{typ, callee.Name().Text(), exact != nil}
+	key := settledDispatchKey{typ, callee.Name().Text(), exact != nil, audit}
 	if l.settledDispatches == nil {
 		l.settledDispatches = map[settledDispatchKey]settledDispatchResult{}
 	}
@@ -207,7 +212,7 @@ func (l *lowerer) settledDispatch(n *ast.Node) ([]*ast.Node, string) {
 	// Source method bodies are pinned only in the absence of mutation and
 	// unsafe provider erasure. This audit also applies to a fresh local receiver.
 	resultType := l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(n))
-	if result.reason == "" && resultType != nil && l.ck.GetPropertyOfType(resultType, "then") != nil {
+	if audit && result.reason == "" && resultType != nil && l.ck.GetPropertyOfType(resultType, "then") != nil {
 		matchCache := map[*checker.Type]bool{}
 		for _, x := range l.settledWorldChecks {
 			if reason := l.settledWorldFailure(x, typ, key.name, matchCache); reason != "" {
@@ -396,6 +401,14 @@ func (l *lowerer) settledWorldFailure(n *ast.Node, target *checker.Type, name st
 		if matches(l.ck.GetTypeAtLocation(n)) {
 			sig := l.ck.GetResolvedSignature(n)
 			if n.Kind == ast.KindCallExpression && (sig == nil || sig.Declaration() == nil || sig.Declaration().Body() == nil || !l.settlementFiles[ast.GetSourceFileOfNode(sig.Declaration())]) {
+				// A source interface/abstract signature is not an external factory:
+				// derive the concrete implementations of this provider call too.
+				if sig != nil && sig.Declaration() != nil && (sig.Declaration().Kind == ast.KindMethodSignature || sig.Declaration().Kind == ast.KindMethodDeclaration) {
+					targets, reason := l.settledDispatchWithAudit(n, false)
+					if reason == "" && len(targets) > 0 {
+						return ""
+					}
+				}
 				return l.settledLabel(n) + " obtains an external " + name + " provider"
 			}
 		}

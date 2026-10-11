@@ -247,3 +247,12 @@ func TestSettledTransitiveCrossFileProgressNote(t *testing.T) {
 		}
 	}
 }
+
+func TestSettledTransitiveInterfaceFluentProvider(t *testing.T) {
+	_, ds := asyncProbe(t, `interface Worker {withValue():Worker;work():Promise<number>}
+ class Impl implements Worker {withValue():Worker{return this;}async work():Promise<number>{return 1;}}
+ export async function invoke(w:Worker):Promise<number>{return await w.withValue().work();}`)
+	if hasBlocking(ds) {
+		t.Fatal(ds)
+	}
+}
