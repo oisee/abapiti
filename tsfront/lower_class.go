@@ -242,6 +242,11 @@ func (l *lowerer) bodiesFile(f *ast.SourceFile) {
 
 func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 	l.class = c
+	if l.unprunedFeatures {
+		for _, m := range node.Members() {
+			c.ViewUnsafe = c.ViewUnsafe || m.Kind == ast.KindGetAccessor || m.Kind == ast.KindSetAccessor
+		}
+	}
 	c.Abstract = node.ModifierFlags()&ast.ModifierFlagsAbstract != 0
 	if heritage := node.ClassLikeData().HeritageClauses; heritage != nil {
 		for _, clauseNode := range heritage.Nodes {
@@ -340,7 +345,7 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	if m.QuestionToken() != nil && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
-	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
+	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 || m.Name().Kind == ast.KindPrivateIdentifier, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
 	c.Fields = append(c.Fields, f)
 	if sym := m.Symbol(); sym != nil {
 		l.fields[sym] = f
