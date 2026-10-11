@@ -82,6 +82,7 @@ var SpecialOps = map[string]bool{
 	"dynamic.materialize": true, // Dynamic -> a class or interface reference
 	"regexp.new":          true, // pattern, [flags] -> RegExp
 
+	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
 }
 

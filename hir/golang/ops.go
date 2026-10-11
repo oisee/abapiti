@@ -10,6 +10,7 @@ import (
 
 var supportedOps = map[string]bool{
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
 	"string.toLowerCase":   true,
@@ -167,6 +168,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "validateXML(" + a + ")"
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
+	case "json.stringifySubset":
+		code = "stringifyConfig(" + a + ")"
 	case "json.stringifyConfig":
 		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
 	case "json.parseSubset":

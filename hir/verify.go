@@ -939,6 +939,12 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "json.stringifySubset":
+		if a.Kind == Void {
+			v.fail(e.Node, "JSON writer needs a value")
+		}
+		eq(t, T(String))
+		args(nil)
 	case "json.stringifyConfig":
 		if a.Kind != ClassRef || a.Name != "src/_config.ts.IConfig" {
 			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")

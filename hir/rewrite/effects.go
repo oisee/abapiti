@@ -26,6 +26,7 @@ type OpEffect struct {
 var RuntimeEffects = map[string]OpEffect{
 	"array.has":                 {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"array.delete":              {Reads: OpReads{Receiver: true, Args: true}, Writes: "Receiver", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"json.stringifySubset":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "JSON data graph; unsupported native order and hooks refuse; ABAP refuses."},
 	"json.stringifyConfig":      {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Source-pinned config graph writer; ABAP explicitly refuses emission."},
 	"array.concat":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.get":                 {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},

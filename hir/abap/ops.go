@@ -32,7 +32,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays are Go-only until the ABAP sparse-array ABI exists.
-var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true, "json.stringifyConfig": true}
+var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true, "json.stringifyConfig": true, "json.stringifySubset": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

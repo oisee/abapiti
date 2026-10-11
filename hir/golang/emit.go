@@ -1090,7 +1090,7 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
 	}
-	if x.Kind == hir.RuntimeOp && x.Op == "json.stringifyConfig" {
+	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
 		e.configJSON = true
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
