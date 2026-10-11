@@ -124,7 +124,7 @@ func main() {
  type initFailure struct { File string `+"`json:\"file\"`"+`; Action string `+"`json:\"action\"`"+`; Message string `+"`json:\"message\"`"+`; Status string `+"`json:\"status\"`"+` }
  initialization:=[]initFailure{}
  initialize:=func(file, action string, f func()){defer func(){if x:=recover();x!=nil{
-  status:="failed";if _,ok:=x.(trap);ok{status="trapped"}
+  status:="failed";switch x.(type) {case trap, rangeFault: status="trapped"}
   r:=initFailure{file,action,message(x),status};initialization=append(initialization,r)
   fmt.Fprintf(os.Stderr,"initialization %%s (%%s): %%s\n",file,action,r.Message)
  }}();f()}
@@ -137,7 +137,7 @@ func main() {
   t := item.(%s)
   r:=record{Title:t.%s.String(),Status:"passed"}
   if t.%s || (%s && !t.%s) {r.Status="not-run";summary.NotRun++} else {
-   apply:=func(x any) {if x==nil || r.Status!="passed" {return};r.Message=message(x);r.Status="failed";if _,ok:=x.(trap);ok {r.Status="trapped";if strings.Contains(r.Message,"unsupported-async") || strings.Contains(r.Message,"certified settled promise") {r.Status="async-pending"};if strings.Contains(r.Message,"unsupported-test-done") {r.Status="not-run"}}}
+   apply:=func(x any) {if x==nil || r.Status!="passed" {return};r.Message=message(x);r.Status="failed";switch x.(type) {case rangeFault:r.Status="trapped";case trap:r.Status="trapped";if strings.Contains(r.Message,"unsupported-async") || strings.Contains(r.Message,"certified settled promise") {r.Status="async-pending"};if strings.Contains(r.Message,"unsupported-test-done") {r.Status="not-run"}}}
    recoverCall:=func(f func()) (failure any) {defer func(){failure=recover()}();f();return nil}
    %s
    switch r.Status {case "async-pending":summary.AsyncPending++;case "passed":r.Passed=true;summary.Passed++;case "trapped":summary.Trapped++;case "not-run":summary.NotRun++;default:summary.Failed++}
