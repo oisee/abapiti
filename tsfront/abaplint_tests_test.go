@@ -140,12 +140,18 @@ func TestAbaplintTestHostGo(t *testing.T) {
 	dir := t.TempDir()
 	sources := map[string]string{
 		"runtime/mocha.ts": `
+ class FancyError extends Error {}
+ class TestContext { timeout(_milliseconds: number): void {} }
+ function describe(_title: string, fn: (this: TestContext) => void): void { fn.call(new TestContext()); }
+ function registerContext(): void { describe("context", function() { this.timeout(1); if (this !== this) { throw new Error("unstable this context"); } register("context pass", () => {}); }); }
  class TestFailure { constructor(public title: string, public message: string) {} }
  class TestResult { constructor(public title: string, public passed: boolean, public message: string) {} }
- class TestCase { constructor(public title: string, public body: () => void) {} }
+ class TestCase { constructor(public title: string, public body: () => void, public only=false, public skipped=false) {} }
  class TestSummary { public passed=0; public failed=0; public failures: TestFailure[]=[]; public fraction=0.5; }
  class TestRuntime {
   public static tests: TestCase[]=[];
+  public static focused=false;
+  public static iteration=0;
   public static results: TestResult[]=[];
   public static add(title: string, body: () => void): void { TestRuntime.tests.push(new TestCase(title,body)); }
   public static run(): TestSummary {
@@ -158,8 +164,9 @@ func TestAbaplintTestHostGo(t *testing.T) {
   }
  }
  function register(title: string, body: () => void): void { TestRuntime.add(title,body); }
+ function registerIterations(): void { for (const value of ["a", "b"]) { register("iteration " + value, () => { TestRuntime.iteration++; if ((TestRuntime.iteration === 1 && value !== "a") || (TestRuntime.iteration === 2 && value !== "b")) { throw new Error("stale for-of capture"); } }); } }
  `,
-		"test/host.ts": `register("host pass", () => {}); register("host fail", () => { throw new Error("deliberate"); });`,
+		"test/host.ts": `register("host pass", () => {}); register("host fail", () => { throw new Error("deliberate"); }); register("host trap", () => { const date = new Date(); }); register("host async", async () => {}); register("host done", (done: () => void) => { done(); }); registerIterations(); registerContext();`,
 	}
 	manifest := map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": []string{"runtime/mocha.ts", "test/host.ts"}}
 	rows := []map[string]string{}
@@ -195,10 +202,11 @@ func TestAbaplintTestHostGo(t *testing.T) {
 		t.Fatal(err)
 	}
 	stdout, stderr, code := runAbaplintTestModule(t, files)
-	if code != 1 || strings.TrimSpace(stdout) != `{"passed":1,"failed":1,"failures":[{"title":"host fail","message":"failed"}]}` {
+	var summary struct{ Passed, Failed, Trapped, NotRun int }
+	if err := json.Unmarshal([]byte(stdout), &summary); err != nil || code != 1 || summary.Passed != 4 || summary.Failed != 1 || summary.Trapped != 1 || summary.NotRun != 2 {
 		t.Fatalf("host returned code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
-	if !strings.Contains(stderr, `{"title":"host pass","passed":true,"message":""}`) || !strings.Contains(stderr, `{"title":"host fail","passed":false,"message":"failed"}`) {
+	if !strings.Contains(stderr, `"title":"host pass","passed":true`) || !strings.Contains(stderr, `"title":"host fail","passed":false,"message":"deliberate"`) {
 		t.Fatal(stderr)
 	}
 	// A tampered source is refused before lowering.

@@ -20,6 +20,21 @@ type verifier struct {
 	interfaces map[string]*Interface
 }
 
+// VerifyBody checks one body against all declarations in p. This is also used
+// by opt-in partial lowering to attribute failures without relying on node IDs
+// (synthetic operands may have ID zero).
+func VerifyBody(p *Program, c *Class, m *Method) []error {
+	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
+	for _, x := range p.Classes {
+		v.classes[x.Name] = x
+	}
+	for _, x := range p.Interfaces {
+		v.interfaces[x.Name] = x
+	}
+	v.body(c, m)
+	return v.errors
+}
+
 func Verify(p *Program) []error {
 	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
 	if p == nil {

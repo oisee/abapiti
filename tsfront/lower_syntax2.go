@@ -113,10 +113,19 @@ func (l *lowerer) moduleStatements(f *ast.SourceFile) []*hir.Stmt {
 		switch stmt.Kind {
 		case ast.KindIfStatement, ast.KindExpressionStatement:
 			if !l.moduleInitializer(stmt) {
+				if l.integerOptions.TrapOnFailure {
+					out = append(out, failureBody(l.node(stmt), l.locOf(stmt)+": unsupported top-level module statement"))
+				}
 				continue
 			}
 			l.diagf(stmt, "note-module-statement", "module-level statement lowered into the module initializer")
 			out = append(out, l.stmts(stmt)...)
+		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindVariableStatement, ast.KindEmptyStatement:
+			// Declarations have their own lowering/use-site fallback.
+		default:
+			if l.integerOptions.TrapOnFailure {
+				out = append(out, failureBody(l.node(stmt), l.locOf(stmt)+": unsupported top-level "+stmt.Kind.String()))
+			}
 		}
 	}
 	return out

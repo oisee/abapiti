@@ -894,6 +894,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.testRuntimeCall(n); ok {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")

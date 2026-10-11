@@ -45,10 +45,13 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 	return p.lowerWithPolicy(files, registry, nil)
 }
 
-// LowerOptions makes the integer input contract explicit. Exceptions are source pinned.
+// LowerOptions makes numeric contracts and partial-lowering policy explicit.
+// Integer exceptions are source pinned.
 type LowerOptions struct {
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
+	// TrapOnFailure is a tests-only, fail-closed partial lowering policy.
+	TrapOnFailure bool
 }
 
 func (p *Program) LowerWithOptions(files []string, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
@@ -319,6 +322,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if options.AssumeOnlyIntegerCalculations {
 		l.assumeIntegerTypes()
 	}
+	if options.TrapOnFailure {
+		l.repairFailedBodies()
+	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
 	if coverage == nil {
 		l.classifyCascades()
@@ -333,6 +339,7 @@ type lowerer struct {
 	integerOptions    LowerOptions
 	integerExceptions map[*ast.Node]IntegerException
 	floatSites        map[string]bool
+	failedSignatures  map[*hir.Method][]string
 	retained          map[*ast.Node]bool
 	typeOnly          map[*ast.Node]bool
 	unexecuted        map[*ast.Node]string

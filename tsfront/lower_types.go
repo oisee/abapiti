@@ -664,7 +664,7 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 	// optional) is that data interface with the others absent: plain
 	// objects have no identity of their own.
 	for _, c := range l.out.Classes {
-		if !l.shapeLike[c.Name] || c.Ctor == nil || len(c.Fields) <= len(fields) {
+		if (!l.shapeLike[c.Name] && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(c.Name, "shape."))) || c.Ctor == nil || len(c.Fields) <= len(fields) {
 			continue
 		}
 		matched := 0
