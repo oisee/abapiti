@@ -274,6 +274,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				}
 				mod := l.moduleClassOf(f)
 				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
+				if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
+					mod.Fields = append(mod.Fields, hir.Field{Name: testReadyPrefix + d.Name().Text(), Type: hir.T(hir.Bool), Static: true})
+				}
 				l.modvars[d.Symbol()] = d.Name().Text()
 				l.modvarsByName[f.FileName()+" "+d.Name().Text()] = modvarRef{owner: mod.Name, field: d.Name().Text()}
 			}
@@ -713,7 +716,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	name := d.Name().Text()
 	init := d.Initializer()
 	sym := d.Symbol()
-	if init != nil && !l.moduleInitializer(init) {
+	if init != nil && !l.moduleInitializer(init) && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/")) {
 		l.diagf(init, "unsupported-static-init", "module initializer is not provably pure and order-independent")
 		return nil
 	}
@@ -744,6 +747,9 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		// Node-based type queries are valid across the checker pool;
 		// symbol-based ones are not (types do not mix between checkers).
 		mapped := l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if hint, ok := l.testModuleArrayContext(d); ok {
+			mapped = hint
+		}
 		if mapped.Kind == hir.Void && sym != nil {
 			before := len(l.diags)
 			mapped = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))

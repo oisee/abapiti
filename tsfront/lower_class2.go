@@ -143,6 +143,9 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	if l.localFns == nil {
+		l.localFns = map[string]*localFn{}
+	}
 	if lf, ok := l.localFns[name]; ok {
 		return lf
 	}
@@ -181,6 +184,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		}
 	}
 	m := &hir.Method{Node: l.node(fn), Name: "fn_" + name, Virtual: true, Result: hir.T(hir.Void)}
+	defer l.trapBodyDiagnostics(fn, m, len(l.diags))
 	if l.method != nil && l.method.Static {
 		m.Static = true
 		m.Virtual = false

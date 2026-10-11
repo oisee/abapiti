@@ -9,6 +9,8 @@ const run = JSON.parse(readFileSync(goPath, 'utf8'));
 const available = new Map();
 for (const title of oracle.titles) available.set(title, (available.get(title) ?? 0) + 1);
 const report = {total:oracle.total ?? oracle.titles.length, passed:0, failed:0, trapped:0, notRun:0, registered:run.results.length, notRunReasons:{asyncOrDone:0, skippedOrFocused:0, unregistered:0}, unmatched:[], topTraps:[]};
+report.initialization = run.initialization ?? [];
+report.asyncInitializationFailures = report.initialization.filter(r => r.message.includes('unsupported-async')).length;
 const traps = new Map();
 for (const r of run.results) {
  const n = available.get(r.title) ?? 0;

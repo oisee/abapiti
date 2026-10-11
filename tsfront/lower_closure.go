@@ -65,7 +65,7 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
-	if l.integerOptions.TrapOnFailure && n.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+	if l.integerOptions.TrapOnFailure && n.ModifierFlags()&ast.ModifierFlagsAsync != 0 && !l.synchronousAsyncSuite(n) {
 		l.diagf(n, "unsupported-async", "async callback is not run by the synchronous test host")
 		return nil
 	}

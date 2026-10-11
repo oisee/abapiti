@@ -20,7 +20,8 @@ func TestStringRepeatJSCounts(t *testing.T) {
  fault(func(){str("").repeat(-inf)})
  fault(func(){str("ab").repeat(2147483647)})
  fmt.Println("ok")`
-	if got := execute(t, &hir.Program{}, main); got != "ok\n" {
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Repeat", Methods: []*hir.Method{{Name: "run", Static: true, Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.repeat", Type: hir.T(hir.String), X: hir.L(hir.T(hir.String), "a"), Args: []*hir.Expr{hir.L(hir.T(hir.Number), 2)}}})}}}}}
+	if got := execute(t, p, main); got != "ok\n" {
 		t.Fatal(got)
 	}
 }
