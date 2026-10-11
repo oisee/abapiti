@@ -5,6 +5,17 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
+> **Progress towards [100 % of abaplint](#goal-100--of-abaplint)** — every abaplint test passing on abaplint compiled by abapiti (TS-HG@Go first). Updated 11 Oct 2026.
+>
+> | | Now | Target |
+> |---|---:|---:|
+> | abaplint tests passing | **663** | 11,060 |
+> | of which lexer | **200 / 200** ✅ | |
+> | of which statements / structures / rules | 434 / 24 / 5 | 4,962 / 140 / 3,159 |
+> | Blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **347** (635 at the start) | 0 |
+>
+> The biggest single blocker today is one trap, the JSON round trip in `Config.getDefault`: 6,278 tests reach it, and the fix is in review. Measured with the test harness of PR #107; the other test directories are wired up next.
+
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
 ```mermaid
