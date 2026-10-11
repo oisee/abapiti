@@ -29,11 +29,13 @@ static literal(): number { return 3 as const; }
 	}
 }
 
+// Nominal downcasts now have a checked Go view. Keep the qualified alias named
+// const on an unrelated cast, whose narrowing remains unproven.
 func TestQualifiedTypeAssertionRefusesUnprovenCast(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
 		"defs.ts": `export class Base {}
-export class Child extends Base { value: number = 7; }
+export class Child { value: number = 7; }
 export {Child as const};`,
 		"probe.ts": `import * as N from "./defs";
 export function cast(x: N.Base): N.Child { return x as N.const; }`,
