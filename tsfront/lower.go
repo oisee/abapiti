@@ -804,6 +804,17 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	switch {
+	case init == nil && l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/"):
+		// Executing `let x;` initializes the binding to undefined. Only
+		// storage that can represent absence is supported; never invent a
+		// primitive zero value. The existing readiness flag still protects
+		// declarations whose initializer throws before completion.
+		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if !typ.IsRef() && typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+			l.diagf(d, "unsupported-static-init", "uninitialized test binding needs absence-preserving storage")
+			return nil
+		}
+		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, &hir.Expr{Kind: hir.Lit, Node: l.node(d), Type: typ}, typ)}
 	case d.Type() != nil:
 		typ = l.mapTypeNode(d.Type())
 		if typ.Kind == hir.Void {

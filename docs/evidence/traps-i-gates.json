@@ -1,0 +1,82 @@
+{
+  "baseCandidate": "933e68fc1ebf8d73a73d29c227631b7d6525fd70",
+  "measuredSemanticCommit": "dcd1a1a2b8ed06b67d61ee3e843cbbb079828379",
+  "finalAmendment": "Documentation/evidence only; semantic trees unchanged",
+  "semanticTrees": {
+    "hir": "6439dd3a7333534e9b7cbfb0f679bc865edb2f8d",
+    "tsfront": "e19b00542a91db8d5a0f9c9c1e80745080d644fc",
+    "tools": "df052944b9b0c00f3a23e2d2c572f0cae2d0e868",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d"
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "shardNiceness": 10,
+    "finalShardWorkers": 3
+  },
+  "passedGates": [
+    "go test ./... -short -timeout 40m",
+    "go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m",
+    "go vet ./...",
+    "node tools/abaplint-tests-report-test.mjs",
+    "node tools/abaplint-tests-all-test.mjs",
+    "go test ./tsfront -run ^TestChaiThrowNodeOracle$ -count=1 -timeout 40m"
+  ],
+  "goldens": {
+    "export": "GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m",
+    "byteIdenticalToCommitted": true,
+    "sha256": "7281eb9f30846711b8f9d7aaa59244a9fef1222d144db71ced79ef79125065dd",
+    "diffs": [],
+    "justification": "The existing Chai operation moves to polymorphic SpecialOps typing; all extracted runtime/effect and lexer facts remain unchanged. No new operation or golden edit."
+  },
+  "defaultOutput": {
+    "baseline": "933e68f compiler built from git archive",
+    "command": "abapiti abaplint -o <same absolute path> --quiet",
+    "comparison": "diff -r default-base default",
+    "diffExit": 0,
+    "files": 6312,
+    "aggregateSHA256": "1d2fe8185b21af561455f4c8c4c423fab4061e2142b1ee57e072a36ee973efdf",
+    "hashEncoding": "sorted relative path + NUL + file bytes",
+    "changedFiles": [],
+    "justification": "No default output changes, including the A4H zip; Chai dispatch is emitted only when its tests-only intrinsic is used."
+  },
+  "zabapgit": {
+    "kitZipSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "freshOriginalNodeBuild": true,
+    "goEmission": "abapiti abaplint --target go -o <scratch>/go-target --quiet",
+    "directComparison": "cmp Node-{clean,seeded}.txt Go-{clean,seeded}.txt",
+    "independentCheck": "python3 tools/go-target-check.py KIT GO_BINARY",
+    "cases": {
+      "clean": {"issues": 0, "nodeGoKitByteIdentical": true, "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"},
+      "seeded": {"issues": 5, "nodeGoKitByteIdentical": true, "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"}
+    }
+  },
+  "fullSuiteEvidence": "traps-i-final.json",
+  "fullSuite": {
+    "runs": 1,
+    "shards": 17,
+    "files": 625,
+    "passed": 10478,
+    "activeNodeDenominator": 11060,
+    "failed": 0,
+    "trapped": 522,
+    "asyncPending": 0,
+    "notRun": {"asyncOrDone": 0, "skippedOrFocused": 28, "unregistered": 64},
+    "titlesReconciled": true,
+    "excluded": [],
+    "wiringFailures": [],
+    "directGainVsBase": {"root": 3, "objects": 1}
+  },
+  "focusedEvidence": "traps-i-focused.json",
+  "discardedAttempts": "Two scratch-command setup errors were corrected before successful output/workload gates: output started before archived compiler build completed; Node scratch import initially had one extra parent segment. Neither executed a comparison or produced a value/assertion mismatch. No genuine mismatch occurred in the completed runs.",
+  "cleanup": {
+    "retained": "Compact JSON/Markdown only",
+    "discarded": "Archived baseline, compilers, emitted output, binaries, source closures, kit, raw records, facts exports and logs",
+    "pushed": false,
+    "transpilerCloned": false
+  }
+}

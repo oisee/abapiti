@@ -943,6 +943,12 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "chai.throwMatch":
+		if a.Kind != Dynamic && !(a.Kind == InterfaceRef && a.Name == "closure.thunk") {
+			v.fail(e.Node, "chai throw needs a thunk or boxed callable")
+		}
+		eq(t, T(Bool))
+		args([]Type{T(String)})
 	case "json.stringifySubset":
 		if a.Kind == Void {
 			v.fail(e.Node, "JSON writer needs a value")

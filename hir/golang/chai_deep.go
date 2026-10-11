@@ -1,6 +1,10 @@
 package golang
 
-import "github.com/oisee/abapiti/hir"
+import (
+	"strings"
+
+	"github.com/oisee/abapiti/hir"
+)
 
 // A required-field data shape has an exact enumerable key set. Optional fields
 // cannot prove absence versus present undefined; nominal instances may have
@@ -31,6 +35,43 @@ func (e *emitter) chaiThrowShape(c *hir.Class) {
 			return
 		}
 	}
+}
+
+// Chai calls a synchronous action and discards its result. Dispatch only the
+// compiler's actual closure classes, not arbitrary objects with a call method.
+// This harness boundary does not adapt general erased callable/config views.
+func (e *emitter) chaiAction() string {
+	name := e.name("chai.action")
+	if e.chaiActionUsed {
+		return name
+	}
+	e.chaiActionUsed = true
+	var b strings.Builder
+	b.WriteString("func " + name + "(d *dynamic) func() {\n")
+	b.WriteString("if d==nil || d.Tag!=2 {panic(newTrap(\"chai action requires certified parameterless callable storage\"))};switch action:=d.Value.(type) {\n")
+	for _, c := range e.p.Classes {
+		if !strings.HasPrefix(c.Name, "closure.") {
+			continue
+		}
+		callable := false
+		thunk := false
+		for _, i := range c.Implements {
+			thunk = thunk || i == "closure.thunk"
+			callable = callable || i == "closure.thunk" || strings.HasPrefix(i, "closure.function.")
+		}
+		m, _ := e.method(c, "call")
+		if !callable || m == nil || len(m.Params) != 0 || m.Result.Kind == hir.Promise && !thunk {
+			continue
+		}
+		call := "action." + e.member("call") + "()"
+		if m.Result.Kind == hir.Promise {
+			call = "drainSettled(" + call + ")"
+		}
+		b.WriteString("case *" + e.obj(c.Name) + ":return func(){" + call + "}\n")
+	}
+	b.WriteString("default:panic(newTrap(\"chai action requires certified parameterless callable storage\"))}}\n")
+	e.extra.WriteString(b.String())
+	return name
 }
 
 const chaiDeepRuntimeSource = `
