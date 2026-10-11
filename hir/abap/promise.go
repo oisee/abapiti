@@ -9,14 +9,21 @@ func (e *emitter) promiseExceptionBase() string {
 }
 func (b *body) awaitPromise(x *hir.Expr, result string) {
 	p := b.expr(x.X)
-	b.line("IF " + p + " IS NOT BOUND.")
-	b.stmt(&hir.Stmt{Kind: hir.Trap, Name: "await provider did not return a certified settled promise"})
-	b.line("ENDIF.")
+	if x.X.Type.Kind == hir.Optional {
+		b.line("IF " + p + " IS BOUND.")
+	} else {
+		b.line("IF " + p + " IS NOT BOUND.")
+		b.stmt(&hir.Stmt{Kind: hir.Trap, Name: "await provider did not return a certified settled promise"})
+		b.line("ENDIF.")
+	}
 	b.line("IF " + p + "->rejection IS BOUND.")
 	b.line("RAISE EXCEPTION " + p + "->rejection.")
 	b.line("ENDIF.")
 	if x.Type.Kind != hir.Void {
 		b.line(result + " = " + p + "->value.")
+	}
+	if x.X.Type.Kind == hir.Optional {
+		b.line("ENDIF.")
 	}
 }
 

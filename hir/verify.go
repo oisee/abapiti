@@ -889,6 +889,11 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		}
 	case PromiseAwait:
 		a := check(e.X)
+		// Optional draining is restricted to the front end's certified progress
+		// calls. Absence has the same undefined result as Promise<void>.
+		if a.Kind == Optional && len(a.Args) == 1 && a.Args[0].Equal(T(Promise, T(Void))) {
+			a = a.Args[0]
+		}
 		if a.Kind != Promise || len(a.Args) != 1 {
 			v.fail(e.Node, "await requires a certified settled promise")
 		} else {

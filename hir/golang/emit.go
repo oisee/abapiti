@@ -558,6 +558,10 @@ func (b *body) expr(x *hir.Expr) string {
 		return b.temp(t, fmt.Sprintf("&settledPromise[%s]{Rejection:payload[%s]{Type:%q,Value:%s}}", promiseValueType(e, t), e.typ(x.X.Type), x.X.Type.String(), value))
 	case hir.PromiseAwait:
 		value := b.expr(x.X)
+		if x.X.Type.Kind == hir.Optional {
+			b.line("if %s != nil { drainSettled(%s) }", value, value)
+			return ""
+		}
 		return b.temp(t, "drainSettled("+value+")")
 	case hir.Lit:
 		if v, ok := x.Value.(string); ok && !utf8.ValidString(v) {

@@ -71,7 +71,12 @@ func (l *lowerer) awaitSettled(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-async", "await requires unpruned settled-promise lowering")
 		return nil
 	}
+	l.settlementFailure = ""
 	if !l.certifiedSettled(operand, map[*ast.Node]bool{}) {
+		if l.settlementFailure != "" {
+			l.diagf(n, "unsupported-async", "IProgress.tick settlement proof failed: %s", l.settlementFailure)
+			return nil
+		}
 		l.diagf(n, "unsupported-async", "await provider is not certified already-settled (open progress providers, pending promises and arbitrary thenables need a scheduler)")
 		return nil
 	}
@@ -81,8 +86,11 @@ func (l *lowerer) awaitSettled(n *ast.Node) *hir.Expr {
 	}
 	if x.Type.Kind != hir.Promise {
 		if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Promise {
-			l.diagf(n, "unsupported-async", "optional Promise await requires a certified conditional drain; dropping rejection is refused")
-			return nil
+			if x.Type.Args[0].Args[0].Kind != hir.Void || !l.closedProgressCall(operand, map[*ast.Node]bool{}) {
+				l.diagf(n, "unsupported-async", "optional Promise await requires a closed-world IProgress.tick settlement proof")
+				return nil
+			}
+			return &hir.Expr{Kind: hir.PromiseAwait, Node: l.node(n), Type: x.Type.Args[0].Args[0], X: x}
 		}
 		return x
 	}
@@ -139,6 +147,9 @@ func (l *lowerer) certifiedSettled(n *ast.Node, seen map[*ast.Node]bool) bool {
 	if sym == nil {
 		return false
 	}
+	if l.closedProgressCall(n, seen) {
+		return true
+	}
 	for _, d := range sym.Declarations {
 		if d.Body() == nil {
 			continue
@@ -155,47 +166,7 @@ func (l *lowerer) certifiedSettled(n *ast.Node, seen map[*ast.Node]bool) bool {
 				return false
 			}
 		}
-		if seen[d] {
-			return false
-		}
-		seen[d] = true
-		async := d.ModifierFlags()&ast.ModifierFlagsAsync != 0
-		safe := true
-		var walk func(*ast.Node)
-		walk = func(x *ast.Node) {
-			if x == nil || !safe {
-				return
-			}
-			if x != d && (x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindFunctionDeclaration) {
-				return
-			}
-			if x.Kind == ast.KindAwaitExpression && !l.certifiedSettled(x.AsAwaitExpression().Expression, seen) {
-				safe = false
-				return
-			}
-			if x.Kind == ast.KindReturnStatement && x.AsReturnStatement().Expression != nil {
-				v := x.AsReturnStatement().Expression
-				if (!async || l.mayThenable(v)) && !l.certifiedSettled(v, seen) {
-					safe = false
-					return
-				}
-			}
-			if x.Kind == ast.KindNewExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier && x.Expression().Text() == "Promise" {
-				safe = false
-				return
-			}
-			if x.Kind == ast.KindCallExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier {
-				switch x.Expression().Text() {
-				case "setTimeout", "setInterval", "queueMicrotask":
-					safe = false
-					return
-				}
-			}
-			x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
-		}
-		walk(d.Body())
-		delete(seen, d)
-		return safe
+		return l.certifiedSettledBody(d, seen)
 	}
 	return false
 }
@@ -304,7 +275,7 @@ func containsAwait(n *ast.Node) bool {
 // This drain has no microtask queue: conservatively require immediate await or
 // result adoption for such producers, even when their promises are settled.
 func (l *lowerer) settledCallUse(n *ast.Node, x *hir.Expr) bool {
-	if !l.settledEnabled || n.Kind != ast.KindCallExpression || x.Type.Kind != hir.Promise {
+	if !l.settledEnabled || n.Kind != ast.KindCallExpression || (x.Type.Kind != hir.Promise && !(x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Promise)) {
 		return true
 	}
 	suspends := l.producerHasAwait(n, map[*ast.Node]bool{})
@@ -336,36 +307,16 @@ func (l *lowerer) producerHasAwait(n *ast.Node, seen map[*ast.Node]bool) bool {
 	if _, ok := l.builtinPromiseCall(n); ok {
 		return false
 	}
+	// Include the await sites of every closed-world dispatch target.
+	if l.progressCallHasAwait(n, seen) {
+		return true
+	}
 	sym := l.resolve(n.Expression())
 	if sym == nil {
 		return false
 	}
 	for _, d := range sym.Declarations {
-		if containsAwait(d.Body()) {
-			return true
-		}
-		found := false
-		var walk func(*ast.Node)
-		walk = func(x *ast.Node) {
-			if x == nil || found {
-				return
-			}
-			if x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindFunctionDeclaration {
-				return
-			}
-			if x.Kind == ast.KindCallExpression {
-				t := l.ck.GetTypeAtLocation(x)
-				if t != nil && t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
-					found = l.producerHasAwait(x, seen)
-					if found {
-						return
-					}
-				}
-			}
-			x.ForEachChild(func(c *ast.Node) bool { walk(c); return found })
-		}
-		walk(d.Body())
-		if found {
+		if l.settledBodyHasAwait(d, seen) {
 			return true
 		}
 	}
@@ -428,6 +379,88 @@ func (l *lowerer) certifiedUndefinedValue(n *ast.Node, seen map[*ast.Node]bool) 
 		walk(d.Body())
 		delete(seen, d)
 		return safe
+	}
+	return false
+}
+
+func (l *lowerer) certifiedSettledBody(d *ast.Node, seen map[*ast.Node]bool) bool {
+	if d == nil || d.Body() == nil {
+		return false
+	}
+	if seen[d] {
+		return false
+	}
+	seen[d] = true
+	async := d.ModifierFlags()&ast.ModifierFlagsAsync != 0
+	if d.Body().Kind != ast.KindBlock {
+		defer delete(seen, d)
+		return (async && !l.mayThenable(d.Body())) || l.certifiedSettled(d.Body(), seen)
+	}
+	safe := true
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil || !safe {
+			return
+		}
+		if x != d && (x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindFunctionDeclaration) {
+			return
+		}
+		if x.Kind == ast.KindAwaitExpression && !l.certifiedSettled(x.AsAwaitExpression().Expression, seen) {
+			safe = false
+			return
+		}
+		if x.Kind == ast.KindReturnStatement && x.AsReturnStatement().Expression != nil {
+			v := x.AsReturnStatement().Expression
+			if (!async || l.mayThenable(v)) && !l.certifiedSettled(v, seen) {
+				safe = false
+				return
+			}
+		}
+		if x.Kind == ast.KindNewExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier && x.Expression().Text() == "Promise" {
+			safe = false
+			return
+		}
+		if x.Kind == ast.KindCallExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier {
+			switch x.Expression().Text() {
+			case "setTimeout", "setInterval", "queueMicrotask":
+				safe = false
+				return
+			}
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(d.Body())
+	delete(seen, d)
+	return safe
+}
+
+func (l *lowerer) settledBodyHasAwait(d *ast.Node, seen map[*ast.Node]bool) bool {
+	if containsAwait(d.Body()) {
+		return true
+	}
+	found := false
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil || found {
+			return
+		}
+		if x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression || x.Kind == ast.KindFunctionDeclaration {
+			return
+		}
+		if x.Kind == ast.KindCallExpression {
+			t := l.ck.GetTypeAtLocation(x)
+			if t != nil && t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
+				found = l.producerHasAwait(x, seen)
+				if found {
+					return
+				}
+			}
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return found })
+	}
+	walk(d.Body())
+	if found {
+		return true
 	}
 	return false
 }
