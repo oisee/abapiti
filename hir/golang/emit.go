@@ -168,6 +168,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	chaiDeep          bool
 	chaiThrow         bool
+	chaiActionUsed    bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
