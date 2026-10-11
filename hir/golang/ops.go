@@ -87,7 +87,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
-		if len(b.e.liveClasses) > 0 {
+		if x.Op == "array.length" && len(b.e.liveClasses) > 0 {
 			code = a + ".length()"
 		}
 	case "map.size":
