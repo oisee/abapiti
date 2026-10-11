@@ -25,6 +25,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	matchUsed                                       bool
 	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
@@ -1573,6 +1574,19 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	for i, v := range x.Args {
 		args = append(args, b.value(v, ps[i]))
 	}
+	if x.Op == "array.matchIndex" {
+		b.e.matchUsed = true
+		b.line("IF " + a + "->match_has_index <> abap_true.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line(n + " = " + a + "->match_index.")
+		return
+	}
+	if x.Op == "string.match" {
+		b.e.matchUsed = true
+		b.line(n + " = " + args[0] + "->match( " + a + " ).")
+		return
+	}
 	if x.Op == "i64.remainder2" {
 		b.line(n + " = " + a + " MOD 2.")
 		b.line("IF " + a + " < 0 AND " + n + " <> 0.")
@@ -1653,6 +1667,19 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
 			b.line("ELSE.")
 			b.line("CLEAR " + n + ".")
+			b.line("ENDIF.")
+		case "string.repeat":
+			count := b.temp(hir.T(hir.Number))
+			b.line(count + " = trunc( " + args[0] + " ).")
+			b.line("IF " + count + " < 0.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			b.line("CLEAR " + n + ".")
+			b.line("IF " + a + " IS NOT INITIAL.")
+			b.line("IF " + count + " > 2147483647 OR " + count + " * strlen( " + a + " ) > 2147483647.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			b.line(n + " = repeat( val = " + a + " occ = CONV i( " + count + " ) ).")
 			b.line("ENDIF.")
 		case "string.repeatIndent":
 			// The enclosing source certificate proves non-negative integer indentation.

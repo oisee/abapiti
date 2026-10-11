@@ -48,11 +48,11 @@ func TestAbaplintTestRuntimePrimitivesGo(t *testing.T) {
 	}
 }
 
-func TestAbaplintRepeatABAPFailsClosed(t *testing.T) {
+func TestAbaplintRepeatABAPSupported(t *testing.T) {
 	t.Setenv("ABAPITI_ASSUME_INT", "")
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe { run(): string { return "x".repeat(2); } }`}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "string.repeat") {
-		t.Fatalf("ABAP did not explicitly reject Go-only repeat: %v", err)
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatalf("ABAP repeat support from #93: %v", err)
 	}
 }
 

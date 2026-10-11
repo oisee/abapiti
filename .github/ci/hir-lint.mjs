@@ -1,6 +1,6 @@
 // Syntax and generation gate; dependency sources are read, never downloaded.
 import {createRequire} from "node:module";
-import {readFileSync, readdirSync} from "node:fs";
+import {existsSync, readFileSync, readdirSync} from "node:fs";
 import {join, resolve} from "node:path";
 const [dir, osg, mode] = process.argv.slice(2);
 if (mode !== undefined && mode !== "--fixture") throw new Error(`Unknown mode: ${mode}`);
@@ -15,6 +15,11 @@ for (const name of Object.keys(config.get().rules)) {
   if (!ruleNames.has(name)) throw new Error(`Unknown abaplint rule: ${name}`);
 }
 const reg = new abaplint.Registry(config);
+// DDIC types the generated runtime uses (FIND … RESULTS), from open-abap-core in the OSG checkout.
+const ddic = join(resolve(osg || "."), ".local/lars/open-abap-core/src/abap/regex");
+for (const name of ["match_result.tabl.xml", "match_result_tab.ttyp.xml", "submatch_result.tabl.xml", "submatch_result_tab.ttyp.xml"]) {
+  if (existsSync(join(ddic, name))) reg.addDependency(new abaplint.MemoryFile(name, readFileSync(join(ddic, name), "utf8")));
+}
 const constructs = {inline: false, instance: false};
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
 for (const n of files) {
@@ -39,6 +44,7 @@ for (const n of files) {
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
   reg.addFile(new abaplint.MemoryFile(n, src));
 }
+// Feature fixtures (--fixture) are small; only the main corpus must show both constructs.
 if (mode !== "--fixture" && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
 function walk(dir) {
   for (const f of readdirSync(dir, {withFileTypes: true})) {

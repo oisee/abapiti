@@ -29,6 +29,18 @@ export class ArrayProbe {
   private static matchReceiver(): string { ArrayProbe.matchOrder += "r"; return "ZTEST"; }
   private static matchPattern(): RegExp { ArrayProbe.matchOrder += "p"; return /^Z/; }
   private static matchOrder = "";
+  private static stringOrder = "";
+  private static stringReceiver(): string { ArrayProbe.stringOrder += "r"; return "ZTEST"; }
+  private static stringPattern(): RegExp { ArrayProbe.stringOrder += "p"; return /^Z/; }
+  public static strings(): string {
+    const captures: RegExpMatchArray | null = "zabz".match(/(a)(b)/);
+    const matches = "aaba".match(/a/g);
+    const absent = "xyz".match(/(a)(b)/);
+    const proxy = "<CLSPROXY>X</CLSPROXY>".match("<CLSPROXY>(.)</CLSPROXY>");
+    const amps = ("&&&".match(/&/g) || []).length;
+    const effects = ArrayProbe.stringReceiver().match(ArrayProbe.stringPattern());
+    return `${"xy".repeat(0)}/${"xy".repeat(1)}/${"xy".repeat(3)}/${"".repeat(4)}/${"x".repeat(2.9)}/${"x".repeat(-0.9)}:${captures?.[0]}/${captures?.[1]}/${captures?.[2]}/${captures?.index}/${captures?.length}:${matches?.join(",")}:${absent === null}:${proxy?.[1]}:${amps}:${effects?.[0]}/${ArrayProbe.stringOrder}`;
+  }
   public static matchTests(): string {
     const name = "ZTEST";
     const missing = name.match(/^Y/) === null;
