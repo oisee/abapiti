@@ -346,6 +346,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		done()
 	}
 	l.stabilizeUnionABI()
+	l.completeAsyncBridges()
 	l.completeCallArguments()
 	l.propagateBridgeTraps()
 	l.inferNumberRanges()
