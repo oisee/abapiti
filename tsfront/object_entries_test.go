@@ -60,7 +60,6 @@ func TestObjectEntriesRefusesOtherObjectModels(t *testing.T) {
 	for _, source := range []string{
 		`export class Probe { run(value: {[key: string]: string | undefined}): number { return Object.entries(value).length; } }`,
 		`export class Probe { run(): number { const map = new Map<string,string>(); map.set("a","x"); return Object.entries(map).length; } }`,
-		`export class Item { value: string = "x"; } export class Probe { run(): number { return Object.entries(new Item()).length; } }`,
 		`export class Probe { run(): number { return Object.entries("text").length; } }`,
 	} {
 		requireDiagnostic(t, sourceProbe(t, source), "unsupported-call")
@@ -81,5 +80,19 @@ func TestObjectEntriesRepeatedCallbackNames(t *testing.T) {
 	}
 	if got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())"); got != "one/two" {
 		t.Fatal(got)
+	}
+}
+
+// Native declaration-order layouts retain their existing proof; class views use
+// backing-object metadata. Other native structural layouts still refuse.
+func TestObjectEntriesNominalNodeOracle(t *testing.T) {
+	source := `class Item {value="x";} class Probe {static run():number {return Object.entries(new Item()).length;}}`
+	p := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	if got := runGoHIR(t, p, "fmt.Println("+goEntry("input.ts.Probe", "run")+"())"); got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
