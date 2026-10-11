@@ -1,5 +1,15 @@
 # abaplint's own tests on TS-HG@Go
 
+## DDIC local bindings — latest full measurement
+
+**9,576/11,060 active tests passed, FAIL 0**, with 1,211
+traps and 305 not-run cases. All 17 shards and 625 files were selected
+and reconciled against original Node. The general binding fix removes all 16
+DDIC unresolved-local HIR errors; total binary64 HIR errors fall 100 → 84.
+See [DDIC counts, next traps, gates and commands](ddic-locals.md),
+[complete evidence](ddic-locals.json), and [latest suite JSON](abaplint-tests-latest.json).
+The measurements below remain as history.
+
 ## Integration train 3 — current full measurement
 
 **9,021/11,060 active tests passed (81.56%).** All 17 shards completed with
@@ -421,7 +431,7 @@ oracle titles.
 ```sh
 export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
 export ABAPITI_GRACECHECK=1 GOMAXPROCS=4
-node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/abaplint-tests-latest.json
+node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/abaplint-tests-latest.json
 
 go test ./... -short
 go test ./tsfront/... ./hir/... ./cmd/...
