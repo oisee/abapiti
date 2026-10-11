@@ -805,11 +805,8 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	case "constructor":
 		// x.constructor is the run-time class; compared with a class value or
-		// asked for its name.
-		if recv.Type.Kind == hir.ClassRef && recv.Type.Name == hir.RootObject {
-			l.diagf(n, "unsupported-expr", "constructor of the object root is not lowered")
-			return nil
-		}
+		// asked for its name. Erasing to the object root preserves the concrete
+		// translated instance's descriptor, so it uses the same HIR operation.
 		if recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef {
 			return l.rtOp("object.classOf", recv, hir.T(hir.ClassValue))
 		}
