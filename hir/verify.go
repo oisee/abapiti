@@ -390,6 +390,10 @@ func exits(s *Stmt) bool {
 	return exits(s.Body) || exits(s.Else)
 }
 
+// CanFallThrough reports whether the verifier lacks a proof that every path
+// terminates. Frontends use the same proof when preserving implicit returns.
+func CanFallThrough(s *Stmt) bool { return !returns(s) }
+
 func returns(s *Stmt) bool {
 	if s == nil {
 		return false

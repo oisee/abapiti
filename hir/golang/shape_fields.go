@@ -8,6 +8,7 @@ func (e *emitter) collectBoxedShapes() {
 	e.boxedShapes = map[string]bool{}
 	e.boxedFields = map[string]bool{}
 	dynamicRows := false
+	guardRows := false
 	var expr func(*hir.Expr)
 	var stmt func(*hir.Stmt)
 	expr = func(x *hir.Expr) {
@@ -18,6 +19,7 @@ func (e *emitter) collectBoxedShapes() {
 			dynamicRows = true
 		}
 		if x.Kind == hir.RuntimeOp {
+			guardRows = guardRows || x.Op == "lsp.isTextDocumentEdit" || x.Op == "lsp.isRenameFile"
 			if x.Op == "chai.throwMatch" {
 				e.chaiThrow = true
 				e.chaiDeep = true
@@ -66,6 +68,13 @@ func (e *emitter) collectBoxedShapes() {
 			stmt(m.Body)
 		}
 	}
+	if guardRows {
+		for _, c := range e.p.Classes {
+			if c.Structural {
+				e.boxedFields[c.Name] = true
+			}
+		}
+	}
 	if dynamicRows {
 		for _, c := range e.p.Classes {
 			e.boxedShapes[c.Name] = true
@@ -109,7 +118,11 @@ func (e *emitter) shapeFields(c *hir.Class) {
 		e.line("};return nil }")
 	}
 	e.line("func (self *%s) dynamicPut(key jsString, value *dynamic) {", e.obj(c.Name))
-	e.line("if self==nil {panic(newRangeFault())};switch key {")
+	e.line("if self==nil {panic(newRangeFault())}")
+	if e.extraRuntimeKeys && c.Structural {
+		e.line("if self.ownKeys!=nil {self.ownKeys.set(key,nil)}")
+	}
+	e.line("switch key {")
 	for _, name := range order {
 		f := fields[name]
 		typ := f.Type

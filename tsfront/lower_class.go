@@ -675,6 +675,11 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	if len(defaults) > 0 {
 		body = hir.B(append(defaults, body)...)
 	}
+	// A private any producer may implicitly return undefined. Preserve that
+	// path without changing the void ABI or adding returns to terminating bodies.
+	if hm.Result.Kind == hir.Dynamic && m.Type() != nil && m.Type().Kind == ast.KindAnyKeyword && m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 && hir.CanFallThrough(body) {
+		body = hir.B(body, &hir.Stmt{Kind: hir.Return, Node: l.node(m), X: l.coerce(&hir.Expr{Kind: hir.Lit, Node: l.node(m), Type: hir.T(hir.Optional, hir.T(hir.Dynamic))}, hm.Result)})
+	}
 	hm.Body = l.finishAsync(m, hm, body)
 	l.pop()
 }

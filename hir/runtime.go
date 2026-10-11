@@ -12,6 +12,7 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"lsp.isTextDocumentEdit": {Dynamic, 0, false}, "lsp.isRenameFile": {Dynamic, 1, false},
 	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
 	"string.match":              {String, 1, false},
@@ -264,7 +265,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, b, true
 	case "regexp.source", "regexp.toString":
 		return nil, T(String), true
-	case "dynamic.isString", "dynamic.isFunction", "dynamic.isArray":
+	case "lsp.isRenameFile":
+		return []Type{b}, b, true
+	case "lsp.isTextDocumentEdit", "dynamic.isString", "dynamic.isFunction", "dynamic.isArray":
 		return nil, b, true
 	case "dynamic.asString":
 		return nil, T(String), true
