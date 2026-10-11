@@ -4,7 +4,7 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {discoverShards, assertNoFailures} from './abaplint-tests-all.mjs';
+import {discoverShards, selectShards, assertNoFailures} from './abaplint-tests-all.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
 const dir = mkdtempSync(join(tmpdir(),'abaplint-all-test-'));
 try {
@@ -30,6 +30,15 @@ try {
  assert.deepEqual(discovered.shards.map(s => s.name).sort(), ['abap','abap/syntax','new_directory','objects','objects/rename','root']);
  assert.deepEqual(discovered.shards.flatMap(s => s.roots).sort(), discovered.files);
  assert.equal(new Set(discovered.shards.flatMap(s => s.roots)).size, 7);
+ const selected = selectShards(discovered, 'abap/syntax,root');
+ assert.equal(selected.partial,true);
+ assert.deepEqual(selected.shards.map(s => s.name).sort(),['abap/syntax','root']);
+ assert.equal(selected.files.length,3); assert.equal(selected.excluded.length,4);
+ assert.equal(selectShards(discovered,undefined),discovered);
+ assert.equal(selectShards(discovered,discovered.shards.map(s => s.name).join(',')),discovered);
+ assert.throws(() => selectShards(discovered,'syntax'),/unknown test shard/);
+ assert.throws(() => selectShards(discovered,'root,root'),/distinct nonempty/);
+ assert.throws(() => selectShards(discovered,','),/distinct nonempty/);
  // Non-four-shard summary, duplicate titles, skipped tests, and root/child dirs.
  const shards = ['root','abap','lsp','objects/rename','abap/syntax'].map(name => ({name, id:name.replaceAll('/','-'), roots:[`test/${name}.ts`]}));
  const plan = {files:shards.flatMap(s => s.roots).sort(), shards, excluded:[]};
@@ -56,5 +65,18 @@ try {
  all.titles[0] = 'duplicate'; all.passed--; whole(); assert.throws(summarize,/whole-suite Node passed mismatch/);
  all.passed++; whole(); plan.files.push('test/missing.ts'); plan.files.sort();
  writeFileSync(join(dir,'shards.json'),JSON.stringify(plan)); assert.throws(summarize,/disjoint exhaustive partition/);
+ const partial = {shards:shards.slice(0,1), files:[...shards[0].roots], excluded:shards.slice(1).flatMap(s => s.roots), partial:true, compilerCommit:'fixture-baseline'};
+ writeFileSync(join(dir,'shards.json'),JSON.stringify(partial));
+ rmSync(join(dir,'node-all.json'));
+ summarize();
+ const focused = JSON.parse(readFileSync(join(dir,'summary.json')));
+ assert.equal(focused.wholeSuite,undefined);
+ assert.equal(focused.selectedSuite.active,2212);
+ assert.deepEqual(focused.selectedSuite.shards,['root']);
+ assert.equal(focused.codeCommit,'fixture-baseline');
+ assert.equal(focused.uniqueTotal.passed,1);
+ partial.files.push('test/missing.ts');
+ writeFileSync(join(dir,'shards.json'),JSON.stringify(partial));
+ assert.throws(summarize,/disjoint exhaustive partition/);
  console.log('all-shard discovery, root/child partition, dependency-safe syntax directory, borrowed registrations, whole-suite multiset and totals: ok');
 } finally {rmSync(dir, {recursive:true, force:true});}
