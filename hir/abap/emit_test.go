@@ -167,6 +167,7 @@ func fixtures() []fixture {
 // Keep global definitions under review, including empty visibility sections and
 // runtime dependencies. HIR dump goldens do not cover ABAP.
 func TestGlobalClassDefinitions(t *testing.T) {
+	t.Setenv("ABAPITI_NAMES", "") // Golden covers the readable default.
 	definitions := map[string]string{}
 	for _, f := range fixtures() {
 		files, err := Emit(f.p)
@@ -227,11 +228,10 @@ func TestFixtures(t *testing.T) {
 	}
 	for _, f := range fixtures() {
 		t.Run(f.name, func(t *testing.T) {
-			files, err := Emit(f.p)
+			files, names, err := EmitNamed(f.p)
 			if err != nil {
 				t.Fatal(err)
 			}
-			names := hir.NewNames()
 			cls := names.Get(f.name)
 			m := names.Get("member.run")
 			files[cls+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE i.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = %d ).\nENDMETHOD.\nENDCLASS.\n", cls, m, f.want)
@@ -286,15 +286,20 @@ func int8Oracle(t *testing.T) (map[string]string, string) {
 		999_999_999, 1_000_000_000, 1_000_000_001, 3074457345618258602,
 	}
 	c := &hir.Class{Name: "int8_oracle"}
-	names := hir.NewNames()
+	for i, value := range values {
+		m := method(fmt.Sprintf("value_%d", i), i64, ret(hir.L(i64, value)))
+		m.Static = true
+		c.Methods = append(c.Methods, m)
+	}
+	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{c}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	cls := names.Get(c.Name)
 	var assertions strings.Builder
 	assertions.WriteString("DATA value TYPE int8.\nDATA adjacent TYPE int8.\nDATA decimal TYPE string.\n")
 	for i, value := range values {
 		n := fmt.Sprintf("value_%d", i)
-		m := method(n, i64, ret(hir.L(i64, value)))
-		m.Static = true
-		c.Methods = append(c.Methods, m)
 		fmt.Fprintf(&assertions, "value = %s=>%s( ).\ndecimal = |{ value }|.\n", cls, names.Get("member."+n))
 		fmt.Fprintf(&assertions, "cl_abap_unit_assert=>assert_equals( act = decimal exp = `%s` ).\n", strconv.FormatInt(value, 10))
 		// Avoid overflowing MinInt64 while checking adjacent arithmetic.
@@ -304,10 +309,6 @@ func int8Oracle(t *testing.T) (map[string]string, string) {
 			assertions.WriteString("adjacent = value + 1.\nadjacent = adjacent - 1.\n")
 		}
 		assertions.WriteString("cl_abap_unit_assert=>assert_equals( act = adjacent exp = value ).\n")
-	}
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{c}})
-	if err != nil {
-		t.Fatal(err)
 	}
 	return files, assertions.String()
 }
@@ -490,11 +491,10 @@ func Test750Semantics(t *testing.T) {
 	methods = append(methods, concat)
 	literals = append(literals, struct{ name, value string }{"concat", " {|}\\`€ \"' \n\tend  "})
 	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: methods}}}
-	files, err := Emit(p)
+	files, names, err := EmitNamed(p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := hir.NewNames()
 	cls := names.Get("Syntax750")
 	var unit strings.Builder
 	fmt.Fprintf(&unit, "CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE xstring.\nDATA expected TYPE xstring.\nDATA hex_chunk TYPE xstring.\ncl_abap_unit_assert=>assert_equals( act = %s=>%s( ) exp = 3 ).\n", cls, names.Get("member.run"))

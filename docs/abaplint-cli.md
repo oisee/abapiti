@@ -6,7 +6,16 @@ Translates the core of [abaplint](https://github.com/abaplint/abaplint) from Typ
 abapiti abaplint -o out                      # abaplint 577f875e is built into abapiti: no network
 abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, after npm ci in packages/core)
 abapiti abaplint -o out --target native      # one target only: all (default ABAP set), a4h, osg, native, go
+abapiti abaplint -o out --target a4h --package '$ZLNT' # readable A4H deployment
 ```
+
+ABAP names are readable by default (`ABAPITI_NAMES=readable` is also accepted):
+classes `ZCL_LNT_*`, interfaces `ZIF_LNT_*`, exceptions `ZCX_LNT_*`, members
+`UPPER_SNAKE` and parameters `I_*`. Set `ABAPITI_NAMES=hashed` for the legacy
+names; any other nonempty value is an error. `names.json` maps emitted names
+back to TypeScript in both modes. The shared `ZCL_ABAPITI_LOG` log class and
+`ZABAPITI_CORPUS` table are unchanged. Use `--package '$ZLNT'` for A4H; the
+package flag's legacy default remains `$ZABAPLINT` for output compatibility.
 
 The ABAP emitter inlines small methods with Grace's inline rules by default.
 `ABAPITI_INLINE=classic` runs `hir.Inline` instead, the oracle Grace is checked
@@ -34,8 +43,8 @@ In both cases every source file of the closure (1,538 files reachable from `regi
 | Directory | Contents | Next step |
 |---|---|---|
 | `classes/` | the translated classes and interfaces (2,110 objects), shared by the ABAP targets | |
-| `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_ABAPITI_REGISTRY_A4H` and the report `ZABAPITI_REGISTRY_RUN` (package `$ZABAPLINT`, set with `--package`) | import with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
-| `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_ABAPITI_REGISTRY_RUN`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
+| `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_LNT_REGISTRY_A4H` and reports `ZLNT_REGISTRY_CLEAN` (timings) and `ZLNT_REGISTRY_RUN` (profiles); use `--package '$ZLNT'` | import with abapGit into `$ZLNT`, then run `ZLNT_REGISTRY_CLEAN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
+| `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_LNT_REGISTRY_OSG`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
 | `native/` | `zabaplint.prog.abap` and `lib/` with the classes | in an open-steamgate checkout: `node tools/gogen/osabap.mjs native/zabaplint.prog.abap --lib native/lib` (set GOOS/GOARCH for cross builds), then `.out/osabap --file zabapgit_standalone.prog.abap --config abaplint.json -allow-read .` |
 
 The output is deterministic. The same pinned input gives byte-identical files on every run and from any directory, and they are the same files that the `TestRegistryClosureGate` test path emits. `--evidence` also writes the lowering evidence (the overrides applied, the trapped bodies, and the blocking diagnostics, of which there are none).

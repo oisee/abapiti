@@ -17,7 +17,7 @@ HIR is abapiti's typed object IR, on the TypeScript side. **GIR** is open-steamg
 | Name | What executes the code |
 |---|---|
 | **Node** | Node.js; `TS@Node` is the reference, also called **vanilla** |
-| **A4H** | a SAP kernel 7.58: our ABAP system A4H, background job of report `ZABAPITI_REGISTRY_CLEAN` (timings) or `ZABAPITI_REGISTRY_RUN` (profiles under a trace request) |
+| **A4H** | a SAP kernel 7.58: our ABAP system A4H, background job of report `ZLNT_REGISTRY_CLEAN` (timings) or `ZLNT_REGISTRY_RUN` (profiles under a trace request) |
 | **OSGO** | open-steamgate's Go runtime: ABAP compiled to Go by gogen and run as ABAP Unit (`npm run osgo:unit`) |
 | **OSGJ** | open-steamgate's JS runtime: ABAP translated to JS by the abaplint transpiler, `@abaplint/runtime` (`npm run osgjs:unit`) |
 | **OSGB** | open-steamgate's Go runtime in one executable: `osabap` compiles the ABAP plus a report into a binary. For abaplint that binary is the command **`zabaplint`** |
@@ -51,5 +51,5 @@ So: **TS-HA equals vanilla on A4H, OSGO, OSGJ and OSGB.**
 | **clean** | zabapgit as published; 0 issues (`5feceb66…`) |
 | **seeded** | the same file with five seeded errors, one per rule; 5 issues (`b1a890fb…`) |
 | **scope** | the build holds the code the zabapgit check runs: syntax v702 and six rules. Anything else stops with a refusal naming the TypeScript location, never with a different answer |
-| **driver** | the harness that feeds the input to TS-HA and prints the `REGISTRY …` line: `ZCL_ABAPITI_REGISTRY_RUN` (OSGO/OSGJ, zabapgit embedded), `ZCL_ABAPITI_REGISTRY_A4H` + reports on A4H |
+| **driver** | the harness that feeds the input to TS-HA and prints the `REGISTRY …` line: `ZCL_LNT_REGISTRY_OSG` (OSGO/OSGJ, zabapgit embedded), `ZCL_LNT_REGISTRY_A4H` + reports on A4H |
 | **pin** | the open-steamgate commit CI uses (`.github/ci/osgo.ref`) |

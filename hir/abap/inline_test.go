@@ -251,12 +251,10 @@ func TestInlineArgumentOrder(t *testing.T) {
 }
 
 func TestInlineDisabled(t *testing.T) {
-	names := hir.NewNames()
-	cur := "->" + names.Get("member.cur") + "("
 	t.Setenv("ABAPITI_INLINE", "0")
 	p := inlineFixture().p
 	before := hir.Dump(p)
-	off, err := Emit(p)
+	off, names, err := EmitNamed(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,6 +266,7 @@ func TestInlineDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cur := "->" + names.Get("member.cur") + "("
 	run := names.Get("inline_fixture") + ".clas.abap"
 	if !strings.Contains(off[run], cur) || strings.Contains(on[run], cur) {
 		t.Fatalf("cur calls: disabled %v, enabled %v", strings.Contains(off[run], cur), strings.Contains(on[run], cur))

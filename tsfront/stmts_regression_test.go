@@ -270,11 +270,10 @@ func TestStatementsDescriptorSet(t *testing.T) {
 		"b.ts":     `export class Item {}`,
 		"probe.ts": `import {Item as A} from "./a"; import {Item as B} from "./b"; export class Probe {static run(): number {const set=new Set<typeof A>();set.add(A);set.add(A);set.add(B);return set.size;} }`,
 	}, []string{"a.ts", "b.ts", "probe.ts"})
-	files, err := abap.Emit(prog)
+	files, names, err := abap.EmitNamed(prog)
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := hir.NewNames()
 	class := names.Get("probe.ts.Probe")
 	files[class+".clas.testclasses.abap"] = "CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE i.\nactual = " + class + "=>" + names.Get("member.run") + "( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = 2 ).\nENDMETHOD.\nENDCLASS.\n"
 	if out := os.Getenv("STMTS_PROBE_OUT"); out != "" {

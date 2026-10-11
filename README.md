@@ -55,7 +55,7 @@ The lexer and file-information layers are already fully covered. Most of the gap
 Download `abapiti` for your platform from the [latest release](https://github.com/oisee/abapiti/releases/latest), then:
 
 ```sh
-abapiti abaplint -o out
+abapiti abaplint -o out --package '$ZLNT'
 ```
 
 abaplint 577f875e is built into the binary (every file checked against its recorded SHA-256), so this needs no network. It translates in a few seconds and writes:
@@ -63,7 +63,7 @@ abaplint 577f875e is built into the binary (every file checked against its recor
 | Directory | For | Run it |
 |---|---|---|
 | `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
-| `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
+| `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZLNT_REGISTRY_CLEAN` as a background job in package `$ZLNT` (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
 An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:
@@ -126,7 +126,7 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 - **TS-HA@OSGO 61 s → 14–17 s, close to Node (13–14 s).** The biggest steps: `toUpperCase` on ASCII text through `TRANSLATE` (2.1×), numeric literals emitted as numbers instead of text, and open-steamgate's own fixes found on our input ([#701](https://github.com/oisee/open-steamgate/pull/701), [#706](https://github.com/oisee/open-steamgate/pull/706), [#707](https://github.com/oisee/open-steamgate/pull/707)).
 - **TS-HA@A4H 207 s → ~172–179 s.** `int8` constants, the `toUpperCase` fast path and `run_one` (abaplint's combinators no longer build a one-element array per call).
 - **TS-HG@Go.** `abapiti abaplint --target go` emits the same HIR as a standalone Go module. `zabaplint-go` checks zabapgit in 7.9 s, Node takes 14 s. The release ships it for six platforms.
-- **Readable names.** `ABAPITI_NAMES=readable` gives `ZCL_LNT_LEXER`, `ZIF_LNT_STATEMENT_RUNNABLE` and so on: 2,001 readable names, none hashed. On A4H (package `$ZLNT`) the result is equal to vanilla and just as fast.
+- **Readable names by default.** ABAP classes use `ZCL_LNT_*`, interfaces `ZIF_LNT_*`, exceptions `ZCX_LNT_*`, members `UPPER_SNAKE` and parameters `I_*`. `ABAPITI_NAMES=readable` explicitly selects the default; `ABAPITI_NAMES=hashed` restores the legacy names. Unknown values are errors. `names.json` still maps emitted names to TypeScript. On A4H (package `$ZLNT`) the result is equal to vanilla and just as fast.
 - **Grace** runs the inlining by default, and every HIR site has a stable id for profiling (`sites.json`).
 
 **2026-10-10 — v0.2.0: the translated abaplint is 1.5× faster off-stack and 7% faster on the kernel.**

@@ -4,7 +4,6 @@ package abap
 import (
 	"fmt"
 	"math"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +51,10 @@ func Emit(p *hir.Program) (map[string]string, error) {
 
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
+	readable, err := hir.ReadableNames()
+	if err != nil {
+		return nil, nil, err
+	}
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
@@ -59,7 +62,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		return nil, nil, err
 	}
 	names := hir.NewNames()
-	if os.Getenv("ABAPITI_NAMES") == "readable" {
+	if readable {
 		names = hir.NewReadableNames(p, "LNT")
 	}
 	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}

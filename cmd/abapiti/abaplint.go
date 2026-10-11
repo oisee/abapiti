@@ -40,7 +40,7 @@ may be refused with the TypeScript location, never answered silently wrong.
 Outputs under <outdir>:
   classes/  the translated classes and interfaces
   a4h/      abapGit zip: classes + the A4H driver + reports _CLEAN (timings) and _RUN (profiles)
-  osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
+  osg/      classes for open-steamgate unit runners (+ the registry driver
             with embedded inputs when --input, --deps and --config are given)
   native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
   sites.json with --target go: sites/1 stable HIR identities and Go locations
@@ -56,12 +56,12 @@ func init() {
 	f := abaplintCmd.Flags()
 	f.StringP("output", "o", "", "Output directory (required unless --full, which defaults to out)")
 	f.String("target", "all", "Targets to write: all (ABAP targets), a4h, osg, native or go (comma-separated)")
-	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip")
-	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
+	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip (use $ZLNT for readable A4H deployment)")
+	f.String("input", "", "osg: folder of files to check (embedded into the registry driver)")
 	f.String("deps", "", "osg: folder of dependency files")
 	f.String("config", "", "osg: abaplint.json for the embedded run")
 	f.String("run-sha", zabapgitRunSHA, "SHA-256 of the expected issue dump that the run drivers compare against (default: zabapgit_standalone with abapGit's ci/abaplint.json)")
-	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
+	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds the registry negative report")
 	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
 	f.Bool("full", false, "Measure the whole closure without pruning; write evidence instead of emitting targets")
@@ -103,6 +103,10 @@ func parseTargets(s string) (map[string]bool, error) {
 }
 
 func runAbaplint(cmd *cobra.Command, args []string) error {
+	d, err := tsfront.Drivers()
+	if err != nil {
+		return err
+	}
 	flags := cmd.Flags()
 	out, _ := flags.GetString("output")
 	targetFlag, _ := flags.GetString("target")
@@ -312,7 +316,6 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if targets["a4h"] {
 		dir := filepath.Join(out, "a4h")
 		sources := copyMap(emitted)
-		d := tsfront.Drivers()
 		a4h := d.A4HClass
 		sources[a4h+".clas.abap"] = tsfront.RegistryRunCorpusClass(a4h, runSHA, negative, names)
 		sources[d.RunReport+".prog.abap"] = tsfront.RegistryRunReport(d.RunReport, a4h, false)
@@ -348,7 +351,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			run := tsfront.Drivers().OSGRun
+			run := d.OSGRun
 			sources[run+".clas.abap"] = tsfront.RegistryRunClass(run, inputs, string(cfg), runSHA, 0, names)
 			sources[run+".clas.testclasses.abap"] = tsfront.RegistryRunTest(run, "")
 			what = fmt.Sprintf("the classes + %s with %d embedded files (its unit test fails with the report line; ok=X is the verdict)", strings.ToUpper(run), len(inputs))

@@ -101,7 +101,10 @@ func TestRegistryClosureGate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d := Drivers()
+		d, err := Drivers()
+		if err != nil {
+			t.Fatal(err)
+		}
 		class := d.OSGRun
 		if err := os.WriteFile(filepath.Join(out, class+".clas.abap"), []byte(RegistryRunClass(class, inputs, string(config), want, 0, names)), 0644); err != nil {
 			t.Fatal(err)
