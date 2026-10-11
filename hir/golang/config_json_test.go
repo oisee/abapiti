@@ -82,7 +82,7 @@ func TestConfigJSONTypedVersionProjection(t *testing.T) {
 	}
 	strT, dynT := hir.T(hir.String), hir.T(hir.Dynamic)
 	version := shape("src/version.ts.VersionNew", []hir.Field{{Name: "release", Type: strT}, {Name: "language", Type: strT}})
-	syntax := shape("src/_config.ts.ISyntaxSettings", []hir.Field{{Name: "version", Type: dynT}, {Name: "errorNamespace", Type: strT}})
+	syntax := shape("src/_config.ts.ISyntaxSettings", []hir.Field{{Name: "version", Type: hir.T(hir.Optional, dynT)}, {Name: "errorNamespace", Type: strT}})
 	graph := &hir.Expr{Kind: hir.RuntimeOp, Op: "json.parseSubset", Type: dynT, X: hir.V("text", strT)}
 	project := &hir.Expr{Kind: hir.RuntimeOp, Op: "dynamic.materialize", Type: hir.Ref(syntax.Name), X: graph}
 	p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "parse", Static: true, Params: []hir.Param{{Name: "text", Type: strT}}, Result: project.Type, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: project})})

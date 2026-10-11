@@ -57,7 +57,7 @@ func (e *emitter) materializer(t hir.Type) string {
 			// The pinned config union is String | VersionNew. Parsed objects
 			// must project to the same native shape its narrowed TS reads use.
 			// Keep the full source graph on that shape for JSON serialization.
-			if e.configJSON && c.Name == "src/_config.ts.ISyntaxSettings" && f.Name == "version" && f.Type.Kind == hir.Dynamic {
+			if e.configJSON && c.Name == "src/_config.ts.ISyntaxSettings" && f.Name == "version" && (f.Type.Kind == hir.Dynamic || (f.Type.Kind == hir.Optional && f.Type.Args[0].Kind == hir.Dynamic)) {
 				project := e.materializer(hir.Ref("src/version.ts.VersionNew"))
 				value = "func() *dynamic {v:=" + input + ";if v!=nil && v.Tag==tagObject {return &dynamic{Tag:2,Value:" + project + "(v)}};return v}()"
 			}
