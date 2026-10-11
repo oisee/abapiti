@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestLiveAsyncRemainsBlocking(t *testing.T) {
+func TestSettledAsyncSignatures(t *testing.T) {
 	for _, source := range []string{
 		`export class Probe { async run(): Promise<number> { return 1; } }`,
 		`export async function run(): Promise<number> { return 1; }`,
@@ -25,8 +25,8 @@ func TestLiveAsyncRemainsBlocking(t *testing.T) {
 		for _, d := range diags {
 			blocked = blocked || d.Category == "unsupported-async"
 		}
-		if !blocked {
-			t.Fatalf("live async body accepted: %v", diags)
+		if blocked {
+			t.Fatalf("settled async body refused: %v", diags)
 		}
 	}
 }

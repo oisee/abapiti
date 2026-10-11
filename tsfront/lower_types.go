@@ -140,6 +140,12 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	switch name {
 	case "Promise":
 		if l.librarySymbol(sym) {
+			if l.settledEnabled {
+				if len(targs) == 1 && targs[0].Kind == ast.KindNeverKeyword {
+					return hir.T(hir.Promise, hir.T(hir.Void))
+				}
+				return hir.T(hir.Promise, arg(0))
+			}
 			return hir.Ref(l.opaquePromise())
 		}
 	case "Set":
@@ -468,9 +474,18 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			l.diagf(n, "note-thunk-type", "parameterless void function type lowered as the closure thunk interface")
 			return l.thunkType()
 		}
-		// Promises carry only an opaque ABI. No fulfillment, await or async
-		// body is translated; coverage traps are the only callable producers.
+		// Coverage-pruned builds retain their opaque ABI. Unpruned lowering
+		// carries the fulfillment type; producer certification is separate.
 		if t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {
+			if l.settledEnabled {
+				args := l.ck.GetTypeArguments(t)
+				if len(args) == 1 {
+					if args[0].Flags()&checker.TypeFlagsNever != 0 {
+						return hir.T(hir.Promise, hir.T(hir.Void))
+					}
+					return hir.T(hir.Promise, l.mapCheckerType(n, args[0]))
+				}
+			}
 			return hir.Ref(l.opaquePromise())
 		}
 		// Array and library-collection reference types.

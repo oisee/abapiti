@@ -27,7 +27,7 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	if e, ok := l.overrides[fn]; ok && e.Method != nil {
 		return hm
 	}
-	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+	if fn.ModifierFlags()&ast.ModifierFlagsAsync != 0 && !l.settledEnabled {
 		l.diagf(fn, "unsupported-async", "async body must be excluded by validated workload coverage")
 		return nil
 	}
@@ -41,10 +41,12 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	for _, p := range hm.Params {
 		l.declare(p.Name, p.Type)
 	}
+	l.asyncMethods[hm] = fn.ModifierFlags()&ast.ModifierFlagsAsync != 0
 	pre := l.applyDefaults(fn, hm)
 	restore := l.withLocalFns(fn.Body())
 	hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
 	restore()
+	hm.Body = l.finishAsync(fn, hm, hm.Body)
 	l.pop()
 	return hm
 }

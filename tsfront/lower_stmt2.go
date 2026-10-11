@@ -35,6 +35,9 @@ func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 		name = cc.VariableDeclaration.Name().Text()
 	}
 	typ := l.throwBaseType(n)
+	if l.settledEnabled && (l.asyncMethods[l.method] || containsAwait(t.TryBlock)) {
+		typ = hir.T(hir.Dynamic)
+	}
 	s := &hir.Stmt{Kind: hir.Try, Node: l.node(n), Name: name, Type: typ}
 	if cc.VariableDeclaration != nil && cc.VariableDeclaration.Name() != nil && cc.VariableDeclaration.Name().Kind == ast.KindIdentifier {
 		if l.declSymbols == nil {
