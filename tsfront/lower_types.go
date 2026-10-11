@@ -169,6 +169,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return arg(0)
 	case "Record":
 		return hir.T(hir.OrderedMap, hir.T(hir.String), arg(1))
+	case "RegExpExecArray", "RegExpMatchArray":
+		if l.librarySymbol(sym) {
+			return hir.T(hir.Array, hir.T(hir.String))
+		}
 	case "RegExp":
 		l.diagf(n, "note-regex-type", "RegExp lowered to the RegExp runtime type")
 		return hir.T(hir.RegExp)
@@ -355,7 +359,7 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 		}
 		return false
 	}
-	return t.Symbol() != nil && t.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(t.Symbol())
+	return t.Symbol() != nil && (t.Symbol().Name == "RegExpMatchArray" || t.Symbol().Name == "RegExpExecArray") && l.librarySymbol(t.Symbol())
 }
 
 // mapCheckerType maps the checker type of an expression (or an inferred
@@ -383,7 +387,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		// reference ABI; no tagged Dynamic payload is needed.
 		matchArray, onlyMatch := false, true
 		for _, part := range t.AsUnionOrIntersectionType().Types() {
-			if part.Symbol() != nil && part.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(part.Symbol()) {
+			if part.Symbol() != nil && (part.Symbol().Name == "RegExpMatchArray" || part.Symbol().Name == "RegExpExecArray") && l.librarySymbol(part.Symbol()) {
 				matchArray = true
 			} else if part.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) == 0 {
 				onlyMatch = false
@@ -529,7 +533,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			return mapped
 		}
 		// Match arrays retain their numbered captures and match index.
-		if t.Symbol() != nil && t.Symbol().Name == "RegExpMatchArray" && l.librarySymbol(t.Symbol()) {
+		if t.Symbol() != nil && (t.Symbol().Name == "RegExpMatchArray" || t.Symbol().Name == "RegExpExecArray") && l.librarySymbol(t.Symbol()) {
 			return hir.T(hir.Array, hir.T(hir.String))
 		}
 		// Array and library-collection reference types.

@@ -403,7 +403,7 @@ func numberString(x float64) jsString {
 
 type loopControl struct {Target string;Continue bool}
 
-type array[T any] struct{ Items []T; MatchIndex int32; HasMatchIndex bool }
+type array[T any] struct{ Items []T; MatchIndex int32; HasMatchIndex bool; Missing map[int32]bool }
 func (a *array[T]) matchIndex() int32 {if !a.HasMatchIndex {panic(newTrap("global match index is not supported"))};return a.MatchIndex}
 func presentArray[T any](a *array[optional[T]]) *array[T] {
  if a==nil{return nil};out:=&array[T]{Items:make([]T,len(a.Items))}
@@ -428,12 +428,13 @@ func (a *array[T]) push(v T) int32 {
  return int32(len(a.Items))
 }
 func (a *array[T]) get(i int32) optional[T] {
-	if i < 0 || int(i) >= len(a.Items) {
+	if i < 0 || int(i) >= len(a.Items) || a.Missing[i] {
 		return optional[T]{}
 	}
 	return present(a.Items[i])
 }
 func (a *array[T]) put(i int32, v T) {
+	delete(a.Missing,i)
 	if i < 0 {
 		panic(newRangeFault())
 	}
@@ -795,8 +796,11 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
- return &jsRegExp{Source:pattern.replaceAll(str("/"), str("\\/")),Flags:flags,compiled:regexp.MustCompile(spec[0]),denied:denied}
+ return &jsRegExp{Source:pattern.replaceAll(str("/"), str("\\/")),Flags:flags,compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
 
+}
+func compileCheckedRegexp(translated, pattern, flags string) *regexp.Regexp {
+ r,err:=regexp.Compile(translated);if err!=nil {panic(newTrap("invalid checked JavaScript regexp /"+pattern+"/"+flags+": "+err.Error()))};return r
 }
 func unitText(s jsString) string {
 	var b strings.Builder
@@ -809,29 +813,35 @@ func (r *jsRegExp) find(input string) []int {
  if r.denied!=nil && r.denied.MatchString(input) {return nil}
  return r.compiled.FindStringIndex(input)
 }
-func (r *jsRegExp) test(s jsString) bool {
-	start := int32(0)
-	global := r.Flags.indexOf(str("g")) >= 0
-	if global {
-		start = r.LastIndex
-	}
-	if start < 0 || start > s.length() {
-		r.LastIndex = 0
-		return false
-	}
-	input := unitText(s[2*start:])
-	m := r.find(input)
-	if m == nil {
-		if global {
-			r.LastIndex = 0
-		}
-		return false
-	}
-	if global {
-		r.LastIndex = start + int32(utf8.RuneCountInString(input[:m[1]]))
-	}
-	return true
+func (r *jsRegExp) setLastIndex(n float64) {
+ if math.IsNaN(n) || math.IsInf(n,0) || math.Trunc(n)!=n || n>math.MaxInt32 || n<math.MinInt32 {panic(newTrap("RegExp.lastIndex assignment requires a finite signed 32-bit integer"))}
+ r.LastIndex=int32(n)
 }
+func (r *jsRegExp) exec(s jsString) *array[jsString] {
+ stateful:=r.Flags.indexOf(str("g"))>=0 || r.Flags.indexOf(str("y"))>=0
+ start:=int32(0);if stateful {start=r.LastIndex;if start<0 {start=0}}
+ if start>s.length() {if stateful {r.LastIndex=0};return nil}
+ input:=unitText(s)
+ if r.denied!=nil && r.denied.MatchString(input) {if stateful {r.LastIndex=0};return nil}
+ re:=r.compiled
+ wrapped:=start>0 || r.Flags.indexOf(str("y"))>=0
+ if wrapped {
+  scan:="(?s:.*?)";if r.Flags.indexOf(str("y"))>=0 {scan=""}
+  re=regexp.MustCompile("\\A(?s:.{"+strconv.Itoa(int(start))+"})"+scan+"("+re.String()+")")
+ }
+ m:=re.FindStringSubmatchIndex(input)
+ if m==nil {if stateful {r.LastIndex=0};return nil}
+ if wrapped {m=m[2:]}
+ out:=&array[jsString]{HasMatchIndex:true,MatchIndex:int32(utf8.RuneCountInString(input[:m[0]]))}
+ if stateful {r.LastIndex=int32(utf8.RuneCountInString(input[:m[1]]))}
+ for i:=0;i<len(m);i+=2 {
+  if m[i]<0 {if out.Missing==nil {out.Missing=map[int32]bool{}};out.Missing[int32(len(out.Items))]=true;out.Items=append(out.Items,str(""));continue}
+  a:=int32(utf8.RuneCountInString(input[:m[i]]));b:=int32(utf8.RuneCountInString(input[:m[i+1]]))
+  out.Items=append(out.Items,s[2*a:2*b])
+ }
+ return out
+}
+func (r *jsRegExp) test(s jsString) bool { return r.exec(s)!=nil }
 func (r *jsRegExp) match_test(s jsString) bool {
 	if r.Flags.indexOf(str("g")) < 0 {
 		return r.test(s)
@@ -846,6 +856,7 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 		panic(newTrap("regexp replacement dollar substitutions are unsupported"))
 	}
 	input := unitText(s)
+ if r.denied!=nil && r.denied.MatchString(input) {return s}
 	global := r.Flags.indexOf(str("g")) >= 0
 	limit := 1
 	if global {
@@ -864,22 +875,16 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 	return out + s[2*last:]
 }
 func (s jsString) match(r *jsRegExp) *array[jsString] {
+ if r.Flags.indexOf(str("g"))<0 {return r.exec(s)}
+ r.LastIndex=0
  input:=unitText(s)
- global:=r.Flags.indexOf(str("g"))>=0
- if global {r.LastIndex=0}
  if r.denied!=nil && r.denied.MatchString(input) {return nil}
- limit:=1; if global {limit=-1}
- matches:=r.compiled.FindAllStringSubmatchIndex(input,limit)
+ matches:=r.compiled.FindAllStringIndex(input,-1)
  if len(matches)==0 {return nil}
  out:=&array[jsString]{}
- if !global {out.HasMatchIndex=true;out.MatchIndex=int32(utf8.RuneCountInString(input[:matches[0][0]]))}
  for _,m:=range matches {
-  end:=len(m); if global {end=2}
-  for i:=0;i<end;i+=2 {
-   if m[i]<0 {panic(newTrap("unmatched optional regex capture is not supported"))}
-   a:=int32(utf8.RuneCountInString(input[:m[i]]));b:=int32(utf8.RuneCountInString(input[:m[i+1]]))
-   out.Items=append(out.Items,s[2*a:2*b])
-  }
+  a:=int32(utf8.RuneCountInString(input[:m[0]]));b:=int32(utf8.RuneCountInString(input[:m[1]]))
+  out.Items=append(out.Items,s[2*a:2*b])
  }
  return out
 }

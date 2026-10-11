@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,
 	"string.replaceRegex": true,
 	"string.toLowerCase":  true,

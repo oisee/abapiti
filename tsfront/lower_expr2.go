@@ -71,6 +71,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		if k == nil {
 			return nil
 		}
+		if l.isMatchArrayType(l.ck.GetTypeAtLocation(e.Expression)) {
+			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.indexValue(k))
+		}
 		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
 	case hir.Dynamic:
 		// The checker's flow-narrowed receiver type (after a typeof test)
@@ -314,6 +317,9 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 	}
 	pattern := text[1 : 1+slash]
 	flags := text[2+slash:]
+	if !l.regexFlags(n, flags) {
+		return nil
+	}
 	l.diagf(n, "note-regex", "regex /%s/%s lowered to the RegExp runtime (FIND REGEX, POSIX classes)", pattern, flags)
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp),
 		Args: []*hir.Expr{
@@ -322,39 +328,65 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 		}}
 }
 
+func (l *lowerer) regexFlags(n *ast.Node, flags string) bool {
+	seen := map[rune]bool{}
+	for _, flag := range flags {
+		if !strings.ContainsRune("igym", flag) || seen[flag] {
+			l.diagf(n, "unsupported-regex", "RegExp flags %q are not lowered: unique i/g/y flags and reviewed m patterns only", flags)
+			return false
+		}
+		seen[flag] = true
+	}
+	return true
+}
+
 // newRegExp lowers new RegExp(pattern[, flags]).
 func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 	sym := l.resolve(n.Expression())
-	if sym == nil || sym.Name != "RegExp" || l.classOf(sym) != nil {
+	if sym == nil || sym.Name != "RegExp" || !l.librarySymbol(sym) || l.classOf(sym) != nil {
 		return nil, false
 	}
 	args := n.Arguments()
 	if len(args) == 0 || len(args) > 2 {
-		return nil, false
+		l.diagf(n, "unsupported-regex", "new RegExp requires a string pattern and optional string flags")
+		return nil, true
 	}
 	var p *hir.Expr
+	defaultFlags := ""
 	if args[0].Kind == ast.KindRegularExpressionLiteral {
 		// new RegExp(/source/f, flags): the source text with the new flags.
 		text := args[0].Text()
 		if slash := strings.LastIndex(text[1:], "/"); slash >= 0 {
 			p = &hir.Expr{Kind: hir.Lit, Node: l.node(args[0]), Type: hir.T(hir.String), Value: text[1 : 1+slash]}
+			defaultFlags = text[2+slash:]
 		}
 	}
 	if p == nil {
 		p = l.expr(args[0])
 	}
 	if p == nil {
-		return nil, false
+		return nil, true
+	}
+	if p.Type.Kind != hir.String {
+		l.diagf(args[0], "unsupported-regex", "new RegExp requires a lowered string pattern")
+		return nil, true
 	}
 	argv := []*hir.Expr{p}
 	if len(args) == 2 {
 		f := l.expr(args[1])
 		if f == nil {
-			return nil, false
+			return nil, true
+		}
+		if f.Type.Kind != hir.String {
+			l.diagf(args[1], "unsupported-regex", "new RegExp requires string flags")
+			return nil, true
 		}
 		argv = append(argv, f)
 	} else {
-		argv = append(argv, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: ""})
+		argv = append(argv, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: defaultFlags})
+	}
+	if flags, ok := argv[1].Value.(string); argv[1].Kind == hir.Lit && ok && !l.regexFlags(n, flags) {
+		return nil, true
 	}
 	l.diagf(n, "note-regex", "new RegExp(...) lowered to the RegExp runtime (dynamic pattern)")
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp), Args: argv}, true

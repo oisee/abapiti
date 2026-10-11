@@ -60,9 +60,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"set.fromArray": {OrderedSet, 1, true},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
 	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false},
-	"classvalue.name":   {ClassValue, 0, false},
-	"classvalue.has":    {ClassValue, 1, false},
-	"regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
+	"classvalue.name":  {ClassValue, 0, false},
+	"classvalue.has":   {ClassValue, 1, false},
+	"regexp.lastIndex": {RegExp, 0, false}, "regexp.setLastIndex": {RegExp, 1, false}, "regexp.exec": {RegExp, 1, false}, "regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
 	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false}, "dynamic.isArray": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
@@ -226,6 +226,12 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(String), true
 	case "classvalue.has":
 		return []Type{T(String)}, b, true
+	case "regexp.lastIndex":
+		return nil, i, true
+	case "regexp.setLastIndex":
+		return []Type{T(Number)}, T(Void), true
+	case "regexp.exec":
+		return []Type{T(String)}, T(Optional, T(Array, T(String))), true
 	case "regexp.test", "regexp.match_test":
 		return []Type{T(String)}, b, true
 	case "regexp.source", "regexp.toString":

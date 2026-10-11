@@ -15,7 +15,7 @@ var supportedOps = map[string]bool{
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
-	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
+	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
 	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
 
@@ -96,6 +96,12 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".replaceRegex(" + strings.Join(args, ",") + ")"
 	case "regexp.match_test":
 		code = a + ".match_test(" + args[0] + ")"
+	case "regexp.lastIndex":
+		code = a + ".LastIndex"
+	case "regexp.setLastIndex":
+		code = a + ".setLastIndex(" + args[0] + ")"
+	case "regexp.exec":
+		code = a + ".exec(" + args[0] + ")"
 	case "regexp.test":
 		code = a + ".test(" + args[0] + ")"
 	case "regexp.source":

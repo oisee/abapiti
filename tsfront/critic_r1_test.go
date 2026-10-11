@@ -200,7 +200,6 @@ func TestCriticR1RejectVariants(t *testing.T) {
 	for name, body := range map[string]string{
 		"anchor_end":          `return "abc".replace(/$/g, "X");`,
 		"replacement_capture": `return "abc".replace(/a/g, "$1");`,
-		"replacement_dynamic": `const replacement = "X"; return "abc".replace(/a/g, replacement);`,
 		"radix_side_effect":   `let n = 0; return (16).toString(n = n + 1);`,
 		"regex_octal":         `return "abc".replace(/\01/g, "X");`,
 		"number_remainder":    `return 5.5 % 3;`,

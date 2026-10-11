@@ -22,6 +22,9 @@ for (const name of ["match_result.tabl.xml", "match_result_tab.ttyp.xml", "subma
 }
 const constructs = {inline: false, instance: false};
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
+// PCRE is confined to the gated JS-regex runtime (ABAP 7.55).
+const version = files.some(n => /\b(?:FIND|REPLACE)\b[^\n]*\bPCRE\b/i.test(readFileSync(join(dir, n), "utf8"))) ? abaplint.Version.v755 : abaplint.Version.v750;
+config.get().syntax.version = version;
 for (const n of files) {
   const src = readFileSync(join(dir, n), "utf8");
   // Only TS origins and the two precise numeric target-limit explanations
@@ -57,5 +60,5 @@ walk(join(osg, ".local/lars/open-abap-core/src"));
 reg.parse();
 const issues = reg.findIssues();
 for (const i of issues) console.error(`${i.getFilename()}:${i.getStart().getRow()}: ${i.getMessage()}`);
-console.log(`HIR ABAP v750: ${files.length} files, ${issues.length} issues`);
+console.log(`HIR ABAP ${version}: ${files.length} files, ${issues.length} issues`);
 process.exitCode = issues.length ? 1 : 0;
