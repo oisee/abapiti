@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -72,8 +73,53 @@ func (l *lowerer) testModuleArrayContext(d *ast.Node) (hir.Type, bool) {
 		}
 		n.ForEachChild(func(child *ast.Node) bool { walk(child); return false })
 	}
-	walk(l.file.AsNode())
-	return result, result.Kind == hir.Array
+	if d.Parent != nil && d.Parent.Parent != nil && d.Parent.Parent.Parent != nil && d.Parent.Parent.Parent.Kind == ast.KindSourceFile {
+		walk(l.file.AsNode())
+	}
+	if result.Kind == hir.Array {
+		return result, true
+	}
+	// Fresh row literals can have different optional fields. Mapping their
+	// reference union to Object loses even common title/data fields. Recover
+	// the checker's normalized structural row, but never a nominal class union
+	// or a shape that would drop an exclusive own property.
+	array := l.ck.GetTypeAtLocation(d.Initializer())
+	info := l.ck.GetIndexInfoOfType(array, l.ck.GetNumberType())
+	if info == nil {
+		return hir.Type{}, false
+	}
+	row := info.ValueType()
+	props := l.ck.GetPropertiesOfType(row)
+	if row.IsUnion() {
+		props = l.ck.GetAllPossiblePropertiesOfTypes(row.AsUnionOrIntersectionType().Types())
+		sort.Slice(props, func(i, j int) bool { return props[i].Name < props[j].Name })
+	}
+	if len(props) == 0 {
+		return hir.Type{}, false
+	}
+	for _, el := range d.Initializer().AsArrayLiteralExpression().Elements.Nodes {
+		if el.Kind != ast.KindObjectLiteralExpression {
+			return hir.Type{}, false
+		}
+		for _, p := range el.AsObjectLiteralExpression().Properties.Nodes {
+			if p.Kind != ast.KindPropertyAssignment || p.Name() == nil || (p.Name().Kind != ast.KindIdentifier && p.Name().Kind != ast.KindStringLiteral) {
+				return hir.Type{}, false
+			}
+			found := false
+			for _, prop := range props {
+				if prop.Name == p.Name().Text() {
+					found = true
+				}
+			}
+			if !found {
+				return hir.Type{}, false
+			}
+		}
+	}
+	if shape := l.synthFromProperties(d, props); shape != nil {
+		return hir.T(hir.Array, hir.Ref(shape.Name)), true
+	}
+	return hir.Type{}, false
 }
 
 // A runtime initializer failure must not expose a fabricated zero/undefined

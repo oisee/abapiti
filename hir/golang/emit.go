@@ -106,6 +106,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesArrayPresence || e.usesArrayDeletion {
 		runtime = sparseRuntime(runtime)
 	}
+	if e.chaiDeep {
+		runtime += chaiDeepRuntimeSource
+	}
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
@@ -132,6 +135,8 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	chaiDeep          bool
+	chaiThrow         bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
@@ -318,6 +323,12 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	if e.chaiDeep {
+		e.chaiDeepShape(c, source)
+	}
+	if e.chaiThrow {
+		e.chaiThrowShape(c)
+	}
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
 	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] {
 		e.shapeFields(c)

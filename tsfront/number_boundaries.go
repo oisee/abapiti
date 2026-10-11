@@ -225,12 +225,20 @@ func (l *lowerer) distinguishNumberLocals() {
 				seen[param.Name] = true
 			}
 			renamed := map[*ast.Symbol]string{}
+			// Grouped switch bodies may lower the same TS binding in several
+			// mutually exclusive HIR blocks. Give each checked symbol one name,
+			// not a new name per copy (which orphaned earlier copies' reads).
+			bindingNames := map[*ast.Symbol]string{}
 			walkNumberStmt(m.Body, func(s *hir.Stmt) {
 				if !numberBindsLocal(s) {
 					return
 				}
 				symbol := l.declSymbols[s]
 				name := s.Name
+				if prior, ok := bindingNames[symbol]; symbol != nil && ok {
+					s.Name = prior
+					return
+				}
 				if seen[name] && symbol != nil {
 					for {
 						l.serial++
@@ -243,6 +251,9 @@ func (l *lowerer) distinguishNumberLocals() {
 					renamed[symbol] = s.Name
 				}
 				seen[name] = true
+				if symbol != nil {
+					bindingNames[symbol] = s.Name
+				}
 			}, func(e *hir.Expr) {})
 			walkNumberStmt(m.Body, func(s *hir.Stmt) {}, func(e *hir.Expr) {
 				if name := renamed[l.localSymbols[e]]; e.Kind == hir.Local && name != "" {
