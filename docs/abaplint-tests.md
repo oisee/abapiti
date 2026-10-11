@@ -151,222 +151,194 @@ aside before the second, because READMEs embed resolved paths. The aggregate
 path/content SHA-256 is
 `54fdd8ad3fad9614ece559ba20b30bf772678365d3f8b576b3eb1572f7c300d4`.
 
-## Historical four-shard N/total — forEach round
+## Historical measurement — traps batch A (partial)
 
-The remainder documents the older four-shard round and its implementation notes,
-not the current whole-suite counts above.
+The remainder documents batch A's four-shard measurement, not a full-suite rerun.
 
 Pinned upstream: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`
-(@abaplint/core 2.120.56). Compiler/runtime revision: **`8acc4f2`**, based on
-harness revision `5a373f3` (PR #107). These are fresh **original-mocha Node
-runs and generated Go executions**, not estimates. Every selected `.ts` file,
-including helpers, was supplied in sorted path order.
+(@abaplint/core 2.120.56). Measured compiler/runtime: **`a1c19a7`**, based on
+train-2 **`ce2f789`**. All four shards were freshly rebuilt and executed against
+fresh original-Mocha Node oracles; selections include every `.ts` file in sorted
+path order. These are actual executions, not estimates or smoke-subset totals.
 
-| Shard | Selected files | Passed | Failed | Trapped | Not-run | Go registered | Node total |
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `test/rules/` | 192 | 5 | 0 | 1,674 | 1,480 | 3,147 | 3,159 |
+| `test/rules/` | 192 | 1,415 | 0 | 1,722 | 22 | 3,147 | 3,159 |
 | `test/abap/lexer/` | 3 | 200 | 0 | 0 | 0 | 200 | 200 |
-| `test/abap/statements/` | 286 | 434 | 20 | 4,508 | 0 | 4,962 | 4,962 |
-| `test/abap/structures/` | 30 | 24 | 0 | 114 | 2 | 139 | 140 |
-| **Unique total** | **511** | **663** | **20** | **6,296** | **1,482** | **8,448** | **8,461** |
+| `test/abap/statements/` | 286 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 |
+| `test/abap/structures/` | 30 | 138 | 0 | 0 | 2 | 139 | 140 |
+| **Unique total** | **511** | **6,695** | **0** | **1,742** | **24** | **8,448** | **8,461** |
 
-**663/8,461**, up from **661/8,461**. This is not coverage of the entire upstream
-test suite; the four shards are separate binaries, with no smoke subset counted
-twice. Node: rules 3,149 passed / 10 pending; lexer 200 passed; statements 4,962
-passed; structures 139 passed / one pending. No Node failures or unmatched Go
-titles. Go's not-run total is **1,458 async/done callbacks**, **11 skipped tests**,
-and **13 unregistered tests** (12 rules, one structure).
+**6,695/8,461**, up **180** from train-2's 6,515. **FAIL stays zero.**
+Unsupported lowering and runtime domains remain traps, never fabricated passes.
+Passed + FAIL + trapped + not-run equals Node total. Every shard has zero
+unmatched multiset titles and zero async-pending tests. Node has 8,450 passes,
+11 pending, and zero failures. The denominator remains 8,461: the isolated
+Downport oracle's 303 registrations did not change the complete-shard totals.
 
-Registration improves by **73 tests**: 3,074 → 3,147 rules; other counts are
-unchanged. Lexer and statements have registration parity. None of the new
-registrations is invented from the oracle. Most unlocked callbacks now reach
-Config, so fixing forEach does not itself produce 1,321 new passes.
+This is **partial batch A**, not completion of every assigned root. The
+structural-config representation, explicit version conversions and lost
+registrations remain unsupported. The 2,599 tests outside these four shards
+were not measured. Compact execution evidence is
+[`abaplint-tests-latest.json`](abaplint-tests-latest.json). Historical baselines
+and integration details are in [`train-1.md`](train-1.md) and
+[`train-2.md`](train-2.md).
 
-### Reached traps, ranked by tests
+## Implemented roots and exactness boundaries
 
-Only **two distinct reached trap messages** remain. Initialization failures are
-excluded. `docs/abaplint-tests-latest.json` records per-shard counts, representative
-messages, every remaining initialization failure, and every ordinary failure.
+### JSON helper and live parsed fields
 
-| Tests | Reached trap / location |
-| ---: | --- |
-| 6,278 | `src/config.ts:69`, via `src/config.ts:11:3`: pinned default-config JSON round-trip trap; 1,656 rules, 4,508 statements, 114 structures |
-| 18 | `test/rules/_utils.ts:13:21`: `identifier JSON is not a lowered local or module value`, in `fullErrorNamespace` |
+The first assigned site is **`test/rules/downport.ts:13`**, not the rule's
+source import at `src/rules/downport.ts:13`. `buildConfig` changes
+`Config.getDefault().get().syntax.version`, serializes the whole graph, and
+constructs a new Config. The generic frontend now recognizes the default-library
+JSON binding, with exactly one argument. Shadowed bindings are not intrinsics.
+String parsing uses the existing strict JSON adapter; input coercion, revivers,
+replacers and indentation explicitly refuse.
 
-The **1,321 forEach traps and the one uninitialized `crlf` trap are gone**.
-Config and async implementations were deliberately not changed.
+The usage-gated Go writer preserves tagged-record insertion order (numeric
+index keys first), array positions including holes, undefined-property omission,
+UTF-16 escaping, primitive encoding and recursive data graphs. Unsupported root
+undefined values, cycles, toJSON hooks and unproven native own-key order trap.
+ABAP explicitly refuses `json.stringifySubset`; this is not an identity clone
+or debug-string serializer.
 
-## forEach/every: length snapshot, live membership and values
+A newly reached bug replayed a parsed shape's stale input graph after direct
+native field writes. That lost the requested Downport release and caused issue
+mismatches in an intermediate experiment. Serialization now retains source key
+order but reads **live fields**, preserving unprojected properties. Multiple
+new keys without write-order metadata refuse. Boxing a changed parsed native
+projection also refuses rather than expose stale source values to a later
+serializer. Node/Go and runtime regressions cover mutation, key order, holes,
+Unicode escaping and native-order refusal. The final reruns have no mismatches.
 
-The existing fingerprinted dense/stable proofs remain fast paths. Unpinned
-array `forEach` and `every` now lower to presence-sensitive indexed loops:
+The JSON/conf702 helper trap is gone. Downport now reaches later, independently
+unsupported syntax/crypto/EditHelper/registry paths; this is not 296 new passes.
 
-- evaluate the receiver once and read length once;
-- check membership immediately before each visit and read the current value;
-- skip holes, including holes created by deletion or out-of-range assignment;
-- visit explicit `undefined` values (they are not holes);
-- observe replacements, removals, shifts and splices; do not visit later pushes;
-- pass the original array and original numeric index to callbacks;
-- return `undefined` for forEach; short-circuit every, with true for an empty array.
+### Artifacts inventory and dynamic constructor arguments
 
-This is a **length snapshot, not an element-copy snapshot**. The presence-aware
-Go array ABI tracks holes separately from values, preserving membership through
-slice, concat, reverse, unshift, splice, pop/shift and reference views. It is
-emitted only when presence/deletion is used; ordinary dense-runtime output stays
-unchanged. `find` keeps its existing separate semantics: it visits missing slots
-as undefined, rather than borrowing forEach's hole-skipping rule.
+The five-type factory remains the frozen deployment adapter. Unpruned lowering
+executes the pinned source's **complete Objects namespace inventory**: ordered
+export enumeration, one dummy construction per export, `getType`, last value
+wins for duplicate type keys, lazy publication, then construction with the
+requested name. Unknown ordinary keys construct UnknownObject. Inherited
+Array/Object properties and unsupported argument domains explicitly refuse
+rather than pretending they are absent inventory keys.
 
-Inline callbacks accept zero through three simple parameters. A forEach callback
-with returns is lifted into its own invocation, so a return cannot escape the
-surrounding method. Unsupported mutable lifted captures still refuse. A
-non-arrow callback using its own `this`, a supplied `thisArg`, arbitrary callable
-values, prototype mutation and other unmodeled constructs remain fail-closed;
-they are not approximated by binding the surrounding method's receiver.
+General descriptor-valued `new` now supports evaluated argument arrays,
+constructor defaults, inherited constructors and ignored extra arguments.
+Receiver and arguments are evaluated once in source order. Required storage
+conversions are checked; unsupported rest/spread/storage domains trap. Go
+factories are usage-gated; ABAP explicitly refuses `classvalue.newArgs`.
+A Node/Go differential exercises inherited constructors, defaults and extras.
+The pinned artifacts refusal is no longer a reached trap in the four shards.
 
-Node/Go differentials exercise holes versus explicit undefined, deletion,
-out-of-range writes, replacements, pushes, shrinking arrays, original index and
-receiver, early return, zero-argument callbacks, sparse slice/reverse/splice,
-empty every and every short-circuiting. The existing source-fingerprint mutation
-check still passes; its unpinned every case now also executes successfully.
+### Optional references and EmptyStructure
 
-## Small initialization fixes and remaining registration barriers
+Known undefined literals retain absence when entering a different optional
+storage type. Optional boxed reference projections check presence before
+unboxing, including map references, instead of forcing absence through a
+present-only conversion. This removes ObsoleteStatement's text-edit-map HIR
+verification barrier, **but 72 executions still reach runtime conversion
+refusals**; that root is not claimed complete.
 
-Fixed generally:
+Reference equality against an optional accepted interface now converts the
+present operand to that interface without narrowing the optional operand.
+Undefined compares unequal rather than throwing, and same/different instance
+identity is retained. This removes EmptyStructure's StatementNode versus
+optional union-interface comparison barrier. Generated-Go regressions cover
+absence, live map values and interface identity.
 
-- boxed plain registration rows expose their stored fields to `dynamic.get`,
-  including absent optional fields; this unlocks `check_comments`,
-  `fully_type_constants`, `method_length` and `newline_between_methods`;
-- map callbacks ending in returning branches use an ordinary lifted invocation,
-  rather than requiring a final syntactic return;
-- property assignment expressions evaluate the reference and RHS once, assign,
-  and yield the **RHS value**, not the receiver;
-- `keyof T` maps through the checker, not to the nominal type of T;
-- dynamic reads/writes of supported class fields and `Object.keys` on
-  zero-argument field-storage classes preserve the existing instance;
-- literal `/\n/g` replacement with a literal, dollar-free replacement lowers to
-  exact global newline replacement. `crlf` failed because this regexp was
-  unsupported, **not** because module initializers ran out of order. The original
-  readiness guard remains.
+### DDIC and ABAP Doc regexps
 
-Remaining actions, recorded exactly in the JSON:
+A small general regexp grammar translates literal ASCII atoms, dot,
+non-folded character classes, anchors and `?`, `*`, `+`. Dot is one UTF-16 unit
+excluding LF, CR, U+2028 and U+2029; non-u ASCII case folding is expressed with
+explicit ASCII alternatives, not Go Unicode case folding. The same source
+implementation certifies literal patterns and handles runtime patterns.
 
-| File / action | Lost tests | Remaining blocker |
+Groups, alternation, backreferences, Unicode/class escapes, folded classes,
+lookarounds, unsupported flags and empty-source canonicalization refuse.
+Node/Go exec differentials include both DDIC exception-name patterns and all
+three ABAP Doc patterns, match text/index, astral input and line terminators.
+The DDIC/ABAP Doc regexp traps are gone. The new runtime is usage-gated; ABAP
+retains its explicit reviewed-pattern refusal for these additional patterns.
+
+## Remaining assigned roots and lost registrations
+
+| Root | Final reached tests / lost registrations | Status |
 | --- | ---: | --- |
-| `keyword_case.ts:289`, `:304` | 5 + 5 | Plain spread objects passed through `any` cannot become nominal `KeywordCaseConf` references; refusal in `src/rules/keyword_case.ts:129` |
-| `line_length.ts:17` | 2 | `new LineLengthConf().length = 400` correctly yields the number **400**; `setConfig`'s nominal config ABI cannot store that number (`src/rules/line_length.ts:35`) |
-| structures `_combi.ts:276` | 1 | Block-local class `Normal` at `:277`; fresh per-invocation constructor identity / local-class capture ABI is not implemented |
+| `src/rules/7bit_ascii.ts:38` | 121 | Plain JSON rule-config values cannot become nominal config references without a live identity/alias-aware structural view; still refuses |
+| `src/rules/obsolete_statement.ts:157` | 72 | Verification barrier removed; checked runtime conversion still refuses |
+| `src/config.ts:11` | 20 statements | Explicit release/language object conversion remains unsupported |
+| `test/rules/keyword_case.ts:289`, `:304` | 10 lost | Spread plain objects cannot become nominal KeywordCaseConf references |
+| `test/rules/line_length.ts:17` | 2 lost | Assignment expression correctly yields scalar 400; config storage cannot retain that scalar |
+| structures `_combi.ts:276` | 1 lost | Block-local class needs fresh per-invocation constructor identity/capture ABI |
 
-No lexer or statement initialization failures remain. No async suite
-initialization failures remain. Local class hoisting and fabricating a nominal
-config instance from a spread object would hide missing runtime semantics; they
-were not used to manufacture registrations.
+No nominal config object was manufactured from a plain object or scalar, no
+local class was hoisted, and no assertion was suppressed. The 24 not-run tests
+are exactly **11 skipped + 13 unregistered**. Registry `findIssues` and
+EditHelper's forEach were left untouched, as requested.
 
-### The 18 JSON serialization cases, precisely
+## New top 10 reached traps
 
-All 18 reach the same **whole-body lowering trap** in `fullErrorNamespace`:
-`Config.getDefault().get()` produces `IConfig`, its `syntax.errorNamespace` is
-changed to `"."`, and the helper calls `new Config(JSON.stringify(conf))`.
-`JSON.stringify` has no generic frontend lowering here, so this helper traps
-before executing its statements. This is not 18 different serialization domains
-and is not evidence that a serializer executed and rejected 18 values.
+Counts are actual trapped test executions, excluding initialization failures;
+normalization and representative full messages are retained in the JSON.
 
-The required input is the **entire nested config graph**, not a primitive string:
-`global`, the dependency-object array, `syntax` (including its version form and
-string arrays), and `rules` containing rule-config field objects; leaves include
-strings, booleans, numbers, enum values and optional undefined properties.
-Correct support must serialize own enumerable fields recursively, omit undefined
-object properties, preserve array positions and JS numeric/string encoding, and
-feed the resulting text through the Config constructor. A Go debug rendering,
-nominal cast, or bypassing that constructor is not JSON.stringify. This graph
-serialization remains unsupported and is reported, not implemented as an
-identity shim; the separate Config round-trip work is left untouched.
+| Rank | Tests | Reached trap |
+| ---: | ---: | --- |
+| 1 | 986 | `src/registry.ts:370`: HIR assignment type mismatch (parallel workstream) |
+| 2 | 194 | `src/rules/downport.ts:713`: ExpressionNode versus ExpressionNode-array runtime argument mismatch |
+| 3 | 187 | `src/edit_helper.ts:220`, `:227`: foreach requires matching array (parallel workstream) |
+| 4 | 121 | `src/rules/7bit_ascii.ts:38`: config reference conversion refusal |
+| 5 | 72 | `src/rules/obsolete_statement.ts:157`: runtime conversion refusal |
+| 6 | 30 | `src/xml_utils.ts:1`: runtime conversion refusal |
+| 7 | 29 | `src/rules/downport.ts:3161`: unsupported crypto/hash values |
+| 8 | 20 | `src/config.ts:11`: explicit release/language conversion refusal (statements) |
+| 9 | 18 | `src/rules/line_only_punc.ts:46`, `:61`: regexp groups outside the supported grammar |
+| 10 | 17 | `src/rules/avoid_use.ts:72`: runtime conversion refusal |
 
-## Ordinary failures: two runtime bugs fixed, 20 Config refusals remain
+Registry/EditHelper counts grow because execution reaches them through removed
+barriers, not because their implementations changed.
 
-- **Structure `sta1 match` now passes.** `DummyNode extends
-  AbstractNode<TokenNode>` actually contains a `StatementNode`. In the unpruned
-  tests path, a common method invoked on an erased generic array element now
-  dispatches through the erased `INode` interface and preserves its result type.
-  It no longer makes a false TokenNode/AbstractToken cast before chai. Default
-  lowering is unchanged. A generated-Go regression covers this mixed-node case.
-- **LOOP AT SCREEN's version-failure test now passes.** Its expected parser
-  failure throws `FailCombinatorError`; the Go catch previously required exactly
-  `payload[Error]`, missing invariant `payload[FailCombinatorError]`. Reference
-  catches now match the TS payload's reference ancestry. Host faults, lowering
-  traps and return/loop-control signals do not implement the payload interface
-  and cannot be swallowed by TypeScript catch.
-- The remaining **20 statement failures** are Config constructor conversion
-  refusals for explicit release/language object forms, not chai mismatches.
-  Their full titles and messages remain in the JSON; no Config changes were made.
+## Gates, reproduction and cleanup
 
-Chai strict equality, instanceof, negation and registration readiness/recovery
-from PR #107 remain intact. Unsupported assertions are not no-ops. Deep chains,
-hooks, arbitrary chai APIs and general async/Promise draining remain uncertified.
+All Go tests used `GOCACHE=$HOME/.cache/go-build`, `GOTOOLCHAIN=go1.26.0`,
+`GOFLAGS=-buildvcs=false`, and `ABAPITI_GRACECHECK=1`.
 
-## Reproduce, compact evidence and gates
+| Gate | Result |
+| --- | --- |
+| `go test ./... -short` | PASS |
+| Grace-enabled `go test ./tsfront/... ./hir/... ./cmd/...` (non-short) | PASS |
+| `go vet ./...` | PASS |
+| Node report/summary multiset contract | PASS |
+| Node test-host runtime contract | PASS, eight scenarios; not TS-HG@Go |
+| Default `abaplint --target all` against `origin/integ/train-2` **236da86** | PASS: empty `diff -r`, 6,339 byte-identical files |
+| `abaplint --full` | Measurement only: 33 blocking (27 root + 6 cascade), 143 HIR errors in 39 files |
 
-Use the unchanged pinned upstream checkout with installed npm dependencies.
-Materialization refuses an existing closure directory. Oracle builds run original
-upstream mocha/chai, never our shims. Keep raw data transient; delete generated
-Go, binaries and copied source after each execution, and the remaining transient
-JSON after producing the compact summary.
+The branch base is ce2f789; origin/integ/train-2 advanced during this work.
+Default output was also compared against the earlier reference executable, then
+freshly compared with 236da86. Both comparisons were empty. No reference-source
+changes were merged into this branch. Full closure numbers above describe this
+branch, not the subsequently advanced integration reference; the supplied base
+had 35 blocking / 151 HIR errors.
 
-```sh
-set -e
-export GOCACHE="$HOME/.cache/go-build"
-export GOTOOLCHAIN=go1.26.0
-export GOFLAGS=-buildvcs=false
-UPSTREAM=/home/alice/dev/abaplint
-mkdir -p .local
-RUN=$(mktemp -d "$PWD/.local/tests-run.XXXXXX")
-trap 'rm -rf "$RUN"' EXIT
-go build -o "$RUN/abapiti" ./cmd/abapiti
+Grace golden updates change **only operation-catalogue counts** for the JSON
+writer and constructor-argument operation. Lexer method/call-site facts remain
+unchanged. Frozen deployment lowering retains its original serials and output;
+new generic semantics apply to unpruned lowering. ABAP refuses unsupported new
+operations explicitly.
 
-for spec in rules abap/lexer abap/statements abap/structures; do
-  name=${spec##*/}
-  files=$(find "$UPSTREAM/packages/core/test/$spec" -name '*.ts' | \
-    sort | perl -pe "s@^$UPSTREAM/packages/core/@@")
-  node tools/abaplint-tests-closure.mjs "$RUN/$name" "$UPSTREAM" $files
-  node tools/abaplint-tests-oracle.mjs "$RUN/node-$name.json" "$UPSTREAM" $files
-  "$RUN/abapiti" abaplint-tests "$RUN/$name" -o "$RUN/$name-out" \
-    >"$RUN/go-$name.json" 2>"$RUN/run.log" || test "$?" = 1
-  node tools/abaplint-tests-report.mjs "$RUN/node-$name.json" \
-    "$RUN/go-$name.json" "$RUN/report-$name.json" >/dev/null
-  # The summary needs only root count and source pin, not copied TS files.
-  node -e 'const f=require("node:fs"),d=process.argv[1];
-    const {roots,upstreamPin}=JSON.parse(f.readFileSync(d+"/closure.json"));
-    f.rmSync(d,{recursive:true});f.mkdirSync(d);
-    f.writeFileSync(d+"/closure.json",JSON.stringify({roots,upstreamPin}));' "$RUN/$name"
-  rm -rf "$RUN/$name-out" "$RUN/run.log"
-done
-node tools/abaplint-tests-summary.mjs "$RUN" docs/abaplint-tests-latest.json
-```
+Reproduction follows the train-2 recipe: materialize each sorted complete shard
+with `tools/abaplint-tests-closure.mjs`; build a fresh original oracle with
+`tools/abaplint-tests-oracle.mjs`; execute `abapiti abaplint-tests`; reconcile with
+`tools/abaplint-tests-report.mjs`; aggregate with
+`tools/abaplint-tests-summary.mjs`. Harness-only builds reuse the measurement-only
+declaration index described in `docs/evidence/train-2-verifier-index.patch`:
+all original bodies are checked in order, with no production verifier changes.
+Code gates and default/full measurements use ordinary source-built executables.
 
-The reporter reconciles full titles as a **multiset**, including duplicates.
-Passed + failed + trapped + not-run equals Node total. Only the compact committed
-JSON/markdown summaries are retained. All transient builds, executables, source
-closures, raw records and logs from this round were removed. No transpiler
-checkout was cloned. During the final sequential run the command timeout stopped
-the structures build; its unchanged generated Go was executed with
-`GOMAXPROCS=4`, reconciled against the fresh oracle, then deleted.
-
-Passed with the stated environment:
-
-```sh
-ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...
-go vet ./...
-node tools/abaplint-tests-report-test.mjs
-node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint
-```
-
-The Grace golden changes **only** runtime-catalogue counts for `array.has` and
-`array.delete`; the 61 lexer call sites and method facts are unchanged.
-`LowerOptions.TrapOnFailure` remains opt-in; test lowering uses nil coverage and
-explicit binary64 semantics, unaffected by `ABAPITI_ASSUME_INT`.
-
-Default **all-target** builds were compared against executables built from
-`git archive origin/main`, finally pinned at **`ea61e23`**. Identical `-o`
-spelling was used because driver READMEs embed it. **All 6,339 files are
-byte-identical**, including the A4H zip; both builds exited zero. Earlier checks
-against `54a521c` and `67d81fc` also matched. The final reference commit, aggregate
-file-hash digest, gates and cleanup policy are recorded in the latest JSON.
+Generated Go/ABAP, binaries, copied closures, oracle builds, raw results, debug
+logs and baseline source extractions were deleted after execution/summary.
+Only compact JSON/markdown evidence is retained. No push or transpiler clone
+was performed.

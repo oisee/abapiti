@@ -898,6 +898,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.jsonCall(n); handled {
+		return x
+	}
 	if x, handled := l.promiseStatic(n); handled {
 		return x
 	}
@@ -1770,7 +1773,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		if cv != nil && cv.Type.Kind == hir.Optional && cv.Type.Args[0].Kind == hir.ClassValue {
 			cv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.ClassValue), X: cv}
 		}
-		if cv != nil && cv.Type.Kind == hir.ClassValue && len(n.Arguments()) == 0 {
+		if cv != nil && cv.Type.Kind == hir.ClassValue && (len(n.Arguments()) == 0 || l.unprunedFeatures) {
 			result := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			if result.Kind == hir.Dynamic {
 				result = hir.Ref(hir.RootObject)
@@ -1778,7 +1781,24 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if l.hint.Kind == hir.ClassRef || l.hint.Kind == hir.InterfaceRef {
 				result = l.hint
 			}
-			return l.rtOp("classvalue.new", cv, result)
+			if len(n.Arguments()) == 0 {
+				return l.rtOp("classvalue.new", cv, result)
+			}
+			saved := l.tempInit(n.Expression(), cv.Type, cv)
+			arrayType := hir.T(hir.Array, hir.T(hir.Dynamic))
+			values := l.tempVar(n, arrayType)
+			for _, arg := range n.Arguments() {
+				if arg.Kind == ast.KindSpreadElement {
+					l.diagf(arg, "unsupported-constructor", "dynamic constructor spread arguments are unsupported")
+					return nil
+				}
+				value := l.expr(arg)
+				if value == nil {
+					return nil
+				}
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("array.push", values, hir.T(hir.I32), l.coerce(value, hir.T(hir.Dynamic)))})
+			}
+			return l.rtOp("classvalue.newArgs", saved, result, values)
 		}
 	}
 	// Context supplies the element types of an empty collection before
@@ -2311,6 +2331,15 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	}
 	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
 		x = l.optionalView(x, y.Type)
+	}
+	// Nullable interface views still compare object identity. Convert the
+	// present operand to the accepted interface before adding absence; never
+	// narrow the optional operand (undefined must compare unequal, not throw).
+	if l.unprunedFeatures && x.Type.IsRef() && y.Type.Kind == hir.Optional && y.Type.Args[0].IsRef() && l.acceptsType(y.Type.Args[0], x.Type) {
+		x = l.optionalView(l.coerce(x, y.Type.Args[0]), y.Type)
+	}
+	if l.unprunedFeatures && y.Type.IsRef() && x.Type.Kind == hir.Optional && x.Type.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], y.Type) {
+		y = l.optionalView(l.coerce(y, x.Type.Args[0]), x.Type)
 	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {

@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 // Emit emits one package named main. Add a main function to execute an entry point.
@@ -91,6 +92,14 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.extendedRegex {
+		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
+		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
+ if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+	}
+	if e.constructorArgs {
+		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
+	}
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
 	}
@@ -125,6 +134,8 @@ func relativeSource(source string) string {
 type emitter struct {
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	extendedRegex     bool
+	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
 	profile           bool
@@ -312,7 +323,14 @@ func (e *emitter) class(c *hir.Class) {
 		e.shapeFields(c)
 	}
 	if source {
-		e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+		if e.configJSON {
+			// Boxing historically returns the parsed input record. After native
+			// writes that record is stale; refuse this escape rather than let a
+			// later dynamic JSON writer silently serialize the old values.
+			e.line("func (self *%s) dynamicSource() *dynamic {if self==nil {return nil};if self.source!=nil && stringifyConfig(self)!=stringifyConfig(self.source) {panic(newTrap(%q))};return self.source}", e.obj(c.Name), "boxing a changed parsed native projection is unsupported")
+		} else {
+			e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+		}
 	} else {
 		e.line("func (self *%s) dynamicSource() *dynamic {return nil}", e.obj(c.Name))
 	}
@@ -1090,7 +1108,10 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
 	}
-	if x.Kind == hir.RuntimeOp && x.Op == "json.stringifyConfig" {
+	if x.Kind == hir.RuntimeOp && x.Op == "classvalue.newArgs" {
+		e.constructorArgs = true
+	}
+	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
 		e.configJSON = true
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {

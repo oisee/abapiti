@@ -76,12 +76,14 @@ var SpecialOps = map[string]bool{
 	"object.hasOwn":       true,
 	"object.has":          true,
 	"object.classOf":      true, // any object ref -> ClassValue
+	"classvalue.newArgs":  true,
 	"classvalue.new":      true, // ClassValue -> a class or interface reference
 	"dynamic.of":          true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":       true,
 	"dynamic.materialize": true, // Dynamic -> a class or interface reference
 	"regexp.new":          true, // pattern, [flags] -> RegExp
 
+	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
 }
 

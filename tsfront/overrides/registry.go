@@ -55,6 +55,8 @@ type Entry struct {
 	// UnprunedPatterns replaces Patterns when no reachability manifest is used.
 	// This keeps frozen workload artifacts stable while extending full closures.
 	UnprunedPatterns *Patterns
+	// UnprunedMethod replaces a workload-only method under the same source pin.
+	UnprunedMethod func() *hir.Method
 	// Assume names a property the lowering may take for granted at the
 	// target ("pure-static-initializer"); the source is still lowered.
 	Assume string
@@ -100,6 +102,9 @@ func (r *Registry) WithReachability(pruned bool) *Registry {
 	for key, e := range r.entries {
 		if e.UnprunedPatterns != nil {
 			e.Patterns = e.UnprunedPatterns
+		}
+		if e.UnprunedMethod != nil {
+			e.Method = e.UnprunedMethod
 		}
 		selected.entries[key] = e
 	}
