@@ -107,7 +107,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if err := l.validateReachability(files, coverage); err != nil {
 		return nil, nil, err
 	}
-	if err := l.validateOverrides(files, registry); err != nil {
+	if err := l.validateOverrides(files, registry.WithReachability(coverage != nil)); err != nil {
 		return nil, nil, err
 	}
 	if coverage == nil {

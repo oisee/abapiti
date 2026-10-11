@@ -24,6 +24,7 @@ type OpEffect struct {
 
 // Explicit records: adding a HIR catalogue operation requires a reviewed entry.
 var RuntimeEffects = map[string]OpEffect{
+	"json.stringifyConfig":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Source-pinned config graph writer; ABAP explicitly refuses emission."},
 	"array.concat":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.get":                 {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.includes":            {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},

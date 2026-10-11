@@ -52,6 +52,9 @@ type Entry struct {
 	Method      func() *hir.Method
 	Expressions map[string]func() *hir.Expr
 	Patterns    *Patterns
+	// UnprunedPatterns replaces Patterns when no reachability manifest is used.
+	// This keeps frozen workload artifacts stable while extending full closures.
+	UnprunedPatterns *Patterns
 	// Assume names a property the lowering may take for granted at the
 	// target ("pure-static-initializer"); the source is still lowered.
 	Assume string
@@ -87,6 +90,22 @@ func (r *Registry) Lookup(key Key, span, location string) (Entry, bool, error) {
 	}
 	return e, true, nil
 }
+
+// WithReachability selects variants without modifying the validated registry.
+func (r *Registry) WithReachability(pruned bool) *Registry {
+	if r == nil || pruned {
+		return r
+	}
+	selected := &Registry{entries: map[Key]Entry{}}
+	for key, e := range r.entries {
+		if e.UnprunedPatterns != nil {
+			e.Patterns = e.UnprunedPatterns
+		}
+		selected.entries[key] = e
+	}
+	return selected
+}
+
 func (r *Registry) Inventory() []Entry {
 	var out []Entry
 	if r != nil {

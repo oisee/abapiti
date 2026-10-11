@@ -1829,6 +1829,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
 		return
+	case "json.stringifyConfig":
+		b.e.err = fmt.Errorf("node %d (%s): json.stringifyConfig is not implemented on ABAP; refusing the config JSON round trip", x.ID, x.Source)
+		return
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")

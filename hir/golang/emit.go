@@ -81,7 +81,11 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
+	jsonWriter := ""
+	if e.configJSON {
+		jsonWriter = configJSONRuntimeSource
+	}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -108,6 +112,7 @@ func relativeSource(source string) string {
 
 type emitter struct {
 	promiseUsed    bool
+	configJSON     bool
 	profile        bool
 	sites          []emittedSite
 	profileIndices map[string]int
@@ -258,6 +263,9 @@ func (e *emitter) effective(c *hir.Class) []string {
 }
 func (e *emitter) class(c *hir.Class) {
 	e.descriptor(c)
+	if e.configJSON {
+		e.configJSONClass(c)
+	}
 	e.line("type %s struct {", e.obj(c.Name))
 	// Only materializable data shapes can acquire a dynamic source. Other
 	// objects still escape normally, but need no permanently nil source slot.
@@ -1047,6 +1055,9 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	}
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "json.stringifyConfig" {
+		e.configJSON = true
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

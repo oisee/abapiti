@@ -8,6 +8,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"json.stringifyConfig": true,
+
 	"string.replaceRegex": true,
 	"string.toLowerCase":  true,
 	"object.classOf":      true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -139,6 +141,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "telemetry()"
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
+	case "json.stringifyConfig":
+		code = "stringifyConfig(" + a + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
 	case "dynamic.null":
