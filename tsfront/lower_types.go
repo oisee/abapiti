@@ -1014,7 +1014,10 @@ func typeRefName(n *ast.Node) string {
 	if t == nil {
 		return "?"
 	}
-	return t.Text()
+	// TypeReference.TypeName is an EntityName: identifiers have text, but
+	// namespace-qualified names must be assembled from their components.
+	// Keep the qualification so N.const is never mistaken for `as const`.
+	return ast.EntityNameToString(t, nil)
 }
 
 // tupleType lowers [A, B, ...] to a synthesized shape class with positional
