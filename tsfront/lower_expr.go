@@ -220,6 +220,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 			}
 		}
 	}
+	if l.integerOptions.TrapOnFailure && l.testShapeView(x.Type, typ) {
+		// Contextual row construction retains its storage layout and object
+		// identity. A narrower checker view is applied at each field read.
+		return x
+	}
 	if keepAbsence && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
