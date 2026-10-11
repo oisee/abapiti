@@ -15,7 +15,7 @@ import "strconv"
 type OpReads struct{ Receiver, Args, Global bool }
 type OpEffect struct {
 	Reads        OpReads
-	Writes       string // "None", "Receiver", or "Arg(i)"
+	Writes       string // "None", "Receiver", "Arg(i)", or "Global" (unknown callback effects)
 	Allocates    bool
 	MayRaise     string // "None", "Trap", or "Catchable"
 	Aliases      string // "None" or "Receiver"
