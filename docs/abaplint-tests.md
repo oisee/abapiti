@@ -1,6 +1,145 @@
 # abaplint's own tests on TS-HG@Go
 
-## Latest N/total — forEach round
+## Latest N/total — all directories
+
+**769/11,060 active Node tests (6.95%).** All **625 files** are selected in
+**17 directory shards**, including `test/*.ts` and files directly in `test/abap/`.
+Upstream remains `577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Harness/compiler
+source: **`67fceb1`**, based on **`e8647a5`** (`integ/train-1`).
+
+The fresh whole-suite original-mocha oracle reports **11,060 passed, zero failed,
+32 pending: 11,092 total**, not 11,060 including pending. The table uses
+**Node active + pending**; every row's Go passed + failed + trapped + not-run
+sums to that row's Node total. Full titles reconcile as a **multiset**, preserving
+legitimate duplicates. No Go titles are unmatched. **No files are excluded or
+unwired; all 17 Go modules built and executed.** Registration loss is not a
+file-selection omission.
+
+| Shard under `test/` | Files | Passed | Failed* | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 44 | 2 | 20 | 154 | 81 | 216 + 4 |
+| `abap/expressions` | 11 | 41 | 2 | 7 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 434 | 20 | 4,508 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 24 | 0 | 114 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 0 | 0 | 1,324 | 49 | 1,332 | 1,363 + 10 |
+| `abap/types` | 6 | 4 | 0 | 25 | 0 | 29 | 29 + 0 |
+| root `*.ts` | 12 | 5 | 0 | 18 | 71 | 94 | 94 + 0 |
+| `cds` | 2 | 3 | 10 | 345 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 1 | 0 | 31 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 1 | 0 | 156 | 36 | 193 | 188 + 5 |
+| `objects` | 26 | 0 | 0 | 29 | 116 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 0 | 0 | 0 | 31 | 2 | 31 + 0 |
+| `rules` | 192 | 10 | 0 | 1,669 | 1,480 | 3,147 | 3,149 + 10 |
+| `utils` | 3 | 0 | 0 | 7 | 8 | 15 | 15 + 0 |
+| **Unique total** | **625** | **769** | **34** | **8,284** | **2,005** | **10,813** | **11,060 + 32** |
+
+**\*Failure-classification limitation on this base:** lowering traps are trapped,
+but other throws still become failed. Of these 34, **10 are actual CDS assertion
+mismatches; 24 are conversion/domain refusals** (22 in Config, two in chai), not
+assertion mismatches. Dell's assertion-only fail-triage work is not included.
+The table/JSON preserve the existing harness statuses rather than silently
+relabeling them; assertion-only triage would make failed **10**, trapped **8,308**,
+with N unchanged. The top-trap ranking also follows these legacy statuses.
+All titles/messages are in `abaplint-tests-latest.json`.
+Not-run comprises **1,700 async/done**, **26 skipped/focused**, and **279
+unregistered** cases, including pending cases that never registered.
+
+### Directory ownership and duplicate-import accounting
+
+`tools/abaplint-tests-all.mjs` discovers every `.ts` root recursively and groups
+by its **immediate parent directory**. `objects` therefore does not also select
+`objects/rename`; `root` contains only `test/*.ts`. Helpers remain selected.
+There is no hard-coded list of the four old shards.
+
+Keep syntax in **one binary**: `modify.ts` and `fugr_import_export.ts` import
+`syntax.ts` (1,153 tests). Splitting it would execute those tests twice. In
+addition, syntax and LSP import the test-bearing
+`test/rules/sql_value_conversion.ts`, registering **six borrowed tests each**.
+Separate original-mocha runs of foreign test modules establish the borrowed
+multiset and statuses. The owning `rules` shard counts those tests; syntax/LSP
+subtract only the independently identified borrowed cases from both Node and Go.
+The latest JSON includes borrowed counts and original registered counts
+(**1,338 syntax; 199 LSP**). Ambiguous own/borrowed title collisions refuse;
+arbitrary duplicate-title deduplication is not used. The final owned-title
+multiset and passed/failed/pending totals match the whole-suite Node run exactly.
+
+A small compiler crash fix was necessary: `typeRefName` no longer calls
+`Node.Text()` on a `QualifiedName` such as `Basic.TableType`. It formats the name
+for diagnostics/`as const` recognition only; checker resolution and cast semantics
+are unchanged. Regression tests cover identifiers, nested qualified names, and
+an emitted Go namespace-qualified cast. The six earlier unaffected shards used
+`e8647a5`; syntax and subsequent shards used the corrected compiler source.
+
+### Top 15 reached traps across the whole suite
+
+Initialization failures are excluded. Long checker types are abbreviated here;
+exact normalized diagnostics, representative messages and shard counts are in
+`abaplint-tests-latest.json`. These are reached traps, not all lowering diagnostics.
+
+| Tests | Message / location |
+| ---: | --- |
+| 6,659 | `src/abap/5_syntax/global_definitions/find_global_definitions.ts`: HIR verification: call arity mismatch |
+| 1,065 | `test/abap/syntax/syntax.ts`: identifier JSON is not a lowered local or module value |
+| 339 | not supported in the Go prototype: JavaScript regexp `/^@\w+$/` |
+| 91 | `src/artifacts_objects.ts: src/artifacts_objects.ts:8` |
+| 18 | `test/rules/_utils.ts`: identifier JSON is not a lowered local or module value |
+| 15 | `test/cds/cds_parser.ts`: captured parseView has no lowered type |
+| 13 | `test/ddl/tabl.ts`: property deep is not lowered |
+| 7 | `test/cds/cds_parser.ts`: captured parse has no lowered type |
+| 7 | `test/utils/name_validator.ts`: object literal property patternKind is not in shape `NamingRuleConfig`; identifier ruleViolated is not a lowered local or module value |
+| 6 | `test/registry.ts`: captured getConfig has no lowered type |
+| 6 | `test/abap/syntax/syntax_atselection.ts`: identifier JSON is not a lowered local or module value |
+| 5 | `test/abap/expressions/sql_set_op.ts`: recursive tuple-union checker type is not a lowered declaration; empty array literal outside a statement context |
+| 4 | `test/abap/native_sql_colon.ts`: captured nativeOf has no lowered type |
+| 3 | `test/objects/class.ts`: type assertion requires checker-proven narrowing of its operand; identifier clas is not a lowered local or module value |
+| 3 | `test/objects/malformed_xml.ts`: captured wrapValues has no lowered type |
+
+### Reproduce the entire suite with one command
+
+```sh
+export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
+node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/abaplint-tests-latest.json
+```
+
+The command prints one table, checks the pinned active denominator and exact Node
+multiset/totals, and writes the compact summary. It compiles original upstream
+once into disposable storage, with a separate original-mocha process for each
+oracle; no runtime shims enter Node. One generated Go binary is built per
+directory. Generated Go, binaries and source closures are deleted after each
+shard, and transient records after summarization. Only compact committed
+JSON/markdown evidence is retained. No transpiler checkout was cloned.
+
+During this measurement the initial split and cross-directory import overlaps
+were detected, not ignored. After all generated modules had built/executed,
+the final reconciliation re-linked and executed their **actual Go build-cache
+archives**, using fresh whole-suite/per-shard/borrowed-module Node oracles. No
+passes or registrations were estimated or synthesized. The discarded syntax
+split is not counted. Builds, re-linked binaries, closures and raw records were
+then removed; the JSON records this provenance.
+
+Passed at this revision with the specified environment:
+
+```sh
+ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+```
+
+Default `abapiti abaplint -o out` builds against **`e8647a5`** and this branch were
+compared with `diff -r`: **all 6,339 files byte-identical**, including the A4H zip.
+Both executions used the **same absolute output path**, moving the first output
+aside before the second, because READMEs embed resolved paths. The aggregate
+path/content SHA-256 is
+`54fdd8ad3fad9614ece559ba20b30bf772678365d3f8b576b3eb1572f7c300d4`.
+
+## Historical four-shard N/total — forEach round
+
+The remainder documents the older four-shard round and its implementation notes,
+not the current whole-suite counts above.
 
 Pinned upstream: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`
 (@abaplint/core 2.120.56). Compiler/runtime revision: **`8acc4f2`**, based on
