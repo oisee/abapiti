@@ -2461,7 +2461,12 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 
 // objectLiteral constructs a named or synthesized structural data class.
 // Spread properties copy the fields of the spread value first.
-func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
+func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
+	defer func() {
+		if out != nil && out.Kind == hir.New && out.Type.Kind == hir.ClassRef {
+			out.OwnKeys = l.literalOwnKeys(n)
+		}
+	}()
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
 		hint = hint.Args[0]
@@ -2862,7 +2867,7 @@ func (l *lowerer) callReceiver(at *ast.Node, recv *hir.Expr, params []hir.Param)
 func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
 	outputHint := l.hint
 	l.hint = hir.Type{}
-	recv := l.expr(n)
+	recv := l.anyCallReceiver(n, l.expr(n))
 	l.hint = outputHint
 	return recv
 }

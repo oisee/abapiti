@@ -104,10 +104,10 @@ export class Probe {
 }
 
 func TestLSPUnsupportedAndShadowed(t *testing.T) {
-	_, ds := lspProbe(t, `import {TextDocumentEdit} from "vscode-languageserver-types"; export class Probe { static run(): boolean { return TextDocumentEdit.is({}); } }`)
+	_, ds := lspProbe(t, `import {Position} from "vscode-languageserver-types"; export class Probe { static run(): boolean { return Position.is({}); } }`)
 	found := false
 	for _, d := range ds {
-		if d.Category == "unsupported-lsp-call" && strings.Contains(d.Message, "TextDocumentEdit.is") {
+		if d.Category == "unsupported-lsp-call" && strings.Contains(d.Message, "Position.is") {
 			found = true
 		}
 	}
@@ -116,6 +116,56 @@ func TestLSPUnsupportedAndShadowed(t *testing.T) {
 	}
 	prog := lowerStatementsProbe(t, map[string]string{"main.ts": `class Range { static create(a: number, b: number): number { return a+b; } } export class Probe { static run(): number { return Range.create(2,3); } }`}, []string{"main.ts"})
 	if got := runGoHIR(t, prog, "fmt.Print("+goEntry("main.ts.Probe", "run")+"())"); got != "5" {
+		t.Fatal(got)
+	}
+}
+
+func TestLSPGuards(t *testing.T) {
+	source := `import {TextDocumentEdit as D, RenameFile as F, Position, Range, TextEdit} from "vscode-languageserver-types";
+ export class Probe {static calls=0;static once():any {Probe.calls=Probe.calls+1;return JSON.parse('{"kind":"rename","oldUri":"old","newUri":"new"}');}
+ static run():string {
+ const doc=D.create({uri:"file",version:1},[TextEdit.replace(Range.create(Position.create(0,0),Position.create(1,1)),"edit")]);
+ const good=F.create("old","new",{overwrite:true},"id");
+ return D.is(doc)+"|"+F.is(good)+"|"+D.is(good)+"|"+F.is(doc)+"|"+
+ D.is(JSON.parse('{"textDocument":{"uri":"file","version":null},"edits":[]}'))+"|"+
+ D.is(JSON.parse('{"textDocument":{"uri":"file","version":1.5},"edits":[]}'))+"|"+
+ D.is(JSON.parse('{"textDocument":{"uri":"file","version":2147483648},"edits":[]}'))+"|"+
+ D.is(JSON.parse('{"textDocument":{"uri":1,"version":1},"edits":[]}'))+"|"+
+ D.is(JSON.parse('{"textDocument":{"uri":"file","version":1},"edits":{}}'))+"|"+
+ F.is(JSON.parse('{"kind":"rename","oldUri":"old","newUri":"new","options":{"overwrite":1}}'))+"|"+
+ F.is(JSON.parse('{"kind":"rename","oldUri":"old","newUri":"new","annotationId":false}'))+"|"+
+ D.is(undefined)+"|"+F.is(Probe.once())+"|"+Probe.calls;
+ }}`
+	p, ds := lspProbe(t, source)
+	for _, d := range ds {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Fatal(d)
+		}
+	}
+	if errs := hir.Verify(p); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "runtime operation lsp.is") {
+		t.Fatalf("expected explicit ABAP guard refusal, got %v", err)
+	}
+	got := runGoHIR(t, p, "fmt.Print("+goEntry("main.ts.Probe", "run")+"())")
+	want := "true|true|false|false|true|true|false|false|false|false|false|false|true|1"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestLSPGuardFalsyValueRefusal(t *testing.T) {
+	p, ds := lspProbe(t, `import {RenameFile} from "vscode-languageserver-types";
+ export class Probe {static condition():string {if(RenameFile.is(undefined)){return "true";}return "false";}
+ static value():boolean {return RenameFile.is(undefined);}}`)
+	for _, d := range ds {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Fatal(d)
+		}
+	}
+	main := "fmt.Print(" + goEntry("main.ts.Probe", "condition") + "());defer func(){if _,ok:=recover().(trap);!ok {panic(\"guard falsy value must refuse\")};fmt.Print(\"|refused\")}();" + goEntry("main.ts.Probe", "value") + "()"
+	if got := runGoHIR(t, p, main); got != "false|refused" {
 		t.Fatal(got)
 	}
 }

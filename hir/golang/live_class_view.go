@@ -84,6 +84,10 @@ func (e *emitter) liveFields(c *hir.Class) {
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"
 		}
-		e.line("func (self *%s) %s(value %s) {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {self.viewSource.put(str(%q),%s);return};self.%s=value}", e.obj(c.Name), write, e.typ(f.Type), f.Name, value, e.member(f.Name))
+		metadata := ""
+		if e.extraRuntimeKeys && c.Structural {
+			metadata = ";if self.ownKeys!=nil {self.ownKeys.set(str(" + fmt.Sprintf("%q", f.Name) + "),nil)}"
+		}
+		e.line("func (self *%s) %s(value %s) {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {self.viewSource.put(str(%q),%s);return};self.%s=value%s}", e.obj(c.Name), write, e.typ(f.Type), f.Name, value, e.member(f.Name), metadata)
 	}
 }

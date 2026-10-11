@@ -787,7 +787,7 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	if n.Kind == ast.KindCallExpression {
 		base = base.Expression()
 	}
-	recv := l.expr(base)
+	recv := l.anyCallReceiver(base, l.expr(base))
 	if base.Kind == ast.KindElementAccessExpression {
 		arr := l.expr(base.Expression())
 		if arr != nil && arr.Type.Kind == hir.Array {

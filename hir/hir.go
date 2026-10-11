@@ -163,6 +163,7 @@ type Expr struct {
 	Value           any // nil denotes undefined; primitive Optional literals denote present values
 	X, Y, Z         *Expr
 	Args            []*Expr
+	OwnKeys         *[]string     `json:",omitempty"` // New: proven own-property presence and insertion order; nil means unknown
 	Range           *IntegerRange // NumericConvert narrowing proof
 	Stmt            *Stmt         // Seq: the statements evaluated before Y
 }

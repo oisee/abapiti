@@ -179,6 +179,7 @@ type emitter struct {
 	code              strings.Builder
 	err               error
 	extra             strings.Builder
+	lspGuards         bool
 	extraRuntimeKeys  bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
@@ -335,6 +336,9 @@ func (e *emitter) class(c *hir.Class) {
 		e.configJSONClass(c)
 	}
 	e.line("type %s struct {", e.obj(c.Name))
+	if e.extraRuntimeKeys && c.Structural {
+		e.line("ownKeys *orderedMap[jsString,*dynamic]")
+	}
 	if len(e.liveClasses) > 0 && c.Structural {
 		e.line("viewExtras *orderedMap[jsString,*dynamic]")
 	}
@@ -707,10 +711,36 @@ func (b *body) expr(x *hir.Expr) string {
 		a := []string{}
 		if t.Kind == hir.ClassRef {
 			m, _ := e.method(e.classBy(t.Name), "constructor")
-			for i, v := range x.Args {
-				a = append(a, b.value(v, m.Params[i].Type))
+
+			if e.extraRuntimeKeys && e.classBy(t.Name).Structural && x.OwnKeys != nil {
+				a = make([]string, len(x.Args))
+				for _, key := range *x.OwnKeys {
+					for i, param := range m.Params {
+						if param.Name == key {
+							a[i] = b.temp(param.Type, b.value(x.Args[i], param.Type))
+							break
+						}
+					}
+				}
+				for i, v := range x.Args {
+					if a[i] == "" {
+						a[i] = b.value(v, m.Params[i].Type)
+					}
+				}
+			} else {
+				for i, v := range x.Args {
+					a = append(a, b.value(v, m.Params[i].Type))
+				}
 			}
 			code = e.name("new."+t.Name) + "(" + strings.Join(a, ",") + ")"
+			if e.extraRuntimeKeys && e.classBy(t.Name).Structural && x.OwnKeys != nil {
+				result := b.temp(t, code)
+				b.line("%s.ownKeys=&orderedMap[jsString,*dynamic]{}", result)
+				for _, key := range *x.OwnKeys {
+					b.line("%s.ownKeys.set(str(%q),nil)", result, key)
+				}
+				return result
+			}
 		} else {
 			for _, v := range x.Args {
 				a = append(a, b.expr(v))
@@ -1018,6 +1048,11 @@ func (b *body) stmt(s *hir.Stmt) {
 			a := b.expr(s.X.X)
 			v := b.value(s.Y, s.X.Type)
 			b.line("%s.%s().%s(%s)", a, e.getter(c.Name), e.name("view.write."+c.Name+"."+s.X.Name), v)
+		} else if s.X.Kind == hir.FieldGet && e.extraRuntimeKeys && e.classBy(s.X.X.Type.Name).Structural {
+			a := b.temp(s.X.X.Type, b.expr(s.X.X))
+			v := b.value(s.Y, s.X.Type)
+			b.line("%s.%s=%s", a, e.member(s.X.Name), v)
+			b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", a, a, s.X.Name)
 		} else if s.X.Kind == hir.IndexGet {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)

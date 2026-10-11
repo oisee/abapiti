@@ -9,6 +9,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true,
 	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex": true,
 	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
@@ -236,6 +237,20 @@ func (b *body) runtime(x *hir.Expr) string {
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			code = "func() *dynamic {if !" + a + ".Has {return nil};return " + boxer + "(" + a + ".Value)}()"
 		}
+	case "lsp.isTextDocumentEdit", "lsp.isRenameFile":
+		if !b.e.lspGuards {
+			b.e.extra.WriteString(lspGuardsSource)
+			b.e.lspGuards = true
+		}
+		helper := "lspTextDocumentEdit"
+		if x.Op == "lsp.isRenameFile" {
+			helper = "lspRenameFile"
+		}
+		tail := ""
+		if x.Op == "lsp.isRenameFile" {
+			tail = "," + args[0]
+		}
+		code = helper + "(" + a + tail + ")"
 	case "dynamic.isString":
 		code = a + "!=nil && " + a + ".Tag==1"
 	case "dynamic.isFunction":
