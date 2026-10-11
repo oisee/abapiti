@@ -13,7 +13,7 @@ include duplicates and pending cases; no titles or statuses were synthesized.
 | `test/abap/structure_errors.ts:15` | 4 | `cases.forEach`, annotated structural callback row, dynamic `it.skip(c.abap)`; native row-shape narrowing | Dell, all four are Node pending |
 | `test/abap/expressions/reuse.ts:10,70` | 57 | heterogeneous expression instances in a module table, `forEach`, title calls `r.getName()`; initializer nominal-union storage mismatch, then failed readiness | Dell |
 | `test/abap/structures/_combi.ts:276` | 1 | nested describe with block-local `class Normal` | Dell, local constructor identity/capture ABI |
-| `test/abap/syntax/syntax.ts:16428` | 41 | ordinary suite-local XML fixture builders and direct `it` registrations; lifted helpers incorrectly required a module receiver in a suite thunk | repaired; actual execution required below |
+| `test/abap/syntax/syntax.ts:16428` | 41 | ordinary suite-local XML fixture builders and direct `it` registrations; lifted helpers incorrectly required a module receiver in a suite thunk | final: all register, 39 active bodies pass, two stay pending |
 | `test/rules/line_length.ts:17` | 2 | helper registers a table after `new LineLengthConf().length = 400`; assignment correctly yields **400**, setter requires a config reference | Dell |
 
 The live-class-view merge already recovered the ten historical `keyword_case`
@@ -168,7 +168,8 @@ remain Dell-owned. Existing E/C write-ups supply their detailed oracle contracts
 
 ### ABAPObject.findTexts — native string-key record versus Dynamic key
 
-The selected 13-test `string <- dynamic` bucket is **not** unescape or parseInt.
+The initial selected 13-test `string <- dynamic` bucket is **not** unescape or
+parseInt. Final execution reaches 37 cases (32 rules + five objects).
 A temporary untrapped lowering of the original byte-pinned core isolates the
 first invalid operation: `map.get(this.texts, id)` at
 `src/objects/_abap_object.ts:148:11`, with key source `:148:22`.
@@ -184,6 +185,39 @@ string/nonstring/missing ID, uppercase IDs, R without KEY, non-R missing KEY,
 empty/optional keys and text/length values, and incompatible key domains
 refusing rather than creating invented properties. No map-key/coercion ABI code
 was changed. The raw probe and its source closure are deleted after diagnosis.
+
+### Remaining native/own-property domains for Dell
+
+- **Domain.parse, final 23 (16 rules + seven objects):** the owned empty-any[]
+  and checked for-of operations now execute. The remaining bucket is a runtime
+  conversion refusal at the method envelope `domain.ts:100`, not a remaining
+  empty-array lowering diagnostic. `DomainValue` declares language/low/high/
+  description as required native Strings (lines 10–15), while both AFF and XML
+  construction assign optional/erased fields (lines 118–124 and 166–172).
+  Missing header language, description, DOMVALUE_H or other fields can therefore
+  cross a native String storage boundary as undefined. These slots need a sound
+  erased/live field representation, not invented empty strings or schema
+  validation absent from Node. Required oracles: AFF fixedValues and intervals,
+  missing/nonstring fields, XML missing DD07V fields, translations, stable
+  getFixedValues array/object identity and subsequent mutation. The coarse host
+  message does not isolate which slot each of the 23 inputs reaches; no 23-pass
+  estimate or blanket type relaxation is made.
+- **LSP `_lookup.ts:272`, final 55:** `Object.keys(ref.extra)` guards
+  `JSON.stringify(ref.extra)`; the receiver is native IReferenceExtras. Generic
+  Object/global-name lowering alone cannot prove native own/enumerable/presence
+  semantics. Preserve absent versus present-undefined/false flags, key order,
+  inherited/nonenumerable exclusion and live writes, then test both keys and
+  serialization against Node. This is the delegated own-key/native view ABI.
+- **syntax.ts:1894, one case:** the recursive local `visit` in “built-in lines( )
+  after REDUCE” collects IReference objects. HIR reports module receiver versus
+  `closure.41849`. This requires callable/captured receiver storage consistency,
+  not another fabricated module-typed this; the common ABI is unchanged.
+
+Below the final top-20 cutoff, honest owned refusals remain: two padStart/fixture
+cases and three Chai `.all.members` cases in basic_variables.ts. Members must not
+be made a no-op or a simple chain getter. Empty dynamic regexes and ambiguous
+legacy class-hyphen languages remain outside the documented subset. These cases
+are counted as traps, not hidden, skipped or credited as repaired.
 
 ## Grace / certification status
 
@@ -206,8 +240,35 @@ prioritizes rules and syntax via `ABAPITI_TESTS_FIRST` but still executes and
 reconciles every shard/whole-suite title; the ordering helper has partition and
 unchanged-total regression tests.
 
-Final all-shard execution, default-output audit, workload and gates will be
-recorded here after fresh final-source runs. No passing whole-suite claim is made
-from the incomplete diagnostic fixture run: it built during an intermediate
-source edit and refused emission for missing `execSpace`; its zero registrations
-were an explicit infrastructure failure and are not final coverage evidence.
+Final frozen-source execution at **98c43e3** completes all 17 shards / 625 files:
+**10,376/11,060 passed, FAIL 0, 624 trapped, 92 not-run = 64 unregistered +
+28 skipped**, zero async/done and async-pending. All Node titles reconcile as an
+exact multiset; there are no unmatched titles, wiring failures or excluded files.
+See [per-shard counts and top 15](abaplint-tests.md),
+[full compact evidence](evidence/traps-f-final.json), and
+[gate/default/workload audit](evidence/traps-f-gates.json).
+
+The same five base shards now have 4,580 pass / FAIL 0 / 334 trap / 85 not-run
+(64 unregistered + 21 skipped): **+202 actual passes**, registration loss 105→64.
+No full-base run was added. All 39 active STRUCTURE bodies actually pass.
+Remaining 64 missing titles are precisely the four pending structure-error rows,
+57 matcher-union rows, one local-class case and two primitive-config assignments.
+
+Grace-enabled `go test ./... -short -timeout=30m`, full tsfront/hir/cmd tests,
+vet and both reporter/partition tests pass. The first package-wide 10m short-test
+deadline expired with tests still progressing; the longer rerun excluded none.
+Default output versus supplied yolo-4@7c2d33f is byte-identical across 6,312 files
+at the same absolute output path (`diff -r` exit 0). Optional Go output changes
+only the runtime subset certification helper and rebuilt executable, justified
+in the gate audit. Fresh original Node and Go match clean/seeded zabapgit kit
+bytes (0/5 issues), also independently checked by go-target-check.py.
+
+The incomplete diagnostic fixture run built during an intermediate source edit
+and refused emission for missing `execSpace`; its zero registrations were an
+explicit infrastructure failure, never coverage evidence. The pre-concat full
+and owned runs were stopped to close the newly reached owned trap, then every
+final shard was regenerated and executed from frozen source. A mistyped workload
+probe invocation failed before reading kit input; the corrected final invocation
+completed fresh Node/Go and independent kit comparisons. Only compact evidence
+is retained; generated sources, binaries, closures, raw data and profiles are
+removed. No push or transpiler clone was performed.

@@ -1,6 +1,101 @@
 # abaplint's own tests on TS-HG@Go
 
-## Integration train 3 — current full measurement
+## Trap batch F — frozen-source full measurement
+
+**10,376/11,060 active tests passed (93.82%), FAIL 0.** All 625 files and
+17 shards built and executed at **`98c43e3`**, against fresh original Node at
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`. There are **624 typed traps**,
+zero async-pending executions, and **92 not-run = 64 unregistered + 28 skipped**
+(zero async/done). Node has 32 pending tests: four remain unregistered and 28
+register as skipped. No files are excluded, no wiring failures or unmatched Go
+titles occur, and the complete title **multiset**, including duplicates and
+borrowed registrations, reconciles. No passes are estimated or synthesized.
+
+See [owned roots and precise Dell handoffs](traps-f-roots.md),
+[all-shard evidence and exact remaining missing titles](evidence/traps-f-final.json),
+[base registration audit](evidence/traps-f-registration-base.json), and
+[gate/default/workload evidence](evidence/traps-f-gates.json).
+The supplied yolo-4 base is pinned at `7c2d33f`; only five base shards were run
+here. Their actual pass count improves **4,378 → 4,580 (+202)**, and their
+unregistered count falls **105 → 64**. The historical 115 included ten
+keyword-case cases already recovered on this base; F does not credit them again.
+All 41 STRUCTURE titles now register: **39 active bodies pass, two stay pending**.
+
+| Shard under `test/` | Files | Passed | Failed | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 168 | 0 | 48 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 42 | 0 | 8 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,353 | 0 | 10 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 23 | 0 | 6 | 0 | 29 | 29 + 0 |
+| root `*.ts` | 12 | 66 | 0 | 28 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 334 | 0 | 24 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 74 | 0 | 114 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 105 | 0 | 39 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 10 | 0 | 21 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 2,879 | 0 | 268 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Unique total** | **625** | **10,376** | **0** | **624** | **92** | **11,028** | **11,060 + 32** |
+
+### F top 15 reached traps
+
+Counts exclude initialization failures; exact messages, locations and shard
+splits are in the evidence JSON. These are reached refusals, not estimated wins.
+
+| Tests | Root / remaining boundary |
+| ---: | --- |
+| 211 | `clear_exporting_parameters.ts:78`: parsed skipNames → native string-array bridge |
+| 55 | `lsp/_lookup.ts:272`: Object.keys/JSON of native IReferenceExtras own properties |
+| 37 | `_abap_object.ts:148`: native string-key map receives Dynamic `id` |
+| 31 | `nesting.ts:253`: Program asserted as sibling Class, common-method view |
+| 27 | `downport.ts:728`: unresolved captured `fix` |
+| 23 | `domain.ts:100`: remaining native value/field conversion domain |
+| 22 | `config.ts:11`: explicit version/language config conversion |
+| 16 | `downport.ts:3520`: dynamic getParameters/importing bridge |
+| 15 | `pretty_printer.ts:16`: constructor/config bridge |
+| 15 | `cds_parser.ts:3879`: captured parseView |
+| 12 | `lsp/references.ts:40`: non-arrow callback invocation ABI |
+| 9 | `identical_conditions.ts:23`: absence-preserving primitive find callback ABI |
+| 7 | `rename_global_interface.ts:18`: assignment/return view |
+| 7 | `pretty_printer.ts:161`: live erased keyword_case assignment |
+| 7 | `cds_parser.ts:3822`: captured parse |
+
+### F reproduction and gates
+
+```sh
+export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
+ABAPITI_GRACECHECK=1 go test ./... -short -timeout=30m
+ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/... -timeout=30m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+ABAPITI_GRACECHECK=1 ABAPITI_TESTS_FIRST=rules,abap/syntax nice -n 10 \
+  node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-f-final.json
+```
+
+All gates pass. The initial package-wide 10-minute short-test deadline expired
+while tests were progressing; the 30-minute rerun excluded no tests. Shard
+priority changes only execution order, never selection or accounting. Interrupted
+pre-final diagnostic runs are disclosed in the roots document and not used as
+whole-suite evidence. Generated binaries, closures, raw records and profiles are
+removed; only compact evidence remains. No transpiler was cloned and nothing
+was pushed.
+
+Default `abaplint` output versus the supplied yolo-4 snapshot: **all 6,312 files
+byte-identical**, including zip output, using the same absolute output path and
+`diff -r`. The optional `--target all,go` comparison changes only
+`go/runtime.go` (dynamic RegExp subset certification) and its rebuilt executable;
+all other bytes match. Fresh original Node, Go and release-kit checks agree on
+zabapgit **clean 0 / seeded 5** issues byte-for-byte. The lexer golden changes
+only six runtime-catalogue counts, including inherited missing class-view facts;
+no lexer method, call-site or oracle facts are altered.
+
+## Integration train 3 — historical full measurement
 
 **9,021/11,060 active tests passed (81.56%).** All 17 shards completed with
 one assertion mismatch, 1,765 traps, zero async-pending executions, and 305
