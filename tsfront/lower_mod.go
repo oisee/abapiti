@@ -229,6 +229,11 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 			}
 		case ast.KindVariableStatement:
 			vars = true
+			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+				if l.moduleCallable(d) && d.Initializer().Kind == ast.KindArrowFunction {
+					funcs = true
+				}
+			}
 		case ast.KindIfStatement, ast.KindExpressionStatement:
 			if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
 				vars = true
@@ -281,6 +286,18 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		// The Go registration boundary runs these actions individually, in
 		// source order. One failed declaration must not erase later suites.
 		l.testModuleActions(f, mod)
+	} else if l.hasModuleCallables(f) {
+		// A newly supported const function is not hoisted like a declaration.
+		// Preserve its initialization point relative to calls and other values.
+		l.moduleFunctions(f, mod)
+		l.class, l.method = mod, init
+		for _, stmt := range l.statementNodes(f) {
+			if stmt.Kind == ast.KindVariableStatement {
+				l.lowerModuleVarStatements([]*ast.Node{stmt}, mod, &body)
+			} else {
+				body = append(body, l.moduleStatementList([]*ast.Node{stmt})...)
+			}
+		}
 	} else {
 		if vars {
 			l.lowerModuleVars(f, mod, &body)
@@ -430,6 +447,17 @@ func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Clas
 			continue
 		}
 		for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
+			if l.moduleCallable(d) {
+				if d.Initializer().Kind != ast.KindArrowFunction {
+					// Reading an alias is observable when its target is still in TDZ.
+					x := l.moduleCallableCall(d, d.Initializer(), hir.L(hir.T(hir.Bool), true))
+					if x.Kind == hir.Seq {
+						*body = append(*body, x.Stmt)
+					}
+				}
+				*body = append(*body, l.assignStatic(mod, d, testReadyPrefix+d.Name().Text(), hir.L(hir.T(hir.Bool), true), hir.T(hir.Bool)))
+				continue
+			}
 			if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Symbol() != nil {
 				if trivialInitializer(d.Initializer()) && !l.moduleConstRead(d) {
 					l.diagf(d, "note-module-const-unread", "module constant %s is only re-exported, never read in the program", d.Name().Text())
@@ -457,6 +485,13 @@ func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Clas
 // methods of the module class.
 func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 	for _, stmt := range l.statementNodes(f) {
+		if stmt.Kind == ast.KindVariableStatement {
+			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+				if l.moduleCallable(d) && d.Initializer().Kind == ast.KindArrowFunction {
+					l.functionBodyToMethod(d.Initializer(), mod, d.Name().Text())
+				}
+			}
+		}
 		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil || isOverloadSignature(stmt) {
 			continue
 		}

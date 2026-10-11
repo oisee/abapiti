@@ -9,13 +9,16 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
+	"string.sha1Hex": true,
+	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
 	"string.toLowerCase":   true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
-	"object.classOf": true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"object.checkedClassView": true,
+	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
@@ -31,7 +34,7 @@ var supportedOps = map[string]bool{
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
 	"string.length": true, "string.concat": true, "string.substring": true, "string.charCodeAt": true,
 	"i32.toString": true, "i64.toString": true, "i64.remainder2": true,
-	"number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
+	"number.ceil": true, "number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
 }
 
@@ -131,6 +134,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "integerString(int64(" + a + "))"
 	case "i64.remainder2":
 		code = a + "%2"
+	case "number.ceil":
+		code = "numberCeil(" + a + ")"
 	case "number.remainder2":
 		code = "numberRemainder2(" + a + ")"
 	case "number.index":
@@ -176,8 +181,29 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
+	case "string.sha1Hex":
+		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
 		code = "dynNull()"
+	case "chai.throwMatch":
+		b.e.usesTypedCatch = true
+		call := a + "." + b.e.member("call") + "()"
+		if method, _ := b.e.method(b.e.classBy(x.X.Type.Name), "call"); method != nil && method.Result.Kind == hir.Promise {
+			call = "drainSettled(" + call + ")"
+		} else {
+			for _, iface := range b.e.p.Interfaces {
+				if iface.Name == x.X.Type.Name {
+					for _, m := range iface.Methods {
+						if m.Name == "call" && m.Result.Kind == hir.Promise {
+							call = "drainSettled(" + call + ")"
+						}
+					}
+				}
+			}
+		}
+		code = "chaiThrowMatch(func(){" + call + "}," + args[0] + ")"
+	case "chai.deepEqual", "chai.deepInclude", "chai.arrayInclude":
+		code = strings.ReplaceAll(x.Op, ".", "") + "(" + a + "," + args[0] + ")"
 	case "dynamic.strictEquals":
 		code = "dynEqual(" + a + "," + args[0] + ")"
 	case "dynamic.isNullish":
@@ -196,10 +222,14 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynTypeof(" + a + ")"
 	case "dynamic.toString":
 		code = "dynToString(" + a + ")"
-	case "dynamic.of":
-		code = "box(" + a + ")"
+	case "dynamic.of", "chai.box":
+		boxer := "box"
+		if x.Op == "chai.box" {
+			boxer = "chaiBox"
+		}
+		code = boxer + "(" + a + ")"
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
-			code = "func() *dynamic {if !" + a + ".Has {return nil};return box(" + a + ".Value)}()"
+			code = "func() *dynamic {if !" + a + ".Has {return nil};return " + boxer + "(" + a + ".Value)}()"
 		}
 	case "dynamic.isString":
 		code = a + "!=nil && " + a + ".Tag==1"
@@ -207,6 +237,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "!=nil && " + a + ".Tag==10"
 	case "dynamic.asString":
 		code = "dynString(" + a + ")"
+	case "object.checkedClassView":
+		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {

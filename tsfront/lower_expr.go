@@ -157,7 +157,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindInstanceOfKeyword || b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}
@@ -901,6 +901,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.mathCeilCall(n); handled {
+		return x
+	}
 	if x, handled := l.jsonCall(n); handled {
 		return x
 	}
@@ -911,6 +914,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.testRuntimeCall(n); ok {
+		return x
+	}
+	if x, ok := l.cryptoHashCall(n); ok {
 		return x
 	}
 	callee := n.Expression()
@@ -945,6 +951,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if sym := l.resolve(callee); sym != nil {
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
+						if check := l.moduleCallableCall(n, callee, hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
+							l.pendStmt(check.Stmt)
+						}
 						args, ok2 := l.callArgsStatic(n, n.Arguments(), ref)
 						if !ok2 {
 							return nil
@@ -1245,8 +1254,12 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: name,
 				Type: l.methodsBy[recvCast.Type.Name+"."+name].Result, X: recvCast, Args: args}
 		}
-		// Library operation, dispatched on the lowered receiver type.
+		// The call's result context is not the receiver's construction
+		// context (e.g. Array<T>[] .flat() produces Array<T>).
+		outputHint := l.hint
+		l.hint = hir.Type{}
 		recv := l.expr(p.Expression)
+		l.hint = outputHint
 		if recv == nil {
 			return nil
 		}
@@ -1863,7 +1876,13 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 	if t := n.Expression(); t != nil && t.Kind == ast.KindIdentifier && t.Text() == "Set" {
 		args := n.Arguments()
 		if len(args) == 1 {
+			// The Set result's construction context is not the iterable's
+			// storage type. In particular, a conditional's empty array arm
+			// must not become a Set while its map arm stays an Array.
+			savedHint := l.hint
+			l.hint = hir.Type{}
 			a := l.expr(args[0])
+			l.hint = savedHint
 			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
 				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
 				fresh := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
@@ -2436,6 +2455,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 					if c.Super == x.Type.Name {
 						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
 					}
+				}
+			}
+			if l.unprunedFeatures {
+				// TS assertions erase; valid nominal views retain the original
+				// object. Unproven downcasts use a checked, trap-only domain on
+				// Go; ABAP explicitly refuses this operation rather than exposing
+				// a catchable ?= exception as though JS performed a cast.
+				if l.acceptsType(mapped, x.Type) {
+					return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+				}
+				if l.acceptsType(x.Type, mapped) {
+					return l.rtOp("object.checkedClassView", x, mapped)
 				}
 			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")

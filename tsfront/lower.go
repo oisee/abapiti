@@ -271,6 +271,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		}
 		done()
 	}
+	l.registerModuleCallables(files)
 	// Register module-variable signatures before any module function body.
 	// Bodies may refer to imported values whose initializers occur later.
 	for _, name := range files {
@@ -285,6 +286,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				if d.Name() == nil || d.Name().Kind != ast.KindIdentifier {
 					continue
 				}
+				if l.moduleCallable(d) {
+					continue
+				}
 				before := len(l.diags)
 				var typ hir.Type
 				if d.Type() != nil {
@@ -293,6 +297,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 					typ = l.mapTypeNode(d.Initializer().Type())
 				} else {
 					typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+				}
+				if hint, ok := l.testModuleArrayContext(d); ok {
+					typ = hint
 				}
 				valid := typ.Kind != hir.Void && !hasBlocking(l.diags[before:])
 				l.diags = l.diags[:before]
@@ -456,7 +463,8 @@ type lowerer struct {
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
 	// funcsBy registers module-level functions (by owner file + name).
-	funcsBy map[string]funcRef
+	funcsBy         map[string]funcRef
+	moduleCallables map[string]*ast.Node
 	// covariants records implicit "class implements interface" edges that the
 	// structural conversion discovered (owner class -> interface name).
 	covariants map[string]map[string]bool
