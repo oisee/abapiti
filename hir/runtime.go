@@ -12,6 +12,7 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
 	"string.match":              {String, 1, false},
 	"array.matchIndex":          {Array, 0, false},
@@ -135,7 +136,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{i}, i, true
 	case "string.charAt":
 		return []Type{i}, T(String), true
-	case "string.trim", "string.trimStart", "string.trimEnd", "string.toUpperCase", "string.toLowerCase":
+	case "string.sha1Hex", "string.trim", "string.trimStart", "string.trimEnd", "string.toUpperCase", "string.toLowerCase":
 		return nil, T(String), true
 	case "string.substr":
 		return []Type{i, i}, T(String), true

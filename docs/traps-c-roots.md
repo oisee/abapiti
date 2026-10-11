@@ -34,3 +34,18 @@ assertions still retain checked-view refusal behavior.
 Focused obsolete_statement + avoid_use: **85 passed, 24 trapped, FAIL 0**.
 Remaining traps are Dell-owned EditHelper (20) and registry assignment (4).
 Generated builds and temporary instrumentation removed.
+
+## Fresh Node SHA-1 pipeline
+
+The frontend recognizes only a fresh namespace-imported `crypto`/`node:crypto`
+`createHash("sha1").update(string).digest("hex")` chain. No intermediate Hash
+state escapes; aliases of the namespace work, local lookalikes do not. Other
+algorithms, encodings, multiple updates, buffers and coercion remain explicit
+traps. Go uses SHA-1 on UTF-8 with Node's replacement of isolated surrogates;
+separate Node-oracle tests exercise empty/ASCII/NUL/Unicode strings, supplementary
+pairs and isolated surrogates, plus once-only input evaluation. ABAP explicitly
+refuses the new operation. This is a generic imported intrinsic, not a Downport
+body rewrite. Pruned/default lowering is unchanged.
+
+Focused Downport remains **1 passed, 297 trapped, 5 not-run, FAIL 0**; both earlier
+roots are gone. EditHelper now blocks 238 tests. No speculative pass credit.
