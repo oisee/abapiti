@@ -74,7 +74,7 @@ directory as well.
 export GOCACHE="$HOME/.cache/go-build"
 export GOTOOLCHAIN=go1.26.0
 export GOFLAGS=-buildvcs=false
-UPSTREAM=/home/alice/dev/abaplint
+UPSTREAM=~/dev/abaplint
 RUN=$(mktemp -d)
 go build -o "$RUN/abapiti" ./cmd/abapiti
 
@@ -163,9 +163,10 @@ callbacks capture each loop iteration's value; a Go-host regression exercises
 that distinction.
 
 The owned chai shim keeps `equal`/`equals` as strict equality, never substitutes
-deep equality. Boxed values use the existing tagged dynamic ABI. Deep chains,
-hooks, arbitrary chai methods, async execution/Promise draining, real timers,
-and the full missing-property/undefined ABI remain unsupported or uncertified.
+deep equality. Boxed values use the existing tagged dynamic ABI. Settled async tests and hooks are described in
+[abaplint-tests-async.md](abaplint-tests-async.md). Deep chains, arbitrary chai
+methods, real timers, and the full missing-property/undefined ABI remain
+unsupported or uncertified.
 Unsupported constructs trap; they are not no-op assertions. Sources in the
 upstream test closure are copied unchanged, hashed and verified. There are no
 SevenBitAscii, Registry, or upstream assertion-body rewrites.
@@ -176,7 +177,7 @@ SevenBitAscii, Registry, or upstream assertion-body rewrites.
 go test ./tsfront/... ./hir/... ./cmd/...
 go vet ./...
 node tools/abaplint-tests-report-test.mjs
-node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint
+node tools/abaplint-tests-runtime-test.mjs ~/dev/abaplint
 ```
 
 Both passed. Rebased the spike onto origin/main `f834c16`. Origin/main then

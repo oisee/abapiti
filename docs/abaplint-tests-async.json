@@ -1,0 +1,1558 @@
+{
+  "branch": "feat/harness-async",
+  "main": "54a521cd51c0494d73e2740fbe9d6328d286d0c6",
+  "harnessParent": "41c7a9aa583a6336d255c8641c4281120ce20907",
+  "asyncParent": "28d6dcdd747fcfb557dc5aad4567301d9db41ca0",
+  "merge": "1974996f01b43c041a1f6185412fef37e7e22b61",
+  "testedImplementation": "56bf815bb1fc4eb27530cd5e7d0afcdff8d828cf",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "artifactDirectory": "/tmp/harness-async",
+  "rules": {
+    "files": 192,
+    "closureFiles": 1732,
+    "before": {
+      "total": 3159,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 1338,
+      "asyncPending": 0,
+      "notRun": 1821,
+      "registered": 2730,
+      "notRunReasons": {
+        "asyncOrDone": 1382,
+        "skippedOrFocused": 10,
+        "unregistered": 429
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1070,
+          "example": "/tmp/harness-async/rules-before/test/rules/_utils.ts:41:24: lowering trap: unsupported-call /tmp/harness-async/rules-before/test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "src/config.ts: src/config.ts:69",
+          "count": 250,
+          "example": "src/config.ts:11:3: src/config.ts:69"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "/tmp/harness-async/rules-before/test/rules/_utils.ts:10:1: lowering trap: unsupported-expr /tmp/harness-async/rules-before/test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        }
+      ]
+    },
+    "after": {
+      "total": 3159,
+      "passed": 5,
+      "failed": 0,
+      "trapped": 1610,
+      "asyncPending": 1134,
+      "notRun": 410,
+      "registered": 2759,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 400
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1069,
+          "example": "/tmp/harness-async/rules-after/test/rules/_utils.ts:41:24: lowering trap: unsupported-call /tmp/harness-async/rules-after/test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "unsupported-expr test/rules/downport.ts: identifier JSON is not a lowered local or module value; unsupported-expr test/rules/downport.ts: identifier conf702 is not a lowered local or module value",
+          "count": 272,
+          "example": "/tmp/harness-async/rules-after/test/rules/downport.ts:13:1: lowering trap: unsupported-expr /tmp/harness-async/rules-after/test/rules/downport.ts:16:30: identifier JSON is not a lowered local or module value; unsupported-expr /tmp/harness-async/rules-after/test/rules/downport.ts:17:10: identifier conf702 is not a lowered local or module value"
+        },
+        {
+          "message": "src/config.ts: src/config.ts:69",
+          "count": 249,
+          "example": "src/config.ts:11:3: src/config.ts:69"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "/tmp/harness-async/rules-after/test/rules/_utils.ts:10:1: lowering trap: unsupported-expr /tmp/harness-async/rules-after/test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-call test/rules/downport.ts: method throw on classref is not lowered",
+          "count": 2,
+          "example": "/tmp/harness-async/rules-after/test/rules/downport.ts:5041:43: lowering trap: unsupported-call /tmp/harness-async/rules-after/test/rules/downport.ts:5047:5: method throw on classref is not lowered"
+        }
+      ]
+    },
+    "originalAsyncCallbacks": {
+      "total": 1382,
+      "byStatus": {
+        "async-pending": 1058,
+        "trapped": 308,
+        "unregistered": 16
+      },
+      "matching": "full title and occurrence ordinal in registration order",
+      "invokedToTrap": 308,
+      "passedOrFailed": 0
+    }
+  },
+  "oracle": {
+    "total": 3159,
+    "passed": 3148,
+    "failed": 1,
+    "pending": 10
+  },
+  "oracleNote": "One original mocha test exceeded its 250ms timeout under host load; full-title multiset reconciliation still has the same 3159-test denominator.",
+  "core": {
+    "before": {
+      "blocking": 373,
+      "rootBlocking": 155,
+      "cascadeBlocking": 218,
+      "hirErrors": 291,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-array": 2,
+        "unsupported-assignment": 11,
+        "unsupported-async": 1,
+        "unsupported-call": 91,
+        "unsupported-callback": 1,
+        "unsupported-expr": 239,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 2,
+        "unsupported-regex": 4,
+        "unsupported-shortcircuit": 1,
+        "unsupported-statement": 2,
+        "unsupported-type": 12
+      },
+      "byArea": {
+        "abap/types": 6,
+        "lsp": 17,
+        "objects": 38,
+        "rules": 300,
+        "src": 12
+      },
+      "byRootMessage": [
+        {
+          "message": "method X on string is not lowered",
+          "count": 77
+        },
+        {
+          "message": "assignment to X is not lowered",
+          "count": 11
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 11
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 11
+        },
+        {
+          "message": "method X on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "async body must be excluded by validated workload coverage",
+          "count": 1
+        },
+        {
+          "message": "binary operator X is not lowered",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "checker type X, void, undefined> is not a lowered declaration",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on array is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on map is not lowered",
+          "count": 1
+        },
+        {
+          "message": "operands cannot preserve the result type classref<X> (left classref<X>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        }
+      ],
+      "files": 71,
+      "blockingByMessage": [
+        {
+          "category": "unsupported-expr",
+          "message": "identifier indentation is not a lowered local or module value",
+          "count": 67
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method repeat on string is not lowered",
+          "count": 40
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method match on string is not lowered",
+          "count": 32
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier fix is not a lowered local or module value",
+          "count": 31
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier fix1 is not a lowered local or module value",
+          "count": 25
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier match is not a lowered local or module value",
+          "count": 13
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier code is not a lowered local or module value",
+          "count": 11
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier abap is not a lowered local or module value",
+          "count": 7
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type RegExpMatchArray is not a lowered declaration",
+          "count": 6
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to abap is not lowered",
+          "count": 5
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method exec on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier issue is not a lowered local or module value",
+          "count": 5
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type RegExpExecArray is not a lowered declaration",
+          "count": 5
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier JSON is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier column is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier found is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier outlineFor is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier start is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-regex",
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "category": "unsupported-call",
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier Object is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier indent is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier pattern is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier value is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "category": "unsupported-array",
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to indentation is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to match is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method toLocaleLowerCase on string is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method trimEnd on string is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier carriage is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier importing is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier label is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier message is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier res is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier result is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier spaces is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier usedForbiddenToken is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "category": "assume-integer",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 1
+        },
+        {
+          "category": "assume-integer",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to code is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to fix1 is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-async",
+          "message": "async body must be excluded by validated workload coverage",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method delete on map is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method flat on array is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method getParameters on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method getStr on classref is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method toLocaleUpperCase on string is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-callback",
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "binary operator KindInKeyword is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier RegExp is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier XMLParser is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier XMLValidator is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier bodyCode is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier candidates is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier crypto is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier data is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier escaped is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier fix2 is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier guidIndex is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier hash is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier isException is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier newFilename is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier regex is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "unary KindPlusPlusToken is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-new",
+          "message": "new RegExp is not a lowered class",
+          "count": 1
+        },
+        {
+          "category": "unsupported-new",
+          "message": "new XMLParser is not a lowered class",
+          "count": 1
+        },
+        {
+          "category": "unsupported-shortcircuit",
+          "message": "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-statement",
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-statement",
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration",
+          "count": 1
+        }
+      ],
+      "verificationByMessage": [
+        {
+          "message": "missing expression",
+          "count": 89
+        },
+        {
+          "message": "condition must be bool",
+          "count": 45
+        },
+        {
+          "message": "call argument type mismatch: string <- void in runtime .",
+          "count": 38
+        },
+        {
+          "message": "call arity mismatch",
+          "count": 22
+        },
+        {
+          "message": "method may fall through without return",
+          "count": 19
+        },
+        {
+          "message": "assignment type mismatch",
+          "count": 16
+        },
+        {
+          "message": "unresolved field range",
+          "count": 6
+        },
+        {
+          "message": "call argument type mismatch: string <- dynamic in runtime .",
+          "count": 5
+        },
+        {
+          "message": "unsupported collection key dynamic",
+          "count": 5
+        },
+        {
+          "message": "conditional type mismatch",
+          "count": 4
+        },
+        {
+          "message": "unresolved local fix",
+          "count": 4
+        },
+        {
+          "message": "foreach requires matching array",
+          "count": 3
+        },
+        {
+          "message": "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 3
+        },
+        {
+          "message": "call argument type mismatch: array<classref<builtin.object>> <- void in runtime .",
+          "count": 3
+        },
+        {
+          "message": "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 3
+        },
+        {
+          "message": "nested optional",
+          "count": 3
+        },
+        {
+          "message": "call argument type mismatch: i64 <- void in runtime .",
+          "count": 2
+        },
+        {
+          "message": "invalid checked integer conversion",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: string <- regexp in runtime .",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .",
+          "count": 2
+        },
+        {
+          "message": "invalid narrowing optional<optional<string>> to optional<string>",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+          "count": 1
+        },
+        {
+          "message": "invalid assignment target",
+          "count": 1
+        },
+        {
+          "message": "invalid literal",
+          "count": 1
+        },
+        {
+          "message": "non-numeric arithmetic",
+          "count": 1
+        },
+        {
+          "message": "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+          "count": 1
+        },
+        {
+          "message": "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+          "count": 1
+        },
+        {
+          "message": "call argument type mismatch: i32 <- void in runtime .",
+          "count": 1
+        },
+        {
+          "message": "unresolved field newText",
+          "count": 1
+        },
+        {
+          "message": "missing method body",
+          "count": 1
+        },
+        {
+          "message": "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>",
+          "count": 1
+        },
+        {
+          "message": "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>",
+          "count": 1
+        }
+      ],
+      "unsupportedAsync": 1
+    },
+    "after": {
+      "blocking": 250,
+      "rootBlocking": 145,
+      "cascadeBlocking": 105,
+      "hirErrors": 325,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-assignment": 2,
+        "unsupported-call": 52,
+        "unsupported-callback": 4,
+        "unsupported-expr": 164,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 3,
+        "unsupported-regex": 4,
+        "unsupported-shortcircuit": 1,
+        "unsupported-statement": 2,
+        "unsupported-type": 11
+      },
+      "byArea": {
+        "abap/5_syntax": 1,
+        "abap/types": 3,
+        "ddl": 2,
+        "lsp": 18,
+        "objects": 112,
+        "rules": 103,
+        "src": 11
+      },
+      "byRootMessage": [
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 47
+        },
+        {
+          "message": "method X on string is not lowered",
+          "count": 36
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 10
+        },
+        {
+          "message": "method X on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "message": "callback block must have exactly one return",
+          "count": 3
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 3
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "message": "assignment to X is not lowered",
+          "count": 2
+        },
+        {
+          "message": "constructor of the object root is not lowered",
+          "count": 2
+        },
+        {
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "binary operator X is not lowered",
+          "count": 1
+        },
+        {
+          "message": "call to KindParenthesizedExpression is not lowered",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "checker type X, void, undefined> is not a lowered declaration",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "every needs a source-pinned dense/stable receiver proof",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on array is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on map is not lowered",
+          "count": 1
+        },
+        {
+          "message": "operands cannot preserve the result type classref<X> (left classref<X>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        }
+      ],
+      "files": 84,
+      "blockingByMessage": [
+        {
+          "category": "unsupported-expr",
+          "message": "identifier Date is not a lowered local or module value",
+          "count": 32
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method match on string is not lowered",
+          "count": 31
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier start is not a lowered local or module value",
+          "count": 21
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier end is not a lowered local or module value",
+          "count": 15
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier match is not a lowered local or module value",
+          "count": 11
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier parsed is not a lowered local or module value",
+          "count": 8
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier JSON is not a lowered local or module value",
+          "count": 6
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method exec on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type RegExpExecArray is not a lowered declaration",
+          "count": 5
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type RegExpMatchArray is not a lowered declaration",
+          "count": 5
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier Object is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier column is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier found is not a lowered local or module value",
+          "count": 4
+        },
+        {
+          "category": "unsupported-regex",
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "category": "unsupported-call",
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "category": "unsupported-callback",
+          "message": "callback block must have exactly one return",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier issue is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier pattern is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier value is not a lowered local or module value",
+          "count": 3
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "category": "unsupported-assignment",
+          "message": "assignment to match is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method toLocaleLowerCase on string is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method trimEnd on string is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "constructor of the object root is not lowered",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier XMLParser is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier carriage is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier importing is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier index is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier label is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier message is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier res is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier result is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier usedForbiddenToken is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "category": "unsupported-new",
+          "message": "new XMLParser is not a lowered class",
+          "count": 2
+        },
+        {
+          "category": "assume-integer",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 1
+        },
+        {
+          "category": "assume-integer",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "call to KindParenthesizedExpression is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "every needs a source-pinned dense/stable receiver proof",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method delete on map is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method flat on array is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method getParameters on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method getStr on classref is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-call",
+          "message": "method toLocaleUpperCase on string is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-callback",
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "binary operator KindInKeyword is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier RegExp is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier XMLValidator is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier candidates is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier crypto is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier ctor is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier escaped is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier fileNewName is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier hash is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier isException is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier newFilename is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier regex is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "identifier typeInformation is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "category": "unsupported-expr",
+          "message": "unary KindPlusPlusToken is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-new",
+          "message": "new RegExp is not a lowered class",
+          "count": 1
+        },
+        {
+          "category": "unsupported-shortcircuit",
+          "message": "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-statement",
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "category": "unsupported-statement",
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+          "count": 1
+        },
+        {
+          "category": "unsupported-type",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration",
+          "count": 1
+        }
+      ],
+      "verificationByMessage": [
+        {
+          "message": "missing expression",
+          "count": 59
+        },
+        {
+          "message": "condition must be bool",
+          "count": 46
+        },
+        {
+          "message": "assignment type mismatch",
+          "count": 44
+        },
+        {
+          "message": "invalid checked integer conversion",
+          "count": 42
+        },
+        {
+          "message": "method may fall through without return",
+          "count": 24
+        },
+        {
+          "message": "call arity mismatch",
+          "count": 22
+        },
+        {
+          "message": "call argument type mismatch: optional<string> <- optional<dynamic> in new .",
+          "count": 22
+        },
+        {
+          "message": "call argument type mismatch: string <- void in runtime .",
+          "count": 7
+        },
+        {
+          "message": "unresolved field range",
+          "count": 6
+        },
+        {
+          "message": "call argument type mismatch: string <- dynamic in runtime .",
+          "count": 5
+        },
+        {
+          "message": "unsupported collection key dynamic",
+          "count": 5
+        },
+        {
+          "message": "conditional type mismatch",
+          "count": 4
+        },
+        {
+          "message": "call argument type mismatch: array<classref<builtin.object>> <- void in runtime .",
+          "count": 4
+        },
+        {
+          "message": "unresolved local fix",
+          "count": 4
+        },
+        {
+          "message": "foreach requires matching array",
+          "count": 3
+        },
+        {
+          "message": "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 3
+        },
+        {
+          "message": "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 3
+        },
+        {
+          "message": "nested optional",
+          "count": 3
+        },
+        {
+          "message": "call argument type mismatch: i64 <- void in runtime .",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: string <- regexp in runtime .",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .",
+          "count": 2
+        },
+        {
+          "message": "invalid narrowing optional<optional<string>> to optional<string>",
+          "count": 2
+        },
+        {
+          "message": "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+          "count": 1
+        },
+        {
+          "message": "invalid assignment target",
+          "count": 1
+        },
+        {
+          "message": "invalid literal",
+          "count": 1
+        },
+        {
+          "message": "non-numeric arithmetic",
+          "count": 1
+        },
+        {
+          "message": "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+          "count": 1
+        },
+        {
+          "message": "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+          "count": 1
+        },
+        {
+          "message": "unresolved field newText",
+          "count": 1
+        },
+        {
+          "message": "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>",
+          "count": 1
+        },
+        {
+          "message": "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>",
+          "count": 1
+        }
+      ],
+      "unsupportedAsync": 0
+    },
+    "attribution": "Core changes include both prerequisite branches. Registry.parseAsync settlement is inherited from the async prerequisite; harness-only thunk and hook changes are opt-in."
+  },
+  "gates": [
+    "PATH=\"$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH\" GOMAXPROCS=2 go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "PATH=\"$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH\" GOMAXPROCS=2 go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "node tools/abaplint-tests-report-test.mjs",
+    "node tools/abaplint-tests-runtime-test.mjs \"$UPSTREAM\""
+  ],
+  "gateResults": {
+    "vet": 0,
+    "shortTests": 0,
+    "nodeContracts": "passed; 8 runtime scenarios plus report reconciliation"
+  },
+  "measurementCommands": {
+    "coreBefore": "GOMAXPROCS=2 /tmp/harness-async/main-abapiti abaplint --full -o /tmp/harness-async/full-before",
+    "coreAfter": "GOMAXPROCS=2 /tmp/harness-async/branch-abapiti abaplint --full -o /tmp/harness-async/full-after",
+    "rulesBefore": "GOMAXPROCS=2 GOFLAGS=\"-p=2 -buildvcs=false\" /tmp/harness-async/base-abapiti abaplint-tests /tmp/harness-async/rules-before -o /tmp/harness-async/before-out > /tmp/harness-async/go-before.json 2> /tmp/harness-async/go-before.log",
+    "rulesAfter": "GOMAXPROCS=2 GOFLAGS=\"-p=2 -buildvcs=false\" /tmp/harness-async/branch-abapiti abaplint-tests /tmp/harness-async/rules-after -o /tmp/harness-async/after-out > /tmp/harness-async/go-after.json 2> /tmp/harness-async/go-after.log",
+    "reconcile": "node tools/abaplint-tests-report.mjs /tmp/harness-async/node-rules.json /tmp/harness-async/go-NAME.json /tmp/harness-async/report-NAME.json",
+    "buildMain": "go build -p 2 -o /tmp/harness-async/main-abapiti ./cmd/abapiti (from git archive of the recorded origin/main SHA)",
+    "buildBranch": "go build -p 2 -o /tmp/harness-async/branch-abapiti ./cmd/abapiti",
+    "defaultMain": "/tmp/harness-async/main-abapiti abaplint -o /tmp/harness-async/default --target all,go",
+    "defaultSnapshot": "mv /tmp/harness-async/default /tmp/harness-async/default-main",
+    "defaultBranch": "/tmp/harness-async/branch-abapiti abaplint -o /tmp/harness-async/default --target all,go",
+    "defaultDiff": "diff -r /tmp/harness-async/default-main /tmp/harness-async/default"
+  },
+  "defaultComparison": {
+    "result": "nonempty inherited difference",
+    "diffBytes": 960,
+    "files": [
+      "go/runtime.go",
+      "go/zabaplint-go"
+    ],
+    "reason": "The harness parent unconditionally includes an unused string.repeat helper. No other generated source, ABAP output, archive or site metadata differs. The emission-only fix is prepared separately and awaits an exception to the reserved repeat scope."
+  },
+  "fixedRoots": [
+    "Promise-returning parameterless test callbacks, including synchronous callbacks returning Promise values",
+    "Go host drains returned settled promises before counting pass and preserves rejection messages",
+    "Pending/uncertified promises and arbitrary thenables are async-pending, never pass",
+    "Async before/beforeEach/afterEach/after hooks, suite lifetime, setup-failure replay and context binding",
+    "Deferred owned mocha callbacks no longer poison module initialization merely by reading class statics"
+  ],
+  "remaining": [
+    {
+      "count": 1058,
+      "scope": "original async callbacks",
+      "reason": "The existing settlement proof cannot certify these producers, including virtual Registry.parseAsync calls through local receivers. They remain async-pending; no scheduler is invented."
+    },
+    {
+      "count": 308,
+      "scope": "original async callbacks now invoked",
+      "reason": "All reach existing traps; principally Config.getDefault JSON round trip and downport JSON/conf702 lowering. No original async candidate is reported as a pass."
+    },
+    {
+      "count": 16,
+      "scope": "original async callbacks now unregistered",
+      "reason": "Merged prerequisite object-array typing makes module initialization fail verification in definitions_top (5), obsolete_statement (4), and unnecessary_pragma (7): expected array<test-row shape>, got array<builtin.object>. Object literal/type ABI is reserved for another owner."
+    },
+    {
+      "count": 400,
+      "scope": "all remaining unregistered rules",
+      "reason": "Registration/module initialization still fails on shapes, dynamic forEach and unsupported regexp, among other recorded diagnostics."
+    },
+    {
+      "count": 250,
+      "scope": "strict core blocking diagnostics",
+      "reason": "Remaining compiler categories are recorded by exact message; 325 HIR verification errors also remain. These are not claimed fixed by the harness integration."
+    }
+  ]
+}
