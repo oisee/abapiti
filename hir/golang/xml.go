@@ -74,9 +74,9 @@ func xmlAdd(d *dynamic, k jsString, v *dynamic) {
 	if old == nil {
 		d.put(k, v)
 	} else if old.Tag == tagArray {
-		old.Value.(*array[*dynamic]).push(v)
+		old.Value.(*array[any]).push(v)
 	} else {
-		d.put(k, &dynamic{tagArray, &array[*dynamic]{Items: []*dynamic{old, v}}})
+		d.put(k, &dynamic{tagArray, &array[any]{Items: []any{old, v}}})
 	}
 }
 func (p *xmlParser) node(closing jsString) *dynamic {

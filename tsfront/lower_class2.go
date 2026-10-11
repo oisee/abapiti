@@ -14,7 +14,10 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	name := fn.Name().Text()
+	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+}
+
+func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {
 	hm := l.methodsBy[owner.Name+"."+name]
 	if hm == nil {
 		return nil
@@ -50,7 +53,11 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	}
 	pre := l.applyDefaults(fn, hm)
 	restore := l.withLocalFns(fn.Body())
-	hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
+	if fn.Body().Kind == ast.KindBlock {
+		hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
+	} else {
+		hm.Body = hir.B(append(pre, l.functionBody(fn.Body()))...)
+	}
 	restore()
 	hm.Body = l.finishAsync(fn, hm, hm.Body)
 	l.pop()
@@ -87,7 +94,7 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: def})})
+					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
 			}
 		}
 		i++

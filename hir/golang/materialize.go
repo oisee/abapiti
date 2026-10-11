@@ -38,7 +38,7 @@ func (e *emitter) materializer(t hir.Type) string {
 		line("return dynNumber(d)")
 	case hir.Array:
 		line("if d==nil {return nil};if d.Tag!=tagArray {jsonFail()}")
-		line("out:=&%s{};for _,item:=range d.Value.(*array[*dynamic]).Items {out.push(%s)};return out", strings.TrimPrefix(e.typ(t), "*"), call(t.Args[0], "item"))
+		line("out:=&%s{};for _,item:=range d.Value.(*array[any]).Items {out.push(%s)};return out", strings.TrimPrefix(e.typ(t), "*"), call(t.Args[0], "box(item)"))
 	case hir.ClassRef:
 		c := e.classBy(t.Name)
 		if c == nil || c.Super != "" || c.Abstract || len(c.Methods) > 0 || c.Ctor == nil || len(c.Ctor.Params) != len(c.Fields) {

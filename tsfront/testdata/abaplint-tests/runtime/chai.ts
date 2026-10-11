@@ -3,18 +3,14 @@ export class Assertion {
   public to: Assertion;
   public be: Assertion;
   public have: Assertion;
-  public not: Assertion;
   public constructor(private value: any, private message = "", private negated = false,
-                     pair = true) {
+                     private deeply = false) {
     this.to = this;
     this.be = this;
     this.have = this;
-    this.not = this;
-    if (pair) {
-      this.not = new Assertion(value, message, !negated, false);
-      this.not.not = this;
-    }
   }
+  public get not(): Assertion { this.negated = true; return new Assertion(this.value, this.message, true, this.deeply); }
+  public get deep(): Assertion { this.deeply = true; return new Assertion(this.value, this.message, this.negated, true); }
   private check(ok: boolean, detail: string, message = ""): void {
     if (ok === this.negated) {
       throw new Error((message || this.message || "assertion failed") + ": " + detail);
@@ -26,7 +22,7 @@ export class Assertion {
     return String(value);
   }
   public equal(expected: any, message = ""): void {
-    const ok = this.value === expected;
+    const ok = this.deeply ? chaiDeepEqual(this.value, expected) : this.value === expected;
     // Do not perform ToPrimitive merely to format a successful assertion.
     if (ok === this.negated) {
       this.check(ok, "expected " + this.display(this.value) +
@@ -34,6 +30,8 @@ export class Assertion {
     }
   }
   public equals(expected: any, message = ""): void { this.equal(expected, message); }
+  public eql(expected: any, message = ""): void { this.check(chaiDeepEqual(this.value, expected), "deep equal check", message); }
+  public eqls(expected: any, message = ""): void { this.eql(expected, message); }
   public greaterThan(expected: number, message = ""): void {
     if (typeof this.value !== "number") { throw new Error("greaterThan requires a number"); }
     this.check((this.value as number) > expected, "greaterThan check", message);
@@ -42,11 +40,24 @@ export class Assertion {
     const object = typeof this.value === "object" && this.value !== null && this.value !== undefined;
     this.check(object && (this.value as object) instanceof expected, "instanceof check", message);
   }
+  // Only existing parameterless void thunks are supported. Checked unboxing
+  // keeps unsupported function representations outside JavaScript catch.
+  public throw(expected = "", message = ""): void {
+    const action = this.value as (() => void);
+    this.check(chaiThrowMatch(action, expected), "throw check", message);
+  }
   public contain(expected: any, message = ""): void {
+    if (this.deeply) {
+      const included = chaiDeepInclude(this.value, expected);
+      // Chai's object subset assertion does not assert for an empty subset,
+      // even when negated. 2 denotes that no-assertion case.
+      if (included !== 2) { this.check(included === 1, "deep include check", message); }
+      return;
+    }
     if (typeof this.value === "string") {
       this.check(this.value.includes(String(expected)), "contain check", message);
     } else {
-      this.check((this.value as any[]).includes(expected), "contain check", message);
+      this.check(chaiArrayInclude(this.value, expected), "contain check", message);
     }
   }
   public include(expected: any, message = ""): void { this.contain(expected, message); }
@@ -63,7 +74,14 @@ export class Assertion {
     return true;
   }
 }
+// Harness intrinsics: only these resolved symbols in tests-only lowering are
+// replaced. Unsupported JS representations raise a typed refusal, not equality.
+export function chaiDeepEqual(actual: any, expected: any): boolean { throw new Error("chai deep intrinsic unavailable"); }
+export function chaiDeepInclude(actual: any, expected: any): number { throw new Error("chai deep intrinsic unavailable"); }
+export function chaiThrowMatch(action: () => void, expected: string): boolean { throw new Error("chai throw intrinsic unavailable"); }
+export function chaiArrayInclude(actual: any, expected: any): boolean { throw new Error("chai array include intrinsic unavailable"); }
+export function chaiFail(message: string): void { throw new Error(message); }
 export function expect(value: any, message = ""): Assertion { return new Assertion(value, message); }
 export namespace expect {
-  export function fail(message: string): never { throw new Error(message); }
+  export function fail(message: string): void { chaiFail(message); }
 }
