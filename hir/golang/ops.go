@@ -9,7 +9,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"string.sha1Hex": true,
+	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
@@ -179,6 +180,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
+	case "string.sha1Hex":
+		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
 		code = "dynNull()"
 	case "dynamic.strictEquals":

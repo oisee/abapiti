@@ -4,6 +4,8 @@ package golang
 const runtimeSource = `package main
 
 import (
+ "crypto/sha1"
+ "encoding/hex"
  "encoding/json"
 	"encoding/binary"
 	"math"
@@ -265,6 +267,9 @@ func dynRef(d *dynamic) any {
 	}
 	return d.Value
 }
+// String() decodes isolated UTF-16 surrogates as U+FFFD, exactly Node's
+// default UTF-8 update encoding, including supplementary pairs.
+func sha1Hex(s jsString) jsString {sum:=sha1.Sum([]byte(s.String()));return str(hex.EncodeToString(sum[:]))}
 func integerString(x int64) jsString     { return str(strconv.FormatInt(x, 10)) }
 func numberRemainder2(x float64) float64 { return math.Mod(x, 2) }
 func numberCeil(x float64) float64 { return math.Ceil(x) }

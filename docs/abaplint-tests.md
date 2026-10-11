@@ -1,5 +1,9 @@
 # abaplint's own tests on TS-HG@Go
 
+Trap-C investigation and the live class view boundary are recorded in
+[traps-c-roots.md](traps-c-roots.md). Its focused measurements do not replace
+the integration train measurement below.
+
 ## Integration train 3 — current full measurement
 
 **9,021/11,060 active tests passed (81.56%).** All 17 shards completed with

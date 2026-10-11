@@ -157,7 +157,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindInstanceOfKeyword || b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}
@@ -916,6 +916,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.testRuntimeCall(n); ok {
 		return x
 	}
+	if x, ok := l.cryptoHashCall(n); ok {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
@@ -1248,8 +1251,12 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: name,
 				Type: l.methodsBy[recvCast.Type.Name+"."+name].Result, X: recvCast, Args: args}
 		}
-		// Library operation, dispatched on the lowered receiver type.
+		// The call's result context is not the receiver's construction
+		// context (e.g. Array<T>[] .flat() produces Array<T>).
+		outputHint := l.hint
+		l.hint = hir.Type{}
 		recv := l.expr(p.Expression)
+		l.hint = outputHint
 		if recv == nil {
 			return nil
 		}
