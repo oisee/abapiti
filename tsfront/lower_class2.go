@@ -87,7 +87,7 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: def})})
+					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
 			}
 		}
 		i++

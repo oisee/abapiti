@@ -1,6 +1,88 @@
 # Trap batch C roots
 
-## Second-round stop: rule configs require Dell-owned class/view ABI
+## Third round: remaining owned roots and integration
+
+### Selection-screen assignment: optional default construction
+
+The 17 selection-screen tests refused in `checkFile`'s prologue, not in a
+registry assignment or class bridge: `mainProgName: string | undefined =
+undefined` emitted an absent optional-dynamic literal assigned to an
+optional-string parameter. `applyDefaults` now coerces each default to the
+parameter's storage type, as ordinary assignments already do. This is shared
+frontend lowering, not a rule override or ABI relaxation.
+`TestDefaultUndefinedNodeOracle` covers omitted/explicit undefined, empty and
+present strings, and lazy once-only default evaluation; Go and ABAP emission
+pass with Grace. Focused original selection-screen tests: **17/17, FAIL 0**.
+
+### LSP own-key enumeration: Dell-owned presence/order ABI handoff
+
+No own-key compiler/runtime code was changed. `Lookup.reference` reaches
+`Object.keys(ref.extra)` at `src/lsp/_lookup.ts:272`; `extra` is the native data
+shape `IReferenceExtras` from `src/abap/5_syntax/_reference.ts`, whose three
+members are optional. The current shape ABI cannot distinguish omitted keys
+from own keys holding undefined, or retain literal insertion/write order.
+Independent Node evidence:
+
+```js
+for (const extra of [{}, {ooName: undefined}, {foundQualified: false},
+                    {ooType: "CLAS", ooName: "X"},
+                    {ooName: "X", ooType: "CLAS"}]) {
+  console.log(Object.keys(extra));
+}
+// [], ["ooName"], ["foundQualified"],
+// ["ooType", "ooName"], ["ooName", "ooType"]
+```
+
+`tsfront/lower_types.go:synthFromProperties/synthFromAlias` use optional field
+values for missing interface members; their constructors have no own-key metadata.
+`hir/golang/emit.go:class` stores those values as native fields, while
+`shape_fields.go:shapeFields` returns undefined for both missing and absent
+optional values. `objectStatic` in `lower_expr2.go` correctly lacks a native
+shape key-order proof. Enumerating Go fields invents absent JS properties;
+filtering undefined loses present-undefined keys, **including the count** used
+by LSP. Parsed-source key order alone is not a live native own-key ABI.
+Dell needs property presence and insertion/deletion/reinsertion order carried
+through native shapes and views, plus mutation/materialization rules. Required
+oracles: empty/present-undefined/false optionals, both literal orders, alias
+writes, delete/reinsert and integer-index ordering. The historical 53-test
+bucket remains a refusal, not a fabricated pass; final reached counts are in
+[the all-shard report](abaplint-tests.md).
+
+### Chai deep assertions: exact supported data graph, explicit refusals
+
+The harness shim supports `.deep.equal/equals`, `.eql/eqls`, and
+`.deep.include/contain`. Tests-only calls resolve the shim's actual helper
+symbols, never arbitrary user methods with matching names. Usage-gated Go
+operations implement Chai 4/deep-eql 4's SameValue primitives (NaN and signed
+zero), positional arrays, pair memoization for cycles, key-set equality
+independent of order, and object subset assertions requiring **presence** as
+well as deep value equality. Nested subset values are full deep equality, not
+recursive partial matching. Sparse array inclusion skips holes; equality reads
+holes as undefined. Empty object subsets do not assert even when negated.
+
+Native enumeration is certified only for required-field data shapes: their
+key set is known and equality does not depend on insertion order. Optional or
+nominal/native enumerable storage, inherited prototype properties, unsupported
+exotic types and string coercions, and direct parsed-to-native snapshot escapes
+remain typed refusals. No identity/live-view ABI, closure or upstream body was
+changed. ABAP explicitly refuses the three harness operations. Effect records
+and backend catalogue checks include these refusals and the earlier SHA-1
+operation; the inspected Grace golden changes only operation fact counts.
+
+**A genuine shim mismatch was found and reported before continuing.** Initially
+`.deep` returned a new assertion without persisting the flag on the original.
+Actual Chai keeps the original's flag and returns a distinct wrapper; `.not`
+is persistent too, and `.eql` must not set `.deep`. The incomplete shard run
+was stopped. The retained `TestChaiDeepNodeOracle` now independently checks
+these reuse/identity cases against actual upstream Chai, alongside 24 positive
+and negative data comparisons and fluent aliases. A negative equality stays
+failed in the oracle; no failed record is relabeled trapped.
+`TestChaiDeepRuntimeNodeOracle` additionally compares NaN, infinities, signed
+zero, cyclic graphs, holes versus undefined and missing-key semantics, and
+requires typed refusals for unproven/inherited properties. Focused original DDL
+is **32/32, FAIL 0**; selection-screen plus DDL is **49/49**.
+
+## Second-round stop (historical): rule configs require Dell-owned class/view ABI
 
 **Stopped at `479373b`, before changing compiler/runtime code.** The erased
 setter conversion cannot be repaired locally while retaining JS identity and

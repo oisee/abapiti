@@ -101,6 +101,23 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	callee := n.Expression()
+	if sym := l.resolve(callee); sym != nil {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" && (sym.Name == "chaiDeepEqual" || sym.Name == "chaiDeepInclude") {
+			args := n.Arguments()
+			if len(args) != 2 {
+				return nil, false
+			}
+			x, y := l.expr(args[0]), l.expr(args[1])
+			if x == nil || y == nil {
+				return nil, true
+			}
+			op, result := "chai.deepEqual", hir.T(hir.Bool)
+			if sym.Name == "chaiDeepInclude" {
+				op, result = "chai.deepInclude", hir.T(hir.I32)
+			}
+			return l.rtOp(op, l.rtOp("chai.box", x, hir.T(hir.Dynamic)), result, l.rtOp("chai.box", y, hir.T(hir.Dynamic))), true
+		}
+	}
 	if callee.Kind != ast.KindPropertyAccessExpression {
 		return nil, false
 	}

@@ -9,6 +9,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true,
 	"string.sha1Hex": true,
 	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
@@ -184,6 +185,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
 		code = "dynNull()"
+	case "chai.deepEqual", "chai.deepInclude":
+		code = strings.ReplaceAll(x.Op, ".", "") + "(" + a + "," + args[0] + ")"
 	case "dynamic.strictEquals":
 		code = "dynEqual(" + a + "," + args[0] + ")"
 	case "dynamic.isNullish":
@@ -202,10 +205,14 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynTypeof(" + a + ")"
 	case "dynamic.toString":
 		code = "dynToString(" + a + ")"
-	case "dynamic.of":
-		code = "box(" + a + ")"
+	case "dynamic.of", "chai.box":
+		boxer := "box"
+		if x.Op == "chai.box" {
+			boxer = "chaiBox"
+		}
+		code = boxer + "(" + a + ")"
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
-			code = "func() *dynamic {if !" + a + ".Has {return nil};return box(" + a + ".Value)}()"
+			code = "func() *dynamic {if !" + a + ".Has {return nil};return " + boxer + "(" + a + ".Value)}()"
 		}
 	case "dynamic.isString":
 		code = a + "!=nil && " + a + ".Tag==1"

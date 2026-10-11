@@ -983,7 +983,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		} else {
 			args(nil)
 		}
-	case "dynamic.of":
+	case "dynamic.of", "chai.box":
 		if a.Kind == Void {
 			v.fail(e.Node, "void box")
 		}
