@@ -8,6 +8,7 @@ import (
 
 var supportedOps = map[string]bool{
 	"json.stringifyConfig": true,
+	"dynamic.classView":    true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,
@@ -33,7 +34,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays are Go-only until the ABAP sparse-array ABI exists.
-var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true}
+var unsupportedOps = map[string]bool{"chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "object.checkedClassView": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "classvalue.newArgs": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

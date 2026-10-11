@@ -5,16 +5,16 @@ root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
 trap 'rm -rf "$gen"' EXIT
-rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestConfigJSONFixtures"
+rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestConfigJSONFixtures" "$gen/TestEmitSwitchGroupedLabels"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures)$' -count=1)
-for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec; do
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels; do
   (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test -p 2 ./tsfront -run "^$suite$" -count=1)
 done
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestRuntimeDebtFixtures" "$osg" --fixture
 node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
-for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec; do
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels; do
   node "$root/.github/ci/hir-lint.mjs" "$gen/$suite" "$osg" --fixture
 done
 for classes in "$gen"/TestConfigJSONFixtures/case*; do
@@ -24,7 +24,7 @@ node "$root/.github/ci/hir-lint.mjs" "$gen/TestConfigJSONFixtures/case0" "$osg" 
 node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
-  for suite in TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestConfigJSONFixtures/case{0,1,2,3}; do
+  for suite in TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3}; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
     if [[ "$suite" == TestRuntimeDebtFixtures ]]; then expected=475; fi

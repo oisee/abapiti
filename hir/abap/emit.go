@@ -15,6 +15,7 @@ import (
 )
 
 type emitter struct {
+	liveClasses  map[string]bool
 	configJSON   bool
 	promiseUsed  bool
 	p            *hir.Program
@@ -61,6 +62,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	hir.SealLiveClassViewBoundary(p)
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
@@ -70,6 +72,10 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	}
 	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
 	e.promiseUsed = hir.UsesSettledPromises(p)
+	e.liveClasses = hir.LiveClassViewLayouts(p)
+	if len(e.liveClasses) > 0 {
+		e.liveRuntime()
+	}
 	e.scanUsage()
 	e.findStaticConstants()
 	e.findConstSets()
@@ -241,6 +247,9 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.InstanceOf && x.Y != nil {
 			need = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" {
+			e.liveRuntime()
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
@@ -407,6 +416,7 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
+	e.liveClassDeclaration(&b, c)
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
 	}
@@ -425,7 +435,16 @@ func (e *emitter) class(c *hir.Class) {
 		fmt.Fprintf(&b, "%s %s TYPE %s.\n", kw, e.member(f.Name), e.typ(f.Type))
 	}
 	if c.Ctor != nil && !e.wideShape(c) {
-		b.WriteString(e.signature(c.Ctor, true))
+		signature := e.signature(c.Ctor, true)
+		if e.liveClasses[c.Name] {
+			if len(c.Ctor.Params) == 0 {
+				signature = strings.Replace(signature, ".\n", " IMPORTING", 1)
+			} else {
+				signature = strings.TrimSuffix(signature, ".\n")
+			}
+			signature += " view_source TYPE REF TO " + e.name("runtime.dynamic") + " OPTIONAL.\n"
+		}
+		b.WriteString(signature)
 	}
 	for _, m := range c.Methods {
 		if m.Name == "class_constructor" && m.Static {
@@ -486,7 +505,11 @@ func (e *emitter) class(c *hir.Class) {
 		if c.Super == "" {
 			fmt.Fprintf(&b, "METHOD %s~%s.\nresult = me->%s( ).\nENDMETHOD.\n", e.name("runtime.described"), name, name)
 		}
-		fmt.Fprintf(&b, "METHOD %s.\nresult = %s.\nENDMETHOD.\n", name, e.descriptorOf(c.Name))
+		if e.liveClasses[c.Name] {
+			fmt.Fprintf(&b, "METHOD %s.\nIF %s IS NOT BOUND.\nresult = %s.\nENDIF.\nENDMETHOD.\n", name, e.name("view.source"), e.descriptorOf(c.Name))
+		} else {
+			fmt.Fprintf(&b, "METHOD %s.\nresult = %s.\nENDMETHOD.\n", name, e.descriptorOf(c.Name))
+		}
 	}
 	for _, n := range c.Implements {
 		for _, i := range e.p.Interfaces {
@@ -511,6 +534,7 @@ func (e *emitter) class(c *hir.Class) {
 			}
 		}
 	}
+	e.liveClassImplementation(&b, c)
 	b.WriteString("ENDCLASS.\n")
 	out := b.String()
 	if e.codeUnits[c.Name] {
@@ -534,6 +558,12 @@ type body struct {
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	m = e.emittedMethod(c, m)
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
+	if !m.Static && name != "constructor" && e.liveClasses[c.Name] {
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+	}
+	if name == "constructor" && e.liveClasses[c.Name] {
+		e.liveConstructor(b, c)
+	}
 	if m.Name == "class_constructor" && m.Static {
 		flag := e.name("builtin.initialized." + c.Name)
 		b.line("IF " + flag + " = abap_true.")
@@ -883,7 +913,12 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.This:
 		b.line(n + " = me.")
 	case hir.FieldGet:
-		b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
+		owner := e.fieldOwner(e.classBy(x.X.Type.Name), x.Name)
+		if owner != nil && e.liveClasses[owner.Name] {
+			b.line(n + " = " + b.receiver(x.X) + "->" + e.name("view.read."+owner.Name+"."+x.Name) + "( ).")
+		} else {
+			b.line(n + " = " + b.receiver(x.X) + "->" + e.member(x.Name) + ".")
+		}
 	case hir.StaticGet:
 		if _, constant := e.staticConstant(x.Owner, x.Name); !constant {
 			b.initialize(x.Owner)
@@ -1004,6 +1039,16 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 
 		z := b.expr(x.Y)
+		if len(e.liveClasses) > 0 && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
+			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
+			b.boxDynamic(left, a, x.X.Type)
+			b.boxDynamic(right, z, x.Y.Type)
+			b.line("IF " + left + " IS BOUND.\n" + n + " = " + left + "->strict_equals( " + right + " ).\nELSE.\n" + n + " = xsdbool( " + right + " IS NOT BOUND ).\nENDIF.")
+			if x.Op == "!=" {
+				b.line(n + " = xsdbool( " + n + " = abap_false ).")
+			}
+			break
+		}
 		if (x.Op == "/" || x.Op == "%") && (t.Kind == hir.I32 || t.Kind == hir.I64) {
 			rem := b.temp(t)
 			b.line(rem + " = " + a + " MOD " + z + ".")
@@ -1094,6 +1139,11 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line(n + " = " + b.value(x.Z, t) + ".")
 		b.line("ENDIF.")
 	case hir.InstanceOf:
+		if len(e.liveClasses) > 0 && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.asRef" && x.X.X.Type.Kind == hir.Dynamic && x.Y == nil {
+			d := b.expr(x.X.X)
+			b.line("IF " + d + " IS BOUND AND " + d + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + " = xsdbool( " + d + "->oval IS INSTANCE OF " + e.name(x.Owner) + " ).\nENDIF.")
+			break
+		}
 		a := b.expr(x.X)
 		if x.Y != nil {
 			// A dynamic class-value operand: walk the descriptor chain.
@@ -1131,6 +1181,9 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
+		if len(e.liveClasses) > 0 && x.X.Type.Kind == hir.ClassRef && e.liveClasses[x.X.Type.Name] {
+			b.line("IF " + a + " IS BOUND AND " + a + "->" + e.name("view.source") + " IS BOUND.\n" + n + " = abap_false.\nENDIF.")
+		}
 	case hir.ClassOf:
 		e.descriptors = true
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
@@ -1615,6 +1668,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		args = append(args, b.value(v, typ))
 	}
+	if x.Op == "map.get" && x.X.Type.Args[1].Kind == hir.Optional {
+		// Keep the physical getter ABI: its outer box records membership.
+		// JS lookup exposes the stored optional, with absence when no box
+		// was returned. The generated getter sets has on every returned box.
+		lookup := b.temp(hir.T(hir.Optional, x.X.Type.Args[1]))
+		b.line(lookup + " = " + a + "->get( p0 = " + args[0] + " ).")
+		b.line("IF " + lookup + " IS BOUND.")
+		b.line(n + " = " + lookup + "->value.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "array.matchIndex" {
 		b.e.matchUsed = true
 		b.line("IF " + a + "->match_has_index <> abap_true.")
@@ -1954,6 +2018,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("CREATE OBJECT " + w + ".")
 		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
 		return
+	case "dynamic.classView":
+		b.liveView(x, n, a)
+		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
 		return
@@ -2221,6 +2288,13 @@ func (b *body) stmt(s *hir.Stmt) {
 		case hir.Local:
 			target = b.locals[s.X.Name]
 		case hir.FieldGet:
+			owner := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
+			if owner != nil && e.liveClasses[owner.Name] {
+				a := b.receiver(s.X.X)
+				v := b.value(s.Y, s.X.Type)
+				b.line(a + "->" + e.name("view.write."+owner.Name+"."+s.X.Name) + "( p0 = " + v + " ).")
+				return
+			}
 			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
 		case hir.StaticGet:
 			b.initialize(s.X.Owner)
@@ -2439,6 +2513,13 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", t)
 			return
 		}
+	}
+	if field == "oval" && len(b.e.liveClasses) > 0 {
+		b.liveBox(n, a, t)
+		if t.IsRef() {
+			b.line("ENDIF.")
+		}
+		return
 	}
 	b.line("CREATE OBJECT " + n + ".")
 	b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>" + tag + ".")

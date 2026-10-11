@@ -272,7 +272,12 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	var x *hir.Expr
+	referenceSet, referenceKeys := l.referenceKeySet(d)
 	switch {
+	case referenceKeys:
+		typ = referenceSet
+		x = &hir.Expr{Kind: hir.New, Node: l.node(init), Type: typ}
+
 	case init != nil && (d.Type() == nil || d.Type().Kind == ast.KindAnyKeyword) && l.isNamespaceValue(init):
 		x, _ = l.namespaceRef(init)
 		typ = x.Type
@@ -287,6 +292,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if hint, ok := l.testModuleArrayContext(d); ok {
+			typ = hint
+		}
 		if typ.Kind == hir.Void {
 
 			return nil
@@ -739,6 +747,13 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	}
 	if x.Type.Kind == hir.OrderedSet {
 		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
+	}
+	// Indexed record reads use map.get's absence-preserving result even
+	// when TypeScript's index signature says the value is an array. A
+	// for-of consumes that array directly; retain the checked reference
+	// view rather than handing an optional array to HIR ForEach.
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Array {
+		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(f.Expression), Type: x.Type.Args[0], X: x}
 	}
 	if x.Type.Kind == hir.Array {
 		elem = x.Type.Args[0]

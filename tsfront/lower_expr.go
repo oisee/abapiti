@@ -157,7 +157,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindInstanceOfKeyword || b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}
@@ -870,7 +870,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	// A record member with a literal name reads the map.
 	if recv.Type.Kind == hir.OrderedMap && n.Name() != nil {
 		key := n.Name().Text()
-		opt := l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), hir.L(hir.T(hir.String), key))
+		opt := l.mapRead(recv, hir.L(hir.T(hir.String), key))
+		if opt.Type.Equal(recv.Type.Args[1]) {
+			return opt
+		}
 		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[1], X: opt}
 	}
 	// Statics and class values through a namespace alias (Ns.member).
@@ -898,6 +901,12 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.mathCeilCall(n); handled {
+		return x
+	}
+	if x, handled := l.jsonCall(n); handled {
+		return x
+	}
 	if x, handled := l.promiseStatic(n); handled {
 		return x
 	}
@@ -905,6 +914,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.testRuntimeCall(n); ok {
+		return x
+	}
+	if x, ok := l.cryptoHashCall(n); ok {
 		return x
 	}
 	callee := n.Expression()
@@ -939,6 +951,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if sym := l.resolve(callee); sym != nil {
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
+						if check := l.moduleCallableCall(n, callee, hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
+							l.pendStmt(check.Stmt)
+						}
 						args, ok2 := l.callArgsStatic(n, n.Arguments(), ref)
 						if !ok2 {
 							return nil
@@ -1129,7 +1144,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: owner.Name, Name: hm.Name, Type: hm.Result, Args: args}
 			}
-			recv := l.expr(p.Expression)
+			recv := l.callReceiverExpr(p.Expression)
 			if recv == nil {
 				return nil
 			}
@@ -1240,7 +1255,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				Type: l.methodsBy[recvCast.Type.Name+"."+name].Result, X: recvCast, Args: args}
 		}
 		// Library operation, dispatched on the lowered receiver type.
-		recv := l.expr(p.Expression)
+		recv := l.callReceiverExpr(p.Expression)
 		if recv == nil {
 			return nil
 		}
@@ -1599,9 +1614,18 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	case hir.OrderedMap:
 		switch name {
 		case "get":
-			return l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), one()), true
+			return l.mapRead(recv, one()), true
 		case "set":
-			a, b := two()
+			var a, b *hir.Expr
+			if recv.Type.Args[1].Kind == hir.Optional && len(args) == 2 {
+				a = l.expr(args[0])
+				saved := l.hint
+				l.hint = recv.Type.Args[1]
+				b = l.expr(args[1])
+				l.hint = saved
+			} else {
+				a, b = two()
+			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
 			return l.rtOp("map.has", recv, boolT, one()), true
@@ -1770,7 +1794,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		if cv != nil && cv.Type.Kind == hir.Optional && cv.Type.Args[0].Kind == hir.ClassValue {
 			cv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.ClassValue), X: cv}
 		}
-		if cv != nil && cv.Type.Kind == hir.ClassValue && len(n.Arguments()) == 0 {
+		if cv != nil && cv.Type.Kind == hir.ClassValue && (len(n.Arguments()) == 0 || l.unprunedFeatures) {
 			result := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			if result.Kind == hir.Dynamic {
 				result = hir.Ref(hir.RootObject)
@@ -1778,7 +1802,24 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if l.hint.Kind == hir.ClassRef || l.hint.Kind == hir.InterfaceRef {
 				result = l.hint
 			}
-			return l.rtOp("classvalue.new", cv, result)
+			if len(n.Arguments()) == 0 {
+				return l.rtOp("classvalue.new", cv, result)
+			}
+			saved := l.tempInit(n.Expression(), cv.Type, cv)
+			arrayType := hir.T(hir.Array, hir.T(hir.Dynamic))
+			values := l.tempVar(n, arrayType)
+			for _, arg := range n.Arguments() {
+				if arg.Kind == ast.KindSpreadElement {
+					l.diagf(arg, "unsupported-constructor", "dynamic constructor spread arguments are unsupported")
+					return nil
+				}
+				value := l.expr(arg)
+				if value == nil {
+					return nil
+				}
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("array.push", values, hir.T(hir.I32), l.coerce(value, hir.T(hir.Dynamic)))})
+			}
+			return l.rtOp("classvalue.newArgs", saved, result, values)
 		}
 	}
 	// Context supplies the element types of an empty collection before
@@ -1831,7 +1872,13 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 	if t := n.Expression(); t != nil && t.Kind == ast.KindIdentifier && t.Text() == "Set" {
 		args := n.Arguments()
 		if len(args) == 1 {
+			// The Set result's construction context is not the iterable's
+			// storage type. In particular, a conditional's empty array arm
+			// must not become a Set while its map arm stays an Array.
+			savedHint := l.hint
+			l.hint = hir.Type{}
 			a := l.expr(args[0])
+			l.hint = savedHint
 			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
 				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
 				fresh := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
@@ -2312,6 +2359,15 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
 		x = l.optionalView(x, y.Type)
 	}
+	// Nullable interface views still compare object identity. Convert the
+	// present operand to the accepted interface before adding absence; never
+	// narrow the optional operand (undefined must compare unequal, not throw).
+	if l.unprunedFeatures && x.Type.IsRef() && y.Type.Kind == hir.Optional && y.Type.Args[0].IsRef() && l.acceptsType(y.Type.Args[0], x.Type) {
+		x = l.optionalView(l.coerce(x, y.Type.Args[0]), y.Type)
+	}
+	if l.unprunedFeatures && y.Type.IsRef() && x.Type.Kind == hir.Optional && x.Type.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], y.Type) {
+		y = l.optionalView(l.coerce(y, x.Type.Args[0]), x.Type)
+	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
 			y = &hir.Expr{Kind: hir.Cast, Type: x.Type, X: y}
@@ -2395,6 +2451,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 					if c.Super == x.Type.Name {
 						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
 					}
+				}
+			}
+			if l.unprunedFeatures {
+				// TS assertions erase; valid nominal views retain the original
+				// object. Unproven downcasts use a checked, trap-only domain on
+				// Go; ABAP explicitly refuses this operation rather than exposing
+				// a catchable ?= exception as though JS performed a cast.
+				if l.acceptsType(mapped, x.Type) {
+					return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+				}
+				if l.acceptsType(x.Type, mapped) {
+					return l.rtOp("object.checkedClassView", x, mapped)
 				}
 			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
@@ -2801,5 +2869,15 @@ func (l *lowerer) callReceiver(at *ast.Node, recv *hir.Expr, params []hir.Param)
 	if prelude || count > len(params) {
 		return l.tempInit(at, recv.Type, recv)
 	}
+	return recv
+}
+
+// callReceiverExpr lowers the receiver in its own type context. The surrounding
+// hint describes the call result, which need not have the receiver's shape.
+func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
+	outputHint := l.hint
+	l.hint = hir.Type{}
+	recv := l.expr(n)
+	l.hint = outputHint
 	return recv
 }

@@ -64,6 +64,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
+		unprunedFeatures:   coverage == nil,
 		settledEnabled:     coverage == nil,
 		generatorEnabled:   true,
 		asyncMethods:       map[*hir.Method]bool{},
@@ -270,6 +271,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		}
 		done()
 	}
+	l.registerModuleCallables(files)
 	// Register module-variable signatures before any module function body.
 	// Bodies may refer to imported values whose initializers occur later.
 	for _, name := range files {
@@ -284,6 +286,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				if d.Name() == nil || d.Name().Kind != ast.KindIdentifier {
 					continue
 				}
+				if l.moduleCallable(d) {
+					continue
+				}
 				before := len(l.diags)
 				var typ hir.Type
 				if d.Type() != nil {
@@ -292,6 +297,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 					typ = l.mapTypeNode(d.Initializer().Type())
 				} else {
 					typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+				}
+				if hint, ok := l.testModuleArrayContext(d); ok {
+					typ = hint
 				}
 				valid := typ.Kind != hir.Void && !hasBlocking(l.diags[before:])
 				l.diags = l.diags[:before]
@@ -345,7 +353,13 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		done()
 	}
 	l.stabilizeUnionABI()
+	l.completeAsyncBridges()
 	l.completeCallArguments()
+	if l.unprunedFeatures {
+		for _, c := range l.out.Classes {
+			c.Structural = l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.")
+		}
+	}
 	l.propagateBridgeTraps()
 	l.inferNumberRanges()
 	if options.AssumeOnlyIntegerCalculations {
@@ -353,6 +367,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if options.TrapOnFailure {
 		l.repairFailedBodies()
+	}
+	if l.unprunedFeatures {
+		hir.SealLiveClassViewBoundary(l.out)
 	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
 	if coverage == nil {
@@ -364,6 +381,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	// The source-pinned deployment is frozen; new generic semantics apply to
+	// unpruned lowering, never perturb its serials or emitted artifacts.
+	unprunedFeatures   bool
 	lspConstructors    bool
 	settledEnabled     bool
 	asyncMethods       map[*hir.Method]bool
@@ -451,7 +471,8 @@ type lowerer struct {
 	// queries about interface types).
 	ifaceNodes map[string]*ast.Node
 	// funcsBy registers module-level functions (by owner file + name).
-	funcsBy map[string]funcRef
+	funcsBy         map[string]funcRef
+	moduleCallables map[string]*ast.Node
 	// covariants records implicit "class implements interface" edges that the
 	// structural conversion discovered (owner class -> interface name).
 	covariants map[string]map[string]bool

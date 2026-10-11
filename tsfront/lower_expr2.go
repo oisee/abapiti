@@ -86,7 +86,7 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		if recv.Type.Args[0].Kind == hir.String && k.Type.Kind == hir.Number {
 			k = l.primitiveString(n, k)
 		}
-		return l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), k)
+		return l.mapRead(recv, k)
 	case hir.Array:
 		k := l.expr(arg)
 		if k == nil {
@@ -111,7 +111,7 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 				}
 				l.diagf(n, "note-dynamic-record", "element access on a dynamic value through its narrowed record type")
 				view := l.rtOp("dynamic.asRef", recv, mapped)
-				return l.rtOp("map.get", view, hir.T(hir.Optional, mapped.Args[1]), k)
+				return l.mapRead(view, k)
 			}
 		}
 		k := l.expr(arg)

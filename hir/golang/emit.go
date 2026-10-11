@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 // Emit emits one package named main. Add a main function to execute an entry point.
@@ -36,6 +37,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e := &emitter{p: p, promiseUsed: hir.UsesSettledPromises(p), names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
 	e.characterSets()
 	e.collectBoxedShapes()
+	e.liveClasses = hir.LiveClassViewLayouts(p)
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
 			e.checkOps(m.Body)
@@ -91,11 +93,26 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if len(e.liveClasses) > 0 {
+		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
+		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
+	}
+	if e.extendedRegex {
+		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
+		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
+ if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+	}
+	if e.constructorArgs {
+		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
+	}
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
 	}
 	if e.usesArrayPresence || e.usesArrayDeletion {
 		runtime = sparseRuntime(runtime)
+	}
+	if e.chaiDeep {
+		runtime += chaiDeepRuntimeSource
 	}
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
@@ -123,8 +140,12 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	chaiDeep          bool
+	chaiThrow         bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	extendedRegex     bool
+	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
 	profile           bool
@@ -136,6 +157,8 @@ type emitter struct {
 	code              strings.Builder
 	err               error
 	extra             strings.Builder
+	liveClasses       map[string]bool
+	liveViews         map[string]bool
 	materializers     map[string]bool
 	stringLiterals    map[string]string
 	classifiers       map[string]string
@@ -286,6 +309,12 @@ func (e *emitter) class(c *hir.Class) {
 		e.configJSONClass(c)
 	}
 	e.line("type %s struct {", e.obj(c.Name))
+	if len(e.liveClasses) > 0 && c.Structural {
+		e.line("viewExtras *orderedMap[jsString,*dynamic]")
+	}
+	if e.liveClasses[c.Name] {
+		e.line("viewSource *dynamic")
+	}
 	// Only materializable data shapes can acquire a dynamic source. Other
 	// objects still escape normally, but need no permanently nil source slot.
 	source := c.Super == "" && !c.Abstract && len(c.Methods) == 0 && c.Ctor != nil && len(c.Ctor.Params) == len(c.Fields)
@@ -307,12 +336,30 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	if e.chaiDeep {
+		e.chaiDeepShape(c, source)
+	}
+	if e.chaiThrow {
+		e.chaiThrowShape(c)
+	}
+	if len(e.liveClasses) > 0 && c.Structural {
+		e.line("func (self *%s) structuralRecord() {}", e.obj(c.Name))
+	}
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
-	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] {
+	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] || len(e.liveClasses) > 0 && c.Structural {
 		e.shapeFields(c)
 	}
-	if source {
-		e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+	if e.liveClasses[c.Name] {
+		e.line("func (self *%s) dynamicSource() *dynamic {if self==nil {return nil};return self.viewSource}", e.obj(c.Name))
+	} else if source {
+		if e.configJSON {
+			// Boxing historically returns the parsed input record. After native
+			// writes that record is stale; refuse this escape rather than let a
+			// later dynamic JSON writer silently serialize the old values.
+			e.line("func (self *%s) dynamicSource() *dynamic {if self==nil {return nil};if self.source!=nil && stringifyConfig(self)!=stringifyConfig(self.source) {panic(newTrap(%q))};return self.source}", e.obj(c.Name), "boxing a changed parsed native projection is unsupported")
+		} else {
+			e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+		}
 	} else {
 		e.line("func (self *%s) dynamicSource() *dynamic {return nil}", e.obj(c.Name))
 	}
@@ -389,6 +436,9 @@ func (e *emitter) class(c *hir.Class) {
 		}
 		e.line("}")
 	}
+	if e.liveClasses[c.Name] {
+		e.liveFields(c)
+	}
 	for _, m := range c.Methods {
 		if !m.Abstract {
 			e.emitBody(c, m)
@@ -432,6 +482,9 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 		} else {
 			e.line("if self==nil || self.nilReference() {panic(newRangeFault())}")
 		}
+	}
+	if !m.Static && m.Name != "constructor" && e.liveClasses[c.Name] {
+		e.line("if self.%s().viewSource!=nil {panic(newTrap(\"prototype method dispatch through structural class view is unsupported\"))}", e.getter(c.Name))
 	}
 	if m.Name != "class_constructor" {
 		e.line("%s()", e.name("init."+c.Name))
@@ -602,7 +655,14 @@ func (b *body) expr(x *hir.Expr) string {
 		code = b.locals[x.Name]
 	case hir.This:
 		code = "self"
-	case hir.FieldGet, hir.StaticGet:
+	case hir.FieldGet:
+		c := e.fieldOwner(e.classBy(x.X.Type.Name), x.Name)
+		if c != nil && e.liveClasses[c.Name] {
+			code = b.expr(x.X) + "." + e.getter(c.Name) + "()." + e.name("view.read."+c.Name+"."+x.Name) + "()"
+		} else {
+			code = b.lvalue(x)
+		}
+	case hir.StaticGet:
 		code = b.lvalue(x)
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
@@ -756,6 +816,10 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.ClassOf:
 		code = "&" + e.name("descriptor."+x.Owner)
 	case hir.InstanceOf:
+		if len(e.liveClasses) > 0 && x.Y == nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.asRef" && x.X.X.Type.Kind == hir.Dynamic {
+			d := b.expr(x.X.X)
+			return b.temp(t, "func() bool {d:="+d+";if d==nil || d.Tag!=2 {return false};if s,ok:=d.Value.(interface{dynamicSource() *dynamic});ok && s.dynamicSource()!=nil {return false};_,ok:=d.Value.("+e.ref(x.Owner)+");return !nilRef(d.Value) && ok}()")
+		}
 		a := b.expr(x.X)
 		if x.Y != nil {
 			cv := b.expr(x.Y)
@@ -765,6 +829,9 @@ func (b *body) expr(x *hir.Expr) string {
 			a = "unwrap(" + a + ")"
 		}
 		code = "func() bool {_,ok:=any(" + a + ").(" + e.ref(x.Owner) + ");return !nilRef(" + a + ") && ok}()"
+		if len(e.liveClasses) > 0 {
+			code = "func() bool {v:=any(" + a + ");if s,ok:=v.(interface{dynamicSource() *dynamic});ok && s.dynamicSource()!=nil {return false};_,ok:=v.(" + e.ref(x.Owner) + ");return !nilRef(v) && ok}()"
+		}
 	case hir.IsUndefined:
 		a := b.expr(x.X)
 		code = "nilRef(" + a + ")"
@@ -909,7 +976,12 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("var %s %s%s; _=%s", n, e.typ(s.Type), v, n)
 		b.locals[s.Name] = n
 	case hir.Assign:
-		if s.X.Kind == hir.IndexGet {
+		if s.X.Kind == hir.FieldGet && e.liveClasses[e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name).Name] {
+			c := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
+			a := b.expr(s.X.X)
+			v := b.value(s.Y, s.X.Type)
+			b.line("%s.%s().%s(%s)", a, e.getter(c.Name), e.name("view.write."+c.Name+"."+s.X.Name), v)
+		} else if s.X.Kind == hir.IndexGet {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
 			b.line("%s.put(%s,%s)", a, i, v)
@@ -1090,7 +1162,10 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
 	}
-	if x.Kind == hir.RuntimeOp && x.Op == "json.stringifyConfig" {
+	if x.Kind == hir.RuntimeOp && x.Op == "classvalue.newArgs" {
+		e.constructorArgs = true
+	}
+	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
 		e.configJSON = true
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {

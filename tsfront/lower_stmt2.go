@@ -104,8 +104,10 @@ func (l *lowerer) builtinError() string {
 	return name
 }
 
-// switchStatement lowers a switch to an if/else chain (no fallthrough in the
-// sources: noFallthroughCasesInSwitch is on).
+// switchStatement lowers terminated clauses to an if/else chain. Empty labels
+// fall through even with noFallthroughCasesInSwitch enabled. Nonempty
+// fallthrough and nested switch-targeting breaks refuse rather than silently
+// skipping statements or breaking an enclosing loop.
 func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 	sw := n.AsSwitchStatement()
 	if sw.CaseBlock == nil {
@@ -119,24 +121,92 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 	for _, c := range sw.CaseBlock.AsCaseBlock().Clauses.Nodes {
 		clauses = append(clauses, c)
 	}
-	// Lower from the last clause backwards, building else-if chains.
-	var chain *hir.Stmt
+	// Resolve each label to the next nonempty clause, including default labels.
+	bodies := make([]*ast.Node, len(clauses))
+	var next *ast.Node
 	for i := len(clauses) - 1; i >= 0; i-- {
 		c := clauses[i]
+		statements := c.AsCaseOrDefaultClause().Statements.Nodes
+		for _, s := range statements {
+			switch s.Kind {
+			case ast.KindVariableStatement, ast.KindClassDeclaration, ast.KindFunctionDeclaration, ast.KindEnumDeclaration:
+				// JS has one lexical environment for the entire case block;
+				// even case expressions see its uninitialized bindings (TDZ).
+				// Per-body HIR scopes cannot model that. Explicit blocks are OK.
+				l.diagf(s, "unsupported-statement", "switch-scoped declarations require a shared lexical environment")
+				return nil
+			}
+		}
+		if len(statements) > 0 {
+			if switchNestedBreak(c) {
+				l.diagf(c, "unsupported-statement", "nested break targeting switch is not lowered")
+				return nil
+			}
+			terminated := false
+			for _, s := range statements {
+				if switchClauseEnds(s) {
+					terminated = true
+					break
+				}
+			}
+			if i+1 < len(clauses) && !terminated {
+				l.diagf(c, "unsupported-statement", "nonempty switch fallthrough is not lowered")
+				return nil
+			}
+			next = c
+		}
+		bodies[i] = next
+	}
+	values := make([]*hir.Expr, len(clauses))
+	stable := subject.Kind == hir.Lit || subject.Kind == hir.Local
+	for i, c := range clauses {
 		if c.Kind == ast.KindDefaultClause {
-			chain = hir.B(l.stmtList(clauseStatements(c))...)
 			continue
 		}
 		value := l.expr(c.AsCaseOrDefaultClause().Expression)
 		if value == nil {
 			return nil
 		}
+		stable = stable && value.Kind == hir.Lit
 		if subject.Type.Kind == hir.Optional && subject.Type.Args[0].Equal(value.Type) {
 			value = l.optionalView(value, subject.Type)
 		}
-		cond := &hir.Expr{Kind: hir.Binary, Node: l.node(c), Op: "==", Type: hir.T(hir.Bool), X: subject, Y: value}
-		body := hir.B(l.stmtList(clauseStatements(c))...)
-		chain = &hir.Stmt{Kind: hir.If, Node: l.node(c), X: cond, Body: body, Else: chain}
+		values[i] = value
+	}
+	// A simple local compared only to literals cannot change during selection.
+	// Otherwise snapshot the discriminant once, before any case expressions.
+	var decl *hir.Stmt
+	if !stable {
+		l.serial++
+		name := "t" + itoa(l.serial)
+		decl = &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: name, Type: subject.Type, X: subject}
+		subject = hir.V(name, subject.Type)
+	}
+	body := func(c *ast.Node) *hir.Stmt {
+		if c == nil {
+			return hir.B()
+		}
+		l.push()
+		defer l.pop()
+		return hir.B(l.stmtList(clauseStatements(c))...)
+	}
+	// Default is the fallback after *all* case tests, wherever it appears.
+	var chain *hir.Stmt
+	for i, c := range clauses {
+		if c.Kind == ast.KindDefaultClause {
+			chain = body(bodies[i])
+		}
+	}
+	for i := len(clauses) - 1; i >= 0; i-- {
+		c := clauses[i]
+		if c.Kind == ast.KindDefaultClause {
+			continue
+		}
+		cond := &hir.Expr{Kind: hir.Binary, Node: l.node(c), Op: "==", Type: hir.T(hir.Bool), X: subject, Y: values[i]}
+		chain = &hir.Stmt{Kind: hir.If, Node: l.node(c), X: cond, Body: body(bodies[i]), Else: chain}
+	}
+	if decl != nil {
+		return hir.B(decl, chain)
 	}
 	return chain
 }
@@ -184,6 +254,45 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	body := l.scopeBlock(f.Statement)
 	l.pop()
 	return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
+}
+
+// switchClauseEnds proves an unconditional abrupt completion. Conditional
+// switch breaks are rejected separately because HIR Break means loop exit.
+func switchClauseEnds(n *ast.Node) bool {
+	switch n.Kind {
+	case ast.KindBreakStatement, ast.KindContinueStatement, ast.KindReturnStatement, ast.KindThrowStatement:
+		return true
+	case ast.KindBlock:
+		for _, s := range n.AsBlock().Statements.Nodes {
+			if switchClauseEnds(s) {
+				return true
+			}
+		}
+	case ast.KindIfStatement:
+		x := n.AsIfStatement()
+		return x.ElseStatement != nil && switchClauseEnds(x.ThenStatement) && switchClauseEnds(x.ElseStatement)
+	}
+	return false
+}
+
+func switchNestedBreak(c *ast.Node) bool {
+	var walk func(*ast.Node) bool
+	walk = func(n *ast.Node) bool {
+		switch n.Kind {
+		case ast.KindBreakStatement:
+			return n.AsBreakStatement().Label == nil
+		case ast.KindSwitchStatement, ast.KindForStatement, ast.KindForOfStatement, ast.KindForInStatement,
+			ast.KindWhileStatement, ast.KindDoStatement, ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction:
+			return false // a break here targets a different construct
+		}
+		return n.ForEachChild(walk)
+	}
+	for _, s := range clauseStatements(c) {
+		if walk(s) {
+			return true
+		}
+	}
+	return false
 }
 
 // clauseStatements returns a case clause's statements up to its direct

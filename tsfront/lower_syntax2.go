@@ -110,10 +110,14 @@ func (l *lowerer) sortWithComparator(n *ast.Node, recv *hir.Expr, cb *ast.Node) 
 // moduleStatements lowers module-level if and expression statements, in
 // source order, into the module initializer after the module constants.
 func (l *lowerer) moduleStatements(f *ast.SourceFile) []*hir.Stmt {
+	return l.moduleStatementList(l.statementNodes(f))
+}
+
+func (l *lowerer) moduleStatementList(statements []*ast.Node) []*hir.Stmt {
 	var out []*hir.Stmt
 	l.push()
 	defer l.pop()
-	for _, stmt := range l.statementNodes(f) {
+	for _, stmt := range statements {
 		switch stmt.Kind {
 		case ast.KindIfStatement, ast.KindExpressionStatement:
 			if !l.moduleInitializer(stmt) {
@@ -218,9 +222,15 @@ func (l *lowerer) objectRest(el *ast.Node, local string, x *hir.Expr) {
 		l.diagf(el, "unsupported-binding", "object rest needs lowered shapes")
 		return
 	}
+	// Preserve the checker's remaining-key set even if nominal storage below
+	// reuses the source shape. Excluded optional fields must be absent, not
+	// copied back from the source (eg. InlineData's derivedFromConstant).
+	remaining := map[string]bool{}
+	for _, property := range l.ck.GetPropertiesOfType(t) {
+		remaining[property.Name] = true
+	}
 	// When every omitted field of the source is optional, the rest value
-	// keeps the source's shape with those fields absent (the omitted keys
-	// are never enumerated in the closure).
+	// can use the source's storage shape with those fields absent.
 	if source.Ctor != nil && source != target {
 		omittedOptional := true
 		for _, f := range source.Fields {
@@ -241,6 +251,14 @@ func (l *lowerer) objectRest(el *ast.Node, local string, x *hir.Expr) {
 	}
 	args := make([]*hir.Expr, len(target.Ctor.Params))
 	for i, p := range target.Ctor.Params {
+		if !remaining[p.Name] {
+			if p.Type.Kind != hir.Optional {
+				l.diagf(el, "unsupported-binding", "excluded object rest field %s has no absence storage", p.Name)
+				return
+			}
+			args[i] = &hir.Expr{Kind: hir.Lit, Node: l.node(el), Type: p.Type}
+			continue
+		}
 		for _, f := range source.Fields {
 			if f.Name == p.Name {
 				args[i] = l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: f.Name, Type: f.Type, X: x}, p.Type)

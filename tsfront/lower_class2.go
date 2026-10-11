@@ -14,7 +14,10 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	name := fn.Name().Text()
+	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+}
+
+func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {
 	hm := l.methodsBy[owner.Name+"."+name]
 	if hm == nil {
 		return nil
@@ -50,7 +53,11 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	}
 	pre := l.applyDefaults(fn, hm)
 	restore := l.withLocalFns(fn.Body())
-	hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
+	if fn.Body().Kind == ast.KindBlock {
+		hm.Body = hir.B(append(pre, l.block(fn.Body()))...)
+	} else {
+		hm.Body = hir.B(append(pre, l.functionBody(fn.Body()))...)
+	}
 	restore()
 	hm.Body = l.finishAsync(fn, hm, hm.Body)
 	l.pop()
@@ -87,7 +94,7 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: def})})
+					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
 			}
 		}
 		i++
@@ -482,20 +489,23 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional && dst.Kind == hir.Optional {
+		return &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}
+	}
 	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic && !x.Type.Equal(dst) {
 		boxed := l.coerce(x, hir.T(hir.Dynamic))
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: boxed, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
 	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.Optional && dst.Args[0].Kind != hir.Dynamic {
 		base := dst.Args[0]
-		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool || l.unprunedFeatures && base.IsRef() {
 			x = l.tempInit(nil, x.Type, x)
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(x, base)}
 		}
 	}
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && dst.Kind == hir.Optional {
 		base := dst.Args[0]
-		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool || l.unprunedFeatures && base.IsRef() {
 			x = l.tempInit(nil, x.Type, x)
 			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}

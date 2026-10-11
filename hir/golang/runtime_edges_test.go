@@ -95,7 +95,7 @@ func TestSubsetAndRegexpEdges(t *testing.T) {
 }
 
 func TestRejectUnreviewedRegexp(t *testing.T) {
-	for _, pattern := range []string{"(?=a)a", "(a)\\1", "a.*c", "\\s", "^Y$", "."} {
+	for _, pattern := range []string{"(?=a)a", "(a)\\1", "a{2}", "\\s", "a|", "[\\W_]", "(?:a(b)?)+"} {
 		regexp := &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Args: []*hir.Expr{hir.L(str, pattern), hir.L(str, "")}}
 		m := method("probe", hir.T(hir.RegExp), ret(regexp))
 		m.Static = true

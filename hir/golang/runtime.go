@@ -4,6 +4,8 @@ package golang
 const runtimeSource = `package main
 
 import (
+ "crypto/sha1"
+ "encoding/hex"
  "encoding/json"
 	"encoding/binary"
 	"math"
@@ -260,13 +262,17 @@ func castRef[T any](v any) T {
 	return r
 }
 func dynRef(d *dynamic) any {
-	if d == nil || d.Tag != 2 {
+	if d == nil || d.Tag != 2 && d.Tag != tagArray {
 		panic(newRangeFault())
 	}
 	return d.Value
 }
+// String() decodes isolated UTF-16 surrogates as U+FFFD, exactly Node's
+// default UTF-8 update encoding, including supplementary pairs.
+func sha1Hex(s jsString) jsString {sum:=sha1.Sum([]byte(s.String()));return str(hex.EncodeToString(sum[:]))}
 func integerString(x int64) jsString     { return str(strconv.FormatInt(x, 10)) }
 func numberRemainder2(x float64) float64 { return math.Mod(x, 2) }
+func numberCeil(x float64) float64 { return math.Ceil(x) }
 func dynString(d *dynamic) jsString {
 	if d == nil || d.Tag != 1 {
 		panic(newRangeFault())
@@ -904,6 +910,16 @@ func dynEqual(a, b *dynamic) bool {
 	if a.Tag >= 4 && a.Tag <= 6 && b.Tag >= 4 && b.Tag <= 6 {
 		return dynNumber(a) == dynNumber(b)
 	}
+	// Parsed arrays and their native any[] views share the same storage.
+	// Boxing the view uses tag 2; the parser's box uses tagArray. Neither
+	// tag choice nor a new wrapper changes JavaScript reference identity.
+	if (a.Tag == tagArray || a.Tag == 2) && (b.Tag == tagArray || b.Tag == 2) {
+		_, aa := a.Value.(interface{ arrayMarker() })
+		_, ba := b.Value.(interface{ arrayMarker() })
+		if aa && ba {
+			return equal(a.Value, b.Value)
+		}
+	}
 	if a.Tag != b.Tag {
 		return false
 	}
@@ -996,7 +1012,7 @@ func (d *dynamic) get(k jsString) *dynamic {
 	case tagObject:
 		return d.Value.(*orderedMap[jsString, *dynamic]).get(k).Value
 	case tagArray:
-		a := d.Value.(*array[*dynamic])
+		a := d.Value.(*array[any])
 		if k == str("length") {
 			return box(float64(len(a.Items)))
 		}
@@ -1005,7 +1021,7 @@ func (d *dynamic) get(k jsString) *dynamic {
 		if err != nil || s == "" || strconv.FormatUint(i, 10) != s {
 			panic(newRangeFault())
 		}
-		return a.get(int32(i)).Value
+		return box(a.get(int32(i)).Value)
 	case 1:
 		if k == str("length") {
 			return box(float64(d.Value.(jsString).length()))

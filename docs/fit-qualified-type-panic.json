@@ -1,0 +1,643 @@
+{
+  "baseCommit": "6d72bfa",
+  "mainCommit": "23b364090e3b9c699ddb768e5a795fa283ca105b",
+  "branch": "feat/fit-qualified-type-panic",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "sourceHashes": {
+    "tsfront/lower_types.go": "4751574c83080996cf5fcbd0d0fd8b46d4d4b2ce3a3fa8f2e1c6e551fc6c93a1",
+    "tsfront/qualified_type_test.go": "e902ee87cc7389504a18a56294efb1b6caf05f08a01363c38c2927df1566655b"
+  },
+  "qualifiedRoots": [
+    "test/lsp/references.ts",
+    "test/lsp/rename_global_class.ts",
+    "test/lsp/rename_method.ts",
+    "test/lsp/rename_variable.ts",
+    "test/lsp/symbols.ts",
+    "test/objects/domain.ts",
+    "test/objects/table_type.ts"
+  ],
+  "selected": {
+    "before": {
+      "total": 62,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 62,
+      "registered": 0,
+      "buildFailure": {
+        "kind": "compiler-panic",
+        "message": "Unhandled case in Node.Text: *ast.QualifiedName",
+        "site": "tsfront.typeRefName, called by asExpression"
+      }
+    },
+    "after": {
+      "total": 62,
+      "passed": 10,
+      "failed": 0,
+      "trapped": 50,
+      "asyncPending": 0,
+      "notRun": 2,
+      "registered": 62,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 2,
+        "unregistered": 0
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 15,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "unsupported-callback src/lsp/references.ts: callback KindPropertyAccessExpression is not an arrow function",
+          "count": 12,
+          "example": "src/lsp/references.ts:19:3: lowering trap: unsupported-callback src/lsp/references.ts:40:12: callback KindPropertyAccessExpression is not an arrow function"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table_type.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts: identifier row is not a lowered local or module value",
+          "count": 8,
+          "example": "test/objects/table_type.ts:10:24: lowering trap: unsupported-assertion test/objects/table_type.ts:38:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts:39:12: identifier row is not a lowered local or module value"
+        },
+        {
+          "message": "src/lsp/rename.ts: HIR verification: call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+          "count": 4,
+          "example": "src/lsp/rename.ts:71:3: lowering trap: src/lsp/rename.ts:71:3: HIR verification: node 156491 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename"
+        },
+        {
+          "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 4,
+          "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "test/objects/table_type.ts: HIR verification: assignment type mismatch",
+          "count": 2,
+          "example": "test/objects/table_type.ts:239:41: lowering trap: test/objects/table_type.ts:239:41: HIR verification: node 32427 (test/objects/table_type.ts:320:11): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand",
+          "count": 2,
+          "example": "test/objects/domain.ts:38:23: lowering trap: unsupported-assertion test/objects/domain.ts:44:13: type assertion requires checker-proven narrowing of its operand"
+        },
+        {
+          "message": "unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand; unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand",
+          "count": 1,
+          "example": "test/objects/domain.ts:171:32: lowering trap: unsupported-assertion test/objects/domain.ts:193:13: type assertion requires checker-proven narrowing of its operand; unsupported-assertion test/objects/domain.ts:194:13: type assertion requires checker-proven narrowing of its operand"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table_type.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts: identifier type is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/table_type.ts:607:63: lowering trap: unsupported-assertion test/objects/table_type.ts:668:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts:669:12: identifier type is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-call test/lsp/rename_global_class.ts: method throw on classref is not lowered",
+          "count": 1,
+          "example": "test/lsp/rename_global_class.ts:64:23: lowering trap: unsupported-call test/lsp/rename_global_class.ts:79:5: method throw on classref is not lowered"
+        }
+      ],
+      "initialization": [],
+      "asyncInitializationFailures": 0
+    },
+    "oracle": {
+      "total": 62,
+      "passed": 60,
+      "failed": 0,
+      "pending": 2
+    },
+    "passedTitles": [
+      "LSP, prepare rename, global class bad position",
+      "LSP, prepare rename, global class class definition name",
+      "LSP, rename variable bad position",
+      "LSP, rename variable DATA",
+      "LSP, rename variable prepare rename of escaped parameter",
+      "LSP, symbols Simple WRITE, no symbols",
+      "LSP, symbols Class Implementation",
+      "LSP, symbols Class Implementation, with method",
+      "LSP, symbols Class Implementation, with method, find end",
+      "LSP, symbols module"
+    ]
+  },
+  "rules": {
+    "base": {
+      "total": 3159,
+      "passed": 1587,
+      "failed": 0,
+      "trapped": 1550,
+      "notRun": 22,
+      "registered": 3147,
+      "asyncPending": 0,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      }
+    },
+    "after": {
+      "total": 3159,
+      "passed": 1587,
+      "failed": 0,
+      "trapped": 1550,
+      "notRun": 22,
+      "registered": 3147,
+      "asyncPending": 0,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      }
+    },
+    "titleOrderIdentical": true,
+    "statusOrderIdentical": true,
+    "passingTestRegressions": 0,
+    "generatedGoDiffEmpty": true,
+    "oracle": {
+      "total": 3159,
+      "passed": 3149,
+      "failed": 0,
+      "pending": 10,
+      "mochaRetries": 2,
+      "coldRuns": {
+        "runs": 2,
+        "failuresPerRun": 1,
+        "reason": "first 7bit_ascii case exceeded original 250ms timeout; title multisets unchanged"
+      }
+    }
+  },
+  "fullClosure": {
+    "base": {
+      "blocking": 35,
+      "rootBlocking": 29,
+      "cascadeBlocking": 6,
+      "hirErrors": 150,
+      "files": 41,
+      "qualifiedNameCompilerPanics": 0,
+      "unsupportedAssertionBlockers": 0,
+      "unsupportedTypeBlockers": 0
+    },
+    "after": {
+      "blocking": 35,
+      "rootBlocking": 29,
+      "cascadeBlocking": 6,
+      "hirErrors": 150,
+      "files": 41,
+      "qualifiedNameCompilerPanics": 0,
+      "unsupportedAssertionBlockers": 0,
+      "unsupportedTypeBlockers": 0
+    },
+    "blockingByCategory": {
+      "assume-integer": 2,
+      "unsupported-array": 2,
+      "unsupported-call": 3,
+      "unsupported-callback": 1,
+      "unsupported-expr": 19,
+      "unsupported-lsp-call": 5,
+      "unsupported-new": 1,
+      "unsupported-regex": 1,
+      "unsupported-statement": 1
+    },
+    "blockingByMessage": {
+      "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+      "callback KindPropertyAccessExpression is not an arrow function": 1,
+      "delete supports ordinary lowered records only": 1,
+      "empty array literal outside a statement context": 2,
+      "find on primitive arrays needs an absence-preserving callback ABI": 1,
+      "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+      "identifier JSON is not a lowered local or module value": 4,
+      "identifier Object is not a lowered local or module value": 1,
+      "identifier XMLParser is not a lowered local or module value": 1,
+      "identifier crypto is not a lowered local or module value": 1,
+      "identifier hash is not a lowered local or module value": 1,
+      "identifier importing is not a lowered local or module value": 2,
+      "identifier packedLength is not a lowered local or module value": 1,
+      "identifier regex is not a lowered local or module value": 1,
+      "identifier text is not a lowered local or module value": 1,
+      "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+      "method getParameters on dynamic is not lowered": 1,
+      "method getStr on classref is not lowered": 1,
+      "new RegExp requires a lowered string pattern": 1,
+      "new XMLParser is not a lowered class": 1,
+      "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+      "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+      "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+      "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+      "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+      "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+    },
+    "messageHistogramsIdentical": true
+  },
+  "gates": {
+    "vet": "passed",
+    "shortTestsWithGrace": "passed",
+    "backendCoverageGuard": "passed",
+    "goldensChanged": false,
+    "defaultAgainstBase": {
+      "files": 6348,
+      "diffEmpty": true
+    },
+    "defaultAgainstMain": {
+      "commit": "23b364090e3b9c699ddb768e5a795fa283ca105b",
+      "files": 6348,
+      "diffEmpty": true
+    }
+  },
+  "implementationCommit": "0ddd95d6e4056dc7820a460b615441bbefab512e",
+  "affectedShards": {
+    "lsp": {
+      "roots": 16,
+      "before": {
+        "total": 199,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 0,
+        "notRun": 199,
+        "registered": 0,
+        "buildFailure": "qualified-name compiler panic"
+      },
+      "after": {
+        "total": 199,
+        "passed": 63,
+        "failed": 0,
+        "trapped": 131,
+        "notRun": 5,
+        "registered": 199,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 5,
+          "unregistered": 0
+        }
+      },
+      "oracle": {
+        "total": 199,
+        "passed": 194,
+        "failed": 0,
+        "pending": 5
+      },
+      "initialization": [],
+      "topTraps": [
+        {
+          "message": "unsupported-expr src/lsp/_lookup.ts: identifier Object is not a lowered local or module value; unsupported-expr src/lsp/_lookup.ts: identifier JSON is not a lowered local or module value",
+          "count": 53,
+          "example": "src/lsp/_lookup.ts:238:3: lowering trap: unsupported-expr src/lsp/_lookup.ts:272:36: identifier Object is not a lowered local or module value; unsupported-expr src/lsp/_lookup.ts:273:30: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 22,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 22,
+          "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-callback src/lsp/references.ts: callback KindPropertyAccessExpression is not an arrow function",
+          "count": 12,
+          "example": "src/lsp/references.ts:19:3: lowering trap: unsupported-callback src/lsp/references.ts:40:12: callback KindPropertyAccessExpression is not an arrow function"
+        },
+        {
+          "message": "src/lsp/implementation.ts: HIR verification: call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+          "count": 4,
+          "example": "src/lsp/implementation.ts:22:3: lowering trap: src/lsp/implementation.ts:22:3: HIR verification: node 0 (): call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime ."
+        },
+        {
+          "message": "src/lsp/rename.ts: HIR verification: call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+          "count": 4,
+          "example": "src/lsp/rename.ts:71:3: lowering trap: src/lsp/rename.ts:71:3: HIR verification: node 166398 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename"
+        },
+        {
+          "message": "src/pretty_printer/pretty_printer.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 4,
+          "example": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/abap/5_syntax/spaghetti_scope.ts: HIR verification: call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+          "count": 2,
+          "example": "src/abap/5_syntax/spaghetti_scope.ts:272:3: lowering trap: src/abap/5_syntax/spaghetti_scope.ts:272:3: HIR verification: node 121345 (src/abap/5_syntax/spaghetti_scope.ts:280:22): call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new ."
+        },
+        {
+          "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-call test/lsp/rename_global_class.ts: method throw on classref is not lowered",
+          "count": 1,
+          "example": "test/lsp/rename_global_class.ts:64:23: lowering trap: unsupported-call test/lsp/rename_global_class.ts:79:5: method throw on classref is not lowered"
+        },
+        {
+          "message": "unsupported-call test/lsp/semantic.ts: method eql on classref is not lowered",
+          "count": 1,
+          "example": "test/lsp/semantic.ts:10:15: lowering trap: unsupported-call test/lsp/semantic.ts:15:5: method eql on classref is not lowered"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 1,
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-expr test/lsp/diagnostics.ts: identifier JSON is not a lowered local or module value",
+          "count": 1,
+          "example": "test/lsp/diagnostics.ts:21:53: lowering trap: unsupported-expr test/lsp/diagnostics.ts:36:35: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/lsp/hover.ts: identifier JSON is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier none is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier hover1 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier hover1 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier hover2 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts: identifier hover2 is not a lowered local or module value",
+          "count": 1,
+          "example": "test/lsp/hover.ts:1620:50: lowering trap: unsupported-expr test/lsp/hover.ts:1630:29: identifier JSON is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1632:30: identifier none is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1633:5: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1634:5: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1636:30: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1636:30: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1637:12: identifier hover1 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1638:12: identifier hover1 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1640:30: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1640:30: identifier reg is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1641:12: identifier hover2 is not a lowered local or module value; unsupported-expr test/lsp/hover.ts:1642:12: identifier hover2 is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-lsp-call test/lsp/hover.ts: vscode-languageserver-types value.split with 1 arguments is not lowered",
+          "count": 1,
+          "example": "test/lsp/hover.ts:950:43: lowering trap: unsupported-lsp-call test/lsp/hover.ts:972:12: vscode-languageserver-types value.split with 1 arguments is not lowered"
+        }
+      ],
+      "trapHistogramComplete": true
+    },
+    "objects": {
+      "roots": 35,
+      "before": {
+        "total": 176,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 0,
+        "notRun": 176,
+        "registered": 0,
+        "buildFailure": "qualified-name compiler panic"
+      },
+      "after": {
+        "total": 176,
+        "passed": 3,
+        "failed": 0,
+        "trapped": 172,
+        "notRun": 1,
+        "registered": 176,
+        "asyncPending": 0,
+        "notRunReasons": {
+          "asyncOrDone": 0,
+          "skippedOrFocused": 1,
+          "unregistered": 0
+        }
+      },
+      "oracle": {
+        "total": 176,
+        "passed": 175,
+        "failed": 0,
+        "pending": 1
+      },
+      "initialization": [],
+      "topTraps": [
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 71,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "unsupported-assertion test/objects/class.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts: identifier clas is not a lowered local or module value; unsupported-expr test/objects/class.ts: identifier s is not a lowered local or module value; unsupported-expr test/objects/class.ts: identifier scope is not a lowered local or module value",
+          "count": 19,
+          "example": "test/objects/class.ts:16:1: lowering trap: unsupported-assertion test/objects/class.ts:17:16: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts:18:34: identifier clas is not a lowered local or module value; unsupported-expr test/objects/class.ts:19:17: identifier s is not a lowered local or module value; unsupported-expr test/objects/class.ts:20:10: identifier scope is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table_type.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts: identifier row is not a lowered local or module value",
+          "count": 8,
+          "example": "test/objects/table_type.ts:10:24: lowering trap: unsupported-assertion test/objects/table_type.ts:38:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts:39:12: identifier row is not a lowered local or module value"
+        },
+        {
+          "message": "src/objects/rename/rename_global_interface.ts: HIR verification: assignment type mismatch",
+          "count": 7,
+          "example": "src/objects/rename/rename_global_interface.ts:18:3: lowering trap: src/objects/rename/rename_global_interface.ts:18:3: HIR verification: node 0 (): assignment type mismatch"
+        },
+        {
+          "message": "src/objects/rename/rename_global_class.ts: HIR verification: assignment type mismatch",
+          "count": 5,
+          "example": "src/objects/rename/rename_global_class.ts:18:3: lowering trap: src/objects/rename/rename_global_class.ts:18:3: HIR verification: node 0 (): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-assertion test/objects/program.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts: identifier prog is not a lowered local or module value",
+          "count": 4,
+          "example": "test/objects/program.ts:8:12: lowering trap: unsupported-assertion test/objects/program.ts:30:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts:31:12: identifier prog is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/table.ts: identifier expect is not a lowered local or module value",
+          "count": 4,
+          "example": "test/objects/table.ts:132:56: lowering trap: unsupported-expr test/objects/table.ts:141:7: identifier expect is not a lowered local or module value"
+        },
+        {
+          "message": "test/objects/table.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "example": "test/objects/table.ts:894:46: lowering trap: test/objects/table.ts:894:46: HIR verification: node 38640 (test/objects/table.ts:950:11): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-assertion test/objects/class.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts: identifier clas is not a lowered local or module value",
+          "count": 3,
+          "example": "test/objects/class.ts:300:15: lowering trap: unsupported-assertion test/objects/class.ts:333:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts:334:12: identifier clas is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts: identifier stru is not a lowered local or module value",
+          "count": 3,
+          "example": "test/objects/table.ts:228:24: lowering trap: unsupported-assertion test/objects/table.ts:235:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts:236:12: identifier stru is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-closure test/objects/malformed_xml.ts: captured wrapValues has no lowered type",
+          "count": 3,
+          "example": "test/objects/malformed_xml.ts:71:49: lowering trap: unsupported-closure test/objects/malformed_xml.ts:71:49: captured wrapValues has no lowered type"
+        },
+        {
+          "message": "src/objects/rename/rename_program.ts: HIR verification: assignment type mismatch",
+          "count": 2,
+          "example": "src/objects/rename/rename_program.ts:19:3: lowering trap: src/objects/rename/rename_program.ts:19:3: HIR verification: node 0 (): assignment type mismatch"
+        },
+        {
+          "message": "test/objects/table_type.ts: HIR verification: assignment type mismatch",
+          "count": 2,
+          "example": "test/objects/table_type.ts:239:41: lowering trap: test/objects/table_type.ts:239:41: HIR verification: node 39407 (test/objects/table_type.ts:320:11): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value",
+          "count": 2,
+          "example": "test/objects/data_definition.ts:213:27: lowering trap: unsupported-assertion test/objects/data_definition.ts:227:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:228:12: identifier parsed is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier components is not a lowered local or module value",
+          "count": 2,
+          "example": "test/objects/data_definition.ts:367:22: lowering trap: unsupported-assertion test/objects/data_definition.ts:397:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:398:24: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:400:29: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_element.ts: type assertion requires checker-proven narrowing of its operand",
+          "count": 2,
+          "example": "test/objects/data_element.ts:249:42: lowering trap: unsupported-assertion test/objects/data_element.ts:263:13: type assertion requires checker-proven narrowing of its operand"
+        },
+        {
+          "message": "unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand",
+          "count": 2,
+          "example": "test/objects/domain.ts:38:23: lowering trap: unsupported-assertion test/objects/domain.ts:44:13: type assertion requires checker-proven narrowing of its operand"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier Object is not a lowered local or module value",
+          "count": 2,
+          "example": "test/objects/function_group.ts:122:36: lowering trap: unsupported-assertion test/objects/function_group.ts:142:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:144:19: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:145:24: identifier texts is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:145:12: identifier Object is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts: identifier stru is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+          "count": 2,
+          "example": "test/objects/table.ts:239:26: lowering trap: unsupported-assertion test/objects/table.ts:316:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts:317:24: identifier stru is not a lowered local or module value; unsupported-expr test/objects/table.ts:318:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:319:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:320:12: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/view.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/view.ts: identifier casted is not a lowered local or module value",
+          "count": 2,
+          "example": "test/objects/view.ts:8:14: lowering trap: unsupported-assertion test/objects/view.ts:91:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/view.ts:92:12: identifier casted is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/malformed_xml.ts: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts: property deep is not lowered",
+          "count": 2,
+          "example": "test/objects/malformed_xml.ts:45:56: lowering trap: unsupported-expr test/objects/malformed_xml.ts:58:11: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts:60:11: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts:62:11: property deep is not lowered"
+        },
+        {
+          "message": "test/objects/data_definition.ts: HIR verification: assignment type mismatch",
+          "count": 1,
+          "example": "test/objects/data_definition.ts:270:27: lowering trap: test/objects/data_definition.ts:270:27: HIR verification: node 31175 (test/objects/data_definition.ts:337:11): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-assertion test/objects/class.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts: identifier tab is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/class.ts:441:49: lowering trap: unsupported-assertion test/objects/class.ts:464:17: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts:465:12: identifier tab is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier components is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/data_definition.ts:345:30: lowering trap: unsupported-assertion test/objects/data_definition.ts:361:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:362:24: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:363:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:364:12: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier names is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/data_definition.ts:463:60: lowering trap: unsupported-assertion test/objects/data_definition.ts:479:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:480:19: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:480:19: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:481:12: identifier names is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: property deep is not lowered",
+          "count": 1,
+          "example": "test/objects/data_definition.ts:581:43: lowering trap: unsupported-assertion test/objects/data_definition.ts:614:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:615:12: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:618:29: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:622:13: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:624:5: property deep is not lowered"
+        },
+        {
+          "message": "unsupported-assertion test/objects/data_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier void1 is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier void1 is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts: property deep is not lowered",
+          "count": 1,
+          "example": "test/objects/data_definition.ts:484:72: lowering trap: unsupported-assertion test/objects/data_definition.ts:562:20: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/data_definition.ts:565:19: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:566:12: identifier void1 is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:567:13: identifier void1 is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:569:22: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:570:12: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:571:13: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:572:13: identifier quantity is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:574:12: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:576:12: identifier parsed is not a lowered local or module value; unsupported-expr test/objects/data_definition.ts:578:5: property deep is not lowered"
+        },
+        {
+          "message": "unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand; unsupported-assertion test/objects/domain.ts: type assertion requires checker-proven narrowing of its operand",
+          "count": 1,
+          "example": "test/objects/domain.ts:171:32: lowering trap: unsupported-assertion test/objects/domain.ts:193:13: type assertion requires checker-proven narrowing of its operand; unsupported-assertion test/objects/domain.ts:194:13: type assertion requires checker-proven narrowing of its operand"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/function_group.ts:99:43: lowering trap: unsupported-assertion test/objects/function_group.ts:102:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:104:22: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:105:12: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:106:12: identifier includes is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/function_group.ts:88:27: lowering trap: unsupported-assertion test/objects/function_group.ts:91:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:93:22: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:94:12: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:95:12: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:96:12: identifier includes is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier row is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/function_group.ts:109:31: lowering trap: unsupported-assertion test/objects/function_group.ts:114:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:116:22: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:117:12: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:118:17: identifier includes is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:119:12: identifier row is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/function_group.ts:75:26: lowering trap: unsupported-assertion test/objects/function_group.ts:78:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:80:21: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:81:12: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:82:12: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:83:12: identifier modules is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:85:12: identifier fugr is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/function_group.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts: identifier sequenced is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/function_group.ts:186:48: lowering trap: unsupported-assertion test/objects/function_group.ts:215:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/function_group.ts:216:23: identifier fugr is not a lowered local or module value; unsupported-expr test/objects/function_group.ts:217:12: identifier sequenced is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/interface.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/interface.ts: identifier intf is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/interface.ts:8:24: lowering trap: unsupported-assertion test/objects/interface.ts:28:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/interface.ts:29:12: identifier intf is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/program.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts: identifier prog is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier Object is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier prog is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/program.ts:67:23: lowering trap: unsupported-assertion test/objects/program.ts:107:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts:108:19: identifier prog is not a lowered local or module value; unsupported-expr test/objects/program.ts:109:24: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:109:12: identifier Object is not a lowered local or module value; unsupported-expr test/objects/program.ts:110:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:110:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:111:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:111:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:112:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:114:12: identifier prog is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/program.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts: identifier prog is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier Object is not a lowered local or module value; unsupported-expr test/objects/program.ts: identifier prog is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/program.ts:130:44: lowering trap: unsupported-assertion test/objects/program.ts:162:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/program.ts:163:19: identifier prog is not a lowered local or module value; unsupported-expr test/objects/program.ts:165:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:165:12: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:166:24: identifier texts is not a lowered local or module value; unsupported-expr test/objects/program.ts:166:12: identifier Object is not a lowered local or module value; unsupported-expr test/objects/program.ts:167:12: identifier prog is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts: identifier stru is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/table.ts:387:32: lowering trap: unsupported-assertion test/objects/table.ts:423:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table.ts:424:24: identifier stru is not a lowered local or module value; unsupported-expr test/objects/table.ts:425:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:426:12: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-assertion test/objects/table_type.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts: identifier type is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/table_type.ts:607:63: lowering trap: unsupported-assertion test/objects/table_type.ts:668:18: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/table_type.ts:669:12: identifier type is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/data_element.ts: identifier JSON is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/data_element.ts:17:1: lowering trap: unsupported-expr test/objects/data_element.ts:18:10: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/malformed_xml.ts: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts: property deep is not lowered",
+          "count": 1,
+          "example": "test/objects/malformed_xml.ts:143:53: lowering trap: unsupported-expr test/objects/malformed_xml.ts:147:5: property deep is not lowered; unsupported-expr test/objects/malformed_xml.ts:151:5: property deep is not lowered"
+        },
+        {
+          "message": "unsupported-expr test/objects/table.ts: identifier JSON is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/table.ts:955:45: lowering trap: unsupported-expr test/objects/table.ts:960:30: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/table.ts: identifier JSON is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier all is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier reg is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier reg is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier tabl is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier typ is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier typ is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier type is not a lowered local or module value",
+          "count": 1,
+          "example": "test/objects/table.ts:175:31: lowering trap: unsupported-expr test/objects/table.ts:217:28: identifier JSON is not a lowered local or module value; unsupported-expr test/objects/table.ts:219:30: identifier all is not a lowered local or module value; unsupported-expr test/objects/table.ts:220:11: identifier reg is not a lowered local or module value; unsupported-expr test/objects/table.ts:221:18: identifier reg is not a lowered local or module value; unsupported-expr test/objects/table.ts:222:17: identifier tabl is not a lowered local or module value; unsupported-expr test/objects/table.ts:223:12: identifier typ is not a lowered local or module value; unsupported-expr test/objects/table.ts:224:18: identifier typ is not a lowered local or module value; unsupported-expr test/objects/table.ts:225:12: identifier type is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr test/objects/transaction.ts: property deep is not lowered",
+          "count": 1,
+          "example": "test/objects/transaction.ts:41:28: lowering trap: unsupported-expr test/objects/transaction.ts:52:5: property deep is not lowered"
+        }
+      ],
+      "trapHistogramComplete": true
+    }
+  },
+  "uniqueThreeShardTotal": {
+    "before": {
+      "total": 3534,
+      "passed": 1587,
+      "failed": 0,
+      "trapped": 1550,
+      "notRun": 397,
+      "registered": 3147
+    },
+    "after": {
+      "total": 3534,
+      "passed": 1653,
+      "failed": 0,
+      "trapped": 1853,
+      "notRun": 28,
+      "registered": 3522
+    },
+    "additionalPasses": 66,
+    "formerlyBlockedRunnableTests": 369,
+    "laterTraps": 303,
+    "selected62OverlapIncludedOnce": true,
+    "selected62StatusesIdenticalWithinCompleteShards": true
+  },
+  "defaultFileManifestSHA256": {
+    "base": "261d52aac1f3d961310df9ecee3114448fa291b83f9b95dc156e186a1c0e9217",
+    "after": "261d52aac1f3d961310df9ecee3114448fa291b83f9b95dc156e186a1c0e9217",
+    "main": "261d52aac1f3d961310df9ecee3114448fa291b83f9b95dc156e186a1c0e9217"
+  }
+}

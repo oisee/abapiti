@@ -939,6 +939,12 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "json.stringifySubset":
+		if a.Kind == Void {
+			v.fail(e.Node, "JSON writer needs a value")
+		}
+		eq(t, T(String))
+		args(nil)
 	case "json.stringifyConfig":
 		if a.Kind != ClassRef || a.Name != "src/_config.ts.IConfig" {
 			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")
@@ -955,20 +961,29 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		} else {
 			eq(t, T(Bool))
 		}
+	case "object.checkedClassView":
+		if a.Kind != ClassRef || t.Kind != ClassRef || !(v.accepts(a, t) || v.accepts(t, a)) {
+			v.fail(e.Node, "checked class view needs related nominal class references")
+		}
+		args(nil)
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")
 		}
 		eq(t, T(ClassValue))
-	case "classvalue.new":
+	case "classvalue.new", "classvalue.newArgs":
 		if a.Kind != ClassValue {
 			v.fail(e.Node, "classvalue.new needs a class value")
 		}
 		if !ref(t) {
 			v.fail(e.Node, "classvalue.new needs a reference result")
 		}
-		args(nil)
-	case "dynamic.of":
+		if e.Op == "classvalue.newArgs" {
+			args([]Type{T(Array, T(Dynamic))})
+		} else {
+			args(nil)
+		}
+	case "dynamic.of", "chai.box":
 		if a.Kind == Void {
 			v.fail(e.Node, "void box")
 		}
@@ -977,6 +992,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 	case "dynamic.materialize":
 		if a.Kind != Dynamic || t.Kind != ClassRef {
 			v.fail(e.Node, "dynamic.materialize needs Dynamic in and a data class reference out")
+		}
+		args(nil)
+	case "dynamic.classView":
+		if a.Kind != Dynamic || t.Kind != ClassRef || t.Name == RootObject {
+			v.fail(e.Node, "dynamic.classView needs Dynamic in and a named class reference out")
 		}
 		args(nil)
 	case "dynamic.asRef":

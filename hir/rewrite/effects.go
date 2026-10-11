@@ -15,7 +15,7 @@ import "strconv"
 type OpReads struct{ Receiver, Args, Global bool }
 type OpEffect struct {
 	Reads        OpReads
-	Writes       string // "None", "Receiver", or "Arg(i)"
+	Writes       string // "None", "Receiver", "Arg(i)", or "Global" (unknown callback effects)
 	Allocates    bool
 	MayRaise     string // "None", "Trap", or "Catchable"
 	Aliases      string // "None" or "Receiver"
@@ -24,8 +24,10 @@ type OpEffect struct {
 
 // Explicit records: adding a HIR catalogue operation requires a reviewed entry.
 var RuntimeEffects = map[string]OpEffect{
+	"string.sha1Hex":            {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Fresh UTF-8 SHA-1 hex pipeline; Go is pure, ABAP explicitly refuses."},
 	"array.has":                 {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"array.delete":              {Reads: OpReads{Receiver: true, Args: true}, Writes: "Receiver", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"json.stringifySubset":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "JSON data graph; unsupported native order and hooks refuse; ABAP refuses."},
 	"json.stringifyConfig":      {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Source-pinned config graph writer."},
 	"array.concat":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.get":                 {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
@@ -47,11 +49,13 @@ var RuntimeEffects = map[string]OpEffect{
 	"array.unshift":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"classvalue.has":            {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"classvalue.name":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"classvalue.newArgs":        {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Dynamic constructor invocation may run arbitrary constructor effects."},
 	"classvalue.new":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Dynamic constructor and initializer effects remain unknown until call targets are resolved."},
 	"clock.telemetry":           {Reads: OpReads{Receiver: false, Args: false, Global: true}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"dynamic.asBoolean":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.asClassValue":      {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.asNumber":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
+	"dynamic.classView":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},
 	"dynamic.asRef":             {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "Receiver"},
 	"dynamic.asString":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"object.get":                {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
@@ -67,6 +71,11 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.null":              {Reads: OpReads{Receiver: false, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"dynamic.of":                {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"dynamic.put":               {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
+	"chai.throwMatch":           {Reads: OpReads{Receiver: true, Args: true, Global: true}, Writes: "Global", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only invokes an existing thunk; callback effects unknown, host faults escape, only string/Error throws match; ABAP refuses."},
+	"chai.arrayInclude":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai strict array inclusion; nonarrays and snapshot escapes refuse; ABAP refuses."},
+	"chai.box":                  {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only boxing; parsed/native snapshot escapes refuse; ABAP refuses."},
+	"chai.deepEqual":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai data graph; unproven enumerable storage refuses; ABAP refuses."},
+	"chai.deepInclude":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai subset assertion; unsupported property/type domains refuse; ABAP refuses."},
 	"dynamic.strictEquals":      {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"dynamic.toString":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.typeof":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
@@ -82,6 +91,8 @@ var RuntimeEffects = map[string]OpEffect{
 	"map.values":                {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"number.fromI32":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.index":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"object.checkedClassView":   {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "Receiver", Conservative: "Unproven nominal class assertions keep identity only in the checked runtime domain; ABAP refuses."},
+	"number.ceil":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.remainder2":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.toString":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"object.classOf":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
