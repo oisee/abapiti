@@ -71,10 +71,85 @@ func (l *lowerer) testRegistrationHelper(fn *ast.Node) bool {
 	for p := fn.Parent; p != nil; p = p.Parent {
 		switch p.Kind {
 		case ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindFunctionDeclaration, ast.KindMethodDeclaration, ast.KindConstructor:
-			return l.isTestCallback(p) && p.Parent.Expression().Kind == ast.KindIdentifier && p.Parent.Expression().Text() == "describe"
+			if !l.isTestCallback(p) {
+				return false
+			}
+			// Check the original API binding, not its local import spelling.
+			sym := l.resolve(p.Parent.Expression())
+			return sym != nil && sym.Name == "describe"
 		}
 	}
 	return false
+}
+
+// Named fixture helpers already use static methods with explicit immutable
+// data parameters. A direct test body can carry that data instead of trying to
+// capture a void-valued function binding. Initialized immutable suite arrows
+// may also be used as direct static callees. Capture-free function declarations
+// (the separate parser/config helper ABI) and escaping values stay unsupported.
+func (l *lowerer) testFixtureCaptures(n *ast.Node, captures []localCapture) []localCapture {
+	if !l.isTestCallback(n) || !l.integerOptions.TrapOnFailure {
+		return captures
+	}
+	sym := l.resolve(n.Parent.Expression())
+	if sym == nil || sym.Name != "it" {
+		return captures
+	}
+	var result []localCapture
+	seen := map[*ast.Symbol]bool{}
+	appendCapture := func(c localCapture) {
+		if !seen[c.symbol] {
+			result = append(result, c)
+			seen[c.symbol] = true
+		}
+	}
+	for _, capture := range captures {
+		decl := (*ast.Node)(nil)
+		if capture.symbol != nil {
+			decl = capture.symbol.ValueDeclaration
+		}
+		fn := decl
+		arrow := false
+		if decl != nil && decl.Kind == ast.KindVariableDeclaration && ast.IsVarConst(decl) {
+			fn = decl.Initializer()
+			_, initialized := l.lookup(capture.name)
+			arrow = fn != nil && fn.Kind == ast.KindArrowFunction && initialized && decl.End() < n.Pos()
+		}
+		if fn == nil || (!arrow && (fn.Kind != ast.KindFunctionDeclaration || len(l.freeLocals(fn)) == 0)) || !l.testRegistrationHelper(fn) || !l.fixtureHelperDirectOnly(decl, capture.symbol) {
+			appendCapture(capture)
+			continue
+		}
+		lf := l.localFns[capture.name]
+		if lf == nil && l.pendingFns[capture.name] == fn {
+			delete(l.pendingFns, capture.name)
+			lf = l.liftLocalFn(capture.name, fn)
+		}
+		if lf == nil || !lf.method.Static || (!arrow && len(lf.captures) == 0) || lf.method.Source != l.locOf(fn) {
+			appendCapture(capture)
+			continue
+		}
+		for _, c := range lf.captures {
+			appendCapture(c)
+		}
+	}
+	return result
+}
+
+// Any non-call reference (including a write, alias or function identity use)
+// rejects the proof. Checked symbols distinguish unrelated shadowed names.
+func (l *lowerer) fixtureHelperDirectOnly(decl *ast.Node, sym *ast.Symbol) bool {
+	ok := true
+	var walk func(*ast.Node)
+	walk = func(n *ast.Node) {
+		if n.Kind == ast.KindIdentifier && n != decl.Name() && l.resolve(n) == sym {
+			if n.Parent == nil || n.Parent.Kind != ast.KindCallExpression || n.Parent.Expression() != n {
+				ok = false
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(l.file.AsNode())
+	return ok
 }
 
 // Mocha ignores describe's return value. An async suite containing only

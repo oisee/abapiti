@@ -83,7 +83,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	if body == nil {
 		return nil
 	}
-	captures := l.freeLocals(n)
+	captures := l.testFixtureCaptures(n, l.freeLocals(n))
 	for _, c := range captures {
 		if l.assignedAfter(n, c.name) {
 			l.diagf(n, "unsupported-closure", "captured %s is assigned after the closure is created", c.name)

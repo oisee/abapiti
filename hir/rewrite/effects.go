@@ -134,6 +134,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"string.match":              {Reads: OpReads{Receiver: true, Args: true}, Writes: "Arg(0)", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"array.matchIndex":          {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"string.split":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"string.splitRegex":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Capturing/empty-match delimiters and unsupported targets explicitly refuse."},
 	"string.startsWith":         {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"string.substr":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"string.substring":          {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},

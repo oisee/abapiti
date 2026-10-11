@@ -3,8 +3,6 @@ package jsregex
 
 // Pinned abaplint patterns reviewed as ASCII token grammars.
 // Dot excludes all four JS line terminators; word/digit remain ASCII.
-const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
-
 // Reviewed maps pattern/flags to a compiled language and an optional whole-input
 // exclusion. Do not mutate: both target emitters and the Go runtime use it.
 var Reviewed = map[string][2]string{

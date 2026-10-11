@@ -15,6 +15,7 @@ var supportedOps = map[string]bool{
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
+	"string.splitRegex":    true,
 	"string.toLowerCase":   true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
 	"object.checkedClassView": true,
@@ -103,6 +104,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "newRegExp(" + args[0] + "," + flags + ")"
 	case "string.replaceRegex":
 		code = a + ".replaceRegex(" + strings.Join(args, ",") + ")"
+	case "string.splitRegex":
+		b.e.splitRegex = true
+		code = a + ".splitRegex(" + args[0] + ")"
 	case "regexp.match_test":
 		code = a + ".match_test(" + args[0] + ")"
 	case "regexp.lastIndex":

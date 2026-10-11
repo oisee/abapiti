@@ -39,7 +39,11 @@ func TestChaiSmallNodeOracle(t *testing.T) {
 	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}
-	probe := `function includes(a:any,b:any,negated:boolean):boolean {
+	probe := `class A {} class B extends A {}
+ function instance(value:any,type:new()=>any,negated:boolean):boolean {
+  try { const assertion=negated?check(value).not:check(value);assertion.instanceOf(type);return true; } catch(error){return false;}
+ }
+ function includes(a:any,b:any,negated:boolean):boolean {
   try { const assertion=negated?check(a).not:check(a);assertion.contain(b);return true; } catch(error){return false;}
  }
  function fail():string {try {check.fail("payload");}catch(error){return error.message;}return "did not throw";}
@@ -49,7 +53,9 @@ func TestChaiSmallNodeOracle(t *testing.T) {
  const item={x:1};const list=[item];const nested=[1];
  return includes([1,2],2,false)+":"+includes([1,2],3,false)+":"+includes([1,2],3,true)+":"+
  includes(list,item,false)+":"+includes(list,{x:1},false)+":"+includes([nested],nested,false)+":"+
- includes([undefined],undefined,false)+":"+includes([null],undefined,false)+":"+includes("abc","b",false)+":"+fail()+":"+lookalike();
+ includes([undefined],undefined,false)+":"+includes([null],undefined,false)+":"+includes("abc","b",false)+":"+fail()+":"+lookalike()+":"+
+ instance(new A(),A,false)+":"+instance(new B(),A,false)+":"+instance(new A(),B,false)+":"+instance(1,A,false)+":"+instance(null,A,true)+":"+instance(undefined,A,false);
+
  }`
 	oracle := fmt.Sprintf("const {expect:check}=require(%q);\n", chai) + probe + "\nconsole.log(decisions());"
 	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1]))`, oracle).CombinedOutput()

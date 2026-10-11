@@ -455,6 +455,12 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			l.hint = l.hint.Args[0]
 		}
 		if len(els) == 0 {
+			if l.unprunedFeatures && l.hint.Kind == hir.Dynamic {
+				// An erased context still constructs a real fresh JS array.
+				// Use the existing any[] storage, boxed by the consumer;
+				// do not infer a nominal element type from an absent row.
+				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.Array, hir.T(hir.Dynamic))}
+			}
 			if l.hint.Kind != hir.Array && l.hint.Kind != hir.OrderedSet {
 				if t := l.ck.GetContextualType(n, 0); t != nil {
 					if arr := l.singleArrayConstituent(t); arr != nil {
@@ -1487,6 +1493,16 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("string.toLowerCase", recv, str), true
 		case "split":
+			if l.unprunedFeatures && len(args) == 1 {
+				pattern := l.expr(args[0])
+				if pattern != nil && pattern.Type.Kind == hir.RegExp {
+					return l.rtOp("string.splitRegex", recv, hir.T(hir.Array, str), pattern), true
+				}
+				if pattern == nil {
+					return nil, true
+				}
+				return l.rtOp("string.split", recv, hir.T(hir.Array, str), pattern), true
+			}
 			return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
 		case "toString":
 			return recv, true

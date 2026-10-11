@@ -27,7 +27,10 @@ for (const r of run.results) {
   const item=traps.get(message) ?? {message,count:0,example:r.message}; item.count++;traps.set(message,item);
  }
 }
-report.notRunReasons.unregistered = [...available.values()].reduce((a,b)=>a+b,0);
+// Keep the exact missing multiset for registration-root audits, including
+// pending Node cases that never registered. Do not infer execution statuses.
+report.unregisteredTitles = [...available].flatMap(([title, count]) => Array(count).fill(title));
+report.notRunReasons.unregistered = report.unregisteredTitles.length;
 report.notRun += report.notRunReasons.unregistered;
 report.topTraps = [...traps.values()].sort((a,b)=>b.count-a.count || a.message.localeCompare(b.message)).slice(0,20);
 if (report.passed+report.failed+report.trapped+report.asyncPending+report.notRun !== report.total) throw new Error('oracle reconciliation did not sum to total');

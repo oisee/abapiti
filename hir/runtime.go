@@ -43,7 +43,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.repeatIndent": {String, 1, false}, "string.trim": {String, 0, false}, "string.toUpperCase": {String, 0, false},
 	"string.replaceAll": {String, 2, false}, "i32.toString": {I32, 0, false},
 	"string.startsWith": {String, 1, false}, "string.endsWith": {String, 1, false},
-	"string.indexOf": {String, 1, false}, "string.split": {String, 1, false},
+	"string.indexOf": {String, 1, false}, "string.split": {String, 1, false}, "string.splitRegex": {String, 1, false},
 	"string.toLowerCase": {String, 0, false},
 	"string.trimStart":   {String, 0, false}, "string.trimEnd": {String, 0, false},
 	"map.delete":          {OrderedMap, 1, true},
@@ -158,6 +158,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, i, true
 	case "string.split":
 		return []Type{T(String)}, T(Array, T(String)), true
+	case "string.splitRegex":
+		return []Type{T(RegExp)}, T(Array, T(String)), true
 	case "string.replaceRegex":
 		return []Type{T(RegExp), T(String)}, T(String), true
 	case "number.index":

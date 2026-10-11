@@ -114,6 +114,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.chaiDeep {
 		runtime += chaiDeepRuntimeSource
 	}
+	if e.splitRegex {
+		runtime += splitRegexRuntimeSource
+	}
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
@@ -145,6 +148,7 @@ type emitter struct {
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
+	splitRegex        bool
 	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
