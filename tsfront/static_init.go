@@ -143,6 +143,11 @@ func (l *lowerer) moduleInitializer(n *ast.Node) bool {
 		if x == nil {
 			return
 		}
+		// Registration stores test/hook bodies; their static reads happen
+		// after initialization, when the Go host invokes the callback.
+		if l.integerOptions.TrapOnFailure && (x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression) && l.isDeferredTestCallback(x) {
+			return
+		}
 		if x.Kind == ast.KindPropertyAccessExpression {
 			p := x.AsPropertyAccessExpression()
 			if l.classOf(l.resolve(p.Expression)) != nil {
