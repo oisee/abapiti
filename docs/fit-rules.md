@@ -37,6 +37,7 @@ not as independent void ABI fixes.
 | Root | Rules before → after | Total before → after | HIR errors before → after |
 | --- | --- | --- | --- |
 | Primitive find: parser_702_chaining and short_case | 113 → 108 (root group 5 → 0) | 635 → 630 | 394 → 390 |
+| Reference `Class || undefined`: intf_referencing_clas | 108 → 105 (root group 3 → 0) | 630 → 627 | 390 → 388 |
 
 Primitive find uses the existing optional-result dense callback mechanism with
 new source fingerprints for these two consumers. The parser receiver is a
@@ -71,3 +72,26 @@ These are disjoint attribution counts of existing diagnostics, not predictions
 of final net reductions: removing a blocker can expose another root. In
 particular, contains_tab's dense callback adapter exposes the currently silent
 two-argument string.indexOf overload; the follow-on belongs here.
+
+Reference logical OR now contextually types a literal undefined arm through the
+existing optional-reference representation when the checker says the result
+is a nominal reference. An assertion can erase absence in the checker without
+making the runtime object present. Both class and interface reference probes
+compare Go with Node, including absence and exactly one lookup per expression;
+ABAP emission is checked. Required vet/short tests pass and the same-path
+all,go default diff is empty. This change does not alter nullish coalescing or void
+results.
+
+Investigated unchanged boundaries:
+
+* Indexed nominal config (4 diagnostics): `ObjectNamingConf[abapType]` needs
+  heterogeneous own/prototype lookup and retained unknown JSON fields. A switch
+  over declared config fields with undefined for all other keys would discard
+  observable values. General property-presence/prototype metadata is needed;
+  this batch leaves those diagnostics intact.
+* `XMLValidator.validate` (3 diagnostics): the embedded fast-xml-parser package
+  provides declarations, not the validation implementation. The existing XML
+  parsing subset cannot reproduce the validator's full input acceptance, error
+  locations/messages and structured `true | ValidationError` result. A complete
+  validation adapter or lowering the upstream implementation is needed; do not
+  substitute successful parsing or a bool for that result.
