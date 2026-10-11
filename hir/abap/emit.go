@@ -1732,13 +1732,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 			b.line(n + " = " + a + "+" + start + "(" + count + ").")
 			b.line("ENDIF.")
-		case "string.trim":
+		case "string.trim", "string.trimStart", "string.trimEnd":
 			lo := b.temp(hir.T(hir.I32))
 			hi := b.temp(hir.T(hir.I32))
 			b.line(lo + " = 0.")
 			b.line(hi + " = " + length + ".")
-			b.trimLoop(a, lo, hi, true)
-			b.trimLoop(a, lo, hi, false)
+			if x.Op != "string.trimEnd" {
+				b.trimLoop(a, lo, hi, true)
+			}
+			if x.Op != "string.trimStart" {
+				b.trimLoop(a, lo, hi, false)
+			}
 			b.line("IF " + hi + " > " + lo + ".")
 			b.line(length + " = " + hi + " - " + lo + ".")
 			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
@@ -2015,6 +2019,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if n != "" {
 			b.line(n + " = lines( " + a + "->items ).")
 		}
+		return
+	}
+	if x.Op == "map.delete" {
+		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
+		b.line(n + " = xsdbool( sy-subrc = 0 ).")
 		return
 	}
 	if x.Op == "record.delete" {

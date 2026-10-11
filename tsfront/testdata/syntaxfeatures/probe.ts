@@ -97,6 +97,39 @@ export class Probe {
   private static readonly seed: Trivial = new Trivial(5);
   private static readonly table: {[name: string]: number} = {"a": 1, "b": 2};
   private counter = 0;
+  public small(raw: string): string {
+    const trimmed = raw.trimStart() + ":" + raw.trimEnd();
+    const casing = raw.toLocaleLowerCase() + ":" + raw.toLocaleUpperCase();
+    const matrix: number[][] = [[1, 2], [], [3]];
+    const flattened = matrix.flat();
+    flattened.push(4);
+    const map = new Map<string, number>();
+    map.set("zero", 0);
+    map.set("other", 2);
+    const removed = map.delete("zero");
+    const absent = map.delete("zero");
+    map.set("zero", 3);
+    let local = 0;
+    const prefix = ++local;
+    const postfix = local++;
+    const fieldPrefix = ++this.counter;
+    const fieldPostfix = this.counter++;
+    ++local;
+    let loops = 0;
+    outer: for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (i === 1) { continue outer; }
+        if (i === 3) { break outer; }
+        loops++;
+      }
+      loops += 10;
+    }
+    const present = matrix ?? [[99]];
+    const record: {[name: string]: number} = {"zero": 0};
+    const hasZero = "zero" in record;
+    const hasMissing = "missing" in record;
+    return `${trimmed}:${casing}:${flattened.join(",")}:${matrix.length}:${removed}:${absent}:${map.size}:${map.get("zero")}:${prefix}:${postfix}:${fieldPrefix}:${fieldPostfix}:${local}:${loops}:${present.length}:${hasZero}:${hasMissing}`;
+  }
   private readonly deferred: (() => void)[] = [];
   private log: string[] = [];
   private note(text: string): void { this.log.push(text); }
@@ -233,6 +266,7 @@ export class Probe {
       this.log.join(";"), `${this.counter}`, `${primUndef}`, `${missingPending}`, `${seed}`, Probe.unrelated(new ClassDef("u")), `${n}`, `${flag}`,
       recsKeys, afterDel, picked, boxText, boxMissing, `${boxNum}`, bagKeys, forwarded,
     ];
+    parts.push(this.small(raw));
     return parts.join("|");
   }
 }

@@ -34,7 +34,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.replaceAll": {String, 2, false}, "i32.toString": {I32, 0, false},
 	"string.startsWith": {String, 1, false}, "string.endsWith": {String, 1, false},
 	"string.indexOf": {String, 1, false}, "string.split": {String, 1, false},
-	"string.toLowerCase":  {String, 0, false},
+	"string.toLowerCase": {String, 0, false},
+	"string.trimStart":   {String, 0, false}, "string.trimEnd": {String, 0, false},
+	"map.delete":          {OrderedMap, 1, true},
 	"string.replaceRegex": {String, 2, false},
 	"array.reverse":       {Array, 0, true},
 	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
@@ -116,7 +118,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{i}, i, true
 	case "string.charAt":
 		return []Type{i}, T(String), true
-	case "string.trim", "string.toUpperCase", "string.toLowerCase":
+	case "string.trim", "string.trimStart", "string.trimEnd", "string.toUpperCase", "string.toLowerCase":
 		return nil, T(String), true
 	case "string.substr":
 		return []Type{i, i}, T(String), true
@@ -168,7 +170,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{i, i, t.Args[0]}, t, true
 	case "array.pop", "array.shift":
 		return nil, optionalOf(t.Args[0]), true
-	case "set.delete":
+	case "set.delete", "map.delete":
 		return []Type{t.Args[0]}, b, true
 	case "map.values":
 		return nil, T(Array, t.Args[1]), true

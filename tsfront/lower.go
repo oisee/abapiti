@@ -408,6 +408,7 @@ type lowerer struct {
 	// `continue`/`break` statements rewritten inside a for loop with an
 	// update expression (lower_syntax.go).
 	breakViaFlag     map[*ast.Node]*hir.Expr
+	labeledControl   map[*ast.Node]*hir.Stmt
 	ifaceClassBaseOf map[string]string
 	bridgeTargets    map[*hir.Method]*hir.Method
 	// ifaceNodes maps interface names to their declarations (for checker

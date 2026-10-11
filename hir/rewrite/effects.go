@@ -79,6 +79,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"number.remainder2":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.toString":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"object.classOf":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"map.delete":                {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"record.delete":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"regexp.match_test":         {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None", Conservative: "Target regex engine may reject a supported-looking pattern at execution."},
 	"regexp.new":                {Reads: OpReads{Receiver: false, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Pattern and flags validation differs between runtimes."},
@@ -115,6 +116,8 @@ var RuntimeEffects = map[string]OpEffect{
 	"string.substring":          {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"string.toLowerCase":        {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"string.toUpperCase":        {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"string.trimStart":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"string.trimEnd":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"string.trim":               {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"xml.parseSubset":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 }
