@@ -140,6 +140,35 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 	return func() { l.localFns = saved; l.pendingFns = savedPending }
 }
 
+// Keep existing output names when unique. Separate lexical callbacks in
+// different enclosing methods may use the same local name; their lifted
+// class members must still be distinct. A source position makes collisions
+// deterministic without renaming the default workload's unique callbacks.
+func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
+	base := "fn_" + local
+	used := func(name string) bool {
+		for _, m := range l.class.Methods {
+			if m.Name == name {
+				return true
+			}
+		}
+		for _, f := range l.class.Fields {
+			if f.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+	if !used(base) {
+		return base
+	}
+	candidate := base + "_" + itoa(fn.Pos())
+	for i := 1; used(candidate); i++ {
+		candidate = base + "_" + itoa(fn.Pos()) + "_" + itoa(i)
+	}
+	return candidate
+}
+
 // liftLocalFn creates the private method for one local arrow function. The
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
@@ -181,7 +210,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			seen[capture.symbol] = true
 		}
 	}
-	m := &hir.Method{Node: l.node(fn), Name: "fn_" + name, Virtual: true, Result: hir.T(hir.Void)}
+	m := &hir.Method{Node: l.node(fn), Name: l.localFnMemberName(name, fn), Virtual: true, Result: hir.T(hir.Void)}
 	if l.method != nil && l.method.Static {
 		m.Static = true
 		m.Virtual = false
