@@ -13,7 +13,7 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 			return
 		}
 		switch e.Writes {
-		case "None", "Receiver", "Arg(0)", "Arg(1)", "Arg(2)":
+		case "None", "Receiver", "Arg(0)", "Arg(1)", "Arg(2)", "Global":
 		default:
 			t.Errorf("%s writes %q", op, e.Writes)
 		}
@@ -27,7 +27,7 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 		default:
 			t.Errorf("%s aliases %q", op, e.Aliases)
 		}
-		if e.Reads.Global != (op == "clock.telemetry") {
+		if e.Reads.Global != (op == "clock.telemetry" || op == "chai.throwMatch") {
 			t.Errorf("%s global read", op)
 		}
 	}
@@ -60,6 +60,18 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 		}
 	}
 	t.Logf("effects coverage: %d catalogue + %d SpecialOps = %d records", len(hir.RuntimeSpecs), len(hir.SpecialOps), len(RuntimeEffects))
+}
+
+func TestChaiThrowCallbackEffectsAreUnknown(t *testing.T) {
+	thunk := hir.Type{Kind: hir.InterfaceRef, Name: "closure.thunk"}
+	p := &hir.Program{Interfaces: []*hir.Interface{{Name: thunk.Name, Methods: []*hir.Method{{Name: "call", Result: hir.T(hir.Void)}}}}, Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{{Name: "run", Static: true, Result: hir.T(hir.Bool), Params: []hir.Param{{Name: "action", Type: thunk}}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "chai.throwMatch", Type: hir.T(hir.Bool), X: hir.V("action", thunk), Args: []*hir.Expr{hir.L(hir.T(hir.String), "")}}})}}}}}
+	db, err := Analyze(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if db.Count("unknown_effect") != 1 || db.Count("pure") != 0 || db.Count("impure") != 1 {
+		t.Fatal(Report(db))
+	}
 }
 
 func TestRuntimeEffectSemantics(t *testing.T) {

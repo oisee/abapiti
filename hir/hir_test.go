@@ -117,10 +117,16 @@ func TestRuntimeCatalogue(t *testing.T) {
 		if op == "array.matchIndex" {
 			typ = T(Array, T(String))
 		}
+		if op == "chai.throwMatch" {
+			typ.Name = "closure.thunk"
+		}
 		ps, r, ok := RuntimeSignature(op, typ)
 		if !ok || len(ps) != s.Arity || r.Kind == "" {
 			t.Fatal(op)
 		}
+	}
+	if _, _, ok := RuntimeSignature("chai.throwMatch", Type{Kind: InterfaceRef, Name: "unrelated"}); ok {
+		t.Fatal("arbitrary callable interface accepted")
 	}
 	if _, _, ok := RuntimeSignature("array.get", T(Array)); ok {
 		t.Fatal("malformed generic accepted")

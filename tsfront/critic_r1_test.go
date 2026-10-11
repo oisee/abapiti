@@ -31,7 +31,7 @@ func TestCriticR1Diagnostics(t *testing.T) {
 		"before_super_this": "unsupported-before-super", "radix": "unsupported-call",
 		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
 		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
-		"unproven_as": "unsupported-assertion", "super_reorder": "unsupported-top-level",
+		"super_reorder":      "unsupported-top-level",
 		"constructor_timing": "unsupported-static-init",
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -46,6 +46,33 @@ func TestCriticR1Diagnostics(t *testing.T) {
 			}
 			t.Fatalf("missing %s: %v", category, diags)
 		})
+	}
+}
+
+// The original unproven assertion now has a checked Go runtime domain,
+// rather than a whole-body refusal. It is not admitted as an ABAP ?= cast.
+func TestCriticR1UnprovenClassView(t *testing.T) {
+	prog, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", "unproven_as"))
+	for _, d := range diags {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Fatal(d)
+		}
+	}
+	if errs := hir.Verify(prog); len(errs) != 0 {
+		t.Fatal(errs)
+	}
+	if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "object.checkedClassView") {
+		t.Fatalf("ABAP must refuse unproven nominal views: %v", err)
+	}
+	names := hir.NewNames()
+	entry := goEntry("input.ts.Probe", "run")
+	probe, sub, base := names.Get("new.input.ts.Probe"), names.Get("new.input.ts.Sub"), names.Get("new.input.ts.Base")
+	if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s(%s(),%s()))", entry, probe, sub)); got != "2\n" {
+		t.Fatal(got)
+	}
+	main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("unproven view escaped its domain")};fmt.Println("refused")}();%s(%s(),%s())`, entry, probe, base)
+	if got := runGoHIR(t, prog, main); got != "refused\n" {
+		t.Fatal(got)
 	}
 }
 

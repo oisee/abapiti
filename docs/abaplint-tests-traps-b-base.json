@@ -1,0 +1,888 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "codeCommit": "421d8e2b200ef354fe8d2ea19c29ac38d23c501f",
+  "mainCommit": "0b4cd7662cadd4ab385a8d0144da19eb43855579",
+  "artifacts": "/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/trapsb/all-yRpLlv",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "abap",
+      "files": 18,
+      "passed": 52,
+      "failed": 0,
+      "trapped": 29,
+      "asyncPending": 0,
+      "notRun": 139,
+      "registered": 81,
+      "total": 220,
+      "node": {
+        "passed": 216,
+        "failed": 0,
+        "pending": 4
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 139
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:9:1",
+          "message": "test/abap/combi.ts:9:1: lowering trap: unsupported-type test/abap/combi.ts:9:7: checker type (s: string) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:10:1",
+          "message": "test/abap/combi.ts:10:1: lowering trap: unsupported-type test/abap/combi.ts:10:7: checker type (first: InputType, second: InputType, ...rest: InputType[]) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:11:1",
+          "message": "test/abap/combi.ts:11:1: lowering trap: unsupported-type test/abap/combi.ts:11:7: checker type (first: InputType, second: InputType, ...rest: InputType[]) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:12:1",
+          "message": "test/abap/combi.ts:12:1: lowering trap: unsupported-type test/abap/combi.ts:12:7: checker type (first: InputType, second: InputType, ...rest: InputType[]) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:13:1",
+          "message": "test/abap/combi.ts:13:1: lowering trap: unsupported-type test/abap/combi.ts:13:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:14:1",
+          "message": "test/abap/combi.ts:14:1: lowering trap: unsupported-type test/abap/combi.ts:14:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:15:1",
+          "message": "test/abap/combi.ts:15:1: lowering trap: unsupported-type test/abap/combi.ts:15:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:16:1",
+          "message": "test/abap/combi.ts:16:1: lowering trap: unsupported-type test/abap/combi.ts:16:7: checker type (r: RegExp) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:17:1",
+          "message": "test/abap/combi.ts:17:1: lowering trap: unsupported-type test/abap/combi.ts:17:7: checker type (t: new (p: Position, s: string) => AbstractToken) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:18:1",
+          "message": "test/abap/combi.ts:18:1: lowering trap: unsupported-type test/abap/combi.ts:18:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:19:1",
+          "message": "test/abap/combi.ts:19:1: lowering trap: unsupported-type test/abap/combi.ts:19:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:21:1",
+          "message": "test/abap/combi.ts:21:1: lowering trap: unsupported-call test/abap/combi.ts:22:18: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi.ts",
+          "action": "test/abap/combi.ts:110:1",
+          "message": "test/abap/combi.ts:110:30: lowering trap: unsupported-expr test/abap/combi.ts:111:3: identifier tests is not a lowered local or module value; unsupported-expr test/abap/combi.ts:111:3: identifier tests is not a lowered local or module value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:10:1",
+          "message": "test/abap/combi_size.ts:10:1: lowering trap: unsupported-type test/abap/combi_size.ts:10:7: checker type (s: string) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:11:1",
+          "message": "test/abap/combi_size.ts:11:1: lowering trap: unsupported-type test/abap/combi_size.ts:11:7: checker type (first: InputType, second: InputType, ...rest: InputType[]) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:12:1",
+          "message": "test/abap/combi_size.ts:12:1: lowering trap: unsupported-type test/abap/combi_size.ts:12:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:13:1",
+          "message": "test/abap/combi_size.ts:13:1: lowering trap: unsupported-type test/abap/combi_size.ts:13:7: checker type (first: InputType) => IStatementRunnable is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:30:1",
+          "message": "test/abap/combi_size.ts:30:1: lowering trap: unsupported-call test/abap/combi_size.ts:31:7: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/combi_size.ts",
+          "action": "test/abap/combi_size.ts:51:1",
+          "message": "test/abap/combi_size.ts:51:31: lowering trap: unsupported-expr test/abap/combi_size.ts:52:3: identifier resultSize is not a lowered local or module value; unsupported-expr test/abap/combi_size.ts:52:3: identifier resultSize is not a lowered local or module value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "action": "test/abap/nesting.ts:251:1",
+          "message": "test/abap/nesting.ts:251:31: lowering trap: unsupported-expr test/abap/nesting.ts:253:15: property n is not lowered; unsupported-expr test/abap/nesting.ts:253:42: property top is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 33034 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/expressions",
+      "files": 11,
+      "passed": 41,
+      "failed": 0,
+      "trapped": 9,
+      "asyncPending": 0,
+      "notRun": 57,
+      "registered": 50,
+      "total": 107,
+      "node": {
+        "passed": 107,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 57
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:10:1",
+          "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30081 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:70:1",
+          "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30296 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/nodes",
+      "files": 1,
+      "passed": 2,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 2,
+      "total": 2,
+      "node": {
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 4942,
+      "failed": 0,
+      "trapped": 20,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/structures",
+      "files": 30,
+      "passed": 138,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 2,
+      "registered": 139,
+      "total": 140,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 1
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/structures/_combi.ts",
+          "action": "test/abap/structures/_combi.ts:276:1",
+          "message": "test/abap/structures/_combi.ts:276:39: lowering trap: unsupported-statement test/abap/structures/_combi.ts:277:3: KindClassDeclaration is not lowered; unsupported-expr test/abap/structures/_combi.ts:282:25: identifier Normal is not a lowered local or module value",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/syntax",
+      "files": 8,
+      "passed": 1243,
+      "failed": 0,
+      "trapped": 81,
+      "asyncPending": 0,
+      "notRun": 49,
+      "registered": 1332,
+      "total": 1373,
+      "node": {
+        "passed": 1363,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 8,
+        "unregistered": 41
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/syntax/syntax.ts",
+          "action": "test/abap/syntax/syntax.ts:16428:1",
+          "message": "test/abap/syntax/syntax.ts:16428:61: lowering trap: test/abap/syntax/syntax.ts:16428:61: HIR verification: node 71982 (test/abap/syntax/syntax.ts:16428:61): expression type mismatch: classref<test/abap/syntax/syntax.ts.module> / classref<closure.71938>",
+          "status": "trapped"
+        }
+      ],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/get_abap.ts",
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 1338
+      }
+    },
+    {
+      "name": "abap/types",
+      "files": 6,
+      "passed": 4,
+      "failed": 0,
+      "trapped": 25,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 29,
+      "total": 29,
+      "node": {
+        "passed": 29,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/types/form_definition.ts",
+          "action": "test/abap/types/form_definition.ts:8:1",
+          "message": "test/abap/types/form_definition.ts:8:1: lowering trap: unsupported-top-level test/abap/types/form_definition.ts:8:1: mutable module variables are not lowered",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 35,
+      "failed": 0,
+      "trapped": 59,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "cds",
+      "files": 2,
+      "passed": 12,
+      "failed": 0,
+      "trapped": 346,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 359,
+      "total": 359,
+      "node": {
+        "passed": 358,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "ddl",
+      "files": 1,
+      "passed": 1,
+      "failed": 0,
+      "trapped": 31,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 32,
+      "total": 32,
+      "node": {
+        "passed": 32,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "lsp",
+      "files": 16,
+      "passed": 54,
+      "failed": 0,
+      "trapped": 134,
+      "asyncPending": 0,
+      "notRun": 5,
+      "registered": 193,
+      "total": 193,
+      "node": {
+        "passed": 188,
+        "failed": 0,
+        "pending": 5
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 5,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 199
+      }
+    },
+    {
+      "name": "objects",
+      "files": 26,
+      "passed": 3,
+      "failed": 0,
+      "trapped": 141,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 145,
+      "total": 145,
+      "node": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "objects/rename",
+      "files": 9,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 31,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "pretty_printer",
+      "files": 1,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 2,
+      "asyncPending": 0,
+      "notRun": 29,
+      "registered": 2,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 29
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:11:1",
+          "message": "test/pretty_printer/pretty_printer.ts:11:1: lowering trap: unsupported-type test/pretty_printer/pretty_printer.ts:11:7: checker type (text: string) => string is not a lowered declaration",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:19:1",
+          "message": "test/pretty_printer/pretty_printer.ts:19:49: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:38:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:48:1",
+          "message": "test/pretty_printer/pretty_printer.ts:48:41: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:57:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:67:1",
+          "message": "test/pretty_printer/pretty_printer.ts:67:50: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:76:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:86:1",
+          "message": "test/pretty_printer/pretty_printer.ts:86:47: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:100:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:110:1",
+          "message": "test/pretty_printer/pretty_printer.ts:110:30: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:157:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:170:1",
+          "message": "test/pretty_printer/pretty_printer.ts:170:49: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:179:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/pretty_printer/pretty_printer.ts",
+          "action": "test/pretty_printer/pretty_printer.ts:192:1",
+          "message": "test/pretty_printer/pretty_printer.ts:192:54: lowering trap: unsupported-call test/pretty_printer/pretty_printer.ts:231:8: call to KindIdentifier is not lowered",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 1415,
+      "failed": 0,
+      "trapped": 1722,
+      "asyncPending": 0,
+      "notRun": 22,
+      "registered": 3147,
+      "total": 3159,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "utils",
+      "files": 3,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 15,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 15,
+      "total": 15,
+      "node": {
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 8142,
+    "failed": 0,
+    "trapped": 2645,
+    "asyncPending": 0,
+    "notRun": 305,
+    "registered": 10813,
+    "total": 11092,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 26,
+    "unregistered": 279
+  },
+  "nodeTotal": {
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092
+  },
+  "wholeSuite": {
+    "files": 625,
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092,
+    "active": 11060,
+    "titlesReconciled": true,
+    "excluded": [],
+    "wiringFailures": []
+  },
+  "countingRule": "Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.",
+  "asyncInitializationFailures": 0,
+  "registrationParity": false,
+  "top20Traps": [
+    {
+      "message": "src/registry.ts: HIR verification: assignment type mismatch",
+      "count": 1087,
+      "shards": {
+        "abap": 3,
+        "root": 12,
+        "lsp": 29,
+        "objects": 49,
+        "rules": 986,
+        "utils": 8
+      },
+      "example": "src/registry.ts:370:3: lowering trap: src/registry.ts:370:3: HIR verification: node 0 (): assignment type mismatch"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /^@\\w+$/",
+      "count": 340,
+      "shards": {
+        "cds": 324,
+        "ddl": 16
+      },
+      "example": "src/cds/expressions/cds_annotation.ts:7:3: lowering trap: node 143848 (src/cds/expressions/cds_annotation.ts:11:39): not supported in the Go prototype: JavaScript regexp /^@\\w+$/"
+    },
+    {
+      "message": "src/edit_helper.ts: HIR verification: foreach requires matching array",
+      "count": 202,
+      "shards": {
+        "abap-syntax": 1,
+        "root": 14,
+        "rules": 187
+      },
+      "example": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 21320 (src/edit_helper.ts:227:5): foreach requires matching array"
+    },
+    {
+      "message": "src/rules/downport.ts: HIR verification: call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .",
+      "count": 194,
+      "shards": {
+        "rules": 194
+      },
+      "example": "src/rules/downport.ts:713:3: lowering trap: src/rules/downport.ts:713:3: HIR verification: node 0 (): call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime ."
+    },
+    {
+      "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 170,
+      "shards": {
+        "abap": 17,
+        "root": 11,
+        "lsp": 20,
+        "objects-rename": 1,
+        "rules": 121
+      },
+      "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/obsolete_statement.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 72,
+      "shards": {
+        "rules": 72
+      },
+      "example": "src/rules/obsolete_statement.ts:157:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/xml_utils.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 66,
+      "shards": {
+        "abap-syntax": 20,
+        "root": 1,
+        "lsp": 10,
+        "objects": 1,
+        "objects-rename": 4,
+        "rules": 30
+      },
+      "example": "src/xml_utils.ts:1:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-expr src/lsp/_lookup.ts: identifier Object is not a lowered local or module value",
+      "count": 53,
+      "shards": {
+        "lsp": 53
+      },
+      "example": "src/lsp/_lookup.ts:238:3: lowering trap: unsupported-expr src/lsp/_lookup.ts:272:36: identifier Object is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-expr src/rules/downport.ts: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier hash is not a lowered local or module value",
+      "count": 29,
+      "shards": {
+        "rules": 29
+      },
+      "example": "src/rules/downport.ts:3161:3: lowering trap: unsupported-expr src/rules/downport.ts:3174:20: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts:3175:23: identifier hash is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value",
+      "count": 25,
+      "shards": {
+        "abap-syntax": 8,
+        "root": 1,
+        "lsp": 2,
+        "objects": 3,
+        "objects-rename": 8,
+        "rules": 3
+      },
+      "example": "src/ddic.ts:353:3: lowering trap: unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value"
+    },
+    {
+      "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 22,
+      "shards": {
+        "abap-expressions": 2,
+        "abap-statements": 20
+      },
+      "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-assertion test/objects/class.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts: identifier clas is not a lowered local or module value; unsupported-expr test/objects/class.ts: identifier s is not a lowered local or module value; unsupported-expr test/objects/class.ts: identifier scope is not a lowered local or module value",
+      "count": 19,
+      "shards": {
+        "objects": 19
+      },
+      "example": "test/objects/class.ts:16:1: lowering trap: unsupported-assertion test/objects/class.ts:17:16: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/objects/class.ts:18:34: identifier clas is not a lowered local or module value; unsupported-expr test/objects/class.ts:19:17: identifier s is not a lowered local or module value; unsupported-expr test/objects/class.ts:20:10: identifier scope is not a lowered local or module value"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/",
+      "count": 18,
+      "shards": {
+        "rules": 18
+      },
+      "example": "src/rules/line_only_punc.ts:46:3: lowering trap: node 283067 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/"
+    },
+    {
+      "message": "src/rules/avoid_use.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 17,
+      "shards": {
+        "rules": 17
+      },
+      "example": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-closure test/cds/cds_parser.ts: captured parseView has no lowered type",
+      "count": 15,
+      "shards": {
+        "cds": 15
+      },
+      "example": "test/cds/cds_parser.ts:3879:56: lowering trap: unsupported-closure test/cds/cds_parser.ts:3879:56: captured parseView has no lowered type"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /\\.fugr\\.(#\\w+#)?sapl/i",
+      "count": 13,
+      "shards": {
+        "abap-syntax": 8,
+        "lsp": 1,
+        "rules": 4
+      },
+      "example": "src/objects/function_group.ts:120:3: lowering trap: node 207075 (src/objects/function_group.ts:121:19): not supported in the Go prototype: JavaScript regexp /\\.fugr\\.(#\\w+#)?sapl/i"
+    },
+    {
+      "message": "unsupported-expr test/ddl/tabl.ts: property deep is not lowered",
+      "count": 13,
+      "shards": {
+        "ddl": 13
+      },
+      "example": "test/ddl/tabl.ts:24:41: lowering trap: unsupported-expr test/ddl/tabl.ts:31:5: property deep is not lowered"
+    },
+    {
+      "message": "unsupported-assertion test/abap/syntax/basic_variables.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/abap/syntax/basic_variables.ts: identifier type is not a lowered local or module value",
+      "count": 12,
+      "shards": {
+        "abap-syntax": 12
+      },
+      "example": "test/abap/syntax/basic_variables.ts:97:1: lowering trap: unsupported-assertion test/abap/syntax/basic_variables.ts:100:16: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/abap/syntax/basic_variables.ts:101:10: identifier type is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-assertion test/abap/types/class_definition.ts: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/abap/types/class_definition.ts: identifier clas is not a lowered local or module value; unsupported-expr test/abap/types/class_definition.ts: identifier s is not a lowered local or module value; unsupported-expr test/abap/types/class_definition.ts: identifier scope is not a lowered local or module value",
+      "count": 11,
+      "shards": {
+        "abap-types": 11
+      },
+      "example": "test/abap/types/class_definition.ts:12:1: lowering trap: unsupported-assertion test/abap/types/class_definition.ts:13:16: type assertion requires checker-proven narrowing of its operand; unsupported-expr test/abap/types/class_definition.ts:14:34: identifier clas is not a lowered local or module value; unsupported-expr test/abap/types/class_definition.ts:15:17: identifier s is not a lowered local or module value; unsupported-expr test/abap/types/class_definition.ts:16:10: identifier scope is not a lowered local or module value"
+    },
+    {
+      "message": "src/rules/ambiguous_statement.ts: HIR verification: invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>",
+      "count": 9,
+      "shards": {
+        "rules": 9
+      },
+      "example": "src/rules/ambiguous_statement.ts:89:3: lowering trap: src/rules/ambiguous_statement.ts:89:3: HIR verification: node 249563 (src/rules/ambiguous_statement.ts:95:29): invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>"
+    }
+  ]
+}
