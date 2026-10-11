@@ -92,6 +92,36 @@ func (l *lowerer) testModuleRead(n *ast.Node, mod *hir.Class, name string, typ h
 	return value
 }
 
+func (l *lowerer) testShapeView(source, view hir.Type) bool {
+	if source.Kind != hir.ClassRef || view.Kind != hir.ClassRef || !strings.HasPrefix(source.Name, "shape.") || !strings.HasPrefix(view.Name, "shape.") {
+		return false
+	}
+	a, b := l.classByName(source.Name), l.classByName(view.Name)
+	if a == nil || b == nil {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, want := range b.Fields {
+		found := false
+		for _, have := range a.Fields {
+			if have.Name == want.Name && (have.Type.Kind == hir.Dynamic || l.acceptsType(have.Type, want.Type)) {
+				found = true
+				seen[have.Name] = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	for _, have := range a.Fields {
+		if !seen[have.Name] && have.Type.Kind != hir.Optional {
+			return false
+		}
+	}
+	return true
+}
+
 func isTestInitialization(m *hir.Method) bool {
 	return strings.HasPrefix(m.Name, testInitializationPrefix)
 }

@@ -23,6 +23,12 @@ func TestChaiAndInitializationGo(t *testing.T) {
 	sources["test/probe.ts"] = `import {expect} from "../runtime/chai";
  class Item { public value = 1; }
  const unsupported = new Date();
+ function checkInstance(value: any, constructor: any): void { expect(value).to.be.instanceof(constructor); }
+ function rows(tests: {abap: string, rel: Item | string, lang?: string}[]): void {
+  for (const test of tests) { it(test.abap, () => {}); }
+ }
+ const names = ["contextual map row"];
+ rows(names.map(abap => ({abap, rel: new Item()})));
  function unavailable(): number { throw new Error("runtime initializer failed"); }
  const guarded = unavailable();
  describe("recovered", () => {
@@ -35,7 +41,7 @@ func TestChaiAndInitializationGo(t *testing.T) {
   it("references", () => {
    const a = new Item(); const b = new Item();
    expect(a).to.equal(a); expect(a).to.not.equal(b);
-   expect(a).to.be.instanceof(Item); expect(1).to.not.be.instanceof(Item);
+   expect(a).to.be.instanceof(Item); checkInstance(a, Item); expect(1).to.not.be.instanceof(Item);
    expect(undefined).to.not.be.instanceof(Item); expect(null).to.not.be.instanceof(Item);
   });
   it("guarded binding", () => expect(guarded).to.equal(0));
@@ -81,7 +87,7 @@ func TestChaiAndInitializationGo(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatal(err, stdout, stderr)
 	}
-	if code != 1 || result.Passed != 4 || result.Failed != 1 || result.Trapped != 1 || result.NotRun != 1 || len(result.Results) != 7 || len(result.Initialization) != 3 {
+	if code != 1 || result.Passed != 5 || result.Failed != 1 || result.Trapped != 1 || result.NotRun != 1 || len(result.Results) != 8 || len(result.Initialization) != 3 {
 		t.Fatalf("code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 	if result.Initialization[0].File != "test/probe.ts" || !strings.Contains(result.Initialization[0].Message, "Date") || !strings.Contains(result.Initialization[1].Message, "runtime initializer failed") || !strings.Contains(result.Initialization[2].Message, "init failure payload") {
