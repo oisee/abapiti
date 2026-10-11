@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
 )
 
@@ -74,4 +75,16 @@ func TestEmptyArrayWithoutElementContextRefuses(t *testing.T) {
 		}
 	}
 	t.Fatalf("missing explicit empty-array refusal: %v", diags)
+}
+
+func TestEmptyArrayPreciseContextOverridesTaggedHint(t *testing.T) {
+	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": `
+export function precise(raw: string): number {
+  const values: string[] = JSON.parse(raw).values ?? [];
+  return values.length;
+}
+`}, []string{"probe.ts"})
+	if !strings.Contains(hir.Dump(prog), "new array<string>") {
+		t.Fatalf("precise string-array context lost: %s", hir.Dump(prog))
+	}
 }

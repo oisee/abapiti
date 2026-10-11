@@ -12,7 +12,7 @@ func (l *lowerer) emptyArrayLiteral(n *ast.Node) *hir.Expr {
 	if typ.Kind == hir.Optional && len(typ.Args) == 1 {
 		typ = typ.Args[0]
 	}
-	if typ.Kind != hir.Array && typ.Kind != hir.OrderedSet && typ.Kind != hir.Dynamic {
+	if typ.Kind != hir.Array && typ.Kind != hir.OrderedSet {
 		if t := l.ck.GetContextualType(n, 0); t != nil {
 			if arr := l.singleArrayConstituent(t); arr != nil {
 				t = arr
