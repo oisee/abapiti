@@ -18,6 +18,16 @@ func (e *emitter) collectBoxedShapes() {
 			dynamicRows = true
 		}
 		if x.Kind == hir.RuntimeOp {
+			if x.Op == "chai.throwMatch" {
+				e.chaiThrow = true
+				e.chaiDeep = true
+				e.usesArrayPresence = true
+				e.usesTypedCatch = true
+			}
+			if x.Op == "chai.deepEqual" || x.Op == "chai.deepInclude" || x.Op == "chai.box" || x.Op == "chai.arrayInclude" {
+				e.chaiDeep = true
+				e.usesArrayPresence = true
+			}
 			if x.Op == "array.get" && x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic {
 				dynamicRows = true
 			}
