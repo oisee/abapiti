@@ -1,4 +1,5 @@
-// Package abap lowers verified object HIR to ABAP 7.50.
+// Package abap lowers verified object HIR to ABAP 7.50 style.
+// PCRE regex features require ABAP 7.55 or later.
 package abap
 
 import (
@@ -25,6 +26,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	matchUsed, execUsed, jsRegexpUsed               bool
 	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
@@ -53,6 +55,9 @@ func Emit(p *hir.Program) (map[string]string, error) {
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
+		return nil, nil, errors[0]
+	}
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
 	if err := inline(p); err != nil {
@@ -222,10 +227,11 @@ func (e *emitter) scanUsage() {
 		if x == nil {
 			return
 		}
+		e.walkStmt(x.Stmt, walk)
 		if x.Kind == hir.ClassOf || x.Type.Kind == hir.ClassValue {
 			need = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "object.classOf" || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
+		if x.Kind == hir.RuntimeOp && (strings.HasPrefix(x.Op, "object.") || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
 			need = true
 		}
 		if x.Kind == hir.InstanceOf && x.Y != nil {
@@ -234,8 +240,25 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex") {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "string.match" {
+			e.matchUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "regexp.test" && x.X != nil && x.X.Kind == hir.New && regexMayHaveState(x.X) {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.Seq {
+			e.walkStmt(x.Stmt, walk)
+		}
 		if x.Type.Kind == hir.RegExp {
 			e.regexpUsed = true
+			if x.Kind == hir.New && regexNeedsJS(x) {
+				e.jsRegexpUsed = true
+			}
 		}
 		if x.Type.Kind == hir.Dynamic {
 			e.dynamicUsed = true
@@ -894,9 +917,10 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if t.Kind == hir.RegExp {
 			e.regexpUsed = true
+			js := regexNeedsJS(x) || e.execUsed && regexMayHaveState(x)
 			original := b.value(x.Args[0], hir.T(hir.String))
 			pattern, reject := original, ""
-			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok {
+			if raw, ok := x.Args[0].Value.(string); !js && x.Args[0].Kind == hir.Lit && ok {
 				translated, excluded := regexPattern(raw)
 				if translated != raw || excluded != "" {
 					pattern = b.temp(hir.T(hir.String))
@@ -907,7 +931,11 @@ func (b *body) expr(x *hir.Expr) string {
 					}
 				}
 			}
-			s := "CREATE OBJECT " + n + " TYPE " + e.name("runtime.regexp")
+			id := "runtime.regexp"
+			if js {
+				id = "runtime.regexp_js"
+			}
+			s := "CREATE OBJECT " + n + " TYPE " + e.name(id)
 			s += " EXPORTING pattern = " + pattern
 			if len(x.Args) > 1 {
 				s += " flags = " + b.value(x.Args[1], hir.T(hir.String))
@@ -916,6 +944,9 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			if reject != "" {
 				s += " excluded_pattern = " + reject
+			}
+			if js {
+				s += " checked = abap_true"
 			}
 			b.line(s + ".")
 			if pattern != original {
@@ -1378,7 +1409,7 @@ func (b *body) stringLit(n, s string) {
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff {
+		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff || r[0] == 0x2028 || r[0] == 0x2029 {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -1391,7 +1422,7 @@ func (b *body) stringLit(n, s string) {
 		}
 		k := 0
 		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && size+len(string(r[k]))*2 <= 120 {
+		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && r[k] != 0x2028 && r[k] != 0x2029 && size+len(string(r[k]))*2 <= 120 {
 			size += len(string(r[k])) * 2
 			k++
 		}
@@ -1559,6 +1590,10 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if x.Op == "json.stringifyConfig" {
+		b.e.err = fmt.Errorf("node %d (%s): json.stringifyConfig is not implemented on ABAP; refusing the config JSON round trip", x.ID, x.Source)
+		return
+	}
 	if b.constSetHas(x, n) {
 		return
 	}
@@ -1571,7 +1606,42 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
 	for i, v := range x.Args {
-		args = append(args, b.value(v, ps[i]))
+		typ := v.Type
+		if i < len(ps) {
+			typ = ps[i]
+		}
+		args = append(args, b.value(v, typ))
+	}
+	if x.Op == "array.matchIndex" {
+		b.e.matchUsed = true
+		b.line("IF " + a + "->match_has_index <> abap_true.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line(n + " = " + a + "->match_index.")
+		return
+	}
+	if x.Op == "regexp.lastIndex" {
+		b.line(n + " = " + a + "->last_index.")
+		return
+	}
+	if x.Op == "regexp.setLastIndex" {
+		v := args[0]
+		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < -2147483648 OR " + v + " > 2147483647.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line(a + "->last_index = " + v + ".")
+		return
+	}
+	if x.Op == "regexp.exec" {
+		b.e.matchUsed = true
+		b.e.execUsed = true
+		b.line(n + " = " + b.e.name("runtime.regexp_js") + "=>exec_legacy( p0 = " + a + " p1 = " + args[0] + " ).")
+		return
+	}
+	if x.Op == "string.match" {
+		b.e.matchUsed = true
+		b.line(n + " = " + args[0] + "->match( " + a + " ).")
+		return
 	}
 	if x.Op == "i64.remainder2" {
 		b.line(n + " = " + a + " MOD 2.")
@@ -1653,6 +1723,19 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + a + "+" + lo + "(" + length + ").")
 			b.line("ELSE.")
 			b.line("CLEAR " + n + ".")
+			b.line("ENDIF.")
+		case "string.repeat":
+			count := b.temp(hir.T(hir.Number))
+			b.line(count + " = trunc( " + args[0] + " ).")
+			b.line("IF " + count + " < 0.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			b.line("CLEAR " + n + ".")
+			b.line("IF " + a + " IS NOT INITIAL.")
+			b.line("IF " + count + " > 2147483647 OR " + count + " * strlen( " + a + " ) > 2147483647.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			b.line(n + " = repeat( val = " + a + " occ = CONV i( " + count + " ) ).")
 			b.line("ENDIF.")
 		case "string.repeatIndent":
 			// The enclosing source certificate proves non-negative integer indentation.
@@ -1791,11 +1874,21 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
+			if x.Args[1].Kind != hir.Lit {
+				b.line("IF " + args[1] + " CS '$'.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+				b.line("ENDIF.")
+			}
 			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 		case "string.replaceAll":
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
 		case "string.replaceFirst":
+			if x.Args[1].Kind != hir.Lit {
+				b.line("IF " + args[1] + " CS '$'.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+				b.line("ENDIF.")
+			}
 			// JavaScript replace with a string pattern: the first occurrence
 			// only; an empty needle inserts before the first code unit.
 			b.line(n + " = " + a + ".")
@@ -1817,6 +1910,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.parseInt10(n, a, length)
 		case "string.localeCompareNames":
 			b.localeCompareNames(n, a, args[0], length)
+		default:
+			// A new verified HIR string op is not automatically implemented
+			// on every target. Never leave its result silently initial.
+			b.e.err = fmt.Errorf("node %d (%s): unsupported ABAP runtime op %s", x.ID, x.Source, x.Op)
 		}
 		return
 	}
@@ -1832,6 +1929,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		return
+	case "xml.validate":
+		b.e.xmlValidationRuntime()
+		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
+		return
+	case "object.get", "object.hasOwn", "object.has":
+		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
+		b.line(n + " = " + b.e.propertyLookup(x.X.Type) + "=>" + method + "( p0 = " + a + " key = " + args[0] + " ).")
 		return
 	case "xml.parseSubset":
 		b.e.xmlSubsetRuntime()
@@ -2000,13 +2105,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "regexp.toString":
 		// JavaScript prints the flags in canonical order: g before i.
-		b.line(n + " = |/{ " + a + "->source }/|.")
-		b.line("IF " + a + "->global = abap_true.")
-		b.line(n + " = " + n + " && `g`.")
-		b.line("ENDIF.")
-		b.line("IF " + a + "->ignore_case = abap_true.")
-		b.line(n + " = " + n + " && `i`.")
-		b.line("ENDIF.")
+		if b.e.jsRegexpUsed {
+			b.line(n + " = |/{ " + a + "->source }/{ " + a + "->flags }|.")
+		} else {
+			b.line(n + " = |/{ " + a + "->source }/|.")
+			b.line("IF " + a + "->global = abap_true.")
+			b.line(n + " = " + n + " && `g`.")
+			b.line("ENDIF.")
+			b.line("IF " + a + "->ignore_case = abap_true.")
+			b.line(n + " = " + n + " && `i`.")
+			b.line("ENDIF.")
+		}
 		return
 	}
 	switch x.Op {

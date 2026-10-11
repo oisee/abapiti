@@ -58,6 +58,9 @@ def summarize(path):
         owners[owner(match[1], int(match[2]), diagnostic["message"])] += 1
     return {
         "total": len(diagnostics),
+        "totalRoot": sum(not d.get("cascade", False) for d in diagnostics),
+        "totalCascade": sum(d.get("cascade", False) for d in diagnostics),
+        "totalByMessage": dict(collections.Counter(d["message"] for d in diagnostics).most_common()),
         "rules": len(rules),
         "rulesRoot": sum(not d.get("cascade", False) for d in rules),
         "owners": dict(sorted(owners.items())),

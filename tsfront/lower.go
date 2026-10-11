@@ -45,10 +45,13 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 	return p.lowerWithPolicy(files, registry, nil)
 }
 
-// LowerOptions makes the integer input contract explicit. Exceptions are source pinned.
+// LowerOptions makes numeric contracts and partial-lowering policy explicit.
+// Integer exceptions are source pinned.
 type LowerOptions struct {
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
+	// TrapOnFailure is a tests-only, fail-closed partial lowering policy.
+	TrapOnFailure bool
 }
 
 func (p *Program) LowerWithOptions(files []string, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
@@ -107,7 +110,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if err := l.validateReachability(files, coverage); err != nil {
 		return nil, nil, err
 	}
-	if err := l.validateOverrides(files, registry); err != nil {
+	if err := l.validateOverrides(files, registry.WithReachability(coverage != nil)); err != nil {
 		return nil, nil, err
 	}
 	if coverage == nil {
@@ -292,6 +295,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				}
 				mod := l.moduleClassOf(f)
 				mod.Fields = append(mod.Fields, hir.Field{Node: l.node(d), Name: d.Name().Text(), Type: typ, Static: true, Private: ast.IsVarConst(d), Readonly: ast.IsVarConst(d)})
+				if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
+					mod.Fields = append(mod.Fields, hir.Field{Name: testReadyPrefix + d.Name().Text(), Type: hir.T(hir.Bool), Static: true})
+				}
 				l.modvars[d.Symbol()] = d.Name().Text()
 				l.modvarsByName[f.FileName()+" "+d.Name().Text()] = modvarRef{owner: mod.Name, field: d.Name().Text()}
 			}
@@ -340,6 +346,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if options.AssumeOnlyIntegerCalculations {
 		l.assumeIntegerTypes()
 	}
+	if options.TrapOnFailure {
+		l.repairFailedBodies()
+	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
 	if coverage == nil {
 		l.classifyCascades()
@@ -364,6 +373,7 @@ type lowerer struct {
 	integerOptions     LowerOptions
 	integerExceptions  map[*ast.Node]IntegerException
 	floatSites         map[string]bool
+	failedSignatures   map[*hir.Method][]string
 	retained           map[*ast.Node]bool
 	typeOnly           map[*ast.Node]bool
 	unexecuted         map[*ast.Node]string
@@ -455,6 +465,8 @@ type lowerer struct {
 	modvarsByName map[string]modvarRef // current file + var name -> module field
 	constReads    map[*ast.Symbol]bool // module constants read anywhere in the program
 	synthsByName  map[string]*hir.Class
+
+	erasedCalls map[*hir.Expr]bool
 
 	// Retain checker binding identity for post-lowering boundary rewrites.
 	localSymbols map[*hir.Expr]*ast.Symbol
@@ -738,7 +750,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	name := d.Name().Text()
 	init := d.Initializer()
 	sym := d.Symbol()
-	if init != nil && !l.moduleInitializer(init) {
+	if init != nil && !l.moduleInitializer(init) && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/")) {
 		l.diagf(init, "unsupported-static-init", "module initializer is not provably pure and order-independent")
 		return nil
 	}
@@ -769,6 +781,9 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		// Node-based type queries are valid across the checker pool;
 		// symbol-based ones are not (types do not mix between checkers).
 		mapped := l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if hint, ok := l.testModuleArrayContext(d); ok {
+			mapped = hint
+		}
 		if mapped.Kind == hir.Void && sym != nil {
 			before := len(l.diags)
 			mapped = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))

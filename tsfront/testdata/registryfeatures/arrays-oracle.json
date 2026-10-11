@@ -13,6 +13,7 @@
   "brandedOptional": "first/absent/first/first/second/first/second/absent/absent",
   "indentation": "|&nbsp&nbsp&nbsp&nbsp|9007199254740991|-9007199254740991",
   "matchTests": "true/true/yes/true/rp",
+  "strings": "/xy/xyxyxy//xx/:ab/a/b/1/3:a,a,a:true:X:3:Z/rp",
   "splice": "x:abcdey;ax:bcdey;abx:cdey;abcdx:ey;abcdex:y;abcdex:y;abcdx:ey;abcx:dey;x:abcdey;1/3/true/second",
   "codeUnits": "65,126,254,255,256,257,8364,55357,56832,9,",
   "reverse": ":true;a:true;ba:true;cba:true;dcba:true;true/third"

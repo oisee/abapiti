@@ -22,11 +22,14 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	switch name {
 	case "map", "filter", "some", "reduce", "find":
 	case "forEach", "every":
-		if !l.pinnedDenseCallback(n) {
-			l.diagf(n, "unsupported-call", "%s needs a source-pinned dense/stable receiver proof", name)
+		if len(args) == 1 && args[0].Kind == ast.KindFunctionExpression && callbackUsesThis(args[0].Body()) {
+			l.diagf(args[0], "unsupported-callback", "%s function callback this binding is not lowered", name)
 			return nil, true
 		}
-		return l.denseCallbackLoop(n, name, recv, args), true
+		if l.pinnedDenseCallback(n) || l.pinnedTestRows(n) {
+			return l.denseCallbackLoop(n, name, recv, args), true
+		}
+		return l.arrayCallbackLoop(n, name, recv, args, true), true
 	default:
 		return l.syntaxHofCall(n, name, recv, args)
 	}
@@ -210,10 +213,6 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		return nil, nil, false
 	}
 	params := cb.Parameters()
-	if params == nil {
-		l.diagf(n, "unsupported-callback", "callback without parameters")
-		return nil, nil, false
-	}
 	var names []string
 	for _, pn := range params {
 		p := pn
@@ -229,14 +228,18 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		names = append(names, p.Name().Text())
 	}
 	if len(names) == 0 {
-		l.diagf(n, "unsupported-callback", "callback without parameters")
-		return nil, nil, false
+		l.serial++
+		name := "unused" + itoa(l.serial)
+		l.declare(name, elem)
+		names = append(names, name)
 	}
 	// Parameter types come from the checker (the element for the first
 	// parameter of map/filter/some, the accumulator for reduce, the index
 	// for the second), falling back to the element type.
 	for i, p := range names {
-		_ = i
+		if i >= len(params) {
+			break
+		}
 		t := elem
 		if ps := params[i].Symbol(); ps != nil {
 			before := len(l.diags)
@@ -260,6 +263,9 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		stmts := body.AsBlock().Statements.Nodes
 		last := len(stmts) - 1
 		if last < 0 || stmts[last].Kind != ast.KindReturnStatement || stmts[last].AsReturnStatement().Expression == nil {
+			if l.containsReturn(body) {
+				return l.callbackWithReturns(cb, names)
+			}
 			l.diagf(n, "unsupported-callback", "callback block must end with a return of a value")
 			return nil, nil, false
 		}
@@ -310,6 +316,9 @@ func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, 
 		args = append(args, value)
 	}
 	for index, name := range names {
+		if len(lf.captures)+index >= len(lf.method.Params) {
+			break
+		}
 		args = append(args, hir.V(name, lf.method.Params[len(lf.captures)+index].Type))
 	}
 	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(cb), X: l.this(l.class), Name: lf.method.Name, Type: lf.method.Result, Args: args}

@@ -222,6 +222,12 @@ type RegistryLowering struct {
 // LowerRegistry loads dir/tsconfig.json and lowers files (relative to dir)
 // with the given overrides and optional reachability manifest.
 func LowerRegistry(dir string, files []string, registry *overrides.Registry, coverage *Reachability) (*RegistryLowering, error) {
+	return LowerRegistryWithOptions(dir, files, registry, coverage, LowerOptions{AssumeOnlyIntegerCalculations: os.Getenv("ABAPITI_ASSUME_INT") == "1"})
+}
+
+// LowerRegistryWithOptions is the same complete closure lowering with an
+// explicit numeric policy, independent of the caller's environment.
+func LowerRegistryWithOptions(dir string, files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*RegistryLowering, error) {
 	if coverage != nil && coverage.UpstreamPin != RegistryUpstreamPin {
 		return nil, fmt.Errorf("coverage upstream pin mismatch")
 	}
@@ -229,7 +235,7 @@ func LowerRegistry(dir string, files []string, registry *overrides.Registry, cov
 	if err != nil {
 		return nil, err
 	}
-	prog, diags, err := p.LowerWithReachability(files, registry, coverage)
+	prog, diags, err := p.lowerWithOptions(files, registry, coverage, options)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +256,7 @@ func LowerRegistry(dir string, files []string, registry *overrides.Registry, cov
 		}
 	}
 	for _, c := range prog.Classes {
-		if c.Super != "" && trapped[c.Super] && !trapped[c.Name] {
+		if !options.TrapOnFailure && c.Super != "" && trapped[c.Super] && !trapped[c.Name] {
 			r.TrappedBases = append(r.TrappedBases, fmt.Sprintf("constructed class %s extends type-only %s", c.Name, c.Super))
 		}
 	}
@@ -292,8 +298,8 @@ func (r *RegistryLowering) Evidence(dump bool) (map[string][]byte, error) {
 	out["registry-blocking.json"] = append(data, '\n')
 	var trapEvidence []struct{ Class, Method, Location string }
 	for _, c := range r.Prog.Classes {
-		for _, m := range c.Methods {
-			if m.Body != nil && m.Body.Kind == hir.Block && len(m.Body.List) == 1 && m.Body.List[0].Kind == hir.Trap {
+		for _, m := range append(append([]*hir.Method{}, c.Methods...), c.Ctor) {
+			if m != nil && m.Body != nil && m.Body.Kind == hir.Block && len(m.Body.List) == 1 && m.Body.List[0].Kind == hir.Trap {
 				trapEvidence = append(trapEvidence, struct{ Class, Method, Location string }{c.Name, m.Name, m.Body.List[0].Name})
 			}
 		}

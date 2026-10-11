@@ -20,6 +20,21 @@ type verifier struct {
 	interfaces map[string]*Interface
 }
 
+// VerifyBody checks one body against all declarations in p. This is also used
+// by opt-in partial lowering to attribute failures without relying on node IDs
+// (synthetic operands may have ID zero).
+func VerifyBody(p *Program, c *Class, m *Method) []error {
+	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
+	for _, x := range p.Classes {
+		v.classes[x.Name] = x
+	}
+	for _, x := range p.Interfaces {
+		v.interfaces[x.Name] = x
+	}
+	v.body(c, m)
+	return v.errors
+}
+
 func Verify(p *Program) []error {
 	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
 	if p == nil {
@@ -924,6 +939,22 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "json.stringifyConfig":
+		if a.Kind != ClassRef || a.Name != "src/_config.ts.IConfig" {
+			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")
+		}
+		eq(t, T(String))
+		args([]Type{T(Optional, T(Dynamic)), T(Optional, T(String))})
+	case "object.get", "object.hasOwn", "object.has":
+		if a.Kind != ClassRef {
+			v.fail(e.Node, "property lookup needs a class receiver")
+		}
+		args([]Type{T(String)})
+		if e.Op == "object.get" {
+			eq(t, T(Dynamic))
+		} else {
+			eq(t, T(Bool))
+		}
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")

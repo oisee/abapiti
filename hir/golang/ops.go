@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -8,18 +9,22 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"string.replaceRegex": true,
-	"string.toLowerCase":  true,
-	"object.classOf":      true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"json.stringifyConfig": true,
+	"string.replaceRegex":  true,
+	"string.toLowerCase":   true,
+	"object.get":           true, "object.hasOwn": true, "object.has": true,
+	"object.classOf": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
-	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
+	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
 	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
 
 	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
-	"array.push": true, "array.get": true, "array.length": true,
+	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
 	"map.delete": true, "string.trimStart": true, "string.trimEnd": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
@@ -67,8 +72,12 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	code := ""
 	switch x.Op {
-	case "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
+	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "string.repeat", "string.match":
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
+	case "array.matchIndex":
+		code = a + ".matchIndex()"
 	case "record.delete":
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":
@@ -91,6 +100,12 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".replaceRegex(" + strings.Join(args, ",") + ")"
 	case "regexp.match_test":
 		code = a + ".match_test(" + args[0] + ")"
+	case "regexp.lastIndex":
+		code = a + ".LastIndex"
+	case "regexp.setLastIndex":
+		code = a + ".setLastIndex(" + args[0] + ")"
+	case "regexp.exec":
+		code = a + ".exec(" + args[0] + ")"
 	case "regexp.test":
 		code = a + ".test(" + args[0] + ")"
 	case "regexp.source":
@@ -123,6 +138,16 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "float64(" + a + ")"
 	case "number.toString":
 		code = "numberString(" + a + ")"
+	case "object.get", "object.hasOwn", "object.has":
+		lookup := b.e.propertyLookup(x.X.Type)
+		code = lookup + "(" + a + "," + args[0] + "," + fmt.Sprint(x.Op == "object.get") + ")"
+		if x.Op == "object.get" {
+			code += ".value"
+		} else if x.Op == "object.hasOwn" {
+			code += ".own"
+		} else {
+			code += ".exists"
+		}
 	case "object.classOf":
 		code = "classOf(" + a + ")"
 	case "classvalue.new":
@@ -137,8 +162,13 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.e.materializer(x.Type) + "(" + a + ")"
 	case "clock.telemetry":
 		code = "telemetry()"
+	case "xml.validate":
+		b.e.xmlValidation = true
+		code = "validateXML(" + a + ")"
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
+	case "json.stringifyConfig":
+		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
 	case "dynamic.null":
@@ -181,7 +211,13 @@ func (b *body) runtime(x *hir.Expr) string {
 	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift" || x.Op == "map.get") && x.Type.Args[0].IsRef() {
 		code += ".Value"
 		if x.X.Type.Kind == hir.Array && x.Type.Args[0].IsRef() {
-			code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			if x.Type.Args[0].Kind == hir.Dynamic {
+				// Reference-array storage is erased. A view as any[] boxes
+				// the actual element, rather than requiring a pre-existing box.
+				code = "box(" + code + ")"
+			} else {
+				code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			}
 		}
 	}
 	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {
@@ -203,3 +239,6 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	return b.temp(x.Type, code)
 }
+
+// SupportsRuntimeOp reports explicit Go emitter coverage.
+func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

@@ -61,6 +61,9 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 	case ast.KindParenthesizedType:
 		return l.mapTypeNode(n.Type())
 	case ast.KindTypeOperator:
+		if n.AsTypeOperatorNode().Operator == ast.KindKeyOfKeyword {
+			return l.mapTypeNodeViaChecker(n)
+		}
 		// `readonly T[]` parses as a readonly type operator; readonlyness of
 		// the elements is not part of the HIR type.
 		return l.mapTypeNode(n.Type())
@@ -169,6 +172,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return arg(0)
 	case "Record":
 		return hir.T(hir.OrderedMap, hir.T(hir.String), arg(1))
+	case "RegExpExecArray", "RegExpMatchArray":
+		if l.librarySymbol(sym) {
+			return hir.T(hir.Array, hir.T(hir.String))
+		}
 	case "RegExp":
 		l.diagf(n, "note-regex-type", "RegExp lowered to the RegExp runtime type")
 		return hir.T(hir.RegExp)
@@ -343,6 +350,21 @@ func (l *lowerer) union(n *ast.Node, parts []hir.Type, optional bool) hir.Type {
 	return hir.T(hir.Void)
 }
 
+func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
+	if t == nil {
+		return false
+	}
+	if t.IsUnion() {
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			if l.isMatchArrayType(part) {
+				return true
+			}
+		}
+		return false
+	}
+	return t.Symbol() != nil && (t.Symbol().Name == "RegExpMatchArray" || t.Symbol().Name == "RegExpExecArray") && l.librarySymbol(t.Symbol())
+}
+
 // mapCheckerType maps the checker type of an expression (or an inferred
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
@@ -364,6 +386,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return mapped
 	}
 	if t.IsUnion() {
+		// Unlike arbitrary mixed null unions, a match array has a nullable
+		// reference ABI; no tagged Dynamic payload is needed.
+		matchArray, onlyMatch := false, true
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			if part.Symbol() != nil && (part.Symbol().Name == "RegExpMatchArray" || part.Symbol().Name == "RegExpExecArray") && l.librarySymbol(part.Symbol()) {
+				matchArray = true
+			} else if part.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) == 0 {
+				onlyMatch = false
+			}
+		}
+		if matchArray && onlyMatch {
+			return hir.T(hir.Optional, hir.T(hir.Array, hir.T(hir.String)))
+		}
 		optional := false
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
@@ -499,6 +534,10 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		}
 		if mapped, ok := l.generatorCheckerType(n, t); ok {
 			return mapped
+		}
+		// Match arrays retain their numbered captures and match index.
+		if t.Symbol() != nil && (t.Symbol().Name == "RegExpMatchArray" || t.Symbol().Name == "RegExpExecArray") && l.librarySymbol(t.Symbol()) {
+			return hir.T(hir.Array, hir.T(hir.String))
 		}
 		// Array and library-collection reference types.
 		if l.ck.IsArrayType(t) || (t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlySet" || t.Symbol().Name == "ReadonlyMap")) {
@@ -691,7 +730,7 @@ func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Cla
 	// optional) is that data interface with the others absent: plain
 	// objects have no identity of their own.
 	for _, c := range l.out.Classes {
-		if !l.shapeLike[c.Name] || c.Ctor == nil || len(c.Fields) <= len(fields) {
+		if (!l.shapeLike[c.Name] && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(c.Name, "shape."))) || c.Ctor == nil || len(c.Fields) <= len(fields) {
 			continue
 		}
 		matched := 0

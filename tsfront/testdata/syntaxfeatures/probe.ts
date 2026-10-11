@@ -258,7 +258,13 @@ export class Probe {
     const optText = Probe.optionalText(flag, raw);
     const optObject = Probe.optionalObject(flag);
     const optionalTags = `${typeof optText === "string"}/${typeof optText !== "string"}/${typeof optText === "undefined"}/${typeof optText === "object"}/${typeof optObject === "object"}/${typeof optObject !== "undefined"}`;
-    const parts: string[] = [minmax, `${spreadOrder}`, optionalTags, presentText, confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
+    const captures = "zabz".match(/(a)(b)/);
+    const matches = "aaba".match(/a/g);
+    const absentMatch = "xyz".match(/(a)(b)/);
+    const proxyMatch = "<CLSPROXY>X</CLSPROXY>".match(/<CLSPROXY>(.)<\/CLSPROXY>/);
+    const ampMatches = ("&&&".match(/&/g) || []).length;
+    const strings = `${"xy".repeat(0)}/${"xy".repeat(1)}/${"xy".repeat(3)}/${"".repeat(4)}/${"x".repeat(2.9)}/${"x".repeat(-0.9)}:${captures?.[0]}/${captures?.[1]}/${captures?.[2]}/${captures?.index}/${captures?.length}:${matches?.join(",")}:${absentMatch === null}:${proxyMatch?.[1]}:${ampMatches}`;
+    const parts: string[] = [minmax, `${spreadOrder}`, optionalTags, strings, presentText, confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,

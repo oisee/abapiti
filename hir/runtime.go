@@ -12,6 +12,10 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"string.repeat":             {String, 1, false},
+	"string.match":              {String, 1, false},
+	"array.matchIndex":          {Array, 0, false},
+	"xml.validate":              {String, 0, false},
 	"xml.parseSubset":           {String, 0, false},
 	"json.parseSubset":          {String, 0, false},
 	"string.compareRegistryKey": {String, 1, false},
@@ -39,7 +43,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"map.delete":          {OrderedMap, 1, true},
 	"string.replaceRegex": {String, 2, false},
 	"array.reverse":       {Array, 0, true},
-	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
+	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.has": {Array, 1, false}, "array.delete": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
 	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
 	"array.slice1": {Array, 1, false}, "array.slice2": {Array, 2, false},
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
@@ -57,9 +61,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"set.fromArray": {OrderedSet, 1, true},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
 	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false},
-	"classvalue.name":   {ClassValue, 0, false},
-	"classvalue.has":    {ClassValue, 1, false},
-	"regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
+	"classvalue.name":  {ClassValue, 0, false},
+	"classvalue.has":   {ClassValue, 1, false},
+	"regexp.lastIndex": {RegExp, 0, false}, "regexp.setLastIndex": {RegExp, 1, false}, "regexp.exec": {RegExp, 1, false}, "regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
 	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false}, "dynamic.isArray": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
@@ -68,12 +72,17 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
+	"object.get":          true, // nominal static property table -> Dynamic
+	"object.hasOwn":       true,
+	"object.has":          true,
 	"object.classOf":      true, // any object ref -> ClassValue
 	"classvalue.new":      true, // ClassValue -> a class or interface reference
 	"dynamic.of":          true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":       true,
 	"dynamic.materialize": true, // Dynamic -> a class or interface reference
 	"regexp.new":          true, // pattern, [flags] -> RegExp
+
+	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
 }
 
 // optionalOf wraps t as an Optional; an optional element stays as it is
@@ -92,7 +101,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
-	case "xml.parseSubset", "json.parseSubset", "dynamic.null":
+	case "xml.validate", "xml.parseSubset", "json.parseSubset", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.get":
 		return []Type{T(String)}, T(Dynamic), true
@@ -106,7 +115,11 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Number), true
 	case "string.length", "array.length", "map.size", "set.size":
 		return nil, i, true
-	case "string.repeatIndent":
+	case "array.matchIndex":
+		return nil, i, t.Args[0].Kind == String
+	case "string.match":
+		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
+	case "string.repeat", "string.repeatIndent":
 		return []Type{T(Number)}, T(String), true
 	case "string.concat":
 		return []Type{T(String)}, T(String), true
@@ -150,6 +163,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t.Args[0]}, i, true
 	case "array.get":
 		return []Type{i}, optionalOf(t.Args[0]), true
+	case "array.has", "array.delete":
+		return []Type{i}, b, true
 	case "array.reverse":
 		return nil, t, true
 	case "array.concat":
@@ -219,6 +234,12 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(String), true
 	case "classvalue.has":
 		return []Type{T(String)}, b, true
+	case "regexp.lastIndex":
+		return nil, i, true
+	case "regexp.setLastIndex":
+		return []Type{T(Number)}, T(Void), true
+	case "regexp.exec":
+		return []Type{T(String)}, T(Optional, T(Array, T(String))), true
 	case "regexp.test", "regexp.match_test":
 		return []Type{T(String)}, b, true
 	case "regexp.source", "regexp.toString":

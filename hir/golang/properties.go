@@ -1,0 +1,111 @@
+package golang
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/oisee/abapiti/hir"
+)
+
+// propertyLookup emits metadata only for an operation's nominal receiver.
+// Fields initialized by base constructors are still own instance properties;
+// class methods and Object.prototype members are prototype properties.
+func (e *emitter) propertyLookup(t hir.Type) string {
+	name := e.name("property.lookup." + t.Name)
+	if e.propertyLookups == nil {
+		e.propertyLookups = map[string]bool{}
+	}
+	if e.propertyLookups[name] {
+		return name
+	}
+	e.propertyLookups[name] = true
+	c := e.classBy(t.Name)
+	type entry struct {
+		name, value string
+		own         bool
+	}
+	var entries []entry
+	seen := map[string]bool{}
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for _, f := range base.Fields {
+			if f.Static || seen[f.Name] {
+				continue
+			}
+			seen[f.Name] = true
+			value := "self." + e.getter(base.Name) + "()." + e.member(f.Name)
+			if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
+				value = "func() *dynamic {v:=" + value + ";if !v.Has {return nil};return box(v.Value)}()"
+			} else {
+				value = "box(" + value + ")"
+			}
+			entries = append(entries, entry{f.Name, value, true})
+		}
+	}
+	// Prototype function values are opaque stable identities. Calling a dynamic
+	// function is outside the HIR callable ABI and remains refused by tsfront.
+	var b strings.Builder
+	line := func(f string, args ...any) { fmt.Fprintf(&b, f+"\n", args...) }
+	addPrototype := func(key, owner string, tag int) {
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		token := e.name("property.value." + owner + "." + key)
+		if !e.propertyLookups[token] {
+			e.propertyLookups[token] = true
+			line("var %s = &dynamic{Tag:%d,Value:&struct{owner,key string}{%q,%q}}", token, tag, owner, key)
+		}
+		entries = append(entries, entry{key, token, false})
+	}
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for _, m := range base.Methods {
+			if !m.Static {
+				addPrototype(m.Name, base.Name, 10)
+			}
+		}
+	}
+	if !seen["constructor"] {
+		seen["constructor"] = true
+		entries = append(entries, entry{"constructor", "box(&" + e.name("descriptor."+c.Name) + ")", false})
+	}
+	addPrototype("__proto__", c.Name, 2)
+	for _, key := range []string{"hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+		addPrototype(key, "Object.prototype", 10)
+	}
+	table := e.name("property.table." + t.Name)
+	line("var %s = map[jsString]struct{slot int;own bool}{", table)
+	for i, p := range entries {
+		line("str(%q):{%d,%t},", p.name, i, p.own)
+	}
+	line("}")
+	line("func %s(self %s,key jsString,read bool) struct{value *dynamic;own,exists bool} {", name, e.typ(t))
+	line("if nilRef(self) {panic(newRangeFault())}")
+	// The static receiver can hold any lowered subclass. Its actual class
+	// selects the corresponding table, rather than losing subclass fields.
+	for _, derived := range e.p.Classes {
+		if derived.Name == c.Name {
+			continue
+		}
+		inherits := false
+		for base := e.classBy(derived.Super); base != nil; base = e.classBy(base.Super) {
+			if base.Name == c.Name {
+				inherits = true
+				break
+			}
+		}
+		if inherits {
+			lookup := e.propertyLookup(hir.Ref(derived.Name))
+			line("if classOf(self)==&%s {return %s(castRef[%s](self),key,read)}", e.name("descriptor."+derived.Name), lookup, e.typ(hir.Ref(derived.Name)))
+		}
+	}
+
+	line("p,ok:=%s[key];var value *dynamic;if !read {return struct{value *dynamic;own,exists bool}{nil,p.own,ok}};switch p.slot {", table)
+	for i, p := range entries {
+		line("case %d:if ok {value=%s}", i, p.value)
+	}
+	line("}")
+	line("return struct{value *dynamic;own,exists bool}{value,p.own,ok}")
+	line("}")
+	e.extra.WriteString(b.String())
+	return name
+}

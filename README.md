@@ -74,7 +74,7 @@ abaplint 577f875e is built into the binary (every file checked against its recor
 | Directory | For | Run it |
 |---|---|---|
 | `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
-| `out/a4h/` | an **ABAP system** (7.50 or later) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
+| `out/a4h/` | an **ABAP system** (7.50 or later for the default build; JS regex features require 7.55) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
 An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:

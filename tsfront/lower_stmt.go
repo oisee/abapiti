@@ -510,6 +510,13 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 	if target == nil {
 		return nil
 	}
+	if target.Kind == hir.RuntimeOp && target.Op == "regexp.setLastIndex" {
+		v := l.expr(rhs)
+		if v == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: l.rtOp("regexp.setLastIndex", target.X, hir.T(hir.Void), l.coerce(v, hir.T(hir.Number)))}
+	}
 	if target.Kind == hir.RuntimeOp && target.Op == "dynamic.put" {
 		// box[k] = v on a tagged record.
 		l.hint = hir.T(hir.Dynamic)
@@ -572,6 +579,14 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 				X: recv, Args: []*hir.Expr{arg, nil}} // filled by the assignment lowering
 		case hir.Array:
 			return &hir.Expr{Kind: hir.IndexGet, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(arg)}
+		case hir.ClassRef:
+			if arg.Kind == hir.Lit && arg.Value == "__proto__" {
+				l.diagf(lhs, "unsupported-assignment", "prototype mutation is not lowered")
+				return nil
+			}
+			if arg.Type.Kind == hir.String {
+				return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "dynamic.put", Type: hir.T(hir.Void), X: l.coerce(recv, hir.T(hir.Dynamic)), Args: []*hir.Expr{arg, nil}}
+			}
 		case hir.Dynamic:
 			if arg.Type.Kind == hir.Number {
 				arg = l.primitiveString(lhs, arg)
@@ -610,6 +625,12 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		l.diagf(lhs, "unsupported-assignment", "assignment to %s is not lowered", name)
 	case ast.KindPropertyAccessExpression:
 		p := lhs.AsPropertyAccessExpression()
+		if p.Name().Text() == "lastIndex" && l.mapCheckerType(p.Expression, l.ck.GetTypeAtLocation(p.Expression)).Kind == hir.RegExp {
+			if recv := l.expr(p.Expression); recv != nil {
+				return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Type: hir.T(hir.Void), Op: "regexp.setLastIndex", X: recv}
+			}
+			return nil
+		}
 		sym := l.resolve(lhs)
 		f, hasField := l.fieldOf(sym)
 		if sym != nil && hasField {

@@ -209,6 +209,16 @@ func (e *emitter) support() {
 	if e.regexpUsed {
 		e.regexpRuntime()
 	}
+	if e.matchUsed || e.jsRegexpUsed {
+		// Match metadata is absent from ordinary array runtimes.
+		e.typ(hir.T(hir.Array, hir.T(hir.String)))
+		file := e.name("runtime."+hir.T(hir.Array, hir.T(hir.String)).String()) + ".clas.abap"
+		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
+		if e.jsRegexpUsed {
+			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
+			e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
+		}
+	}
 	if e.dynamicUsed {
 		e.classvalueRuntime()
 		e.dynamicRuntime()
@@ -390,7 +400,14 @@ func tsName(className string) string {
 // source) and translated to POSIX classes at construction (see the stage-0
 // probe: \w and \d differ between JavaScript and ABAP regexes).
 func (e *emitter) regexpRuntime() {
-	id := "runtime.regexp"
+	e.buildRegexpRuntime("runtime.regexp", false)
+	if e.jsRegexpUsed {
+		e.buildRegexpRuntime("runtime.regexp_js", true)
+		e.regexpJSSubclass()
+	}
+}
+
+func (e *emitter) buildRegexpRuntime(id string, js bool) {
 	if e.types[id] {
 		return
 	}
@@ -399,6 +416,7 @@ func (e *emitter) regexpRuntime() {
 	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 DATA source TYPE string.
+DATA flags TYPE string.
 DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
@@ -417,6 +435,7 @@ DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
 DATA escaped TYPE abap_bool.
+me->flags = flags.
 n = strlen( pattern ).
 WHILE i < n.
   c = pattern+i(1).
@@ -546,6 +565,9 @@ IF sy-subrc = 0.
 ENDIF.
 ENDMETHOD.
 METHOD replace.
+IF p1 CS '$'.
+  RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
 result = p0.
 IF excluded IS NOT INITIAL.
   IF ignore_case = abap_true.
@@ -574,6 +596,83 @@ ENDIF.
 ENDMETHOD.
 ENDCLASS.
 `
+	if e.matchUsed || e.jsRegexpUsed {
+		arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
+		file := name + ".clas.abap"
+		e.files[file] = strings.Replace(e.files[file], "METHODS test IMPORTING", "METHODS match IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE "+arr+".\nMETHODS test IMPORTING", 1)
+		e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD match.
+DATA matches TYPE match_result_tab.
+DATA hit TYPE match_result.
+DATA group TYPE submatch_result.
+DATA groups TYPE submatch_result_tab.
+DATA part TYPE string.
+IF excluded IS NOT INITIAL.
+  IF ignore_case = abap_true.
+    FIND REGEX excluded IN p0 IGNORING CASE.
+  ELSE.
+    FIND REGEX excluded IN p0.
+  ENDIF.
+  IF sy-subrc = 0.
+    RETURN.
+  ENDIF.
+ENDIF.
+IF global = abap_true.
+  IF ignore_case = abap_true.
+    FIND ALL OCCURRENCES OF REGEX posix IN p0 IGNORING CASE RESULTS matches.
+  ELSE.
+    FIND ALL OCCURRENCES OF REGEX posix IN p0 RESULTS matches.
+  ENDIF.
+ELSE.
+  IF ignore_case = abap_true.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS hit.
+    IF sy-subrc = 0.
+      APPEND hit TO matches.
+    ENDIF.
+  ELSE.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS hit.
+    IF sy-subrc = 0.
+      APPEND hit TO matches.
+    ENDIF.
+  ENDIF.
+ENDIF.
+IF matches IS INITIAL.
+  RETURN.
+ENDIF.
+CREATE OBJECT result.
+LOOP AT matches INTO hit.
+  IF global = abap_false.
+    result->match_index = hit-offset.
+    result->match_has_index = abap_true.
+  ENDIF.
+  part = p0+hit-offset(hit-length).
+  APPEND part TO result->items.
+  IF global = abap_false.
+    groups = hit-submatches.
+    LOOP AT groups INTO group.
+      IF group-offset < 0.
+        RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+      ENDIF.
+      part = p0+group-offset(group-length).
+      APPEND part TO result->items.
+    ENDLOOP.
+  ENDIF.
+ENDLOOP.
+ENDMETHOD.
+ENDCLASS.
+`
+	}
+	if js {
+		// This runtime always implements full JS state, even if only a lazy
+		// literal's match/replace was the reason it was reached.
+		old := e.execUsed
+		e.execUsed = true
+		e.regexpExecRuntime(name)
+		e.regexpDynamicRuntime(name)
+		e.regexpPCRERuntime(name)
+		e.execUsed = old
+	} else {
+		e.regexpLegacyRuntime(name)
+	}
 }
 
 // dynamicRuntime emits the tagged union box for Dynamic values.

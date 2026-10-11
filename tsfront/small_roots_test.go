@@ -102,13 +102,13 @@ func TestGoCatchCommonSuperclassNodeOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := integerProbe(t, source)
-	// The unproved call must remain blocking: this is a source-specific proof.
-	_, ds, err := p.LowerWithOptions([]string{"probe.ts"}, LowerOptions{})
-	if err != nil {
-		t.Fatal(err)
+	// Unpinned every now uses presence-sensitive, length-snapshot iteration.
+	unpinned, ds, err := p.LowerWithOptions([]string{"probe.ts"}, LowerOptions{})
+	if err != nil || hasBlocking(ds) {
+		t.Fatal(err, ds)
 	}
-	if !hasBlocking(ds) {
-		t.Fatal("unproved every callback accepted")
+	if got := runGoHIR(t, unpinned, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "ROOT|A|ROOT|none|none|none|X\n" {
+		t.Fatal(got)
 	}
 	prog, ds, err := p.LowerWithReachability([]string{"probe.ts"}, fixture, nil)
 	if err != nil || hasBlocking(ds) {

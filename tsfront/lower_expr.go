@@ -147,7 +147,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
-	if l.isGeneratorABIValue(x) {
+	if l.isGeneratorABIValue(x) || l.erasedCalls[x] {
 		return x
 	}
 	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
@@ -229,6 +229,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 				return x
 			}
 		}
+	}
+	if l.integerOptions.TrapOnFailure && l.testShapeView(x.Type, typ) {
+		// Contextual row construction retains its storage layout and object
+		// identity. A narrower checker view is applied at each field read.
+		return x
 	}
 	if keepAbsence && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
@@ -341,6 +346,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		}
 		if receiver == nil || key == nil {
 			return nil
+		}
+		if receiver.Type.Kind == hir.Array && numberType(key.Type) {
+			return l.rtOp("array.delete", receiver, hir.T(hir.Bool), l.indexValue(key))
 		}
 		// Maps share the OrderedMap representation with records, but delete on a
 		// Map only removes an own property, never an entry.
@@ -640,7 +648,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 			for _, f := range mod.Fields {
 				if f.Name == fieldName {
-					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: mod.Name, Name: fieldName, Type: f.Type}
+					return l.testModuleRead(n, mod, fieldName, f.Type)
 				}
 			}
 		}
@@ -689,6 +697,38 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	sym := l.resolve(n)
+	if sym != nil {
+		for _, declaration := range sym.Declarations {
+			if declaration.Kind != ast.KindGetAccessor {
+				continue
+			}
+			if getter := l.methodOf(sym); getter != nil {
+				if getter.Static {
+					owner := l.classOf(sym.Parent)
+					// Static bodies have no dynamic `this` ABI. An inherited
+					// getter must not silently run with the declaring class as
+					// receiver when JavaScript would bind the derived class.
+					if owner != nil && p.Expression.Kind == ast.KindIdentifier && l.classOf(l.resolve(p.Expression)) == owner {
+						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: owner.Name, Name: getter.Name, Type: getter.Result}
+					}
+					l.diagf(n, "unsupported-expr", "static getter needs its declaring class as receiver")
+					return nil
+				} else {
+					if p.Expression.Kind == ast.KindSuperKeyword {
+						return &hir.Expr{Kind: hir.SuperCall, Node: l.node(n), Name: getter.Name, Type: getter.Result}
+					}
+					recv := l.expr(p.Expression)
+					if recv == nil {
+						return nil
+					}
+					if recv.Type.Kind == hir.Optional {
+						recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+					}
+					return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), X: recv, Name: getter.Name, Type: getter.Result}
+				}
+			}
+		}
+	}
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
 		if f.Static {
@@ -777,6 +817,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	}
 	switch n.Name().Text() {
+	case "index":
+		if l.isMatchArrayType(l.ck.GetTypeAtLocation(p.Expression)) {
+			return l.rtOp("array.matchIndex", recv, hir.T(hir.I32))
+		}
 	case "length":
 		switch recv.Type.Kind {
 		case hir.String:
@@ -801,6 +845,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	case "name":
 		if recv.Type.Kind == hir.ClassValue {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
+		}
+	case "lastIndex":
+		if recv.Type.Kind == hir.RegExp {
+			return l.rtOp("regexp.lastIndex", recv, hir.T(hir.I32))
 		}
 	case "source":
 		if recv.Type.Kind == hir.RegExp {
@@ -856,6 +904,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.generatorNextCall(n); ok {
 		return x
 	}
+	if x, ok := l.testRuntimeCall(n); ok {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
@@ -898,6 +949,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, ok := l.thunkCall(n, callee); ok {
+		return x
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
@@ -1003,6 +1057,32 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return x
 			}
 		}
+		if name == "hasOwnProperty" && l.librarySymbol(l.resolve(callee)) {
+			before := len(l.diags)
+			typ := l.mapCheckerType(p.Expression, l.ck.GetTypeAtLocation(p.Expression))
+			l.diags = l.diags[:before]
+			if typ.Kind == hir.ClassRef && l.isRuleConfig(typ.Name) {
+				if len(n.Arguments()) != 1 {
+					l.diagf(n, "unsupported-call", "config hasOwnProperty needs one string key")
+					return nil
+				}
+				recv := l.expr(p.Expression)
+				if recv == nil {
+					return nil
+				}
+				recv = l.tempInit(n, typ, recv)
+				key := l.expr(n.Arguments()[0])
+				if recv == nil || key == nil {
+					return nil
+				}
+				if key.Type.Kind != hir.String {
+					l.diagf(n, "unsupported-call", "config hasOwnProperty key must be a string")
+					return nil
+				}
+				return l.rtOp("object.hasOwn", recv, hir.T(hir.Bool), key)
+			}
+		}
+
 		if p.Expression.Kind == ast.KindSuperKeyword {
 			hm := l.methodOf(l.resolve(callee))
 			if hm == nil {
@@ -1057,6 +1137,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// The checker typed the receiver present (`if (map[k]) map[k].f()`).
 				recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recv.Type.Args[0], X: recv}
 			}
+			// In unpruned tests, a generic array may actually contain another
+			// implementation of its erased constraint. Dispatch common methods
+			// through that constraint instead of asserting a nominal element cast.
+			erasedReceiver := false
+			if l.integerOptions.TrapOnFailure && recv.Kind == hir.IndexGet && recv.X != nil && recv.X.Kind == hir.Narrow && recv.X.X != nil && recv.X.X.Kind == hir.VirtualCall && recv.X.X.Type.Kind == hir.Array && recv.X.X.Type.Args[0].Kind == hir.InterfaceRef {
+				if common := l.interfaceMethod(recv.X.X.Type.Args[0].Name, name); common != nil {
+					recv = &hir.Expr{Kind: hir.IndexGet, Node: recv.Node, Type: recv.X.X.Type.Args[0], X: recv.X.X, Y: recv.Y}
+					hm = common
+					erasedReceiver = true
+				}
+			}
 			// Ordinary calls must use the erased virtual slot. The specialized
 			// implementation name is reserved for its bridge and super calls.
 			slot := hm
@@ -1108,7 +1199,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: slot.Name, Type: slot.Result, X: recv, Args: args}
-			if !slot.Result.Equal(hm.Result) && hm.Result.Kind != hir.Void {
+			if erasedReceiver {
+				if l.erasedCalls == nil {
+					l.erasedCalls = map[*hir.Expr]bool{}
+				}
+				l.erasedCalls[call] = true
+			}
+			if !slot.Result.Equal(hm.Result) && hm.Result.Kind != hir.Void && !erasedReceiver {
 				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hm.Result, X: call}
 			}
 			return call
@@ -1192,9 +1289,6 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		}
 		return x
 	}
-	if x, ok := l.thunkCall(n, callee); ok {
-		return x
-	}
 	if x, ok := l.globalCall(n, callee); ok {
 		return x
 	}
@@ -1220,6 +1314,26 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	switch recv.Type.Kind {
 	case hir.String:
 		switch name {
+		case "repeat":
+			if len(args) > 1 {
+				l.diagf(n, "unsupported-call", "string.repeat accepts at most one count")
+				return nil, true
+			}
+			count := hir.L(hir.T(hir.Number), 0)
+			if len(args) == 1 {
+				// Count lowering may enqueue statements; the receiver must
+				// already have been evaluated, in JavaScript source order.
+				recv = l.tempInit(n, recv.Type, recv)
+				count = l.expr(args[0])
+			}
+			if count == nil {
+				return nil, true
+			}
+			if !numberType(count.Type) {
+				l.diagf(n, "unsupported-call", "string.repeat requires a numeric count")
+				return nil, true
+			}
+			return l.rtOp("string.repeat", recv, str, l.coerce(count, hir.T(hir.Number))), true
 		case "includes":
 			if len(args) != 1 {
 				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")
@@ -1285,6 +1399,34 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, true
 			}
 			return l.rtOp("string.toUpperCase", recv, str), true
+		case "match":
+			if len(args) != 1 {
+				return nil, false
+			}
+			// The regexp becomes the target receiver; evaluate the JS string
+			// receiver first, including any effects before pattern construction.
+			recv = l.tempInit(n, recv.Type, recv)
+			pattern := one()
+			if pattern == nil {
+				return nil, true
+			}
+			if pattern.Type.Kind == hir.String {
+				pattern = &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Node: l.node(n), Args: []*hir.Expr{pattern, hir.L(str, "")}}
+			}
+			if pattern.Type.Kind != hir.RegExp {
+				l.diagf(n, "unsupported-regex", "match argument is not lowered: expected RegExp or string")
+				return nil, true
+			}
+			if pattern.Kind == hir.New && len(pattern.Args) > 1 && pattern.Args[1].Kind == hir.Lit {
+				if flags, ok := pattern.Args[1].Value.(string); ok && strings.Trim(flags, "ig") != "" {
+					l.diagf(n, "unsupported-regex", "match flags %q are not lowered: only i and g are supported", flags)
+					return nil, true
+				}
+			}
+			if isConditionOnly(n) {
+				return l.rtOp("regexp.match_test", pattern, boolT, recv), true
+			}
+			return l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
 		case "replace", "replaceAll":
@@ -1326,11 +1468,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "test":
 			return l.rtOp("regexp.test", recv, boolT, one()), true
 		case "exec":
-			// Only the match's truthiness is read: exec and test advance a
-			// global regexp's lastIndex alike.
+			// Discarded captures retain the pre-exec test ABI.
 			if isConditionOnly(n) {
 				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
 				return l.rtOp("regexp.test", recv, boolT, one()), true
+			}
+			if len(args) == 1 {
+				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), one()), true
 			}
 		case "toString":
 			if len(args) == 0 {
@@ -1338,6 +1482,10 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 		}
 	case hir.Dynamic:
+		if name == "forEach" && l.pinnedTestRows(n) {
+			array := hir.T(hir.Array, hir.T(hir.Dynamic))
+			return l.denseCallbackLoop(n, name, l.rtOp("dynamic.asRef", recv, array), args), true
+		}
 		// A string method on a tagged value reads the box's string; any other
 		// tag fails loudly where JavaScript raises a TypeError (boxed graphs
 		// carry no functions).
@@ -1453,7 +1601,7 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		l.diagf(n, "unsupported-regex", "replace needs a pattern and a replacement")
 		return nil
 	}
-	if (args[0].Kind == ast.KindRegularExpressionLiteral && args[1].Kind != ast.KindStringLiteral && args[1].Kind != ast.KindNoSubstitutionTemplateLiteral) || ((args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && strings.Contains(args[1].Text(), "$")) {
+	if (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && strings.Contains(args[1].Text(), "$") {
 		l.diagf(args[1], "unsupported-regex", "replace requires a literal replacement without dollar substitutions")
 		return nil
 	}
@@ -1462,9 +1610,13 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		return nil
 	}
 	if args[0].Kind == ast.KindRegularExpressionLiteral {
-		if args[0].Text() == `/\r/g` && args[1].Kind == ast.KindStringLiteral && !strings.Contains(args[1].Text(), "$") {
-			l.diagf(n, "note-regex-mapped", "literal global carriage-return replacement")
-			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), "\r"), with)
+		if (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`) && args[1].Kind == ast.KindStringLiteral && !strings.Contains(args[1].Text(), "$") {
+			needle := "\r"
+			if args[0].Text() == `/\n/g` {
+				needle = "\n"
+			}
+			l.diagf(n, "note-regex-mapped", "literal global line-break replacement")
+			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
 		if (args[0].Text() == `/^/g` || args[0].Text() == `/$/g`) || strings.Contains(args[0].Text(), `\0`) {
 			l.diagf(n, "unsupported-regex", "anchor or octal replacement semantics are not lowered")
@@ -1488,7 +1640,7 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
 	}
-	if pat != nil && pat.Type.Kind == hir.String && (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$") {
+	if pat != nil && pat.Type.Kind == hir.String {
 		if n.Expression().Name().Text() == "replace" {
 			l.diagf(n, "note-replace-first", "string replace with a dynamic string pattern replaces the first occurrence")
 			return l.rtOp("string.replaceFirst", recv, hir.T(hir.String), pat, with)
@@ -1917,7 +2069,29 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.coerce(y, result), Z: l.coerce(left, result)}
 
-	case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
+	case ast.KindEqualsToken:
+		// Evaluate a property reference before the RHS, once, and return the
+		// assigned value (not the receiver). Keep other expression targets
+		// fail-closed until their reference evaluation ABI is available.
+		if b.Left.Kind == ast.KindPropertyAccessExpression {
+			target := l.assignTarget(b.Left)
+			if target != nil && target.Kind == hir.FieldGet {
+				target.X = l.tempInit(n, target.X.Type, target.X)
+				keep := l.hint
+				l.hint = target.Type
+				value := l.expr(b.Right)
+				l.hint = keep
+				if value == nil {
+					return nil
+				}
+				value = l.tempInit(n, target.Type, l.coerce(value, target.Type))
+				l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: value})
+				return value
+			}
+		}
+		l.diagf(n, "unsupported-expr", "assignment expression needs a field reference")
+		return nil
+	case ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 		l.diagf(n, "unsupported-expr", "assignment inside an expression is not lowered")
 		return nil
 	}
@@ -2076,6 +2250,25 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 		}
 		return test
+	}
+	// Match arrays encode null as an absent reference, not as Dynamic's
+	// distinct undefined tag. Preserve JS null checks without boxing it.
+	for _, pair := range []struct {
+		node, other *ast.Node
+		value       *hir.Expr
+	}{{b.Left, b.Right, x}, {b.Right, b.Left, y}} {
+		if pair.other.Kind == ast.KindNullKeyword && l.isMatchArrayType(l.ck.GetTypeAtLocation(pair.node)) {
+			test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: pair.value}
+			if value := pair.value; value.Kind == hir.RuntimeOp && value.Op == "string.match" {
+				// A null check does not read captures (which may be absent).
+				present := l.rtOp("regexp.match_test", value.Args[0], hir.T(hir.Bool), value.X)
+				test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
+			}
+			if negated {
+				return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+			}
+			return test
+		}
 	}
 	tagged := func(t hir.Type) bool {
 		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
@@ -2445,10 +2638,16 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		return l.rtOp("number.toString", x, s)
 	case hir.I32:
 		return l.rtOp("i32.toString", x, s)
+	case hir.I64:
+		return l.rtOp("i64.toString", x, s)
 	case hir.Bool:
 		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
 	case hir.Dynamic:
 		return l.rtOp("dynamic.toString", x, s)
+	case hir.ClassRef:
+		if x.Type.Name == "builtin.Error" {
+			return l.errorToString(at, x)
+		}
 	case hir.Optional:
 		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break

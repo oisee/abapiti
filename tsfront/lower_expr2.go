@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -43,7 +45,17 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	switch recv.Type.Kind {
+	case hir.ClassValue:
+		if arg.Kind == ast.KindStringLiteral && arg.Text() == "name" {
+			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
+		}
 	case hir.ClassRef:
+		if arg.Kind != ast.KindStringLiteral && !l.isRuleConfig(recv.Type.Name) {
+			key := l.expr(arg)
+			if key != nil && key.Type.Kind == hir.String {
+				return l.rtOp("dynamic.get", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), key)
+			}
+		}
 		if arg.Kind == ast.KindStringLiteral {
 			for c := l.classByName(recv.Type.Name); c != nil; c = l.classByName(c.Super) {
 				for _, field := range c.Fields {
@@ -52,6 +64,19 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
+		}
+		// Rule config classes have statically known own fields (including
+		// inherited fields). Keep heterogeneous values and absence tagged.
+		if l.isRuleConfig(recv.Type.Name) {
+			key := l.expr(arg)
+			if key == nil {
+				return nil
+			}
+			if key.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-expr", "config property key must be a string")
+				return nil
+			}
+			return l.rtOp("object.get", recv, hir.T(hir.Dynamic), key)
 		}
 	case hir.OrderedMap:
 		k := l.expr(arg)
@@ -66,6 +91,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		k := l.expr(arg)
 		if k == nil {
 			return nil
+		}
+		if l.isMatchArrayType(l.ck.GetTypeAtLocation(e.Expression)) {
+			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.indexValue(k))
 		}
 		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
 	case hir.Dynamic:
@@ -228,6 +256,9 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 			break
 		}
 		tag := staticTypeofTag(e.Type.Args[0].Kind)
+		if l.isHIRThunk(e.Type.Args[0]) {
+			tag = "function"
+		}
 		if want == "undefined" {
 			test = undefined
 		} else if tag == "" {
@@ -245,6 +276,9 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		// A statically typed operand has a fixed tag; a reference is never
 		// a primitive (whether it is null decides only "object", not folded).
 		tag := map[hir.Kind]string{hir.Number: "number", hir.I32: "number", hir.Bool: "boolean"}[e.Type.Kind]
+		if l.isHIRThunk(e.Type) {
+			tag = "function"
+		}
 		if tag == "" && want == "object" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type.Kind)
 			return nil
@@ -259,6 +293,22 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 	}
 	return test
+}
+
+func (l *lowerer) isHIRThunk(t hir.Type) bool {
+	if t.Kind == hir.InterfaceRef && t.Name == thunkInterfaceName {
+		return true
+	}
+	if t.Kind == hir.ClassRef {
+		if c := l.classByName(t.Name); c != nil {
+			for _, name := range c.Implements {
+				if name == thunkInterfaceName {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // staticTypeofTag describes present values; null is not currently a HIR type.
@@ -288,6 +338,9 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 	}
 	pattern := text[1 : 1+slash]
 	flags := text[2+slash:]
+	if !l.regexFlags(n, flags) {
+		return nil
+	}
 	l.diagf(n, "note-regex", "regex /%s/%s lowered to the RegExp runtime (FIND REGEX, POSIX classes)", pattern, flags)
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp),
 		Args: []*hir.Expr{
@@ -296,39 +349,65 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 		}}
 }
 
+func (l *lowerer) regexFlags(n *ast.Node, flags string) bool {
+	seen := map[rune]bool{}
+	for _, flag := range flags {
+		if !strings.ContainsRune("igym", flag) || seen[flag] {
+			l.diagf(n, "unsupported-regex", "RegExp flags %q are not lowered: unique i/g/y flags and reviewed m patterns only", flags)
+			return false
+		}
+		seen[flag] = true
+	}
+	return true
+}
+
 // newRegExp lowers new RegExp(pattern[, flags]).
 func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 	sym := l.resolve(n.Expression())
-	if sym == nil || sym.Name != "RegExp" || l.classOf(sym) != nil {
+	if sym == nil || sym.Name != "RegExp" || !l.librarySymbol(sym) || l.classOf(sym) != nil {
 		return nil, false
 	}
 	args := n.Arguments()
 	if len(args) == 0 || len(args) > 2 {
-		return nil, false
+		l.diagf(n, "unsupported-regex", "new RegExp requires a string pattern and optional string flags")
+		return nil, true
 	}
 	var p *hir.Expr
+	defaultFlags := ""
 	if args[0].Kind == ast.KindRegularExpressionLiteral {
 		// new RegExp(/source/f, flags): the source text with the new flags.
 		text := args[0].Text()
 		if slash := strings.LastIndex(text[1:], "/"); slash >= 0 {
 			p = &hir.Expr{Kind: hir.Lit, Node: l.node(args[0]), Type: hir.T(hir.String), Value: text[1 : 1+slash]}
+			defaultFlags = text[2+slash:]
 		}
 	}
 	if p == nil {
 		p = l.expr(args[0])
 	}
 	if p == nil {
-		return nil, false
+		return nil, true
+	}
+	if p.Type.Kind != hir.String {
+		l.diagf(args[0], "unsupported-regex", "new RegExp requires a lowered string pattern")
+		return nil, true
 	}
 	argv := []*hir.Expr{p}
 	if len(args) == 2 {
 		f := l.expr(args[1])
 		if f == nil {
-			return nil, false
+			return nil, true
+		}
+		if f.Type.Kind != hir.String {
+			l.diagf(args[1], "unsupported-regex", "new RegExp requires string flags")
+			return nil, true
 		}
 		argv = append(argv, f)
 	} else {
-		argv = append(argv, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: ""})
+		argv = append(argv, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.String), Value: defaultFlags})
+	}
+	if flags, ok := argv[1].Value.(string); argv[1].Kind == hir.Lit && ok && !l.regexFlags(n, flags) {
+		return nil, true
 	}
 	l.diagf(n, "note-regex", "new RegExp(...) lowered to the RegExp runtime (dynamic pattern)")
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp), Args: argv}, true
@@ -388,6 +467,54 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		switch x.Type.Kind {
 		case hir.OrderedMap:
 			return l.rtOp("map.keys", x, hir.T(hir.Array, x.Type.Args[0])), true
+		case hir.ClassRef:
+			// ES2022 public class fields are own properties, including fields
+			// initialized by super(). No dynamic additions/deletions are lowered.
+			if c := l.classByName(x.Type.Name); c != nil && x.Type.Name != hir.RootObject && c.Ctor != nil && len(c.Ctor.Params) == 0 {
+				x = l.tempInit(n, x.Type, x)
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("dynamic.get", l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), ""))})
+				out := l.tempVar(n, hir.T(hir.Array, hir.T(hir.String)))
+				var keys []string
+				var fields func(*hir.Class)
+				fields = func(c *hir.Class) {
+					if c == nil {
+						return
+					}
+					fields(l.classByName(c.Super))
+					for _, f := range c.Fields {
+						if f.Static {
+							continue
+						}
+						found := false
+						for _, k := range keys {
+							if k == f.Name {
+								found = true
+							}
+						}
+						if !found {
+							keys = append(keys, f.Name)
+						}
+					}
+				}
+				fields(c)
+				// Own integer-index keys precede other strings, in numeric order.
+				index := func(s string) (uint64, bool) {
+					v, err := strconv.ParseUint(s, 10, 32)
+					return v, err == nil && v < 4294967295 && strconv.FormatUint(v, 10) == s
+				}
+				sort.SliceStable(keys, func(i, j int) bool {
+					a, ai := index(keys[i])
+					b, bi := index(keys[j])
+					if ai && bi {
+						return a < b
+					}
+					return ai && !bi
+				})
+				for _, key := range keys {
+					l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", out, hir.T(hir.I32), hir.L(hir.T(hir.String), key))})
+				}
+				return out, true
+			}
 		}
 	case "values":
 		args := n.Arguments()
@@ -770,4 +897,14 @@ func (l *lowerer) withLocal(name *ast.Node, repl *hir.Expr, f func() *hir.Expr) 
 	l.replacements = l.replacements[:len(l.replacements)-1]
 	l.scope = l.scope[:len(l.scope)-1]
 	return x
+}
+
+// This boundary does not admit arbitrary objects or prototype mutation.
+func (l *lowerer) isRuleConfig(name string) bool {
+	for c := l.classByName(name); c != nil; c = l.classByName(c.Super) {
+		if strings.HasSuffix(c.Name, ".BasicRuleConfig") {
+			return true
+		}
+	}
+	return false
 }

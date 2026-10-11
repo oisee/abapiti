@@ -1,0 +1,663 @@
+{
+  "baselineCommit": "54a521cd51c0494d73e2740fbe9d6328d286d0c6",
+  "harnessCommit": "41c7a9aa583a6336d255c8641c4281120ce20907",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "branch": "feat/fit-config-json",
+  "implementation": "Actual strict JSON stringify/parse, followed by the original typed constructor adapter; no clone substitution. Writer enabled without reachability; frozen coverage build retains its trap. ABAP explicitly refuses json.stringifyConfig.",
+  "fullClosure": {
+    "commands": {
+      "before": "/tmp/config-json-main-bin abaplint --full -o /tmp/config-json-before",
+      "after": "/tmp/config-json-branch-bin abaplint --full -o /tmp/config-json-after"
+    },
+    "before": {
+      "blocking": 373,
+      "rootBlocking": 155,
+      "cascadeBlocking": 218,
+      "hirErrors": 291,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-array": 2,
+        "unsupported-assignment": 11,
+        "unsupported-async": 1,
+        "unsupported-call": 91,
+        "unsupported-callback": 1,
+        "unsupported-expr": 239,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 2,
+        "unsupported-regex": 4,
+        "unsupported-shortcircuit": 1,
+        "unsupported-statement": 2,
+        "unsupported-type": 12
+      },
+      "byArea": {
+        "abap/types": 6,
+        "lsp": 17,
+        "objects": 38,
+        "rules": 300,
+        "src": 12
+      },
+      "byRootMessage": [
+        {
+          "message": "method X on string is not lowered",
+          "count": 77
+        },
+        {
+          "message": "assignment to X is not lowered",
+          "count": 11
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 11
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 11
+        },
+        {
+          "message": "method X on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "async body must be excluded by validated workload coverage",
+          "count": 1
+        },
+        {
+          "message": "binary operator X is not lowered",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "checker type X, void, undefined> is not a lowered declaration",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on array is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on map is not lowered",
+          "count": 1
+        },
+        {
+          "message": "operands cannot preserve the result type classref<X> (left classref<X>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        }
+      ],
+      "files": 71
+    },
+    "after": {
+      "blocking": 373,
+      "rootBlocking": 155,
+      "cascadeBlocking": 218,
+      "hirErrors": 291,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-array": 2,
+        "unsupported-assignment": 11,
+        "unsupported-async": 1,
+        "unsupported-call": 91,
+        "unsupported-callback": 1,
+        "unsupported-expr": 239,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 2,
+        "unsupported-regex": 4,
+        "unsupported-shortcircuit": 1,
+        "unsupported-statement": 2,
+        "unsupported-type": 12
+      },
+      "byArea": {
+        "abap/types": 6,
+        "lsp": 17,
+        "objects": 38,
+        "rules": 300,
+        "src": 12
+      },
+      "byRootMessage": [
+        {
+          "message": "method X on string is not lowered",
+          "count": 77
+        },
+        {
+          "message": "assignment to X is not lowered",
+          "count": 11
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 11
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 11
+        },
+        {
+          "message": "method X on regexp is not lowered",
+          "count": 5
+        },
+        {
+          "message": "replace with a non-literal pattern is not lowered",
+          "count": 4
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 3
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "?? needs an optional or tagged left operand",
+          "count": 2
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "forEach needs a source-pinned dense/stable receiver proof",
+          "count": 2
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "KindLabeledStatement is not lowered",
+          "count": 1
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "async body must be excluded by validated workload coverage",
+          "count": 1
+        },
+        {
+          "message": "binary operator X is not lowered",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "checker type X, void, undefined> is not a lowered declaration",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "element access on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on array is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on map is not lowered",
+          "count": 1
+        },
+        {
+          "message": "operands cannot preserve the result type classref<X> (left classref<X>, right optional<dynamic>)",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        }
+      ],
+      "files": 71
+    },
+    "blockingByMessage": {
+      "before": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 3,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "after": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 3,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      }
+    },
+    "configBlockingBefore": 0,
+    "configBlockingAfter": 0,
+    "generalJSONIdentifierBlockingBefore": 4,
+    "generalJSONIdentifierBlockingAfter": 4
+  },
+  "ruleOwnKeyProof": {
+    "configs": 194,
+    "explicitConstructors": 0,
+    "requiredUninitializedFields": 0,
+    "allDeclarationOrdersMatchV8": true,
+    "command": "node tools/config-json-oracle.mjs /tmp/config-json-upstream /tmp/config-json-oracle",
+    "oracleBytes": 22011
+  },
+  "harness": {
+    "commands": {
+      "before": "/tmp/config-json-measure-before abaplint-tests /tmp/config-json-rules -o /tmp/config-json-rules-before",
+      "after": "/tmp/config-json-measure-final3 abaplint-tests /tmp/config-json-rules -o /tmp/config-json-rules-final3"
+    },
+    "before": {
+      "total": 3159,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 1295,
+      "notRun": 1864,
+      "registered": 2671,
+      "notRunReasons": {
+        "asyncOrDone": 1366,
+        "skippedOrFocused": 10,
+        "unregistered": 488
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1066,
+          "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "src/config.ts: src/config.ts:69",
+          "count": 211,
+          "example": "src/config.ts:11:3: src/config.ts:69"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        }
+      ]
+    },
+    "after": {
+      "total": 3159,
+      "passed": 5,
+      "failed": 0,
+      "trapped": 1290,
+      "notRun": 1864,
+      "registered": 2671,
+      "notRunReasons": {
+        "asyncOrDone": 1366,
+        "skippedOrFocused": 10,
+        "unregistered": 488
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1066,
+          "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "src/abap/5_syntax/global_definitions/find_global_definitions.ts: HIR verification: call arity mismatch",
+          "count": 196,
+          "example": "src/abap/5_syntax/global_definitions/find_global_definitions.ts:24:3: lowering trap: src/abap/5_syntax/global_definitions/find_global_definitions.ts:24:3: HIR verification: node 136277 (src/abap/5_syntax/global_definitions/find_global_definitions.ts:39:9): call arity mismatch"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 10,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        }
+      ],
+      "failuresByMessage": {}
+    },
+    "historicalConfigTrapped": 250,
+    "baselineConfigTrapped": 211,
+    "note": "The baseline integrates harness 41c7a9a with main 54a521c; current registration is 2671 versus the historical 2730, so historical 250 Config traps are not the current measured baseline.",
+    "intermediateAfter": {
+      "total": 3159,
+      "passed": 5,
+      "failed": 196,
+      "trapped": 1094,
+      "notRun": 1864,
+      "registered": 2671,
+      "notRunReasons": {
+        "asyncOrDone": 1366,
+        "skippedOrFocused": 10,
+        "unregistered": 488
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1066,
+          "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 10,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        }
+      ],
+      "failuresByMessage": {
+        "src/config.ts:154:3: value outside supported numeric, ordering or conversion domain": 196
+      }
+    },
+    "configTrappedAfter": 0,
+    "rootsFixed": [
+      "Config.getDefault stringify/parse trap",
+      "parsed optional syntax.version typed object projection"
+    ],
+    "remainingWhy": {
+      "1066": "test/rules/_utils.ts forEach receiver proof is outside this task",
+      "196": "Existing HIR call arity mismatch at find_global_definitions.ts:39 (o.parseType(this.reg)); surfaced after Config succeeds",
+      "18": "Other JSON calls in test/rules/_utils.ts are outside the pinned config adapter",
+      "10": "Existing src/artifacts_objects.ts:8 pinned trap",
+      "1864": "Synchronous harness excludes 1366 async/done tests; 10 skipped; 488 unregistered"
+    }
+  },
+  "defaultDiff": {
+    "targets": "all,go",
+    "bytes": 0,
+    "result": "empty",
+    "baselineOutput": "/tmp/config-json-default-before",
+    "branchOutput": "/tmp/config-json-default"
+  },
+  "localGate": {
+    "vet": "passed",
+    "shortTests": "passed",
+    "packages": [
+      "./hir/...",
+      "./tsfront/...",
+      "./internal/...",
+      "./cmd/..."
+    ],
+    "node": "v26.9.0",
+    "goPackageParallelism": 2
+  },
+  "implementationCommit": "a535eb1b1636b32105cfd0c625fb1e76f0c68496",
+  "nodeRulesOracle": {
+    "total": 3159,
+    "passed": 3149,
+    "failed": 0,
+    "pending": 10,
+    "firstAttemptTimedOut": 1,
+    "repeatCommand": "node tools/abaplint-tests-oracle.mjs /tmp/config-json-node-rules.json /tmp/config-json-upstream <sorted roots from closure.json>"
+  },
+  "compiledDefaultByteProof": {
+    "command": "go test -p 2 -run TestCompiledConfigDefaultRoundTrip -v (in the generated rules-final3/go module)",
+    "bytes": 22011,
+    "sha256": "bcb3130ed089306420f759d32182829540468dd7726e07e51ae172a6fe382b39",
+    "matchesFreshV8": true,
+    "cloneMutationIndependence": true,
+    "releaseGetter": "Newest",
+    "languageGetter": "Normal"
+  }
+}
