@@ -101,6 +101,18 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	callee := n.Expression()
+	if sym := l.resolve(callee); sym != nil && sym.Name == "chaiThrowMatch" {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" {
+			ref := l.funcsBy[f.FileName()+" chaiThrowMatch"]
+			if m := l.methodsBy[ref.owner+"."+ref.method]; m != nil {
+				args, ok := l.callArgs(n, n.Arguments(), m.Params)
+				if !ok {
+					return nil, true
+				}
+				return l.rtOp("chai.throwMatch", args[0], hir.T(hir.Bool), args[1]), true
+			}
+		}
+	}
 	if sym := l.resolve(callee); sym != nil {
 		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" && (sym.Name == "chaiDeepEqual" || sym.Name == "chaiDeepInclude" || sym.Name == "chaiArrayInclude") {
 			args := n.Arguments()

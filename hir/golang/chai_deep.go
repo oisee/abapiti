@@ -22,6 +22,17 @@ func (e *emitter) chaiDeepShape(c *hir.Class, data bool) {
 	e.line("} }")
 }
 
+// Only builtin Error storage and its native descendants certify this scalar
+// message read. No general catch, enumerable-key, or live-view ABI is changed.
+func (e *emitter) chaiThrowShape(c *hir.Class) {
+	for parent := c; parent != nil; parent = e.classBy(parent.Super) {
+		if parent.Name == "builtin.Error" {
+			e.line("func (self *%s) chaiErrorMessage() jsString {if self==nil {panic(newTrap(\"chai null Error throw\"))};return self.%s}", e.obj(c.Name), e.member("message"))
+			return
+		}
+	}
+}
+
 const chaiDeepRuntimeSource = `
 // Chai 4 / deep-eql 4: SameValue primitives, positional arrays (holes read as
 // undefined), enumerable object keys, and pair memoization for cyclic graphs.
@@ -91,6 +102,28 @@ func chaiEqual(a,b *dynamic,seen map[chaiPair]bool) bool {
   return true
  default:panic(newTrap("chai deep equality type is unsupported"))
  }
+}
+// A harness-only exception observation boundary, not generic TS catch
+// lowering. Only actual translated payloads are caught; refusals and host
+// faults always escape. Chai/check-error accepts primitive string throws too.
+func chaiThrowMatch(action func(), expected jsString) (matched bool) {
+ defer func(){if x:=recover();x!=nil {
+  thrown,ok:=x.(interface{payloadValue() any});if !ok {panic(x)}
+  value:=thrown.payloadValue()
+  if boxed,ok:=value.(*dynamic);ok {
+   if boxed==nil {panic(newTrap("chai unsupported thrown undefined"))}
+   value=boxed.Value
+  }
+  var message jsString
+  switch value:=value.(type) {
+  case jsString:message=value
+  case interface{chaiErrorMessage() jsString}:message=value.chaiErrorMessage()
+  default:panic(newTrap("chai throw supports only string and native Error payloads"))
+  }
+  matched=message.indexOf(expected)>=0
+ }}()
+ action()
+ return false
 }
 // Chai's shallow array include uses indexOf: strict equality, not the
 // SameValueZero of Array.includes. Holes are skipped; NaN never matches.

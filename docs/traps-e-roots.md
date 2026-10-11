@@ -63,18 +63,40 @@ mutation against Node, plus ABAP emission with Grace.
 After the first two harness repairs, a second complete run measured
 **8,867/11,060, FAIL 0** (Set input-context fix was not yet in that binary).
 Its new top 20 includes six `test/registry.ts` cases blocked by missing `.throw`.
-The shim now invokes a checked **existing parameterless void thunk**, outside
-the catch boundary's unboxing step, and checks whether a catchable Error was
-thrown and whether its string message contains the requested substring.
-Negation uses the existing assertion flag. Unsupported callable values,
-non-void callback creation, constructor/regexp expectations and nonstring
-message domains still refuse; no function-object/type/closure ABI changed.
+The shim invokes a checked **existing parameterless void thunk**, with
+unboxing outside its exception-observation boundary. `chai.throwMatch` catches
+only translated string or native builtin-Error payloads and matches their
+message substring. Negation uses the existing assertion flag. Unsupported
+callable values, non-void callback creation, constructor/regexp expectations and
+other thrown-payload domains still refuse; no function-object/type/closure ABI
+changed. The operation calls the existing thunk slot (and its existing drain
+adapter in normalized mode), not a new scheduler or callable representation.
+Error-message scalar readers are emitted only for builtin Error storage and
+native descendants, not arbitrary object/shape views. ABAP explicitly refuses.
 `TestChaiThrowNodeOracle` compares actual Chai for throw/no-throw, omitted/empty
 and matching/mismatching substring expectations, negation, and exactly-once
 callback effects. Its intentionally unsatisfied assertion remains failed;
 an unsupported callback remains trapped even though `.throw` catches JS errors.
 The existing closure lowering refuses local callable-value and non-void-arrow
 forms; those independent ABI/closure roots are not bypassed for this assertion.
+
+**A subsequent full run genuinely failed and was stopped at the rules shard.**
+The two Downport titles were `table expression in ELSEIF, index` and
+`table expression in ELSEIF, condition`. Their expected payload is the primitive
+string `downport, unable to downport table expression in ELSEIF`. The initial
+shim used ordinary Error-typed catch lowering, which correctly does not catch
+that differently represented string; it escaped the assertion as a failed
+record. Actual Chai/check-error accepts a primitive string and uses it as the
+message. The failure was reported before repair; neither record was relabeled.
+The failed run is incomplete, never counted as a FAIL-zero whole-suite result.
+
+The shim-only observation operation above repairs this without altering generic
+TS catch lowering. The retained actual-Chai oracle now tests the exact primitive
+string, matching/mismatching substrings, and both ordinary and existing
+normalized-thunk modes. `TestChaiThrowRuntimeBoundaries` requires translated
+string observation, exactly-once effects, and escape of host faults/refusals;
+unsupported numeric payloads refuse instead of silently matching. The original
+Downport cases are rerun independently before the fresh final all-shard run.
 
 ## Type/ABI items handed to Dell (not repaired here)
 
@@ -119,14 +141,24 @@ incompatible descriptor refusal. No narrowing/verifier/descriptor code changed.
 `obj instanceof Interface`, and uses its narrowed `getMainABAPFile()` and later
 its original identity in RenamerHelper calls. Verification reports synthetic
 `node 0 (): assignment type mismatch` in `buildEdits`, not a source assignment
-of `changes` at line 45. This is the flow-view parameter/assignment boundary
-between IObject and nominal Interface. The analogous RenameGlobalClass bucket
-is six tests. Dell needs to inspect the synthesized flow-view assignments and
-preserve alias identity across both original-interface and class uses; widening
-the method parameter or copying an Interface is not sound. Required oracles:
-valid/wrong object types, negative instanceof branch, same instance in helper
-calls, inherited fields/methods and writes through both views. These assignment
-roots and the registry assignment are left untouched.
+of `changes` at line 45. **Raw untrapped core lowering isolates the exact pair:**
+`buildEdits`'s generated override bridge returns
+`optional<classref<shape.51780d82bc5f3f53a208bd824daf28dc4b0c31ffd85304c5213dcb4d761dc80f>>`
+(the WorkspaceEdit view), but its returned virtual call to
+`buildEdits_instantiated_src/objects/rename/rename_global_interface.ts.RenameGlobalInterface`
+is still typed **`optional<classref<builtin.object>>`**. `hir.VerifyBody` reports
+only the node-zero assignment mismatch on the bridge's synthesized Return;
+the implementation body verifies. This is return/view/override ABI work in
+`tsfront/lower_generic.go:eraseGenericOverrides`, not the instanceof operand
+or a missing source local. The analogous RenameGlobalClass bucket is six tests.
+Dell must coordinate erased implementation results and the structural interface
+return view without snapshotting `documentChanges` or weakening every object
+cast. Required oracles: undefined vs actual WorkspaceEdit, return identity,
+optional fields and live edit-array mutations through concrete and ObjectRenamer
+interface calls. A temporary diagnosis used the original byte-pinned source
+closure, no semantic source edits, and was removed; it is refusal diagnosis,
+not a passing workload claim. These return-assignment roots and the registry
+assignment are left untouched.
 
 ### NameValidator NamingRuleConfig shape — 7
 

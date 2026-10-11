@@ -9,7 +9,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true,
+	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex": true,
 	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
@@ -185,6 +185,23 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
 		code = "dynNull()"
+	case "chai.throwMatch":
+		b.e.usesTypedCatch = true
+		call := a + "." + b.e.member("call") + "()"
+		if method, _ := b.e.method(b.e.classBy(x.X.Type.Name), "call"); method != nil && method.Result.Kind == hir.Promise {
+			call = "drainSettled(" + call + ")"
+		} else {
+			for _, iface := range b.e.p.Interfaces {
+				if iface.Name == x.X.Type.Name {
+					for _, m := range iface.Methods {
+						if m.Name == "call" && m.Result.Kind == hir.Promise {
+							call = "drainSettled(" + call + ")"
+						}
+					}
+				}
+			}
+		}
+		code = "chaiThrowMatch(func(){" + call + "}," + args[0] + ")"
 	case "chai.deepEqual", "chai.deepInclude", "chai.arrayInclude":
 		code = strings.ReplaceAll(x.Op, ".", "") + "(" + a + "," + args[0] + ")"
 	case "dynamic.strictEquals":

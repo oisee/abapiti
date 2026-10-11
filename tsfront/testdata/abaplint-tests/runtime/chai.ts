@@ -44,13 +44,7 @@ export class Assertion {
   // keeps unsupported function representations outside JavaScript catch.
   public throw(expected = "", message = ""): void {
     const action = this.value as (() => void);
-    let thrown = false;
-    let matches = false;
-    try { action(); } catch (error) {
-      thrown = true;
-      matches = expected === "" || (error.message as string).includes(expected);
-    }
-    this.check(thrown && matches, "throw check", message);
+    this.check(chaiThrowMatch(action, expected), "throw check", message);
   }
   public contain(expected: any, message = ""): void {
     if (this.deeply) {
@@ -84,6 +78,7 @@ export class Assertion {
 // replaced. Unsupported JS representations raise a typed refusal, not equality.
 export function chaiDeepEqual(actual: any, expected: any): boolean { throw new Error("chai deep intrinsic unavailable"); }
 export function chaiDeepInclude(actual: any, expected: any): number { throw new Error("chai deep intrinsic unavailable"); }
+export function chaiThrowMatch(action: () => void, expected: string): boolean { throw new Error("chai throw intrinsic unavailable"); }
 export function chaiArrayInclude(actual: any, expected: any): boolean { throw new Error("chai array include intrinsic unavailable"); }
 export function chaiFail(message: string): void { throw new Error(message); }
 export function expect(value: any, message = ""): Assertion { return new Assertion(value, message); }

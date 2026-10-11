@@ -136,6 +136,7 @@ func relativeSource(source string) string {
 
 type emitter struct {
 	chaiDeep          bool
+	chaiThrow         bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
@@ -324,6 +325,9 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("}")
 	if e.chaiDeep {
 		e.chaiDeepShape(c, source)
+	}
+	if e.chaiThrow {
+		e.chaiThrowShape(c)
 	}
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
 	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] {
