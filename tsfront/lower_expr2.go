@@ -342,6 +342,8 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 			return nil, false
 		}
 		return l.assignRecords(n), true
+	case "entries":
+		return l.objectEntries(n), true
 	case "freeze":
 		// Object.freeze(x) is the identity here: nothing mutates through the
 		// frozen view in the closure.

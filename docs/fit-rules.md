@@ -38,6 +38,7 @@ not as independent void ABI fixes.
 | --- | --- | --- | --- |
 | Primitive find: parser_702_chaining and short_case | 113 → 108 (root group 5 → 0) | 635 → 630 | 394 → 390 |
 | Reference `Class || undefined`: intf_referencing_clas | 108 → 105 (root group 3 → 0) | 630 → 627 | 390 → 388 |
+| Record Object.entries: xml_consistency | 105 → 103 (root group 2 → 0) | 627 → 625 | 388 → 386 |
 
 Primitive find uses the existing optional-result dense callback mechanism with
 new source fingerprints for these two consumers. The parser receiver is a
@@ -95,3 +96,22 @@ Investigated unchanged boundaries:
   locations/messages and structured `true | ValidationError` result. A complete
   validation adapter or lowering the upstream implementation is needed; do not
   substitute successful parsing or a bool for that result.
+
+`Object.entries` lowers string-indexed records to a key/value tuple-array
+snapshot with the same value identities. Canonical array-index keys from 0
+through 4294967294 sort numerically before the other string keys in insertion
+order. Empty strings, leading zeroes, signs, Unicode and out-of-range decimal
+strings remain ordinary keys. Node/Go differential tests cover ordering,
+receiver evaluation once, snapshots after replacement/insertion and shared
+value objects; ABAP emission and refusal probes cover unsupported inputs.
+Nominal objects, JavaScript Map, strings and optional-valued records remain
+refused: this models existing plain records, not enumerable-property metadata
+or a nested optional ABI.
+
+Lowering runTextPool also exposes a lifted-member naming collision: four
+lexically separate `push` callbacks in XMLConsistency shared `fn_push`.
+Allocate a source-position suffix only on collision, retaining existing unique
+names. A generated-Go regression checks two same-named callbacks with distinct
+captures. This avoids the newly exposed error and removes two pre-existing HIR
+errors in that class; no new verification errors remain. Required vet/short
+tests pass and the same-path all,go default diff is empty.
