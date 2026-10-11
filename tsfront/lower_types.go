@@ -1010,24 +1010,14 @@ func (l *lowerer) acceptsType(dst, src hir.Type) bool {
 }
 
 func typeRefName(n *ast.Node) string {
-	// EntityName can be a QualifiedName, whose Node.Text panics. This name is
-	// used only for diagnostics and recognizing `as const`, not type resolution.
-	var name func(*ast.Node) string
-	name = func(t *ast.Node) string {
-		if t == nil {
-			return "?"
-		}
-		switch t.Kind {
-		case ast.KindIdentifier:
-			return t.Text()
-		case ast.KindQualifiedName:
-			q := t.AsQualifiedName()
-			return name(q.Left) + "." + name(q.Right)
-		default:
-			return "?"
-		}
+	t := n.AsTypeReferenceNode().TypeName
+	if t == nil {
+		return "?"
 	}
-	return name(n.AsTypeReferenceNode().TypeName)
+	// TypeReference.TypeName is an EntityName: identifiers have text, but
+	// namespace-qualified names must be assembled from their components.
+	// Keep the qualification so N.const is never mistaken for `as const`.
+	return ast.EntityNameToString(t, nil)
 }
 
 // tupleType lowers [A, B, ...] to a synthesized shape class with positional
