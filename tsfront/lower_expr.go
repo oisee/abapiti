@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
+		return x
+	}
 	if l.isGeneratorABIValue(x) || l.erasedCalls[x] {
 		return x
 	}
@@ -955,7 +958,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
-		if t, ok := l.lookup(name); ok && l.callableMethod(t) != nil {
+		if t, ok := l.lookup(name); ok && l.isCallableValueType(t) {
+			if t.Name == thunkInterfaceName {
+				x, _ := l.thunkCall(n, callee)
+				return x
+			}
 			return l.functionValueCall(n, callee)
 		}
 		if lf, ok := l.localFns[name]; ok {
@@ -989,7 +996,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if l.unprunedFeatures && callee.Kind == ast.KindPropertyAccessExpression {
-		if sym := l.resolve(callee); sym != nil && sym.Flags&ast.SymbolFlagsMethod == 0 && !l.isThunkType(l.ck.GetTypeAtLocation(callee)) && len(l.ck.GetSignaturesOfType(l.ck.GetTypeAtLocation(callee), checker.SignatureKindCall)) == 1 {
+		if field, ok := l.fieldOf(l.resolve(callee)); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
 			return l.functionValueCall(n, callee)
 		}
 	}

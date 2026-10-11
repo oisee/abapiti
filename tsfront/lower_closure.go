@@ -70,7 +70,11 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 
 func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	typ := hir.Type{Kind: hir.InterfaceRef, Name: thunkInterfaceName}
-	general := !l.isThunkType(l.ck.GetTypeAtLocation(n)) && !l.isThunkType(l.ck.GetContextualType(n, 0))
+	if l.integerOptions.TrapOnFailure && len(n.Parameters()) > 0 && l.isTestCallback(n) {
+		l.diagf(n, "unsupported-test-done", "done/parameterized callback is not run by the synchronous test host")
+		return nil
+	}
+	general := len(n.Parameters()) > 0 || !l.isThunkType(l.ck.GetTypeAtLocation(n)) && !l.isThunkType(l.ck.GetContextualType(n, 0))
 	if general {
 		if l.integerOptions.TrapOnFailure && l.isTestCallback(n) {
 			l.diagf(n, "unsupported-test-done", "done/parameterized callback is not run by the synchronous test host")

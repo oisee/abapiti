@@ -204,10 +204,10 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			return nil
 		}
 		lf := l.localFns[capture.name]
-		if l.callableMethod(capture.typ) != nil {
+		if l.isCallableValueType(capture.typ) {
 			lf = nil
 		}
-		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil && l.callableMethod(capture.typ) == nil {
+		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil && !l.isCallableValueType(capture.typ) {
 			delete(l.pendingFns, capture.name)
 			lf = l.liftLocalFn(capture.name, pending)
 		}

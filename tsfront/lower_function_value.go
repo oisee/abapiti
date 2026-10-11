@@ -11,6 +11,9 @@ import (
 // Callable values use ordinary interfaces and classes, shared by both targets.
 // Named functions keep their direct-call ABI until they escape as values.
 func (l *lowerer) functionType(n *ast.Node, t *checker.Type) hir.Type {
+	if l.isThunkType(t) {
+		return l.thunkType()
+	}
 	sigs := l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)
 	if len(sigs) != 1 {
 		return hir.T(hir.Void)
@@ -25,6 +28,9 @@ func (l *lowerer) functionType(n *ast.Node, t *checker.Type) hir.Type {
 		param := hir.Param{Name: "arg" + itoa(len(m.Params)), Type: typ}
 		if d := p.ValueDeclaration; d != nil && d.Kind == ast.KindParameter {
 			param.Variadic = d.AsParameterDeclaration().DotDotDotToken != nil
+			if (d.Initializer() != nil || d.QuestionToken() != nil) && param.Type.Kind != hir.Optional {
+				param.Type = hir.T(hir.Optional, param.Type)
+			}
 			if (d.Initializer() != nil || d.QuestionToken() != nil) && param.Type.Kind != hir.Optional {
 				param.Type = hir.T(hir.Optional, param.Type)
 			}
@@ -59,7 +65,7 @@ func (l *lowerer) functionType(n *ast.Node, t *checker.Type) hir.Type {
 }
 
 func (l *lowerer) callableMethod(t hir.Type) *hir.Method {
-	if t.Kind != hir.InterfaceRef || !strings.HasPrefix(t.Name, "closure.function.") {
+	if t.Kind != hir.InterfaceRef || !(strings.HasPrefix(t.Name, "closure.function.") || t.Name == thunkInterfaceName) {
 		return nil
 	}
 	for _, i := range l.out.Interfaces {
@@ -265,7 +271,13 @@ func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 		x.Kind = hir.VirtualCall
 		x.X = receiver
 	}
-	if call.Result.Kind == hir.Void {
+	if typ.Name == thunkInterfaceName && call.Result.Kind == hir.Promise {
+		effect := x
+		if x.Type.Kind == hir.Promise {
+			effect = &hir.Expr{Kind: hir.PromiseAwait, Type: x.Type.Args[0], X: x}
+		}
+		call.Body = &hir.Stmt{Kind: hir.Async, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: effect}, &hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.PromiseFulfill, Type: call.Result}})}
+	} else if call.Result.Kind == hir.Void {
 		call.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: x})
 	} else {
 		call.Body = hir.B(&hir.Stmt{Kind: hir.Return, X: x})
@@ -437,3 +449,5 @@ func (l *lowerer) localFnReceiver(lf *localFn) *hir.Expr {
 	}
 	return l.this(lf.owner)
 }
+
+func (l *lowerer) isCallableValueType(t hir.Type) bool { return l.callableMethod(t) != nil }
