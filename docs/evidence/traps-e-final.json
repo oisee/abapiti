@@ -1,0 +1,63 @@
+{
+  "source": "bd86393",
+  "compilerRuntimeSource": "9f479b6 (bd86393 adds catalogue/effect tests and a documentation comment only)",
+  "mergedBase": "f0e8efe",
+  "defaultBase": "origin/feat/fit-traps-c@b11e522c4e61db4b62a2d772e2b407f3f3b681ee",
+  "environment": {"GOTOOLCHAIN": "go1.26.0", "GOFLAGS": "-buildvcs=false", "ABAPITI_GRACECHECK": "1", "GOMAXPROCS": "4", "GOCACHE": "$HOME/.cache/go-build"},
+  "gates": {
+    "go test ./... -short": 0,
+    "go test ./tsfront/... ./hir/... ./cmd/...": 0,
+    "go vet ./...": 0,
+    "node tools/abaplint-tests-all-test.mjs": 0,
+    "node tools/abaplint-tests-report-test.mjs": 0
+  },
+  "defaultOutput": {
+    "command": "abapiti abaplint -o /tmp/trapse-audit2/out --quiet (same output path on both sources)",
+    "comparison": "diff -r base-out final-out",
+    "diffExit": 0,
+    "files": 6312,
+    "changed": 0,
+    "added": 0,
+    "removed": 0,
+    "inventoryEncoding": "SHA256 of compact JSON sorted [relativePath, SHA256(fileBytes)] pairs",
+    "baseAndFinalInventorySHA256": "4d63ed481d9223929676d7cabae46ddae410d37736d5b5770d65e14f196e0add",
+    "explanation": "Harness calls/operations and shims are tests-only. Set iterable context has no emitted change on the coverage-pruned default closure. Registration module-callable lowering is unpruned-only. All default ABAP mirrors, names, READMEs and zip are byte-identical; no change needs an exception."
+  },
+  "workload": {
+    "generation": "abapiti abaplint -o /tmp/trapse-workload2/go-target --target go --quiet",
+    "generationExit": 0,
+    "kitSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "freshNodeAndGo": "tools/hir-go-check.mjs (fresh original pinned Node build): clean 0 issues, seeded 5 issues; both Node and Go byte-identical to the kit outputs",
+    "freshNodeAndGoExit": 0,
+    "independentGoCheck": "tools/go-target-check.py: clean and seeded byte-identical",
+    "independentGoCheckExit": 0,
+    "newABAPExecuted": false
+  },
+  "intermediateAllShards": {
+    "stage": "expect.fail and shallow array containment repairs; binary built before Set input-context repair",
+    "shards": 17,
+    "files": 625,
+    "passed": 8867,
+    "activeNode": 11060,
+    "FAIL": 0,
+    "trapped": 2084,
+    "notRun": 141,
+    "newTop20Selected": {"rank": 17, "tests": 6, "message": "unsupported-call test/registry.ts: method throw on classref is not lowered"}
+  },
+  "stoppedRun": {
+    "source": "3de2f7a",
+    "status": "STOP at rules shard; incomplete, no whole-suite pass total claimed",
+    "genuineFAIL": 2,
+    "failures": [
+      {"title": "Rule: downport table expression in ELSEIF, index", "message": "downport, unable to downport table expression in ELSEIF", "status": "failed"},
+      {"title": "Rule: downport table expression in ELSEIF, condition", "message": "downport, unable to downport table expression in ELSEIF", "status": "failed"}
+    ],
+    "root": "New Chai .throw used Error-typed TS catch, which let expected primitive-string throws escape. Reported before continuing; generic catch ABI is unchanged.",
+    "regressions": ["TestChaiThrowNodeOracle (actual Chai; ordinary and normalized thunks; exact primitive string)", "TestChaiThrowRuntimeBoundaries (host faults and typed refusals escape)"],
+    "repairedOriginalDownport": {"nodePassed": 298, "nodeFAIL": 0, "nodePending": 5, "goPassed": 3, "goFAIL": 0, "goTrapped": 295, "goNotRun": 5, "bothFormerFailuresPassed": true, "unmatched": 0}
+  },
+  "graceGolden": "Only operation catalogue counts changed for chai.arrayInclude and chai.throwMatch: aliases/allocates/may_raise/writes 117->119, conservative 17->19, reads 175->180. No lexer program facts changed. Callback effects are explicitly unknown/global and cannot yield a purity proof.",
+  "genuineMismatch": "Actual-Chai oracles repair shallow array NaN/holes semantics and primitive string throws; the latter produced two genuine suite FAILs in the stopped run above. Both were reported before continuing, and neither was reclassified as trapped.",
+  "allShards": {"runner": "tools/abaplint-tests-all.mjs", "exit": 0, "shards": 17, "files": 625, "activeNode": 11060, "passed": 8876, "FAIL": 0, "trapped": 2075, "notRun": 141, "registered": 10977, "pendingNode": 32, "unregistered": 115, "skippedOrFocused": 26, "unmatched": 0, "wiringFailures": 0, "infrastructureFailures": 0, "registrationParity": false, "deltaFromMergedBase": 16, "details": "../abaplint-tests-latest.json"},
+  "handoffDiagnosis": "Raw untrapped pinned-core lowering plus hir.VerifyBody isolates RenameGlobalInterface.buildEdits's node-zero mismatch to the generated WorkspaceEdit return bridge, optional structural shape vs optional builtin.object; temporary probe removed. Other ABI roots remain refused; see ../traps-e-roots.md."
+}

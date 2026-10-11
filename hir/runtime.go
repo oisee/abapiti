@@ -12,6 +12,7 @@ type RuntimeSpec struct {
 }
 
 var RuntimeSpecs = map[string]RuntimeSpec{
+	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
 	"string.match":              {String, 1, false},
 	"array.matchIndex":          {Array, 0, false},
@@ -24,12 +25,17 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
+	"chai.throwMatch":           {InterfaceRef, 1, false},
+	"chai.arrayInclude":         {Dynamic, 1, false},
+	"chai.deepEqual":            {Dynamic, 1, false},
+	"chai.deepInclude":          {Dynamic, 1, false},
 	"dynamic.asBoolean":         {Dynamic, 0, false},
 	"dynamic.null":              {I32, 0, false},
 	"clock.telemetry":           {I32, 0, false},
 	"i64.toString":              {I64, 0, false},
 	"i64.remainder2":            {I64, 0, false},
 	"number.remainder2":         {Number, 0, false},
+	"number.ceil":               {Number, 0, false},
 	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.slice": {String, 2, false}, "string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
@@ -72,16 +78,18 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
-	"object.get":          true, // nominal static property table -> Dynamic
-	"object.hasOwn":       true,
-	"object.has":          true,
-	"object.classOf":      true, // any object ref -> ClassValue
-	"classvalue.newArgs":  true,
-	"classvalue.new":      true, // ClassValue -> a class or interface reference
-	"dynamic.of":          true, // any value -> Dynamic (tagged box)
-	"dynamic.asRef":       true,
-	"dynamic.materialize": true, // Dynamic -> a class or interface reference
-	"regexp.new":          true, // pattern, [flags] -> RegExp
+	"object.get":              true, // nominal static property table -> Dynamic
+	"object.hasOwn":           true,
+	"object.has":              true,
+	"object.checkedClassView": true, // nominal class view; invalid runtime types trap
+	"object.classOf":          true, // any object ref -> ClassValue
+	"classvalue.newArgs":      true,
+	"classvalue.new":          true, // ClassValue -> a class or interface reference
+	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
+	"dynamic.of":              true, // any value -> Dynamic (tagged box)
+	"dynamic.asRef":           true,
+	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
+	"regexp.new":              true, // pattern, [flags] -> RegExp
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
@@ -109,7 +117,11 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, T(Dynamic), true
 	case "dynamic.put":
 		return []Type{T(String), T(Dynamic)}, T(Void), true
-	case "dynamic.strictEquals":
+	case "chai.throwMatch":
+		return []Type{T(String)}, b, t.Name == "closure.thunk"
+	case "chai.deepInclude":
+		return []Type{T(Dynamic)}, i, true
+	case "dynamic.strictEquals", "chai.deepEqual", "chai.arrayInclude":
 		return []Type{T(Dynamic)}, T(Bool), true
 	case "dynamic.isNullish", "dynamic.asBoolean":
 		return nil, T(Bool), true
@@ -133,7 +145,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{i}, i, true
 	case "string.charAt":
 		return []Type{i}, T(String), true
-	case "string.trim", "string.trimStart", "string.trimEnd", "string.toUpperCase", "string.toLowerCase":
+	case "string.sha1Hex", "string.trim", "string.trimStart", "string.trimEnd", "string.toUpperCase", "string.toLowerCase":
 		return nil, T(String), true
 	case "string.substr":
 		return []Type{i, i}, T(String), true
@@ -151,7 +163,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "i64.remainder2":
 		return nil, T(I64), true
-	case "number.remainder2", "number.fromI32":
+	case "number.remainder2", "number.fromI32", "number.ceil":
 		return nil, T(Number), true
 	case "dynamic.asNumber":
 		return nil, T(Number), true

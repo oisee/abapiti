@@ -1,0 +1,53 @@
+{
+  "source": "017c6ba",
+  "base": "origin/feat/fit-traps-b@2169c5d94f970d1d68358ba04e7e3dae025e7d1b",
+  "environment": {"GOTOOLCHAIN": "go1.26.0", "GOFLAGS": "-buildvcs=false", "ABAPITI_GRACECHECK": "1", "GOMAXPROCS": "4"},
+  "gates": {
+    "go test ./... -short": 0,
+    "go test ./tsfront/... ./hir/... ./cmd/...": 0,
+    "go vet ./...": 0,
+    "node tools/abaplint-tests-all-test.mjs": 0,
+    "node tools/abaplint-tests-report-test.mjs": 0,
+    ".github/ci/lint.sh gate origin/feat/fit-traps-b": {"status": "unavailable", "exit": 1, "reason": "golangci-lint is not on PATH; no lint verdict claimed"}
+  },
+  "defaultOutput": {
+    "command": "abapiti abaplint -o /tmp/trapsc-final/default --quiet",
+    "comparison": "diff -r default-base default-final",
+    "diffExit": 1,
+    "wholeTree": {"changed": 1230, "removed": 30, "added": 3},
+    "identicalMirrors": ["classes/", "osg/", "native/lib/"],
+    "changedLogicalFiles": {
+      "onlyExactRemovedUnionAdapters": 356,
+      "ancestryOnly": 35,
+      "optionalDefaultsOnly": 14,
+      "ancestryAndOptionalDefaults": 4
+    },
+    "removedUnionInterfaces": ["z_union_180bf3_dcd901ba14efbb", "z_union_26632c_ca3b7b6d3dcd36", "z_union_2ef51e_0fd255cd874b37", "z_union_3d279d_a4c4af36d1910d", "z_union_3fda3e_f7d343a4648dcb", "z_union_62aaaa_9e5c1702f81f2a", "z_union_a75227_282198ce953177", "z_union_a9cfb6_9b16cb4ac9c75e", "z_union_b0cca5_ee926be4fb96e6"],
+    "renamedClosure": {"before": "z_closure_1063_fd9340a501a5f1", "after": "z_closure_1061_770547748c612e", "otherwiseByteIdentical": true},
+    "ancestryResiduals": [
+      "union.a89e3b1e55171e22c52feb8e64f9125d0890eef0f051b7d0c72e9663b088dd27 (source comment only)", "runtime.descriptors.c (renamed closure)",
+      "src/rules/implement_methods.ts.ImplementMethods", "src/abap/types/class_attributes.ts.Attributes", "src/abap/nodes/structure_node.ts.StructureNode",
+      "src/abap/5_syntax/expressions/sql_in.ts.SQLIn", "src/abap/5_syntax/expressions/method_source.ts.MethodSource", "src/abap/5_syntax/statements/loop.ts.Loop", "src/abap/5_syntax/statements/write.ts.Write", "src/abap/5_syntax/statements/append.ts.Append", "src/abap/5_syntax/expressions/dereference.ts.Dereference", "src/abap/5_syntax/expressions/sql_compare.ts.SQLCompare", "src/abap/5_syntax/statements/split.ts.Split", "src/abap/5_syntax/statements/concatenate.ts.Concatenate", "src/abap/5_syntax/expressions/target.ts.Target", "src/abap/5_syntax/expressions/value_body.ts.ValueBody", "src/abap/5_syntax/expressions/inline_data.ts.InlineData", "src/abap/5_syntax/statements/sort.ts.Sort", "src/abap/5_syntax/structures/types.ts.Types", "src/abap/5_syntax/expressions/method_call_chain.ts.MethodCallChain", "src/abap/5_syntax/expressions/new_object.ts.NewObject", "src/abap/5_syntax/statements/perform.ts.Perform", "src/abap/5_syntax/expressions/string_template.ts.StringTemplate", "src/abap/5_syntax/statements/get_time.ts.GetTime", "src/abap/5_syntax/expressions/cast.ts.Cast", "src/abap/5_syntax/statements/include_type.ts.IncludeType", "src/abap/5_syntax/syntax.ts.SyntaxLogic", "src/abap/5_syntax/expressions/method_call_param.ts.MethodCallParam", "src/abap/5_syntax/statements/read_table.ts.ReadTable", "src/abap/5_syntax/expressions/field_assignment.ts.FieldAssignment", "src/abap/5_syntax/_type_utils.ts.TypeUtils", "src/abap/5_syntax/statements/create_object.ts.CreateObject", "src/abap/5_syntax/expressions/compare.ts.Compare", "src/abap/5_syntax/expressions/component_chain.ts.ComponentChain", "src/abap/5_syntax/_object_oriented.ts.ObjectOriented",
+      "src/abap/5_syntax/expressions/field_chain.ts.FieldChain", "src/abap/5_syntax/basic_types.ts.BasicTypes", "src/abap/5_syntax/expressions/select.ts.Select", "src/abap/5_syntax/expressions/source.ts.Source"
+    ],
+    "optionalDefaultResiduals": [
+      "src/utils/include_graph.ts.IncludeGraph", "src/objects/_abap_object.ts.ABAPObject", "src/abap/abap_file.ts.ABAPFile", "src/abap/5_syntax/expressions/method_parameters.ts.MethodParameters", "src/abap/5_syntax/expressions/source_field.ts.SourceField", "src/abap/5_syntax/expressions/attribute_name.ts.AttributeName", "src/abap/5_syntax/expressions/let.ts.Let", "src/abap/2_statements/expressions/_select_core.ts.module", "src/abap/2_statements/expressions/sql_path_segment.ts.SQLPathSegment", "src/abap/2_statements/expand_macros.ts.ExpandMacros", "src/abap/2_statements/expressions/database_table.ts.DatabaseTable", "src/abap/2_statements/combi.ts.Combi", "src/abap/2_statements/combi.ts.module", "src/abap/2_statements/statement_parser.ts.StatementParser",
+      "src/abap/5_syntax/expressions/field_chain.ts.FieldChain", "src/abap/5_syntax/basic_types.ts.BasicTypes", "src/abap/5_syntax/expressions/select.ts.Select", "src/abap/5_syntax/expressions/source.ts.Source"
+    ],
+    "otherChangedFiles": {"a4h/README.txt": "2114 -> 2105 packaged objects (nine removed interfaces)", "a4h/abaplint-577f875e-a4h.zip": "contains exactly the changed/renamed/removed ABAP objects", "names.json": "removed unused union members and renamed closure"},
+    "isolation": {"508ca6fTo2886c4b": "only two README output-path instructions differ; ABAP and zip byte-identical", "2886c4bToFinal": "18 optional-default classes and containing zip; no other files", "freshFinalRebuildDiffExit": 0}
+  },
+  "workload": {
+    "generation": "abapiti abaplint -o /tmp/trapsc-final/go-target --target go --quiet",
+    "generationExit": 0,
+    "kitSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "nodeAndGoCheck": "tools/hir-go-check.mjs: original Node freshly rebuilt; clean=0 issues, seeded=5; byte-identical to kit and Go",
+    "nodeAndGoExit": 0,
+    "independentCheck": "tools/go-target-check.py: clean and seeded Go byte-identical to Node kit outputs",
+    "independentCheckExit": 0,
+    "newABAPExecuted": false
+  },
+  "graceGolden": "Only catalogue fact counts changed: four reviewed operations (SHA-1 plus three harness intrinsics); no lexer program facts changed.",
+  "genuineMismatch": "Initial Chai deep flag was not persistent on reused assertions. Reported and incomplete run stopped; repaired with actual-Chai Node regression for persistent flags, distinct accessor wrappers, repeated not, and eql not setting deep. No failed record reclassified.",
+  "allShards": {"runner": "tools/abaplint-tests-all.mjs", "exit": 0, "shards": 17, "files": 625, "activeNode": 11060, "passed": 8756, "FAIL": 0, "trapped": 2031, "notRun": 305, "registered": 10813, "pendingNode": 32, "unregistered": 279, "skippedOrFocused": 26, "unmatched": 0, "wiringFailures": 0, "infrastructureFailures": 0, "registrationParity": false, "deltaFromBatchB": 180, "details": "../abaplint-tests-latest.json"}
+}

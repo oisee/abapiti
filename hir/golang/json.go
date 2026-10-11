@@ -126,7 +126,7 @@ func (p *jsonParser) value() *dynamic {
 		}
 	case 91:
 		p.cursor++
-		a := &array[*dynamic]{}
+		a := &array[any]{}
 		p.whitespace()
 		if p.peek() == 93 {
 			p.cursor++

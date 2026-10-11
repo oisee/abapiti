@@ -33,6 +33,11 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	default:
 		return l.syntaxHofCall(n, name, recv, args)
 	}
+	if len(args) > 0 && args[0].Kind == ast.KindIdentifier {
+		if check := l.moduleCallableCall(n, args[0], hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
+			l.pendStmt(check.Stmt)
+		}
+	}
 	if name == "reduce" {
 		if len(args) != 2 {
 			l.diagf(n, "unsupported-call", "reduce needs a callback and an initial value")

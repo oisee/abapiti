@@ -101,12 +101,66 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	callee := n.Expression()
+	if sym := l.resolve(callee); sym != nil && sym.Name == "chaiThrowMatch" {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" {
+			ref := l.funcsBy[f.FileName()+" chaiThrowMatch"]
+			if m := l.methodsBy[ref.owner+"."+ref.method]; m != nil {
+				args, ok := l.callArgs(n, n.Arguments(), m.Params)
+				if !ok {
+					return nil, true
+				}
+				return l.rtOp("chai.throwMatch", args[0], hir.T(hir.Bool), args[1]), true
+			}
+		}
+	}
+	if sym := l.resolve(callee); sym != nil {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" && (sym.Name == "chaiDeepEqual" || sym.Name == "chaiDeepInclude" || sym.Name == "chaiArrayInclude") {
+			args := n.Arguments()
+			if len(args) != 2 {
+				return nil, false
+			}
+			x, y := l.expr(args[0]), l.expr(args[1])
+			if x == nil || y == nil {
+				return nil, true
+			}
+			op, result := "chai.deepEqual", hir.T(hir.Bool)
+			if sym.Name == "chaiDeepInclude" {
+				op, result = "chai.deepInclude", hir.T(hir.I32)
+			} else if sym.Name == "chaiArrayInclude" {
+				op = "chai.arrayInclude"
+			}
+			return l.rtOp(op, l.rtOp("chai.box", x, hir.T(hir.Dynamic)), result, l.rtOp("chai.box", y, hir.T(hir.Dynamic))), true
+		}
+	}
 	if callee.Kind != ast.KindPropertyAccessExpression {
 		return nil, false
 	}
 	base := callee.Expression()
 	if base.Kind != ast.KindIdentifier {
 		return nil, false
+	}
+	// Function/namespace merging does not require a function-object receiver
+	// for the shim's fail method. Certify both resolved symbols, including
+	// aliased imports; arbitrary user objects named expect are untouched.
+	if sym := l.resolve(callee); sym != nil && sym.Name == "fail" {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" {
+			if parent := l.resolve(base); parent != nil && parent.Name == "expect" && l.fileOfSymbol(parent) == f {
+				if len(n.Arguments()) != 1 || n.Arguments()[0].Kind == ast.KindSpreadElement {
+					l.diagf(n, "unsupported-call", "chai expect.fail supports only one message argument")
+					return nil, true
+				}
+				ref, ok := l.funcsBy[f.FileName()+" chaiFail"]
+				if ok {
+					if m := l.methodsBy[ref.owner+"."+ref.method]; m != nil {
+						args, valid := l.callArgs(n, n.Arguments(), m.Params)
+						if !valid {
+							return nil, true
+						}
+						return &hir.Expr{Node: l.node(n), Kind: hir.DirectCall, Owner: ref.owner, Name: ref.method, Type: m.Result, Args: args}, true
+					}
+				}
+			}
+		}
 	}
 	kind := base.Text()
 	modifier := callee.Name().Text()

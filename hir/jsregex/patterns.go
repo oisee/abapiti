@@ -8,6 +8,7 @@ const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x
 // Reviewed maps pattern/flags to a compiled language and an optional whole-input
 // exclusion. Do not mutate: both target emitters and the Go runtime use it.
 var Reviewed = map[string][2]string{
+	`\s+/g`:                           {execSpace + `+`, ""},
 	`[.{,]DEFAULTSEARCHELEMENT:TRUE/`: {`[.{,]DEFAULTSEARCHELEMENT:TRUE`, ""},
 	`[.{,]SEARCHABLE:TRUE/`:           {`[.{,]SEARCHABLE:TRUE`, ""},
 	`\/\/.*$/gm`:                      {`//[^\n\r\x{2028}\x{2029}]*`, ""},
