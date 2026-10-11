@@ -9,6 +9,10 @@ name: OSD M1
 # OSD activates through the abaplint transpiler, so green here is not proof of
 # kernel behaviour (TYPE i overflow, for one).
 
+# The `osgo` job is the HIR gate on every PR (hir-unit.sh: HIR fixtures on osgo
+# and OSG-JS against the Node oracle, hir-lint, lexer-unit). The WASM parts
+# (osgo-unit.sh and the osd-m1 shards) belong to the legacy WASM path,
+# deprecated 2026-10-10, and run only on workflow_dispatch.
 on:
   push:
     branches: [main]
@@ -89,7 +93,8 @@ jobs:
           node tools/osd-link.mjs core packages/transpiler/node_modules/@abaplint/core
           node tools/osd-transpiler.mjs
 
-      - name: Run the generated classes on osgo
+      - name: Run the generated classes on osgo (legacy WASM, dispatch only)
+        if: github.event_name == 'workflow_dispatch'
         run: .github/ci/osgo-unit.sh "$RUNNER_TEMP/osgo"
 
       - name: Run the HIR corpus on osgo and OSG-JS
@@ -117,6 +122,7 @@ jobs:
 
   osd-m1-shard:
     name: osd-m1 shard ${{ matrix.shard }}
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -173,7 +179,7 @@ jobs:
 
   osd-m1:
     needs: osd-m1-shard
-    if: always()
+    if: always() && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: All shards passed

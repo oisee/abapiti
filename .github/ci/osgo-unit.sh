@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# legacy WASM path, deprecated 2026-10-10
 # Run the generated OSD classes as ABAP Unit on osgo (open-steamgate's Go
 # runtime) straight from the files: no ADT, no activation. open-steamgate is
 # checked out at the commit pinned in .github/ci/osgo.ref.
@@ -65,7 +66,7 @@ fi
 node "$here/osg-transpiler.mjs" "$osg"
 
 rm -rf "$gen"
-(cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1) > "$work/generate.log" 2>&1 ||
+(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -tags wasmlegacy ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1) > "$work/generate.log" 2>&1 ||
   { cat "$work/generate.log" >&2; exit 4; }
 classes="$gen/TestOSD_EmitUnitClasses"
 # Run the same split fixtures as OSD, including their interfaces.

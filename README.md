@@ -48,6 +48,8 @@ Where it stands (10 Oct 2026):
 
 The lexer and file-information layers are already fully covered. Most of the gap is in the rules (191 functions, 75 of them in `downport`), the objects (111) and `abap/types` (49).
 
+> **`wasm/` and `abap/wasm_compiler/`: experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.**
+
 ## Quick start: three abaplints with one command
 
 Download `abapiti` for your platform from the [latest release](https://github.com/oisee/abapiti/releases/latest), then:
@@ -116,7 +118,7 @@ How it works in more depth: [the ADRs](docs/adr/) (own object HIR, tsgo front en
 Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpiler and the acceptance test: check `zabapgit_standalone` on the stack in under 5 minutes.
 
 <details>
-<summary><b>Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
+<summary><b>Legacy WASM: experimental, deprecated (2026-10-10). Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
 
@@ -190,6 +192,8 @@ Generated code has no comments, no line longer than 255 characters (the limit th
 
 ## What runs today
 
+Historical WASM results below; `wasm/` and `abap/wasm_compiler/` are experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.
+
 Every case is checked against the same program run natively (C compiled by gcc, and [wazero](https://wazero.io)), bit for bit.
 
 | Rung | Size | SAP kernel (A4H) | OSG-JS | osgo |
@@ -208,8 +212,8 @@ One Go module, one CLI (`abapiti`), several frontends. Status as of 2026-10-03:
 
 | Frontend | Input → output | What works today | What does not (yet) |
 |---|---|---|---|
-| **`wasm/`** (WASM → ABAP, Go) | `.wasm` → a self-contained global ABAP class (`METHODS` per export, linear memory as `xstring`); large modules split into a state class, chunk classes and one interface per chunk, each activatable on its own (`--split`, `--class-lines`); generated nesting stays below the kernel's limit. Backends: class, function group, hybrid, multi-class. | See *What runs today*. i32 and i64 arithmetic wraps like WebAssembly; branches, loops, `call_indirect`, `memory.grow`, sign extension, bulk memory. | Exceptions, SIMD, atomics; f32 is computed in double precision; NaN/Inf trap. See [docs/TECH-DEBT.md](docs/TECH-DEBT.md). |
-| **`abap/wasm_compiler/`** (WASM → ABAP, written in ABAP) | `.wasm` xstring → ABAP source, then `GENERATE SUBROUTINE POOL` on SAP | Self-hosting run on SAP (a 785-line compiler); it has an ABAP Unit class. | Not packaged for installation. Depends on `GENERATE SUBROUTINE POOL`, which OSD most likely cannot run. |
+| **`wasm/`** (WASM → ABAP, Go) — **experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go** | `.wasm` → a self-contained global ABAP class (`METHODS` per export, linear memory as `xstring`); large modules split into a state class, chunk classes and one interface per chunk, each activatable on its own (`--split`, `--class-lines`); generated nesting stays below the kernel's limit. Backends: class, function group, hybrid, multi-class. | See *What runs today*. i32 and i64 arithmetic wraps like WebAssembly; branches, loops, `call_indirect`, `memory.grow`, sign extension, bulk memory. | Exceptions, SIMD, atomics; f32 is computed in double precision; NaN/Inf trap. See [docs/TECH-DEBT.md](docs/TECH-DEBT.md). |
+| **`abap/wasm_compiler/`** (WASM → ABAP, written in ABAP) — **experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go** | `.wasm` xstring → ABAP source, then `GENERATE SUBROUTINE POOL` on SAP | Self-hosting run on SAP (a 785-line compiler); it has an ABAP Unit class. | Not packaged for installation. Depends on `GENERATE SUBROUTINE POOL`, which OSD most likely cannot run. |
 | **`llvm/`** (LLVM IR / C → ABAP) | `.ll` or `.c` (via `clang`) → typed `CLASS-METHODS`; optional abapGit zip; multi-class split | 3 tests pass (a 34-function C corpus, leaf functions, control flow). FatFS: 28 functions → 8,016 lines, 0 TODOs, verified 5/5 on SAP via `GENERATE SUBROUTINE POOL`. QuickJS: 537 methods / 124 K lines, 0 TODOs. | QuickJS-as-ABAP is verified only natively (via `llc`), not on SAP. Test coverage is thin. `.c` input needs `clang` on the PATH. |
 | **`ts/`** (TypeScript → ABAP) | TS → JSON AST (node + `ts/ts_ast.js`) → ABAP classes | A lexer modelled on abaplint's was transpiled to ABAP (55 classes in `ts/testdata/abaplint_lexer/`) and ran on SAP. | Needs node and `npm install` at runtime, and finds `ts_ast.js` only from a source checkout (or `ABAPITI_TS_AST_PATH`). Its test skips without the TypeScript toolchain. |
 | **`ts2go/`** (TypeScript → Go) | TS AST → Go | Produced valid Go from the same lexer. | No tests, no caller. |
@@ -237,7 +241,7 @@ ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oise
 
 ## How it's verified
 
-Today: Go unit tests (`go test ./...`), including a native run of the WASM inputs in wazero as the reference; in CI the generated classes run as ABAP Unit on osgo (open-steamgate's Go runtime, straight from the files) and on OSD through ADT ([`osd-m1.yml`](.github/workflows/osd-m1.yml)); larger programs are run on a real kernel (A4H) with throwaway packages, and the results are summarised above.
+Default Go unit tests (`go test ./...`) exclude the deprecated WASM path. Its opt-in tests (`go test -tags wasmlegacy ./wasm`) use wazero as the native reference. The legacy generated classes can be checked as ABAP Unit on osgo and OSD through the manual-only [`osd-m1.yml`](.github/workflows/osd-m1.yml) workflow. The larger-program results above are historical runs on a real kernel (A4H) with throwaway packages.
 CI (`.github/workflows/ci.yml`, the same checks as vsp's) runs on every pull request and push to main: build, vet, the tests with `-race` and a shuffled order, a clean tree after them, a lint gate on new code, and a leak scan; complexity metrics, a full lint and a "does the new test fail without the fix" check are advisory. One bot comment per pull request (`ci-report.yml`) sums them up, with deltas against main.
 
 The target pipeline, per test case:
@@ -249,6 +253,8 @@ The target pipeline, per test case:
 OSD activates code through the abaplint transpiler, so a green OSD run proves the generated ABAP passes abaplint and behaves correctly under that runtime. It does not prove kernel behaviour (`TYPE i` overflow, for one); that stays a check on a real system. The kernel behaviour the generated code relies on is pinned by the ABAP Unit repros in [`abap/osd_repro/`](abap/osd_repro/), measured on a real system.
 
 ## Roadmap
+
+The WASM milestones below are historical; that path is deprecated and planned for removal.
 
 - **M1 (done):** `abapiti compile wasm` output for **add** and **factorial**, plus the generated ABAP Unit class, deploys, activates and runs green on a pinned OSD in CI ([`osd-m1.yml`](.github/workflows/osd-m1.yml)) and on a real kernel, including i32 wrap-around.
 - **M2 (done on the kernel and osgo):** the size ladder: the C corpus, Monocypher, and QuickJS evaluating JavaScript inside ABAP. QuickJS on OSG-JS is still to run.

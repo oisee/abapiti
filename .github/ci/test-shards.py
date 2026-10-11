@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Deterministic test partitions (wasm, tsfront), textual coverage merge, and CI aggregation."""
+"""Deterministic test partitions (tsfront), textual coverage merge, and CI aggregation."""
 import collections
 import json
 from pathlib import Path
 import re
 import sys
 
-WASM = "github.com/oisee/abapiti/wasm"
 TSFRONT = "github.com/oisee/abapiti/tsfront"
 # Packages whose top-level tests are split in halves over two shards, and the
 # shards that run the halves.
-SPLIT = {WASM: ("wasm", (1, 2)), TSFRONT: ("tsfront", (3, 4))}
-SHARDS = (1, 2, 3, 4)
+SPLIT = {TSFRONT: ("tsfront", (1, 2))}
+SHARDS = (1, 2)
 
 
-def split(listing, out, half, name="wasm"):
+def split(listing, out, half, name="tsfront"):
     # Benchmarks are listed by -list . too, but go test does not run them.
     names = sorted(line for line in listing.read_text().splitlines()
                    if re.fullmatch(r"(?:Test|Example|Fuzz)\w*", line))

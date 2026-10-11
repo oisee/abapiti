@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# legacy WASM path, deprecated 2026-10-10
 # Compile the OSD modules listed in wasm/osd_unit_test.go to ABAP, deploy each
 # class and its generated ABAP Unit test class to a running OSD with vsp, and
 # run the tests. Every generated class is deployed; none is listed here.
@@ -53,7 +54,7 @@ vsp() {
 echo "osd-m1: vsp $tag as DEVELOPER on $url" >&2
 
 # Generate the classes and their test classes.
-(cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
+(cd "$root" && ABAPITI_TEST_OUT="$work/gen" go test -tags wasmlegacy ./wasm -run '^TestOSD_EmitUnitClasses$' -count=1 -v) \
   > "$work/log/generate.log" 2>&1 || { cat "$work/log/generate.log" >&2; exit 1; }
 gen="$work/gen/TestOSD_EmitUnitClasses"
 # Flatten the same fixture sets consumed by osgo.

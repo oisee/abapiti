@@ -25,22 +25,21 @@ class ShardTests(unittest.TestCase):
         for i in (1, 2):
             out = self.root / str(i)
             shards.split(listing, out, i)
-            patterns.append((out / "wasm-run.txt").read_text().strip())
+            patterns.append((out / "tsfront-run.txt").read_text().strip())
         self.assertEqual(patterns, ["^(ExampleA|TestA)$", "^(FuzzB|TestZ)$"])
         listing.write_text("TestOne\n")
         shards.split(listing, self.root / "empty", 2)
-        self.assertEqual((self.root / "empty/wasm-run.txt").read_text(), "^$\n")
+        self.assertEqual((self.root / "empty/tsfront-run.txt").read_text(), "^$\n")
         listing.write_text("TestB\nTestA\nTestC\n")
         shards.split(listing, self.root / "ts", 2, "tsfront")
         self.assertEqual((self.root / "ts/tsfront-run.txt").read_text(), "^(TestB)$\n")
         self.assertEqual(json.loads((self.root / "ts/tsfront-listed.json").read_text()), ["TestA", "TestB", "TestC"])
 
     def fixtures(self):
-        # Shards 1-2 split wasm, shard 3 runs another package plus tsfront's
-        # first half, shard 4 tsfront's second half.
-        tests = {1: [(shards.WASM, "Test1")], 2: [(shards.WASM, "Test2")],
-                 3: [("github.com/oisee/abapiti/hir", "Test3"), (shards.TSFRONT, "TestA")],
-                 4: [(shards.TSFRONT, "TestB")]}
+        # Shard 1 runs another package and tsfront's first half; shard 2
+        # runs tsfront's second half.
+        tests = {1: [(shards.TSFRONT, "TestA"), ("github.com/oisee/abapiti/hir", "Test3")],
+                 2: [(shards.TSFRONT, "TestB")]}
         for i, rows in tests.items():
             out = self.root / f"test-shard-{i}"
             out.mkdir()
@@ -50,10 +49,7 @@ class ShardTests(unittest.TestCase):
                            dict(Package=pkg, Action="pass", Test=name),
                            dict(Package=pkg, Action="pass", Elapsed=i)]
             (out / "test.json").write_text("\n".join(json.dumps(e) for e in events) + "\n")
-            if i < 3:
-                (out / "wasm-listed.json").write_text('["Test1", "Test2"]')
-            else:
-                (out / "tsfront-listed.json").write_text('["TestA", "TestB"]')
+            (out / "tsfront-listed.json").write_text('["TestA", "TestB"]')
             pkg = rows[0][0]
             (out / "cover.out").write_text(
                 f"mode: atomic\n{pkg}/x.go:1.1,2.2 2 {int(i != 1)}\n"
@@ -67,12 +63,11 @@ class ShardTests(unittest.TestCase):
         shards.aggregate(self.root, out)
         self.assertTrue((out / "tree-dirty").exists())
         rows = {p['pkg']: p for p in json.loads((out / 'test-summary.json').read_text())['packages']}
-        self.assertEqual(rows[shards.WASM]['seconds'], 3)
-        self.assertEqual(rows[shards.WASM]['pass'], 2)
-        self.assertEqual(rows[shards.WASM]['cover'], 50)
-        self.assertEqual(rows[shards.TSFRONT]['seconds'], 7)
+        self.assertEqual(rows[shards.TSFRONT]['seconds'], 3)
         self.assertEqual(rows[shards.TSFRONT]['pass'], 2)
-        self.assertEqual(len((out / 'cover.out').read_text().splitlines()), 7)
+        self.assertEqual(rows['github.com/oisee/abapiti/hir']['pass'], 1)
+        self.assertEqual(rows[shards.TSFRONT]['cover'], 50)
+        self.assertEqual(len((out / 'cover.out').read_text().splitlines()), 3)
 
     def test_missing_duplicate_and_different_lists(self):
         self.fixtures()
@@ -85,20 +80,11 @@ class ShardTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'missing'):
             shards.check(self.root)
         log.write_text(original)
-        (self.root / 'test-shard-2/wasm-listed.json').write_text('["Test2"]')
+        (self.root / 'test-shard-2/tsfront-listed.json').write_text('["TestB"]')
         with self.assertRaisesRegex(ValueError, 'lists differ'):
             shards.check(self.root)
-        (self.root / 'test-shard-2/wasm-listed.json').write_text('["Test1", "Test2"]')
-        tsfront = self.root / 'test-shard-4/test.json'
-        kept = tsfront.read_text()
-        tsfront.write_text('\n'.join(kept.splitlines()[1:]) + '\n')
-        with self.assertRaisesRegex(ValueError, 'tsfront execution mismatch: missing'):
-            shards.check(self.root)
-        tsfront.write_text(kept)
-        (self.root / 'test-shard-4/tsfront-listed.json').write_text('["TestA"]')
-        with self.assertRaisesRegex(ValueError, 'tsfront test lists differ'):
-            shards.check(self.root)
-        (self.root / 'test-shard-4/test.json').unlink()
+        (self.root / 'test-shard-2/tsfront-listed.json').write_text('["TestA", "TestB"]')
+        (self.root / 'test-shard-2/test.json').unlink()
         with self.assertRaises(FileNotFoundError):
             shards.check(self.root)
 

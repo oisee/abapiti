@@ -31,6 +31,9 @@ var compileWasmCmd = &cobra.Command{
 	Long: `Compile a .wasm binary to native ABAP source code.
 Fully offline — no SAP connection required.
 
+Deprecated (2026-10-10): experimental WASM path, planned for removal.
+The supported path is TypeScript → HIR → ABAP/Go.
+
 Small modules produce one ABAP class. Large modules produce a shared state class,
 independent function chunks, and a facade. Activate state, chunks, then facade.
 Deploy with vsp: vsp deploy <output.clas.abap> '$TMP'
@@ -139,6 +142,7 @@ func init() {
 }
 
 func runCompileWasm(cmd *cobra.Command, args []string) error {
+	fmt.Fprintln(os.Stderr, "Deprecated (2026-10-10): experimental WASM path, planned for removal; the supported path is TypeScript → HIR → ABAP/Go.")
 	inputFile := args[0]
 	className, _ := cmd.Flags().GetString("class")
 	outputDir, _ := cmd.Flags().GetString("output")
