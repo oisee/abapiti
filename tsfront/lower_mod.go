@@ -418,7 +418,7 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 // methods of the module class.
 func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 	for _, stmt := range l.statementNodes(f) {
-		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil {
+		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil || isOverloadSignature(stmt) {
 			continue
 		}
 		name := stmt.Name().Text()

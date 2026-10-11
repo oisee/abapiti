@@ -1076,9 +1076,26 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 						break
 					}
 				}
+				if slot == hm && recv.Type.Kind == hir.InterfaceRef {
+					if actual := l.interfaceMethod(recv.Type.Name, original); actual != nil {
+						slot = actual
+					}
+				}
 				if slot == hm {
 					l.diagf(n, "unsupported-generic-dispatch", "erased virtual slot %s is unavailable", original)
 					return nil
+				}
+			}
+			// The receiver's erased interface owns the calling convention. A
+			// checker symbol can name a shorter constituent implementation,
+			// while a union slot includes another member's optional tail.
+			if recv.Type.Kind == hir.InterfaceRef {
+				name := slot.Name
+				if original, _, specialized := strings.Cut(name, "_instantiated_"); specialized {
+					name = original
+				}
+				if actual := l.interfaceMethod(recv.Type.Name, name); actual != nil {
+					slot = actual
 				}
 			}
 			if slot.Result.Kind == hir.Void && recv.Type.Kind == hir.InterfaceRef && l.hint.Kind != "" && l.hint.Kind != hir.Void {
@@ -1103,6 +1120,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
+			recv = l.callReceiver(n, recv, slot.Params)
 			args, ok := l.callArgs(n, n.Arguments(), slot.Params)
 			if !ok {
 				return nil
@@ -1116,6 +1134,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// A receiver of a vendored but not-lowered class goes through a cast
 		// view interface grown for exactly this member.
 		if recvCast, ok := l.viewCast(p.Expression, name); ok {
+			recvCast = l.callReceiver(n, recvCast, l.methodsBy[recvCast.Type.Name+"."+name].Params)
 			args, ok2 := l.callArgsMethod(n, n.Arguments(), l.methodsBy[recvCast.Type.Name+"."+name], 0)
 			if !ok2 {
 				return nil
@@ -1169,6 +1188,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 		if method != nil {
+			recv = l.callReceiver(n, recv, method.Params)
 			args, ok := l.callArgsMethod(n, n.Arguments(), method, 0)
 			if !ok {
 				return nil
@@ -1177,6 +1197,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		}
 		if recv.Type.Kind == hir.InterfaceRef {
 			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
+				recv = l.callReceiver(n, recv, m.Params)
 				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
 				if !ok {
 					return nil
@@ -2558,4 +2579,28 @@ func (l *lowerer) unionViewFor(x *ast.Node, name string) (hir.Type, *hir.Method,
 		}
 	}
 	return hir.Type{}, nil, false
+}
+
+// Discarded arguments are emitted as a prelude. Evaluate the member receiver
+// first, before any argument effects, as JavaScript member calls require.
+func (l *lowerer) callReceiver(at *ast.Node, recv *hir.Expr, params []hir.Param) *hir.Expr {
+	prelude := len(params) > 0 && params[len(params)-1].Variadic
+	count := len(at.Arguments())
+	for _, arg := range at.Arguments() {
+		if arg.Kind != ast.KindSpreadElement {
+			continue
+		}
+		prelude = true
+		typ := l.ck.GetTypeAtLocation(arg.Expression())
+		if typ != nil && typ.IsTupleType() {
+			count--
+			for i := 0; l.ck.GetPropertyOfType(typ, itoa(i)) != nil; i++ {
+				count++
+			}
+		}
+	}
+	if prelude || count > len(params) {
+		return l.tempInit(at, recv.Type, recv)
+	}
+	return recv
 }

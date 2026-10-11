@@ -60,9 +60,13 @@ func (l *lowerer) sortWithComparator(n *ast.Node, recv *hir.Expr, cb *ast.Node) 
 	if !ok {
 		return nil
 	}
-	if len(params) != 2 {
-		l.diagf(n, "unsupported-call", "sort comparator must take two parameters")
+	if len(params) > 2 {
+		l.diagf(n, "unsupported-call", "sort comparator optional tails need an absence-preserving binding")
 		return nil
+	}
+	for len(params) < 2 {
+		l.serial++
+		params = append(params, "e"+itoa(l.serial))
 	}
 	if body.Type.Kind != hir.Number {
 		l.diagf(n, "unsupported-call", "sort comparator must return a number")

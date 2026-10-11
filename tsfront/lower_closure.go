@@ -222,12 +222,17 @@ func (l *lowerer) assignedAfter(fn *ast.Node, name string) bool {
 
 // thunkCall lowers `d()` for a local holding a thunk.
 func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
-	if callee.Kind != ast.KindIdentifier || len(n.Arguments()) != 0 {
+	if callee.Kind != ast.KindIdentifier {
 		return nil, false
 	}
 	t, ok := l.lookup(callee.Text())
 	if !ok || t.Kind != hir.InterfaceRef || t.Name != thunkInterfaceName {
 		return nil, false
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: hir.T(hir.Void), X: hir.V(callee.Text(), t)}, true
+	recv := l.callReceiver(n, hir.V(callee.Text(), t), nil)
+	args, ok := l.callArgs(n, n.Arguments(), nil)
+	if !ok {
+		return nil, true
+	}
+	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: hir.T(hir.Void), X: recv, Args: args}, true
 }

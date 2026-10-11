@@ -67,13 +67,20 @@ ENDCLASS.
 	}
 }
 
-func TestCriticR4LiftedDefaultsFailClosed(t *testing.T) {
+func TestCriticR4LiftedDefaults(t *testing.T) {
 	source, err := os.ReadFile("testdata/critic-r4/defaults.ts")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, src := range []string{string(source), `export class Probe { static run(): number { const captured = 3; const first = (n: number = captured): number => n; const second = (): number => first(); return second(); } }`} {
-		requireDiagnostic(t, sourceProbe(t, src), "unsupported-lifted-default")
+	for i, src := range []string{string(source), `export class Probe { static run(): number { const captured = 3; const first = (n: number = captured): number => n; const second = (): number => first(); return second(); } }`} {
+		prog := lowerStatementsProbe(t, map[string]string{"probe.ts": src}, []string{"probe.ts"})
+		if _, err := abap.Emit(prog); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"7\n", "3\n"}[i]
+		if got := runGoHIR(t, prog, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())"); got != want {
+			t.Fatalf("got %q want %q", got, want)
+		}
 	}
 }
 

@@ -246,6 +246,11 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			if fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil {
 				continue
 			}
+			if isOverloadSignature(fn) {
+				// Keep source declaration IDs stable without emitting a duplicate.
+				l.node(fn)
+				continue
+			}
 			mod := l.moduleClassOf(f)
 			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
@@ -333,8 +338,8 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		l.bodiesFile(f)
 		done()
 	}
-	l.completeUnionInterfaces()
-	l.covariantImplements()
+	l.stabilizeUnionABI()
+	l.completeCallArguments()
 	l.propagateBridgeTraps()
 	l.inferNumberRanges()
 	if options.AssumeOnlyIntegerCalculations {

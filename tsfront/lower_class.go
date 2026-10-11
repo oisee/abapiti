@@ -353,6 +353,12 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 }
 
 func (l *lowerer) methodSignature(m *ast.Node, c *hir.Class) {
+	if isOverloadSignature(m) {
+		// Reserve the source declaration identity even though it has no
+		// runtime method, preserving subsequent generated names.
+		l.node(m)
+		return
+	}
 	name, ok := l.memberName(m, c)
 	if !ok {
 		return
@@ -380,6 +386,12 @@ func (l *lowerer) methodSignature(m *ast.Node, c *hir.Class) {
 }
 
 func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
+	if isOverloadSignature(m) {
+		// Reserve the source declaration identity even though it has no
+		// runtime method, preserving subsequent generated names.
+		l.node(m)
+		return
+	}
 	hm := &hir.Method{Node: l.node(m), Name: "constructor"}
 	l.signature(m, hm)
 	c.Ctor = hm
@@ -598,6 +610,9 @@ func (l *lowerer) memberName(m *ast.Node, c *hir.Class) (string, bool) {
 // lowerMethodBody lowers the body of one method (skipping what the signature
 // pass rejected).
 func (l *lowerer) lowerMethodBody(m *ast.Node) {
+	if isOverloadSignature(m) {
+		return
+	}
 	hm := l.methodOfNode(m)
 	if hm == nil {
 		return
@@ -843,4 +858,18 @@ func (l *lowerer) baseConstructor() *hir.Method {
 		name = found.Super
 	}
 	return nil
+}
+
+// Overload declarations describe checked call sites, not additional runtime
+// functions. Only the declaration with a body defines the HIR calling ABI.
+func isOverloadSignature(n *ast.Node) bool {
+	if n.Body() != nil || n.Symbol() == nil {
+		return false
+	}
+	for _, d := range n.Symbol().Declarations {
+		if d.Kind == n.Kind && d.Body() != nil {
+			return true
+		}
+	}
+	return false
 }
