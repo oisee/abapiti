@@ -455,24 +455,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			l.hint = l.hint.Args[0]
 		}
 		if len(els) == 0 {
-			if l.hint.Kind != hir.Array && l.hint.Kind != hir.OrderedSet {
-				if t := l.ck.GetContextualType(n, 0); t != nil {
-					if arr := l.singleArrayConstituent(t); arr != nil {
-						// A tagged (union) context: the one array constituent
-						// gives the element type; the value is boxed later.
-						t = arr
-					}
-					l.hint = l.mapCheckerType(n, t)
-				}
-			}
-			if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
-				l.hint = l.hint.Args[0]
-			}
-			if l.hint.Kind == hir.Array || l.hint.Kind == hir.OrderedSet {
-				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: l.hint}
-			}
-			l.diagf(n, "unsupported-array", "empty array literal outside a statement context")
-			return nil
+			return l.emptyArrayLiteral(n)
 		}
 		if l.hint.Kind == hir.ClassRef && strings.HasPrefix(l.hint.Name, "tuple.") {
 			// Construct positional fields in their individual contexts.
