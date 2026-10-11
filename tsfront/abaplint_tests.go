@@ -99,10 +99,14 @@ func EmitAbaplintTests(dir string, lowering *RegistryLowering) (map[string]strin
 		}
 	}
 	files["go.mod"] = "module abaplinttests\n\ngo 1.26.0\n"
-	message := "message:=func(x any) string {return fmt.Sprint(x)}"
+	// Async rejection preserves a typed TS payload. Unwrap primitive reasons
+	// and Error subclasses before formatting the report message.
+	message := "message:=func(x any) string {if p,ok:=x.(interface{tsValue() *dynamic});ok {d:=p.tsValue();if d==nil{return \"undefined\"};x=d.Value};ERROR_MESSAGE;return fmt.Sprint(x)}"
+	errorMessage := ""
 	if modules["builtin.Error"] {
-		message = fmt.Sprintf("message:=func(x any) string {if p,ok:=x.(payload[%s]);ok && p.Value!=nil{return p.Value.%s().%s.String()};return fmt.Sprint(x)}", names.Get("ref.builtin.Error"), names.Get("base.builtin.Error"), names.Get("member.message"))
+		errorMessage = fmt.Sprintf("if p,ok:=x.(%s);ok && p!=nil{return p.%s().%s.String()}", names.Get("ref.builtin.Error"), names.Get("base.builtin.Error"), names.Get("member.message"))
 	}
+	message = strings.ReplaceAll(message, "ERROR_MESSAGE", errorMessage)
 	files["main.go"] = fmt.Sprintf(`package main
 import ("encoding/json"; "fmt"; "os"; "strings")
 func main() {
@@ -112,24 +116,70 @@ func main() {
  %s()
  %s
  type record struct { Title string `+"`json:\"title\"`"+`; Passed bool `+"`json:\"passed\"`"+`; Message string `+"`json:\"message\"`"+`; Status string `+"`json:\"status\"`"+` }
- summary := struct { Passed int `+"`json:\"passed\"`"+`; Failed int `+"`json:\"failed\"`"+`; Trapped int `+"`json:\"trapped\"`"+`; NotRun int `+"`json:\"notRun\"`"+`; Results []record `+"`json:\"results\"`"+` }{Results:[]record{}}
+ summary := struct { AsyncPending int `+"`json:\"asyncPending\"`"+`; Passed int `+"`json:\"passed\"`"+`; Failed int `+"`json:\"failed\"`"+`; Trapped int `+"`json:\"trapped\"`"+`; NotRun int `+"`json:\"notRun\"`"+`; Results []record `+"`json:\"results\"`"+` }{Results:[]record{}}
+ %s
  for _, item := range %s.Items {
   t := item.(%s)
   r:=record{Title:t.%s.String(),Status:"passed"}
   if t.%s || (%s && !t.%s) {r.Status="not-run";summary.NotRun++} else {
-   func(){defer func(){if x:=recover();x!=nil{
-    r.Message=message(x); r.Status="failed"
-    if _,ok:=x.(trap);ok {r.Status="trapped"}
-    if strings.Contains(r.Message,"unsupported-async") {r.Status="not-run"}
-   }}();t.%s.%s()}()
-   switch r.Status {case "passed":r.Passed=true;summary.Passed++;case "trapped":summary.Trapped++;case "not-run":summary.NotRun++;default:summary.Failed++}
+   apply:=func(x any) {if x==nil || r.Status!="passed" {return};r.Message=message(x);r.Status="failed";if _,ok:=x.(trap);ok {r.Status="trapped";if strings.Contains(r.Message,"unsupported-async") || strings.Contains(r.Message,"certified settled promise") {r.Status="async-pending"};if strings.Contains(r.Message,"unsupported-test-done") {r.Status="not-run"}}}
+   recoverCall:=func(f func()) (failure any) {defer func(){failure=recover()}();f();return nil}
+   %s
+   switch r.Status {case "async-pending":summary.AsyncPending++;case "passed":r.Passed=true;summary.Passed++;case "trapped":summary.Trapped++;case "not-run":summary.NotRun++;default:summary.Failed++}
   }
   summary.Results=append(summary.Results,r)
   if err:=json.NewEncoder(os.Stderr).Encode(r);err!=nil{panic(err)}
  }
  if err := json.NewEncoder(os.Stdout).Encode(summary); err != nil { panic(err) }
- if summary.Failed + summary.Trapped != 0 { os.Exit(1) }
+ if summary.Failed + summary.Trapped + summary.AsyncPending != 0 { os.Exit(1) }
 }
-`, init.String(), names.Get("init.runtime/mocha.ts.TestRuntime"), message, names.Get("static.runtime/mocha.ts.TestRuntime.tests"), names.Get("ref.runtime/mocha.ts.TestCase"), names.Get("member.title"), names.Get("member.skipped"), names.Get("static.runtime/mocha.ts.TestRuntime.focused"), names.Get("member.only"), names.Get("member.body"), names.Get("member.call"))
+`, init.String(), names.Get("init.runtime/mocha.ts.TestRuntime"), message, testHookSetup(names, modules), names.Get("static.runtime/mocha.ts.TestRuntime.tests"), names.Get("ref.runtime/mocha.ts.TestCase"), names.Get("member.title"), names.Get("member.skipped"), names.Get("static.runtime/mocha.ts.TestRuntime.focused"), names.Get("member.only"), testHookExecution(names, modules))
 	return files, nil
+}
+
+// Hook failures use the same recovery boundary as bodies. A failed before hook
+// is replayed for every affected test; afterEach and after still get drained.
+func testHookSetup(names *hir.Names, modules map[string]bool) string {
+	if !modules["runtime/mocha.ts.TestSuite"] {
+		return ""
+	}
+	return testHookNames(names, `
+ remaining:=map[SUITE]int{}
+ started:=map[SUITE]bool{}
+ beforeFailure:=map[SUITE]any{}
+ for _,item:=range TESTS.Items {t:=item.(CASE);if t.SKIPPED || (FOCUSED && !t.ONLY) {continue};for _,entry:=range t.SUITES.Items {remaining[entry.(SUITE)]++}}
+ `)
+}
+func testHookExecution(names *hir.Names, modules map[string]bool) string {
+	if !modules["runtime/mocha.ts.TestSuite"] {
+		return testHookNames(names, `apply(recoverCall(func(){drainSettled(t.BODY.CALL())}))`)
+	}
+	return testHookNames(names, `
+ entered:=[]SUITE{}
+ apply(recoverCall(func(){
+  for _,entry:=range t.SUITES.Items {
+   suite:=entry.(SUITE)
+   if !started[suite] {started[suite]=true;beforeFailure[suite]=recoverCall(func(){for _,h:=range suite.BEFOREALL.Items {drainSettled(h.(THUNK).CALL())}})}
+   if x:=beforeFailure[suite];x!=nil {panic(x)}
+   entered=append(entered,suite)
+   for _,h:=range suite.BEFOREEACH.Items {drainSettled(h.(THUNK).CALL())}
+  }
+  drainSettled(t.BODY.CALL())
+ }))
+ for i:=len(entered)-1;i>=0;i-- {for _,h:=range entered[i].AFTEREACH.Items {apply(recoverCall(func(){drainSettled(h.(THUNK).CALL())}))}}
+ for i:=len(t.SUITES.Items)-1;i>=0;i-- {suite:=t.SUITES.Items[i].(SUITE);remaining[suite]--;if remaining[suite]==0 && started[suite] {for _,h:=range suite.AFTERALL.Items {apply(recoverCall(func(){drainSettled(h.(THUNK).CALL())}))}}}
+ `)
+}
+func testHookNames(names *hir.Names, source string) string {
+	return strings.NewReplacer(
+		"SUITES", names.Get("member.suites"), "SUITE", names.Get("ref.runtime/mocha.ts.TestSuite"),
+		"CASE", names.Get("ref.runtime/mocha.ts.TestCase"),
+		"THUNK", names.Get("ref.closure.thunk"),
+		"TESTS", names.Get("static.runtime/mocha.ts.TestRuntime.tests"),
+		"FOCUSED", names.Get("static.runtime/mocha.ts.TestRuntime.focused"),
+		"SKIPPED", names.Get("member.skipped"), "ONLY", names.Get("member.only"),
+		"BODY", names.Get("member.body"), "CALL", names.Get("member.call"),
+		"BEFOREALL", names.Get("member.beforeAll"), "AFTERALL", names.Get("member.afterAll"),
+		"BEFOREEACH", names.Get("member.beforeEach"), "AFTEREACH", names.Get("member.afterEach"),
+	).Replace(source)
 }

@@ -86,3 +86,21 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 	}
 	return &hir.Expr{Node: l.node(n), Kind: hir.DirectCall, Owner: "runtime/mocha.ts.TestRuntime", Name: method, Type: hir.T(hir.Void), Args: args}, true
 }
+
+func (l *lowerer) isDeferredTestCallback(n *ast.Node) bool {
+	if !l.isTestCallback(n) {
+		return false
+	}
+	callee := n.Parent.Expression()
+	if callee.Kind == ast.KindPropertyAccessExpression {
+		callee = callee.Expression()
+	}
+	if callee.Kind != ast.KindIdentifier {
+		return false
+	}
+	switch callee.Text() {
+	case "it", "before", "after", "beforeEach", "afterEach":
+		return true
+	}
+	return false
+}

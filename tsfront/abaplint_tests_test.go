@@ -168,30 +168,7 @@ func TestAbaplintTestHostGo(t *testing.T) {
  `,
 		"test/host.ts": `register("host pass", () => {}); register("host fail", () => { throw new Error("deliberate"); }); register("host trap", () => { const date = new Date(); }); register("host async", async () => {}); register("host done", (done: () => void) => { done(); }); registerIterations(); registerContext();`,
 	}
-	manifest := map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": []string{"runtime/mocha.ts", "test/host.ts"}}
-	rows := []map[string]string{}
-	for _, name := range []string{"runtime/mocha.ts", "test/host.ts"} {
-		source := sources[name]
-		path := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(source), 0644); err != nil {
-			t.Fatal(err)
-		}
-		rows = append(rows, map[string]string{"file": name, "sha256": fmt.Sprintf("%x", sha256.Sum256([]byte(source)))})
-	}
-	manifest["sources"] = rows
-	raw, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = os.WriteFile(filepath.Join(dir, "closure.json"), raw, 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err = os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["runtime/*.ts","test/*.ts"]}`), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeTestClosure(t, dir, sources)
 	t.Setenv("ABAPITI_ASSUME_INT", "1") // the harness must still select binary64
 	lowering, err := LowerAbaplintTests(dir)
 	if err != nil {
@@ -203,7 +180,7 @@ func TestAbaplintTestHostGo(t *testing.T) {
 	}
 	stdout, stderr, code := runAbaplintTestModule(t, files)
 	var summary struct{ Passed, Failed, Trapped, NotRun int }
-	if err := json.Unmarshal([]byte(stdout), &summary); err != nil || code != 1 || summary.Passed != 4 || summary.Failed != 1 || summary.Trapped != 1 || summary.NotRun != 2 {
+	if err := json.Unmarshal([]byte(stdout), &summary); err != nil || code != 1 || summary.Passed != 5 || summary.Failed != 1 || summary.Trapped != 1 || summary.NotRun != 1 {
 		t.Fatalf("host returned code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 	if !strings.Contains(stderr, `"title":"host pass","passed":true`) || !strings.Contains(stderr, `"title":"host fail","passed":false,"message":"deliberate"`) {
@@ -256,5 +233,112 @@ func TestAbaplintOwnTestsGo(t *testing.T) {
 	var summary struct{ Passed, Failed int }
 	if err := json.Unmarshal([]byte(stdout), &summary); err != nil || summary.Passed == 0 || summary.Failed != 0 {
 		t.Fatalf("not a passing test summary: %s (%v)", stdout, err)
+	}
+}
+
+func writeTestClosure(t *testing.T, dir string, sources map[string]string) {
+	t.Helper()
+	manifest := map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": []string{"runtime/mocha.ts", "test/host.ts"}}
+	rows := []map[string]string{}
+	for _, name := range []string{"runtime/mocha.ts", "test/host.ts"} {
+		source := sources[name]
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, map[string]string{"file": name, "sha256": fmt.Sprintf("%x", sha256.Sum256([]byte(source)))})
+	}
+	manifest["sources"] = rows
+	raw, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "closure.json"), raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["runtime/*.ts","test/*.ts"]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAbaplintAsyncCallbacksAndHooksGo(t *testing.T) {
+	runtime, err := os.ReadFile("testdata/abaplint-tests/runtime/mocha.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	writeTestClosure(t, dir, map[string]string{
+		"runtime/mocha.ts": string(runtime),
+		"test/host.ts": `
+ class State { static value = ""; }
+ class Thenable { then(): void {} }
+ before(async function() { this.timeout(1); State.value = "root"; });
+ describe("async", () => {
+  before(async () => { State.value = State.value + ":before"; });
+  beforeEach(async () => { State.value = State.value + ":each"; });
+  afterEach(async () => { State.value = State.value + ":afterEach"; });
+  after(async () => { if (State.value !== "root:before:each:afterEach:each:afterEach:each:afterEach:each:afterEach:each:afterEach") { throw new Error(State.value); } });
+  it("fulfilled", async () => { await Promise.resolve(); });
+  it("returned", () => Promise.resolve(7));
+  it("rejected", () => Promise.reject(new Error("rejected")));
+  it("thrown", async () => { throw new Error("thrown"); });
+  it("pending", () => new Promise<void>(() => {}));
+ });
+ it("optional promise", () => { if (State.value === "root") { return Promise.reject("must not pass"); } });
+ it("uncertified thenable", () => new Thenable());
+ it("primitive rejection", () => Promise.reject("literal reason"));
+ it("undefined rejection", () => Promise.reject());
+ it("diagnostic-like rejection", () => Promise.reject(new Error("unsupported-async user rejection")));
+ describe("setup", () => {
+  before(async () => { throw new Error("setup rejected"); });
+  it("first", () => { throw new Error("body must not run"); });
+  it("second", async () => {});
+ });
+ describe("afterEach", () => {
+  afterEach(async () => { throw new Error("cleanup rejected"); });
+  it("test", async () => {});
+ });
+ describe("after", () => {
+  after(() => Promise.reject(new Error("after rejected")));
+  it("test", async () => {});
+ });
+ describe("pending hook", () => {
+  before(() => new Promise<void>(() => {}));
+  it("test", async () => {});
+ });
+ describe.skip("skip", () => {
+  before(async () => { throw new Error("must not run"); });
+  it("test", async () => {});
+ });
+ `,
+	})
+	lowering, err := LowerAbaplintTests(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := EmitAbaplintTests(dir, lowering)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, code := runAbaplintTestModule(t, files)
+	var summary struct {
+		Passed, Failed, Trapped, NotRun, AsyncPending int
+		Results                                       []struct{ Title, Status, Message string }
+	}
+	if err := json.Unmarshal([]byte(stdout), &summary); err != nil || code != 1 || summary.Passed != 2 || summary.Failed != 9 || summary.Trapped != 0 || summary.NotRun != 1 || summary.AsyncPending != 4 {
+		t.Fatalf("host returned code=%d stdout=%s stderr=%s", code, stdout, stderr)
+	}
+	for _, result := range summary.Results {
+		if result.Status == "failed" && strings.Contains(result.Message, "body must not run") {
+			t.Fatal(result)
+		}
+	}
+	for _, want := range []string{`"title":"async rejected","passed":false,"message":"rejected"`, `"title":"async thrown","passed":false,"message":"thrown"`, `"status":"async-pending"`, `"message":"setup rejected"`, `"message":"cleanup rejected"`, `"message":"after rejected"`, `"message":"literal reason"`, `"message":"undefined"`, `"message":"unsupported-async user rejection","status":"failed"`} {
+		if !strings.Contains(stderr, want) {
+			t.Fatalf("missing %s in %s", want, stderr)
+		}
 	}
 }
