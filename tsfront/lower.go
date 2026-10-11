@@ -355,6 +355,11 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.stabilizeUnionABI()
 	l.completeAsyncBridges()
 	l.completeCallArguments()
+	if l.unprunedFeatures {
+		for _, c := range l.out.Classes {
+			c.Structural = l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.")
+		}
+	}
 	l.propagateBridgeTraps()
 	l.inferNumberRanges()
 	if options.AssumeOnlyIntegerCalculations {
@@ -362,6 +367,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if options.TrapOnFailure {
 		l.repairFailedBodies()
+	}
+	if l.unprunedFeatures {
+		hir.SealLiveClassViewBoundary(l.out)
 	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
 	if coverage == nil {
