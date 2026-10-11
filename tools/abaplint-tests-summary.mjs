@@ -46,6 +46,7 @@ let wholeSuite;
 if (manifest) {
  const roots = specs.flatMap(s => s.roots).sort();
  if (JSON.stringify(roots) !== JSON.stringify(manifest.files) || new Set(roots).size !== roots.length) throw new Error('test roots are not a disjoint exhaustive partition');
+ if (!manifest.partial) {
  const all = read('node-all.json');
  for (const title of all.titles) titles.set(title, (titles.get(title) ?? 0) - 1);
  if ([...titles.values()].some(n => n !== 0)) throw new Error('shard titles differ from whole-suite Node multiset');
@@ -54,11 +55,13 @@ if (manifest) {
  if (all.total !== all.passed + all.failed + all.pending) throw new Error('Node active/pending total mismatch');
  wholeSuite = {files:manifest.files.length, ...nodeTotals, active:all.passed + all.failed, titlesReconciled:true, excluded:manifest.excluded,
   wiringFailures:shards.filter(s => s.infrastructureFailure).map(s => ({name:s.name, files:specs.find(p => p.name === s.name).roots, reason:s.infrastructureFailure}))};
+ }
 }
-const result = {upstreamPin:pin, codeCommit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+const result = {upstreamPin:pin, codeCommit:manifest?.compilerCommit ?? execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
  mainCommit:execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim(),
  artifacts:directory, artifactPrefix:prefix, shards, uniqueTotal:totals, nodeTotal:nodeTotals,
  ...(wholeSuite ? {wholeSuite} : {}),
+ ...(manifest?.partial ? {selectedSuite:{shards:specs.map(s => s.name), files:manifest.files.length, excluded:manifest.excluded, active:nodeTotals.passed + nodeTotals.failed}} : {}),
  countingRule:'Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.',
  asyncInitializationFailures:shards.flatMap(s => s.initialization).filter(r => r.message.includes('unsupported-async')).length,
  registrationParity:shards.every(s => s.registered === s.total && s.unmatched === 0),
