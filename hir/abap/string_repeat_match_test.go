@@ -35,7 +35,13 @@ func TestEmitStringRepeatAndMatch(t *testing.T) {
 	for _, s := range files {
 		text += s
 	}
-	for _, want := range []string{"trunc(", "repeat( val = ", "cx_sy_range_out_of_bounds", "METHOD match.", "FIND FIRST OCCURRENCE OF REGEX", "FIND ALL OCCURRENCES OF REGEX", "LOOP AT hit-submatches", "IF matches IS INITIAL.\n  RETURN.", "DATA match_index TYPE i.", "result->match_index = hit-offset."} {
+	// Compare without the indentation the formatter adds.
+	lines := strings.Split(text, "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimLeft(l, " ")
+	}
+	text = strings.Join(lines, "\n")
+	for _, want := range []string{"trunc(", "repeat( val = ", "cx_sy_range_out_of_bounds", "METHOD match.", "FIND FIRST OCCURRENCE OF REGEX", "FIND ALL OCCURRENCES OF REGEX", "LOOP AT hit-submatches", "IF matches IS INITIAL.\nRETURN.", "DATA match_index TYPE i.", "result->match_index = hit-offset."} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %q", want)
 		}
