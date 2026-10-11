@@ -92,6 +92,7 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		if n.Name() != nil {
 			_, lifted := l.localFns[n.Name().Text()]
 			if l.pendingFns[n.Name().Text()] == n || lifted {
+				l.declare(n.Name().Text(), hir.T(hir.Void))
 				return nil // declaration may occur after its first (hoisted) call
 			}
 		}
@@ -188,14 +189,6 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 			return nil
 		}
 		return &hir.Stmt{Kind: hir.Continue, Node: l.node(n)}
-	case ast.KindFunctionDeclaration:
-		if n.Name() != nil && l.pendingFns[n.Name().Text()] != nil {
-			l.declare(n.Name().Text(), hir.T(hir.Void))
-			return nil
-		}
-		if n.Name() != nil && l.localFns[n.Name().Text()] != nil {
-			return nil
-		}
 	case ast.KindEmptyStatement:
 		return nil
 	case ast.KindThrowStatement:

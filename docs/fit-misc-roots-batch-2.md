@@ -69,13 +69,22 @@ need a real iterator state machine. The current diagnostic states this boundary.
 
 * Uncovered closure: **644 -> 629 blocking diagnostics**; accompanying HIR
   errors **392 -> 382**. This does not claim all core tests pass yet.
-* This branch has no --full switch. Measurement used the non-committed change
-  `LowerRegistry(work, files, registry, nil)` in cmd/abapiti/abaplint.go, then
+* The original measurement predates main's `--full` switch and used the
+  non-committed change `LowerRegistry(work, files, registry, nil)` in
+  cmd/abapiti/abaplint.go, then
   `abaplint --target a4h --assume-int=false --evidence`. The hack was restored.
   Binary64 was used for both measurements because the baseline uncovered
   assume-int pass panics at assume_integer.go:298 on malformed blocked HIR.
+  The rebased branch now includes main's `--full` mode.
 * `go test ./tsfront/... ./hir/... ./cmd/...` passes, plus per-feature tests.
 * Default a4h output versus origin/main (`b04e07f`): **diff -r empty**, including
   the deterministic zip. Default validated workload remains unchanged.
+* Rebase validation against origin/main `7659ba6`: Grace-enabled
+  `go test ./tsfront/... ./hir/... ./cmd/...` and vet pass. Exported
+  `TestLexerFactsReport` matches `testdata/lexer.facts.golden` byte-for-byte;
+  no catalogue-count or lexer-method fact differences, so no golden update.
+  Syntax-feature output passes fixture hir-lint (65 files, zero issues), and
+  default `abaplint -o X --target a4h --quiet` output has an empty recursive
+  diff against main, including the zip.
 * No SAP runtime execution was available; ABAP coverage here is verified HIR
   plus emitter tests, not a claim of on-system ABAP Unit execution.
