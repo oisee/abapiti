@@ -81,7 +81,11 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
+	validation := ""
+	if e.xmlValidation {
+		validation = xmlValidationRuntimeSource
+	}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -107,19 +111,21 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
-	promiseUsed    bool
-	profile        bool
-	sites          []emittedSite
-	profileIndices map[string]int
-	profileNodes   []hir.Site
-	p              *hir.Program
-	names          *hir.Names
-	code           strings.Builder
-	err            error
-	extra          strings.Builder
-	materializers  map[string]bool
-	stringLiterals map[string]string
-	classifiers    map[string]string
+	xmlValidation   bool
+	promiseUsed     bool
+	profile         bool
+	sites           []emittedSite
+	profileIndices  map[string]int
+	profileNodes    []hir.Site
+	p               *hir.Program
+	names           *hir.Names
+	code            strings.Builder
+	err             error
+	extra           strings.Builder
+	propertyLookups map[string]bool
+	materializers   map[string]bool
+	stringLiterals  map[string]string
+	classifiers     map[string]string
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }

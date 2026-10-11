@@ -16,11 +16,12 @@ import (
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
-func TestRulesCallbackSourcePins(t *testing.T) {
+func TestRulesSourcePins(t *testing.T) {
 	specs := []struct{ file, symbol, kind, start, end string }{
 		{"src/rules/uncaught_exception.ts", "UncaughtException.setSinkedFromMethod", "KindMethodDeclaration", "private setSinkedFromMethod(", "\n  }"},
 		{"src/abap/types/method_definition.ts", "MethodDefinition", "KindClassDeclaration", "export class MethodDefinition ", "\n}"},
 		{"src/rules/parser_702_chaining.ts", "Parser702Chaining.ensureSourceHasNoProceduralKeywords", "KindMethodDeclaration", "private ensureSourceHasNoProceduralKeywords(", "\n  }"},
+		{"src/rules/xml_consistency.ts", "XMLConsistency.run", "KindMethodDeclaration", "public run(obj: IObject): Issue[] {", "\n  }"},
 		{"src/rules/short_case.ts", "ShortCase", "KindClassDeclaration", "export class ShortCase extends", "\n}"},
 	}
 	zr, err := gzip.NewReader(bytes.NewReader(EmbeddedAbaplintArchive()))
@@ -69,7 +70,7 @@ func TestRulesCallbackSourcePins(t *testing.T) {
 			if !ok || err != nil {
 				t.Fatal(ok, err)
 			}
-			if entry.Patterns == nil || len(entry.Patterns.DenseCallbacks) == 0 && !entry.Patterns.SourceGuard {
+			if entry.Patterns == nil || len(entry.Patterns.DenseCallbacks) == 0 && len(entry.Patterns.Expressions) == 0 && !entry.Patterns.SourceGuard {
 				t.Fatal("missing proof")
 			}
 			for call := range entry.Patterns.DenseCallbacks {

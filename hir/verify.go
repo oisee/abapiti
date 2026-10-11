@@ -924,6 +924,16 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "object.get", "object.hasOwn", "object.has":
+		if a.Kind != ClassRef {
+			v.fail(e.Node, "property lookup needs a class receiver")
+		}
+		args([]Type{T(String)})
+		if e.Op == "object.get" {
+			eq(t, T(Dynamic))
+		} else {
+			eq(t, T(Bool))
+		}
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")

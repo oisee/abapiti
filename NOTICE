@@ -20,6 +20,15 @@ Copyright (c) Lars Hvam Petersen. Licensed under the MIT License.
   tsfront/testdata/lexer/src/ and tsfront/testdata/stmts/src/ contain verbatim
   TypeScript sources. Each fixture includes LICENSE.abaplint.
 
+fast-xml-parser — https://github.com/NaturalIntelligence/fast-xml-parser
+Copyright (c) 2017 Amit Kumar Gupta. Licensed under the MIT License.
+  hir/golang/xml_validate.go ports the 5.10.1 default validator.
+  hir/golang/testdata/xml-validator/ contains its validator and name grammar
+  as an offline Node oracle, with the upstream LICENSE.
+  tsfront/testdata/xml-validator-rule-cases.json contains literal XML inputs
+  from abaplint's xml_consistency rule tests at the embedded upstream pin,
+  with its license in tsfront/testdata/LICENSE.abaplint.
+
 QuickJS — https://bellard.org/quickjs/
 Copyright (c) 2017-2021 Fabrice Bellard and Charlie Gordon.
 Licensed under the MIT License.

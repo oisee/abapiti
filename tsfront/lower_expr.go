@@ -984,6 +984,32 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return x
 			}
 		}
+		if name == "hasOwnProperty" && l.librarySymbol(l.resolve(callee)) {
+			before := len(l.diags)
+			typ := l.mapCheckerType(p.Expression, l.ck.GetTypeAtLocation(p.Expression))
+			l.diags = l.diags[:before]
+			if typ.Kind == hir.ClassRef && l.isRuleConfig(typ.Name) {
+				if len(n.Arguments()) != 1 {
+					l.diagf(n, "unsupported-call", "config hasOwnProperty needs one string key")
+					return nil
+				}
+				recv := l.expr(p.Expression)
+				if recv == nil {
+					return nil
+				}
+				recv = l.tempInit(n, typ, recv)
+				key := l.expr(n.Arguments()[0])
+				if recv == nil || key == nil {
+					return nil
+				}
+				if key.Type.Kind != hir.String {
+					l.diagf(n, "unsupported-call", "config hasOwnProperty key must be a string")
+					return nil
+				}
+				return l.rtOp("object.hasOwn", recv, hir.T(hir.Bool), key)
+			}
+		}
+
 		if p.Expression.Kind == ast.KindSuperKeyword {
 			hm := l.methodOf(l.resolve(callee))
 			if hm == nil {
