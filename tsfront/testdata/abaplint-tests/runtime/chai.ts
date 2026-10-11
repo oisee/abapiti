@@ -40,6 +40,18 @@ export class Assertion {
     const object = typeof this.value === "object" && this.value !== null && this.value !== undefined;
     this.check(object && (this.value as object) instanceof expected, "instanceof check", message);
   }
+  // Only existing parameterless void thunks are supported. Checked unboxing
+  // keeps unsupported function representations outside JavaScript catch.
+  public throw(expected = "", message = ""): void {
+    const action = this.value as (() => void);
+    let thrown = false;
+    let matches = false;
+    try { action(); } catch (error) {
+      thrown = true;
+      matches = expected === "" || (error.message as string).includes(expected);
+    }
+    this.check(thrown && matches, "throw check", message);
+  }
   public contain(expected: any, message = ""): void {
     if (this.deeply) {
       const included = chaiDeepInclude(this.value, expected);

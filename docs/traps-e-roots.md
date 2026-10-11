@@ -58,6 +58,24 @@ checks template-derived keys, both branch orders, lazy once-only input effects,
 empty/nonempty arrays, duplicate elimination, insertion order and fresh Set
 mutation against Node, plus ABAP emission with Grace.
 
+### Additional new-top-20 harness item: Chai `.throw`
+
+After the first two harness repairs, a second complete run measured
+**8,867/11,060, FAIL 0** (Set input-context fix was not yet in that binary).
+Its new top 20 includes six `test/registry.ts` cases blocked by missing `.throw`.
+The shim now invokes a checked **existing parameterless void thunk**, outside
+the catch boundary's unboxing step, and checks whether a catchable Error was
+thrown and whether its string message contains the requested substring.
+Negation uses the existing assertion flag. Unsupported callable values,
+non-void callback creation, constructor/regexp expectations and nonstring
+message domains still refuse; no function-object/type/closure ABI changed.
+`TestChaiThrowNodeOracle` compares actual Chai for throw/no-throw, omitted/empty
+and matching/mismatching substring expectations, negation, and exactly-once
+callback effects. Its intentionally unsatisfied assertion remains failed;
+an unsupported callback remains trapped even though `.throw` catches JS errors.
+The existing closure lowering refuses local callable-value and non-void-arrow
+forms; those independent ABI/closure roots are not bypassed for this assertion.
+
 ## Type/ABI items handed to Dell (not repaired here)
 
 Counts below are reached tests on the merged base, not inferred future passes.
