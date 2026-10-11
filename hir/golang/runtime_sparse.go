@@ -6,11 +6,9 @@ import "strings"
 // presence-sensitive callbacks/deletion. In the presence-aware ABI, a nil hole
 // map is dense; undefined is a value, never a hole.
 func sparseRuntime(source string) string {
-	// Regex absent captures and sparse-array holes share membership semantics.
-	source = strings.ReplaceAll(source, "Missing map[int32]bool", "holes map[int]bool")
-	source = strings.ReplaceAll(source, "out.Missing", "out.holes")
-	source = strings.ReplaceAll(source, "out.holes=map[int32]bool{}", "out.holes=map[int]bool{}")
-	source = strings.ReplaceAll(source, "out.holes[int32(len(out.Items))]", "out.holes[len(out.Items)]")
+	// Unmatched regex captures are present undefined values, not holes.
+	// Preserve their separate Missing metadata when enabling sparse arrays.
+	source = strings.Replace(source, "type array[T any] struct{ Items []T;", "type array[T any] struct{ Items []T; holes map[int]bool;", 1)
 	replace := func(start, end, body string) {
 		i := strings.Index(source, start)
 		j := strings.Index(source[i:], end) + i
@@ -20,7 +18,7 @@ func sparseRuntime(source string) string {
   return i>=0 && int(i)<len(a.Items) && !a.holes[int(i)]
  }
  func (a *array[T]) get(i int32) optional[T] {
-  if !a.has(i) { return optional[T]{} };return present(a.Items[i])
+  if !a.has(i) || a.Missing[i] { return optional[T]{} };return present(a.Items[i])
  }
  func (a *array[T]) delete(i int32) bool {
   if i>=0 && int(i)<len(a.Items) {
@@ -32,7 +30,7 @@ func sparseRuntime(source string) string {
   if i<0 {panic(newRangeFault())}
   if int(i)>len(a.Items) && a.holes==nil {a.holes=map[int]bool{}}
   for len(a.Items)<=int(i) {a.holes[len(a.Items)]=true;var zero T;a.Items=append(a.Items,zero)}
-  a.Items[i]=v;delete(a.holes,int(i))
+  a.Items[i]=v;delete(a.holes,int(i));delete(a.Missing,i)
  }
  func copyHoles(holes map[int]bool, lo, hi int) map[int]bool {
   if len(holes)==0 {return nil};out:=map[int]bool{}

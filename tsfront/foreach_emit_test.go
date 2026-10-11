@@ -45,6 +45,29 @@ func TestGoUnpinnedForEachNodeOracle(t *testing.T) {
 	}
 }
 
+// Integration regression: regex Missing metadata must survive sparse-runtime
+// selection. Sparse holes must not erase optional-capture absence.
+func TestGoRegExpExecWithSparseArraysNodeOracle(t *testing.T) {
+	source := `class Probe { static run(): string {
+ const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi;
+ const hit = r.exec("define behavior for foo");
+ if (hit === null) { return "none"; }
+ const a: number[] = [1,2,3]; delete a[1];
+ let sparse = ""; a.forEach((v, i) => { sparse = sparse + ":" + i; });
+ return sparse + ":" + (hit[2] === undefined);
+ }}`
+	cmd := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source)
+	want, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
 func TestGoSmallRegistrationExpressions(t *testing.T) {
 	source := `class Conf {length: number=80;}
  class Probe {static run(): string {
