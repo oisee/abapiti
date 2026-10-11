@@ -195,6 +195,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	// Captures: free identifiers that resolve to locals of the enclosing
 	// method and are never assigned.
 	captures := []localCapture{}
+	receiverFree := !touchesThis(fn.Body())
 	seen := map[*ast.Symbol]bool{}
 	for _, capture := range l.freeLocals(fn) {
 		if capture.symbol == nil {
@@ -209,6 +210,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		// Known lifted callees remain direct calls. Their actual lexical inputs
 		// must be carried through the caller, rather than capturing a void value.
 		if lf != nil {
+			receiverFree = receiverFree && lf.method.Static
 			for _, transitive := range lf.captures {
 				if !seen[transitive.symbol] {
 					captures = append(captures, transitive)
@@ -228,7 +230,10 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	}
 	m := &hir.Method{Node: l.node(fn), Name: l.localFnMemberName(name, fn), Virtual: true, Result: hir.T(hir.Void)}
 	defer l.trapBodyDiagnostics(fn, m, len(l.diags))
-	if l.method != nil && l.method.Static {
+	if l.method != nil && (l.method.Static || (receiverFree && l.testRegistrationHelper(fn))) {
+		// A suite thunk has no module instance. Receiver-free registration
+		// helpers use the existing static/capture-parameter lowering, rather
+		// than fabricating a module-typed `this` in the thunk's body.
 		m.Static = true
 		m.Virtual = false
 	}

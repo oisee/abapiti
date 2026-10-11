@@ -61,6 +61,22 @@ func (l *lowerer) isTestCallback(n *ast.Node) bool {
 	return f != nil && l.relFile(f) == "runtime/mocha.ts"
 }
 
+// Only local helpers immediately enclosed by an original Mocha describe
+// callback receive receiver-free static lowering. This does not recover an
+// escaping callable or change captures in nested test bodies.
+func (l *lowerer) testRegistrationHelper(fn *ast.Node) bool {
+	if !l.integerOptions.TrapOnFailure {
+		return false
+	}
+	for p := fn.Parent; p != nil; p = p.Parent {
+		switch p.Kind {
+		case ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindFunctionDeclaration, ast.KindMethodDeclaration, ast.KindConstructor:
+			return l.isTestCallback(p) && p.Parent.Expression().Kind == ast.KindIdentifier && p.Parent.Expression().Text() == "describe"
+		}
+	}
+	return false
+}
+
 // Mocha ignores describe's return value. An async suite containing only
 // synchronous registration calls and inert constants has no suspension; its
 // async it callbacks are separately certified and drained by the test host.
