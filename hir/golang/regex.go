@@ -2,6 +2,7 @@ package golang
 
 import (
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 // Each accepted language has been reviewed for UTF-16 JavaScript semantics.
@@ -33,6 +34,10 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 		}
 	}
 	if !reviewedRegexp(p, flags) {
-		e.unsupported(x.Node, "JavaScript regexp /"+p+"/"+flags)
+		if _, ok := jsregex.TranslateSubset(p, flags); ok {
+			e.extendedRegex = true
+		} else {
+			e.unsupported(x.Node, "JavaScript regexp /"+p+"/"+flags)
+		}
 	}
 }

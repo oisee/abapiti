@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 // Emit emits one package named main. Add a main function to execute an entry point.
@@ -91,6 +92,11 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.extendedRegex {
+		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
+		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
+ if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+	}
 	if e.constructorArgs {
 		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
 	}
@@ -128,6 +134,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	extendedRegex     bool
 	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
