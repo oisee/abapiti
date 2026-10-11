@@ -102,7 +102,7 @@ func (l *lowerer) testModuleArrayContext(d *ast.Node) (hir.Type, bool) {
 			return hir.Type{}, false
 		}
 		for _, p := range el.AsObjectLiteralExpression().Properties.Nodes {
-			if p.Kind != ast.KindPropertyAssignment || p.Name() == nil {
+			if p.Kind != ast.KindPropertyAssignment || p.Name() == nil || (p.Name().Kind != ast.KindIdentifier && p.Name().Kind != ast.KindStringLiteral) {
 				return hir.Type{}, false
 			}
 			found := false

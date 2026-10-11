@@ -40,6 +40,8 @@ func (l *lowerer) registerModuleCallables(files []string) {
 					if s := l.ck.GetShorthandAssignmentValueSymbol(p); s != nil {
 						written[s.ValueDeclaration] = true
 					}
+				} else if p.Kind == ast.KindSpreadAssignment {
+					mark(p.Expression())
 				} else {
 					mark(p.Initializer())
 				}
@@ -92,7 +94,7 @@ func (l *lowerer) registerModuleCallables(files []string) {
 	}
 	var target func(*ast.Node, map[*ast.Node]bool) (funcRef, bool)
 	target = func(d *ast.Node, seen map[*ast.Node]bool) (funcRef, bool) {
-		if d == nil || seen[d] || d.Name() == nil || written[d] {
+		if d == nil || seen[d] || d.Name() == nil || d.Name().Kind != ast.KindIdentifier || written[d] {
 			return funcRef{}, false
 		}
 		seen[d] = true
@@ -181,7 +183,7 @@ func (l *lowerer) hasModuleCallables(f *ast.SourceFile) bool {
 }
 
 func (l *lowerer) moduleCallable(d *ast.Node) bool {
-	return d.Name() != nil && l.moduleCallables[l.file.FileName()+" "+d.Name().Text()] == d
+	return d.Name() != nil && d.Name().Kind == ast.KindIdentifier && l.moduleCallables[l.file.FileName()+" "+d.Name().Text()] == d
 }
 
 // Const callables have a TDZ, unlike hoisted function declarations. The test

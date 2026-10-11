@@ -48,10 +48,44 @@ func TestModuleCallableInitializationBoundaries(t *testing.T) {
 	}
 }
 
+func TestRegistrationProofRejectsComputedNames(t *testing.T) {
+	runtime, err := os.ReadFile("testdata/abaplint-tests/runtime/mocha.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	source := `const rows = [{["input"]:"first"}, {["input"]:"second", extra:true}];
+ describe("computed",()=>{rows.forEach(row=>{it(row.input,()=>{});});});
+ describe("later",()=>{it("independent",()=>{});});`
+	writeTestClosure(t, dir, map[string]string{"runtime/mocha.ts": string(runtime), "test/host.ts": source})
+	lowered, err := LowerAbaplintTests(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := EmitAbaplintTests(dir, lowered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, _ := runAbaplintTestModule(t, files)
+	var got struct {
+		Passed, Failed int
+		Initialization []struct{ Status string }
+	}
+	if err = json.Unmarshal([]byte(stdout), &got); err != nil || got.Passed != 1 || got.Failed != 0 || len(got.Initialization) == 0 {
+		t.Fatalf("%s\\n%s", stdout, stderr)
+	}
+	for _, r := range got.Initialization {
+		if r.Status != "trapped" {
+			t.Fatal(r.Status)
+		}
+	}
+}
+
 func TestModuleCallableMutationRefuses(t *testing.T) {
 	for _, source := range []string{
 		`function base(n: number): number {return n;} const alias=base; base=(n:number)=>n+1; class Probe {run():number{return alias(1);}}`,
 		`function base(n: number): number {return n;} const alias=base; (base as any)=(n:number)=>n+1; class Probe {run():number{return alias(1);}}`,
+		`const {name}=()=>1; class Probe {run():number{return name.length;}}`,
 	} {
 		p := integerProbe(t, source)
 		_, diags, err := p.Lower([]string{"probe.ts"})
