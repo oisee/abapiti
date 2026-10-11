@@ -945,6 +945,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			if sym := l.resolve(callee); sym != nil {
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
+						if check := l.moduleCallableCall(n, callee, hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
+							l.pendStmt(check.Stmt)
+						}
 						args, ok2 := l.callArgsStatic(n, n.Arguments(), ref)
 						if !ok2 {
 							return nil

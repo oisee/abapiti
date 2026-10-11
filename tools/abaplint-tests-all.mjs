@@ -33,7 +33,7 @@ export function discoverShards(upstream) {
 // Never continue trap work past an assertion mismatch (or other genuine
 // failed throw). Runtime/lowering refusals already have typed trap statuses.
 export function assertNoFailures(name, run) {
- const failures = run.results.filter(r => r.status === 'failed');
+ const failures = [...run.results, ...(run.initialization ?? [])].filter(r => r.status === 'failed');
  if (failures.length) throw new Error(`STOP: ${name}: ${failures.length} genuine FAIL(s)\n${JSON.stringify(failures, null, 2)}`);
 }
 
@@ -87,6 +87,9 @@ function main() {
     mkdirSync(closure);
     writeFileSync(join(closure,'closure.json'), JSON.stringify({roots, upstreamPin:manifest?.upstreamPin ?? upstreamPin}));
    }
+   // Borrowed test bodies are real executions too: never hide their FAILs
+   // while restricting the accounting to this shard's owned titles.
+   assertNoFailures(name, result);
    if (borrowed) ({oracle:node, run:result} = ownedResults(node, result, borrowed, foreign));
    writeFileSync(join(run,`node-${id}.json`), JSON.stringify(node));
    writeFileSync(join(run,`go-${id}.json`), JSON.stringify(result));

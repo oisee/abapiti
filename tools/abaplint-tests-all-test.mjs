@@ -10,6 +10,7 @@ const dir = mkdtempSync(join(tmpdir(),'abaplint-all-test-'));
 try {
  assertNoFailures('syntax', {results:[{status:'passed'},{status:'trapped',message:'refusal'}]});
  assert.throws(() => assertNoFailures('syntax', {results:[{status:'failed',title:'regression',message:'expected 0 to equal 1'}]}), /STOP: syntax: 1 genuine FAIL.*regression.*expected 0 to equal 1/s);
+ assert.throws(() => assertNoFailures('root', {results:[], initialization:[{file:'test/root.ts',action:'describe',status:'failed',message:'expected 0 to equal 1'}]}), /STOP: root: 1 genuine FAIL.*test\/root.ts.*expected 0 to equal 1/s);
  const paths = ['root.ts', 'abap/helper.ts', 'abap/syntax/syntax.ts', 'abap/syntax/basic.ts', 'objects/object.ts', 'objects/rename/rename.ts', 'new_directory/future.ts'];
  for (const path of paths) {
   const file = join(dir, 'packages/core/test', path);
