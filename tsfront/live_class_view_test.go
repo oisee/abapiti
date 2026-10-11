@@ -250,3 +250,42 @@ func TestLiveTypedArrayNestedNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
+
+func TestStructuralOwnKeysLiveView(t *testing.T) {
+	source := `class Conf {value=0; missing?:string; added?:string;}
+ interface Slot {setConfig(conf:any):void;}
+ class Rule implements Slot {conf=new Conf();setConfig(conf:Conf):void {this.conf=conf;}write():void {this.conf.added="new";}}
+ class Probe {static run():string {
+ const input:{value:number; missing?:string; added?:string}={missing:undefined,value:1};
+ const rule=new Rule();const slot:Slot=rule;slot.setConfig(input);
+ const before=Object.keys(rule.conf).join(",");rule.write();
+ return before+"|"+Object.keys(rule.conf).join(",")+"|"+Object.keys(input).join(",")+"|"+input.added+"|"+JSON.stringify(input)+"|"+JSON.stringify(rule.conf);
+ }} `
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
+		t.Fatalf("expected explicit ABAP JSON refusal, got %v", err)
+	}
+	got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())")
+	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
+func TestStructuralOwnKeysEvaluationOrder(t *testing.T) {
+	source := `interface Row {a:number;b:number;} class Probe {static log="";static tick(n:number):number {Probe.log=Probe.log+n;return n;}
+ static pick(row:Row):Row {Probe.log=Probe.log+"p";return row;}
+ static run():string {const first:Row={a:Probe.tick(1),b:Probe.tick(2)};const second:Row={b:Probe.tick(3),a:Probe.tick(4)};Probe.pick(first).a=5;return Object.keys(first).join(",")+"|"+Object.keys(second).join(",")+"|"+Probe.log;}}`
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())")
+	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}

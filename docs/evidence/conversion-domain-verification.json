@@ -1,0 +1,104 @@
+{
+  "baseCommit": "392aecaa1967cdaacec393a061154aadaafc9286",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "compilerSourceBlobs": {
+    "hir/abap/live_class_view.go": "6add53f8135101d6c498e2bf8cf5b2eaef756fde",
+    "hir/golang/live_class_view.go": "303ceaed1431240d0a8a4c894c5698da3faaa948",
+    "tsfront/common_class_view.go": "7a572584c9b82d9968950a757efe054d57235378",
+    "tsfront/conversion_view.go": "eda17ea4bcea2d64d9b3b870f1ec32116ff98994",
+    "tsfront/conversion_view_test.go": "240f8e10b9edfe435fabb9ded1e56b6553b7d1fa",
+    "tsfront/lower.go": "6894d43f597cb885b7e44600b3f9a58a797d1205",
+    "tsfront/lower_class2.go": "5f968cfa86042fe6cc565ef3af1483a7972b8be3",
+    "tsfront/lower_expr.go": "b2fc9077a6b0c063452308d72255d77ef1d1623f"
+  },
+  "gates": {
+    "vet": {
+      "command": "GOTOOLCHAIN=local GOMAXPROCS=2 go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+      "passed": true
+    },
+    "shortTests": {
+      "command": "GOTOOLCHAIN=local GOMAXPROCS=2 go test -short -timeout 30m -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+      "passed": true,
+      "initialAttempt": "The initial 10m wall-clock timeout expired during concurrent corpus work. The final source passed with a 30m timeout and the same -p 2 limit."
+    },
+    "grace": {
+      "command": "GOTOOLCHAIN=local GOMAXPROCS=2 ABAPITI_GRACECHECK=1 go test -short -p 2 ./tsfront -run 'Test(DirectDataConversion|Common.*Assertion|DynamicPrimitiveMethodConversion|LexerFactsReport|EmitRegistry)'",
+      "passed": true,
+      "goldenRegenerated": false
+    },
+    "backendOps": {
+      "command": "GOTOOLCHAIN=local GOMAXPROCS=2 go test -short -p 2 ./cmd/abapiti -run TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend -v",
+      "passed": true
+    },
+    "lint": {
+      "command": "PATH=$TMPDIR/conversion-bin:$PATH GOTOOLCHAIN=local GOMAXPROCS=2 GOFLAGS='-p=2' ./.github/ci/lint.sh gate origin/integ/yolo-5",
+      "passed": true,
+      "version": "2.13.2",
+      "newIssues": 0,
+      "canariesDetected": 5
+    },
+    "defaultOutput": {
+      "passed": true,
+      "diffBytes": 0,
+      "targets": "all,go",
+      "includes": [
+        "Go executable",
+        "ABAP archives",
+        "all generated source",
+        "README files"
+      ],
+      "comparison": "Both compilers emitted at the same absolute scratch path; the base output was moved aside before final-compiler emission.",
+      "commands": [
+        "GOTOOLCHAIN=local GOMAXPROCS=2 GOFLAGS='-p=2' $TMPDIR/conversion-base abaplint $TMPDIR/abaplint-upstream -o $TMPDIR/conversion-default-base --target all,go",
+        "mv $TMPDIR/conversion-default-base $TMPDIR/conversion-default-reference",
+        "GOTOOLCHAIN=local GOMAXPROCS=2 $TMPDIR/conversion-final abaplint $TMPDIR/abaplint-upstream -o $TMPDIR/conversion-default-base --target all,go",
+        "diff -r $TMPDIR/conversion-default-reference $TMPDIR/conversion-default-base"
+      ]
+    },
+    "fullClosure": {
+      "blockingBefore": 44,
+      "blockingAfter": 44,
+      "hirErrorsBefore": 103,
+      "hirErrorsAfter": 103,
+      "messageCountsIdentical": true,
+      "commands": [
+        "GOTOOLCHAIN=local GOFLAGS='-p=2' $TMPDIR/conversion-base abaplint --full $TMPDIR/abaplint-upstream -o $TMPDIR/conversion-full-base",
+        "GOTOOLCHAIN=local GOMAXPROCS=2 GOFLAGS='-p=2' $TMPDIR/conversion-final abaplint --full $TMPDIR/abaplint-upstream -o $TMPDIR/conversion-full-final"
+      ]
+    }
+  },
+  "abapRuntimeExecuted": false,
+  "selectedShards": {
+    "commandBefore": "ABAPITI_TESTS_COMPILER=$TMPDIR/conversion-base ABAPITI_TESTS_COMPILER_COMMIT=392aeca ABAPITI_TESTS_SHARDS=abap,abap/expressions,abap/statements,objects,rules,lsp,pretty_printer ABAPITI_TESTS_WORKERS=1 node tools/abaplint-tests-all.mjs $TMPDIR/abaplint-upstream $TMPDIR/conversion-base-shards.json",
+    "commandAfter": "GOTOOLCHAIN=local GOMAXPROCS=2 ABAPITI_TESTS_COMPILER=$TMPDIR/conversion-final ABAPITI_TESTS_COMPILER_COMMIT=392aeca ABAPITI_TESTS_SHARDS=abap,abap/expressions,abap/statements,objects,rules,lsp,pretty_printer ABAPITI_TESTS_WORKERS=1 node tools/abaplint-tests-all.mjs $TMPDIR/abaplint-upstream $TMPDIR/conversion-final-shards.json",
+    "compilerProvenance": "The final working-tree compiler used the base revision as the harness override. Its actual source is identified by compilerSourceBlobs above; the override is not claimed as its compiler revision.",
+    "before": {
+      "passed": 8116,
+      "failed": 0,
+      "trapped": 622,
+      "asyncPending": 0,
+      "notRun": 79,
+      "registered": 8754,
+      "total": 8817,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 16,
+      "unregistered": 63
+    },
+    "after": {
+      "passed": 8191,
+      "failed": 0,
+      "trapped": 547,
+      "asyncPending": 0,
+      "notRun": 79,
+      "registered": 8754,
+      "total": 8817,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 16,
+      "unregistered": 63
+    },
+    "failures": 0,
+    "ownedRootsBefore": 91,
+    "ownedRootsAfter": 19,
+    "all17ShardsRun": false
+  }
+}

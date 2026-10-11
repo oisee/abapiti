@@ -42,6 +42,36 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 		chain = append(chain, parent)
 		ruleConfig = ruleConfig || parent.Name == "src/rules/_basic_rule_config.ts.BasicRuleConfig"
 	}
+
+	// A literal's own-property proof is per instance, independent of field
+	// layout. Read values now so native writes and live-view writes stay visible.
+	if e.extraRuntimeKeys && c.Structural {
+		e.line("if self!=nil && self.ownKeys!=nil {")
+		for _, parent := range chain {
+			for _, m := range parent.Methods {
+				if m.Name == "toJSON" {
+					e.line("panic(newTrap(%q))", "structural JSON toJSON is unsupported")
+				}
+			}
+		}
+		e.line("w.enter(self);defer w.leave(self);entries:=[]entry[jsString,any]{};for _,key:=range self.nominalOwnKeys().Items {var value any;switch key {")
+		seen := map[string]bool{}
+		for _, parent := range chain {
+			for _, field := range parent.Fields {
+				if field.Static || seen[field.Name] {
+					continue
+				}
+				seen[field.Name] = true
+				e.line("case str(%q):value=self.%s", field.Name, e.member(field.Name))
+			}
+		}
+		if len(e.liveClasses) > 0 {
+			e.line("default:if self.viewExtras!=nil {value=self.viewExtras.get(key).Value}")
+		} else {
+			e.line("default:panic(newTrap(%q))", "structural own key has no lowered storage")
+		}
+		e.line("};entries=append(entries,entry[jsString,any]{key,value})};return w.object(entries)}")
+	}
 	// Parsed data shapes retain their original key order, but field storage is
 	// live: serialization must not replay the stale input graph after writes.
 	materializable := c.Super == "" && !c.Abstract && len(c.Methods) == 0 && c.Ctor != nil && len(c.Ctor.Params) == len(c.Fields)

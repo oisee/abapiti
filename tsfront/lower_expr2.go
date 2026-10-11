@@ -83,8 +83,11 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		if k == nil {
 			return nil
 		}
-		if recv.Type.Args[0].Kind == hir.String && k.Type.Kind == hir.Number {
+		if recv.Type.Args[0].Kind == hir.String && k.Type.Kind != hir.String {
 			k = l.primitiveString(n, k)
+			if k == nil {
+				return nil
+			}
 		}
 		return l.mapRead(recv, k)
 	case hir.Array:
@@ -111,6 +114,10 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 				}
 				l.diagf(n, "note-dynamic-record", "element access on a dynamic value through its narrowed record type")
 				view := l.rtOp("dynamic.asRef", recv, mapped)
+				k = l.primitiveString(n, k)
+				if k == nil {
+					return nil
+				}
 				return l.mapRead(view, k)
 			}
 		}
@@ -795,7 +802,7 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	if n.Kind == ast.KindCallExpression {
 		base = base.Expression()
 	}
-	recv := l.expr(base)
+	recv := l.anyCallReceiver(base, l.expr(base))
 	if base.Kind == ast.KindElementAccessExpression {
 		arr := l.expr(base.Expression())
 		if arr != nil && arr.Type.Kind == hir.Array {

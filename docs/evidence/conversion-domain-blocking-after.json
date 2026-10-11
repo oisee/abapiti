@@ -1,0 +1,27 @@
+{
+  "total": 44,
+  "byExactMessage": {
+    "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported": 2,
+    "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 9,
+    "callback KindPropertyAccessExpression is not an arrow function": 1,
+    "delete supports ordinary lowered records only": 1,
+    "find on primitive arrays needs an absence-preserving callback ABI": 1,
+    "identifier XMLParser is not a lowered local or module value": 1,
+    "identifier importing is not a lowered local or module value": 2,
+    "identifier packedLength is not a lowered local or module value": 9,
+    "identifier regex is not a lowered local or module value": 1,
+    "identifier text is not a lowered local or module value": 1,
+    "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+    "method getParameters on dynamic is not lowered": 1,
+    "method getStr on classref is not lowered": 2,
+    "new RegExp requires a lowered string pattern": 1,
+    "new XMLParser is not a lowered class": 1,
+    "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+    "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+    "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+    "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+    "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+    "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+    "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+  }
+}

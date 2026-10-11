@@ -365,6 +365,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.completeAsyncBridges()
 	l.completeCallArguments()
 	if l.unprunedFeatures {
+		l.preserveCommonClassViews()
 		for _, c := range l.out.Classes {
 			c.Structural = l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.")
 		}

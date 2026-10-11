@@ -58,6 +58,20 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 	}
 	name := sym.Name
 	args := n.Arguments()
+	if method == "is" && len(args) == 1 && (name == "TextDocumentEdit" || name == "RenameFile") {
+		saved := l.hint
+		l.hint = hir.T(hir.Dynamic)
+		value := l.expr(args[0])
+		l.hint = saved
+		if value == nil {
+			return nil, true
+		}
+		guard := l.rtOp("lsp.is"+name, l.coerce(value, hir.T(hir.Dynamic)), hir.T(hir.Bool))
+		if name == "RenameFile" {
+			guard.Args = []*hir.Expr{hir.L(hir.T(hir.Bool), isConditionOnly(n))}
+		}
+		return guard, true
+	}
 	supported := (name == "Position" && method == "create" && len(args) == 2) ||
 		(name == "Range" && method == "create" && (len(args) == 2 || len(args) == 4)) ||
 		(name == "TextEdit" && method == "replace" && len(args) == 2) ||
@@ -163,7 +177,7 @@ func (l *lowerer) scanLSPConstructors(n *ast.Node) {
 		callee := n.Expression()
 		if callee != nil && callee.Kind == ast.KindPropertyAccessExpression {
 			method := callee.Name().Text()
-			if (method == "create" || method == "replace") && l.lspSymbol(l.resolve(callee.Expression())) {
+			if (method == "create" || method == "replace" || method == "is") && l.lspSymbol(l.resolve(callee.Expression())) {
 				l.lspConstructors = true
 			}
 		}

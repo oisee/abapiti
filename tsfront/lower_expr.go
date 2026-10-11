@@ -267,7 +267,7 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 		return l.rtOp("dynamic.asClassValue", x, typ)
 	}
 	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || typ.Kind == hir.Array || typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
-		return l.rtOp("dynamic.asRef", x, typ)
+		return l.dynamicReference(x, typ)
 	}
 	if typ.Kind == hir.InterfaceRef && l.ifaceClassBaseOf[typ.Name] != "" {
 		base := x.Type
@@ -1535,6 +1535,17 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 		}
 	case hir.Dynamic:
+		if l.unprunedFeatures && name == "toString" {
+			if len(args) != 0 {
+				l.diagf(n, "unsupported-call", "dynamic.toString arguments are not lowered")
+				return nil, true
+			}
+			// Method conversion accepts numeric and boolean primitives too.
+			// Unlike String(value), a nullish method receiver must refuse.
+			recv = l.tempInit(n, recv.Type, recv)
+			l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: l.rtOp("dynamic.isNullish", recv, boolT), Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n)})})
+			return l.rtOp("dynamic.toString", recv, str), true
+		}
 		if name == "forEach" && l.pinnedTestRows(n) {
 			array := hir.T(hir.Array, hir.T(hir.Dynamic))
 			return l.denseCallbackLoop(n, name, l.rtOp("dynamic.asRef", recv, array), args), true
@@ -1574,10 +1585,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":
-			if l.unprunedFeatures && len(args) != 1 {
-				return l.concatArrays(n, recv, args), true
-			}
-			return l.rtOp("array.concat", recv, recv.Type, one()), true
+			return l.arrayConcat(n, recv, args), true
 		case "slice":
 			a := one()
 			if a == nil {
@@ -2497,7 +2505,7 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	case x.Type.Kind == hir.Dynamic && mapped.Kind == hir.ClassValue:
 		return l.rtOp("dynamic.asClassValue", x, hir.T(hir.ClassValue))
 	case x.Type.Kind == hir.Dynamic && (mapped.Kind == hir.ClassRef || mapped.Kind == hir.InterfaceRef):
-		return l.rtOp("dynamic.asRef", x, mapped)
+		return l.dynamicReference(x, mapped)
 	case (mapped.Kind == hir.ClassRef || mapped.Kind == hir.InterfaceRef) && !mapped.Equal(x.Type):
 		if mapped.Kind == hir.ClassRef && x.Type.Kind == hir.ClassRef && l.classesByQualifiedName(mapped.Name) != nil {
 			// A source-proven nominal downcast is checked by ABAP's ?=. An
@@ -2533,7 +2541,12 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 
 // objectLiteral constructs a named or synthesized structural data class.
 // Spread properties copy the fields of the spread value first.
-func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
+func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
+	defer func() {
+		if out != nil && out.Kind == hir.New && out.Type.Kind == hir.ClassRef {
+			out.OwnKeys = l.literalOwnKeys(n)
+		}
+	}()
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
 		hint = hint.Args[0]
@@ -2934,7 +2947,7 @@ func (l *lowerer) callReceiver(at *ast.Node, recv *hir.Expr, params []hir.Param)
 func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
 	outputHint := l.hint
 	l.hint = hir.Type{}
-	recv := l.expr(n)
+	recv := l.anyCallReceiver(n, l.expr(n))
 	l.hint = outputHint
 	return recv
 }

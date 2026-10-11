@@ -1,0 +1,97 @@
+{
+  "blocking": 44,
+  "rootBlocking": 31,
+  "cascadeBlocking": 13,
+  "hirErrors": 103,
+  "byCategory": {
+    "assume-integer": 10,
+    "unsupported-call": 4,
+    "unsupported-callback": 1,
+    "unsupported-expr": 20,
+    "unsupported-json": 2,
+    "unsupported-lsp-call": 5,
+    "unsupported-new": 1,
+    "unsupported-regex": 1
+  },
+  "byArea": {
+    "lsp": 14,
+    "objects": 4,
+    "rules": 8,
+    "src": 18
+  },
+  "byRootMessage": [
+    {
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+      "count": 9
+    },
+    {
+      "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+      "count": 3
+    },
+    {
+      "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+      "count": 2
+    },
+    {
+      "message": "method X on classref is not lowered",
+      "count": 2
+    },
+    {
+      "message": "string coercion of classref\u003cX\u003e requires JavaScript ToPrimitive",
+      "count": 2
+    },
+    {
+      "message": "callback KindPropertyAccessExpression is not an arrow function",
+      "count": 1
+    },
+    {
+      "message": "delete supports ordinary lowered records only",
+      "count": 1
+    },
+    {
+      "message": "find on primitive arrays needs an absence-preserving callback ABI",
+      "count": 1
+    },
+    {
+      "message": "identifier X is not a lowered local or module value",
+      "count": 1
+    },
+    {
+      "message": "in requires a record or a literal property X a lowered shape (got classref\u003cX\u003e)",
+      "count": 1
+    },
+    {
+      "message": "method X on dynamic is not lowered",
+      "count": 1
+    },
+    {
+      "message": "new X is not a lowered class",
+      "count": 1
+    },
+    {
+      "message": "new X requires a lowered string pattern",
+      "count": 1
+    },
+    {
+      "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+      "count": 1
+    },
+    {
+      "message": "string coercion of array\u003cstring\u003e requires JavaScript ToPrimitive",
+      "count": 1
+    },
+    {
+      "message": "string coercion of interfaceref\u003cX\u003e requires JavaScript ToPrimitive",
+      "count": 1
+    },
+    {
+      "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+      "count": 1
+    },
+    {
+      "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+      "count": 1
+    }
+  ],
+  "files": 28
+}

@@ -21,7 +21,7 @@ func (e *emitter) liveView(t hir.Type) string {
 	var b strings.Builder
 	line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
 	line("func %s(d *dynamic) %s {", name, e.typ(t))
-	line("if d==nil {panic(newRangeFault())};if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
+	line("if d==nil {return nil};if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
 	if !hir.DataClassView(e.p, t.Name) {
 		line("panic(newTrap(%q))", "structural class view requires data-only public ancestry: "+t.Name)
 	} else {
@@ -84,6 +84,10 @@ func (e *emitter) liveFields(c *hir.Class) {
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"
 		}
-		e.line("func (self *%s) %s(value %s) {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {self.viewSource.put(str(%q),%s);return};self.%s=value}", e.obj(c.Name), write, e.typ(f.Type), f.Name, value, e.member(f.Name))
+		metadata := ""
+		if e.extraRuntimeKeys && c.Structural {
+			metadata = ";if self.ownKeys!=nil {self.ownKeys.set(str(" + fmt.Sprintf("%q", f.Name) + "),nil)}"
+		}
+		e.line("func (self *%s) %s(value %s) {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {self.viewSource.put(str(%q),%s);return};self.%s=value%s}", e.obj(c.Name), write, e.typ(f.Type), f.Name, value, e.member(f.Name), metadata)
 	}
 }

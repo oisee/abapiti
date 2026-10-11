@@ -1,0 +1,497 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "mainCommit": "a55a2f8384c8516eb5cff7bc46a6dc5d71e45547",
+  "artifacts": "$TMPDIR/conversion-evidence-base",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "abap",
+      "files": 18,
+      "passed": 168,
+      "failed": 0,
+      "trapped": 48,
+      "asyncPending": 0,
+      "notRun": 4,
+      "registered": 216,
+      "total": 220,
+      "node": {
+        "passed": 216,
+        "failed": 0,
+        "pending": 4
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 4
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36387 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/expressions",
+      "files": 11,
+      "passed": 42,
+      "failed": 0,
+      "trapped": 8,
+      "asyncPending": 0,
+      "notRun": 57,
+      "registered": 50,
+      "total": 107,
+      "node": {
+        "passed": 107,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 57
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:10:1",
+          "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30119 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:70:1",
+          "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30334 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 4942,
+      "failed": 0,
+      "trapped": 20,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "lsp",
+      "files": 16,
+      "passed": 97,
+      "failed": 0,
+      "trapped": 91,
+      "asyncPending": 0,
+      "notRun": 5,
+      "registered": 193,
+      "total": 193,
+      "node": {
+        "passed": 188,
+        "failed": 0,
+        "pending": 5
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 5,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 199
+      }
+    },
+    {
+      "name": "objects",
+      "files": 26,
+      "passed": 105,
+      "failed": 0,
+      "trapped": 39,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 145,
+      "total": 145,
+      "node": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "pretty_printer",
+      "files": 1,
+      "passed": 10,
+      "failed": 0,
+      "trapped": 21,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 2752,
+      "failed": 0,
+      "trapped": 395,
+      "asyncPending": 0,
+      "notRun": 12,
+      "registered": 3157,
+      "total": 3159,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 8116,
+    "failed": 0,
+    "trapped": 622,
+    "asyncPending": 0,
+    "notRun": 79,
+    "registered": 8754,
+    "total": 8817,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 16,
+    "unregistered": 63
+  },
+  "nodeTotal": {
+    "passed": 8797,
+    "failed": 0,
+    "pending": 20,
+    "total": 8817
+  },
+  "selectedSuite": {
+    "shards": [
+      "abap",
+      "abap/expressions",
+      "abap/statements",
+      "lsp",
+      "objects",
+      "pretty_printer",
+      "rules"
+    ],
+    "files": 550,
+    "excluded": [
+      "test/abap/lexer/count.ts",
+      "test/abap/lexer/lexer.ts",
+      "test/abap/lexer/type.ts",
+      "test/abap/nodes/structure_node.ts",
+      "test/abap/structures/_combi.ts",
+      "test/abap/structures/any.ts",
+      "test/abap/structures/case.ts",
+      "test/abap/structures/catch_system_exceptions.ts",
+      "test/abap/structures/chain.ts",
+      "test/abap/structures/class_data.ts",
+      "test/abap/structures/class_definition.ts",
+      "test/abap/structures/class_global.ts",
+      "test/abap/structures/class_implementation.ts",
+      "test/abap/structures/constants.ts",
+      "test/abap/structures/data.ts",
+      "test/abap/structures/define.ts",
+      "test/abap/structures/do.ts",
+      "test/abap/structures/dynpro_logic.ts",
+      "test/abap/structures/exec_sql.ts",
+      "test/abap/structures/form.ts",
+      "test/abap/structures/if.ts",
+      "test/abap/structures/interface.ts",
+      "test/abap/structures/interface_global.ts",
+      "test/abap/structures/loop.ts",
+      "test/abap/structures/loop_at_screen.ts",
+      "test/abap/structures/method.ts",
+      "test/abap/structures/on_change.ts",
+      "test/abap/structures/select.ts",
+      "test/abap/structures/try.ts",
+      "test/abap/structures/type_enum.ts",
+      "test/abap/structures/types.ts",
+      "test/abap/structures/when_type.ts",
+      "test/abap/structures/while.ts",
+      "test/abap/structures/with.ts",
+      "test/abap/syntax/basic_types.ts",
+      "test/abap/syntax/basic_variables.ts",
+      "test/abap/syntax/fugr_import_export.ts",
+      "test/abap/syntax/modify.ts",
+      "test/abap/syntax/spaghetti_scope.ts",
+      "test/abap/syntax/syntax.ts",
+      "test/abap/syntax/syntax_atselection.ts",
+      "test/abap/syntax/when_type.ts",
+      "test/abap/types/class_definition.ts",
+      "test/abap/types/form_definition.ts",
+      "test/abap/types/interface_definition.ts",
+      "test/abap/types/message.ts",
+      "test/abap/types/method_parameters.ts",
+      "test/abap/types/types.ts",
+      "test/artifacts_objects.ts",
+      "test/cds/cds_lexer.ts",
+      "test/cds/cds_parser.ts",
+      "test/config.ts",
+      "test/ddic_references.ts",
+      "test/ddic_references_top.ts",
+      "test/ddl/tabl.ts",
+      "test/edit_helper.ts",
+      "test/get_abap.ts",
+      "test/msag_references.ts",
+      "test/objects/rename/rename_data_element.ts",
+      "test/objects/rename/rename_domain.ts",
+      "test/objects/rename/rename_global_class.ts",
+      "test/objects/rename/rename_global_interface.ts",
+      "test/objects/rename/rename_icf_service.ts",
+      "test/objects/rename/rename_message_class.ts",
+      "test/objects/rename/rename_program.ts",
+      "test/objects/rename/rename_table.ts",
+      "test/objects/rename/rename_table_type.ts",
+      "test/registry.ts",
+      "test/serialization.ts",
+      "test/severity.ts",
+      "test/skip_logic.ts",
+      "test/utils/cyclomatic_complexity_stats.ts",
+      "test/utils/method_length_stats.ts",
+      "test/utils/name_validator.ts",
+      "test/version.ts"
+    ],
+    "active": 8797
+  },
+  "countingRule": "Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.",
+  "asyncInitializationFailures": 0,
+  "registrationParity": false,
+  "top20Traps": [
+    {
+      "message": "src/rules/catch_and_raise.ts: HIR verification: call argument type mismatch: string <- regexp in runtime .",
+      "count": 172,
+      "shards": {
+        "abap": 17,
+        "lsp": 23,
+        "rules": 132
+      },
+      "example": "src/rules/catch_and_raise.ts:35:3: lowering trap: src/rules/catch_and_raise.ts:35:3: HIR verification: node 190721 (src/rules/catch_and_raise.ts:73:21): call argument type mismatch: string <- regexp in runtime ."
+    },
+    {
+      "message": "src/rules/xml_consistency.ts: unreviewed JavaScript regexp /<abapGit\\b[^>]*\\bversion=\"([^\"]+)\"/",
+      "count": 63,
+      "shards": {
+        "rules": 63
+      },
+      "example": "src/rules/xml_consistency.ts:51:3: unreviewed JavaScript regexp /<abapGit\\b[^>]*\\bversion=\"([^\"]+)\"/"
+    },
+    {
+      "message": "src/lsp/_lookup.ts: own-key enumeration requires original structural property storage",
+      "count": 32,
+      "shards": {
+        "lsp": 32
+      },
+      "example": "src/lsp/_lookup.ts:238:3: own-key enumeration requires original structural property storage"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /\\s/g",
+      "count": 31,
+      "shards": {
+        "rules": 31
+      },
+      "example": "src/rules/cds_check_syntax.ts:178:3: lowering trap: node 251664 (src/rules/cds_check_syntax.ts:212:85): not supported in the Go prototype: JavaScript regexp /\\s/g"
+    },
+    {
+      "message": "test/abap/nesting.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 31,
+      "shards": {
+        "abap": 31
+      },
+      "example": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-regex src/rules/object_naming.ts: new RegExp requires a lowered string pattern; unsupported-expr src/rules/object_naming.ts: identifier regex is not a lowered local or module value",
+      "count": 30,
+      "shards": {
+        "lsp": 1,
+        "rules": 29
+      },
+      "example": "src/rules/object_naming.ts:109:3: lowering trap: unsupported-regex src/rules/object_naming.ts:126:30: new RegExp requires a lowered string pattern; unsupported-expr src/rules/object_naming.ts:128:51: identifier regex is not a lowered local or module value"
+    },
+    {
+      "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 23,
+      "shards": {
+        "objects": 7,
+        "rules": 16
+      },
+      "example": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 22,
+      "shards": {
+        "abap-expressions": 2,
+        "abap-statements": 20
+      },
+      "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /^((\\/[A-Z_\\d]{3,8}\\/)|[a-zA-Z0-9]{3}|CI_)\\w+$/",
+      "count": 19,
+      "shards": {
+        "rules": 19
+      },
+      "example": "src/objects/table.ts:90:3: lowering trap: node 238968 (src/objects/table.ts:92:19): not supported in the Go prototype: JavaScript regexp /^((\\/[A-Z_\\d]{3,8}\\/)|[a-zA-Z0-9]{3}|CI_)\\w+$/"
+    },
+    {
+      "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+      "count": 18,
+      "shards": {
+        "objects": 5,
+        "rules": 13
+      },
+      "example": "src/objects/_abap_object.ts:126:3: lowering trap: src/objects/_abap_object.ts:126:3: HIR verification: node 166682 (src/objects/_abap_object.ts:148:11): call argument type mismatch: string <- dynamic in runtime ."
+    },
+    {
+      "message": "unsupported-call src/rules/downport.ts: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value",
+      "count": 16,
+      "shards": {
+        "rules": 16
+      },
+      "example": "src/rules/downport.ts:3520:3: lowering trap: unsupported-call src/rules/downport.ts:3556:27: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts:3557:13: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts:3558:36: identifier importing is not a lowered local or module value"
+    },
+    {
+      "message": "src/pretty_printer/pretty_printer.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 15,
+      "shards": {
+        "lsp": 4,
+        "pretty_printer": 11
+      },
+      "example": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp / (abap_true|abap_false)\\s*\\./i",
+      "count": 13,
+      "shards": {
+        "rules": 13
+      },
+      "example": "src/rules/change_if_to_case.ts:50:3: lowering trap: node 253946 (src/rules/change_if_to_case.ts:66:44): not supported in the Go prototype: JavaScript regexp / (abap_true|abap_false)\\s*\\./i"
+    },
+    {
+      "message": "unsupported-callback src/lsp/references.ts: callback KindPropertyAccessExpression is not an arrow function",
+      "count": 12,
+      "shards": {
+        "lsp": 12
+      },
+      "example": "src/lsp/references.ts:19:3: lowering trap: unsupported-callback src/lsp/references.ts:40:12: callback KindPropertyAccessExpression is not an arrow function"
+    },
+    {
+      "message": "src/rules/local_variable_names.ts: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i",
+      "count": 10,
+      "shards": {
+        "rules": 10
+      },
+      "example": "src/rules/local_variable_names.ts:152:3: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i"
+    },
+    {
+      "message": "src/rules/cds_field_order.ts: HIR verification: call argument type mismatch: string <- regexp in runtime .",
+      "count": 9,
+      "shards": {
+        "rules": 9
+      },
+      "example": "src/rules/cds_field_order.ts:126:3: lowering trap: src/rules/cds_field_order.ts:126:3: HIR verification: node 252943 (src/rules/cds_field_order.ts:128:18): call argument type mismatch: string <- regexp in runtime ."
+    },
+    {
+      "message": "unsupported-call src/rules/identical_conditions.ts: find on primitive arrays needs an absence-preserving callback ABI",
+      "count": 9,
+      "shards": {
+        "rules": 9
+      },
+      "example": "src/rules/identical_conditions.ts:22:3: lowering trap: unsupported-call src/rules/identical_conditions.ts:23:12: find on primitive arrays needs an absence-preserving callback ABI"
+    },
+    {
+      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered",
+      "count": 7,
+      "shards": {
+        "pretty_printer": 7
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered"
+    },
+    {
+      "message": "src/rules/method_parameter_names.ts: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i",
+      "count": 6,
+      "shards": {
+        "rules": 6
+      },
+      "example": "src/rules/method_parameter_names.ts:122:3: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i"
+    },
+    {
+      "message": "src/lsp/rename.ts: HIR verification: call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+      "count": 5,
+      "shards": {
+        "lsp": 5
+      },
+      "example": "src/lsp/rename.ts:71:3: lowering trap: src/lsp/rename.ts:71:3: HIR verification: node 168540 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename"
+    }
+  ],
+  "compiler": {
+    "commit": "392aecaa1967cdaacec393a061154aadaafc9286"
+  }
+}

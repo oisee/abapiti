@@ -1,0 +1,320 @@
+{
+  "base": "392aecaa1967cdaacec393a061154aadaafc9286",
+  "command": "abapiti abaplint --full -o <evidence-directory>",
+  "before": {
+    "blocking": 44,
+    "rootBlocking": 31,
+    "cascadeBlocking": 13,
+    "hirErrors": 103,
+    "byCategory": {
+      "assume-integer": 10,
+      "unsupported-call": 4,
+      "unsupported-callback": 1,
+      "unsupported-expr": 20,
+      "unsupported-json": 2,
+      "unsupported-lsp-call": 5,
+      "unsupported-new": 1,
+      "unsupported-regex": 1
+    },
+    "byArea": {
+      "lsp": 14,
+      "objects": 4,
+      "rules": 8,
+      "src": 18
+    },
+    "byRootMessage": [
+      {
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+        "count": 9
+      },
+      {
+        "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+        "count": 3
+      },
+      {
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+        "count": 2
+      },
+      {
+        "message": "method X on classref is not lowered",
+        "count": 2
+      },
+      {
+        "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+        "count": 2
+      },
+      {
+        "message": "callback KindPropertyAccessExpression is not an arrow function",
+        "count": 1
+      },
+      {
+        "message": "delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "find on primitive arrays needs an absence-preserving callback ABI",
+        "count": 1
+      },
+      {
+        "message": "identifier X is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "method X on dynamic is not lowered",
+        "count": 1
+      },
+      {
+        "message": "new X is not a lowered class",
+        "count": 1
+      },
+      {
+        "message": "new X requires a lowered string pattern",
+        "count": 1
+      },
+      {
+        "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+        "count": 1
+      },
+      {
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+        "count": 1
+      }
+    ],
+    "files": 28
+  },
+  "after": {
+    "blocking": 39,
+    "rootBlocking": 28,
+    "cascadeBlocking": 11,
+    "hirErrors": 94,
+    "byCategory": {
+      "assume-integer": 10,
+      "unsupported-call": 3,
+      "unsupported-callback": 1,
+      "unsupported-expr": 18,
+      "unsupported-json": 2,
+      "unsupported-lsp-call": 3,
+      "unsupported-new": 1,
+      "unsupported-regex": 1
+    },
+    "byArea": {
+      "lsp": 14,
+      "objects": 2,
+      "rules": 5,
+      "src": 18
+    },
+    "byRootMessage": [
+      {
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+        "count": 9
+      },
+      {
+        "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+        "count": 3
+      },
+      {
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+        "count": 2
+      },
+      {
+        "message": "method X on classref is not lowered",
+        "count": 2
+      },
+      {
+        "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+        "count": 2
+      },
+      {
+        "message": "callback KindPropertyAccessExpression is not an arrow function",
+        "count": 1
+      },
+      {
+        "message": "delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "find on primitive arrays needs an absence-preserving callback ABI",
+        "count": 1
+      },
+      {
+        "message": "identifier X is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "new X is not a lowered class",
+        "count": 1
+      },
+      {
+        "message": "new X requires a lowered string pattern",
+        "count": 1
+      },
+      {
+        "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+        "count": 1
+      },
+      {
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+        "count": 1
+      }
+    ],
+    "files": 28
+  },
+  "blockingByMessage": [
+    {
+      "category": "assume-integer",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+      "before": 9,
+      "after": 9
+    },
+    {
+      "category": "assume-integer",
+      "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "find on primitive arrays needs an absence-preserving callback ABI",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method getParameters on dynamic is not lowered",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method getStr on classref is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-callback",
+      "message": "callback KindPropertyAccessExpression is not an arrow function",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "delete supports ordinary lowered records only",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier XMLParser is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier importing is not a lowered local or module value",
+      "before": 2,
+      "after": 0
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "before": 9,
+      "after": 9
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier regex is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier text is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-json",
+      "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-lsp-call",
+      "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "category": "unsupported-lsp-call",
+      "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "category": "unsupported-lsp-call",
+      "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-new",
+      "message": "new XMLParser is not a lowered class",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-regex",
+      "message": "new RegExp requires a lowered string pattern",
+      "before": 1,
+      "after": 1
+    }
+  ]
+}

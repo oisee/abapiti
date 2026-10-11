@@ -35,7 +35,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays are Go-only until the ABAP sparse-array ABI exists.
-var unsupportedOps = map[string]bool{"chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "string.splitRegex": true, "object.checkedClassView": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "classvalue.newArgs": true}
+var unsupportedOps = map[string]bool{"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "object.checkedClassView": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "classvalue.newArgs": true, "string.splitRegex": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
