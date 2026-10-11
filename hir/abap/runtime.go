@@ -585,6 +585,10 @@ ENDCLASS.
 		file := name + ".clas.abap"
 		e.files[file] = strings.Replace(e.files[file], "METHODS test IMPORTING", "METHODS match IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE "+arr+".\nMETHODS test IMPORTING", 1)
 		e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD match.
+DATA matches TYPE match_result_tab.
+DATA hit TYPE match_result.
+DATA group TYPE submatch_result.
+DATA groups TYPE submatch_result_tab.
 DATA part TYPE string.
 IF excluded IS NOT INITIAL.
   IF ignore_case = abap_true.
@@ -598,22 +602,28 @@ IF excluded IS NOT INITIAL.
 ENDIF.
 IF global = abap_true.
   IF ignore_case = abap_true.
-    FIND ALL OCCURRENCES OF REGEX posix IN p0 IGNORING CASE RESULTS DATA(matches).
+    FIND ALL OCCURRENCES OF REGEX posix IN p0 IGNORING CASE RESULTS matches.
   ELSE.
     FIND ALL OCCURRENCES OF REGEX posix IN p0 RESULTS matches.
   ENDIF.
 ELSE.
   IF ignore_case = abap_true.
-    FIND FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS matches.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS hit.
+    IF sy-subrc = 0.
+      APPEND hit TO matches.
+    ENDIF.
   ELSE.
-    FIND FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS matches.
+    FIND FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS hit.
+    IF sy-subrc = 0.
+      APPEND hit TO matches.
+    ENDIF.
   ENDIF.
 ENDIF.
 IF matches IS INITIAL.
   RETURN.
 ENDIF.
 CREATE OBJECT result.
-LOOP AT matches INTO DATA(hit).
+LOOP AT matches INTO hit.
   IF global = abap_false.
     result->match_index = hit-offset.
     result->match_has_index = abap_true.
@@ -621,7 +631,8 @@ LOOP AT matches INTO DATA(hit).
   part = p0+hit-offset(hit-length).
   APPEND part TO result->items.
   IF global = abap_false.
-    LOOP AT hit-submatches INTO DATA(group).
+    groups = hit-submatches.
+    LOOP AT groups INTO group.
       IF group-offset < 0.
         RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
       ENDIF.

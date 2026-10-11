@@ -41,7 +41,7 @@ func TestEmitStringRepeatAndMatch(t *testing.T) {
 		lines[i] = strings.TrimLeft(l, " ")
 	}
 	text = strings.Join(lines, "\n")
-	for _, want := range []string{"trunc(", "repeat( val = ", "cx_sy_range_out_of_bounds", "METHOD match.", "FIND FIRST OCCURRENCE OF REGEX", "FIND ALL OCCURRENCES OF REGEX", "LOOP AT hit-submatches", "IF matches IS INITIAL.\nRETURN.", "DATA match_index TYPE i.", "result->match_index = hit-offset."} {
+	for _, want := range []string{"trunc(", "repeat( val = ", "cx_sy_range_out_of_bounds", "METHOD match.", "FIND FIRST OCCURRENCE OF REGEX", "FIND ALL OCCURRENCES OF REGEX", "groups = hit-submatches.", "LOOP AT groups INTO group.", "IF matches IS INITIAL.\nRETURN.", "DATA match_index TYPE i.", "result->match_index = hit-offset."} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %q", want)
 		}
