@@ -748,6 +748,11 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if x.Type.Kind == hir.OrderedSet {
 		x = l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0]))
 	}
+	if x.Type.Kind == hir.Dynamic {
+		// A tagged iterable (including a JSON array with an empty fallback)
+		// needs a checked array view before HIR can iterate its elements.
+		x = l.coerce(x, hir.T(hir.Array, elem))
+	}
 	// Indexed record reads use map.get's absence-preserving result even
 	// when TypeScript's index signature says the value is an array. A
 	// for-of consumes that array directly; retain the checked reference
