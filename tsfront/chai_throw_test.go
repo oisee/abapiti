@@ -10,7 +10,7 @@ import (
 )
 
 func TestChaiThrowNodeOracle(t *testing.T) {
-	chai := "/home/alice/dev/abaplint/node_modules/chai"
+	chai := upstreamChaiModule(t)
 	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}

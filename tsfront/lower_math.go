@@ -19,8 +19,9 @@ func (l *lowerer) mathCeilCall(n *ast.Node) (*hir.Expr, bool) {
 	if receiver.Kind != ast.KindIdentifier || receiver.Text() != "Math" {
 		return nil, false
 	}
-	file := l.fileOfSymbol(l.resolve(receiver))
-	if file == nil || !l.prog.prog.IsSourceFileDefaultLibrary(file.Path()) {
+	// A global can merge library and user declarations. Dispatch only when
+	// the complete binding has library provenance; one declaration is insufficient.
+	if !l.librarySymbol(l.resolve(receiver)) {
 		return nil, false
 	}
 	args := n.Arguments()

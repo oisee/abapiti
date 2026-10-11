@@ -4,7 +4,8 @@
 // No source editing, test extraction, or oracle-synthesized Go registrations.
 import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
-import {execFileSync, spawnSync} from 'node:child_process';
+import {execFile, execFileSync} from 'node:child_process';
+import {promisify} from 'node:util';
 import {homedir, tmpdir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {materializeRegistryClosure} from './registry-closure.mjs';
@@ -61,7 +62,20 @@ export function assertNoFailures(name, run) {
  if (failures.length) throw new Error(`STOP: ${name}: ${failures.length} genuine FAIL(s)\n${JSON.stringify(failures, null, 2)}`);
 }
 
-function main() {
+// Drain in-flight work before cleanup, and do not schedule past a genuine FAIL.
+export async function runShards(shards, workers, runShard) {
+ if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
+  let next = 0, failure;
+  const settled = await Promise.allSettled(Array.from({length:Math.min(workers, shards.length)}, async () => {
+   while (!failure && next < shards.length) {
+    const shard = shards[next++];
+    try { await runShard(shard); } catch (error) { failure = error; throw error; }
+   }
+  }));
+  for (const result of settled) if (result.status === 'rejected') throw result.reason;
+}
+
+async function main() {
  const [upstreamArg = join(homedir(), 'dev/abaplint'), outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
  const upstream = resolve(upstreamArg), output = resolve(outputArg);
  const tools = import.meta.dirname, repository = resolve(tools, '..');
@@ -92,7 +106,7 @@ function main() {
   if (!plan.partial) oracle('all', plan.files);
   if (compiler) copyFileSync(resolve(compiler), join(run,'abapiti'));
   else command('go', ['build', '-o', join(run,'abapiti'), './cmd/abapiti'], {stdio:'inherit'});
-  for (const {name, id, roots} of plan.shards) {
+  async function runShard({name, id, roots}) {
    console.error(`=== ${name}: ${roots.length} files ===`);
    const closure = join(run, id), build = join(run, `${id}-out`);
    let manifest, borrowed, foreign;
@@ -101,7 +115,12 @@ function main() {
     manifest = materializeRegistryClosure(closure, upstream, {roots, runtime:join(repository,'tsfront/testdata/abaplint-tests/runtime')});
     foreign = manifest.sources.map(s => s.file).filter(f => f.startsWith('test/') && !roots.includes(f));
     if (foreign.length) borrowed = executeOracle(oracleBuild, upstream, foreign);
-    const execution = spawnSync(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024});
+    let execution;
+    try {
+     execution = {...await promisify(execFile)(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
+    } catch (error) {
+     execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
+    }
     // Never manufacture registrations if materialization, emission, or Go fails.
     try { result = JSON.parse(execution.stdout); if (!Array.isArray(result.results)) throw new Error('missing results'); }
     catch {
@@ -127,6 +146,9 @@ function main() {
    command(process.execPath, [join(tools,'abaplint-tests-report.mjs'), join(run,`node-${id}.json`), join(run,`go-${id}.json`), join(run,`report-${id}.json`)], {stdio:['ignore','ignore','inherit']});
    assertNoFailures(name, result);
   }
+  const workers = Number(process.env.ABAPITI_TESTS_WORKERS ?? 1);
+  if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
+  await runShards(plan.shards, workers, runShard);
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
@@ -141,4 +163,4 @@ function main() {
   else console.error(`all-shard evidence retained after incomplete run: ${run}`);
  }
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch(error => { console.error(error); process.exitCode = 1; });

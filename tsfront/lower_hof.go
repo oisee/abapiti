@@ -347,11 +347,13 @@ func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, 
 	}
 	var args []*hir.Expr
 	for _, capture := range lf.captures {
-		value := hir.V(capture.name, capture.typ)
+		value := l.captureTransport(capture, capture.typ)
 		if l.localSymbols == nil {
 			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
 		}
-		l.localSymbols[value] = capture.symbol
+		if _, shared := l.captureCells[capture.symbol]; !shared {
+			l.localSymbols[value] = capture.symbol
+		}
 		args = append(args, value)
 	}
 	for index, name := range names {
@@ -360,7 +362,7 @@ func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, 
 		}
 		args = append(args, hir.V(name, lf.method.Params[len(lf.captures)+index].Type))
 	}
-	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(cb), X: l.this(l.class), Name: lf.method.Name, Type: lf.method.Result, Args: args}
+	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(cb), X: l.localFnReceiver(lf), Name: lf.method.Name, Type: lf.method.Result, Args: args}
 	if lf.method.Static {
 		call.Kind, call.Owner, call.X = hir.DirectCall, lf.owner.Name, nil
 	}
@@ -509,10 +511,15 @@ func (l *lowerer) localFnCall(n *ast.Node, lf *localFn, callee *ast.Node) *hir.E
 			return nil
 		}
 		capture := hir.V(c.name, c.typ)
+		if cell, shared := l.captureCells[c.symbol]; shared {
+			capture = l.captureTransport(c, cell)
+		}
 		if l.localSymbols == nil {
 			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
 		}
-		l.localSymbols[capture] = c.symbol
+		if _, cell := l.captureCells[c.symbol]; !cell {
+			l.localSymbols[capture] = c.symbol
+		}
 		args = append(args, capture)
 	}
 	rest, ok := l.callArgsMethod(n, n.Arguments(), lf.method, len(args))
@@ -524,7 +531,7 @@ func (l *lowerer) localFnCall(n *ast.Node, lf *localFn, callee *ast.Node) *hir.E
 			Name: lf.method.Name, Type: lf.method.Result, Args: append(args, rest...)}
 	}
 	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: lf.method.Name,
-		Type: lf.method.Result, X: l.this(l.class), Args: append(args, rest...)}
+		Type: lf.method.Result, X: l.localFnReceiver(lf), Args: append(args, rest...)}
 }
 
 // callArgsStatic lowers call arguments against a module function's method.
@@ -780,11 +787,13 @@ func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRe
 	if lf != nil {
 		params = params[len(lf.captures):]
 		for _, capture := range lf.captures {
-			value := hir.V(capture.name, capture.typ)
+			value := l.captureTransport(capture, capture.typ)
 			if l.localSymbols == nil {
 				l.localSymbols = map[*hir.Expr]*ast.Symbol{}
 			}
-			l.localSymbols[value] = capture.symbol
+			if _, shared := l.captureCells[capture.symbol]; !shared {
+				l.localSymbols[value] = capture.symbol
+			}
 			args = append(args, value)
 		}
 	}
@@ -845,7 +854,7 @@ func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRe
 	}
 	call := &hir.Expr{Kind: hir.DirectCall, Node: l.node(cb), Owner: ref.owner, Name: ref.method, Type: method.Result, Args: args}
 	if lf != nil && !method.Static {
-		call.Kind, call.Owner, call.X = hir.VirtualCall, "", l.this(lf.owner)
+		call.Kind, call.Owner, call.X = hir.VirtualCall, "", l.localFnReceiver(lf)
 	}
 	if len(l.pend) > 0 {
 		call = &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: call.Type, Stmt: hir.B(l.pend...), Y: call}

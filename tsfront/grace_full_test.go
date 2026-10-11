@@ -109,7 +109,8 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 	if e := lowering.Err(); e != nil {
 		t.Fatal(e)
 	}
-	if len(lowering.Prog.Classes) != 1927 || len(lowering.Prog.Interfaces) != 73 {
+	// Natural instanceof operands (508ca6f) avoid nine unused synthesized union interfaces.
+	if len(lowering.Prog.Classes) != 1927 || len(lowering.Prog.Interfaces) != 64 {
 		t.Fatalf("changed closure: %d classes, %d interfaces", len(lowering.Prog.Classes), len(lowering.Prog.Interfaces))
 	}
 	db, e := rewrite.Analyze(lowering.Prog)
