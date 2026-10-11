@@ -106,7 +106,13 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line(n + " = " + v + ".")
 	case hir.Bool:
 		b.line(n + " = " + d + "->as_boolean( ).")
-	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
+	case hir.Array:
+		// ABAP typed tables cannot alias a parsed dynamic-element table.
+		b.line("IF " + d + " IS NOT BOUND OR " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_ref.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		v := b.rawTemp("REF TO object")
+		b.line(v + " = " + d + "->as_ref( ).")
+		b.line("TRY.\n" + n + " ?= " + v + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDTRY.")
+	case hir.ClassRef, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line(n + " ?= " + v + ".")

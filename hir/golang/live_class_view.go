@@ -64,7 +64,9 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 			return e.liveView(t) + "(" + d + ")"
 		}
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
-	case hir.Array, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
+	case hir.Array:
+		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + e.viewValue(t.Args[0], "d") + "})"
+	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	default:
 		return "func() " + e.typ(t) + " {panic(newTrap(\"unsupported live class field conversion\"))}()"

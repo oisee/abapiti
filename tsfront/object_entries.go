@@ -30,6 +30,14 @@ func (l *lowerer) objectEntries(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	infos := l.ck.GetIndexInfosOfType(typ)
+	if l.unprunedFeatures && len(infos) == 0 && typ.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsAny) != 0 {
+		recv := l.expr(args[0])
+		if recv != nil && (recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.Dynamic) {
+			return l.viewEntries(n, recv)
+		}
+		l.diagf(n, "unsupported-call", "Object.entries receiver lacks structural own-property storage")
+		return nil
+	}
 	if len(infos) != 1 || !infos[0].KeyType().IsStringLike() {
 		l.diagf(n, "unsupported-call", "Object.entries requires a string-indexed record; nominal objects and JS Map need own/enumerable property metadata")
 		return nil
@@ -96,4 +104,17 @@ func (l *lowerer) recordPropertyKeys(n *ast.Node, recv *hir.Expr) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: i, X: binary("!=", a, c, b), Y: binary("-", a, c, i), Z: l.rtOp("string.compareRegistryKey", left, i, right)}
 	})
 	return l.tempInit(n, keysType, l.rtOp("array.concat", sorted, keysType, other))
+}
+
+// View entries read each value from the original storage after snapshotting keys.
+func (l *lowerer) viewEntries(n *ast.Node, recv *hir.Expr) *hir.Expr {
+	recv = l.tempInit(n, hir.T(hir.Dynamic), l.coerce(recv, hir.T(hir.Dynamic)))
+	str := hir.T(hir.String)
+	pair := l.tupleShape(n, []hir.Type{str, hir.T(hir.Dynamic)})
+	result := l.tempVar(n, hir.T(hir.Array, pair))
+	l.serial++
+	key := hir.V("viewKey"+itoa(l.serial), str)
+	row := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: pair, Args: []*hir.Expr{key, l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), key)}}
+	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: str, X: l.rtOp("dynamic.keys", recv, hir.T(hir.Array, str)), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, hir.T(hir.I32), row)})})
+	return result
 }

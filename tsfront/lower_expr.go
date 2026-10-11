@@ -399,44 +399,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		u := n.AsPostfixUnaryExpression()
 		return l.updateExpression(n, u.Operand, u.Operator, false)
 	case ast.KindConditionalExpression:
-		c := n.AsConditionalExpression()
-		x := l.condition(c.Condition)
-		if value, ok := constantBool(x); ok {
-			// The other branch is dead in JavaScript too; it is not lowered.
-			l.diagf(n, "note-dead-branch", "conditional with a constant condition keeps only the live branch")
-			branch := c.WhenFalse
-			if value {
-				branch = c.WhenTrue
-			}
-			live := l.expr(branch)
-			if live != nil && x.Kind == hir.Seq {
-				live = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: live.Type, Stmt: x.Stmt, Y: live}
-			}
-			return live
-		}
-		hint := l.hint
-		if hint.Kind == hir.Void || hint.Kind == "" {
-			l.hint = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
-		}
-		branchHint := l.hint
-		y := l.expr(c.WhenTrue)
-		l.hint = branchHint
-		z := l.expr(c.WhenFalse)
-		l.hint = hint
-		if x == nil || y == nil || z == nil {
-			return nil
-		}
-		result := y.Type
-		if !y.Type.Equal(z.Type) {
-			result = hint
-			if result.Kind == hir.Void || result.Kind == "" {
-				result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
-			}
-			if result.Kind == hir.Void || result.Kind == "" {
-				return nil
-			}
-		}
-		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: x, Y: l.coerce(y, result), Z: l.coerce(z, result)}
+		return l.conditionalExpression(n)
 	case ast.KindAsExpression:
 		return l.asExpression(n)
 	case ast.KindSatisfiesExpression:
@@ -1560,10 +1523,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, false
 			}
 			lowered := make([]*hir.Expr, 0, len(args))
-			for _, arg := range args {
+			for index, arg := range args {
 				x := l.expr(arg)
 				if x == nil {
 					return nil, true
+				}
+				if l.unprunedFeatures && index == 2 {
+					x = l.coerce(x, recv.Type.Args[0])
 				}
 				lowered = append(lowered, x)
 			}
