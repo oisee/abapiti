@@ -132,3 +132,15 @@ func TestConditionalJoinNarrowedUnionClassBase(t *testing.T) {
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
 }
+
+func TestConditionalJoinCheckedDynamicContext(t *testing.T) {
+	source := `export class Probe {
+ static text(flag:boolean,value:any):string{return flag?value:"fallback";}
+ static run():string{return Probe.text(true,"live")+":"+Probe.text(false,9);}
+ }`
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+	conditionalMatchesNode(t, source, p, "Probe")
+}

@@ -73,8 +73,8 @@ func (l *lowerer) conditionalExpression(n *ast.Node) *hir.Expr {
 		if !l.conditionalConvertible(c.WhenTrue, y, target) || !l.conditionalConvertible(c.WhenFalse, z, target) {
 			continue
 		}
-		left := l.convertConditionalBranch(c.WhenTrue, y, target)
-		right := l.convertConditionalBranch(c.WhenFalse, z, target)
+		left := l.convertConditionalBranch(c.WhenTrue, y, target, l.conditionalRepeatedRead(c.Condition, c.WhenTrue))
+		right := l.convertConditionalBranch(c.WhenFalse, z, target, l.conditionalRepeatedRead(c.Condition, c.WhenFalse))
 		if left != nil && right != nil && l.acceptsType(target, left.Type) && l.acceptsType(target, right.Type) {
 			return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: target, X: x, Y: left, Z: right}
 		}
@@ -167,6 +167,12 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		// element changes require a live generic view we cannot prove here.
 		return src.Args[0].IsRef() && dst.Args[0].IsRef() && l.acceptsType(dst, src)
 	}
+	if src.Kind == hir.Dynamic {
+		switch dst.Kind {
+		case hir.String, hir.Number, hir.Bool, hir.ClassValue, hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
+			return true // existing checked unboxing, never an unchecked retag
+		}
+	}
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef && dst.Name != hir.RootObject {
 		return l.interfaceHasClassBase(src.Name, dst) || l.unionPartsAccepted(src.Name, dst)
 	}
@@ -175,12 +181,16 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 
 // Keep conversion temporaries inside the chosen branch, including optional
 // boxing. Evaluating an unchosen getter or collection would change JS behavior.
-func (l *lowerer) convertConditionalBranch(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Expr {
+func (l *lowerer) convertConditionalBranch(n *ast.Node, x *hir.Expr, dst hir.Type, repeatedRead bool) *hir.Expr {
 	saved := l.pend
 	l.pend = nil
 	out := l.conditionalConversion(n, x, dst)
 	pre := l.pend
 	l.pend = saved
+	if repeatedRead {
+		l.pend = append(l.pend, pre...)
+		return out
+	}
 	if out != nil && len(pre) > 0 {
 		out = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: out.Type, Stmt: hir.B(pre...), Y: out}
 	}
@@ -232,4 +242,21 @@ func (l *lowerer) conditionalAbsent(node hir.Node, dst hir.Type) *hir.Expr {
 		return l.coerce(&hir.Expr{Kind: hir.Lit, Node: node, Type: hir.T(hir.Optional, dst)}, dst)
 	}
 	return &hir.Expr{Kind: hir.Lit, Node: node, Type: dst}
+}
+
+// A literal-key data read already evaluated by the condition can keep the
+// existing temporary placement. No call, getter or computed key is moved;
+// checked unboxing itself remains in the selected branch.
+func (l *lowerer) conditionalRepeatedRead(condition, branch *ast.Node) bool {
+	if condition.Kind == ast.KindPropertyAccessExpression && branch.Kind == ast.KindPropertyAccessExpression {
+		a, b := condition.AsPropertyAccessExpression(), branch.AsPropertyAccessExpression()
+		// Dynamic property access in this ABI reads data, never a JS getter.
+		typ := l.ck.GetTypeAtLocation(a.Expression)
+		return a.QuestionDotToken == nil && b.QuestionDotToken == nil && a.Expression.Kind == ast.KindIdentifier && b.Expression.Kind == ast.KindIdentifier && typ != nil && typ.Flags()&checker.TypeFlagsAny != 0 && a.Name().Text() == b.Name().Text() && l.resolve(a.Expression) != nil && l.resolve(a.Expression) == l.resolve(b.Expression)
+	}
+	if condition.Kind != ast.KindElementAccessExpression || branch.Kind != ast.KindElementAccessExpression {
+		return false
+	}
+	a, b := condition.AsElementAccessExpression(), branch.AsElementAccessExpression()
+	return a.Expression.Kind == ast.KindIdentifier && b.Expression.Kind == ast.KindIdentifier && a.ArgumentExpression.Kind == ast.KindStringLiteral && b.ArgumentExpression.Kind == ast.KindStringLiteral && a.ArgumentExpression.Text() == b.ArgumentExpression.Text() && l.resolve(a.Expression) != nil && l.resolve(a.Expression) == l.resolve(b.Expression)
 }
