@@ -1768,6 +1768,14 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
 			left, right := l.taggedOperand(x, typ), l.coerce(y, typ)
+			// Reference types use an initial reference for undefined. A TS
+			// assertion can erase absence from the checker type without making
+			// the runtime object present (`value as Class || undefined`). Keep
+			// the undefined arm typed as that same nullable reference, rather
+			// than coercing an optional tagged value or dropping the truth test.
+			if op == ast.KindBarBarToken && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef) && isUndefinedKeyword(b.Right) && y.Kind == hir.Lit && y.Value == nil {
+				right = &hir.Expr{Kind: hir.Narrow, Node: y.Node, Type: typ, X: &hir.Expr{Kind: hir.Lit, Node: y.Node, Type: hir.T(hir.Optional, typ)}}
+			}
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
