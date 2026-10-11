@@ -235,3 +235,18 @@ func TestLiveClassViewJSONNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
+
+func TestLiveTypedArrayNestedNodeOracle(t *testing.T) {
+	source := `class Conf {names?:string[][];} interface Slot {setConfig(conf:any):void;}
+ class Rule implements Slot {conf=new Conf();setConfig(conf:Conf):void {this.conf=conf;}}
+ class Probe {static run():string {const input=JSON.parse('{"names":[["a"]]}');const r=new Rule();const s:Slot=r;s.setConfig(input);const typed=r.conf.names!;const inner=typed[0];const viewed:any=inner;const caller:any[]=input.names[0];inner.push("b");caller[0]="A";return (viewed===input.names[0])+":"+typed[0].join(",")+":"+caller.length;}}`
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}

@@ -78,7 +78,9 @@ func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  // Check existing present elements before publishing a view. Future reads check
  // again, so caller writes can never bypass the element representation boundary.
  for i:=int32(0);i<a.liveLength();i++ {v,has:=a.liveGet(i);if has {decode(v)}}
- if v,ok:=d.Value.(*array[T]);ok {return v}
+ var zero T
+ // Erased reference storage still needs the element converter on every read.
+ if reflect.TypeOf(zero)!=nil {if v,ok:=d.Value.(*array[T]);ok {return v}}
  return &array[T]{live:a,source:d,decode:decode}
 }
 func (a *array[T]) dynamicSource() *dynamic {if a==nil {return nil};return a.source}
