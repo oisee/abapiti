@@ -83,6 +83,7 @@ var SpecialOps = map[string]bool{
 	"classvalue.new":          true, // ClassValue -> a class or interface reference
 	"dynamic.of":              true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":           true,
+	"dynamic.classView":       true, // live structural storage, never a nominal assertion
 	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
 	"regexp.new":              true, // pattern, [flags] -> RegExp
 
