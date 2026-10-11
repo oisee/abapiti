@@ -2,7 +2,7 @@
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
   "codeCommit": "bd863933b558fe71632e745e20e5ad3c7c1514f5",
   "mainCommit": "0693e013512d36c5c76b3d4c5820f33509a2978e",
-  "artifacts": "/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/shards/all-kxS9k5",
+  "artifacts": "<scratch>/shards/all-kxS9k5",
   "artifactPrefix": "",
   "shards": [
     {
