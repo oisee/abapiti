@@ -3,6 +3,7 @@ bin/
 dist/
 /abapiti
 *.test
+*.vsix
 
 # Local-only material and credentials
 .local/

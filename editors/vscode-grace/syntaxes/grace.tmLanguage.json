@@ -1,0 +1,294 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Grace",
+  "scopeName": "source.grace",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#declaration"
+    },
+    {
+      "include": "#fact"
+    },
+    {
+      "include": "#atom"
+    },
+    {
+      "include": "#terms"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.semicolon.grace",
+      "begin": ";",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.comment.grace"
+        }
+      },
+      "end": "$"
+    },
+    "string": {
+      "name": "string.quoted.double.grace",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.begin.grace"
+        }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.grace"
+        }
+      },
+      "patterns": [
+        {
+          "name": "constant.character.escape.grace",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "terms": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "name": "variable.other.grace",
+          "match": "\\?[^\\s();]*"
+        },
+        {
+          "name": "constant.language.wildcard.grace",
+          "match": "_(?=[\\s();]|$)"
+        },
+        {
+          "name": "constant.numeric.grace",
+          "match": "[+-]?\\d+(?=[\\s();]|$)"
+        },
+        {
+          "name": "constant.other.atom.grace",
+          "match": "[^\\s();\"]+"
+        }
+      ]
+    },
+    "declaration": {
+      "name": "meta.declaration.grace",
+      "begin": "(\\()\\s*(rule|grace)(?=[\\s();]|$)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.section.parens.begin.grace"
+        },
+        "2": {
+          "name": "keyword.control.declaration.grace"
+        }
+      },
+      "end": "\\)",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.parens.end.grace"
+        }
+      },
+      "patterns": [
+        {
+          "begin": "\\G",
+          "end": "(?=\\(|\\))",
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#string"
+            },
+            {
+              "name": "constant.numeric.grace",
+              "match": "[+-]?\\d+(?=[\\s();]|$)"
+            },
+            {
+              "name": "entity.name.function.rule.grace",
+              "match": "[^\\s();\"]+"
+            }
+          ]
+        },
+        {
+          "include": "#section"
+        },
+        {
+          "include": "#terms"
+        }
+      ]
+    },
+    "section": {
+      "patterns": [
+        {
+          "name": "meta.section.grace",
+          "begin": "(\\()\\s*(head|base|tail|match|where|action)(?=[\\s();]|$)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.grace"
+            },
+            "2": {
+              "name": "keyword.control.section.grace"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.end.grace"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#atom"
+            },
+            {
+              "include": "#terms"
+            }
+          ]
+        },
+        {
+          "name": "meta.section.bound.grace",
+          "begin": "(\\()\\s*(bound)(?=[\\s();]|$)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.grace"
+            },
+            "2": {
+              "name": "keyword.control.section.grace"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.end.grace"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "name": "keyword.other.depth.grace",
+              "match": "depth(?=[\\s();]|$)"
+            },
+            {
+              "include": "#terms"
+            }
+          ]
+        }
+      ]
+    },
+    "atom": {
+      "patterns": [
+        {
+          "name": "meta.negation.grace",
+          "begin": "(\\()\\s*(not)(?=[\\s();]|$)",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.grace"
+            },
+            "2": {
+              "name": "keyword.operator.logical.grace"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.end.grace"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comment"
+            },
+            {
+              "include": "#atom"
+            },
+            {
+              "include": "#terms"
+            }
+          ]
+        },
+        {
+          "name": "meta.atom.grace",
+          "begin": "(\\()",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.section.parens.begin.grace"
+            }
+          },
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.end.grace"
+            }
+          },
+          "patterns": [
+            {
+              "begin": "\\G",
+              "end": "([^\\s();\"]+)",
+              "endCaptures": {
+                "1": {
+                  "name": "entity.name.function.predicate.grace"
+                }
+              },
+              "patterns": [
+                {
+                  "include": "#comment"
+                }
+              ]
+            },
+            {
+              "include": "#terms"
+            }
+          ]
+        }
+      ]
+    },
+    "fact": {
+      "name": "meta.fact.grace",
+      "begin": "(\\()\\s*(fact)(?=[\\s();]|$)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.section.parens.begin.grace"
+        },
+        "2": {
+          "name": "keyword.control.declaration.grace"
+        }
+      },
+      "end": "\\)",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.parens.end.grace"
+        }
+      },
+      "patterns": [
+        {
+          "begin": "\\G",
+          "end": "([^\\s();\"]+)",
+          "endCaptures": {
+            "1": {
+              "name": "entity.name.function.predicate.grace"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comment"
+            }
+          ]
+        },
+        {
+          "include": "#terms"
+        }
+      ]
+    }
+  }
+}
