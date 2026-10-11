@@ -77,6 +77,8 @@ var SpecialOps = map[string]bool{
 	"dynamic.asRef":       true,
 	"dynamic.materialize": true, // Dynamic -> a class or interface reference
 	"regexp.new":          true, // pattern, [flags] -> RegExp
+
+	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
 }
 
 // optionalOf wraps t as an Optional; an optional element stays as it is

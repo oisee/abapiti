@@ -939,6 +939,12 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "json.stringifyConfig":
+		if a.Kind != ClassRef || a.Name != "src/_config.ts.IConfig" {
+			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")
+		}
+		eq(t, T(String))
+		args([]Type{T(Optional, T(Dynamic)), T(Optional, T(String))})
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")

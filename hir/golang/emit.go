@@ -82,6 +82,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
+	jsonWriter := ""
+	if e.configJSON {
+		jsonWriter = configJSONRuntimeSource
+	}
 	runtime := runtimeSource
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
@@ -89,7 +93,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesArrayPresence || e.usesArrayDeletion {
 		runtime = sparseRuntime(runtime)
 	}
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -115,6 +119,7 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	configJSON        bool
 	promiseUsed       bool
 	profile           bool
 	sites             []emittedSite
@@ -271,6 +276,9 @@ func (e *emitter) effective(c *hir.Class) []string {
 }
 func (e *emitter) class(c *hir.Class) {
 	e.descriptor(c)
+	if e.configJSON {
+		e.configJSONClass(c)
+	}
 	e.line("type %s struct {", e.obj(c.Name))
 	// Only materializable data shapes can acquire a dynamic source. Other
 	// objects still escape normally, but need no permanently nil source slot.
@@ -1075,6 +1083,9 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	}
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "json.stringifyConfig" {
+		e.configJSON = true
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

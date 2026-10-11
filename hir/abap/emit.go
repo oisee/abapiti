@@ -1586,6 +1586,10 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if x.Op == "json.stringifyConfig" {
+		b.e.err = fmt.Errorf("node %d (%s): json.stringifyConfig is not implemented on ABAP; refusing the config JSON round trip", x.ID, x.Source)
+		return
+	}
 	if b.constSetHas(x, n) {
 		return
 	}
