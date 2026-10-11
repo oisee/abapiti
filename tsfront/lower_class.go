@@ -495,6 +495,9 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 		if t, ok := l.paramTypeOverride(node, hm.Name, name); ok {
 			typ = t
 		}
+		if t, ok := l.testParameterType(hm.Name, name); ok {
+			typ = t
+		}
 		hm.Params = append(hm.Params, hir.Param{Name: name, Type: typ})
 		checked[len(hm.Params)-1] = true
 	}

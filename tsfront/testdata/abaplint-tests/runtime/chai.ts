@@ -20,13 +20,27 @@ export class Assertion {
       throw new Error((message || this.message || "assertion failed") + ": " + detail);
     }
   }
+  private display(value: any): string {
+    if (typeof value === "object") { return "[object]"; }
+    if (typeof value === "function") { return "[function]"; }
+    return String(value);
+  }
   public equal(expected: any, message = ""): void {
-    this.check(this.value === expected, "expected " + String(this.value) +
-      (this.negated ? " not to equal " : " to equal ") + String(expected), message);
+    const ok = this.value === expected;
+    // Do not perform ToPrimitive merely to format a successful assertion.
+    if (ok === this.negated) {
+      this.check(ok, "expected " + this.display(this.value) +
+        (this.negated ? " not to equal " : " to equal ") + this.display(expected), message);
+    }
   }
   public equals(expected: any, message = ""): void { this.equal(expected, message); }
+  public greaterThan(expected: number, message = ""): void {
+    if (typeof this.value !== "number") { throw new Error("greaterThan requires a number"); }
+    this.check((this.value as number) > expected, "greaterThan check", message);
+  }
   public instanceof(expected: new () => any, message = ""): void {
-    this.check(this.value instanceof expected, "instanceof check", message);
+    const object = typeof this.value === "object" && this.value !== null && this.value !== undefined;
+    this.check(object && (this.value as object) instanceof expected, "instanceof check", message);
   }
   public contain(expected: any, message = ""): void {
     if (typeof this.value === "string") {

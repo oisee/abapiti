@@ -43,6 +43,10 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	switch recv.Type.Kind {
+	case hir.ClassValue:
+		if arg.Kind == ast.KindStringLiteral && arg.Text() == "name" {
+			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
+		}
 	case hir.ClassRef:
 		if arg.Kind == ast.KindStringLiteral {
 			for c := l.classByName(recv.Type.Name); c != nil; c = l.classByName(c.Super) {
@@ -228,6 +232,9 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 			break
 		}
 		tag := staticTypeofTag(e.Type.Args[0].Kind)
+		if l.isHIRThunk(e.Type.Args[0]) {
+			tag = "function"
+		}
 		if want == "undefined" {
 			test = undefined
 		} else if tag == "" {
@@ -245,6 +252,9 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		// A statically typed operand has a fixed tag; a reference is never
 		// a primitive (whether it is null decides only "object", not folded).
 		tag := map[hir.Kind]string{hir.Number: "number", hir.I32: "number", hir.Bool: "boolean"}[e.Type.Kind]
+		if l.isHIRThunk(e.Type) {
+			tag = "function"
+		}
 		if tag == "" && want == "object" {
 			l.diagf(n, "unsupported-expr", "typeof comparison on %s is not lowered", e.Type.Kind)
 			return nil
@@ -259,6 +269,22 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 	}
 	return test
+}
+
+func (l *lowerer) isHIRThunk(t hir.Type) bool {
+	if t.Kind == hir.InterfaceRef && t.Name == thunkInterfaceName {
+		return true
+	}
+	if t.Kind == hir.ClassRef {
+		if c := l.classByName(t.Name); c != nil {
+			for _, name := range c.Implements {
+				if name == thunkInterfaceName {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // staticTypeofTag describes present values; null is not currently a HIR type.
