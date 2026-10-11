@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,26 +54,19 @@ export function cast(x: N.Base): N.Child { return x as N.const; }`,
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !trap {
-			found := false
-			for _, d := range diags {
-				if d.Category == "unsupported-assertion" && strings.Contains(d.Loc, "probe.ts:") {
-					found = true
-				}
-			}
-			if !found {
-				t.Fatalf("missing cast refusal: %v", diags)
-			}
-		} else {
-			if hasBlocking(diags) {
-				t.Fatal(diags)
-			}
-			if errors := hir.Verify(prog); len(errors) > 0 {
-				t.Fatal(errors)
-			}
-			if !strings.Contains(hir.Dump(prog), "type assertion requires checker-proven narrowing") {
-				t.Fatal("missing trap")
-			}
+		if hasBlocking(diags) {
+			t.Fatal(diags)
+		}
+		if errors := hir.Verify(prog); len(errors) > 0 {
+			t.Fatal(errors)
+		}
+		if !strings.Contains(hir.Dump(prog), "object.checkedClassView") {
+			t.Fatal("qualified alias lost its checked nominal boundary")
+		}
+		names := hir.NewNames()
+		main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("qualified invalid view must refuse")};fmt.Println("refused")}();%s(%s())`, goEntry("probe.ts.module", "cast"), names.Get("new.defs.ts.Base"))
+		if got := runGoHIR(t, prog, main); got != "refused\n" {
+			t.Fatal(got)
 		}
 	}
 }
