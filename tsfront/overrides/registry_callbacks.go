@@ -35,6 +35,9 @@ func registryDenseCallbacks() []Entry {
 		{ID: "abaplint-dense-callback-Catch.runSyntax", Key: Key{"src/abap/5_syntax/statements/catch.ts", "Catch.runSyntax", "KindMethodDeclaration"}, SHA256: "4f8f21e98eeeae98acd365c4d6892e14e5209123787172b31c288c6a3882bf31", Rationale: "classNames is Array.from of a Set<string>: dense and not mutated; the callback only reads the scope, so an absent result means no element matched", Patterns: &Patterns{DenseCallbacks: map[string]bool{
 			"classNames.find(name => input.scope.findClassDefinition(name) === undefined)": true,
 		}}},
+		{ID: "abaplint-dense-callback-Catch.findCommonSuperclass", Key: Key{"src/abap/5_syntax/statements/catch.ts", "Catch.findCommonSuperclass", "KindMethodDeclaration"}, SHA256: "7bff4859c41356390913e1ff9f90c7bb191878341a06f8930683e211560f382f", Rationale: "lineages and each lineage are fresh dense arrays built only by push before the search; nested callbacks only read names and never change array membership", Patterns: &Patterns{DenseCallbacks: map[string]bool{
+			"lineages.every(lineage =>\n      lineage.some(item => item.getName().toUpperCase() === candidate.getName().toUpperCase()))": true,
+		}}},
 		{ID: "abaplint-select-single-full-key-default-conf", Key: Key{"src/rules/select_single_full_key.ts", "SelectSingleFullKey.getConfig", "KindMethodDeclaration"}, SHA256: "b86b0823577309d8039eb10ba09ba8a187bfd82e8c5930ff869cbeb99080da32", Rationale: "the default literal {allowPseudo: true} equals a fresh SelectSingleFullKeyConf: exclude is read from the registry config, and an undefined severity defaults to Error in Issue.atRange", Patterns: &Patterns{Expressions: map[string]func() *hir.Expr{
 			"{\n        allowPseudo: true,\n      }": func() *hir.Expr {
 				return &hir.Expr{Kind: hir.New, Type: hir.Ref("src/rules/select_single_full_key.ts.SelectSingleFullKeyConf")}
