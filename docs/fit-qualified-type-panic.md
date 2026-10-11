@@ -157,8 +157,45 @@ coercion/integer proofs, and other HIR representation mismatches.
 
 Default `abaplint -o out --target all,go` output is unchanged against `6d72bfa`:
 `diff -r` is empty for all **6,348 files**, including the Go executable and A4H
-zip. The separate origin/main comparison and complete LSP/objects execution
-measurements are still in progress.
+zip. The separate comparison against origin/main `23b3640` is also empty for all
+6,348 files. The JSON companion records the common file-manifest digest.
+
+## Complete affected shards
+
+| Shard | Roots | Pass before → after | FAIL | Trap before → after | Not-run before → after | Node total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Rules | 192 | 1,587 → 1,587 | 0 → 0 | 1,550 → 1,550 | 22 → 22 | 3,159 |
+| LSP | 16 | 0 → 63 | 0 → 0 | 0 → 131 | 199 → 5 | 199 |
+| Objects | 35 | 0 → 3 | 0 → 0 | 0 → 172 | 176 → 1 | 176 |
+| **Unique total** | **243** | **1,587 → 1,653** | **0 → 0** | **1,550 → 1,853** | **397 → 28** | **3,534** |
+
+Both complete affected shards reproduce the same qualified-name compiler
+panic on the baseline, before any Go registration or execution. Both after
+builds lower and emit successfully with zero blocking diagnostics and zero
+HIR errors. LSP registers all 199 titles; objects registers all 176. There
+are no initialization failures, unmatched titles, or async-pending results.
+All remaining not-run tests in these two shards are original skips.
+
+Thus **369 formerly blocked runnable tests execute**, producing **66 additional
+passes and 303 later traps**, with zero FAIL. The 62-test subset is included
+in these shard totals exactly once, and all 62 statuses agree with its separate
+run. No previously passing rules test regresses. The remaining 28 not-run tests
+are 16 original skips and the same 12 existing unregistered rules tests.
+This measures 3,534 selected original tests, rather than the whole 11,060 suite.
+
+The larger shards expose additional existing barriers: 53 LSP tests trap in
+`src/lsp/_lookup.ts` on Object/JSON operations; the factory coverage trap occurs
+in 22 LSP tests and 71 objects tests. Unproven object downcasts, unsupported
+callbacks, coercion/domain proofs, collection/assignment typing, closure captures,
+and chai API gaps account for the other reached refusals. Complete ranked messages
+are in the JSON companion. These existing features remain outside this panic
+fix; no LSP types, object literals, small builtins, regexp, Math, typeof, or void
+ABI implementations were changed.
+
+Compiler source revision: `0ddd95d`; subsequent evidence updates do not change
+the measured compiler or regression tests. All transient checkouts, closures,
+generated programs, executables and raw logs are removed after retaining these
+compact summaries.
 
 ## Gates
 
