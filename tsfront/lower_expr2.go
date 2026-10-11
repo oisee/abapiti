@@ -50,6 +50,17 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
 		}
 	case hir.ClassRef:
+		if l.unprunedFeatures && strings.HasPrefix(recv.Type.Name, "tuple.") &&
+			(arg.Kind == ast.KindNumericLiteral || arg.Kind == ast.KindStringLiteral) {
+			if index, err := strconv.Atoi(arg.Text()); err == nil && index >= 0 {
+				if c := l.classByName(recv.Type.Name); c != nil && index < len(c.Fields) {
+					field := c.Fields[index]
+					return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: field.Name, Type: field.Type, X: recv}
+				}
+			}
+			l.diagf(n, "unsupported-expr", "tuple index needs a declared positional slot")
+			return nil
+		}
 		if arg.Kind != ast.KindStringLiteral && !l.isRuleConfig(recv.Type.Name) {
 			key := l.expr(arg)
 			if key != nil && key.Type.Kind == hir.String {

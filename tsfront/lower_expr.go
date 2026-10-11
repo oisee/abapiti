@@ -195,6 +195,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
 	}
+	if l.collectionShapes[base.Name] ||
+		(base.Kind == hir.Array && len(base.Args) == 1 && (l.collectionShapes[base.Args[0].Name] || l.collectionElements[base.Args[0].String()])) ||
+		(x.Kind == hir.FieldGet && x.X != nil && l.collectionShapes[x.X.Type.Name]) {
+		// Structural inference may name only the first sibling. The collection
+		// owns the physical base slot; that inferred name is not a downcast proof.
+		return x
+	}
 	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
 	}
@@ -451,22 +458,22 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if hint.Kind == hir.Array {
 			elem = hint.Args[0]
 		} else {
-			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
+			if arr := l.singleArrayConstituent(t); arr != nil {
+				t = arr
+			}
+			if t == nil || (!l.ck.IsArrayType(t) && !t.IsTupleType()) {
+				t = l.ck.GetTypeAtLocation(n)
+			}
+			mapped := l.mapCheckerType(n, t)
+			if l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns) == nil {
+				mapped = l.inferredCollectionType(n, mapped)
+			}
 			if mapped.Kind == hir.Array {
 				elem = mapped.Args[0]
 			}
-			for _, el := range els {
-				if elem.Kind != hir.Void {
-					break
-				}
-				if el.Kind == ast.KindSpreadElement {
-					continue
-				}
-				elem = l.mapCheckerType(n, l.ck.GetTypeAtLocation(el))
-				break
-			}
 		}
-		if elem.Kind == hir.Void {
+		if elem.Kind == "" || elem.Kind == hir.Void {
 			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			if mapped.Kind != hir.Array {
 				return nil

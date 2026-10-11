@@ -301,6 +301,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if hint, ok := l.testModuleArrayContext(d); ok {
 			typ = hint
 		}
+		typ = l.inferredDeclarationCollection(d, typ)
 		if typ.Kind == hir.Void {
 
 			return nil
@@ -414,36 +415,6 @@ func (l *lowerer) localDeclaration(d *ast.Node, name string, typ hir.Type, x *hi
 	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(d.Name())
 	l.declare(name, typ)
 	return decl
-}
-
-// arrayLiteral lowers [a, b, ...] in a statement context into a fresh array
-// plus pushes; the element type is the checker type of the first element.
-func (l *lowerer) arrayLiteral(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
-	els := n.AsArrayLiteralExpression().Elements.Nodes
-	if len(els) == 0 {
-		l.diagf(n, "unsupported-array", "empty array literal needs a contextual type")
-		return nil, nil
-	}
-	elem := l.mapCheckerType(n, l.ck.GetTypeAtLocation(els[0]))
-	if elem.Kind == hir.Void {
-		return nil, nil
-	}
-	typ := hir.T(hir.Array, elem)
-	l.serial++
-	tmp := "a" + itoa(l.serial)
-	l.declare(tmp, typ)
-	stmts := []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(n), Name: tmp, Type: typ,
-		X: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}}}
-	_ = tmp
-	for _, el := range els {
-		v := l.expr(el)
-		if v == nil {
-			return nil, nil
-		}
-		stmts = append(stmts, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(el),
-			X: l.rtOp("array.push", hir.V(tmp, typ), hir.T(hir.I32), v)})
-	}
-	return stmts, hir.V(tmp, typ)
 }
 
 // expressionStatement handles assignments (including compound) and calls.
