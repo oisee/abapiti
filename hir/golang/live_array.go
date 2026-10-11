@@ -8,6 +8,7 @@ func liveArrayRuntime(source string) string {
 	source = strings.Replace(source, "type array[T any] struct{ Items []T;", "type array[T any] struct{ Items []T; live liveArrayStorage; source *dynamic; decode func(*dynamic) T;", 1)
 	guards := map[string]string{
 		"reserve(n int)":                        "if a.live!=nil {return}",
+		"chaiLength() int":                      "if a.live!=nil {return int(a.length())}",
 		"push(v T) int32":                       "if a.live!=nil {n:=a.length();a.live.livePut(n,box(v));return n+1}",
 		"get(i int32) optional[T]":              "if a.live!=nil {v,ok:=a.live.liveGet(i);if !ok {return optional[T]{}};return present(a.decode(v))}",
 		"put(i int32, v T)":                     "if a.live!=nil {a.live.livePut(i,box(v));return}",
