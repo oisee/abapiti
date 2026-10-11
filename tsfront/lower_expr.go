@@ -157,7 +157,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
 		b := n.Parent.AsBinaryExpression()
-		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
+		if l.isUndefinedType(b.Left) || l.isUndefinedType(b.Right) || (b.Left == n && (b.OperatorToken.Kind == ast.KindInstanceOfKeyword || b.OperatorToken.Kind == ast.KindBarBarToken || b.OperatorToken.Kind == ast.KindAmpersandAmpersandToken || b.OperatorToken.Kind == ast.KindQuestionQuestionToken)) {
 			return x
 		}
 	}
