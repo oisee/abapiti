@@ -41,7 +41,9 @@ def owner(file, line, message):
         if line in {118, 122}:
             return "owned: Object.entries"
         return "excluded: small builtins"
-    return "excluded: string match"
+    if file in {"abapdoc.ts", "change_if_to_case.ts", "global_class.ts", "inline_data_old_versions.ts", "msag_consistency.ts", "no_prefixes.ts"}:
+        return "excluded: string match"
+    return "unassigned: inspect diagnostic"
 
 
 def summarize(path):

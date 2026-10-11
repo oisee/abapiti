@@ -1275,6 +1275,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "endsWith":
 			return l.rtOp("string.endsWith", recv, boolT, one()), true
 		case "indexOf":
+			if len(args) == 2 {
+				return l.stringIndexOfFrom(n, recv, args), true
+			}
+			if len(args) != 1 {
+				l.diagf(n, "unsupported-call", "string.indexOf requires a search string and an optional numeric start position")
+				return nil, true
+			}
 			return l.rtOp("string.indexOf", recv, i32, one()), true
 		case "toLowerCase", "toLocaleLowerCase":
 			if name == "toLocaleLowerCase" && len(args) != 0 {

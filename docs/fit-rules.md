@@ -9,6 +9,8 @@ and the other assigned batches are excluded.
 
 Node on PATH: `export PATH="$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH"`.
 Build and generated-Go builds use `GOMAXPROCS=2 GOFLAGS=-p=2`.
+The baseline binary was built on the clean initial branch at `f834c16`, before
+any edits; reproduce that binary from an isolated checkout of this base SHA.
 
 ```sh
 go build -p 2 -o /tmp/fit-rules/main ./cmd/abapiti
@@ -125,3 +127,42 @@ initialized independent sink array. Generated Go agrees with Node for both a
 present and absent optional sink, ABAP emission is checked, and both producer
 and consumer fingerprints reject stale source. No producer body is replaced.
 Required vet/short tests pass and the same-path all,go default diff is empty.
+
+## Masked string overload
+
+The only two-argument string.indexOf site in the pinned closure is
+contains_tab.ts:55. Its callback is refused by origin/main's dense-receiver
+boundary, so the visible full-closure blocker group is **0 → 0** here. The
+one-argument lowering previously supplied a nil runtime argument for that
+overload; this was visible from source inspection, not counted as a full
+blocker reduction. No misc-roots source pin is copied into this branch.
+
+The numeric-position overload now evaluates receiver/search/position once in
+order, uses existing `number.index` for finite Number truncation/saturation,
+clamps the position to string length, and searches the UTF-16 suffix. A failed
+search keeps -1; an empty needle returns the clamped position. Omitted/undefined
+numeric positions use zero. Node/Go tests cover fractional and huge finite
+positions, empty needles, misses, Unicode code-unit offsets and operand side
+effects, plus ABAP emission. Arbitrary JS coercions and non-finite Numbers
+remain outside the existing typed Number boundary; the one-argument output
+stays unchanged. Required vet/short tests pass and the same-path all,go default
+diff is empty.
+
+## Final visible gap
+
+Rules except downport: **113 → 102** (66 → 60 root diagnostics,
+47 → 42 cascades). Full closure: **635 → 624** (355 → 349 roots,
+280 → 275 cascades). HIR verification errors: **394 → 386**.
+
+Of the 102 rules blockers left, 95 belong to excluded batches with the unchanged
+owner counts above. The remaining owned sites are indexed nominal config (4)
+and XML validation (3), with the required semantic models described above.
+No claim is made that the 11,060 mocha tests pass yet. No PR or main-branch push
+is part of this batch.
+
+Feature evidence directories under `/tmp/fit-rules`: `before`, `find-after`,
+`reference-after`, `entries-after`, `foreach-after`, `indexof-after`.
+Each stage uses `abaplint --full -o /tmp/fit-rules/<stage>` and
+`python3 tools/rules-gap.py /tmp/fit-rules/<stage>/evidence/registry-blocking.json`.
+Verification logs are `<feature>-gate.log`; default comparisons are
+`<feature>-default.diff` (the find comparison is `find-default-same-path.diff`).
