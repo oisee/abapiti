@@ -221,7 +221,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "map.set":
 		return []Type{t.Args[0], t.Args[1]}, t, true
 	case "map.get":
-		return []Type{t.Args[0]}, T(Optional, t.Args[1]), true
+		// get observes a value, not membership: stored undefined and a missing
+		// key both yield undefined. map.has keeps membership independent.
+		return []Type{t.Args[0]}, optionalOf(t.Args[1]), true
 	case "record.delete", "map.has", "set.has":
 		return []Type{t.Args[0]}, b, true
 	case "set.add":
