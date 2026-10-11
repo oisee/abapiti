@@ -31,7 +31,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays are Go-only until the ABAP sparse-array ABI exists.
-var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true, "json.stringifyConfig": true}
+var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true, "json.stringifyConfig": true, "object.get": true, "object.hasOwn": true, "object.has": true, "xml.validate": true}
 
 // RuntimeOps reports the complete catalogue partition in sorted order.
 func RuntimeOps() (supported, unsupported []string) {

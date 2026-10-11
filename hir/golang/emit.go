@@ -82,6 +82,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
+	validation := ""
+	if e.xmlValidation {
+		validation = xmlValidationRuntimeSource
+	}
 	jsonWriter := ""
 	if e.configJSON {
 		jsonWriter = configJSONRuntimeSource
@@ -93,7 +97,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesArrayPresence || e.usesArrayDeletion {
 		runtime = sparseRuntime(runtime)
 	}
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -119,6 +123,8 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	xmlValidation     bool
+	propertyLookups   map[string]bool
 	configJSON        bool
 	promiseUsed       bool
 	profile           bool

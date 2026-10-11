@@ -580,6 +580,10 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 		case hir.Array:
 			return &hir.Expr{Kind: hir.IndexGet, Node: l.node(lhs), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(arg)}
 		case hir.ClassRef:
+			if arg.Kind == hir.Lit && arg.Value == "__proto__" {
+				l.diagf(lhs, "unsupported-assignment", "prototype mutation is not lowered")
+				return nil
+			}
 			if arg.Type.Kind == hir.String {
 				return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(lhs), Op: "dynamic.put", Type: hir.T(hir.Void), X: l.coerce(recv, hir.T(hir.Dynamic)), Args: []*hir.Expr{arg, nil}}
 			}

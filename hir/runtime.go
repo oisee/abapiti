@@ -15,6 +15,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.repeat":             {String, 1, false},
 	"string.match":              {String, 1, false},
 	"array.matchIndex":          {Array, 0, false},
+	"xml.validate":              {String, 0, false},
 	"xml.parseSubset":           {String, 0, false},
 	"json.parseSubset":          {String, 0, false},
 	"string.compareRegistryKey": {String, 1, false},
@@ -71,6 +72,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
+	"object.get":          true, // nominal static property table -> Dynamic
+	"object.hasOwn":       true,
+	"object.has":          true,
 	"object.classOf":      true, // any object ref -> ClassValue
 	"classvalue.new":      true, // ClassValue -> a class or interface reference
 	"dynamic.of":          true, // any value -> Dynamic (tagged box)
@@ -97,7 +101,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
-	case "xml.parseSubset", "json.parseSubset", "dynamic.null":
+	case "xml.validate", "xml.parseSubset", "json.parseSubset", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.get":
 		return []Type{T(String)}, T(Dynamic), true

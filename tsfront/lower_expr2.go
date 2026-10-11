@@ -50,7 +50,7 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
 		}
 	case hir.ClassRef:
-		if arg.Kind != ast.KindStringLiteral {
+		if arg.Kind != ast.KindStringLiteral && !l.isRuleConfig(recv.Type.Name) {
 			key := l.expr(arg)
 			if key != nil && key.Type.Kind == hir.String {
 				return l.rtOp("dynamic.get", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), key)
@@ -64,6 +64,19 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
+		}
+		// Rule config classes have statically known own fields (including
+		// inherited fields). Keep heterogeneous values and absence tagged.
+		if l.isRuleConfig(recv.Type.Name) {
+			key := l.expr(arg)
+			if key == nil {
+				return nil
+			}
+			if key.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-expr", "config property key must be a string")
+				return nil
+			}
+			return l.rtOp("object.get", recv, hir.T(hir.Dynamic), key)
 		}
 	case hir.OrderedMap:
 		k := l.expr(arg)
@@ -884,4 +897,14 @@ func (l *lowerer) withLocal(name *ast.Node, repl *hir.Expr, f func() *hir.Expr) 
 	l.replacements = l.replacements[:len(l.replacements)-1]
 	l.scope = l.scope[:len(l.scope)-1]
 	return x
+}
+
+// This boundary does not admit arbitrary objects or prototype mutation.
+func (l *lowerer) isRuleConfig(name string) bool {
+	for c := l.classByName(name); c != nil; c = l.classByName(c.Super) {
+		if strings.HasSuffix(c.Name, ".BasicRuleConfig") {
+			return true
+		}
+	}
+	return false
 }

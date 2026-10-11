@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -12,7 +13,9 @@ var supportedOps = map[string]bool{
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
 	"string.toLowerCase":   true,
-	"object.classOf":       true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"object.get":           true, "object.hasOwn": true, "object.has": true,
+	"object.classOf": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
@@ -135,6 +138,16 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "float64(" + a + ")"
 	case "number.toString":
 		code = "numberString(" + a + ")"
+	case "object.get", "object.hasOwn", "object.has":
+		lookup := b.e.propertyLookup(x.X.Type)
+		code = lookup + "(" + a + "," + args[0] + "," + fmt.Sprint(x.Op == "object.get") + ")"
+		if x.Op == "object.get" {
+			code += ".value"
+		} else if x.Op == "object.hasOwn" {
+			code += ".own"
+		} else {
+			code += ".exists"
+		}
 	case "object.classOf":
 		code = "classOf(" + a + ")"
 	case "classvalue.new":
@@ -149,6 +162,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.e.materializer(x.Type) + "(" + a + ")"
 	case "clock.telemetry":
 		code = "telemetry()"
+	case "xml.validate":
+		b.e.xmlValidation = true
+		code = "validateXML(" + a + ")"
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
 	case "json.stringifyConfig":
