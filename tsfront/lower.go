@@ -346,6 +346,12 @@ type lowerer struct {
 	settlementSuspends map[*ast.Node]bool
 	settlementFiles    map[*ast.SourceFile]bool
 	settlementFailure  string
+	settledDispatches  map[settledDispatchKey]settledDispatchResult
+	settledProofs      map[settledProofKey]*settledProof
+	settledActive      *settledProofKey
+	settledShapes      []*ast.Node
+	settledWorldChecks []*ast.Node
+	settledWorldReady  bool
 	integerOptions     LowerOptions
 	integerExceptions  map[*ast.Node]IntegerException
 	floatSites         map[string]bool
