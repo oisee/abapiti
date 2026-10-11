@@ -49,3 +49,19 @@ body rewrite. Pruned/default lowering is unchanged.
 
 Focused Downport remains **1 passed, 297 trapped, 5 not-run, FAIL 0**; both earlier
 roots are gone. EditHelper now blocks 238 tests. No speculative pass credit.
+
+## Grouped-switch bindings in numeric range renaming
+
+DDIC's decimal cases lower one shared TS block into mutually exclusive HIR
+branches. The numeric pass renamed each copy of a checked binding separately,
+then rewrote *all* reads to the last copy's name, leaving earlier branches with
+unresolved locals. Each checked symbol now gets one name reused by its copies;
+different shadowing symbols remain distinct. The general grouped-switch
+Node/Go oracle reproduces the exact unresolved-local refusal before the fix,
+and tests all grouped entries plus an independent shadow binding. Existing
+parameter-shadow and alias-boundary regressions pass with Grace. ABAP refuses
+its independent Math.ceil operation explicitly.
+
+Focused basic_types + sql_value_conversion: **15 passed, 2 trapped, FAIL 0**;
+remaining traps are chai's unsupported `instanceOf` alias. Full syntax/rules
+DDIC gains are measured only in the final all-shards execution.
