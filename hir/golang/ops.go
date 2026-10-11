@@ -219,3 +219,6 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	return b.temp(x.Type, code)
 }
+
+// SupportsRuntimeOp reports explicit Go emitter coverage.
+func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

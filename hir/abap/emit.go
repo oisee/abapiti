@@ -55,6 +55,9 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); len(errors) > 0 {
+		return nil, nil, errors[0]
+	}
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
@@ -222,10 +225,11 @@ func (e *emitter) scanUsage() {
 		if x == nil {
 			return
 		}
+		e.walkStmt(x.Stmt, walk)
 		if x.Kind == hir.ClassOf || x.Type.Kind == hir.ClassValue {
 			need = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "object.classOf" || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
+		if x.Kind == hir.RuntimeOp && (strings.HasPrefix(x.Op, "object.") || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
 			need = true
 		}
 		if x.Kind == hir.InstanceOf && x.Y != nil {
@@ -1571,7 +1575,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
 	for i, v := range x.Args {
-		args = append(args, b.value(v, ps[i]))
+		typ := v.Type
+		if i < len(ps) {
+			typ = ps[i]
+		}
+		args = append(args, b.value(v, typ))
 	}
 	if x.Op == "i64.remainder2" {
 		b.line(n + " = " + a + " MOD 2.")
@@ -1832,6 +1840,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		return
+	case "xml.validate":
+		b.e.xmlValidationRuntime()
+		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
+		return
+	case "object.get", "object.hasOwn", "object.has":
+		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
+		b.line(n + " = " + b.e.propertyLookup(x.X.Type) + "=>" + method + "( p0 = " + a + " key = " + args[0] + " ).")
 		return
 	case "xml.parseSubset":
 		b.e.xmlSubsetRuntime()

@@ -1,0 +1,166 @@
+package abap
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/oisee/abapiti/hir"
+)
+
+// Tables are nominal, but dispatch on the actual descriptor preserves fields
+// introduced by subclasses. Constructor-initialized inherited fields are own.
+func (e *emitter) propertyLookup(t hir.Type) string {
+	id := "property.lookup." + t.Name
+	name := e.name(id)
+	if e.types[id] {
+		return name
+	}
+	e.types[id] = true
+	e.classvalueRuntime()
+	e.dynamicRuntime()
+	c := e.classBy(t.Name)
+	type entry struct {
+		key, owner string
+		field      *hir.Field
+		tag        string
+	}
+	entries := []entry{}
+	seen := map[string]bool{}
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for i := range base.Fields {
+			f := &base.Fields[i]
+			if f.Static || seen[f.Name] {
+				continue
+			}
+			seen[f.Name] = true
+			entries = append(entries, entry{key: f.Name, owner: base.Name, field: f})
+		}
+	}
+	add := func(key, owner, tag string) {
+		if !seen[key] {
+			seen[key] = true
+			entries = append(entries, entry{key: key, owner: owner, tag: tag})
+		}
+	}
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for _, m := range base.Methods {
+			if !m.Static {
+				add(m.Name, base.Name, "function")
+			}
+		}
+	}
+	add("constructor", c.Name, "constructor")
+	add("__proto__", c.Name, "prototype")
+	for _, key := range []string{"hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+		add(key, "Object.prototype", "function")
+	}
+	var s strings.Builder
+	line := func(f string, args ...any) { fmt.Fprintf(&s, f+"\n", args...) }
+	d := e.name("runtime.dynamic")
+	line("CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.", name)
+	for _, m := range []string{"get", "own", "has"} {
+		result := "abap_bool"
+		if m == "get" {
+			result = "REF TO " + d
+		}
+		line("CLASS-METHODS %s IMPORTING p0 TYPE REF TO %s key TYPE string RETURNING VALUE(result) TYPE %s.", m, e.name(c.Name), result)
+	}
+	line("PROTECTED SECTION.\nPRIVATE SECTION.\nCLASS-METHODS initialize.\nCLASS-DATA initialized TYPE abap_bool.")
+	line("TYPES: BEGIN OF entry, key TYPE string, slot TYPE i, own TYPE abap_bool, END OF entry.")
+	line("CLASS-DATA entries TYPE HASHED TABLE OF entry WITH UNIQUE KEY key.")
+	for i, p := range entries {
+		if p.field == nil {
+			line("CLASS-DATA token%d TYPE REF TO %s.", i, d)
+		}
+	}
+	line("ENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD initialize.\nDATA row TYPE entry.\nIF initialized = abap_true.\nRETURN.\nENDIF.\ninitialized = abap_true.", name)
+	for i, p := range entries {
+		own := "abap_false"
+		if p.field != nil {
+			own = "abap_true"
+		}
+		line("row-key = %s.\nrow-slot = %d.\nrow-own = %s.\nINSERT row INTO TABLE entries.", "`"+strings.ReplaceAll(p.key, "`", "``")+"`", i, own)
+		if p.field == nil {
+			line("CREATE OBJECT token%d.", i)
+			switch p.tag {
+			case "constructor":
+				line("token%d->tag = %s=>tag_class.\ntoken%d->cval = %s.", i, d, i, e.descriptorOf(c.Name))
+			case "function":
+				line("token%d = %s=>get( ).", i, e.propertyToken(p.owner, p.key, true))
+			default:
+				line("token%d = %s=>get( ).", i, e.propertyToken(p.owner, p.key, false))
+			}
+		}
+	}
+	line("ENDMETHOD.")
+	// Descriptor equality selects the actual class, including deeper descendants.
+	var derived []*hir.Class
+	var visit func(*hir.Class)
+	visit = func(base *hir.Class) {
+		for _, child := range e.p.Classes {
+			if child.Super == base.Name {
+				visit(child)
+				derived = append(derived, child)
+			}
+		}
+	}
+	visit(c)
+	for _, m := range []string{"get", "own", "has"} {
+		line("METHOD %s.\nDATA row TYPE entry.", m)
+		line("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\ninitialize( ).")
+		for i, child := range derived {
+			line("IF p0->%s( ) = %s.\nDATA child%d TYPE REF TO %s.\nchild%d ?= p0.", e.name("builtin.classOf"), e.descriptorOf(child.Name), i, e.name(child.Name), i)
+			line("result = %s=>%s( p0 = child%d key = key ).\nRETURN.\nENDIF.", e.propertyLookup(hir.Ref(child.Name)), m, i)
+		}
+		line("READ TABLE entries WITH TABLE KEY key = key INTO row.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
+		if m == "own" {
+			line("result = row-own.")
+		} else if m == "has" {
+			line("result = abap_true.")
+		} else {
+			line("CASE row-slot.")
+			b := &body{e: e, c: c, locals: map[string]string{}}
+			for i, p := range entries {
+				line("WHEN %d.", i)
+				if p.field == nil {
+					line("result = token%d.", i)
+					continue
+				}
+				b.code.Reset()
+				boxType := p.field.Type
+				if boxType.Kind == hir.I64 {
+					boxType = hir.T(hir.Number)
+				}
+				if boxType.Kind == hir.Optional && boxType.Args[0].Kind == hir.I64 {
+					boxType = hir.T(hir.Optional, hir.T(hir.Number))
+				}
+				b.boxDynamic("result", "p0->"+e.member(p.field.Name), boxType)
+				s.WriteString(b.code.String())
+			}
+			line("ENDCASE.")
+		}
+		line("ENDMETHOD.")
+	}
+	line("ENDCLASS.")
+	e.files[name+".clas.abap"] = s.String()
+	return name
+}
+
+// Shared prototype tokens retain identity across nominal lookup tables.
+func (e *emitter) propertyToken(owner, key string, function bool) string {
+	id := "property.token." + owner + "." + key
+	name := e.name(id)
+	if e.types[id] {
+		return name
+	}
+	e.types[id] = true
+	d := e.name("runtime.dynamic")
+	var init string
+	if function {
+		init = fmt.Sprintf("value->tag = %s=>tag_class.\nDATA parent TYPE REF TO %s.\nDATA names TYPE %s.\nCREATE OBJECT value->cval EXPORTING name = '' emitted = '' parent = parent static_names = names.\n", d, e.name("runtime.classvalue"), e.typ(hir.T(hir.Array, hir.T(hir.String))))
+	} else {
+		init = fmt.Sprintf("value->tag = %s=>tag_object.\n", d)
+	}
+	e.files[name+".clas.abap"] = fmt.Sprintf("CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\nCLASS-METHODS get RETURNING VALUE(result) TYPE REF TO %s.\nPROTECTED SECTION.\nPRIVATE SECTION.\nCLASS-DATA value TYPE REF TO %s.\nENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD get.\nIF value IS NOT BOUND.\nCREATE OBJECT value.\n%sENDIF.\nresult = value.\nENDMETHOD.\nENDCLASS.\n", name, d, d, name, init)
+	return name
+}

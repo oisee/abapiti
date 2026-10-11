@@ -247,6 +247,10 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		n.say("  %s", note)
 	}
 
+	if err := checkTargetRuntimeOps(lowering.Prog, targets); err != nil {
+		return err
+	}
+
 	// 4. ABAP
 	if targets["go"] {
 		files, sites, err := gohir.EmitWithSites(lowering.Prog)

@@ -4,22 +4,26 @@ work=${1:?usage: hir-unit.sh <osgo workdir>}
 root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
-rm -rf "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures"
-(cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^(TestFixtures|Test750Semantics)$' -count=1)
+rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures"
+(cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^(TestFixtures|Test750Semantics|TestRuntimeDebtFixtures)$' -count=1)
 (cd "$root" && ABAPITI_TEST_OUT="$gen/TestEmitSyntaxFeatures" go test ./tsfront -run '^TestEmitSyntaxFeatures$' -count=1)
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
+node "$root/.github/ci/hir-lint.mjs" "$gen/TestRuntimeDebtFixtures" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestEmitSyntaxFeatures" "$osg"
 node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
-  for suite in TestFixtures Test750Semantics TestEmitSyntaxFeatures; do
+  for suite in TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
+    if [[ "$suite" == TestRuntimeDebtFixtures ]]; then expected=475; fi
     classes="$gen/$suite"
     status=0
-    (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false npm run -s "$runtime:unit" -- "$classes" --json) > "$work/hir-$runtime-$suite.json" 2> "$work/hir-$runtime-$suite.err" || status=$?
+    runtime_args=()
+    if [[ "$runtime" == osgo ]]; then runtime_args=(--jobs 2); fi
+    (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS="${GOFLAGS:-} -p=2 -buildvcs=false" npm run -s "$runtime:unit" -- "$classes" --json "${runtime_args[@]}") > "$work/hir-$runtime-$suite.json" 2> "$work/hir-$runtime-$suite.err" || status=$?
     node -e '
       const fs = require("fs");
       const d = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));

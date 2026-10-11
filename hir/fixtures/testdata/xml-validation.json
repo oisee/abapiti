@@ -1,0 +1,3596 @@
+[
+  {
+    "input": "",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Start tag expected.",
+        "line": 1
+      }
+    }
+  },
+  {
+    "input": " ",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Start tag expected.",
+        "line": 1
+      }
+    }
+  },
+  {
+    "input": "x",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char 'x' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "< a/>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<1/>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '1' is an invalid name.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a><b>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Invalid '[    \"a\",    \"b\"]' found.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a></b>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'a' (opened in line 1, col 1) instead of closing tag 'b'.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'a' has not been opened.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a></a>",
+    "result": true
+  },
+  {
+    "input": "<a/><b/>",
+    "result": true
+  },
+  {
+    "input": "<a></a><b/>",
+    "result": true
+  },
+  {
+    "input": "<a></a><b></b>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Multiple possible root nodes found.",
+        "line": 1,
+        "col": 10
+      }
+    }
+  },
+  {
+    "input": "<a></a> x",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Extra text at the end",
+        "line": 1,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a/>",
+    "result": true
+  },
+  {
+    "input": "<a/ >",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '/' has no space in starting.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a/",
+    "result": true
+  },
+  {
+    "input": "<a><b/>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a>&oops</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>&#;</a>",
+    "result": true
+  },
+  {
+    "input": "<a>&#x;</a>",
+    "result": true
+  },
+  {
+    "input": "<a>&#z;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>&;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a a='v'/>",
+    "result": true
+  },
+  {
+    "input": "<a a='v' a='w'/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'a' is repeated.",
+        "line": 1,
+        "col": 10
+      }
+    }
+  },
+  {
+    "input": "<a a='v'b='w'/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'b' has no space in starting.",
+        "line": 1,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a a=bad/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'a' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a boolean/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute 'boolean' is not allowed.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a a='open>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a 1bad='x'/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '1bad' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a __proto__='x' toString='y'/>",
+    "result": true
+  },
+  {
+    "input": "<a a='>'/>",
+    "result": true
+  },
+  {
+    "input": "<a></a x='y'>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'a' can't have attributes or invalid starting.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a></a",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'a' doesn't have proper closing.",
+        "line": 1,
+        "col": 7
+      }
+    }
+  },
+  {
+    "input": "<?xml version='1.0'?><a/>",
+    "result": true
+  },
+  {
+    "input": "<a><?xml version='1.0'?></a>",
+    "result": true
+  },
+  {
+    "input": "<!--comment--><a/>",
+    "result": true
+  },
+  {
+    "input": "<!DOCTYPE a [<!ENTITY foo 'bar'>]><a>&foo;</a>",
+    "result": true
+  },
+  {
+    "input": "<a><![CDATA[<&text]]></a>",
+    "result": true
+  },
+  {
+    "input": "<a><!--open",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "﻿<a/>",
+    "result": true
+  },
+  {
+    "input": "<é 名='字'/>",
+    "result": true
+  },
+  {
+    "input": "<𐀀/>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '𐀀' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>😀\r\n<b></c></a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'b' (opened in line 2, col 1) instead of closing tag 'c'.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b>\n<c>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Invalid '[    \"a\",    \"b\",    \"c\"]' found.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a a='😀' a='again'/>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'a' is repeated.",
+        "line": 1,
+        "col": 11
+      }
+    }
+  },
+  {
+    "input": "<abapGit version='v1.0.0'><asx:abap xmlns:asx='http://www.sap.com/abapxml'><asx:values/></asx:abap></abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOCLASS>\n    <CLSNAME>ZCL_KLAUS</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Description</DESCRIPT>\n    <STATE>1</STATE>\n    <CLSCCINCL>X</CLSCCINCL>\n    <FIXPT>X</FIXPT>\n    <UNICODE>X</UNICODE>\n   </VSEOCLASS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n  <abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n   <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n    <asx:values>\n     <VSEOCLASS>\n      <CLSNAME>ZCL_LARS</CLSNAME>\n      <LANGU>E</LANGU>\n      <DESCRIPT>Description</DESCRIPT>\n      <STATE>1</STATE>\n      <CLSCCINCL>X</CLSCCINCL>\n      <FIXPT>X</FIXPT>\n      <UNICODE>X</UNICODE>\n     </VSEOCLASS>\n    </asx:values>\n   </asx:abap>\n  </abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n  <abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n   <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n    <asx:values>\n     <VSEOCLASS>\n      <CLSNAME>ZCL_LARS</CLSNAME>\n      <LANGU>E</LANGU>\n      <DESCRIPT>Description</DESCRIPT>\n      <STATE>1</STATE>\n      <CLSCCINCL>X</CLSCCINCL>\n      <FIXPT>X</FIXPT>\n      <UNICODE>X</UNICODE>\n     </VSEOCLASS>\n    </asx:values>\n   </asx:abap>\n  </abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n  <abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n   <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n    <asx:values>\n     <VSEOCLASS>\n      <CLSNAME>ZCL_LARS</CLSNAME>\n      <LANGU>E</LANGU>\n      <DESCRIPT>abapGit - ENHO - Enhancement Implementation of Function Groups</DESCRIPT>\n      <STATE>1</STATE>\n      <CLSCCINCL>X</CLSCCINCL>\n      <FIXPT>X</FIXPT>\n      <UNICODE>X</UNICODE>\n     </VSEOCLASS>\n    </asx:values>\n   </asx:abap>\n  </abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_INTF\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOINTERF>\n    <CLSNAME>ZIF_ABAPGIT_XML_INPUT</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Interface for XML INPUT</DESCRIPT>\n    <EXPOSURE>2</EXPOSURE>\n    <STATE>1</STATE>\n    <UNICODE>X</UNICODE>\n   </VSEOINTERF>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_INTF\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOINTERF>\n    <CLSNAME>/FOO/ZIF</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Interface for XML INPUT</DESCRIPT>\n    <EXPOSURE>2</EXPOSURE>\n    <STATE>1</STATE>\n    <UNICODE>X</UNICODE>\n   </VSEOINTERF>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TABL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD02V>\n    <TABNAME>ZTABL</TABNAME>\n    <TABCLASS>INTTAB</TABCLASS>\n   </DD02V>\n   <DD03P_TABLE>\n    <DD03P>\n     <FIELDNAME>FIELD</FIELDNAME>\n     <DATATYPE>CHAR</DATATYPE>\n     <LENG>000010</LENG>\n    </DD03P>\n   </DD03P_TABLE>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <HEADLEN>10</HEADLEN>\n    <SCRLEN1>05</SCRLEN1>\n    <SCRLEN2>10</SCRLEN2>\n    <SCRLEN3>20</SCRLEN3>\n    <DDTEXT>Short description</DDTEXT>\n    <REPTEXT>Heading</REPTEXT>\n    <SCRTEXT_S>Short</SCRTEXT_S>\n    <SCRTEXT_M>Medium txt</SCRTEXT_M>\n    <SCRTEXT_L>Long label text here</SCRTEXT_L>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DDTEXT>This description is way too long and definitely exceeds sixty characters total</DDTEXT>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DDTEXT>123456789012345678901234567890123456789012345678901234567890</DDTEXT>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN1>05</SCRLEN1>\n    <SCRTEXT_S>TooLong</SCRTEXT_S>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DDTEXT>This description is way too long and definitely exceeds sixty characters total</DDTEXT>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DDTEXT>This description is way too long and definitely exceeds sixty characters total</DDTEXT>\n    <SCRLEN1>05</SCRLEN1>\n    <SCRTEXT_S>TooLong</SCRTEXT_S>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN2>10</SCRLEN2>\n    <SCRTEXT_M>Medium text too long</SCRTEXT_M>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN3>10</SCRLEN3>\n    <SCRTEXT_L>Long label text exceeding limit</SCRTEXT_L>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <HEADLEN>05</HEADLEN>\n    <REPTEXT>Heading too long</REPTEXT>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <HEADLEN>03</HEADLEN>\n    <SCRLEN1>03</SCRLEN1>\n    <REPTEXT>Heading too long</REPTEXT>\n    <SCRTEXT_S>Short text too long</SCRTEXT_S>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <SCRTEXT_S>Short</SCRTEXT_S>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <SCRTEXT_S>Short</SCRTEXT_S>\n    <SCRTEXT_M>Medium</SCRTEXT_M>\n    <SCRTEXT_L>Long</SCRTEXT_L>\n    <REPTEXT>Heading</REPTEXT>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000010</LENG>\n   </DD04V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN1>10</SCRLEN1>\n    <SCRLEN2>10</SCRLEN2>\n    <SCRLEN3>40</SCRLEN3>\n    <HEADLEN>55</HEADLEN>\n    <DDTEXT>Text</DDTEXT>\n    <SCRTEXT_S>Short</SCRTEXT_S>\n    <SCRTEXT_M>Medium</SCRTEXT_M>\n    <SCRTEXT_L>Long</SCRTEXT_L>\n   </DD04V>\n   <DD04_TEXTS>\n    <item>\n     <DDLANGUAGE>F</DDLANGUAGE>\n     <DDTEXT>Text</DDTEXT>\n     <SCRTEXT_S>Short</SCRTEXT_S>\n     <SCRTEXT_M>medium text too long</SCRTEXT_M>\n     <SCRTEXT_L>Long</SCRTEXT_L>\n    </item>\n   </DD04_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN1>05</SCRLEN1>\n    <SCRLEN2>20</SCRLEN2>\n    <SCRLEN3>40</SCRLEN3>\n    <HEADLEN>55</HEADLEN>\n    <DDTEXT>Text</DDTEXT>\n    <SCRTEXT_S>Short</SCRTEXT_S>\n    <SCRTEXT_M>Medium</SCRTEXT_M>\n    <SCRTEXT_L>Long</SCRTEXT_L>\n   </DD04V>\n   <DD04_TEXTS>\n    <item>\n     <DDLANGUAGE>I</DDLANGUAGE>\n     <DDTEXT>Text</DDTEXT>\n     <SCRTEXT_S>toolong</SCRTEXT_S>\n     <SCRTEXT_M>Medium</SCRTEXT_M>\n     <SCRTEXT_L>Long</SCRTEXT_L>\n    </item>\n   </DD04_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN1>05</SCRLEN1>\n    <SCRLEN2>10</SCRLEN2>\n    <SCRLEN3>40</SCRLEN3>\n    <HEADLEN>55</HEADLEN>\n    <DDTEXT>Text</DDTEXT>\n   </DD04V>\n   <DD04_TEXTS>\n    <item>\n     <DDLANGUAGE>F</DDLANGUAGE>\n     <SCRTEXT_M>medium text too long</SCRTEXT_M>\n    </item>\n    <item>\n     <DDLANGUAGE>I</DDLANGUAGE>\n     <SCRTEXT_S>toolong</SCRTEXT_S>\n    </item>\n   </DD04_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DTEL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD04V>\n    <ROLLNAME>ZDTEL</ROLLNAME>\n    <DTELMASTER>E</DTELMASTER>\n    <SCRLEN1>10</SCRLEN1>\n    <SCRLEN2>20</SCRLEN2>\n    <SCRLEN3>40</SCRLEN3>\n    <HEADLEN>55</HEADLEN>\n    <DDTEXT>Text</DDTEXT>\n   </DD04V>\n   <DD04_TEXTS>\n    <item>\n     <DDLANGUAGE>D</DDLANGUAGE>\n     <SCRTEXT_S>Short val</SCRTEXT_S>\n     <SCRTEXT_M>Medium text value</SCRTEXT_M>\n     <SCRTEXT_L>Long label text value</SCRTEXT_L>\n    </item>\n   </DD04_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>Short description</TTEXT>\n   </TSTCT>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>123456789012345678901234567890123456</TTEXT>\n   </TSTCT>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>This description is way too long and exceeds 36 chars</TTEXT>\n   </TSTCT>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>Short description</TTEXT>\n   </TSTCT>\n   <I18N_TPOOL>\n    <TSTCT>\n     <SPRSL>F</SPRSL>\n     <TTEXT>Extra long translation text that exceeds 36 characters</TTEXT>\n    </TSTCT>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>Short description</TTEXT>\n   </TSTCT>\n   <I18N_TPOOL>\n    <TSTCT>\n     <SPRSL>F</SPRSL>\n     <TTEXT>Extra long translation text that exceeds 36 characters</TTEXT>\n    </TSTCT>\n    <TSTCT>\n     <SPRSL>D</SPRSL>\n     <TTEXT>Sehr lange Beschreibung die 36 Zeichen überschreitet</TTEXT>\n    </TSTCT>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TRAN\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <TSTC>\n    <TCODE>ZTRAN</TCODE>\n    <PGMNA>ZTRAN</PGMNA>\n   </TSTC>\n   <TSTCT>\n    <SPRSL>E</SPRSL>\n    <TCODE>ZTRAN</TCODE>\n    <TTEXT>Short description</TTEXT>\n   </TSTCT>\n   <I18N_TPOOL>\n    <TSTCT>\n     <SPRSL>D</SPRSL>\n     <TTEXT>Kurze Beschreibung</TTEXT>\n    </TSTCT>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_MSAG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <T100A>\n    <ARBGB>ZMSAG</ARBGB>\n    <MASTERLANG>E</MASTERLANG>\n    <STEXT>Message class</STEXT>\n   </T100A>\n   <T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>001</MSGNR>\n     <TEXT>This is a short message</TEXT>\n    </T100>\n   </T100>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_MSAG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <T100A>\n    <ARBGB>ZMSAG</ARBGB>\n    <MASTERLANG>E</MASTERLANG>\n    <STEXT>Message class</STEXT>\n   </T100A>\n   <T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>001</MSGNR>\n     <TEXT>This message text is way too long and definitively exceeds the seventy-three char limit</TEXT>\n    </T100>\n   </T100>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_MSAG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <T100A>\n    <ARBGB>ZMSAG</ARBGB>\n    <MASTERLANG>E</MASTERLANG>\n    <STEXT>Message class</STEXT>\n   </T100A>\n   <T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>001</MSGNR>\n     <TEXT>Short message</TEXT>\n    </T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>002</MSGNR>\n     <TEXT>This message text is way too long and definitively exceeds the seventy-three char limit</TEXT>\n    </T100>\n   </T100>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_MSAG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <T100A>\n    <ARBGB>ZMSAG</ARBGB>\n    <MASTERLANG>E</MASTERLANG>\n    <STEXT>Message class</STEXT>\n   </T100A>\n   <T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>001</MSGNR>\n     <TEXT>Short message</TEXT>\n    </T100>\n   </T100>\n   <T100_TEXTS>\n    <item>\n     <SPRSL>F</SPRSL>\n     <MSGNR>001</MSGNR>\n     <TEXT>This translated text is way too long and definitively exceeds the seventy-three char limit</TEXT>\n    </item>\n   </T100_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_MSAG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <T100A>\n    <ARBGB>ZMSAG</ARBGB>\n    <MASTERLANG>E</MASTERLANG>\n    <STEXT>Message class</STEXT>\n   </T100A>\n   <T100>\n    <T100>\n     <SPRSL>E</SPRSL>\n     <ARBGB>ZMSAG</ARBGB>\n     <MSGNR>001</MSGNR>\n     <TEXT>Short message</TEXT>\n    </T100>\n   </T100>\n   <T100_TEXTS>\n    <item>\n     <SPRSL>D</SPRSL>\n     <MSGNR>001</MSGNR>\n     <TEXT>Kurze Nachricht</TEXT>\n    </item>\n   </T100_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOCLASS>\n    <CLSNAME>ZCL_TEST</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Test class</DESCRIPT>\n    <STATE>1</STATE>\n    <CLSCCINCL>X</CLSCCINCL>\n    <FIXPT>X</FIXPT>\n    <UNICODE>X</UNICODE>\n   </VSEOCLASS>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>50</LENGTH>\n    </item>\n   </TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOCLASS>\n    <CLSNAME>ZCL_TEST</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Test class</DESCRIPT>\n    <STATE>1</STATE>\n    <CLSCCINCL>X</CLSCCINCL>\n    <FIXPT>X</FIXPT>\n    <UNICODE>X</UNICODE>\n   </VSEOCLASS>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>This text is longer than ten chars</ENTRY>\n     <LENGTH>10</LENGTH>\n    </item>\n   </TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOCLASS>\n    <CLSNAME>ZCL_TEST</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Test class</DESCRIPT>\n    <STATE>1</STATE>\n    <CLSCCINCL>X</CLSCCINCL>\n    <FIXPT>X</FIXPT>\n    <UNICODE>X</UNICODE>\n   </VSEOCLASS>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>20</LENGTH>\n    </item>\n   </TPOOL>\n   <I18N_TPOOL>\n    <item>\n     <LANGUAGE>F</LANGUAGE>\n     <TEXTPOOL>\n      <item>\n       <ID>I</ID>\n       <KEY>001</KEY>\n       <ENTRY>Traduction beaucoup trop longue</ENTRY>\n       <LENGTH>20</LENGTH>\n      </item>\n     </TEXTPOOL>\n    </item>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_CLAS\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <VSEOCLASS>\n    <CLSNAME>ZCL_TEST</CLSNAME>\n    <LANGU>E</LANGU>\n    <DESCRIPT>Test class</DESCRIPT>\n    <STATE>1</STATE>\n    <CLSCCINCL>X</CLSCCINCL>\n    <FIXPT>X</FIXPT>\n    <UNICODE>X</UNICODE>\n   </VSEOCLASS>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>50</LENGTH>\n    </item>\n   </TPOOL>\n   <I18N_TPOOL>\n    <item>\n     <LANGUAGE>D</LANGUAGE>\n     <TEXTPOOL>\n      <item>\n       <ID>I</ID>\n       <KEY>001</KEY>\n       <ENTRY>Kurzer Text</ENTRY>\n       <LENGTH>50</LENGTH>\n      </item>\n     </TEXTPOOL>\n    </item>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_PROG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <PROGDIR>\n    <NAME>ZPROG</NAME>\n    <SUBC>1</SUBC>\n    <FIXPT>X</FIXPT>\n    <UCCHECK>X</UCCHECK>\n   </PROGDIR>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>50</LENGTH>\n    </item>\n    <item>\n     <ID>S</ID>\n     <KEY>P_PARAM</KEY>\n     <ENTRY>Parameter</ENTRY>\n     <LENGTH>20</LENGTH>\n    </item>\n   </TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_PROG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <PROGDIR>\n    <NAME>ZPROG</NAME>\n    <SUBC>1</SUBC>\n    <FIXPT>X</FIXPT>\n    <UCCHECK>X</UCCHECK>\n   </PROGDIR>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>This text is longer than ten chars</ENTRY>\n     <LENGTH>10</LENGTH>\n    </item>\n   </TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_PROG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <PROGDIR>\n    <NAME>ZPROG</NAME>\n    <SUBC>1</SUBC>\n    <FIXPT>X</FIXPT>\n    <UCCHECK>X</UCCHECK>\n   </PROGDIR>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>20</LENGTH>\n    </item>\n   </TPOOL>\n   <I18N_TPOOL>\n    <item>\n     <LANGUAGE>F</LANGUAGE>\n     <TEXTPOOL>\n      <item>\n       <ID>I</ID>\n       <KEY>001</KEY>\n       <ENTRY>Translated text that is way too long</ENTRY>\n       <LENGTH>20</LENGTH>\n      </item>\n     </TEXTPOOL>\n    </item>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_PROG\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <PROGDIR>\n    <NAME>ZPROG</NAME>\n    <SUBC>1</SUBC>\n    <FIXPT>X</FIXPT>\n    <UCCHECK>X</UCCHECK>\n   </PROGDIR>\n   <TPOOL>\n    <item>\n     <ID>I</ID>\n     <KEY>001</KEY>\n     <ENTRY>Short text</ENTRY>\n     <LENGTH>50</LENGTH>\n    </item>\n   </TPOOL>\n   <I18N_TPOOL>\n    <item>\n     <LANGUAGE>D</LANGUAGE>\n     <TEXTPOOL>\n      <item>\n       <ID>I</ID>\n       <KEY>001</KEY>\n       <ENTRY>Kurzer Text</ENTRY>\n       <LENGTH>50</LENGTH>\n      </item>\n     </TEXTPOOL>\n    </item>\n   </I18N_TPOOL>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>Short description</DDTEXT>\n   </DD01V>\n   <DD07V_TAB>\n    <DD07V>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>E</DDLANGUAGE>\n     <DDTEXT>Not Checked</DDTEXT>\n    </DD07V>\n   </DD07V_TAB>\n   <DD07_TEXTS>\n    <item>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>D</DDLANGUAGE>\n     <DDTEXT>Nicht geprüft</DDTEXT>\n    </item>\n   </DD07_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>This description is way too long and definitely exceeds sixty characters total</DDTEXT>\n   </DD01V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>123456789012345678901234567890123456789012345678901234567890</DDTEXT>\n   </DD01V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>Short description</DDTEXT>\n   </DD01V>\n   <DD07V_TAB>\n    <DD07V>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>E</DDLANGUAGE>\n     <DDTEXT>This fixed value description is way too long and exceeds the sixty character limit</DDTEXT>\n    </DD07V>\n   </DD07V_TAB>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>Short description</DDTEXT>\n   </DD01V>\n   <DD07V_TAB>\n    <DD07V>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>E</DDLANGUAGE>\n     <DDTEXT>Not Checked</DDTEXT>\n    </DD07V>\n   </DD07V_TAB>\n   <DD07_TEXTS>\n    <item>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>F</DDLANGUAGE>\n     <DDTEXT>Ce texte de traduction est beaucoup trop long et dépasse la limite de soixante caractères</DDTEXT>\n    </item>\n   </DD07_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>This description is way too long and definitely exceeds sixty characters total</DDTEXT>\n   </DD01V>\n   <DD07V_TAB>\n    <DD07V>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>E</DDLANGUAGE>\n     <DDTEXT>This fixed value description is way too long and exceeds the sixty character limit</DDTEXT>\n    </DD07V>\n   </DD07V_TAB>\n   <DD07_TEXTS>\n    <item>\n     <VALPOS>0001</VALPOS>\n     <DDLANGUAGE>D</DDLANGUAGE>\n     <DDTEXT>Dieser Übersetzungstext ist viel zu lang und überschreitet das Limit von sechzig Zeichen</DDTEXT>\n    </item>\n   </DD07_TEXTS>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_DOMA\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD01V>\n    <DOMNAME>ZDOMA</DOMNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <DATATYPE>CHAR</DATATYPE>\n    <LENG>000001</LENG>\n    <DDTEXT>Short description</DDTEXT>\n   </DD01V>\n  </asx:values>\n </asx:abap>\n</abapGit>",
+    "result": true
+  },
+  {
+    "input": "parser error",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char 'p' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char 'a' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<<a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "><a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '>' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "'<a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char ''' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "&<a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": " <a x=\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "=<a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '=' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "< x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<<a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<>a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<'a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<&a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "< a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<=a x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<ax=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'ax=\"1\"' is an invalid name.",
+        "line": 1,
+        "col": 8
+      }
+    }
+  },
+  {
+    "input": "<a< x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a<' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a> x=\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a' x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a'' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a& x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a&' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a  x=\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a= x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a=' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a =\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '\"1\"' has no space in starting.",
+        "line": 1,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a <x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '<x' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a >x=\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a 'x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a &x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '&x' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a  x=\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a =x=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' has no space in starting.",
+        "line": 1,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a x\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute 'x\"1\"' is not allowed.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x<=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x<' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x>=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute 'x' is not allowed.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x'=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a x&=\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x&' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x =\"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x==\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x=1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a x=<\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x=>\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x='\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a x=&\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x= \"1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x==\"1\"><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'x' is without value.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a x=\"\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"<1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\">1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"'1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"&1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\" 1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"=1\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1<\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1>\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1'\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1&\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1 \"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1=\"><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"<b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '<b' has no space in starting.",
+        "line": 1,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"<><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '<' has no space in starting.",
+        "line": 1,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\">><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"'><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'a' have open quote.",
+        "line": 1,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"&><b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '&' has no space in starting.",
+        "line": 1,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\" ><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"=><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\">b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><<b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<b' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\">><b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\">'<b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\">&<b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 10
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"> <b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\">=<b/>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"></>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 12
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><<b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<b' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><>b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 11
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><'b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''b' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><&b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&b' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\">< b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 11
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><=b/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=b' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'b' (opened in line 1, col 10) instead of closing tag 'a'.",
+        "line": 1,
+        "col": 22
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b</>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b<' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b>/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'b' (opened in line 1, col 10) instead of closing tag 'a'.",
+        "line": 1,
+        "col": 24
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b'/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b'' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b&/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b&' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b />text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b=/>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b=' is an invalid name.",
+        "line": 1,
+        "col": 13
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b/text&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 25
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/<>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b/<' is an invalid name.",
+        "line": 1,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/'>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b/'' is an invalid name.",
+        "line": 1,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/&>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b/&' is an invalid name.",
+        "line": 1,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/ >text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '/' has no space in starting.",
+        "line": 1,
+        "col": 12
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/=>text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b/=' is an invalid name.",
+        "line": 1,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>ext&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/><text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'text&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>>text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>'text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>&text&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/> text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>=text&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>txt&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>t<ext&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'ext&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>t>ext&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>t'ext&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>t&ext&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 15
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>t ext&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>t=ext&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tet&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>te<xt&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'xt&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>te>xt&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>te'xt&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>te&xt&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 16
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>te xt&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>te=xt&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex<t&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 't&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex>t&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex't&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex&t&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 17
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex t&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>tex=t&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>textamp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text<&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&amp;</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text>&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text'&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text &amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text=&amp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&mp;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&<amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&>amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&'amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&&amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text& amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&=amp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&ap;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a<mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a>mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a'mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a&mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&a=mp;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am;</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am<p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am>p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am'p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am&p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&am=p;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp<;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp>;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp';</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp&;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp ;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp=;</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 18
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;></a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;'</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;&</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 23
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp; </a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;=</a>",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<a>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Invalid '[    \"a\",    \"a\"]' found.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<>/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 24
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<'/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''/a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<&/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&/a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;< /a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 24
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;<=/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=/a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 25
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</<a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</>a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 25
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</'a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</&a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</ a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 25
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</=a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=a' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'a' doesn't have proper closing.",
+        "line": 1,
+        "col": 26
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a<>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a<' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a>>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Extra text at the end",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a'>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a'' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a&>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a&' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a >",
+    "result": true
+  },
+  {
+    "input": "<a x=\"1\"><b/>text&amp;</a=>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a=' is an invalid name.",
+        "line": 1,
+        "col": 27
+      }
+    }
+  },
+  {
+    "input": "a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char 'a' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<<a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "><a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '>' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "'<a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char ''' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "&<a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": " <a>\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "=<a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '=' is not expected.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<<a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<>a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<'a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<&a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "< a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<=a>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=a' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute '<b' is not allowed.",
+        "line": 2,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a<>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a<' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>>\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a'>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a'' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a&>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a&' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a >\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a=>\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a=' is an invalid name.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a><\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>>\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>'\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>&\r\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a> \r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>=\r\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r<\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 1,
+        "col": 6
+      }
+    }
+  },
+  {
+    "input": "<a>\r>\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r'\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r&\n<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 1,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r \n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r=\n<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\nb y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'a' (opened in line 1, col 1) instead of closing tag 'b'.",
+        "line": 2,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<b' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n><b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n'<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n&<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 2,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n <b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n=<b y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n< y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<<b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<b' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<>b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<'b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''b' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<&b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&b' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n< b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<=b y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=b' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<by='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'by='v'' is an invalid name.",
+        "line": 2,
+        "col": 8
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b< y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b<' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b> y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b' y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b'' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b& y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b&' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b  y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b= y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b=' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b ='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute ''v'' has no space in starting.",
+        "line": 2,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b <y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '<y' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b >y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b 'y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b &y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '&y' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b  y='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b =y='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' has no space in starting.",
+        "line": 2,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y'v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute 'y'v'' is not allowed.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y<='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y<' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y>='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "boolean attribute 'y' is not allowed.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y'='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y&='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y&' is an invalid name.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y ='v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y=='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' is without value.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=<'v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' is without value.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=>'v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' is without value.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=''v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=&'v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' is without value.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y= 'v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y=='v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute 'y' is without value.",
+        "line": 2,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y=''></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='<v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='>v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y=''v'></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='&v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y=' v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='=v'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v<'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v>'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v''></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v&'></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v '></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v='></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'</b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '</b' has no space in starting.",
+        "line": 2,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'<></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '<' has no space in starting.",
+        "line": 2,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'>></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v''></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attributes for 'b' have open quote.",
+        "line": 2,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'&></b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidAttr",
+        "msg": "Attribute '&' has no space in starting.",
+        "line": 2,
+        "col": 9
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v' ></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'=></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'>/b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'b' (opened in line 2, col 1) instead of closing tag 'a'.",
+        "line": 3,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><</b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'>></b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'>'</b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'>&</b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 2,
+        "col": 10
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'> </b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'>=</b>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'><b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Expected closing tag 'b' (opened in line 2, col 10) instead of closing tag 'a'.",
+        "line": 3,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><</b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><>/b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 11
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><'/b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''/b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><&/b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&/b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'>< /b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 11
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'><=/b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=/b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 12
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></<b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></>b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 12
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></'b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></&b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></ b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 12
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></=b>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=b' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'b' can't have attributes or invalid starting.",
+        "line": 2,
+        "col": 10
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b<>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b<' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b'>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b'' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b&>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b&' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b >\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b=>\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'b=' is an invalid name.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b></a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b><\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 2,
+        "col": 15
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>>\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>'\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>&\n</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 2,
+        "col": 14
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b> \n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>=\n</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Unclosed tag 'a'.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n></a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n'</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n&</a>",
+    "result": {
+      "err": {
+        "code": "InvalidChar",
+        "msg": "char '&' is not expected.",
+        "line": 3,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n </a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n=</a>",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<a>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Invalid '[    \"a\",    \"a\"]' found.",
+        "line": 1,
+        "col": 1
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<</a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '</a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<>/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 3,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<'/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''/a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<&/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&/a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n< /a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 3,
+        "col": 2
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n<=/a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=/a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 3,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</<a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '<a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</>a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 3,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</'a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag ''a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</&a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '&a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</ a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Invalid space after '<'.",
+        "line": 3,
+        "col": 3
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</=a>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag '=a' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Closing tag 'a' doesn't have proper closing.",
+        "line": 3,
+        "col": 4
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a<>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a<' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a>>",
+    "result": {
+      "err": {
+        "code": "InvalidXml",
+        "msg": "Extra text at the end",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a'>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a'' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a&>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a&' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a >",
+    "result": true
+  },
+  {
+    "input": "<a>\r\n<b y='v'></b>\n</a=>",
+    "result": {
+      "err": {
+        "code": "InvalidTag",
+        "msg": "Tag 'a=' is an invalid name.",
+        "line": 3,
+        "col": 5
+      }
+    }
+  }
+]

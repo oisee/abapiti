@@ -34,9 +34,9 @@ execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),gen,osg],{stdio:"inher
 execFileSync("node",[join(root,".github/ci/hir-lint.mjs"),fix2,osg],{stdio:"inherit"});
 async function run(runtime, dir, label, pass, tests = 1) {
   const result = await new Promise((resolve, reject) => {
-    const child = spawn("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json"],{
+    const child = spawn("npm",["run","-s",`${runtime}:unit`,"--",dir,"--json",...(runtime === "osgo" ? ["--jobs","2"] : [])],{
       cwd:osg,
-      env:{...process.env,GOTOOLCHAIN:"go1.26.0",GOFLAGS:"-buildvcs=false"}
+      env:{...process.env,GOTOOLCHAIN:"go1.26.0",GOFLAGS:`${process.env.GOFLAGS || ""} -p=2 -buildvcs=false`}
     });
     let stdout = "";
     let stderr = "";
