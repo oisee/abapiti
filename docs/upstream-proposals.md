@@ -1,6 +1,6 @@
 # Proposals for abaplint upstream
 
-A living list of small changes to abaplint's TypeScript that would let it map more directly onto abapiti's typed IR (HIR), translate to simpler ABAP, and run faster on every host (Node too). Each entry says what to change, why, and what we observed. Nothing here is required: abapiti compiles abaplint as it is. These are suggestions for Lars. When we sum up, they go to him as one separate discussion on his morph2 PR ([#4402](https://github.com/abaplint/abaplint/pull/4402)), only with Alice's consent.
+A living list of small changes to abaplint's TypeScript that would let it map more directly onto abapiti's typed IR (HIR), translate to simpler ABAP, and run faster on every host (Node too). Each entry says what to change, why, and what we observed. Nothing here is required: abapiti compiles abaplint as it is. These are suggestions for Lars; the first batch went to him on 2026-10-11 as one comment on his morph2 PR ([#4402](https://github.com/abaplint/abaplint/pull/4402#issuecomment-6109734632)).
 
 Status: **idea** (here only), **issue** (filed, link), **PR** (draft PR, link), **done** (merged upstream).
 
@@ -8,8 +8,8 @@ Add new entries at the end and keep them short. Builders and reviewers working o
 
 ## Performance
 
-### P1. `splice(1)` copies the tail of the array on every call — **issue** [#4399](https://github.com/abaplint/abaplint/issues/4399)
-Structures matching shifts the token array with `splice`, which is O(n) per call, so the structures stage is quadratic: on zabapgit it is ~10 s of Node's 13 s. abapiti hands the table over instead (runtime fix in v0.2), which makes it linear. Upstream, an index into the array (or a reversed stack with `pop`) gives the same result on Node. A prototype exists; a draft PR waits for consent.
+### P1. `splice(1)` copies the tail of the array on every call — **done** ([#4399](https://github.com/abaplint/abaplint/issues/4399), merged upstream as [#4400](https://github.com/abaplint/abaplint/pull/4400))
+Structure matching shifted the token array with `splice`, which made that stage quadratic. Fixed upstream; abapiti's runtime hand-over (v0.2) is no longer needed once the pin moves past it.
 
 ### P2. Combinators allocate a fresh result array per call
 `Sequence.run`, `Expression.run`, `Token.run`, `Word.run` etc. start with `const result: Result[] = []` and `Sequence` wraps its input as `[input]`. A site profile of zabapgit shows ~49 M allocations, mostly these arrays. Most calls match nothing and return the empty array. Returning a shared frozen empty array when nothing matched, and passing a single input without wrapping it, would cut allocations a lot on every host, Node included. Needs care: callers must not mutate the returned array (true today as far as we checked).
@@ -26,7 +26,7 @@ Structures matching shifts the token array with `splice`, which is O(n) per call
 `InlineData.stripDerivedFromConstant` removes one field with object rest. That is fine JavaScript, but it is the construct where abapiti had a silent miscompile (now fixed). Constructing the new type data explicitly, e.g. `{...data, derivedFromConstant: false}` or a small `withoutDerivedFromConstant()` helper, states the intent and maps 1:1 onto a typed copy.
 
 ### S4. Rules build `RegExp` objects from configuration strings
-23 rules call `new RegExp(…)` on strings from the rule configuration (naming patterns etc.). Dynamic regular expressions can't be translated ahead of time; abapiti has to translate them at runtime and refuse the parts that ABAP regex can't express. Compiling each configured pattern once in `setConfig` and keeping it would at least keep the dynamic part in one place per rule and make it cheaper on Node.
+14 rules build `RegExp` from their configured patterns on every check (23 `new RegExp(` sites in 18 rule files; some use the global errorNamespace or no configuration). Dynamic regular expressions can't be translated ahead of time; abapiti has to translate them at runtime and refuse the parts that ABAP regex can't express. Compiling each configured pattern once in `setConfig` and keeping it would at least keep the dynamic part in one place per rule and make it cheaper on Node.
 
 ## Correctness-neutral style (smaller and clearer generated code)
 
