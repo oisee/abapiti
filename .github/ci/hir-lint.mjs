@@ -3,7 +3,7 @@ import {createRequire} from "node:module";
 import {readFileSync, readdirSync} from "node:fs";
 import {join, resolve} from "node:path";
 const [dir, osg, mode] = process.argv.slice(2);
-if (mode && mode !== "--feature-suite") throw new Error(`Unknown HIR lint mode: ${mode}`);
+if (mode && mode !== "--fixture") throw new Error(`Unknown HIR lint mode: ${mode}`);
 const require = createRequire(join(resolve(osg || "."), "package.json"));
 const abaplint = require("@abaplint/core");
 const config = abaplint.Config.getDefault();
@@ -28,7 +28,7 @@ for (const n of files) {
   const code = src.replace(/^\s*" Math\.(?:min|max): (?:signed-zero tie cannot be resolved portably for ABAP f|empty input yields Infinity, not representable by ABAP f or integers)\n(?=RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds\.)/gm, "")
     .replace(/'(?:''|[^'])*'|`(?:``|[^`])*`|\|(?:\\.|[^|])*\|/g, "");
   if (code.includes('"')) throw new Error(`${n}: comment`);
-  if (mode === "--feature-suite" && /\bPCRE\b/i.test(code)) reg.getConfig().get().syntax.version = abaplint.Version.v755;
+  if (mode === "--fixture" && /\bPCRE\b/i.test(code)) reg.getConfig().get().syntax.version = abaplint.Version.v755;
   if (n.endsWith(".clas.abap")) {
     for (const section of ["PUBLIC", "PROTECTED", "PRIVATE"]) {
       if (!new RegExp(`\\b${section}\\s+SECTION\\s*\\.`, "i").test(code)) {
@@ -42,7 +42,7 @@ for (const n of files) {
 }
 // The complete HIR corpus must exercise both constructs; narrow feature suites
 // are still subject to every parser, class-section, and generation check.
-if (mode !== "--feature-suite" && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
+if (mode !== "--fixture" && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
 function walk(dir) {
   for (const f of readdirSync(dir, {withFileTypes: true})) {
     const path = join(dir, f.name);

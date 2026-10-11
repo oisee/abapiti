@@ -61,26 +61,19 @@ func regexMayHaveState(x *hir.Expr) bool {
 	return strings.ContainsAny(flags, "gy")
 }
 
-// Restore the exact pre-exec runtime for legacy users. The match-result DDIC
-// ABI deliberately stays unchanged here: fixing it is separate from opting
-// into a JS engine which the pinned OSGO cannot compile.
+// Restore the pre-exec runtime for legacy users, retaining inline FIND types
+// without opting into a JS engine which the pinned OSGO cannot compile.
 func (e *emitter) regexpLegacyRuntime(name string) {
 	file := name + ".clas.abap"
 	text := e.files[file]
 	if e.jsRegexpUsed {
-		// Mixed programs share the feature array ABI and locally declared
-		// result types, but never the PCRE engine in this base class.
+		// Mixed programs share the feature array ABI, but never the PCRE
+		// engine in this base class.
 		text = strings.Replace(text, "DATA flags TYPE string.", "DATA flags TYPE string.\nDATA last_index TYPE i.", 1)
 		e.files[file] = text
 		return
 	}
 	text = strings.Replace(text, "IF p1 CS '$'.\n  RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\n", "", 1)
-	start := strings.Index(text, "TYPES: BEGIN OF submatch_result,")
-	if start >= 0 {
-		end := strings.Index(text[start:], "DATA source TYPE string.") + start
-		text = text[:start] + text[end:]
-	}
-	text = strings.Replace(text, "DATA groups TYPE submatch_result_tab.\n", "", 1)
 	text = strings.Replace(text, "DATA idx TYPE i.\n", "", 1)
 	text = strings.ReplaceAll(text, "FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS hit", "FIRST OCCURRENCE OF REGEX posix IN p0 IGNORING CASE RESULTS matches")
 	text = strings.ReplaceAll(text, "FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS hit", "FIRST OCCURRENCE OF REGEX posix IN p0 RESULTS matches")
@@ -101,10 +94,6 @@ func (e *emitter) regexpJSSubclass() {
 	file := name + ".clas.abap"
 	text := e.files[file]
 	text = strings.Replace(text, "DEFINITION PUBLIC CREATE PUBLIC.", "DEFINITION PUBLIC INHERITING FROM "+base+" CREATE PUBLIC.", 1)
-	// Result types are inherited from the feature-enabled legacy base.
-	start := strings.Index(text, "TYPES: BEGIN OF submatch_result,")
-	end := strings.Index(text[start:], "DATA source TYPE string.") + start
-	text = text[:start] + text[end:]
 	for _, field := range []string{"source", "flags", "posix", "excluded"} {
 		text = strings.Replace(text, "DATA "+field+" TYPE string.\n", "", 1)
 	}

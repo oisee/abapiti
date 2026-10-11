@@ -15,9 +15,6 @@ func (e *emitter) regexpExecRuntime(name string) {
 	e.files[file] = strings.Replace(e.files[file], "ENDMETHOD.\nMETHOD test.", "exec_pattern = posix.\nENDMETHOD.\nMETHOD test.", 1)
 	e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD exec.
 DATA start TYPE i.
-DATA hit TYPE match_result.
-DATA group TYPE submatch_result.
-DATA groups TYPE submatch_result_tab.
 DATA text TYPE string.
 DATA part TYPE string.
 DATA idx TYPE i.
@@ -45,7 +42,7 @@ IF sticky = abap_false.
 ENDIF.
 search = search && '(' && exec_pattern && ')'.
 IF ignore_case = abap_true.
-  FIND FIRST OCCURRENCE OF REGEX search IN text IGNORING CASE RESULTS hit.
+  FIND FIRST OCCURRENCE OF REGEX search IN text IGNORING CASE RESULTS DATA(hit).
 ELSE.
   FIND FIRST OCCURRENCE OF REGEX search IN text RESULTS hit.
 ENDIF.
@@ -55,8 +52,8 @@ IF sy-subrc <> 0.
   ENDIF.
   RETURN.
 ENDIF.
-groups = hit-submatches.
-READ TABLE groups INDEX 1 INTO group.
+DATA(groups) = hit-submatches.
+READ TABLE groups INDEX 1 INTO DATA(group).
 hit-offset = hit-offset + hit-length - group-length.
 hit-length = group-length.
 DELETE groups INDEX 1.

@@ -27,6 +27,16 @@ func TestRegExpExecRuntime(t *testing.T) {
 			t.Errorf("missing %s", want)
 		}
 	}
+	for _, forbidden := range []string{"match_result", "submatch_result"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("emitted ABAP must use inline FIND types, found %s", forbidden)
+		}
+	}
+	for _, want := range []string{"RESULTS DATA(matches)", "RESULTS DATA(hit)", "INTO DATA(hit)", "INTO DATA(group)"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("missing inline result typing: %s", want)
+		}
+	}
 	if !strings.Contains(text, "FIND FIRST OCCURRENCE OF PCRE search") || !strings.Contains(text, "METHOD unit_text.") {
 		t.Fatal("JS exec needs the PCRE/UTF-16 path, not legacy POSIX matching")
 	}

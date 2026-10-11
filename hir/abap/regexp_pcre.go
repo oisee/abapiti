@@ -129,8 +129,6 @@ ENDCLASS.
 	end := strings.Index(text, "METHOD match.\n")
 	replacement := `METHOD replace.
 DATA text TYPE string.
-DATA matches TYPE match_result_tab.
-DATA hit TYPE match_result.
 DATA last TYPE i.
 DATA n TYPE i.
 IF p1 CS '$'.
@@ -149,14 +147,11 @@ IF global = abap_true.
 	if e.execUsed {
 		replacement += "last_index = 0.\n"
 	}
-	replacement += `  FIND ALL OCCURRENCES OF PCRE posix IN text RESULTS matches.
+	replacement += `  FIND ALL OCCURRENCES OF PCRE posix IN text RESULTS DATA(matches).
 ELSE.
-  FIND FIRST OCCURRENCE OF PCRE posix IN text RESULTS hit.
-  IF sy-subrc = 0.
-    APPEND hit TO matches.
-  ENDIF.
+  FIND FIRST OCCURRENCE OF PCRE posix IN text RESULTS matches.
 ENDIF.
-LOOP AT matches INTO hit.
+LOOP AT matches INTO DATA(hit).
   n = hit-offset - last.
   result = result && p0+last(n) && p1.
   last = hit-offset + hit-length.
