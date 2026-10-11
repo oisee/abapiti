@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Qualified assertions used to panic before reaching the checker because the
@@ -30,7 +31,7 @@ static literal(): number { return 3 as const; }
 	}
 }
 
-func TestQualifiedTypeAssertionRefusesUnprovenCast(t *testing.T) {
+func TestQualifiedTypeAssertionCheckedClassView(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
 		"defs.ts": `export class Base {}
@@ -60,11 +61,18 @@ export function cast(x: N.Base): N.Child { return x as N.const; }`,
 		if errors := hir.Verify(prog); len(errors) > 0 {
 			t.Fatal(errors)
 		}
-		if !strings.Contains(hir.Dump(prog), "object.checkedClassView") {
-			t.Fatal("qualified alias lost its checked nominal boundary")
+		if !strings.Contains(hir.Dump(prog), "object.checkedClassView") { t.Fatal("qualified alias lost its checked nominal boundary") }
+		if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "object.checkedClassView") {
+			t.Fatalf("ABAP must refuse unproven nominal views: %v", err)
 		}
 		names := hir.NewNames()
-		main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("qualified invalid view must refuse")};fmt.Println("refused")}();%s(%s())`, goEntry("probe.ts.module", "cast"), names.Get("new.defs.ts.Base"))
+		entry := goEntry("probe.ts.module", "cast")
+		child := names.Get("new.defs.ts.Child")
+		base := names.Get("new.defs.ts.Base")
+		if got := runGoHIR(t, prog, fmt.Sprintf("x := %s();fmt.Println(%s(x)==x)", child, entry)); got != "true\n" {
+			t.Fatal(got)
+		}
+		main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok{panic("unproven view escaped its domain")};fmt.Println("refused")}();%s(%s())`, entry, base)
 		if got := runGoHIR(t, prog, main); got != "refused\n" {
 			t.Fatal(got)
 		}
