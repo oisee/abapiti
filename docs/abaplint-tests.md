@@ -1,6 +1,115 @@
 # abaplint's own tests on TS-HG@Go
 
-## Integration train 3 — current full measurement
+## Trap batch G — after live typed arrays
+
+**10,317/11,060 active tests passed (93.28%), FAIL 0.** All 17 shards and
+625 selected files completed on compiler **`b0570c4`**, based on **`350034c`**
+(yolo-4 + live views 2). Upstream remains
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Fresh original Node: 11,060 passed,
+zero failed, 32 pending. Go: 644 typed/domain traps, zero async-pending,
+131 not-run. No infrastructure failures, exclusions or unmatched titles.
+
+Not-run is **0 async/done, 26 skipped/focused, 105 unregistered**. It includes
+all 32 Node pending titles and 99 active titles. Registration loss is not a
+file-selection omission. Owned-title accounting still subtracts the six
+independently identified borrowed SQL-value-conversion tests from syntax/LSP;
+all borrowed executions are checked for FAIL before subtraction.
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 163 | 0 | 53 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 42 | 0 | 8 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,310 | 0 | 14 | 49 | 1,332 | 1,363 + 10 |
+| `abap/types` | 6 | 23 | 0 | 6 | 0 | 29 | 29 + 0 |
+| root | 12 | 66 | 0 | 28 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 334 | 0 | 24 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 97 | 0 | 91 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 98 | 0 | 46 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 10 | 0 | 21 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 2,852 | 0 | 295 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,317** | **0** | **644** | **131** | **10,987** | **11,060 + 32** |
+
+### Top 15 reached traps (initialization failures excluded)
+
+Exact normalized messages, representative locations, per-shard contributions
+and initialization refusals are in [compact evidence](evidence/traps-g-final.json).
+These are remaining ABI/domain refusals, not estimated future passes.
+
+| Tests | Message / location |
+| ---: | --- |
+| 173 | `function_module_recommendations.ts:125`: conversion/domain refusal |
+| 50 | `object_naming.ts:126`: RegExp pattern not a lowered string; missing regex local cascades |
+| 38 | `objects/domain.ts:114/122`: contextual empty-array fallback |
+| 37 | `objects/_abap_object.ts:148`: string <- dynamic |
+| 33 | `lsp/_lookup.ts:238`: own-key enumeration requires original structural storage |
+| 31 | `test/abap/nesting.ts:253`: config conversion/domain refusal |
+| 27 | `rules/downport.ts:730`: unresolved captured fix |
+| 22 | `config.ts:11`: conversion/domain refusal |
+| 16 | `rules/downport.ts:3556`: getParameters on dynamic; importing local cascades |
+| 15 | `pretty_printer.ts:16`: conversion/domain refusal |
+| 15 | `test/cds/cds_parser.ts:3879`: captured parseView lacks a lowered type |
+| 12 | `lsp/references.ts:40`: property-access callback is not an arrow |
+| 9 | `identical_conditions.ts:23`: primitive find needs absence-preserving callback ABI |
+| 7 | `rename_global_interface.ts:18`: generated bridge return assignment mismatch |
+| 7 | `test/pretty_printer/pretty_printer.ts:161`: keyword_case property assignment |
+
+### Scope, oracle regressions and gates
+
+Regexp split has its own typed signature, numeric ToUint32 limits, original
+anchor context, JS empty-match suppression and capture splicing. Both regexp
+split sites in abaplint src were enumerated with the TypeScript AST and use the
+same operation. Dynamic Go RegExp construction uses the same checked subset as
+literals, including JS whitespace and ASCII boundaries. XML version patterns,
+`/$^/i`, and two exact bounded naming grammars are certified against live Node.
+Unsupported patterns/flags still refuse; this is not arbitrary RE2 fallback.
+
+An oracle exposed undefined captures becoming empty strings in ordinary
+string-array reads. That prototype was rejected: an actually unmatched split
+capture now produces a typed nullable-element ABI refusal at insertion, before
+slice/iteration/escape can lose absence. Mandatory/empty captures and limits
+stopping before an absent capture are supported. Repeated captures outside the
+capture-safe grammar refuse. The splitter also avoids exec's bounded-repeat
+cursor wrapper; a 1101-unit Node differential covers long input. See
+[owned roots, mismatch diagnosis and dell's ABI handoff](traps-g-roots.md) and
+[the certified domain](../tsfront/regexp_exec.md). No broad string-array,
+closure, config, LSP presence, rename, DDIC or async ABI repair is included.
+
+Passed on the final implementation:
+
+```sh
+export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
+ABAPITI_GRACECHECK=1 go test ./... -short
+ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+nice -n 10 node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-g-final.json
+```
+
+Only the new op's runtime-catalogue counts change the Grace golden; method
+facts and 61 lexer call sites are unchanged. Default `abaplint -o` output was
+compared to an executable built from `git archive 350034c`, using the same
+absolute output path before moving the baseline aside: **all 6,312 files
+byte-identical by `diff -r`**, including the A4H zip. The path/content aggregate
+SHA-256 is `2f910f53ad936abb3291a90e3bab05bbb19ff5c38dd184f105a8b94cd1b0af43`.
+With `--target all,go` added, only `go/runtime.go` and its compiled binary differ:
+the dynamic checked translator is now emitted, and the two exact naming reviews
+join its table. `go/hir.go` and every ABAP-target file remain identical.
+
+Fresh final-source Go and original Node are byte-identical on zabapgit **clean
+(0 issues)** and **seeded (5 issues)**, also matching the release kit. The compact
+JSON retains the gate audit; generated builds, source closures, binaries,
+profiles, kit copies and raw/intermediate records were deleted. No transpiler
+checkout or push. Earlier measurements below are historical, not this base's N.
+
+## Integration train 3 — historical full measurement
 
 **9,021/11,060 active tests passed (81.56%).** All 17 shards completed with
 one assertion mismatch, 1,765 traps, zero async-pending executions, and 305
@@ -9,7 +118,7 @@ No infrastructure failures or unmatched titles remain.
 
 See [train-3 gates, per-shard counts, every assertion mismatch, top 15 traps,
 full-closure gap and default-output comparison](train-3.md) and the
-[latest JSON evidence](abaplint-tests-latest.json). The earlier measurements
+[train-3 JSON evidence](abaplint-tests-latest.json). The earlier measurements
 below are retained as history.
 
 ## CDS silent-miscompile fix

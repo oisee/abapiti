@@ -63,17 +63,17 @@ not changed.
 
 ## Dell-owned reached roots (unchanged)
 
-Counts below are diagnostic **exploratory three-shard** counts, not estimates
-of additional passing cases. Final reached rankings are recorded separately.
+Counts below are **final all-shard reached** counts, not estimates of additional
+passing cases. Full rankings and exact diagnostics are recorded in the evidence.
 
 | Count | Root | Boundary / required follow-up |
 | ---: | --- | --- |
-| 156 | `function_module_recommendations.ts:125` domain refusal (123 rules, 23 LSP, 10 root) | `runParsed` reads the nominal config's `Recommendations[]`, searches row `name`, optional `from`, and release values. The generic range/conversion diagnostic does not identify a numeric fault. Inspect the config/row view and absent `from` conversion; preserve default row identity and user-supplied config writes. Do not replace the recommendations with a hard-coded snapshot. |
-| 32 | `_abap_object.ts:148`, string <- dynamic | `findTexts` accepts parsed XML `any`; row `ENTRY` feeds `unescape(t.ENTRY)` and `LENGTH` feeds parseInt. `typeof` checks of ID/KEY do not prove ENTRY is a string. Needs dynamic primitive conversion/narrowing contracts, not another regexp. |
-| 31 | `lsp/_lookup.ts:238` own-key enumeration | `referenceHover` calls `Object.keys(ref.extra)` before JSON.stringify. IReference's structural extra metadata must retain original own enumerable fields, absent vs explicit undefined and live writes. Fabricating declared-field keys or suppressing JSON output is not a fix. |
-| 31 | `object_naming.ts:126` RegExp pattern not string | `config[abapType]` at :120 is heterogeneous nominal class-field indexing. The resulting dynamic/optional view does not become a lowered pattern string; `regex` missing at :128 cascades. This is not the runtime translator refusing a pattern. Needs original config identity and checked string-field reads. |
+| 173 | `function_module_recommendations.ts:125` domain refusal (123 rules, 23 LSP, 10 root, 17 abap) | `runParsed` reads the nominal config's `Recommendations[]`, searches row `name`, optional `from`, and release values. The generic range/conversion diagnostic does not identify a numeric fault. Inspect the config/row view and absent `from` conversion; preserve default row identity and user-supplied config writes. Do not replace the recommendations with a hard-coded snapshot. |
+| 37 | `_abap_object.ts:148`, string <- dynamic | `findTexts` accepts parsed XML `any`; row `ENTRY` feeds `unescape(t.ENTRY)` and `LENGTH` feeds parseInt. `typeof` checks of ID/KEY do not prove ENTRY is a string. Needs dynamic primitive conversion/narrowing contracts, not another regexp. |
+| 33 | `lsp/_lookup.ts:238` own-key enumeration | `referenceHover` calls `Object.keys(ref.extra)` before JSON.stringify. IReference's structural extra metadata must retain original own enumerable fields, absent vs explicit undefined and live writes. Fabricating declared-field keys or suppressing JSON output is not a fix. |
+| 50 | `object_naming.ts:126` RegExp pattern not string | `config[abapType]` at :120 is heterogeneous nominal class-field indexing. The resulting dynamic/optional view does not become a lowered pattern string; `regex` missing at :128 cascades. This is not the runtime translator refusing a pattern. Needs original config identity and checked string-field reads. |
 | 27 + 16 | `downport.ts:730` captured `fix`; :3556 dynamic getParameters | Closure storage and erased method receiver/result ABI; left untouched. |
-| 23 | `domain.ts:114/122` empty array context | `JSON.parse` returns a dynamic graph; `parsed.fixedValues ?? []` and `fixedValueIntervals ?? []` feed for-of. Needs contextual element/view typing of the fallback and live parsed-array reads; do not inject synthetic domain values. |
+| 38 | `domain.ts:114/122` empty array context | `JSON.parse` returns a dynamic graph; `parsed.fixedValues ?? []` and `fixedValueIntervals ?? []` feed for-of. Needs contextual element/view typing of the fallback and live parsed-array reads; do not inject synthetic domain values. |
 | 12 | `lsp/references.ts:40` property-access callback | `locs.map(LSPUtils.identiferToLocation)` is a namespace/static callable, not an inline arrow. Callable-value adapter and return-view ABI work, not a regex/string shim. |
 | 9 | `identical_conditions.ts:23` primitive-array find | The predicate receives a string; find's result must distinguish undefined from `""`. Presence-preserving callback/result ABI remains refused. |
 | 8 | captured `getConfig` (six registry, two severity) | Lowered captured function types/storage, not registration recovery or JSON text substitution. |
@@ -93,5 +93,15 @@ The only Grace golden change is runtime-catalogue counts for the new op:
 `op_aliases/allocates/may_raise/writes` 121 → 122 and `op_reads` 182 → 184.
 Lexer method facts, 61 call sites and conservative count are unchanged.
 ABAP explicitly lists `string.splitRegex` as unsupported; its legacy split ABI
-and the default pruned ABAP output are unchanged. Final gate results and the
-extra Go-output diff are recorded with the whole-suite measurement.
+and the default pruned ABAP output are unchanged.
+
+Final measurement on `b0570c4`: **10,317/11,060 (93.28%), FAIL 0**, 644 trapped,
+131 not-run (0 async/done, 26 skipped/focused, 105 unregistered). All 17 shards,
+625 files, no exclusions/infrastructure failures/unmatched titles. Initial
+exploratory runs and aborted gate retries are not counted in this measurement.
+Grace-enabled short/full tests, vet and reporter tests pass. Raw default
+`diff -r` against `350034c` finds all 6,312 files identical. Optional Go output
+changes only its checked runtime and binary; the translator and two naming
+reviews justify every difference. Zabapgit clean/seeded agree byte-for-byte
+with fresh original Node and the kit (0/5 issues). Only compact evidence remains;
+all generated/intermediate artifacts were removed. No push.
