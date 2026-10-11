@@ -80,14 +80,14 @@ func TestChaiAndInitializationGo(t *testing.T) {
 	}
 	stdout, stderr, code := runAbaplintTestModule(t, files)
 	var result struct {
-		Passed, Failed, Trapped, NotRun int
-		Results                         []json.RawMessage
-		Initialization                  []struct{ File, Action, Message, Status string }
+		Passed, Failed, Trapped, NotRun, AsyncPending int
+		Results                                       []json.RawMessage
+		Initialization                                []struct{ File, Action, Message, Status string }
 	}
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatal(err, stdout, stderr)
 	}
-	if code != 1 || result.Passed != 5 || result.Failed != 1 || result.Trapped != 1 || result.NotRun != 1 || len(result.Results) != 8 || len(result.Initialization) != 3 {
+	if code != 1 || result.Passed != 6 || result.Failed != 1 || result.Trapped != 1 || result.NotRun != 0 || result.AsyncPending != 0 || len(result.Results) != 8 || len(result.Initialization) != 3 {
 		t.Fatalf("code=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 	if result.Initialization[0].File != "test/probe.ts" || !strings.Contains(result.Initialization[0].Message, "Date") || !strings.Contains(result.Initialization[1].Message, "runtime initializer failed") || !strings.Contains(result.Initialization[2].Message, "init failure payload") {

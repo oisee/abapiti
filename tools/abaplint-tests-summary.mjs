@@ -8,7 +8,7 @@ if (!output) throw new Error('usage: abaplint-tests-summary.mjs RUN OUTPUT.json 
 const read = name => JSON.parse(readFileSync(join(directory, name), 'utf8'));
 const shards = [];
 const traps = new Map();
-const totals = {passed:0, failed:0, trapped:0, notRun:0, registered:0, total:0, asyncOrDone:0, unregistered:0};
+const totals = {passed:0, failed:0, trapped:0, asyncPending:0, notRun:0, registered:0, total:0, asyncOrDone:0, unregistered:0};
 let pin;
 for (const name of ['rules','lexer','statements','structures']) {
  const report = read(`${prefix}report-${name}.json`);
@@ -19,14 +19,14 @@ for (const name of ['rules','lexer','statements','structures']) {
  pin = closure.upstreamPin;
  const clean = text => text.replaceAll(resolve(directory, `${prefix}${name}`) + '/', '');
  const row = {name:name === 'rules' ? name : `abap/${name}`, files:closure.roots.length,
-  passed:report.passed, failed:report.failed, trapped:report.trapped, notRun:report.notRun,
+  passed:report.passed, failed:report.failed, trapped:report.trapped, asyncPending:report.asyncPending ?? 0, notRun:report.notRun,
   registered:report.registered, total:report.total, node:{passed:node.passed, failed:node.failed, pending:node.pending},
   notRunReasons:report.notRunReasons, unmatched:report.unmatched.length,
   initialization:(run.initialization ?? []).map(r => ({...r, action:clean(r.action), message:clean(r.message)})),
   failures:run.results.filter(r => r.status === 'failed').map(r => ({title:r.title, message:clean(r.message).replace(/0x[0-9a-f]+/g,'<address>')}))};
  if (row.total !== node.total) throw new Error('oracle total mismatch');
  shards.push(row);
- for (const key of ['passed','failed','trapped','notRun','registered','total']) totals[key] += row[key];
+ for (const key of ['passed','failed','trapped','asyncPending','notRun','registered','total']) totals[key] += row[key];
  totals.asyncOrDone += report.notRunReasons.asyncOrDone;
  totals.unregistered += report.notRunReasons.unregistered;
  for (const r of run.results.filter(r => r.status === 'trapped')) {

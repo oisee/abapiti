@@ -63,7 +63,7 @@ func (l *lowerer) isTestCallback(n *ast.Node) bool {
 
 // Mocha ignores describe's return value. An async suite containing only
 // synchronous registration calls and inert constants has no suspension; its
-// async it callbacks are still separately refused and counted as not-run.
+// async it callbacks are separately certified and drained by the test host.
 func (l *lowerer) synchronousAsyncSuite(n *ast.Node) bool {
 	if !l.isTestCallback(n) || n.Parent.Expression().Kind != ast.KindIdentifier || n.Parent.Expression().Text() != "describe" || n.Body() == nil || n.Body().Kind != ast.KindBlock {
 		return false
@@ -149,4 +149,22 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 		args = append(args, hir.L(hir.T(hir.Optional, hir.T(hir.Bool)), only), hir.L(hir.T(hir.Optional, hir.T(hir.Bool)), skip))
 	}
 	return &hir.Expr{Node: l.node(n), Kind: hir.DirectCall, Owner: "runtime/mocha.ts.TestRuntime", Name: method, Type: hir.T(hir.Void), Args: args}, true
+}
+
+func (l *lowerer) isDeferredTestCallback(n *ast.Node) bool {
+	if !l.isTestCallback(n) {
+		return false
+	}
+	callee := n.Parent.Expression()
+	if callee.Kind == ast.KindPropertyAccessExpression {
+		callee = callee.Expression()
+	}
+	if callee.Kind != ast.KindIdentifier {
+		return false
+	}
+	switch callee.Text() {
+	case "it", "before", "after", "beforeEach", "afterEach":
+		return true
+	}
+	return false
 }
