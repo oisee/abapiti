@@ -55,7 +55,7 @@ func TestSettledTransitiveRecursion(t *testing.T) {
 }
 
 func TestSettledTransitiveFluentReceiver(t *testing.T) {
-	p, ds := asyncProbe(t, `class Registry {addFile(n:number):Registry{return this;}async parseAsync():Promise<number>{return 9;}}
+	_, ds := asyncProbe(t, `class Registry {addFile(n:number):Registry{return this;}async parseAsync():Promise<number>{return 9;}}
  class Pending extends Registry {async parseAsync():Promise<number>{return await new Promise<number>(()=>{});}}
  export class Probe {static async run():Promise<number>{const reg=new Registry();const alias=reg;return await alias.addFile(1).parseAsync();}}`)
 	// The unused Pending body is independently refused, but must not poison the
@@ -65,7 +65,7 @@ func TestSettledTransitiveFluentReceiver(t *testing.T) {
 			t.Fatal(ds)
 		}
 	}
-	p, ds = asyncProbe(t, `class Registry {addFile(n:number):Registry{return this;}async parseAsync():Promise<number>{return 9;}}
+	p, ds := asyncProbe(t, `class Registry {addFile(n:number):Registry{return this;}async parseAsync():Promise<number>{return 9;}}
  export class Probe {static async run():Promise<number>{const reg=new Registry();const alias=reg;return await alias.addFile(1).parseAsync();}}`)
 	if hasBlocking(ds) {
 		t.Fatal(ds)
