@@ -48,7 +48,32 @@ func (l *lowerer) isThunkType(t *checker.Type) bool {
 
 // closureValue lowers an arrow function used as a value.
 func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
+	before := len(l.diags)
+	x := l.closureValueInner(n)
+	if !l.integerOptions.TrapOnFailure || x != nil {
+		return x
+	}
+	l.serial++
+	name := "closure." + itoa(l.serial)
+	m := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: hir.T(hir.Void)}
+	l.trapBodyDiagnostics(n, m, before)
+	if m.Body == nil {
+		m.Body = failureBody(m.Node, l.locOf(n)+": unsupported callback")
+	}
+	l.out.Classes = append(l.out.Classes, &hir.Class{Node: l.node(n), Name: name, Implements: []string{l.thunkType().Name}, Methods: []*hir.Method{m}})
+	return &hir.Expr{Node: l.node(n), Kind: hir.New, Type: hir.Ref(name)}
+}
+
+func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
+	if l.integerOptions.TrapOnFailure && n.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+		l.diagf(n, "unsupported-async", "async callback is not run by the synchronous test host")
+		return nil
+	}
 	if len(n.Parameters()) != 0 {
+		if l.integerOptions.TrapOnFailure && l.isTestCallback(n) {
+			l.diagf(n, "unsupported-async", "done/parameterized callback is not run by the synchronous test host")
+			return nil
+		}
 		l.diagf(n, "unsupported-closure", "only parameterless thunks are lowered as closures")
 		return nil
 	}
@@ -68,6 +93,10 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 		}
 	}
 	usesThis := touchesThis(body)
+	contextThis := l.integerOptions.TrapOnFailure && n.Kind == ast.KindFunctionExpression && usesThis && l.isTestCallback(n)
+	if contextThis {
+		usesThis = false
+	}
 	if usesThis && (l.method == nil || l.method.Static || l.class == nil) {
 		l.diagf(n, "unsupported-closure", "closure uses this outside an instance method")
 		return nil
@@ -117,6 +146,10 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 		outerType = hir.Ref(l.class.Name)
 		field("outer", outerType, l.this(l.class))
 	}
+	if contextThis {
+		outerType = hir.Ref("runtime/mocha.ts.TestContext")
+		field("context", outerType, &hir.Expr{Node: l.node(n), Kind: hir.New, Type: outerType})
+	}
 	ctor.Body = hir.B(init...)
 	c.Ctor = ctor
 	call := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: hir.T(hir.Void)}
@@ -143,7 +176,11 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	} else {
 		l.thisOverride = nil
 	}
+	if contextThis {
+		l.thisOverride = &hir.Expr{Node: l.node(n), Kind: hir.FieldGet, Name: "context", Type: outerType, X: self}
+	}
 	l.method = call
+	before := len(l.diags)
 	l.pend = nil
 	restore := l.withLocalFns(body)
 	var inner *hir.Stmt
@@ -164,6 +201,7 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	call.Body = hir.B(append(prologue, inner)...)
+	l.trapBodyDiagnostics(n, call, before)
 	l.diagf(n, "note-closure", "thunk lowered as closure %s capturing %d locals", name, len(captures))
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(name), Args: args}
 }
@@ -232,6 +270,12 @@ func (l *lowerer) assignedAfter(fn *ast.Node, name string) bool {
 
 // thunkCall lowers a parameterless thunk held in a local or object field.
 func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
+	if l.integerOptions.TrapOnFailure && l.relFile(l.file) == "runtime/mocha.ts" && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "call" {
+		x := l.expr(callee.Expression())
+		if x != nil && x.Type.Name == thunkInterfaceName {
+			return &hir.Expr{Node: l.node(n), Kind: hir.VirtualCall, Name: "call", Type: hir.T(hir.Void), X: x}, true
+		}
+	}
 	if len(n.Arguments()) != 0 {
 		return nil, false
 	}

@@ -20,6 +20,21 @@ type verifier struct {
 	interfaces map[string]*Interface
 }
 
+// VerifyBody checks one body against all declarations in p. This is also used
+// by opt-in partial lowering to attribute failures without relying on node IDs
+// (synthetic operands may have ID zero).
+func VerifyBody(p *Program, c *Class, m *Method) []error {
+	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
+	for _, x := range p.Classes {
+		v.classes[x.Name] = x
+	}
+	for _, x := range p.Interfaces {
+		v.interfaces[x.Name] = x
+	}
+	v.body(c, m)
+	return v.errors
+}
+
 func Verify(p *Program) []error {
 	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
 	if p == nil {
@@ -319,6 +334,7 @@ func (v *verifier) accepts(dst, src Type) bool {
 	}
 	return false
 }
+
 // crossCastable reports whether a checked cast between a class and an
 // interface can succeed: some lowered class is a subtype of both (the
 // emitter routes such casts through the object root and `?=` raises when
@@ -356,6 +372,7 @@ func (v *verifier) body(c *Class, m *Method) {
 		v.fail(m.Node, "method may fall through without return")
 	}
 }
+
 // exits reports a return, break or continue anywhere in the block.
 func exits(s *Stmt) bool {
 	if s == nil {

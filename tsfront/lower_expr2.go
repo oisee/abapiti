@@ -218,6 +218,12 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 			test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "&&", X: defined, Y: tag}
 			break
 		}
+		if e.Type.Args[0].Kind == hir.ClassValue && want == "function" {
+			// Preserve the established default build's compact class-value
+			// presence test (it also evaluates the operand exactly once).
+			test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: e}}
+			break
+		}
 		// Evaluate once even when the present tag can be folded. Optional
 		// primitives have a different tag when absent; narrowing must stay
 		// under the presence test, not in an eagerly evaluated operand.

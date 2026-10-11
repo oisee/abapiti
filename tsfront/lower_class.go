@@ -419,6 +419,19 @@ func (l *lowerer) constructorSignature(m *ast.Node, c *hir.Class) {
 
 // signature fills params and result of hm from the checker's signature.
 func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
+	before := len(l.diags)
+	defer func() {
+		if l.integerOptions.TrapOnFailure && !hm.Abstract {
+			for _, d := range l.diags[before:] {
+				if !strings.HasPrefix(d.Category, "note-") {
+					if l.failedSignatures == nil {
+						l.failedSignatures = map[*hir.Method][]string{}
+					}
+					l.failedSignatures[hm] = append(l.failedSignatures[hm], d.String())
+				}
+			}
+		}
+	}()
 	sig := l.ck.GetSignatureFromDeclaration(node)
 	if l.paramSymbols == nil {
 		l.paramSymbols = map[*hir.Method]map[string]*ast.Symbol{}
@@ -605,6 +618,7 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 		return
 	}
 	l.method = hm
+	defer l.trapBodyDiagnostics(m, hm, len(l.diags))
 	if l.trapUnexecuted(m, hm) {
 		return
 	}
@@ -639,6 +653,7 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 		return
 	}
 	l.method = hm
+	defer l.trapBodyDiagnostics(m, hm, len(l.diags))
 	if l.trapUnexecuted(m, hm) {
 		return
 	}
@@ -680,10 +695,21 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 			continue
 		}
 		name := p.Name().Text()
+		value := hir.V(name, l.declaredFieldType(c, name))
+		if l.integerOptions.TrapOnFailure {
+			for _, hp := range hm.Params {
+				if hp.Name == name {
+					value = hir.V(name, hp.Type)
+					if p.Initializer() != nil && hp.Type.Kind == hir.Optional && hp.Type.Args[0].Equal(l.declaredFieldType(c, name)) {
+						value = &hir.Expr{Node: l.node(p), Kind: hir.Narrow, Type: hp.Type.Args[0], X: value}
+					}
+				}
+			}
+		}
 		prologue = append(prologue, &hir.Stmt{Kind: hir.Assign, Node: l.node(p),
 			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(p), Name: name, Type: l.declaredFieldType(c, name),
 				X: l.this(c)},
-			Y: hir.V(name, l.declaredFieldType(c, name))})
+			Y: value})
 	}
 	prologue = append(prologue, l.fieldInitializers(m.Parent, c, false)...)
 	stmts = append(stmts, prologue...)
@@ -734,6 +760,7 @@ func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) [
 func (l *lowerer) lowerImplicitInitializers(node *ast.Node, c *hir.Class) {
 	if l.implicitCtors[c] {
 		l.method = c.Ctor
+		defer l.trapBodyDiagnostics(node, c.Ctor, len(l.diags))
 		l.push()
 		var body []*hir.Stmt
 		for _, p := range c.Ctor.Params {
@@ -754,11 +781,13 @@ func (l *lowerer) lowerImplicitInitializers(node *ast.Node, c *hir.Class) {
 	}
 	init := &hir.Method{Node: l.node(node), Name: "class_constructor", Static: true, Result: hir.T(hir.Void)}
 	l.method = init
+	before := len(l.diags)
 	l.push()
 	body := l.fieldInitializers(node, c, true)
 	l.pop()
-	if len(body) > 0 {
+	if len(body) > 0 || (l.integerOptions.TrapOnFailure && hasBlocking(l.diags[before:])) {
 		init.Body = hir.B(body...)
+		l.trapBodyDiagnostics(node, init, before)
 		c.Methods = append(c.Methods, init)
 	}
 }

@@ -21,6 +21,7 @@ func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
 	}
 	l.class = owner
 	l.method = hm
+	defer l.trapBodyDiagnostics(fn, hm, len(l.diags))
 	if l.trapUnexecuted(fn, hm) {
 		return hm
 	}

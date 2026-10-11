@@ -22,7 +22,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 	switch name {
 	case "map", "filter", "some", "reduce", "find":
 	case "forEach", "every":
-		if !l.pinnedDenseCallback(n) {
+		if !l.pinnedDenseCallback(n) && !l.pinnedTestRows(n) {
 			l.diagf(n, "unsupported-call", "%s needs a source-pinned dense/stable receiver proof", name)
 			return nil, true
 		}
