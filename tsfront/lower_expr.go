@@ -900,6 +900,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
 		name := callee.Name().Text()
+		if x, handled := l.lspCall(n, p.Expression, name); handled {
+			return x
+		}
 		if p.Expression.Kind == ast.KindIdentifier && p.Expression.Text() == "Math" && (name == "min" || name == "max") {
 			sym := l.resolve(p.Expression)
 			file := l.fileOfSymbol(sym)

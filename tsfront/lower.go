@@ -106,6 +106,21 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			return nil, nil, err
 		}
 	}
+	// Only expand the external LSP ABI when a callable constructor needs it.
+	// Coverage-trapped signatures retain their existing opaque/structural ABI.
+	l.lspConstructors = coverage == nil
+	if !l.lspConstructors {
+		for _, name := range files {
+			f, ok := p.File(name)
+			if !ok {
+				return nil, nil, fmt.Errorf("file %s is not part of the program", name)
+			}
+			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			l.scanLSPConstructors(f.AsNode())
+			done()
+		}
+	}
 	for _, name := range files {
 		f, ok := p.File(name)
 		if !ok {
@@ -314,6 +329,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	lspConstructors   bool
 	integerOptions    LowerOptions
 	integerExceptions map[*ast.Node]IntegerException
 	floatSites        map[string]bool
