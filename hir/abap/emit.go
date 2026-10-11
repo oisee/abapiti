@@ -1612,6 +1612,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		args = append(args, b.value(v, typ))
 	}
+	if x.Op == "map.get" && x.X.Type.Args[1].Kind == hir.Optional {
+		// Keep the physical getter ABI: its outer box records membership.
+		// JS lookup exposes the stored optional, with absence when no box
+		// was returned. The generated getter sets has on every returned box.
+		lookup := b.temp(hir.T(hir.Optional, x.X.Type.Args[1]))
+		b.line(lookup + " = " + a + "->get( p0 = " + args[0] + " ).")
+		b.line("IF " + lookup + " IS BOUND.")
+		b.line(n + " = " + lookup + "->value.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "array.matchIndex" {
 		b.e.matchUsed = true
 		b.line("IF " + a + "->match_has_index <> abap_true.")

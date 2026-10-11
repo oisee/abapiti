@@ -223,6 +223,10 @@ func (b *body) runtime(x *hir.Expr) string {
 	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {
 		code += ".Value"
 	}
+	if x.Op == "map.get" && x.X.Type.Args[1].Kind == hir.Optional && !x.Type.Args[0].IsRef() {
+		// The outer lookup box carries membership; JS get exposes its payload.
+		code += ".Value"
+	}
 	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values") && x.Type.Args[0].IsRef() {
 		code = "referenceArray(" + code + ")"
 	}

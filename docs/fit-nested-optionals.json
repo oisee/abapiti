@@ -1,0 +1,703 @@
+{
+  "baseCommit": "6d72bfa",
+  "mainCommit": "23b364090e3b9c699ddb768e5a795fa283ca105b",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "full": {
+    "base": {
+      "blocking": 35,
+      "rootBlocking": 29,
+      "cascadeBlocking": 6,
+      "hirErrors": 150,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-array": 2,
+        "unsupported-call": 3,
+        "unsupported-callback": 1,
+        "unsupported-expr": 19,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 1,
+        "unsupported-regex": 1,
+        "unsupported-statement": 1
+      },
+      "byArea": {
+        "lsp": 17,
+        "objects": 6,
+        "rules": 10,
+        "src": 2
+      },
+      "byRootMessage": [
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 7
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "new X requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "files": 41,
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "hirByMessage": {
+        "assignment type mismatch": 16,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 7,
+        "condition must be bool": 6,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "foreach requires matching array": 3,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 42,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "invalid narrowing optional<optional<string>> to optional<string>": 2,
+        "method may fall through without return": 5,
+        "missing expression": 15,
+        "nested optional": 3,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4,
+        "unsupported collection key dynamic": 5
+      }
+    },
+    "after": {
+      "blocking": 35,
+      "rootBlocking": 29,
+      "cascadeBlocking": 6,
+      "hirErrors": 138,
+      "byCategory": {
+        "assume-integer": 2,
+        "unsupported-array": 2,
+        "unsupported-call": 3,
+        "unsupported-callback": 1,
+        "unsupported-expr": 19,
+        "unsupported-lsp-call": 5,
+        "unsupported-new": 1,
+        "unsupported-regex": 1,
+        "unsupported-statement": 1
+      },
+      "byArea": {
+        "lsp": 17,
+        "objects": 6,
+        "rules": 10,
+        "src": 2
+      },
+      "byRootMessage": [
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 7
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+          "count": 1
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 1
+        },
+        {
+          "message": "method X on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "new X requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "files": 38,
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "hirByMessage": {
+        "assignment type mismatch": 16,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 7,
+        "condition must be bool": 6,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "foreach requires matching array": 3,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 42,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "method may fall through without return": 5,
+        "missing expression": 15,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4
+      }
+    }
+  },
+  "rules": {
+    "base": {
+      "total": 3159,
+      "passed": 1587,
+      "failed": 0,
+      "trapped": 1550,
+      "asyncPending": 0,
+      "notRun": 22,
+      "registered": 3147,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-expr test/rules/downport.ts: identifier JSON is not a lowered local or module value; unsupported-expr test/rules/downport.ts: identifier conf702 is not a lowered local or module value",
+          "count": 296,
+          "example": "test/rules/downport.ts:13:1: lowering trap: unsupported-expr test/rules/downport.ts:16:30: identifier JSON is not a lowered local or module value; unsupported-expr test/rules/downport.ts:17:10: identifier conf702 is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 281,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "src/rules/unused_variables.ts: HIR verification: nested optional",
+          "count": 150,
+          "example": "src/rules/unused_variables.ts:214:3: lowering trap: src/rules/unused_variables.ts:214:3: HIR verification: node 305857 (src/rules/unused_variables.ts:231:20): nested optional"
+        },
+        {
+          "message": "src/edit_helper.ts: HIR verification: foreach requires matching array",
+          "count": 141,
+          "example": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22525 (src/edit_helper.ts:227:5): foreach requires matching array"
+        },
+        {
+          "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 105,
+          "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/rules/obsolete_statement.ts: HIR verification: call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 83,
+          "example": "src/rules/obsolete_statement.ts:157:3: lowering trap: src/rules/obsolete_statement.ts:157:3: HIR verification: node 288741 (src/rules/obsolete_statement.ts:237:23): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^.?cx_.*$/i",
+          "count": 56,
+          "example": "src/ddic.ts:30:3: lowering trap: node 210044 (src/ddic.ts:63:48): not supported in the Go prototype: JavaScript regexp /^.?cx_.*$/i"
+        },
+        {
+          "message": "src/rules/sy_read_restriction.ts: HIR verification: unsupported collection key dynamic",
+          "count": 48,
+          "example": "src/rules/sy_read_restriction.ts:73:3: lowering trap: src/rules/sy_read_restriction.ts:73:3: HIR verification: node 300758 (src/rules/sy_read_restriction.ts:86:11): unsupported collection key dynamic"
+        },
+        {
+          "message": "src/xml_utils.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 25,
+          "example": "src/xml_utils.ts:1:1: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/rules/abapdoc.ts: unreviewed JavaScript regexp /^\\\"! .*<[^/>]*><\\//",
+          "count": 21,
+          "example": "src/rules/abapdoc.ts:45:3: unreviewed JavaScript regexp /^\\\"! .*<[^/>]*><\\//"
+        },
+        {
+          "message": "src/rules/empty_structure.ts: HIR verification: expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>",
+          "count": 20,
+          "example": "src/rules/empty_structure.ts:68:3: lowering trap: src/rules/empty_structure.ts:68:3: HIR verification: node 272849 (src/rules/empty_structure.ts:132:60): expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>"
+        },
+        {
+          "message": "src/rules/selection_screen_naming.ts: unreviewed JavaScript regexp /^SC_.+$/i",
+          "count": 20,
+          "example": "src/rules/selection_screen_naming.ts:48:3: unreviewed JavaScript regexp /^SC_.+$/i"
+        },
+        {
+          "message": "src/rules/definitions_top.ts: HIR verification: call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 19,
+          "example": "src/rules/definitions_top.ts:92:3: lowering trap: src/rules/definitions_top.ts:92:3: HIR verification: node 257450 (src/rules/definitions_top.ts:133:18): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/",
+          "count": 18,
+          "example": "src/rules/line_only_punc.ts:46:3: lowering trap: node 280876 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/",
+          "count": 18,
+          "example": "src/rules/xml_consistency.ts:51:3: lowering trap: node 307739 (src/rules/xml_consistency.ts:67:50): not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/rules/avoid_use.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 17,
+          "example": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^0+/",
+          "count": 15,
+          "example": "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 290115 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/"
+        },
+        {
+          "message": "src/rules/no_prefixes.ts: unreviewed JavaScript regexp /^[LGM].?_/i",
+          "count": 15,
+          "example": "src/rules/no_prefixes.ts:66:3: unreviewed JavaScript regexp /^[LGM].?_/i"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^check /i",
+          "count": 14,
+          "example": "src/rules/exit_or_check.ts:46:3: lowering trap: node 273097 (src/rules/exit_or_check.ts:67:45): not supported in the Go prototype: JavaScript regexp /^check /i"
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "asyncInitializationFailures": 0
+    },
+    "after": {
+      "total": 3159,
+      "passed": 1782,
+      "failed": 0,
+      "trapped": 1355,
+      "asyncPending": 0,
+      "notRun": 22,
+      "registered": 3147,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-expr test/rules/downport.ts: identifier JSON is not a lowered local or module value; unsupported-expr test/rules/downport.ts: identifier conf702 is not a lowered local or module value",
+          "count": 296,
+          "example": "test/rules/downport.ts:13:1: lowering trap: unsupported-expr test/rules/downport.ts:16:30: identifier JSON is not a lowered local or module value; unsupported-expr test/rules/downport.ts:17:10: identifier conf702 is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 281,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "src/edit_helper.ts: HIR verification: foreach requires matching array",
+          "count": 144,
+          "example": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22525 (src/edit_helper.ts:227:5): foreach requires matching array"
+        },
+        {
+          "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 105,
+          "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/rules/obsolete_statement.ts: HIR verification: call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 83,
+          "example": "src/rules/obsolete_statement.ts:157:3: lowering trap: src/rules/obsolete_statement.ts:157:3: HIR verification: node 288741 (src/rules/obsolete_statement.ts:237:23): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^.?cx_.*$/i",
+          "count": 56,
+          "example": "src/ddic.ts:30:3: lowering trap: node 210044 (src/ddic.ts:63:48): not supported in the Go prototype: JavaScript regexp /^.?cx_.*$/i"
+        },
+        {
+          "message": "src/xml_utils.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 25,
+          "example": "src/xml_utils.ts:1:1: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/rules/abapdoc.ts: unreviewed JavaScript regexp /^\\\"! .*<[^/>]*><\\//",
+          "count": 21,
+          "example": "src/rules/abapdoc.ts:45:3: unreviewed JavaScript regexp /^\\\"! .*<[^/>]*><\\//"
+        },
+        {
+          "message": "src/rules/empty_structure.ts: HIR verification: expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>",
+          "count": 20,
+          "example": "src/rules/empty_structure.ts:68:3: lowering trap: src/rules/empty_structure.ts:68:3: HIR verification: node 272849 (src/rules/empty_structure.ts:132:60): expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>"
+        },
+        {
+          "message": "src/rules/selection_screen_naming.ts: unreviewed JavaScript regexp /^SC_.+$/i",
+          "count": 20,
+          "example": "src/rules/selection_screen_naming.ts:48:3: unreviewed JavaScript regexp /^SC_.+$/i"
+        },
+        {
+          "message": "src/rules/definitions_top.ts: HIR verification: call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 19,
+          "example": "src/rules/definitions_top.ts:92:3: lowering trap: src/rules/definitions_top.ts:92:3: HIR verification: node 257450 (src/rules/definitions_top.ts:133:18): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/",
+          "count": 18,
+          "example": "src/rules/line_only_punc.ts:46:3: lowering trap: node 280876 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/",
+          "count": 18,
+          "example": "src/rules/xml_consistency.ts:51:3: lowering trap: node 307736 (src/rules/xml_consistency.ts:67:50): not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/rules/avoid_use.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 17,
+          "example": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^0+/",
+          "count": 15,
+          "example": "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 290115 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/"
+        },
+        {
+          "message": "src/rules/no_prefixes.ts: unreviewed JavaScript regexp /^[LGM].?_/i",
+          "count": 15,
+          "example": "src/rules/no_prefixes.ts:66:3: unreviewed JavaScript regexp /^[LGM].?_/i"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^check /i",
+          "count": 14,
+          "example": "src/rules/exit_or_check.ts:46:3: lowering trap: node 273097 (src/rules/exit_or_check.ts:67:45): not supported in the Go prototype: JavaScript regexp /^check /i"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp / (abap_true|abap_false)\\s*\\./i",
+          "count": 13,
+          "example": "src/rules/change_if_to_case.ts:50:3: lowering trap: node 251569 (src/rules/change_if_to_case.ts:66:44): not supported in the Go prototype: JavaScript regexp / (abap_true|abap_false)\\s*\\./i"
+        },
+        {
+          "message": "src/rules/local_variable_names.ts: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i",
+          "count": 10,
+          "example": "src/rules/local_variable_names.ts:152:3: unreviewed JavaScript regexp /^[a-zA-Z]{1,3}_.*$/i"
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "asyncInitializationFailures": 0
+    }
+  },
+  "targeted": {
+    "unused_variables": {
+      "targeted": 150,
+      "after": {
+        "passed": 147,
+        "trapped": 3
+      },
+      "nextTraps": {
+        "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22525 (src/edit_helper.ts:227:5): foreach requires matching array": 3
+      }
+    },
+    "sy_read_restriction": {
+      "targeted": 48,
+      "after": {
+        "passed": 48
+      },
+      "nextTraps": {}
+    },
+    "uncaught_exception": {
+      "targeted": 0,
+      "after": {},
+      "nextTraps": {}
+    }
+  },
+  "rulesVerification": {
+    "orderedTitlesIdentical": true,
+    "previousPassesRegressed": 0,
+    "unmatchedTitles": 0,
+    "originalNode": {
+      "total": 3159,
+      "passed": 3149,
+      "failed": 0,
+      "pending": 10
+    },
+    "initialOracleTimeouts": 1,
+    "registryFreedUnusedVariableTestsNowPassed": 147,
+    "synchronousQuickfixTestsNowAtEditHelperTrap": 3,
+    "uncaughtException": {
+      "trapped": 21,
+      "notRun": 2,
+      "reason": "src/ddic.ts: Go prototype regexp /^.?cx_.*$/i"
+    }
+  },
+  "defaultOutput": {
+    "files": 6348,
+    "baseDiffEmpty": true,
+    "mainDiffEmpty": true,
+    "mainBuild": "exact origin/main source substitutions over base source tree; no measurement instrumentation"
+  },
+  "gates": {
+    "vet": "passed",
+    "short": "passed",
+    "parallelism": 2,
+    "graceCheck": "ABAPITI_GRACECHECK=1",
+    "backendCoverageGuard": "passed"
+  },
+  "finalSourceHashes": {
+    "hir/runtime.go": "19b65b1f81324b0d30dc232284d3cbc5e816a5546358634e1fe0b8c2bf80db2b",
+    "hir/golang/ops.go": "3c4c719b5686617d9de76d99a8620a7825f69b9500bd78f6ccd0b050672fc636",
+    "hir/abap/emit.go": "a69a5618e9edaf8537fceabdc503a44dbb3c1425601da956988243e31334e2fb",
+    "tsfront/lower_expr.go": "4a027acde8344bbc8b864eef2f4a5718485b5c576dce37ca256014a8e000fa0f",
+    "tsfront/lower_expr2.go": "c9034326b01b5a9def8f205fd5b5264faced5df5cf3ee46cacb26e3cc0e5d75c",
+    "tsfront/lower_stmt.go": "fa286b27998a64a2adeae6e58199a5e06ccbc9797baf4c0a0f154789091d43aa",
+    "tsfront/map_optional.go": "b3d2c91e04f24235f12847547d00cf169e0354c5cf4341689426e1a93779bce6",
+    "tsfront/reference_key_set.go": "928609da805ba2ca017ab88fb37fbd12f57faca2665f32d44665c2f56151947f"
+  },
+  "compilerSHA256": {
+    "base-bin": "5bd9b9a3c6a29132b6820631f0080e27c7c261e185a6407eb5b1266320c7c0e2",
+    "base-fast": "78cda24379ab6fdc54878d07913e4f9805d7eba44f6963848b949d45a2b0b38c",
+    "after-fast": "ab0f8ac71001da55f156684cd14ed1e21fa006cf8a4b16574546351633d11cd8",
+    "after-bin": "c480b498fa32115e72c91106736791736c7a9e3ce58983a0a52ff9ebd3c13149",
+    "main-bin": "bc6b398db1e95a41a6c544c94e5c1486519b763d97794fba14e59f6091530da0"
+  },
+  "harnessFinalABAPCorrection": "TS\u2192HIR, HIR contract, and Go source unchanged after harness compiler build; ABAP-only correction verified by final ordinary gates and diffs",
+  "commands": {
+    "full": [
+      "\"$BASE_ABAPITI\" abaplint --full -o \"$RUN/full-base\"",
+      "\"$AFTER_ABAPITI\" abaplint --full -o \"$RUN/full-after\""
+    ],
+    "gate": [
+      "go vet ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+      "ABAPITI_GRACECHECK=1 go test -short -p 2 -timeout 30m ./hir/... ./tsfront/... ./internal/... ./cmd/..."
+    ],
+    "default": [
+      "\"$ABAPITI\" abaplint -o out --target all,go",
+      "diff -r \"$RUN/default-base\" \"$RUN/default-after\"",
+      "diff -r \"$RUN/default-main\" \"$RUN/default-after\""
+    ],
+    "harness": [
+      "go build -overlay \"$OVERLAY\" -o \"$TEST_ABAPITI\" ./cmd/abapiti",
+      "node tools/abaplint-tests-closure.mjs \"$CLOSURE\" \"$UPSTREAM\" $files",
+      "node tools/abaplint-tests-oracle.mjs \"$NODE_JSON\" \"$UPSTREAM\" $files",
+      "\"$TEST_ABAPITI\" abaplint-tests \"$CLOSURE\" -o \"$OUT\" > \"$GO_JSON\" 2> \"$LOG\"",
+      "node tools/abaplint-tests-report.mjs \"$NODE_JSON\" \"$GO_JSON\" \"$REPORT_JSON\""
+    ]
+  }
+}

@@ -272,7 +272,12 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	var x *hir.Expr
+	referenceSet, referenceKeys := l.referenceKeySet(d)
 	switch {
+	case referenceKeys:
+		typ = referenceSet
+		x = &hir.Expr{Kind: hir.New, Node: l.node(init), Type: typ}
+
 	case init != nil && (d.Type() == nil || d.Type().Kind == ast.KindAnyKeyword) && l.isNamespaceValue(init):
 		x, _ = l.namespaceRef(init)
 		typ = x.Type

@@ -870,7 +870,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	// A record member with a literal name reads the map.
 	if recv.Type.Kind == hir.OrderedMap && n.Name() != nil {
 		key := n.Name().Text()
-		opt := l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), hir.L(hir.T(hir.String), key))
+		opt := l.mapRead(recv, hir.L(hir.T(hir.String), key))
+		if opt.Type.Equal(recv.Type.Args[1]) {
+			return opt
+		}
 		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[1], X: opt}
 	}
 	// Statics and class values through a namespace alias (Ns.member).
@@ -1599,9 +1602,18 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	case hir.OrderedMap:
 		switch name {
 		case "get":
-			return l.rtOp("map.get", recv, hir.T(hir.Optional, recv.Type.Args[1]), one()), true
+			return l.mapRead(recv, one()), true
 		case "set":
-			a, b := two()
+			var a, b *hir.Expr
+			if recv.Type.Args[1].Kind == hir.Optional && len(args) == 2 {
+				a = l.expr(args[0])
+				saved := l.hint
+				l.hint = recv.Type.Args[1]
+				b = l.expr(args[1])
+				l.hint = saved
+			} else {
+				a, b = two()
+			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
 			return l.rtOp("map.has", recv, boolT, one()), true
