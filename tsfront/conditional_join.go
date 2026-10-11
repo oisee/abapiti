@@ -49,7 +49,7 @@ func (l *lowerer) conditionalExpression(n *ast.Node) *hir.Expr {
 	}
 	// An already exact join needs no conversion; the enclosing assignment
 	// performs any widening. Preserve the default closure's HIR spelling.
-	if y.Type.Equal(z.Type) {
+	if y.Type.Kind != "" && y.Type.Kind != hir.Void && y.Type.Equal(z.Type) {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: y.Type, X: x, Y: y, Z: z}
 	}
 	candidates := []hir.Type{context}
@@ -131,6 +131,9 @@ func emptyConditionalArray(n *ast.Node, x *hir.Expr) bool {
 // Fresh [] and undefined can adopt the join without a copy or evaluation.
 func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type) bool {
 	src := x.Type
+	if src.Kind == "" || src.Kind == hir.Void || dst.Kind == "" || dst.Kind == hir.Void {
+		return false
+	}
 	if src.Equal(dst) {
 		return true
 	}

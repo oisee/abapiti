@@ -92,3 +92,22 @@ func TestConditionalJoinRefusesIncompatibleStorage(t *testing.T) {
 	}
 	t.Fatalf("missing exact-join refusal: %v", diags)
 }
+
+func TestConditionalJoinCollectionIdentity(t *testing.T) {
+	source := `export class Probe {
+ static chooseSet(flag:boolean,a:Set<string>,b:Set<string>|undefined):Set<string>|undefined {return flag?a:b;}
+ static chooseMap(flag:boolean,a:Map<string,string>,b:Map<string,string>|undefined):Map<string,string>|undefined {return flag?a:b;}
+ static run():string {
+  const a=new Set<string>();const b=new Set<string>();
+  const m=new Map<string,string>();const n=new Map<string,string>();
+  const selectedSet=Probe.chooseSet(false,a,b);const selectedMap=Probe.chooseMap(true,m,n);
+  if(selectedSet!==undefined){selectedSet.add("live");}
+  if(selectedMap!==undefined){selectedMap.set("key","value");}
+  return (selectedSet===b)+":"+(selectedMap===m)+":"+a.size+":"+b.size+":"+m.get("key")+":"+n.size+":"+(Probe.chooseSet(false,a,undefined)===undefined);
+ }}`
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
+	}
+	conditionalMatchesNode(t, source, p, "Probe")
+}
