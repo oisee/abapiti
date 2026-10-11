@@ -44,11 +44,18 @@ func pcreRegexPattern(pattern string) string {
 		} else if c == ']' {
 			inClass = false
 		}
-		if !inClass && c == '^' {
+		switch {
+		case !inClass && c == '^':
 			out.WriteString(`(?<![\s\S])`)
-		} else if !inClass && c == '$' {
+		case !inClass && c == '$':
 			out.WriteString(`(?![\s\S])`)
-		} else {
+		case !inClass && c == ' ':
+			// ABAP PCRE defaults to extended mode, which drops unescaped spaces and
+			// treats # as a comment; hex escapes mean the same in PCRE, JS and RE2.
+			out.WriteString(`\x20`)
+		case !inClass && c == '#':
+			out.WriteString(`\x23`)
+		default:
 			out.WriteByte(c)
 		}
 	}
