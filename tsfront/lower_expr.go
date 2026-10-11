@@ -2332,6 +2332,15 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
 		x = l.optionalView(x, y.Type)
 	}
+	// Nullable interface views still compare object identity. Convert the
+	// present operand to the accepted interface before adding absence; never
+	// narrow the optional operand (undefined must compare unequal, not throw).
+	if x.Type.IsRef() && y.Type.Kind == hir.Optional && y.Type.Args[0].IsRef() && l.acceptsType(y.Type.Args[0], x.Type) {
+		x = l.optionalView(l.coerce(x, y.Type.Args[0]), y.Type)
+	}
+	if y.Type.IsRef() && x.Type.Kind == hir.Optional && x.Type.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], y.Type) {
+		y = l.optionalView(l.coerce(y, x.Type.Args[0]), x.Type)
+	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
 			y = &hir.Expr{Kind: hir.Cast, Type: x.Type, X: y}
