@@ -38,7 +38,8 @@ for (const n of files) {
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
   reg.addFile(new abaplint.MemoryFile(n, src));
 }
-if (!constructs.inline || !constructs.instance) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
+// Feature fixtures (--fixture) are small; only the main corpus must show both constructs.
+if (!process.argv.includes("--fixture") && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
 function walk(dir) {
   for (const f of readdirSync(dir, {withFileTypes: true})) {
     const path = join(dir, f.name);
