@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
+		return x
+	}
 	if l.isGeneratorABIValue(x) || l.erasedCalls[x] {
 		return x
 	}
@@ -555,6 +558,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		}
 	}
 	if t, ok := l.lookup(name); ok {
+		if t.Kind == hir.Void {
+			if value := l.functionValue(n); value != nil {
+				return value
+			}
+		}
 		x := hir.V(name, t)
 		x.Node = l.node(n)
 		if l.localSymbols == nil {
@@ -569,12 +577,19 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 		}
 		l.localSymbols[x] = symbol
+		if l.localSymbolMethods == nil {
+			l.localSymbolMethods = map[*hir.Expr]*hir.Method{}
+		}
+		l.localSymbolMethods[x] = l.method
 		if t.Kind == hir.Optional && len(l.guards) > 0 {
 			if typ, guarded := l.guards[l.resolve(n)]; guarded && t.Args[0].Equal(typ) {
 				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
 			}
 		}
 		return x
+	}
+	if value := l.functionValue(n); value != nil {
+		return value
 	}
 	sym := l.resolve(n)
 	if sym == nil {
@@ -614,6 +629,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
+	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
+		if value := l.functionValue(n); value != nil {
+			return value
+		}
+	}
 	p := n.AsPropertyAccessExpression()
 	if x, ok := l.numberStatic(n, p); ok {
 		return x
@@ -884,6 +904,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
+		if t, ok := l.lookup(name); ok && l.isCallableValueType(t) {
+			if t.Name == thunkInterfaceName {
+				x, _ := l.thunkCall(n, callee)
+				return x
+			}
+			return l.functionValueCall(n, callee)
+		}
 		if lf, ok := l.localFns[name]; ok {
 			return l.localFnCall(n, lf, callee)
 		}
@@ -913,6 +940,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	}
 	if x, ok := l.thunkCall(n, callee); ok {
 		return x
+	}
+	if l.unprunedFeatures && callee.Kind == ast.KindPropertyAccessExpression {
+		if field, ok := l.fieldOf(l.resolve(callee)); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
+			return l.functionValueCall(n, callee)
+		}
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()

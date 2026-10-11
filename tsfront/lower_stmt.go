@@ -194,6 +194,9 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 	case ast.KindFunctionDeclaration:
 		if n.Name() != nil && l.pendingFns[n.Name().Text()] != nil {
 			l.declare(n.Name().Text(), hir.T(hir.Void))
+			if l.unprunedFeatures {
+				return l.functionBindingPlaceholder(n.Name())
+			}
 			return nil
 		}
 		if n.Name() != nil && l.localFns[n.Name().Text()] != nil {
@@ -266,6 +269,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if _, lifted := l.pendingFns[name]; lifted {
 			// Lifted to a method; calls resolve through localFns.
 			l.declare(name, hir.T(hir.Void))
+			if l.unprunedFeatures {
+				return []*hir.Stmt{l.functionBindingPlaceholder(d.Name())}
+			}
 			return nil
 		}
 	}

@@ -124,6 +124,9 @@ func (l *lowerer) classHasNominalBrand(name string) bool {
 				continue
 			}
 			for _, node := range symbol.Declarations {
+				if node.Kind != ast.KindClassDeclaration && node.Kind != ast.KindClassExpression {
+					continue
+				}
 				for _, member := range node.Members() {
 					if member.Kind == ast.KindConstructor {
 						for _, parameter := range member.Parameters() {
