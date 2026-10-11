@@ -1,0 +1,213 @@
+{
+  "base": "b89c039",
+  "upstream": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "scope": "unpruned full closure, no reachability manifest",
+  "before": {
+    "blocking": 48,
+    "rootBlocking": 35,
+    "cascadeBlocking": 13,
+    "hirErrors": 123,
+    "byCategory": {
+      "assume-integer": 10,
+      "unsupported-array": 2,
+      "unsupported-call": 4,
+      "unsupported-callback": 1,
+      "unsupported-expr": 21,
+      "unsupported-json": 2,
+      "unsupported-lsp-call": 5,
+      "unsupported-new": 1,
+      "unsupported-regex": 1,
+      "unsupported-statement": 1
+    },
+    "byRootMessage": [
+      {
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+        "count": 9
+      },
+      {
+        "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+        "count": 3
+      },
+      {
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+        "count": 2
+      },
+      {
+        "message": "empty array literal outside a statement context",
+        "count": 2
+      },
+      {
+        "message": "identifier X is not a lowered local or module value",
+        "count": 2
+      },
+      {
+        "message": "method X on classref is not lowered",
+        "count": 2
+      },
+      {
+        "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+        "count": 2
+      },
+      {
+        "message": "callback KindPropertyAccessExpression is not an arrow function",
+        "count": 1
+      },
+      {
+        "message": "delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "find on primitive arrays needs an absence-preserving callback ABI",
+        "count": 1
+      },
+      {
+        "message": "for-in needs a string-keyed map (classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "method X on dynamic is not lowered",
+        "count": 1
+      },
+      {
+        "message": "new X is not a lowered class",
+        "count": 1
+      },
+      {
+        "message": "new X requires a lowered string pattern",
+        "count": 1
+      },
+      {
+        "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+        "count": 1
+      },
+      {
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+        "count": 1
+      }
+    ]
+  },
+  "after": {
+    "blocking": 48,
+    "rootBlocking": 35,
+    "cascadeBlocking": 13,
+    "hirErrors": 123,
+    "byCategory": {
+      "assume-integer": 10,
+      "unsupported-array": 2,
+      "unsupported-call": 4,
+      "unsupported-callback": 1,
+      "unsupported-expr": 21,
+      "unsupported-json": 2,
+      "unsupported-lsp-call": 5,
+      "unsupported-new": 1,
+      "unsupported-regex": 1,
+      "unsupported-statement": 1
+    },
+    "byRootMessage": [
+      {
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+        "count": 9
+      },
+      {
+        "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+        "count": 3
+      },
+      {
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+        "count": 2
+      },
+      {
+        "message": "empty array literal outside a statement context",
+        "count": 2
+      },
+      {
+        "message": "identifier X is not a lowered local or module value",
+        "count": 2
+      },
+      {
+        "message": "method X on classref is not lowered",
+        "count": 2
+      },
+      {
+        "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+        "count": 2
+      },
+      {
+        "message": "callback KindPropertyAccessExpression is not an arrow function",
+        "count": 1
+      },
+      {
+        "message": "delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "find on primitive arrays needs an absence-preserving callback ABI",
+        "count": 1
+      },
+      {
+        "message": "for-in needs a string-keyed map (classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+        "count": 1
+      },
+      {
+        "message": "method X on dynamic is not lowered",
+        "count": 1
+      },
+      {
+        "message": "new X is not a lowered class",
+        "count": 1
+      },
+      {
+        "message": "new X requires a lowered string pattern",
+        "count": 1
+      },
+      {
+        "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+        "count": 1
+      },
+      {
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+        "count": 1
+      },
+      {
+        "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+        "count": 1
+      }
+    ]
+  },
+  "liveClassViewLoweringDiagnostics": {
+    "before": 0,
+    "after": 0
+  },
+  "commands": {
+    "before": "GOMAXPROCS=1 GOFLAGS=\"-p=2 -buildvcs=false\" /tmp/live-class-view/base-abapiti abaplint /tmp/config-json-upstream --full -o /tmp/live-class-view/full-before",
+    "after": "GOMAXPROCS=1 GOFLAGS=\"-p=2 -buildvcs=false\" /tmp/live-class-view/branch-abapiti-sealed abaplint /tmp/config-json-upstream --full -o /tmp/live-class-view/full-after-sealed"
+  }
+}
