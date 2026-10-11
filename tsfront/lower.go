@@ -466,6 +466,8 @@ type lowerer struct {
 	constReads    map[*ast.Symbol]bool // module constants read anywhere in the program
 	synthsByName  map[string]*hir.Class
 
+	erasedCalls map[*hir.Expr]bool
+
 	// Retain checker binding identity for post-lowering boundary rewrites.
 	localSymbols map[*hir.Expr]*ast.Symbol
 	declSymbols  map[*hir.Stmt]*ast.Symbol

@@ -42,7 +42,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"map.delete":          {OrderedMap, 1, true},
 	"string.replaceRegex": {String, 2, false},
 	"array.reverse":       {Array, 0, true},
-	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
+	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.has": {Array, 1, false}, "array.delete": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
 	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
 	"array.slice1": {Array, 1, false}, "array.slice2": {Array, 2, false},
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
@@ -157,6 +157,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t.Args[0]}, i, true
 	case "array.get":
 		return []Type{i}, optionalOf(t.Args[0]), true
+	case "array.has", "array.delete":
+		return []Type{i}, b, true
 	case "array.reverse":
 		return nil, t, true
 	case "array.concat":

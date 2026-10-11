@@ -30,6 +30,9 @@ var supportedOps = map[string]bool{
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
 }
 
+// Presence-sensitive arrays are Go-only until the ABAP sparse-array ABI exists.
+var unsupportedOps = map[string]bool{"array.has": true, "array.delete": true}
+
 // RuntimeOps reports the complete catalogue partition in sorted order.
 func RuntimeOps() (supported, unsupported []string) {
 	all := map[string]bool{}

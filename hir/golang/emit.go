@@ -35,6 +35,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	hir.AssignSiteIDs(p)
 	e := &emitter{p: p, promiseUsed: hir.UsesSettledPromises(p), names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
 	e.characterSets()
+	e.collectBoxedShapes()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
 			e.checkOps(m.Body)
@@ -81,7 +82,14 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.line("}")
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
+	runtime := runtimeSource
+	if e.usesTypedCatch {
+		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
+	}
+	if e.usesArrayPresence || e.usesArrayDeletion {
+		runtime = sparseRuntime(runtime)
+	}
+	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -107,19 +115,24 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
-	promiseUsed    bool
-	profile        bool
-	sites          []emittedSite
-	profileIndices map[string]int
-	profileNodes   []hir.Site
-	p              *hir.Program
-	names          *hir.Names
-	code           strings.Builder
-	err            error
-	extra          strings.Builder
-	materializers  map[string]bool
-	stringLiterals map[string]string
-	classifiers    map[string]string
+	promiseUsed       bool
+	profile           bool
+	sites             []emittedSite
+	profileIndices    map[string]int
+	profileNodes      []hir.Site
+	p                 *hir.Program
+	names             *hir.Names
+	code              strings.Builder
+	err               error
+	extra             strings.Builder
+	materializers     map[string]bool
+	stringLiterals    map[string]string
+	classifiers       map[string]string
+	boxedFields       map[string]bool
+	boxedShapes       map[string]bool
+	usesArrayPresence bool
+	usesArrayDeletion bool
+	usesTypedCatch    bool
 }
 
 func (e *emitter) line(f string, a ...any) { fmt.Fprintf(&e.code, f+"\n", a...) }
@@ -281,6 +294,9 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	e.line("}")
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
+	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] {
+		e.shapeFields(c)
+	}
 	if source {
 		e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
 	} else {
@@ -997,6 +1013,14 @@ func (b *body) stmt(s *hir.Stmt) {
 		if e.promiseUsed && s.Type.Kind == hir.Dynamic {
 			b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(tsThrown);ok {")
 			value = "caught.tsValue()"
+		} else if s.Type.Kind == hir.ClassRef || s.Type.Kind == hir.InterfaceRef {
+			// Generic Go instantiations are invariant: payload[Derived] is
+			// not payload[Base]. Match the thrown reference's ancestry, not
+			// its static throw-site type. Only TS payloads implement this
+			// interface; host faults and lowering traps still escape.
+			e.usesTypedCatch = true
+			b.line("func(){defer func(){if x:=recover();x!=nil {if thrown,ok:=x.(interface{payloadValue() any});ok {if caught,ok:=thrown.payloadValue().(%s);ok {", e.typ(s.Type))
+			value = "caught"
 		} else {
 			b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(payload[%s]);ok && caught.Type==%q {", e.typ(s.Type), s.Type.String())
 		}
@@ -1008,7 +1032,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.stmt(s.Else)
 		b.tryDepth--
 		b.locals = old
-		b.line("}else{panic(x)}}}()")
+		if s.Type.Kind == hir.ClassRef || s.Type.Kind == hir.InterfaceRef {
+			b.line("}else{panic(x)}}else{panic(x)}}}()")
+		} else {
+			b.line("}else{panic(x)}}}()")
+		}
 		b.locals = clone(old)
 		b.tryDepth++
 		b.stmt(s.Body)

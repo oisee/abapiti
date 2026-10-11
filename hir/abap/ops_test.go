@@ -14,8 +14,16 @@ func TestRuntimeOpsSupportedByEveryBackend(t *testing.T) {
 		"golang": golang.RuntimeOps,
 	} {
 		supported, unsupported := catalogue()
-		if len(supported) == 0 || len(unsupported) != 0 {
-			t.Errorf("%s: supported=%d unsupported=%v", name, len(supported), unsupported)
+		if len(supported) == 0 {
+			t.Errorf("%s: empty supported catalogue", name)
+		}
+		for _, op := range unsupported {
+			if name != "abap" || !unsupportedOps[op] {
+				t.Errorf("%s: unreviewed unsupported op %s", name, op)
+			}
+		}
+		if name == "abap" && len(unsupported) != len(unsupportedOps) {
+			t.Errorf("ABAP unsupported catalogue drift: %v", unsupported)
 		}
 	}
 }
