@@ -1,0 +1,1313 @@
+{
+  "ts-js": {
+    "Classes": 65,
+    "Interfaces": 1,
+    "LowerError": "",
+    "RawError": "",
+    "GoFiles": 3,
+    "GoError": "",
+    "ABAPFiles": 98,
+    "ABAPError": "",
+    "BuildError": "",
+    "BuildOutput": "",
+    "Checker": [],
+    "Verify": [],
+    "RawVerify": [
+      "node 5695 (<scratch>/tools/gogen/ir.ts:262:47): void type argument",
+      "node 5710 (<scratch>/tools/gogen/ir.ts:265:3): void type argument",
+      "node 20 (<scratch>/tools/gogen/ir.ts:258:1): void type argument",
+      "node 20 (<scratch>/tools/gogen/ir.ts:258:1): void type argument",
+      "node 5697 (<scratch>/tools/gogen/ir.ts:262:47): void type argument",
+      "node 0 (): void type argument",
+      "node 5712 (<scratch>/tools/gogen/ir.ts:265:3): void type argument",
+      "node 0 (): void type argument",
+      "node 5951 (<scratch>/tools/gogen/ir.ts:284:108): void type argument",
+      "node 25 (<scratch>/tools/gogen/ir.ts:284:1): void type argument",
+      "node 5953 (<scratch>/tools/gogen/ir.ts:284:108): void type argument",
+      "node 0 (): void type argument",
+      "node 6472 (<scratch>/tools/gogen/emit-constructors.ts:16:22): field on non-class",
+      "node 6472 (<scratch>/tools/gogen/emit-constructors.ts:16:22): unresolved field params",
+      "node 6412 (<scratch>/tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 6535 (<scratch>/tools/gogen/emit-constructors.ts:22:9): call argument type mismatch: classref<tools/gogen/emit-constructors.ts.ConstructorFactory> <- void in runtime .",
+      "node 6412 (<scratch>/tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 6556 (<scratch>/tools/gogen/emit-constructors.ts:24:9): condition must be bool",
+      "node 6414 (<scratch>/tools/gogen/frontend-find-results.ts:5:1): void type argument",
+      "node 6414 (<scratch>/tools/gogen/frontend-find-results.ts:5:1): invalid parameter body",
+      "node 6414 (<scratch>/tools/gogen/frontend-find-results.ts:5:1): missing method body",
+      "node 6416 (<scratch>/tools/gogen/frontend-find-results.ts:30:1): invalid parameter node",
+      "node 6416 (<scratch>/tools/gogen/frontend-find-results.ts:30:1): invalid parameter resultNode",
+      "node 6416 (<scratch>/tools/gogen/frontend-find-results.ts:30:1): missing method body",
+      "node 6427 (<scratch>/tools/gogen/symbols.ts:14:1): method may fall through without return",
+      "node 6428 (<scratch>/tools/gogen/symbols.ts:20:1): method may fall through without return",
+      "node 6430 (<scratch>/tools/gogen/symbols.ts:42:1): method may fall through without return"
+    ],
+    "BlockingDiagnosticsFourFiles": [
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:71:25",
+        "message": "data interface tools/gogen/frontend-find-results.ts.FindContext: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:82:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member XS has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:83:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member S has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:7:49",
+        "message": "data interface tools/gogen/ir.ts.Field: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:136",
+        "message": "data interface tools/gogen/ir.ts.Argument: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:158",
+        "message": "data interface tools/gogen/ir.ts.Argument: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:181",
+        "message": "data interface tools/gogen/ir.ts.Argument: member place has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:204",
+        "message": "data interface tools/gogen/ir.ts.Argument: member wrap has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:11:50",
+        "message": "data interface tools/gogen/ir.ts.Where: member fx has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:11:91",
+        "message": "data interface tools/gogen/ir.ts.Where: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:12:76",
+        "message": "data interface tools/gogen/ir.ts.SortKey: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:13:78",
+        "message": "data interface tools/gogen/ir.ts.TableKey: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:244:3",
+        "message": "data interface tools/gogen/ir.ts.Method: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:247:99",
+        "message": "data interface tools/gogen/ir.ts.Attribute: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:256:147",
+        "message": "data interface tools/gogen/ir.ts.TableColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:259:39",
+        "message": "data interface tools/gogen/ir.ts.Program: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:260:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:267:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member anonStructs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:39",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member I has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:69",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member 8 has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:101",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member P has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:131",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member F has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:282:26",
+        "message": "data interface tools/gogen/ir.ts.ExprMetadata: member fromP has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:93",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoPlace has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:147",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoType has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:248",
+        "message": "data interface tools/gogen/ir.ts.Catch: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:288:53",
+        "message": "data interface tools/gogen/ir.ts.SqlColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:289:84",
+        "message": "data interface tools/gogen/ir.ts.SqlAssignment: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:291:79",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:291:148",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member range has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:297:27",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member group has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:298:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member module has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:300:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member spaghetti has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:301:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member top has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/symbols.ts:104:217",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/symbols.ts:104:256",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member consts has unlowered types"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:5:45",
+        "message": "type reference StructureNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:5:136",
+        "message": "type reference Type is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:40",
+        "message": "type reference StatementNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:142",
+        "message": "type reference ExpressionNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:203",
+        "message": "type reference Extract is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:9:19",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:15:71",
+        "message": "identifier classes is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-shortcircuit",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:17:43",
+        "message": "mixed tagged operands require value-preserving truthiness"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:20:22",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:20:49",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:21:96",
+        "message": "empty array literal outside a statement context"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:22:31",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:24:28",
+        "message": "identifier Unsupported is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:24:15",
+        "message": "instanceof needs a lowered class operand"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:8:14",
+        "message": "checker type (s: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:12:14",
+        "message": "checker type (cls: string, method: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:16:12",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-closure",
+        "loc": "<scratch>/tools/gogen/symbols.ts:21:10",
+        "message": "only parameterless thunks are lowered as closures"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:37:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:44:16",
+        "message": "identifier emitGo is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:45:18",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:46:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:47:16",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:48:10",
+        "message": "identifier source is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/symbols.ts:54:46",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:56:26",
+        "message": "binary operator KindQuestionQuestionEqualsToken is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:59:3",
+        "message": "??= needs an optional local or this field"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:60:22",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:68:23",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:40",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:36",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:32",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:23",
+        "message": "new Set is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:84:25",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:94:14",
+        "message": "checker type Dirent<string> is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:94:23",
+        "message": "call to KindIdentifier is not lowered"
+      }
+    ],
+    "TrapModeDiagnosticCategories": {
+      "note-data-interface": 38,
+      "note-dropped-declaration": 54,
+      "note-class-value-type": 863,
+      "note-dynamic-union": 47,
+      "note-number-binary64": 12,
+      "note-record-map": 2,
+      "note-generic-erased": 1,
+      "note-default-param": 9,
+      "note-trap-failure": 29,
+      "note-empty-map": 1,
+      "note-finally": 1,
+      "note-builtin-error": 1,
+      "note-any-dynamic": 4,
+      "note-object-spread": 1,
+      "note-namespace-export-unread": 1,
+      "note-module-const-unread": 7,
+      "note-number-ranges": 65
+    },
+    "SourceFiles": [
+      "<scratch>/tools/gogen/emit-constructors.ts",
+      "<scratch>/tools/gogen/frontend-find-results.ts",
+      "<scratch>/tools/gogen/ir.ts",
+      "<scratch>/tools/gogen/symbols.ts"
+    ]
+  },
+  "stub": {
+    "Classes": 64,
+    "Interfaces": 1,
+    "LowerError": "",
+    "RawError": "",
+    "GoFiles": 3,
+    "GoError": "",
+    "ABAPFiles": 97,
+    "ABAPError": "",
+    "BuildError": "",
+    "BuildOutput": "",
+    "Checker": [],
+    "Verify": [],
+    "RawVerify": [
+      "node 5695 (<scratch-stub>/tools/gogen/ir.ts:262:47): void type argument",
+      "node 5710 (<scratch-stub>/tools/gogen/ir.ts:265:3): void type argument",
+      "node 20 (<scratch-stub>/tools/gogen/ir.ts:258:1): void type argument",
+      "node 20 (<scratch-stub>/tools/gogen/ir.ts:258:1): void type argument",
+      "node 5697 (<scratch-stub>/tools/gogen/ir.ts:262:47): void type argument",
+      "node 0 (): void type argument",
+      "node 5712 (<scratch-stub>/tools/gogen/ir.ts:265:3): void type argument",
+      "node 0 (): void type argument",
+      "node 5951 (<scratch-stub>/tools/gogen/ir.ts:284:108): void type argument",
+      "node 25 (<scratch-stub>/tools/gogen/ir.ts:284:1): void type argument",
+      "node 5953 (<scratch-stub>/tools/gogen/ir.ts:284:108): void type argument",
+      "node 0 (): void type argument",
+      "node 6472 (<scratch-stub>/tools/gogen/emit-constructors.ts:16:22): field on non-class",
+      "node 6472 (<scratch-stub>/tools/gogen/emit-constructors.ts:16:22): unresolved field params",
+      "node 6412 (<scratch-stub>/tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 6536 (<scratch-stub>/tools/gogen/emit-constructors.ts:22:9): call argument type mismatch: classref<tools/gogen/emit-constructors.ts.ConstructorFactory> <- void in runtime .",
+      "node 6412 (<scratch-stub>/tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 6542 (<scratch-stub>/tools/gogen/emit-constructors.ts:24:9): condition must be bool",
+      "node 6414 (<scratch-stub>/tools/gogen/frontend-find-results.ts:5:1): void type argument",
+      "node 6414 (<scratch-stub>/tools/gogen/frontend-find-results.ts:5:1): invalid parameter body",
+      "node 6414 (<scratch-stub>/tools/gogen/frontend-find-results.ts:5:1): missing method body",
+      "node 6416 (<scratch-stub>/tools/gogen/frontend-find-results.ts:30:1): invalid parameter node",
+      "node 6416 (<scratch-stub>/tools/gogen/frontend-find-results.ts:30:1): invalid parameter resultNode",
+      "node 6416 (<scratch-stub>/tools/gogen/frontend-find-results.ts:30:1): missing method body",
+      "node 6427 (<scratch-stub>/tools/gogen/symbols.ts:14:1): method may fall through without return",
+      "node 6428 (<scratch-stub>/tools/gogen/symbols.ts:20:1): method may fall through without return",
+      "node 6430 (<scratch-stub>/tools/gogen/symbols.ts:42:1): method may fall through without return"
+    ],
+    "BlockingDiagnosticsFourFiles": [
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:71:25",
+        "message": "data interface tools/gogen/frontend-find-results.ts.FindContext: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:82:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member XS has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:83:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member S has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:7:49",
+        "message": "data interface tools/gogen/ir.ts.Field: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:9:136",
+        "message": "data interface tools/gogen/ir.ts.Argument: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:9:158",
+        "message": "data interface tools/gogen/ir.ts.Argument: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:9:181",
+        "message": "data interface tools/gogen/ir.ts.Argument: member place has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:9:204",
+        "message": "data interface tools/gogen/ir.ts.Argument: member wrap has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:11:50",
+        "message": "data interface tools/gogen/ir.ts.Where: member fx has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:11:91",
+        "message": "data interface tools/gogen/ir.ts.Where: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:12:76",
+        "message": "data interface tools/gogen/ir.ts.SortKey: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:13:78",
+        "message": "data interface tools/gogen/ir.ts.TableKey: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:244:3",
+        "message": "data interface tools/gogen/ir.ts.Method: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:247:99",
+        "message": "data interface tools/gogen/ir.ts.Attribute: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:256:147",
+        "message": "data interface tools/gogen/ir.ts.TableColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:259:39",
+        "message": "data interface tools/gogen/ir.ts.Program: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:260:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:267:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member anonStructs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:279:39",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member I has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:279:69",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member 8 has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:279:101",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member P has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:279:131",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member F has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:282:26",
+        "message": "data interface tools/gogen/ir.ts.ExprMetadata: member fromP has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:287:93",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoPlace has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:287:147",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoType has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:287:248",
+        "message": "data interface tools/gogen/ir.ts.Catch: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:288:53",
+        "message": "data interface tools/gogen/ir.ts.SqlColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:289:84",
+        "message": "data interface tools/gogen/ir.ts.SqlAssignment: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:291:79",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:291:148",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member range has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:297:27",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member group has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:298:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member module has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:300:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member spaghetti has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/ir.ts:301:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member top has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:104:217",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:104:256",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member consts has unlowered types"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:5:45",
+        "message": "type reference StructureNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:5:136",
+        "message": "type reference Type is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:30:40",
+        "message": "type reference StatementNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:30:142",
+        "message": "type reference ExpressionNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/frontend-find-results.ts:30:203",
+        "message": "type reference Extract is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:9:19",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:15:71",
+        "message": "identifier classes is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-shortcircuit",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:17:43",
+        "message": "mixed tagged operands require value-preserving truthiness"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:20:22",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:20:49",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:22:31",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:24:28",
+        "message": "identifier Unsupported is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/emit-constructors.ts:24:15",
+        "message": "instanceof needs a lowered class operand"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:8:14",
+        "message": "checker type (s: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:12:14",
+        "message": "checker type (cls: string, method: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:16:12",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-closure",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:21:10",
+        "message": "only parameterless thunks are lowered as closures"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:37:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:44:16",
+        "message": "identifier emitGo is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:45:18",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:46:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:47:16",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:48:10",
+        "message": "identifier source is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:54:46",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:56:26",
+        "message": "binary operator KindQuestionQuestionEqualsToken is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:59:3",
+        "message": "??= needs an optional local or this field"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:60:22",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:68:23",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:74:40",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:74:36",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:74:32",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:74:23",
+        "message": "new Set is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:84:25",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:94:14",
+        "message": "checker type Dirent<string> is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch-stub>/tools/gogen/symbols.ts:94:23",
+        "message": "call to KindIdentifier is not lowered"
+      }
+    ],
+    "TrapModeDiagnosticCategories": {
+      "note-data-interface": 38,
+      "note-dropped-declaration": 54,
+      "note-class-value-type": 863,
+      "note-dynamic-union": 47,
+      "note-number-binary64": 12,
+      "note-record-map": 2,
+      "note-generic-erased": 1,
+      "note-default-param": 9,
+      "note-trap-failure": 28,
+      "note-empty-map": 1,
+      "note-finally": 1,
+      "note-builtin-error": 1,
+      "note-object-spread": 1,
+      "note-any-dynamic": 2,
+      "note-namespace-export-unread": 1,
+      "note-module-const-unread": 7,
+      "note-number-ranges": 64
+    },
+    "SourceFiles": [
+      "<scratch-stub>/tools/gogen/emit-constructors.ts",
+      "<scratch-stub>/tools/gogen/frontend-find-results.ts",
+      "<scratch-stub>/tools/gogen/ir.ts",
+      "<scratch-stub>/tools/gogen/symbols.ts"
+    ]
+  },
+  "js": {
+    "Classes": 445,
+    "Interfaces": 4,
+    "LowerError": "",
+    "RawError": "panic: runtime error: invalid memory address or nil pointer dereference",
+    "GoFiles": 0,
+    "GoError": "node 25846 (<scratch>/tools/gogen/frontend-session.mjs:6:25): not supported in the Go prototype: JavaScript regexp /=>|->|~|\\b(?:TYPES|CONSTANTS|INTERFACES|INHERITING|NEW|CATCH|RAISE|ASSIGN|SELECT|INSERT|DELETE|UPDATE|MODIFY|APPEND|COLLECT|SUBMIT|DESCRIBE)\\b|\\b(?:CALL\\s+FUNCTION|IS\\s+(?:NOT\\s+)?SUPPLIED|SET\\s+HANDLER|GET\\s+REFERENCE)\\b/i",
+    "ABAPFiles": 495,
+    "ABAPError": "",
+    "BuildError": "not attempted: Go emission failed",
+    "BuildOutput": "",
+    "Checker": [],
+    "Verify": [],
+    "RawVerify": [],
+    "BlockingDiagnosticsFourFiles": [
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:71:25",
+        "message": "data interface tools/gogen/frontend-find-results.ts.FindContext: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:82:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member XS has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:83:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member S has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:7:49",
+        "message": "data interface tools/gogen/ir.ts.Field: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:136",
+        "message": "data interface tools/gogen/ir.ts.Argument: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:158",
+        "message": "data interface tools/gogen/ir.ts.Argument: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:181",
+        "message": "data interface tools/gogen/ir.ts.Argument: member place has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:9:204",
+        "message": "data interface tools/gogen/ir.ts.Argument: member wrap has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:11:50",
+        "message": "data interface tools/gogen/ir.ts.Where: member fx has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:11:91",
+        "message": "data interface tools/gogen/ir.ts.Where: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:12:76",
+        "message": "data interface tools/gogen/ir.ts.SortKey: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:13:78",
+        "message": "data interface tools/gogen/ir.ts.TableKey: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:244:3",
+        "message": "data interface tools/gogen/ir.ts.Method: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:247:99",
+        "message": "data interface tools/gogen/ir.ts.Attribute: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:256:147",
+        "message": "data interface tools/gogen/ir.ts.TableColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:259:39",
+        "message": "data interface tools/gogen/ir.ts.Program: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:260:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:267:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member anonStructs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:39",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member I has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:69",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member 8 has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:101",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member P has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:279:131",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member F has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:282:26",
+        "message": "data interface tools/gogen/ir.ts.ExprMetadata: member fromP has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:93",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoPlace has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:147",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoType has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:287:248",
+        "message": "data interface tools/gogen/ir.ts.Catch: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:288:53",
+        "message": "data interface tools/gogen/ir.ts.SqlColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:289:84",
+        "message": "data interface tools/gogen/ir.ts.SqlAssignment: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:291:79",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:291:148",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member range has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:297:27",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member group has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:298:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member module has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:300:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member spaghetti has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/ir.ts:301:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member top has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/symbols.ts:104:217",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member structs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "<scratch>/tools/gogen/symbols.ts:104:256",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member consts has unlowered types"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:5:45",
+        "message": "type reference StructureNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:5:136",
+        "message": "type reference Type is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:40",
+        "message": "type reference StatementNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:142",
+        "message": "type reference ExpressionNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/frontend-find-results.ts:30:203",
+        "message": "type reference Extract is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:9:19",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-shortcircuit",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:17:43",
+        "message": "mixed tagged operands require value-preserving truthiness"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:20:22",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:21:96",
+        "message": "empty array literal outside a statement context"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/emit-constructors.ts:22:31",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:8:14",
+        "message": "checker type (s: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:12:14",
+        "message": "checker type (cls: string, method: string) => string is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:16:12",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-closure",
+        "loc": "<scratch>/tools/gogen/symbols.ts:21:10",
+        "message": "only parameterless thunks are lowered as closures"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:37:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:44:16",
+        "message": "identifier emitGo is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:45:18",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:46:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:47:16",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:48:10",
+        "message": "identifier source is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/symbols.ts:54:46",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:56:26",
+        "message": "binary operator KindQuestionQuestionEqualsToken is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:59:3",
+        "message": "??= needs an optional local or this field"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:60:22",
+        "message": "identifier ir is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:68:23",
+        "message": "identifier ir is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:40",
+        "message": "identifier ir is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:36",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:32",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "<scratch>/tools/gogen/symbols.ts:74:23",
+        "message": "new Set is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "<scratch>/tools/gogen/symbols.ts:84:25",
+        "message": "identifier ir is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "<scratch>/tools/gogen/symbols.ts:94:14",
+        "message": "checker type Dirent<string> is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "<scratch>/tools/gogen/symbols.ts:94:23",
+        "message": "call to KindIdentifier is not lowered"
+      }
+    ],
+    "TrapModeDiagnosticCategories": {
+      "note-data-interface": 38,
+      "note-dropped-declaration": 381,
+      "note-class-value-type": 863,
+      "note-dynamic-union": 116,
+      "note-number-binary64": 12,
+      "note-record-map": 24,
+      "note-builtin-error": 1,
+      "note-any-dynamic": 4811,
+      "note-default-param": 73,
+      "note-union-root": 58,
+      "note-generic-erased": 1,
+      "note-shape-subset": 46,
+      "note-regex-type": 18,
+      "note-thunk-type": 6,
+      "note-regex": 324,
+      "note-trap-failure": 6585,
+      "note-dynamic-string": 115,
+      "note-empty-map": 7,
+      "note-finally": 6,
+      "note-dynamic-record": 138,
+      "note-callback-inline": 33,
+      "note-is-array": 14,
+      "note-spread-push": 21,
+      "note-empty-set": 3,
+      "note-sort-inline": 3,
+      "note-locale-compare": 1,
+      "note-regex-mapped": 6,
+      "note-module-const-unread": 21,
+      "note-closure": 5,
+      "note-instanceof-dynamic": 10,
+      "note-object-spread": 3,
+      "note-cast-view": 2,
+      "note-equality-unrelated": 6,
+      "note-module-statement": 3,
+      "note-host-process": 3,
+      "note-object-freeze": 1,
+      "note-short-circuit-constant": 2,
+      "note-dead-branch": 5,
+      "note-namespace-export-unread": 1,
+      "note-number-ranges": 445
+    },
+    "SourceFiles": [
+      "<scratch>/tools/adt-single-select.mjs",
+      "<scratch>/tools/gogen/emit-builtins.mjs",
+      "<scratch>/tools/gogen/emit-bytes.mjs",
+      "<scratch>/tools/gogen/emit-constructors.ts",
+      "<scratch>/tools/gogen/emit-go.mjs",
+      "<scratch>/tools/gogen/emit-int8.mjs",
+      "<scratch>/tools/gogen/emit-local-constants.mjs",
+      "<scratch>/tools/gogen/emit-owned.mjs",
+      "<scratch>/tools/gogen/emit-packedint.mjs",
+      "<scratch>/tools/gogen/emit-table-move.mjs",
+      "<scratch>/tools/gogen/frontend-analysis.mjs",
+      "<scratch>/tools/gogen/frontend-boolx.mjs",
+      "<scratch>/tools/gogen/frontend-builtins.mjs",
+      "<scratch>/tools/gogen/frontend-bytes.mjs",
+      "<scratch>/tools/gogen/frontend-diagnostics.mjs",
+      "<scratch>/tools/gogen/frontend-find-results.ts",
+      "<scratch>/tools/gogen/frontend-local-constants.mjs",
+      "<scratch>/tools/gogen/frontend-owned.mjs",
+      "<scratch>/tools/gogen/frontend-replay.mjs",
+      "<scratch>/tools/gogen/frontend-session.mjs",
+      "<scratch>/tools/gogen/frontend-static.mjs",
+      "<scratch>/tools/gogen/frontend.mjs",
+      "<scratch>/tools/gogen/ir.ts",
+      "<scratch>/tools/gogen/js/abap.mjs",
+      "<scratch>/tools/gogen/symbols.ts",
+      "<scratch>/tools/ir-ranges.mjs",
+      "<scratch>/tools/ir-writes.mjs",
+      "<scratch>/tools/osd-abapgit-config.mjs",
+      "<scratch>/tools/osd-amc.mjs",
+      "<scratch>/tools/osd-cockpit-apps.mjs",
+      "<scratch>/tools/osd-daemon-context.mjs",
+      "<scratch>/tools/osd-dialog-step.mjs",
+      "<scratch>/tools/osd-lock.mjs",
+      "<scratch>/tools/osd-main.mjs",
+      "<scratch>/tools/osd-narrow-submit.mjs",
+      "<scratch>/tools/osd-object-name.mjs",
+      "<scratch>/tools/osd-packs.mjs",
+      "<scratch>/tools/osd-source-layers.mjs",
+      "<scratch>/tools/osd-source-write-check.mjs",
+      "<scratch>/tools/osd-source-zip.mjs",
+      "<scratch>/tools/osd-tmp.mjs",
+      "<scratch>/tools/sqlscript-ir.mjs",
+      "<scratch>/tools/sqlscript-lower.mjs"
+    ]
+  }
+}
