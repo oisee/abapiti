@@ -232,6 +232,9 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		case ast.KindIfStatement, ast.KindExpressionStatement:
 			if !l.moduleInitializer(stmt) {
 				l.diagf(stmt, "unsupported-top-level", "top-level %s observes class statics and is not lowered", stmt.Kind.String())
+				if l.integerOptions.TrapOnFailure {
+					vars = true
+				}
 				continue
 			}
 			vars = true
@@ -244,6 +247,9 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
 			l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
+			if l.integerOptions.TrapOnFailure && stmt.Kind != ast.KindModuleDeclaration {
+				vars = true
+			}
 		}
 	}
 	if !needNS && !enums && !funcs && !vars {
@@ -408,7 +414,19 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 					l.diagf(d, "note-module-const-unread", "module constant %s is only re-exported, never read in the program", d.Name().Text())
 					continue
 				}
-				*body = append(*body, l.moduleVar(d, mod)...)
+				before := len(l.diags)
+				values := l.moduleVar(d, mod)
+				if l.integerOptions.TrapOnFailure && hasBlocking(l.diags[before:]) {
+					// Do not expose a zero-initialized value for a declaration
+					// whose initializer was dropped. Retained uses fail verification.
+					for i := len(mod.Fields) - 1; i >= 0; i-- {
+						if mod.Fields[i].Name == d.Name().Text() {
+							mod.Fields = append(mod.Fields[:i], mod.Fields[i+1:]...)
+						}
+					}
+					continue
+				}
+				*body = append(*body, values...)
 			}
 		}
 	}
