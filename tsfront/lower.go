@@ -353,6 +353,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		done()
 	}
 	l.stabilizeUnionABI()
+	l.completeReturnBridges()
 	l.completeAsyncBridges()
 	l.completeCallArguments()
 	if l.unprunedFeatures {
