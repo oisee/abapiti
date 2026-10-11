@@ -1,13 +1,23 @@
 # abaplint's own tests on TS-HG@Go
 
-## Batch C — partial, integration not certified
+## Batch C — stopped at class/view ABI boundary, integration not certified
 
-The [reviewed whitespace regexp root](traps-c-whitespace.md) passes its Node
-oracle and focused DDL shard: **17/32 passed, FAIL 0, 15 trapped** (+13 over
-batch B). This is not a whole-suite total. Concurrent edits from another process
-in this worktree prevented safe completion of batch-C integration; the last
-completed all-17-shard measurement below is still batch B. No new all-suite,
-default-output or zabapgit gate is claimed.
+Second-round investigation at `479373b` hit the task's explicit ABI stop
+condition. The rule-config erased setter requires a live structural reference
+view across nominal storage and field accesses; a bridge-only cast relaxation
+or snapshot would not preserve JS identity and two-way writes. See the
+[Node reproduction, typed Go refusals and precise Dell handoff](traps-c-roots.md).
+No compiler/runtime change was made in this round. Selection-screen assignment,
+LSP own-key enumeration and chai.deep remain unworked here. Final gates,
+default-output comparison, zabapgit and a fresh all-17-shard run were not
+executed; **no new N/11,060, FAIL total or top-15 table is claimed**.
+
+The earlier [reviewed whitespace regexp root](traps-c-whitespace.md) passes its
+Node oracle and focused DDL shard: **17/32 passed, FAIL 0, 15 trapped** (+13 over
+batch B). Other focused batch-C evidence is in the roots document; focused gains
+are not added to a whole-suite total. First-round concurrent edits are no longer
+an active blocker, but the second-round ABI stop prevents certification. The
+last completed all-17-shard measurement below is still batch B.
 
 ## Final batch B — all 17 shards
 

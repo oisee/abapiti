@@ -31,10 +31,15 @@ for example `SevenBitAscii.setConfig` casts `dynRef` to `SevenBitAsciiConf`.
 A snapshot/materialization is not a general JS fix: identity and live writes
 must be preserved. No nominal type/ABI code was changed for this triage.
 
-## Incomplete integration
+## First-round incomplete integration (historical)
 
 Another process was actively editing this same worktree (`tsfront/lower_expr.go`
 and `tsfront/receiver_context_test.go`) during this work. Those edits were left
 untouched and are not part of this root. Full-suite, default-output, zabapgit,
 and repository-wide final gates have not been certified for this mixed working
 tree. The batch-B whole-suite evidence remains the last completed measurement.
+
+Second round: the duplicate process was stopped and sole worktree ownership
+restored. Config-bridge investigation then reached the explicit class/view ABI
+stop condition; see [the precise handoff](traps-c-roots.md). No second-round
+compiler/runtime changes or final-gate/all-shard certification are claimed.
