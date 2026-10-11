@@ -901,6 +901,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.mathCeilCall(n); handled {
+		return x
+	}
 	if x, handled := l.jsonCall(n); handled {
 		return x
 	}
@@ -2436,6 +2439,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 					if c.Super == x.Type.Name {
 						return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
 					}
+				}
+			}
+			if l.unprunedFeatures {
+				// TS assertions erase; valid nominal views retain the original
+				// object. Unproven downcasts use a checked, trap-only domain on
+				// Go; ABAP explicitly refuses this operation rather than exposing
+				// a catchable ?= exception as though JS performed a cast.
+				if l.acceptsType(mapped, x.Type) {
+					return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
+				}
+				if l.acceptsType(x.Type, mapped) {
+					return l.rtOp("object.checkedClassView", x, mapped)
 				}
 			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
