@@ -64,34 +64,44 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
-		integerOptions:    options,
-		integerExceptions: map[*ast.Node]IntegerException{},
-		floatSites:        map[string]bool{},
-		unexecuted:        map[*ast.Node]string{},
-		overrides:         map[*ast.Node]overrides.Entry{},
-		prog:              p,
-		implicitCtors:     map[*hir.Class]bool{},
-		out:               &hir.Program{},
-		classes:           map[*ast.Symbol]*hir.Class{},
-		ifaces:            map[*ast.Symbol]*hir.Interface{},
-		methods:           map[*ast.Symbol]*hir.Method{},
-		fields:            map[*ast.Symbol]hir.Field{},
-		synths:            map[*ast.Symbol]*hir.Class{},
-		modules:           map[*ast.SourceFile]*hir.Class{},
-		modvars:           map[*ast.Symbol]string{},
-		classesByName:     map[string]*hir.Class{},
-		ifacesByName:      map[string]*hir.Interface{},
-		methodsBy:         map[string]*hir.Method{},
-		fieldsBy:          map[string]hir.Field{},
-		modvarsByName:     map[string]modvarRef{},
-		synthsByName:      map[string]*hir.Class{},
-		enums:             map[string]map[string]string{},
-		enumNumbers:       map[string]map[string]float64{},
-		nsNeeded:          map[string]bool{},
-		views:             map[string]*hir.Interface{},
-		ifaceNodes:        map[string]*ast.Node{},
-		funcsBy:           map[string]funcRef{},
-		covariants:        map[string]map[string]bool{},
+		settledEnabled:     coverage == nil,
+		asyncMethods:       map[*hir.Method]bool{},
+		settlementWorld:    map[*ast.Node]string{},
+		settlementSuspends: map[*ast.Node]bool{},
+		settlementFiles:    map[*ast.SourceFile]bool{},
+		integerOptions:     options,
+		integerExceptions:  map[*ast.Node]IntegerException{},
+		floatSites:         map[string]bool{},
+		unexecuted:         map[*ast.Node]string{},
+		overrides:          map[*ast.Node]overrides.Entry{},
+		prog:               p,
+		implicitCtors:      map[*hir.Class]bool{},
+		out:                &hir.Program{},
+		classes:            map[*ast.Symbol]*hir.Class{},
+		ifaces:             map[*ast.Symbol]*hir.Interface{},
+		methods:            map[*ast.Symbol]*hir.Method{},
+		fields:             map[*ast.Symbol]hir.Field{},
+		synths:             map[*ast.Symbol]*hir.Class{},
+		modules:            map[*ast.SourceFile]*hir.Class{},
+		modvars:            map[*ast.Symbol]string{},
+		classesByName:      map[string]*hir.Class{},
+		ifacesByName:       map[string]*hir.Interface{},
+		methodsBy:          map[string]*hir.Method{},
+		fieldsBy:           map[string]hir.Field{},
+		modvarsByName:      map[string]modvarRef{},
+		synthsByName:       map[string]*hir.Class{},
+		enums:              map[string]map[string]string{},
+		enumNumbers:        map[string]map[string]float64{},
+		nsNeeded:           map[string]bool{},
+		views:              map[string]*hir.Interface{},
+		ifaceNodes:         map[string]*ast.Node{},
+		funcsBy:            map[string]funcRef{},
+		covariants:         map[string]map[string]bool{},
+	}
+	for _, name := range files {
+		if f, ok := p.File(name); ok {
+			l.settlementFiles[f] = true
+		}
 	}
 	if err := l.validateIntegerExceptions(files); err != nil {
 		return nil, nil, err
@@ -107,6 +117,21 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		files, err = l.pruneDeclarations(files)
 		if err != nil {
 			return nil, nil, err
+		}
+	}
+	// Only expand the external LSP ABI when a callable constructor needs it.
+	// Coverage-trapped signatures retain their existing opaque/structural ABI.
+	l.lspConstructors = coverage == nil
+	if !l.lspConstructors {
+		for _, name := range files {
+			f, ok := p.File(name)
+			if !ok {
+				return nil, nil, fmt.Errorf("file %s is not part of the program", name)
+			}
+			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			l.scanLSPConstructors(f.AsNode())
+			done()
 		}
 	}
 	for _, name := range files {
@@ -320,31 +345,38 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	integerOptions    LowerOptions
-	integerExceptions map[*ast.Node]IntegerException
-	floatSites        map[string]bool
-	failedSignatures  map[*hir.Method][]string
-	retained          map[*ast.Node]bool
-	typeOnly          map[*ast.Node]bool
-	unexecuted        map[*ast.Node]string
-	overrides         map[*ast.Node]overrides.Entry
-	prog              *Program
-	ck                *checker.Checker
-	file              *ast.SourceFile
-	out               *hir.Program
-	diags             []LowerDiagnostic
-	classes           map[*ast.Symbol]*hir.Class
-	ifaces            map[*ast.Symbol]*hir.Interface
-	methods           map[*ast.Symbol]*hir.Method
-	fields            map[*ast.Symbol]hir.Field
-	synths            map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
-	modules           map[*ast.SourceFile]*hir.Class
-	modvars           map[*ast.Symbol]string // module variable symbol -> field name
-	scope             []map[string]hir.Type
-	class             *hir.Class  // class whose member is being lowered
-	method            *hir.Method // method being lowered
-	serial            int
-	hint              hir.Type // contextual type for undefined literals
+	lspConstructors    bool
+	settledEnabled     bool
+	asyncMethods       map[*hir.Method]bool
+	settlementWorld    map[*ast.Node]string
+	settlementSuspends map[*ast.Node]bool
+	settlementFiles    map[*ast.SourceFile]bool
+	settlementFailure  string
+	integerOptions     LowerOptions
+	integerExceptions  map[*ast.Node]IntegerException
+	floatSites         map[string]bool
+	failedSignatures   map[*hir.Method][]string
+	retained           map[*ast.Node]bool
+	typeOnly           map[*ast.Node]bool
+	unexecuted         map[*ast.Node]string
+	overrides          map[*ast.Node]overrides.Entry
+	prog               *Program
+	ck                 *checker.Checker
+	file               *ast.SourceFile
+	out                *hir.Program
+	diags              []LowerDiagnostic
+	classes            map[*ast.Symbol]*hir.Class
+	ifaces             map[*ast.Symbol]*hir.Interface
+	methods            map[*ast.Symbol]*hir.Method
+	fields             map[*ast.Symbol]hir.Field
+	synths             map[*ast.Symbol]*hir.Class // object-literal alias symbol -> class
+	modules            map[*ast.SourceFile]*hir.Class
+	modvars            map[*ast.Symbol]string // module variable symbol -> field name
+	scope              []map[string]hir.Type
+	class              *hir.Class  // class whose member is being lowered
+	method             *hir.Method // method being lowered
+	serial             int
+	hint               hir.Type // contextual type for undefined literals
 	// Anonymous checker graphs may contain cycles without a nominal reference
 	// to stop structural expansion. Reject those instead of overflowing the
 	// Go stack. Entries live only for the current recursive mapping call.

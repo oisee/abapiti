@@ -77,7 +77,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-closure", "only parameterless thunks are lowered as closures")
 		return nil
 	}
-	if t := l.ck.GetTypeAtLocation(n); !l.isThunkType(t) {
+	if t := l.ck.GetTypeAtLocation(n); !l.isThunkType(t) && !l.isThunkType(l.ck.GetContextualType(n, 0)) {
 		l.diagf(n, "unsupported-closure", "only void thunks are lowered as closures")
 		return nil
 	}
@@ -183,17 +183,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	before := len(l.diags)
 	l.pend = nil
 	restore := l.withLocalFns(body)
-	var inner *hir.Stmt
-	if body.Kind == ast.KindBlock {
-		inner = l.block(body)
-	} else {
-		x := l.expr(body)
-		pre := l.pend
-		l.pend = nil
-		if x != nil {
-			inner = hir.B(append(pre, &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(body), X: x})...)
-		}
-	}
+	inner := l.functionBody(body)
 	restore()
 	l.pop()
 	l.scope, l.method, l.pend, l.thisOverride = savedScope, savedMethod, savedPend, savedThis

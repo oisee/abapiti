@@ -207,7 +207,7 @@ func (v *verifier) typ(n Node, t Type) {
 		if v.interfaces[t.Name] == nil {
 			v.fail(n, "unresolved interface "+t.Name)
 		}
-	case Optional, Array, OrderedSet:
+	case Optional, Array, OrderedSet, Promise:
 		arity = 1
 	case OrderedMap:
 		arity = 2
@@ -220,7 +220,7 @@ func (v *verifier) typ(n Node, t Type) {
 	}
 	for _, a := range t.Args {
 		v.typ(n, a)
-		if a.Kind == Void {
+		if a.Kind == Void && t.Kind != Promise {
 			v.fail(n, "void type argument")
 		}
 	}
@@ -395,6 +395,8 @@ func returns(s *Stmt) bool {
 		return false
 	}
 	switch s.Kind {
+	case Async:
+		return returns(s.Body)
 	case Return, Throw, Trap:
 		return true
 	case Block:
@@ -518,6 +520,14 @@ func (v *verifier) stmt(c *Class, m *Method, s *Stmt, env map[string]Type, loops
 		if check(s.X).Kind == Void {
 			v.fail(s.Node, "void throw")
 		}
+	case Async:
+		if s != m.Body || s.Body == nil {
+			v.fail(s.Node, "async boundary must be the method body")
+		}
+		if m.Result.Kind != Promise {
+			v.fail(s.Node, "async requires a settled promise result")
+		}
+		v.stmt(c, m, s.Body, clone(env), loops)
 	case Try:
 		v.typ(s.Node, s.Type)
 		v.stmt(c, m, s.Body, clone(env), loops)
@@ -824,9 +834,17 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		}
 		eq(t, T(ClassValue))
 	case NumericMinMax:
-		a, b := check(e.X), check(e.Y)
-		eq(a, b)
-		eq(a, t)
+		a := check(e.X)
+		if e.Y == nil {
+			if a.Kind != Array || len(a.Args) != 1 {
+				v.fail(e.Node, "numeric min/max requires a numeric array")
+			} else {
+				eq(a.Args[0], t)
+			}
+		} else {
+			eq(a, check(e.Y))
+			eq(a, t)
+		}
 		if !numeric(t) || (e.Op != "min" && e.Op != "max") {
 			v.fail(e.Node, "invalid numeric min/max")
 		}
@@ -865,6 +883,37 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			}
 		}
 		eq(t, v.expr(c, m, e.Y, scope))
+	case PromiseFulfill:
+		if t.Kind != Promise || len(t.Args) != 1 {
+			v.fail(e.Node, "fulfillment requires a settled promise")
+			break
+		}
+		if e.X == nil {
+			if t.Args[0].Kind != Void {
+				v.fail(e.Node, "missing fulfillment value")
+			}
+		} else {
+			eq(t.Args[0], check(e.X))
+		}
+	case PromiseReject:
+		if t.Kind != Promise {
+			v.fail(e.Node, "rejection requires a settled promise")
+		}
+		if check(e.X).Kind == Void {
+			v.fail(e.Node, "void rejection payload")
+		}
+	case PromiseAwait:
+		a := check(e.X)
+		// Optional draining is restricted to the front end's certified progress
+		// calls. Absence has the same undefined result as Promise<void>.
+		if a.Kind == Optional && len(a.Args) == 1 && a.Args[0].Equal(T(Promise, T(Void))) {
+			a = a.Args[0]
+		}
+		if a.Kind != Promise || len(a.Args) != 1 {
+			v.fail(e.Node, "await requires a certified settled promise")
+		} else {
+			eq(t, a.Args[0])
+		}
 	case RuntimeOp:
 		a := check(e.X)
 		if SpecialOps[e.Op] {

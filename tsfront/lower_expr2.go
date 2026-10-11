@@ -235,13 +235,13 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 			test = &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: absent, Y: hir.L(hir.T(hir.Bool), want == "undefined"), Z: tag}
 			break
 		}
-		tag := map[hir.Kind]string{hir.String: "string", hir.Number: "number", hir.I32: "number", hir.I64: "number", hir.Bool: "boolean", hir.ClassValue: "function", hir.Array: "object", hir.OrderedMap: "object", hir.OrderedSet: "object", hir.RegExp: "object"}[base.Kind]
+		tag := staticTypeofTag(base.Kind)
 		if base.Kind == hir.InterfaceRef && base.Name == thunkInterfaceName {
 			tag = "function"
 		}
 		// Closure objects represent JavaScript functions, not ordinary
-		// objects. Broad structural object references can hold callable
-		// values too; do not assume their tag from the HIR reference kind.
+		// objects. Preserve this harness distinction over the prerequisite
+		// branch's static tag for ordinary reference values.
 		if base.Kind == hir.ClassRef {
 			if c := l.classByName(base.Name); c != nil {
 				for _, impl := range c.Implements {
@@ -279,6 +279,23 @@ func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated b
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
 	}
 	return test
+}
+
+// staticTypeofTag describes present values; null is not currently a HIR type.
+func staticTypeofTag(k hir.Kind) string {
+	switch k {
+	case hir.String:
+		return "string"
+	case hir.Number, hir.I32, hir.I64:
+		return "number"
+	case hir.Bool:
+		return "boolean"
+	case hir.ClassValue:
+		return "function"
+	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
+		return "object"
+	}
+	return ""
 }
 
 // regexLiteral lowers /pattern/flags to a runtime RegExp construction.

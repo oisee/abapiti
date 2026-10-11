@@ -33,7 +33,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		return nil, nil, errs[0]
 	}
 	hir.AssignSiteIDs(p)
-	e := &emitter{p: p, names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
+	e := &emitter{p: p, promiseUsed: hir.UsesSettledPromises(p), names: hir.NewNames(), profile: profile, profileIndices: map[string]int{}}
 	e.characterSets()
 	for _, c := range p.Classes {
 		for _, m := range c.Methods {
@@ -82,6 +82,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	patternJSON, _ := json.Marshal(reviewedPatterns)
 	regexTable := "\nvar reviewedRegexPatterns = func() map[string][2]string { var m map[string][2]string; if err:=json.Unmarshal([]byte(" + strconv.Quote(string(patternJSON)) + "), &m);err!=nil {panic(err)};return m }()\n"
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtimeSource+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+regexTable, "package main", "package "+pkg, 1)}
+	if e.promiseUsed {
+		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
+	}
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -104,6 +107,7 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	promiseUsed    bool
 	profile        bool
 	sites          []emittedSite
 	profileIndices map[string]int
@@ -170,6 +174,13 @@ func arrayStorage(t hir.Type) hir.Type {
 func (e *emitter) typ(t hir.Type) string {
 	t = arrayStorage(t)
 	switch t.Kind {
+	case hir.Promise:
+		e.promiseUsed = true
+		base := "struct{}"
+		if t.Args[0].Kind != hir.Void {
+			base = e.typ(t.Args[0])
+		}
+		return "*settledPromise[" + base + "]"
 	case hir.Void:
 		return ""
 	case hir.Bool:
@@ -534,6 +545,24 @@ func (b *body) expr(x *hir.Expr) string {
 	t := x.Type
 	code := ""
 	switch x.Kind {
+	case hir.PromiseFulfill:
+		value := "struct{}{}"
+		if x.X != nil && t.Args[0].Kind == hir.Void {
+			b.expr(x.X)
+		} else if x.X != nil {
+			value = b.value(x.X, t.Args[0])
+		}
+		return b.temp(t, "&settledPromise["+promiseValueType(e, t)+"]{Value:"+value+"}")
+	case hir.PromiseReject:
+		value := b.expr(x.X)
+		return b.temp(t, fmt.Sprintf("&settledPromise[%s]{Rejection:payload[%s]{Type:%q,Value:%s}}", promiseValueType(e, t), e.typ(x.X.Type), x.X.Type.String(), value))
+	case hir.PromiseAwait:
+		value := b.expr(x.X)
+		if x.X.Type.Kind == hir.Optional {
+			b.line("if %s != nil { drainSettled(%s) }", value, value)
+			return ""
+		}
+		return b.temp(t, "drainSettled("+value+")")
 	case hir.Lit:
 		if v, ok := x.Value.(string); ok && !utf8.ValidString(v) {
 			e.unsupported(x.Node, "invalid UTF-8 or lone surrogate literal")
@@ -755,8 +784,29 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		code = e.typ(t) + "(" + a + ")"
 	case hir.NumericMinMax:
-		a, v := b.expr(x.X), b.expr(x.Y)
-		code = x.Op + "(" + a + "," + v + ")"
+		helper := "numberMin"
+		if x.Op == "max" {
+			helper = "numberMax"
+		}
+		a := b.expr(x.X)
+		if x.Y == nil {
+			if t.Kind == hir.Number {
+				code = helper + "Array(" + a + ".Items)"
+			} else {
+				n := b.temp(t, "0")
+				b.line("if len(%s.Items)==0 {panic(newRangeFault())}", a)
+				b.line("%s=%s.Items[0]", n, a)
+				b.line("for _,v:=range %s.Items { %s=%s(%s,v) }", a, n, x.Op, n)
+				return n
+			}
+		} else {
+			v := b.expr(x.Y)
+			if t.Kind == hir.Number {
+				code = helper + "(" + a + "," + v + ")"
+			} else {
+				code = x.Op + "(" + a + "," + v + ")"
+			}
+		}
 	case hir.Seq:
 		old := b.locals
 		b.locals = clone(old)
@@ -919,6 +969,9 @@ func (b *body) stmt(s *hir.Stmt) {
 				b.line("panic(returned[%s]{%s})", e.typ(b.m.Result), v)
 			}
 		}
+	case hir.Async:
+		b.line("defer func(){if x:=recover();x!=nil {if _,ok:=x.(tsThrown);ok {result=&settledPromise[%s]{Rejection:x}}else{panic(x)}}}()", promiseValueType(e, b.m.Result))
+		b.stmt(s.Body)
 	case hir.Throw:
 		v := b.expr(s.X)
 		b.line("panic(payload[%s]{Type:%q,Value:%s})", e.typ(s.X.Type), s.X.Type.String(), v)
@@ -940,10 +993,16 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.locals = old
 		b.line("}()")
 	case hir.Try:
-		b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(payload[%s]);ok && caught.Type==%q {", e.typ(s.Type), s.Type.String())
+		value := "caught.Value"
+		if e.promiseUsed && s.Type.Kind == hir.Dynamic {
+			b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(tsThrown);ok {")
+			value = "caught.tsValue()"
+		} else {
+			b.line("func(){defer func(){if x:=recover();x!=nil {if caught,ok:=x.(payload[%s]);ok && caught.Type==%q {", e.typ(s.Type), s.Type.String())
+		}
 		old := b.locals
 		b.locals = clone(old)
-		n := b.temp(s.Type, "caught.Value")
+		n := b.temp(s.Type, value)
 		b.locals[s.Name] = n
 		b.tryDepth++
 		b.stmt(s.Else)

@@ -1,0 +1,98 @@
+[
+  {
+    "location": "src/lsp/symbols.ts:72:13",
+    "underlying_messages": [
+      "checker type DocumentSymbol is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/lsp/symbols.ts:88:15",
+    "underlying_messages": [
+      "checker type DocumentSymbol is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/lsp/symbols.ts:102:13",
+    "underlying_messages": [
+      "checker type DocumentSymbol is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/lsp/symbols.ts:109:13",
+    "underlying_messages": [
+      "checker type DocumentSymbol is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/lsp/symbols.ts:138:13",
+    "underlying_messages": [
+      "checker type DocumentSymbol is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/objects/behavior_definition.ts:69:9",
+    "underlying_messages": [
+      "checker type RegExpExecArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/objects/data_definition.ts:140:11",
+    "underlying_messages": [
+      "checker type RegExpMatchArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/objects/data_definition.ts:146:11",
+    "underlying_messages": [
+      "checker type RegExpMatchArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/objects/rename/renamer_helper.ts:281:11",
+    "underlying_messages": [
+      "checker type Generator<IObject, void, undefined> is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/rules/7bit_ascii.ts:51:17",
+    "underlying_messages": [
+      "checker type RegExpExecArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/rules/7bit_ascii.ts:63:17",
+    "underlying_messages": [
+      "checker type RegExpExecArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/rules/cds_check_syntax.ts:282:13",
+    "underlying_messages": [
+      "checker type RegExpMatchArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/rules/cds_check_syntax.ts:308:11",
+    "underlying_messages": [
+      "checker type RegExpExecArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/rules/whitespace_end.ts:57:17",
+    "underlying_messages": [
+      "checker type RegExpExecArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/skip_logic.ts:78:11",
+    "underlying_messages": [
+      "checker type RegExpMatchArray is not a lowered declaration"
+    ]
+  },
+  {
+    "location": "src/skip_logic.ts:91:11",
+    "underlying_messages": [
+      "checker type RegExpMatchArray is not a lowered declaration"
+    ]
+  }
+]

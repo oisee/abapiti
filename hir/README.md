@@ -55,6 +55,21 @@ other divisors fail with node/source diagnostics. Number +, -, and * remain
 supported. Results beyond the binary64 range (|x| > ~1.8e308), including division
 overflow, raise in ABAP instead of giving Infinity. This is an accepted divergence
 until a later phase implements exceptional-number handling.
+NumericMinMax accepts either two numeric operands (the established integer
+proof path), or X as an array of its result type with Y absent. The array form
+reduces a snapshot materialized by the frontend; operands and spread snapshots
+are evaluated once in source order. Go's Number implementation follows JavaScript:
+empty input gives +Infinity for min / -Infinity for max, NaN dominates even
+Infinity, and zero ties select -0 for min / +0 for max. Integer empty reductions
+raise because Infinity cannot inhabit integer storage. ABAP empty reductions
+likewise raise cx_sy_range_out_of_bounds, with an emitted explanation, rather
+than inventing a finite sentinel. ABAP f cannot represent NaN or Infinity;
+existing non-finite input/overflow restrictions still apply. Portable ABAP has
+no supported signbit operation across the native and transpiled targets, so a
+Number zero tie also raises explicitly rather than selecting the wrong signed
+zero. Non-tied zero operands are copied without arithmetic. Proven integer
+reductions have no zero-sign guard and keep their established comparison path.
+
 Integer division truncates toward zero and remainder keeps the dividend sign.
 General Number remainder is rejected; the Number remainder-by-two runtime
 operation implements the lexer's literal `% 2` case.

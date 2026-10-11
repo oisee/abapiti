@@ -126,6 +126,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 			x = l.naturalExpr(n)
 		}
 	}
+	if x != nil && !l.settledCallUse(n, x) {
+		x = nil
+	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
 	}
@@ -276,6 +279,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		return matched
 	}
 	switch n.Kind {
+	case ast.KindAwaitExpression:
+		return l.awaitSettled(n)
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
 		// Preflight already diagnosed lone units. Never pass them to HIR,
 		// where ordinary Go rune conversion would irreversibly replace them.
@@ -900,6 +905,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.testRuntimeCall(n); ok {
 		return x
 	}
+	if x, handled := l.promiseStatic(n); handled {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
@@ -938,14 +946,67 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
 		name := callee.Name().Text()
+		if x, handled := l.lspCall(n, p.Expression, name); handled {
+			return x
+		}
 		if p.Expression.Kind == ast.KindIdentifier && p.Expression.Text() == "Math" && (name == "min" || name == "max") {
 			sym := l.resolve(p.Expression)
 			file := l.fileOfSymbol(sym)
 			if file != nil && l.prog.prog.IsSourceFileDefaultLibrary(file.Path()) {
 				args := n.Arguments()
-				if len(args) != 2 {
-					l.diagf(n, "unsupported-call", "Math.%s requires two arguments in this phase", name)
-					return nil
+				spread := false
+				for _, arg := range args {
+					spread = spread || arg.Kind == ast.KindSpreadElement
+				}
+				if len(args) > 0 && len(args) != 2 && !spread {
+					// Save all arguments before reducing: calls are evaluated exactly once,
+					// left to right, and integral proofs can still use the binary path.
+					values := make([]*hir.Expr, 0, len(args))
+					for _, arg := range args {
+						v := l.expr(arg)
+						if v == nil {
+							return nil
+						}
+						if !numberType(v.Type) {
+							l.diagf(arg, "unsupported-call", "Math.%s requires numeric operands", name)
+							return nil
+						}
+						values = append(values, l.tempInit(arg, v.Type, v))
+					}
+					result := values[0]
+					for _, v := range values[1:] {
+						result = &hir.Expr{Kind: hir.NumericMinMax, Node: l.node(n), Op: name, Type: hir.T(hir.Number), X: result, Y: v}
+					}
+					return result
+				}
+				if len(args) != 2 || args[0].Kind == ast.KindSpreadElement || args[1].Kind == ast.KindSpreadElement {
+					// Materialize in source order, including snapshots of spreads.
+					typ := hir.T(hir.Array, hir.T(hir.Number))
+					arr := l.tempVar(n, typ)
+					for _, arg := range args {
+						if arg.Kind == ast.KindSpreadElement {
+							v := l.expr(arg.Expression())
+							if v == nil {
+								return nil
+							}
+							if v.Type.Kind != hir.Array || !numberType(v.Type.Args[0]) {
+								l.diagf(arg, "unsupported-call", "Math.%s spread requires a numeric array", name)
+								return nil
+							}
+							arr = l.tempInit(arg, typ, l.rtOp("array.concat", arr, typ, v))
+						} else {
+							v := l.expr(arg)
+							if v == nil {
+								return nil
+							}
+							if !numberType(v.Type) {
+								l.diagf(arg, "unsupported-call", "Math.%s requires numeric operands", name)
+								return nil
+							}
+							l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(arg), X: l.rtOp("array.push", arr, hir.T(hir.I32), l.coerce(v, hir.T(hir.Number)))})
+						}
+					}
+					return &hir.Expr{Kind: hir.NumericMinMax, Node: l.node(n), Op: name, Type: hir.T(hir.Number), X: arr}
 				}
 				x, y := l.expr(args[0]), l.expr(args[1])
 				if x == nil || y == nil {
@@ -1542,6 +1603,10 @@ func (l *lowerer) callArgs(at *ast.Node, args []*ast.Node, params []hir.Param) (
 // newExpression lowers allocations of lowered classes; `new Set([..])` is
 // only allowed in statement contexts (see collectionInit).
 func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
+	if sym := l.resolve(n.Expression()); sym != nil && sym.Name == "Promise" && l.librarySymbol(sym) {
+		l.diagf(n, "unsupported-async", "Promise constructors are refused: executor settlement and deferred resolve require a scheduler")
+		return nil
+	}
 	if x, ok := l.newRegExp(n); ok {
 		return x
 	}
@@ -1734,7 +1799,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if base.Kind == hir.Optional {
 				base = base.Args[0]
 			}
-			if base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0 {
+			emptyArray := base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0
+			emptyRecord := base.Kind == hir.OrderedMap && b.Right.Kind == ast.KindObjectLiteralExpression && len(b.Right.AsObjectLiteralExpression().Properties.Nodes) == 0
+			if emptyArray || emptyRecord {
 				l.hint = base
 			}
 			y := l.expr(b.Right)
@@ -1743,7 +1810,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			var typ hir.Type
-			if base.Kind == hir.Array && base.Equal(y.Type) {
+			if (base.Kind == hir.Array || emptyRecord) && base.Equal(y.Type) {
 				typ = base
 			} else {
 				typ = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
@@ -2153,9 +2220,8 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	return x
 }
 
-// objectLiteral lowers { ... } whose contextual type is a named alias shape,
-// by constructing the synthesized class; spread properties copy the fields of
-// the spread value first.
+// objectLiteral constructs a named or synthesized structural data class.
+// Spread properties copy the fields of the spread value first.
 func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
@@ -2188,10 +2254,31 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 		if t := l.ck.GetTypeAtLocation(n); t != nil {
 			before := len(l.diags)
 			mapped := l.mapCheckerType(n, t)
-			if len(l.diags) == before && mapped.Kind != hir.Void {
+			if !hasBlocking(l.diags[before:]) && mapped.Kind != hir.Void {
 				l.hint = mapped
+				if mapped.Kind == hir.OrderedMap {
+					return l.recordLiteral(n, mapped)
+				}
+				if mapped.Kind == hir.Dynamic {
+					return l.dynamicRecordLiteral(n)
+				}
 				target = shapeClassOf(l.out.Classes, mapped)
 			} else {
+				l.diags = l.diags[:before]
+			}
+		}
+	}
+	if target == nil {
+		// A fresh type may contain never[] (or an untyped nested {}) even
+		// though its contextual type supplies the full structural layout.
+		// Try it only after ordinary mapping fails, preserving existing ABIs.
+		if t := l.ck.GetContextualType(n, checker.ContextFlagsNone); t != nil {
+			before := len(l.diags)
+			mapped := l.mapCheckerType(n, t)
+			if !hasBlocking(l.diags[before:]) {
+				target = shapeClassOf(l.out.Classes, mapped)
+			}
+			if target == nil {
 				l.diags = l.diags[:before]
 			}
 		}
@@ -2220,7 +2307,7 @@ func (l *lowerer) objectLiteral(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
-			if t := l.ck.GetTypeAtLocation(n); t != nil && t.Symbol() == nil {
+			if t := l.ck.GetTypeAtLocation(n); t != nil {
 				if c := l.synthFromProperties(n, l.ck.GetPropertiesOfType(t)); c != nil {
 					args := []*hir.Expr{}
 					for _, p := range c.Ctor.Params {

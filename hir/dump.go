@@ -98,6 +98,10 @@ func dumpStmt(b *strings.Builder, s *Stmt, indent string) {
 		line("catch %s:%s", s.Name, s.Type)
 		dumpStmt(b, s.Else, indent+"  ")
 		line("end try")
+	case Async:
+		line("async settled")
+		dumpStmt(b, s.Body, indent+"  ")
+		line("end async")
 	case Finally:
 		line("try")
 		dumpStmt(b, s.Body, indent+"  ")
@@ -123,6 +127,8 @@ func dumpExpr(e *Expr) string {
 	}
 	a := strings.Join(args, ", ")
 	switch e.Kind {
+	case PromiseFulfill, PromiseReject, PromiseAwait:
+		s = string(e.Kind) + "(" + dumpExpr(e.X) + ")"
 	case Lit:
 		s = fmt.Sprintf("%v", e.Value)
 		if x, ok := e.Value.(string); ok {
@@ -132,7 +138,11 @@ func dumpExpr(e *Expr) string {
 			s = "undefined"
 		}
 	case NumericMinMax:
-		s = "Math." + e.Op + "(" + dumpExpr(e.X) + ", " + dumpExpr(e.Y) + ")"
+		if e.Y == nil {
+			s = "Math." + e.Op + "(..." + dumpExpr(e.X) + ")"
+		} else {
+			s = "Math." + e.Op + "(" + dumpExpr(e.X) + ", " + dumpExpr(e.Y) + ")"
+		}
 	case CheckedNumericConvert:
 		if e.Range == nil {
 			s = "checked_integer[invalid](" + dumpExpr(e.X) + ")"

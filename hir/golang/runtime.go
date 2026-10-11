@@ -350,6 +350,24 @@ func integerArithmetic(a, b int64, op string, checked bool, bits int) int64 {
 	}
 	return v
 }
+func numberMin(x, y float64) float64 {
+ if math.IsNaN(x) || math.IsNaN(y) { return math.NaN() }
+ return math.Min(x, y)
+}
+func numberMax(x, y float64) float64 {
+ if math.IsNaN(x) || math.IsNaN(y) { return math.NaN() }
+ return math.Max(x, y)
+}
+func numberMinArray(xs []float64) float64 {
+ r := math.Inf(1)
+ for _, x := range xs { r = numberMin(r, x) }
+ return r
+}
+func numberMaxArray(xs []float64) float64 {
+ r := math.Inf(-1)
+ for _, x := range xs { r = numberMax(r, x) }
+ return r
+}
 func negativeZero() float64 { return math.Copysign(0, -1) }
 func finite(x float64) float64 {
 	if math.IsInf(x, 0) || math.IsNaN(x) {

@@ -18,12 +18,14 @@ const constructs = {inline: false, instance: false};
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
 for (const n of files) {
   const src = readFileSync(join(dir, n), "utf8");
-  // The only comment allowed is the TypeScript origin as the first line.
+  // Only TS origins and the two precise numeric target-limit explanations
+  // emitted immediately before a min/max range fault are allowed comments.
   src.split("\n").forEach((line, i) => {
     const origin = i === 0 && /^\* TS: \S+ \S+$/.test(line);
     if (Buffer.byteLength(line) > 255 || (/^\s*\*/.test(line) && !origin)) throw new Error(`${n}: generation rule`);
   });
-  const code = src.replace(/'(?:''|[^'])*'|`(?:``|[^`])*`|\|(?:\\.|[^|])*\|/g, "");
+  const code = src.replace(/^\s*" Math\.(?:min|max): (?:signed-zero tie cannot be resolved portably for ABAP f|empty input yields Infinity, not representable by ABAP f or integers)\n(?=RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds\.)/gm, "")
+    .replace(/'(?:''|[^'])*'|`(?:``|[^`])*`|\|(?:\\.|[^|])*\|/g, "");
   if (code.includes('"')) throw new Error(`${n}: comment`);
   if (n.endsWith(".clas.abap")) {
     for (const section of ["PUBLIC", "PROTECTED", "PRIVATE"]) {

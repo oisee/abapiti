@@ -109,6 +109,9 @@ export class Probe {
     return `str:${v}`;
   }
   private static base(x: SiblingBase): SiblingBase { return x; }
+  private static optionalText(flag: boolean, text: string): string | undefined { return flag ? text : undefined; }
+  private static optionalObject(flag: boolean): Named | undefined { return flag ? new Named("o") : undefined; }
+  private static mutateNumbers(xs: number[]): number { xs.push(-99); return 7; }
   public run(raw: string, needle: string, n: number, flag: boolean): string {
     const scope = new Scope();
     scope.add(new ClassDef("zcl_" + raw));
@@ -215,7 +218,14 @@ export class Probe {
     const present = maybeNames.filter(v => v !== undefined);
     present.push(...["c", "d"].map(v => v.toUpperCase()));
     const presentText = present.join(",");
-    const parts: string[] = [presentText, confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
+    const extrema = [1.25, -2.5, 3.75];
+    const minmax = `${Math.min(...extrema) === -2.5}/${Math.max(1.25, ...extrema, 2.5) === 3.75}/${Math.min(3.75) === 3.75}/${Math.max(-2.5, 1.25) === 1.25}`;
+    const snapshot = [1.25, 2.5];
+    const spreadOrder = Math.min(...snapshot, Probe.mutateNumbers(snapshot)) === 1.25;
+    const optText = Probe.optionalText(flag, raw);
+    const optObject = Probe.optionalObject(flag);
+    const optionalTags = `${typeof optText === "string"}/${typeof optText !== "string"}/${typeof optText === "undefined"}/${typeof optText === "object"}/${typeof optObject === "object"}/${typeof optObject !== "undefined"}`;
+    const parts: string[] = [minmax, `${spreadOrder}`, optionalTags, presentText, confText, colorKeys, labeled, evolving.join("+"), viewed, downcast, typed, filtered,
       found?.getName() ?? "none", found?.kind() ?? "none", missing === undefined ? "absent" : "present",
       names.join(","), `${idx}`, `${allNamed}`, flat.join(""), seen, first ?? "none", queue.join(","), union.join(""),
       `${parsed}`, `${nan}`, `${big}`, sliced, ch, far, replaced, sorted.join(" "), `${before}`, `${after}`, `${skipped}`, keys,

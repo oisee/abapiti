@@ -89,6 +89,9 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 					continue
 				}
 				base := l.classOf(sym)
+				if base == nil {
+					base = l.lspShape(sym)
+				}
 				if base != nil && base.Ctor == nil && len(sym.Declarations) > 0 && sym.Declarations[0].Kind == ast.KindInterfaceDeclaration {
 					decl := sym.Declarations[0]
 					saved := l.file
@@ -625,7 +628,7 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	if e, ok := l.overrides[m]; ok && e.Method != nil {
 		return
 	}
-	if m.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+	if m.ModifierFlags()&ast.ModifierFlagsAsync != 0 && !l.settledEnabled {
 		l.diagf(m, "unsupported-async", "async body must be excluded by validated workload coverage")
 		return
 	}
@@ -636,6 +639,7 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	for _, p := range hm.Params {
 		l.declare(p.Name, p.Type)
 	}
+	l.asyncMethods[hm] = m.ModifierFlags()&ast.ModifierFlagsAsync != 0
 	defaults := l.applyDefaults(m, hm)
 	restore := l.withLocalFns(m.Body())
 	body := l.block(m.Body())
@@ -643,7 +647,7 @@ func (l *lowerer) lowerMethodBody(m *ast.Node) {
 	if len(defaults) > 0 {
 		body = hir.B(append(defaults, body)...)
 	}
-	hm.Body = body
+	hm.Body = l.finishAsync(m, hm, body)
 	l.pop()
 }
 

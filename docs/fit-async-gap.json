@@ -1,0 +1,761 @@
+{
+  "base": "f834c16ea65c9bd691ca0fe788d0cfbda4332dfc",
+  "branch": "feat/fit-async",
+  "scope": "TS to HIR, settled Promise representation in Go and ABAP; WASM untouched",
+  "measurementCommands": {
+    "before": "/tmp/fit-async/main-abapiti abaplint --full -o /tmp/fit-async/before",
+    "after": "GOMAXPROCS=2 /tmp/fit-async/reviewed-abapiti abaplint --full -o /tmp/fit-async/reviewed-after"
+  },
+  "gates": [
+    "PATH=\"$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH\" GOMAXPROCS=2 go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "PATH=\"$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH\" GOMAXPROCS=2 go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/..."
+  ],
+  "defaultComparison": [
+    "go build -p 2 -o /tmp/fit-async/main-abapiti ./cmd/abapiti (at origin/main)",
+    "/tmp/fit-async/main-abapiti abaplint -o /tmp/fit-async/default --target all,go",
+    "mv /tmp/fit-async/default /tmp/fit-async/default-main",
+    "go build -p 2 -o /tmp/fit-async/reviewed-abapiti ./cmd/abapiti (at feat/fit-async)",
+    "/tmp/fit-async/reviewed-abapiti abaplint -o /tmp/fit-async/default --target all,go",
+    "diff -r /tmp/fit-async/default-main /tmp/fit-async/default"
+  ],
+  "defaultComparisonResult": "empty diff, including generated Go executable and deterministic ABAP zip",
+  "before": {
+    "blocking": 635,
+    "rootBlocking": 355,
+    "cascadeBlocking": 280,
+    "hirErrors": 394,
+    "byCategory": {
+      "assume-integer": 2,
+      "unsupported-assignment": 11,
+      "unsupported-async": 1,
+      "unsupported-binding": 16,
+      "unsupported-call": 130,
+      "unsupported-callback": 4,
+      "unsupported-expr": 346,
+      "unsupported-new": 3,
+      "unsupported-regex": 4,
+      "unsupported-shortcircuit": 1,
+      "unsupported-statement": 3,
+      "unsupported-top-level": 81,
+      "unsupported-type": 33
+    },
+    "files": 100
+  },
+  "after": {
+    "blocking": 635,
+    "rootBlocking": 355,
+    "cascadeBlocking": 280,
+    "hirErrors": 394,
+    "byCategory": {
+      "assume-integer": 2,
+      "unsupported-assignment": 11,
+      "unsupported-async": 1,
+      "unsupported-binding": 16,
+      "unsupported-call": 130,
+      "unsupported-callback": 4,
+      "unsupported-expr": 346,
+      "unsupported-new": 3,
+      "unsupported-regex": 4,
+      "unsupported-shortcircuit": 1,
+      "unsupported-statement": 3,
+      "unsupported-top-level": 81,
+      "unsupported-type": 33
+    },
+    "files": 100
+  },
+  "asyncBefore": [
+    {
+      "category": "unsupported-async",
+      "loc": "src/registry.ts:370:3",
+      "message": "async body must be excluded by validated workload coverage"
+    }
+  ],
+  "asyncAfter": [
+    {
+      "category": "unsupported-async",
+      "loc": "src/registry.ts:379:7",
+      "message": "await provider is not certified already-settled (open progress providers, pending promises and arbitrary thenables need a scheduler)"
+    }
+  ],
+  "blockingByMessage": [
+    {
+      "category": "assume-integer",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "assume-integer",
+      "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-assignment",
+      "message": "assignment to abap is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-assignment",
+      "message": "assignment to code is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-assignment",
+      "message": "assignment to fix1 is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-assignment",
+      "message": "assignment to indentation is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-assignment",
+      "message": "assignment to match is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-async",
+      "message": "async body must be excluded by validated workload coverage",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "category": "unsupported-async",
+      "message": "await provider is not certified already-settled (open progress providers, pending promises and arbitrary thenables need a scheduler)",
+      "before": 0,
+      "after": 1
+    },
+    {
+      "category": "unsupported-binding",
+      "message": "void local requires a value-preserving result ABI",
+      "before": 16,
+      "after": 16
+    },
+    {
+      "category": "unsupported-call",
+      "message": "Math.min requires two arguments in this phase",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "call to KindIdentifier is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-call",
+      "message": "call to KindParenthesizedExpression is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "every needs a source-pinned dense/stable receiver proof",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "find on primitive arrays needs an absence-preserving callback ABI",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-call",
+      "message": "forEach needs a source-pinned dense/stable receiver proof",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method create on classvalue is not lowered",
+      "before": 13,
+      "after": 13
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method create on map is not lowered",
+      "before": 15,
+      "after": 15
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method delete on map is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method exec on regexp is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method flat on array is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method getParameters on dynamic is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method getStr on classref is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method is on map is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method match on string is not lowered",
+      "before": 31,
+      "after": 31
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method repeat on string is not lowered",
+      "before": 40,
+      "after": 40
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method replace on map is not lowered",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method toLocaleLowerCase on string is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method toLocaleUpperCase on string is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-call",
+      "message": "method trimEnd on string is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-callback",
+      "message": "callback KindPropertyAccessExpression is not an arrow function",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-callback",
+      "message": "callback block must have exactly one return",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "?? needs an optional or tagged left operand",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "binary operator KindInKeyword is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "constructor of the object root is not lowered",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "delete supports ordinary lowered records only",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "element access on classref is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier Date is not a lowered local or module value",
+      "before": 32,
+      "after": 32
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier JSON is not a lowered local or module value",
+      "before": 6,
+      "after": 6
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier Object is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier RegExp is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier XMLParser is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier XMLValidator is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier abap is not a lowered local or module value",
+      "before": 7,
+      "after": 7
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier bodyCode is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier candidates is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier carriage is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier cleanOldName is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier code is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier column is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier crypto is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier ctor is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier data is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier end is not a lowered local or module value",
+      "before": 15,
+      "after": 15
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier escaped is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier fileNewName is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier fix is not a lowered local or module value",
+      "before": 31,
+      "after": 31
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier fix1 is not a lowered local or module value",
+      "before": 25,
+      "after": 25
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier fix2 is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier found is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier hash is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier icfServices is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier importing is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier indent is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier indentation is not a lowered local or module value",
+      "before": 67,
+      "after": 67
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier index is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier isException is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier issue is not a lowered local or module value",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier label is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier match is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier message is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier outlineFor is not a lowered local or module value",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier paramName is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier parsed is not a lowered local or module value",
+      "before": 8,
+      "after": 8
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier pattern is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier range is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier regex is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier res is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier result is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier spaces is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier splitAt is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier start is not a lowered local or module value",
+      "before": 21,
+      "after": 21
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier symbol is not a lowered local or module value",
+      "before": 7,
+      "after": 7
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier text is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier typeInformation is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier updatedUrl is not a lowered local or module value",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier usedForbiddenToken is not a lowered local or module value",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier value is not a lowered local or module value",
+      "before": 3,
+      "after": 3
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "identifier workspace is not a lowered local or module value",
+      "before": 11,
+      "after": 11
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "typeof comparison on optional<string> is not lowered",
+      "before": 6,
+      "after": 6
+    },
+    {
+      "category": "unsupported-expr",
+      "message": "unary KindPlusPlusToken is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-new",
+      "message": "new RegExp is not a lowered class",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-new",
+      "message": "new XMLParser is not a lowered class",
+      "before": 2,
+      "after": 2
+    },
+    {
+      "category": "unsupported-regex",
+      "message": "replace with a non-literal pattern is not lowered",
+      "before": 4,
+      "after": 4
+    },
+    {
+      "category": "unsupported-shortcircuit",
+      "message": "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-statement",
+      "message": "KindFunctionDeclaration is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-statement",
+      "message": "KindLabeledStatement is not lowered",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-statement",
+      "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-top-level",
+      "message": "top-level KindModuleDeclaration is not lowered",
+      "before": 81,
+      "after": 81
+    },
+    {
+      "category": "unsupported-type",
+      "message": "checker type DocumentSymbol is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-type",
+      "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration",
+      "before": 1,
+      "after": 1
+    },
+    {
+      "category": "unsupported-type",
+      "message": "checker type RegExpExecArray is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-type",
+      "message": "checker type RegExpMatchArray is not a lowered declaration",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "category": "unsupported-type",
+      "message": "object literal needs a named lowered shape",
+      "before": 17,
+      "after": 17
+    }
+  ],
+  "model": [
+    "promise<T> is a settled fulfillment value or rejection carrier with the original thrown value; promise<void> has an explicit fulfillment without changing ordinary void returns",
+    "async method bodies execute synchronously; explicit source throws become rejected promises while coverage/domain refusals escape",
+    "await drains a producer-certified promise synchronously, returning the value or rethrowing at the await site",
+    "Promise.resolve/reject use default-library declaration provenance; resolving a certified promise adopts it",
+    "Async/await catches retain tagged payload identity and distinguish undefined from null",
+    "Coverage-pruned builds retain their opaque Promise signatures and existing traps, preserving default emitted files"
+  ],
+  "loweredAndTested": [
+    "module and class/static async functions returning values",
+    "nested awaits and argument/body effect order",
+    "throw/rejection delivery at await with try/catch, including undefined payload",
+    "Promise.resolve/reject and adoption of certified settled results; async adoption is fresh while Promise.resolve retains Promise identity",
+    "parseAsync-shaped sequential parsing/progress with concrete already-settled Promise<void> tick",
+    "void fulfillment fallthrough and source-proven undefined return-expression effects"
+  ],
+  "fullClosureRootsRemoved": 0,
+  "coreProgress": "Registry.parseAsync body and fulfillment returns are lowered; src/registry.ts:379 remains blocking because IProgress.tick is an open interface with no certified implementation in the core closure. This is not a completed parseAsync root or a claim that the 11,060 mocha tests pass. Optional Promise awaits also remain refused until a certified conditional drain is represented.",
+  "stillRefused": [
+    "open IProgress.tick and other external/interface Promise providers without a source settlement proof",
+    "Promise parameters, mutable Promise aliases, and cycles without a producer proof",
+    "Promise constructors (including deferred resolve), timers and queueMicrotask",
+    "arbitrary thenables and unresolved Promise.resolve assimilation",
+    "Promise combinators (all/race/any etc.) and then/catch/finally continuations",
+    "unawaited calls with direct or transitive await sites, because microtask ordering could be observable",
+    "virtual calls without a pinned receiver; a freshly constructed concrete receiver is supported",
+    "optional Promise awaits without a certified conditional drain",
+    "settled adoption with differing fulfillment types and local async closures outside the declaration model"
+  ],
+  "abapValidation": "HIR verifier and ABAP emission checks only; no SAP runtime execution",
+  "gateResult": "passed"
+}
