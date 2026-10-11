@@ -6,10 +6,10 @@ import {createRequire} from "node:module";
 import {resolve} from "node:path";
 import vm from "node:vm";
 import {verifyUpstream} from "./statements-upstream.mjs";
-const upstream = process.argv[2] || "/home/alice/dev/abaplint";
+const upstream = process.argv[2] || resolve(process.env.HOME, "dev/abaplint");
 const ts = createRequire(import.meta.url)(verifyUpstream(upstream));
 const runtime = resolve(import.meta.dirname, "../tsfront/testdata/abaplint-tests/runtime");
-function run(source) {
+async function run(source) {
  const context = vm.createContext({exports:{}});
  for (const name of ["mocha.ts", "chai.ts"]) {
   const raw = readFileSync(resolve(runtime, name), "utf8");
@@ -17,9 +17,9 @@ function run(source) {
   vm.runInContext(output, context, {filename:name});
  }
  vm.runInContext("const expect = exports.expect; " + source, context);
- return JSON.parse(vm.runInContext("JSON.stringify(TestRuntime.run())", context));
+ return JSON.parse(JSON.stringify(await vm.runInContext("TestRuntime.run()", context)));
 }
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  class Item {}
  describe("suite", function() {
   this.timeout(1);
@@ -33,7 +33,7 @@ assert.deepEqual(run(`
  });
  describe.skip("skipped", () => it("skip suite", () => { throw new Error("must not run"); }));
 `), {passed:5,failed:1,failures:[{title:"suite failure",message:"Error: custom message: expected 1 to equal 2"}]});
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  describe("outer", function() {
   it("ignored", () => { throw new Error("not focused"); });
   describe("inner", function() { this.timeout(0); it.only("focused", () => expect(true).to.equal(true)); });
@@ -41,23 +41,55 @@ assert.deepEqual(run(`
  it.only("second", () => expect(undefined).to.not.equals(1));
  it.skip("skipped focus", () => { throw new Error("skip"); });
 `), {passed:2,failed:0,failures:[]});
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  describe.only("focused suite", () => it("focused", () => {}));
  describe("other", () => it("ignored", () => { throw new Error("not focused"); }));
 `), {passed:1,failed:0,failures:[]});
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  it("expect message", () => expect(1, "expect message").to.not.equals(1));
  it("explicit failure", () => expect.fail("explicit"));
 `), {passed:0,failed:2,failures:[
  {title:"expect message",message:"Error: expect message: expected 1 not to equal 1"},
  {title:"explicit failure",message:"Error: explicit"},
 ]});
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  describe.only("focused but skipped", () => it.skip("pending", () => {}));
  it("outside", () => { throw new Error("not focused"); });
 `), {passed:0,failed:0,failures:[]});
-assert.deepEqual(run(`
+assert.deepEqual(await run(`
  describe.only("empty focused suite", () => {});
  it("outside", () => { throw new Error("not focused"); });
 `), {passed:0,failed:0,failures:[]});
-console.log("runtime Node contract: 6 scenarios passed (not TS-HG@Go)");
+assert.deepEqual(await run(`
+ class State { static value = ""; }
+ before(async function() { this.timeout(1); State.value += "root"; });
+ describe("async", () => {
+  before(async () => { State.value += ":before"; });
+  beforeEach(async () => { State.value += ":each"; });
+  afterEach(() => Promise.resolve().then(() => { State.value += ":afterEach"; }));
+  after(async () => { if (State.value !== "root:before:each:afterEach:each:afterEach") { throw new Error(State.value); } });
+  it("fulfillment", async () => { await Promise.resolve(); });
+  it("rejection", () => Promise.reject(new Error("rejected")));
+ });
+`), {passed:1,failed:1,failures:[{title:"async rejection",message:"Error: rejected"}]});
+assert.deepEqual(await run(`
+ describe("setup failure", () => {
+  before(async () => { throw new Error("setup rejected"); });
+  it("first", () => { throw new Error("body must not run"); });
+  it("second", async () => {});
+ });
+ describe("teardown failure", () => {
+  afterEach(async () => { throw new Error("cleanup rejected"); });
+  it("test", async () => {});
+ });
+ describe("after failure", () => {
+  after(() => Promise.reject(new Error("after rejected")));
+  it("test", async () => {});
+ });
+`), {passed:0,failed:4,failures:[
+ {title:"setup failure first",message:"Error: setup rejected"},
+ {title:"setup failure second",message:"Error: setup rejected"},
+ {title:"teardown failure test",message:"Error: cleanup rejected"},
+ {title:"after failure test",message:"Error: after rejected"},
+]});
+console.log("runtime Node contract: 8 scenarios passed (not TS-HG@Go)");

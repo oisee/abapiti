@@ -5,10 +5,10 @@ root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
 trap 'rm -rf "$gen"' EXIT
-rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec"
-(cd "$root" && ABAPITI_TEST_OUT="$gen" go test ./hir/abap -run '^(TestFixtures|Test750Semantics|TestRuntimeDebtFixtures)$' -count=1)
+rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestConfigJSONFixtures"
+(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures)$' -count=1)
 for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec; do
-  (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test ./tsfront -run "^$suite$" -count=1)
+  (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test -p 2 ./tsfront -run "^$suite$" -count=1)
 done
 node "$root/.github/ci/hir-lint-test.mjs" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
@@ -17,10 +17,14 @@ node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
 for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec; do
   node "$root/.github/ci/hir-lint.mjs" "$gen/$suite" "$osg" --fixture
 done
+for classes in "$gen"/TestConfigJSONFixtures/case*; do
+  node "$root/.github/ci/hir-lint.mjs" "$classes" "$osg"
+done
+node "$root/.github/ci/hir-lint.mjs" "$gen/TestConfigJSONFixtures/case0" "$osg" config-json-v702
 node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 for runtime in osgo osgjs; do
-  for suite in TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec; do
+  for suite in TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestConfigJSONFixtures/case{0,1,2,3}; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
     if [[ "$suite" == TestRuntimeDebtFixtures ]]; then expected=475; fi
@@ -28,7 +32,7 @@ for runtime in osgo osgjs; do
     status=0
     runtime_args=()
     if [[ "$runtime" == osgo ]]; then runtime_args=(--jobs 2); fi
-    (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS="${GOFLAGS:-} -p=2 -buildvcs=false" npm run -s "$runtime:unit" -- "$classes" --json "${runtime_args[@]}") > "$work/hir-$runtime-$suite.json" 2> "$work/hir-$runtime-$suite.err" || status=$?
+    (cd "$osg" && GOTOOLCHAIN=go1.26.0 GOFLAGS="${GOFLAGS:-} -p=2 -buildvcs=false" npm run -s "$runtime:unit" -- "$classes" --json "${runtime_args[@]}") > "$work/hir-$runtime-${suite//\//-}.json" 2> "$work/hir-$runtime-${suite//\//-}.err" || status=$?
     node -e '
       const fs = require("fs");
       const d = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
@@ -43,7 +47,7 @@ for runtime in osgo osgjs; do
       const gapped = d.rows.filter(known).length;
       console.log(`${process.argv[3]} HIR: ${t.success}/${t.tests} passed` + (gapped ? `, ${gapped} known osgo gap(s)` : ""));
       if (t.tests !== expected || d.rows.length !== expected || t.success + gapped !== expected || d.rows.some(r => r.status !== "SUCCESS" && !known(r)) || (Number(process.argv[2]) !== 0 && gapped === 0)) process.exit(1);
-    ' "$work/hir-$runtime-$suite.json" "$status" "$runtime $suite" "$expected" "$root/.github/ci/osgo-known-gaps.txt" "$suite" || result=1
+    ' "$work/hir-$runtime-${suite//\//-}.json" "$status" "$runtime $suite" "$expected" "$root/.github/ci/osgo-known-gaps.txt" "$suite" || result=1
   done
 done
 node "$root/.github/ci/lexer-unit.mjs" "$work" || result=1

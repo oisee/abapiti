@@ -23,7 +23,7 @@ func (l *lowerer) thunkType() hir.Type {
 		}
 	}
 	i := &hir.Interface{Node: hir.Node{ID: l.nextID(), Source: thunkInterfaceName}, Name: thunkInterfaceName,
-		Methods: []*hir.Method{{Node: hir.Node{ID: l.nextID(), Source: thunkInterfaceName}, Name: "call", Virtual: true, Result: hir.T(hir.Void)}}}
+		Methods: []*hir.Method{{Node: hir.Node{ID: l.nextID(), Source: thunkInterfaceName}, Name: "call", Virtual: true, Result: l.thunkResult()}}}
 	l.out.Interfaces = append(l.out.Interfaces, i)
 	if l.ifaceDone == nil {
 		l.ifaceDone = map[*hir.Interface]bool{}
@@ -34,6 +34,7 @@ func (l *lowerer) thunkType() hir.Type {
 
 // isThunkType reports a checker type with exactly one call signature that
 // takes no parameters and returns void (or never, an always-throwing thunk).
+// The test host additionally accepts Promise results; its boundary drains them.
 func (l *lowerer) isThunkType(t *checker.Type) bool {
 	if t == nil {
 		return false
@@ -43,7 +44,8 @@ func (l *lowerer) isThunkType(t *checker.Type) bool {
 		return false
 	}
 	ret := l.ck.GetReturnTypeOfSignature(sigs[0])
-	return ret != nil && ret.Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsNever) != 0
+	return ret != nil && (ret.Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsNever) != 0 ||
+		(l.integerOptions.TrapOnFailure && l.settledEnabled && ret.Symbol() != nil && ret.Symbol().Name == "Promise" && l.librarySymbol(ret.Symbol())))
 }
 
 // closureValue lowers an arrow function used as a value.
@@ -55,7 +57,7 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	}
 	l.serial++
 	name := "closure." + itoa(l.serial)
-	m := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: hir.T(hir.Void)}
+	m := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: l.thunkResult()}
 	l.trapBodyDiagnostics(n, m, before)
 	if m.Body == nil {
 		m.Body = failureBody(m.Node, l.locOf(n)+": unsupported callback")
@@ -65,20 +67,16 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
-	if l.integerOptions.TrapOnFailure && n.ModifierFlags()&ast.ModifierFlagsAsync != 0 && !l.synchronousAsyncSuite(n) {
-		l.diagf(n, "unsupported-async", "async callback is not run by the synchronous test host")
-		return nil
-	}
 	if len(n.Parameters()) != 0 {
 		if l.integerOptions.TrapOnFailure && l.isTestCallback(n) {
-			l.diagf(n, "unsupported-async", "done/parameterized callback is not run by the synchronous test host")
+			l.diagf(n, "unsupported-test-done", "done/parameterized callback is not run by the synchronous test host")
 			return nil
 		}
 		l.diagf(n, "unsupported-closure", "only parameterless thunks are lowered as closures")
 		return nil
 	}
 	if t := l.ck.GetTypeAtLocation(n); !l.isThunkType(t) && !l.isThunkType(l.ck.GetContextualType(n, 0)) {
-		l.diagf(n, "unsupported-closure", "only void thunks are lowered as closures")
+		l.diagf(n, "unsupported-closure", "only void thunks (or Promise test callbacks) are lowered as closures")
 		return nil
 	}
 	body := n.Body()
@@ -152,7 +150,30 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	}
 	ctor.Body = hir.B(init...)
 	c.Ctor = ctor
-	call := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: hir.T(hir.Void)}
+	call := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: l.thunkResult()}
+	// The test boundary always returns a settled Promise<void>. Keep the
+	// producer's fulfillment type in a separate method, then drain it before
+	// reporting success. Ordinary compilation retains its void thunk ABI.
+	var invoke *hir.Method
+	if l.integerOptions.TrapOnFailure && l.settledEnabled {
+		ret := l.ck.GetReturnTypeOfSignature(l.ck.GetSignaturesOfType(l.ck.GetTypeAtLocation(n), checker.SignatureKindCall)[0])
+		result := hir.T(hir.Void)
+		if ret.Symbol() != nil && ret.Symbol().Name == "Promise" && l.librarySymbol(ret.Symbol()) {
+			result = l.mapCheckerType(n, ret)
+			if !l.synchronousAsyncSuite(n) && !l.certifiedSettledBody(n, map[*ast.Node]bool{}) {
+				l.diagf(n, "unsupported-async", "test callback is not certified already-settled; pending promises require a scheduler")
+				return nil
+			}
+		} else if l.testMayThenable(ret) {
+			l.diagf(n, "unsupported-async", "test callback may return an arbitrary thenable; settled assimilation is not certified")
+			return nil
+		}
+		invoke = call
+		invoke.Name, invoke.Virtual, invoke.Result = "invoke", false, result
+		if n.ModifierFlags()&ast.ModifierFlagsAsync != 0 {
+			l.asyncMethods[invoke] = true
+		}
+	}
 	call.SiteOwner = c.SiteOwner + ".call"
 	c.Methods = append(c.Methods, call)
 	l.out.Classes = append(l.out.Classes, c)
@@ -183,15 +204,28 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	before := len(l.diags)
 	l.pend = nil
 	restore := l.withLocalFns(body)
-	inner := l.functionBody(body)
+	var inner *hir.Stmt
+	if l.asyncMethods[call] && body.Kind != ast.KindBlock {
+		inner = l.asyncReturn(body, body)
+	} else {
+		inner = l.functionBody(body)
+	}
 	restore()
 	l.pop()
 	l.scope, l.method, l.pend, l.thisOverride = savedScope, savedMethod, savedPend, savedThis
 	if inner == nil {
 		return nil
 	}
-	call.Body = hir.B(append(prologue, inner)...)
+	call.Body = l.finishAsync(n, call, hir.B(append(prologue, inner)...))
 	l.trapBodyDiagnostics(n, call, before)
+	if invoke != nil {
+		x := &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: name, Name: "invoke", Type: invoke.Result, X: self}
+		if invoke.Result.Kind == hir.Promise {
+			x = &hir.Expr{Kind: hir.PromiseAwait, Node: l.node(n), Type: invoke.Result.Args[0], X: x}
+		}
+		c.Methods = append(c.Methods, &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: l.thunkResult(),
+			Body: &hir.Stmt{Kind: hir.Async, Node: l.node(n), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: x}, &hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.PromiseFulfill, Type: l.thunkResult()}})}})
+	}
 	l.diagf(n, "note-closure", "thunk lowered as closure %s capturing %d locals", name, len(captures))
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(name), Args: args}
 }
@@ -263,11 +297,8 @@ func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	if l.integerOptions.TrapOnFailure && l.relFile(l.file) == "runtime/mocha.ts" && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "call" {
 		x := l.expr(callee.Expression())
 		if x != nil && x.Type.Name == thunkInterfaceName {
-			return &hir.Expr{Node: l.node(n), Kind: hir.VirtualCall, Name: "call", Type: hir.T(hir.Void), X: x}, true
+			return l.invokeThunk(n, x), true
 		}
-	}
-	if len(n.Arguments()) != 0 {
-		return nil, false
 	}
 	// Named functions have their own direct-call path; only stored values
 	// use the thunk interface. Do not re-evaluate a method's receiver here.
@@ -293,5 +324,37 @@ func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	if x.Type.Kind != hir.InterfaceRef || x.Type.Name != thunkInterfaceName {
 		return nil, false
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: hir.T(hir.Void), X: x}, true
+	x = l.callReceiver(n, x, nil)
+	if _, ok := l.callArgs(n, n.Arguments(), nil); !ok {
+		return nil, true
+	}
+	return l.invokeThunk(n, x), true
+}
+
+// Only the trap-on-failure test host normalizes thunks to settled promises.
+func (l *lowerer) thunkResult() hir.Type {
+	if l.integerOptions.TrapOnFailure && l.settledEnabled {
+		return hir.T(hir.Promise, hir.T(hir.Void))
+	}
+	return hir.T(hir.Void)
+}
+func (l *lowerer) invokeThunk(n *ast.Node, x *hir.Expr) *hir.Expr {
+	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: l.thunkResult(), X: x}
+	if call.Type.Kind == hir.Promise {
+		return &hir.Expr{Kind: hir.PromiseAwait, Node: l.node(n), Type: hir.T(hir.Void), X: call}
+	}
+	return call
+}
+
+// A void contextual callback type must not erase a possible Promise return.
+func (l *lowerer) testMayThenable(t *checker.Type) bool {
+	if t.IsUnion() {
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			if l.testMayThenable(part) {
+				return true
+			}
+		}
+		return false
+	}
+	return t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 || l.ck.GetPropertyOfType(t, "then") != nil
 }

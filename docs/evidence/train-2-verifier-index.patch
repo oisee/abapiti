@@ -1,0 +1,28 @@
+--- a/hir/verify.go
++++ b/hir/verify.go
+@@ -35,0 +36,18 @@
++}
++
++// Measurement-only reusable declaration index. Body checks are unchanged.
++type MeasurementBodyVerifier struct {
++ p *Program
++ classes map[string]*Class
++ interfaces map[string]*Interface
++}
++func MeasurementBodyIndex(p *Program) *MeasurementBodyVerifier {
++ b:=&MeasurementBodyVerifier{p:p, classes:map[string]*Class{}, interfaces:map[string]*Interface{}}
++ for _,x:=range p.Classes {b.classes[x.Name]=x}
++ for _,x:=range p.Interfaces {b.interfaces[x.Name]=x}
++ return b
++}
++func (b *MeasurementBodyVerifier) VerifyBody(c *Class,m *Method) []error {
++ v:=&verifier{p:b.p,classes:b.classes,interfaces:b.interfaces}
++ v.body(c,m)
++ return v.errors
+--- a/tsfront/trap_failure.go
++++ b/tsfront/trap_failure.go
+@@ -182,0 +183 @@
++	bodyVerifier := hir.MeasurementBodyIndex(l.out)
+@@ -204 +205 @@
+-			if errors := hir.VerifyBody(l.out, entry.c, m); len(errors) > 0 {
++			if errors := bodyVerifier.VerifyBody(entry.c, m); len(errors) > 0 {
