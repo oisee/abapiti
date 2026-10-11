@@ -3,7 +3,8 @@ import {createRequire} from "node:module";
 import {existsSync, readFileSync, readdirSync} from "node:fs";
 import {join, resolve} from "node:path";
 const [dir, osg, mode] = process.argv.slice(2);
-if (mode !== undefined && mode !== "--fixture") throw new Error(`Unknown mode: ${mode}`);
+if (mode !== undefined && mode !== "--fixture" && mode !== "config-json-v702") throw new Error(`Unknown mode: ${mode}`);
+const config702 = mode === "config-json-v702";
 const require = createRequire(join(resolve(osg || "."), "package.json"));
 const abaplint = require("@abaplint/core");
 const config = abaplint.Config.getDefault();
@@ -23,7 +24,7 @@ for (const name of ["match_result.tabl.xml", "match_result_tab.ttyp.xml", "subma
 const constructs = {inline: false, instance: false};
 const files = readdirSync(dir).filter(n => n.endsWith(".abap"));
 // PCRE is confined to the gated JS-regex runtime (ABAP 7.55).
-const version = files.some(n => /\b(?:FIND|REPLACE)\b[^\n]*\bPCRE\b/i.test(readFileSync(join(dir, n), "utf8"))) ? abaplint.Version.v755 : abaplint.Version.v750;
+const version = config702 ? abaplint.Version.v702 : files.some(n => /\b(?:FIND|REPLACE)\b[^\n]*\bPCRE\b/i.test(readFileSync(join(dir, n), "utf8"))) ? abaplint.Version.v755 : abaplint.Version.v750;
 config.get().syntax.version = version;
 for (const n of files) {
   const src = readFileSync(join(dir, n), "utf8");
@@ -45,7 +46,8 @@ for (const n of files) {
   }
   constructs.inline ||= /\bDATA\s*\(/i.test(code);
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
-  reg.addFile(new abaplint.MemoryFile(n, src));
+  if (!config702 || /^z_runtime_(?:conf|json|mate)_/.test(n)) reg.addFile(new abaplint.MemoryFile(n, src));
+  else if (!n.includes("testclasses")) reg.addDependency(new abaplint.MemoryFile(n, src));
 }
 // Feature fixtures (--fixture) are small; only the main corpus must show both constructs.
 if (mode !== "--fixture" && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
@@ -60,5 +62,5 @@ walk(join(osg, ".local/lars/open-abap-core/src"));
 reg.parse();
 const issues = reg.findIssues();
 for (const i of issues) console.error(`${i.getFilename()}:${i.getStart().getRow()}: ${i.getMessage()}`);
-console.log(`HIR ABAP ${version}: ${files.length} files, ${issues.length} issues`);
+console.log(`HIR ABAP ${config702 ? "config JSON v702" : version}: ${files.length} files, ${issues.length} issues`);
 process.exitCode = issues.length ? 1 : 0;

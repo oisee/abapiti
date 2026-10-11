@@ -1,0 +1,567 @@
+{
+  "baseline": "141ecaf2e965e338db5bcfd7c138da3bd82c7d81",
+  "main": "23b364090e3b9c699ddb768e5a795fa283ca105b",
+  "configBranch": "89519d57e62012596a53d72cb05923d1ef24addb",
+  "runtimePin": "7720f6e29b41a6a12faee17ea65076ac6f046552",
+  "transpilerPin": "ee5c2cd1a45aaac6be503a46fc903ce95a946877",
+  "runtime": {
+    "osgo": {
+      "Test750Semantics": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case0": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case1": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case2": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case3": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestEmitRegExpExec": {
+        "totals": {
+          "success": 0,
+          "failure": 0,
+          "not_compiled": 1,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": [
+          "NOT_COMPILED in Z_RUNTIME_REGE_8D1CC105868012=>CONSTRUCTOR (z_runtime_rege_8d1cc105868012.clas.abap:793): FIND PCRE"
+        ]
+      },
+      "TestEmitStringRepeatMatch": {
+        "totals": {
+          "success": 0,
+          "failure": 0,
+          "not_compiled": 1,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": [
+          "NOT_COMPILED in Z_RUNTIME_REGE_5A210F82384EBF=>MATCH (z_runtime_rege_5a210f82384ebf.clas.abap:226): LOOP form: LOOP AT groups INTO group."
+        ]
+      },
+      "TestEmitSyntaxFeatures": {
+        "totals": {
+          "success": 0,
+          "failure": 0,
+          "not_compiled": 1,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": [
+          "NOT_COMPILED in Z_RUNTIME_REGE_5A210F82384EBF=>MATCH (z_runtime_rege_5a210f82384ebf.clas.abap:226): LOOP form: LOOP AT groups INTO group."
+        ]
+      },
+      "TestFixtures": {
+        "totals": {
+          "success": 7,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 7
+        },
+        "knownGaps": []
+      },
+      "TestRuntimeDebtFixtures": {
+        "totals": {
+          "success": 475,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 475
+        },
+        "knownGaps": []
+      }
+    },
+    "osgjs": {
+      "Test750Semantics": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case0": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case1": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case2": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestConfigJSONFixtures-case3": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestEmitRegExpExec": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestEmitStringRepeatMatch": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestEmitSyntaxFeatures": {
+        "totals": {
+          "success": 1,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 1
+        },
+        "knownGaps": []
+      },
+      "TestFixtures": {
+        "totals": {
+          "success": 7,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 7
+        },
+        "knownGaps": []
+      },
+      "TestRuntimeDebtFixtures": {
+        "totals": {
+          "success": 475,
+          "failure": 0,
+          "not_compiled": 0,
+          "error": 0,
+          "tests": 475
+        },
+        "knownGaps": []
+      }
+    }
+  },
+  "lexer": {
+    "osgo": {
+      "baseline": "PASS",
+      "early": "expected FAIL",
+      "skip": "expected FAIL",
+      "token-count": "expected FAIL",
+      "default": "PASS",
+      "default_required": "PASS",
+      "implicit_init": "PASS",
+      "inherited_init": "PASS",
+      "number_semantics": "PASS",
+      "optional_downcast": "PASS",
+      "overflow": "PASS",
+      "proven_as": "PASS",
+      "regex_literals": "PASS",
+      "static_init": "PASS",
+      "static_order": "PASS",
+      "super_preserved": "PASS",
+      "supplementary": "PASS",
+      "unicode_codes": "PASS",
+      "unicode_mode": "PASS",
+      "unicode_trim": "PASS",
+      "unicode_upper": "PASS",
+      "number-fix2": "PASS"
+    },
+    "osgjs": {
+      "baseline": "PASS",
+      "early": "expected FAIL",
+      "skip": "expected FAIL",
+      "token-count": "expected FAIL",
+      "default": "PASS",
+      "default_required": "PASS",
+      "implicit_init": "PASS",
+      "inherited_init": "PASS",
+      "number_semantics": "PASS",
+      "optional_downcast": "PASS",
+      "overflow": "PASS",
+      "proven_as": "PASS",
+      "regex_literals": "PASS",
+      "static_init": "PASS",
+      "static_order": "PASS",
+      "super_preserved": "PASS",
+      "supplementary": "PASS",
+      "unicode_codes": "PASS",
+      "unicode_mode": "PASS",
+      "unicode_trim": "PASS",
+      "unicode_upper": "PASS",
+      "number-fix2": "PASS"
+    }
+  },
+  "mergeParents": [
+    "db2834c",
+    "89519d57e62012596a53d72cb05923d1ef24addb"
+  ],
+  "gates": {
+    "build": 0,
+    "vet": 0,
+    "short": 0,
+    "grace": 0,
+    "default-ops": 0,
+    "hir-unit": 0,
+    "build-branch": 0,
+    "default-base": 0,
+    "default-main": 0,
+    "default-branch": 0,
+    "diff-base": 0,
+    "diff-main": 0,
+    "full-base": 0,
+    "full-branch": 0
+  },
+  "fullClosure": {
+    "base": {
+      "command": "/tmp/train2-merge-gates/base-bin abaplint --full -o /tmp/train2-merge-gates/full-base",
+      "summary": {
+        "blocking": 35,
+        "rootBlocking": 29,
+        "cascadeBlocking": 6,
+        "hirErrors": 173,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-call": 3,
+          "unsupported-callback": 1,
+          "unsupported-expr": 19,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 17,
+          "objects": 6,
+          "rules": 10,
+          "src": 2
+        },
+        "byRootMessage": [
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 7
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 47
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "configSourceBlockers": 0
+    },
+    "branch": {
+      "command": "/tmp/train2-merge-gates/branch-bin abaplint --full -o /tmp/train2-merge-gates/full-branch",
+      "summary": {
+        "blocking": 35,
+        "rootBlocking": 29,
+        "cascadeBlocking": 6,
+        "hirErrors": 151,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-call": 3,
+          "unsupported-callback": 1,
+          "unsupported-expr": 19,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 17,
+          "objects": 6,
+          "rules": 10,
+          "src": 2
+        },
+        "byRootMessage": [
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 7
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 41
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "delete supports ordinary lowered records only": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "new RegExp requires a lowered string pattern": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "configSourceBlockers": 0
+    }
+  },
+  "defaultOutput": {
+    "command": "abapiti abaplint -o /tmp/train2-merge-gates/default --target all,go",
+    "baselineDiffEmpty": true,
+    "mainDiffEmpty": true,
+    "files": 6348
+  }
+}

@@ -1,0 +1,313 @@
+CLASS $W DEFINITION PUBLIC CREATE PUBLIC.
+PUBLIC SECTION.
+$METHODS
+PROTECTED SECTION.
+PRIVATE SECTION.
+DATA active TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
+METHODS enter IMPORTING p0 TYPE REF TO object.
+METHODS leave IMPORTING p0 TYPE REF TO object.
+METHODS quote IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE string.
+METHODS code_unit IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE i.
+TYPES decimal_integer TYPE p LENGTH 16 DECIMALS 0.
+METHODS odd_decimal IMPORTING p0 TYPE decimal_integer RETURNING VALUE(result) TYPE abap_bool.
+METHODS double_decimal IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE string.
+METHODS midpoint_side IMPORTING p0 TYPE f p1 TYPE decimal_integer p2 TYPE i RETURNING VALUE(result) TYPE i.
+METHODS number IMPORTING p0 TYPE f RETURNING VALUE(result) TYPE string.
+ENDCLASS.
+CLASS $W IMPLEMENTATION.
+$IMPLEMENTATIONS
+METHOD enter.
+READ TABLE active WITH KEY table_line = p0 TRANSPORTING NO FIELDS.
+IF sy-subrc = 0.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+APPEND p0 TO active.
+ENDMETHOD.
+METHOD leave.
+DATA last TYPE i.
+last = lines( active ).
+DELETE active INDEX last.
+ENDMETHOD.
+METHOD code_unit.
+DATA converter TYPE REF TO cl_abap_conv_out_ce.
+DATA bytes TYPE xstring.
+DATA low TYPE x LENGTH 1.
+DATA high TYPE x LENGTH 1.
+DATA highint TYPE i.
+DATA unit TYPE c LENGTH 1.
+unit = p0.
+result = cl_abap_conv_out_ce=>uccpi( unit ).
+IF result >= 255.
+converter = cl_abap_conv_out_ce=>create( encoding = '4103' ).
+converter->convert( EXPORTING data = unit IMPORTING buffer = bytes ).
+low = bytes+0(1).
+high = bytes+1(1).
+result = low.
+highint = high.
+result = result + highint * 256.
+ENDIF.
+ENDMETHOD.
+METHOD quote.
+DATA pos TYPE i.
+DATA code TYPE i.
+DATA next TYPE i.
+DATA ch TYPE string.
+DATA hex TYPE string VALUE '0123456789abcdef'.
+DATA escaped TYPE string.
+DATA digit TYPE i.
+DATA shift TYPE i.
+DATA tail TYPE string.
+result = `"`.
+WHILE pos < strlen( p0 ).
+ch = p0+pos(1).
+code = code_unit( ch ).
+pos = pos + 1.
+CASE code.
+WHEN 34.
+escaped = `\"`.
+WHEN 92.
+escaped = `\\`.
+WHEN 8.
+escaped = `\b`.
+WHEN 9.
+escaped = `\t`.
+WHEN 10.
+escaped = `\n`.
+WHEN 12.
+escaped = `\f`.
+WHEN 13.
+escaped = `\r`.
+WHEN OTHERS.
+IF code >= 55296 AND code <= 56319 AND pos < strlen( p0 ).
+tail = p0+pos(1).
+next = code_unit( tail ).
+IF next >= 56320 AND next <= 57343.
+CONCATENATE result ch tail INTO result RESPECTING BLANKS.
+pos = pos + 1.
+CONTINUE.
+ENDIF.
+ENDIF.
+IF code < 32 OR ( code >= 55296 AND code <= 57343 ).
+escaped = `\u`.
+shift = 4096.
+DO 4 TIMES.
+digit = code DIV shift MOD 16.
+CONCATENATE escaped hex+digit(1) INTO escaped.
+shift = shift DIV 16.
+ENDDO.
+ELSE.
+escaped = ch.
+ENDIF.
+ENDCASE.
+CONCATENATE result escaped INTO result RESPECTING BLANKS.
+ENDWHILE.
+CONCATENATE result `"` INTO result.
+ENDMETHOD.
+METHOD odd_decimal.
+DATA text TYPE string.
+DATA last TYPE i.
+text = |{ p0 }|.
+last = strlen( text ) - 1.
+IF text+last(1) CO `13579`.
+result = abap_true.
+ENDIF.
+ENDMETHOD.
+METHOD double_decimal.
+DATA pos TYPE i.
+DATA digit TYPE i.
+DATA carry TYPE i.
+DATA ch TYPE string.
+pos = strlen( p0 ).
+WHILE pos > 0.
+pos = pos - 1.
+digit = p0+pos(1).
+digit = digit * 2 + carry.
+carry = digit DIV 10.
+digit = digit MOD 10.
+ch = |{ digit }|.
+CONCATENATE ch result INTO result.
+ENDWHILE.
+IF carry > 0.
+CONCATENATE `1` result INTO result.
+ENDIF.
+ENDMETHOD.
+METHOD midpoint_side.
+DATA scaled TYPE f.
+DATA binary_unit TYPE f.
+DATA binary_exp TYPE i.
+DATA mantissa TYPE decimal_integer.
+DATA left TYPE string.
+DATA right TYPE string.
+scaled = p0.
+WHILE scaled >= 2.
+scaled = scaled / 2.
+binary_exp = binary_exp + 1.
+ENDWHILE.
+WHILE scaled < 1.
+scaled = scaled * 2.
+binary_exp = binary_exp - 1.
+ENDWHILE.
+binary_unit = '4503599627370496'.
+scaled = scaled * binary_unit.
+mantissa = scaled.
+left = |{ mantissa }|.
+right = |{ p1 }|.
+CONDENSE left NO-GAPS.
+CONDENSE right NO-GAPS.
+binary_exp = binary_exp - 51.
+IF binary_exp >= 0.
+DO binary_exp TIMES.
+left = double_decimal( left ).
+ENDDO.
+ELSE.
+DO 0 - binary_exp TIMES.
+right = double_decimal( right ).
+ENDDO.
+ENDIF.
+IF p2 >= 0.
+DO p2 TIMES.
+CONCATENATE right `0` INTO right.
+ENDDO.
+ELSE.
+DO 0 - p2 TIMES.
+CONCATENATE left `0` INTO left.
+ENDDO.
+ENDIF.
+IF strlen( left ) > strlen( right ).
+result = 1.
+ELSEIF strlen( left ) < strlen( right ).
+result = -1.
+ELSEIF left > right.
+result = 1.
+ELSEIF left < right.
+result = -1.
+ENDIF.
+ENDMETHOD.
+METHOD number.
+DATA magnitude TYPE f.
+DATA candidate TYPE f.
+DATA finite TYPE f.
+DATA exponent TYPE i.
+DATA trialexp TYPE i.
+DATA precision TYPE i.
+DATA source TYPE string.
+DATA digits TYPE string.
+DATA sign TYPE string.
+DATA length TYPE i.
+DATA offset TYPE i.
+DATA exptext TYPE string.
+DATA mantissa TYPE p LENGTH 16 DECIMALS 0.
+DATA divisor TYPE p LENGTH 16 DECIMALS 0.
+DATA rounded TYPE p LENGTH 16 DECIMALS 0.
+DATA remainder TYPE p LENGTH 16 DECIMALS 0.
+DATA trial TYPE string.
+DATA midpoint TYPE decimal_integer.
+DATA side TYPE i.
+IF p0 = 0.
+result = `0`.
+RETURN.
+ENDIF.
+finite = '1.7976931348623157E308'.
+IF p0 <> p0 OR p0 > finite OR p0 < 0 - finite.
+result = `null`.
+RETURN.
+ENDIF.
+magnitude = abs( p0 ).
+source = magnitude.
+REPLACE ALL OCCURRENCES OF `,` IN source WITH `.`.
+SPLIT source AT `E` INTO digits exptext.
+IF exptext IS INITIAL.
+result = `null`.
+RETURN.
+ENDIF.
+exponent = exptext.
+REPLACE ALL OCCURRENCES OF `.` IN digits WITH ``.
+mantissa = digits.
+divisor = 10000000000000000.
+DO 17 TIMES.
+precision = sy-index.
+rounded = mantissa DIV divisor.
+remainder = mantissa MOD divisor.
+IF remainder * 2 > divisor.
+rounded = rounded + 1.
+ELSEIF remainder * 2 = divisor.
+midpoint = rounded * 2 + 1.
+trialexp = exponent - precision + 1.
+side = midpoint_side( p0 = magnitude p1 = midpoint p2 = trialexp ).
+IF side > 0 OR ( side = 0 AND odd_decimal( rounded ) = abap_true ).
+rounded = rounded + 1.
+ENDIF.
+ENDIF.
+trialexp = exponent - precision + 1.
+IF precision = 17 AND odd_decimal( rounded ) = abap_true.
+midpoint = rounded * 2 - 1.
+side = midpoint_side( p0 = magnitude p1 = midpoint p2 = trialexp ).
+IF side = 0.
+rounded = rounded - 1.
+ELSE.
+midpoint = rounded * 2 + 1.
+side = midpoint_side( p0 = magnitude p1 = midpoint p2 = trialexp ).
+IF side = 0.
+rounded = rounded + 1.
+ENDIF.
+ENDIF.
+ENDIF.
+digits = |{ rounded }|.
+CONDENSE digits NO-GAPS.
+exptext = |{ trialexp }|.
+CONCATENATE digits `E` exptext INTO trial.
+TRY.
+candidate = trial.
+CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
+CLEAR candidate.
+ENDTRY.
+IF candidate = magnitude.
+EXIT.
+ENDIF.
+divisor = divisor DIV 10.
+ENDDO.
+exponent = trialexp + strlen( digits ) - 1.
+WHILE strlen( digits ) > 1.
+length = strlen( digits ) - 1.
+IF digits+length(1) <> `0`.
+EXIT.
+ENDIF.
+digits = digits(length).
+ENDWHILE.
+IF p0 < 0.
+sign = `-`.
+ENDIF.
+IF exponent < -6 OR exponent >= 21.
+length = strlen( digits ).
+result = digits(1).
+IF length > 1.
+length = length - 1.
+CONCATENATE result `.` digits+1(length) INTO result.
+ENDIF.
+exptext = |{ exponent }|.
+IF exponent >= 0.
+CONCATENATE `+` exptext INTO exptext.
+ENDIF.
+CONCATENATE sign result `e` exptext INTO result.
+ELSE.
+offset = exponent + 1.
+length = strlen( digits ).
+IF offset <= 0.
+result = `0.`.
+DO 0 - offset TIMES.
+CONCATENATE result `0` INTO result.
+ENDDO.
+CONCATENATE result digits INTO result.
+ELSEIF offset >= length.
+result = digits.
+DO offset - length TIMES.
+CONCATENATE result `0` INTO result.
+ENDDO.
+ELSE.
+length = length - offset.
+CONCATENATE digits(offset) `.` digits+offset(length) INTO result.
+ENDIF.
+CONCATENATE sign result INTO result.
+ENDIF.
+ENDMETHOD.
+ENDCLASS.
