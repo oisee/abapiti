@@ -692,19 +692,6 @@ func (s jsString) replaceFirst(n, v jsString) jsString {
 	}
 	return s[:2*i] + v + s[2*i+int32(len(n)):]
 }
-// String.prototype.repeat: ToIntegerOrInfinity and UTF-16 code-unit copying
-// (including lone surrogates). RangeError-domain counts use the prototype's
-// existing rangeFault refusal, not a JavaScript exception-object ABI.
-func (s jsString) repeat(n float64) jsString {
- if math.IsNaN(n) { n = 0 }
- n = math.Trunc(n)
- if n < 0 || math.IsInf(n, 0) { panic(newRangeFault()) }
- if n == 0 || len(s) == 0 { return "" }
- // Keep the existing runtime's signed 32-bit string-length domain. Reject
- // overlong strings before int conversion or allocating host memory.
- if n > float64(2147483647 / s.length()) { panic(newRangeFault()) }
- return jsString(strings.Repeat(string(s), int(n)))
-}
 func (s jsString) repeatIndent(n float64) jsString {
 	n = math.Trunc(n)
 	if n <= 0 {

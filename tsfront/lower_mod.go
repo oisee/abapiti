@@ -230,6 +230,10 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 		case ast.KindVariableStatement:
 			vars = true
 		case ast.KindIfStatement, ast.KindExpressionStatement:
+			if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
+				vars = true
+				continue
+			}
 			if !l.moduleInitializer(stmt) {
 				l.diagf(stmt, "unsupported-top-level", "top-level %s observes class statics and is not lowered", stmt.Kind.String())
 				if l.integerOptions.TrapOnFailure {
@@ -246,6 +250,10 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 			// are checked individually by lspCall, not emitted as modules.
 		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
+			if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
+				vars = true
+				continue
+			}
 			l.diagf(stmt, "unsupported-top-level", "top-level %s is not lowered", stmt.Kind.String())
 			if l.integerOptions.TrapOnFailure && stmt.Kind != ast.KindModuleDeclaration {
 				vars = true
@@ -266,14 +274,23 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 	if enums {
 		body = append(body, l.enumNamespacesInit(f, mod)...)
 	}
-	if vars {
-		l.lowerModuleVars(f, mod, &body)
-	}
-	if funcs {
-		l.moduleFunctions(f, mod)
-	}
-	if vars {
-		body = append(body, l.moduleStatements(f)...)
+	if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
+		if funcs {
+			l.moduleFunctions(f, mod)
+		}
+		// The Go registration boundary runs these actions individually, in
+		// source order. One failed declaration must not erase later suites.
+		l.testModuleActions(f, mod)
+	} else {
+		if vars {
+			l.lowerModuleVars(f, mod, &body)
+		}
+		if funcs {
+			l.moduleFunctions(f, mod)
+		}
+		if vars {
+			body = append(body, l.moduleStatements(f)...)
+		}
 	}
 	if len(body) > 0 || funcs {
 		init.Body = hir.B(body...)
@@ -396,7 +413,11 @@ func (l *lowerer) enumNamespacesInit(f *ast.SourceFile, mod *hir.Class) []*hir.S
 
 // lowerModuleVars lowers the plain module variables (phase-1 moduleVar).
 func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hir.Stmt) {
-	for _, stmt := range l.statementNodes(f) {
+	l.lowerModuleVarStatements(l.statementNodes(f), mod, body)
+}
+
+func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Class, body *[]*hir.Stmt) {
+	for _, stmt := range statements {
 		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 {
 			l.diagf(stmt, "unsupported-top-level", "mutable module variables are not lowered")
 			continue

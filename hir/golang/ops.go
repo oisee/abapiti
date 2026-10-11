@@ -181,7 +181,13 @@ func (b *body) runtime(x *hir.Expr) string {
 	if (x.Op == "array.get" || x.Op == "array.pop" || x.Op == "array.shift" || x.Op == "map.get") && x.Type.Args[0].IsRef() {
 		code += ".Value"
 		if x.X.Type.Kind == hir.Array && x.Type.Args[0].IsRef() {
-			code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			if x.Type.Args[0].Kind == hir.Dynamic {
+				// Reference-array storage is erased. A view as any[] boxes
+				// the actual element, rather than requiring a pre-existing box.
+				code = "box(" + code + ")"
+			} else {
+				code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+			}
 		}
 	}
 	if (x.Op == "array.get" || x.Op == "array.shift" || x.Op == "array.pop") && x.X.Type.Args[0].Kind == hir.Optional && !x.Type.Args[0].IsRef() {

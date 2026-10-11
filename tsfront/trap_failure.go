@@ -101,9 +101,27 @@ func (l *lowerer) repairFailedBodies() {
 		body *hir.Stmt
 	}
 	var entries []entry
+	initializationFields := map[*hir.Method]map[string]bool{}
 	for _, c := range l.out.Classes {
 		for _, m := range append(append([]*hir.Method{}, c.Methods...), c.Ctor) {
 			if m != nil {
+				if isTestInitialization(m) {
+					fields := map[string]bool{}
+					var assignments func(*hir.Stmt)
+					assignments = func(s *hir.Stmt) {
+						if s == nil {
+							return
+						}
+						if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.StaticGet && s.X.Owner == c.Name {
+							fields[s.X.Name] = true
+						}
+						for _, child := range s.List {
+							assignments(child)
+						}
+					}
+					assignments(m.Body)
+					initializationFields[m] = fields
+				}
 				entries = append(entries, entry{c, m, m.Body})
 				if !m.Abstract {
 					m.Body = failureBody(m.Node, "signature verification placeholder")
@@ -167,10 +185,10 @@ func (l *lowerer) repairFailedBodies() {
 		changed := false
 		for _, c := range l.out.Classes {
 			for _, m := range c.Methods {
-				if m.Name == "class_constructor" && isFailureBody(m.Body) {
+				if (m.Name == "class_constructor" || isTestInitialization(m)) && isFailureBody(m.Body) {
 					var retained []hir.Field
 					for _, f := range c.Fields {
-						if !f.Static {
+						if !f.Static || (isTestInitialization(m) && !initializationFields[m][f.Name]) {
 							retained = append(retained, f)
 						}
 					}

@@ -54,9 +54,15 @@ func EmitAbaplintTests(dir string, lowering *RegistryLowering) (map[string]strin
 		return nil, fmt.Errorf("test closure has no initialization order")
 	}
 	modules := map[string]bool{}
+	actions := map[string][]*hir.Method{}
 	runtime := false
 	for _, c := range lowering.Prog.Classes {
 		modules[c.Name] = true
+		for _, m := range c.Methods {
+			if isTestInitialization(m) {
+				actions[c.Name] = append(actions[c.Name], m)
+			}
+		}
 		if c.Name == "runtime/mocha.ts.TestRuntime" {
 			runtime = true
 		}
@@ -68,7 +74,10 @@ func EmitAbaplintTests(dir string, lowering *RegistryLowering) (map[string]strin
 	var init strings.Builder
 	for _, file := range manifest.Initialization {
 		if modules[file+".module"] {
-			fmt.Fprintf(&init, "initialize(%q,func(){%s()})\n", file, names.Get("init."+file+".module"))
+			fmt.Fprintf(&init, "initialize(%q,%q,func(){%s()})\n", file, "module", names.Get("init."+file+".module"))
+			for _, action := range actions[file+".module"] {
+				fmt.Fprintf(&init, "initialize(%q,%q,func(){%s()})\n", file, action.Source, names.Get("body."+file+".module."+action.Name))
+			}
 		}
 	}
 	var files map[string]string
@@ -107,12 +116,18 @@ func EmitAbaplintTests(dir string, lowering *RegistryLowering) (map[string]strin
 import ("encoding/json"; "fmt"; "os"; "strings")
 func main() {
  defer func() { if x := recover(); x != nil { fmt.Fprintf(os.Stderr, "test harness refused: %%v\n", x); os.Exit(2) } }()
- initialize:=func(file string, f func()){defer func(){if x:=recover();x!=nil{fmt.Fprintf(os.Stderr,"initialization %%s: %%v\n",file,x)}}();f()}
+ %s
+ type initFailure struct { File string `+"`json:\"file\"`"+`; Action string `+"`json:\"action\"`"+`; Message string `+"`json:\"message\"`"+`; Status string `+"`json:\"status\"`"+` }
+ initialization:=[]initFailure{}
+ initialize:=func(file, action string, f func()){defer func(){if x:=recover();x!=nil{
+  status:="failed";if _,ok:=x.(trap);ok{status="trapped"}
+  r:=initFailure{file,action,message(x),status};initialization=append(initialization,r)
+  fmt.Fprintf(os.Stderr,"initialization %%s (%%s): %%s\n",file,action,r.Message)
+ }}();f()}
  %s
  %s()
- %s
  type record struct { Title string `+"`json:\"title\"`"+`; Passed bool `+"`json:\"passed\"`"+`; Message string `+"`json:\"message\"`"+`; Status string `+"`json:\"status\"`"+` }
- summary := struct { Passed int `+"`json:\"passed\"`"+`; Failed int `+"`json:\"failed\"`"+`; Trapped int `+"`json:\"trapped\"`"+`; NotRun int `+"`json:\"notRun\"`"+`; Results []record `+"`json:\"results\"`"+` }{Results:[]record{}}
+ summary := struct { Passed int `+"`json:\"passed\"`"+`; Failed int `+"`json:\"failed\"`"+`; Trapped int `+"`json:\"trapped\"`"+`; NotRun int `+"`json:\"notRun\"`"+`; Results []record `+"`json:\"results\"`"+`; Initialization []initFailure `+"`json:\"initialization\"`"+` }{Results:[]record{}, Initialization:initialization}
  for _, item := range %s.Items {
   t := item.(%s)
   r:=record{Title:t.%s.String(),Status:"passed"}
@@ -130,6 +145,6 @@ func main() {
  if err := json.NewEncoder(os.Stdout).Encode(summary); err != nil { panic(err) }
  if summary.Failed + summary.Trapped != 0 { os.Exit(1) }
 }
-`, init.String(), names.Get("init.runtime/mocha.ts.TestRuntime"), message, names.Get("static.runtime/mocha.ts.TestRuntime.tests"), names.Get("ref.runtime/mocha.ts.TestCase"), names.Get("member.title"), names.Get("member.skipped"), names.Get("static.runtime/mocha.ts.TestRuntime.focused"), names.Get("member.only"), names.Get("member.body"), names.Get("member.call"))
+`, message, init.String(), names.Get("init.runtime/mocha.ts.TestRuntime"), names.Get("static.runtime/mocha.ts.TestRuntime.tests"), names.Get("ref.runtime/mocha.ts.TestCase"), names.Get("member.title"), names.Get("member.skipped"), names.Get("static.runtime/mocha.ts.TestRuntime.focused"), names.Get("member.only"), names.Get("member.body"), names.Get("member.call"))
 	return files, nil
 }

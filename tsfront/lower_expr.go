@@ -640,7 +640,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 			for _, f := range mod.Fields {
 				if f.Name == fieldName {
-					return &hir.Expr{Kind: hir.StaticGet, Node: l.node(n), Owner: mod.Name, Name: fieldName, Type: f.Type}
+					return l.testModuleRead(n, mod, fieldName, f.Type)
 				}
 			}
 		}
@@ -1393,6 +1393,10 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 		}
 	case hir.Dynamic:
+		if name == "forEach" && l.pinnedTestRows(n) {
+			array := hir.T(hir.Array, hir.T(hir.Dynamic))
+			return l.denseCallbackLoop(n, name, l.rtOp("dynamic.asRef", recv, array), args), true
+		}
 		// A string method on a tagged value reads the box's string; any other
 		// tag fails loudly where JavaScript raises a TypeError (boxed graphs
 		// carry no functions).
