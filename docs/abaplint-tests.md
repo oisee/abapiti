@@ -1,5 +1,17 @@
 # abaplint's own tests on TS-HG@Go
 
+## Integration train 3 — current full measurement
+
+**9,021/11,060 active tests passed (81.56%).** All 17 shards completed with
+one assertion mismatch, 1,765 traps, zero async-pending executions, and 305
+not-run cases. Table totals include the original Node oracle’s 32 pending tests.
+No infrastructure failures or unmatched titles remain.
+
+See [train-3 gates, per-shard counts, every assertion mismatch, top 15 traps,
+full-closure gap and default-output comparison](train-3.md) and the
+[latest JSON evidence](abaplint-tests-latest.json). The earlier measurements
+below are retained as history.
+
 ## CDS silent-miscompile fix
 
 The grouped-switch-label fix changes the fresh CDS result from **3 passed,
@@ -7,9 +19,8 @@ The grouped-switch-label fix changes the fresh CDS result from **3 passed,
 one not-run**, with all 359 titles reconciled against original Node (358 active,
 one pending). Nine lexer mismatches now pass; the parser token-count mismatch
 now reaches an existing unsupported-regexp trap. Genuine CDS assertion
-mismatches are **zero**. The whole-suite baseline below is historical until a
-new full measurement replaces it; do not add focused results to it as though
-all directories were rerun.
+mismatches are **zero**. The whole-suite baseline below is retained as history; the current train-3
+measurement above reruns every directory.
 
 See [root cause, regression, other affected sites, default-output diff and full
 zabapgit validation](cds-lexer-miscompile.md). The fix is shared frontend HIR,
@@ -116,7 +127,7 @@ exact normalized diagnostics, representative messages and shard counts are in
 
 ```sh
 export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
-node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/abaplint-tests-latest.json
+node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/abaplint-tests-latest.json
 ```
 
 The command prints one table, checks the pinned active denominator and exact Node
@@ -316,7 +327,7 @@ set -e
 export GOCACHE="$HOME/.cache/go-build"
 export GOTOOLCHAIN=go1.26.0
 export GOFLAGS=-buildvcs=false
-UPSTREAM=/home/alice/dev/abaplint
+UPSTREAM=~/dev/abaplint
 mkdir -p .local
 RUN=$(mktemp -d "$PWD/.local/tests-run.XXXXXX")
 trap 'rm -rf "$RUN"' EXIT
@@ -356,7 +367,7 @@ Passed with the stated environment:
 ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...
 go vet ./...
 node tools/abaplint-tests-report-test.mjs
-node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint
+node tools/abaplint-tests-runtime-test.mjs ~/dev/abaplint
 ```
 
 The Grace golden changes **only** runtime-catalogue counts for `array.has` and

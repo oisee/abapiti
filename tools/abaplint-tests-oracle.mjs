@@ -4,6 +4,7 @@
 import {execFileSync} from 'node:child_process';
 import {writeFileSync, existsSync} from 'node:fs';
 import {join, dirname, resolve} from 'node:path';
+import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {buildUpstream} from './statements-upstream.mjs';
 
@@ -22,7 +23,7 @@ export function executeOracle(build, upstream, files) {
   passedTitles:titles(result.passes), failedTitles:titles(result.failures), pendingTitles:titles(result.pending)};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
- const [output, upstream = '/home/alice/dev/abaplint', ...files] = process.argv.slice(2);
+ const [output, upstream = join(homedir(), 'dev/abaplint'), ...files] = process.argv.slice(2);
  if (!output || !files.length) throw new Error('usage: abaplint-tests-oracle.mjs OUTPUT.json UPSTREAM test/rules/7bit_ascii.ts [...files]');
  const build = buildUpstream(upstream);
  try {

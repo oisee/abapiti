@@ -5,6 +5,7 @@
 import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
 import {execFileSync, spawnSync} from 'node:child_process';
+import {homedir, tmpdir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {materializeRegistryClosure} from './registry-closure.mjs';
 import {upstreamPin, buildUpstream} from './statements-upstream.mjs';
@@ -31,18 +32,18 @@ export function discoverShards(upstream) {
 }
 
 function main() {
- const [upstreamArg = '/home/alice/dev/abaplint', outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
+ const [upstreamArg = join(homedir(), 'dev/abaplint'), outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
  const upstream = resolve(upstreamArg), output = resolve(outputArg);
  const tools = import.meta.dirname, repository = resolve(tools, '..');
- const scratch = process.env.ABAPITI_TESTS_SCRATCH ?? '/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/shards';
+ const scratch = process.env.ABAPITI_TESTS_SCRATCH ?? join(tmpdir(), 'abapiti-test-shards');
  mkdirSync(scratch, {recursive:true});
  const run = mkdtempSync(join(scratch, 'all-'));
  const plan = discoverShards(upstream);
- const env = {...process.env, GOCACHE:join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:'-buildvcs=false'};
+ const env = {...process.env, GOCACHE:join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
  }
- let oracleBuild;
+ let oracleBuild, finished = false;
  function oracle(id, roots) {
   const result = executeOracle(oracleBuild, upstream, roots);
   writeFileSync(join(run,`node-${id}.json`), JSON.stringify(result));
@@ -87,11 +88,16 @@ function main() {
   }
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
-  console.log('| Shard | Pass | Fail | Trap | Not-run | Registered | Node |');
-  console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: |');
-  for (const row of [...summary.shards, {name:'TOTAL', ...summary.uniqueTotal, node:summary.nodeTotal}]) console.log(`| ${row.name} | ${row.passed} | ${row.failed} | ${row.trapped} | ${row.notRun} | ${row.registered} | ${row.node.passed + row.node.failed}+${row.node.pending} pending |`);
+  console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
+  console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
+  for (const row of [...summary.shards, {name:'TOTAL', ...summary.uniqueTotal, node:summary.nodeTotal}]) console.log(`| ${row.name} | ${row.passed} | ${row.failed} | ${row.trapped} | ${row.asyncPending} | ${row.notRun} | ${row.registered} | ${row.node.passed + row.node.failed}+${row.node.pending} pending |`);
   console.log(`${summary.uniqueTotal.passed}/${summary.wholeSuite.active}; Node total including pending: ${summary.wholeSuite.total}`);
   if (summary.shards.some(s => s.infrastructureFailure || s.unmatched)) process.exitCode = 1;
- } finally { oracleBuild?.dispose(); rmSync(run, {recursive:true, force:true}); }
+  finished = true;
+ } finally {
+  oracleBuild?.dispose();
+  if (finished) rmSync(run, {recursive:true, force:true});
+  else console.error(`all-shard evidence retained after incomplete run: ${run}`);
+ }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();
