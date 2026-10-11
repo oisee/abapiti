@@ -1,16 +1,16 @@
 {
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
-  "codeCommit": "d45f3c174fcf5e143f9d9899de694d1c5c989d00",
-  "mainCommit": "dea0c53c3fd8393c505180d7a631a458b9d35db1",
-  "artifacts": "/mnt/ram/abapiti/tmp/abapiti-test-shards/all-NUqS4Y",
+  "codeCommit": "06cd4cc5947ad7692782b2256dc4ca7bfbc4ec65",
+  "mainCommit": "9480bfae9186abd724e493a8a064b179d7ae5f99",
+  "artifacts": "discarded after successful run; compact evidence retained in this report",
   "artifactPrefix": "",
   "shards": [
     {
       "name": "abap",
       "files": 18,
-      "passed": 168,
+      "passed": 199,
       "failed": 0,
-      "trapped": 48,
+      "trapped": 17,
       "asyncPending": 0,
       "notRun": 4,
       "registered": 216,
@@ -45,9 +45,9 @@
     {
       "name": "abap/expressions",
       "files": 11,
-      "passed": 42,
+      "passed": 44,
       "failed": 0,
-      "trapped": 8,
+      "trapped": 6,
       "asyncPending": 0,
       "notRun": 57,
       "registered": 50,
@@ -191,9 +191,9 @@
     {
       "name": "abap/statements",
       "files": 286,
-      "passed": 4942,
+      "passed": 4962,
       "failed": 0,
-      "trapped": 20,
+      "trapped": 0,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 4962,
@@ -394,9 +394,9 @@
     {
       "name": "lsp",
       "files": 16,
-      "passed": 97,
+      "passed": 134,
       "failed": 0,
-      "trapped": 91,
+      "trapped": 54,
       "asyncPending": 0,
       "notRun": 5,
       "registered": 193,
@@ -430,9 +430,9 @@
     {
       "name": "objects",
       "files": 26,
-      "passed": 105,
+      "passed": 115,
       "failed": 0,
-      "trapped": 39,
+      "trapped": 29,
       "asyncPending": 0,
       "notRun": 1,
       "registered": 145,
@@ -480,9 +480,9 @@
     {
       "name": "pretty_printer",
       "files": 1,
-      "passed": 10,
+      "passed": 21,
       "failed": 0,
-      "trapped": 21,
+      "trapped": 10,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 31,
@@ -505,9 +505,9 @@
     {
       "name": "rules",
       "files": 192,
-      "passed": 2906,
+      "passed": 2957,
       "failed": 0,
-      "trapped": 241,
+      "trapped": 190,
       "asyncPending": 0,
       "notRun": 12,
       "registered": 3157,
@@ -564,9 +564,9 @@
     }
   ],
   "uniqueTotal": {
-    "passed": 10452,
+    "passed": 10614,
     "failed": 0,
-    "trapped": 548,
+    "trapped": 386,
     "asyncPending": 0,
     "notRun": 92,
     "registered": 11028,
@@ -609,81 +609,30 @@
       "example": "src/rules/function_module_recommendations.ts:125:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
-      "count": 37,
+      "message": "unsupported-expr src/objects/rename/renamer.ts: in requires a record or a literal property on a lowered shape (got classref<builtin.object>)",
+      "count": 23,
       "shards": {
-        "objects": 5,
-        "rules": 32
+        "objects-rename": 23
       },
-      "example": "src/objects/_abap_object.ts:126:3: lowering trap: src/objects/_abap_object.ts:126:3: HIR verification: node 166627 (src/objects/_abap_object.ts:148:11): call argument type mismatch: string <- dynamic in runtime ."
-    },
-    {
-      "message": "src/lsp/_lookup.ts: own-key enumeration requires original structural property storage",
-      "count": 33,
-      "shards": {
-        "lsp": 33
-      },
-      "example": "src/lsp/_lookup.ts:238:3: own-key enumeration requires original structural property storage"
-    },
-    {
-      "message": "test/abap/nesting.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 31,
-      "shards": {
-        "abap": 31
-      },
-      "example": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain"
+      "example": "src/objects/rename/renamer.ts:125:3: lowering trap: unsupported-expr src/objects/rename/renamer.ts:132:11: in requires a record or a literal property on a lowered shape (got classref<builtin.object>)"
     },
     {
       "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 23,
+      "count": 19,
       "shards": {
-        "objects": 7,
+        "objects": 3,
         "rules": 16
       },
       "example": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "unsupported-lsp-call src/objects/rename/renamer.ts: vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered; unsupported-lsp-call src/objects/rename/renamer.ts: vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
-      "count": 23,
-      "shards": {
-        "objects-rename": 23
-      },
-      "example": "src/objects/rename/renamer.ts:93:3: lowering trap: unsupported-lsp-call src/objects/rename/renamer.ts:104:11: vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered; unsupported-lsp-call src/objects/rename/renamer.ts:107:18: vscode-languageserver-types RenameFile.is with 1 arguments is not lowered"
-    },
-    {
-      "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 22,
-      "shards": {
-        "abap-expressions": 2,
-        "abap-statements": 20
-      },
-      "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "unsupported-call src/rules/downport.ts: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value",
-      "count": 16,
-      "shards": {
-        "rules": 16
-      },
-      "example": "src/rules/downport.ts:3520:3: lowering trap: unsupported-call src/rules/downport.ts:3556:27: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts:3557:13: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts:3558:36: identifier importing is not a lowered local or module value"
-    },
-    {
-      "message": "src/pretty_printer/pretty_printer.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 15,
-      "shards": {
-        "lsp": 4,
-        "pretty_printer": 11
-      },
-      "example": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
       "message": "src/rules_runner.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 15,
+      "count": 18,
       "shards": {
         "root": 4,
         "lsp": 2,
         "objects-rename": 3,
-        "rules": 6
+        "rules": 9
       },
       "example": "src/rules_runner.ts:133:3: value outside supported numeric, ordering or conversion domain"
     },
@@ -767,6 +716,57 @@
         "objects": 4
       },
       "example": "test/objects/table.ts:894:46: lowering trap: test/objects/table.ts:894:46: HIR verification: node 36840 (test/objects/table.ts:950:11): assignment type mismatch"
+    },
+    {
+      "message": "src/abap/5_syntax/spaghetti_scope.ts: HIR verification: call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+      "count": 3,
+      "shards": {
+        "abap-syntax": 1,
+        "lsp": 2
+      },
+      "example": "src/abap/5_syntax/spaghetti_scope.ts:272:3: lowering trap: src/abap/5_syntax/spaghetti_scope.ts:272:3: HIR verification: node 153031 (src/abap/5_syntax/spaghetti_scope.ts:280:22): call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new ."
+    },
+    {
+      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 3,
+      "shards": {
+        "abap-syntax": 1,
+        "lsp": 1,
+        "rules": 1
+      },
+      "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-expr src/rules/remove_descriptions.ts: identifier XMLParser is not a lowered local or module value; unsupported-new src/rules/remove_descriptions.ts: new XMLParser is not a lowered class",
+      "count": 3,
+      "shards": {
+        "rules": 3
+      },
+      "example": "src/rules/remove_descriptions.ts:103:3: lowering trap: unsupported-expr src/rules/remove_descriptions.ts:106:20: identifier XMLParser is not a lowered local or module value; unsupported-new src/rules/remove_descriptions.ts:106:16: new XMLParser is not a lowered class"
+    },
+    {
+      "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
+    },
+    {
+      "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/_abstract_object.ts:134:3: input is outside the reviewed abapGit XML subset"
+    },
+    {
+      "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "rules": 2
+      },
+      "example": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
     }
   ]
 }
