@@ -358,7 +358,7 @@ oracle titles.
 ```sh
 export GOCACHE="$HOME/.cache/go-build" GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
 export ABAPITI_GRACECHECK=1 GOMAXPROCS=4
-node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/abaplint-tests-latest.json
+node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/abaplint-tests-latest.json
 
 go test ./... -short
 go test ./tsfront/... ./hir/... ./cmd/...
