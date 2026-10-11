@@ -961,6 +961,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		} else {
 			eq(t, T(Bool))
 		}
+	case "object.checkedClassView":
+		if a.Kind != ClassRef || t.Kind != ClassRef || !(v.accepts(a, t) || v.accepts(t, a)) {
+			v.fail(e.Node, "checked class view needs related nominal class references")
+		}
+		args(nil)
 	case "object.classOf":
 		if !ref(a) && !(a.Kind == Optional && ref(a.Args[0])) {
 			v.fail(e.Node, "classof needs an object receiver")

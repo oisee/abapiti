@@ -30,6 +30,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"i64.toString":              {I64, 0, false},
 	"i64.remainder2":            {I64, 0, false},
 	"number.remainder2":         {Number, 0, false},
+	"number.ceil":               {Number, 0, false},
 	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.slice": {String, 2, false}, "string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
@@ -72,16 +73,17 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
-	"object.get":          true, // nominal static property table -> Dynamic
-	"object.hasOwn":       true,
-	"object.has":          true,
-	"object.classOf":      true, // any object ref -> ClassValue
-	"classvalue.newArgs":  true,
-	"classvalue.new":      true, // ClassValue -> a class or interface reference
-	"dynamic.of":          true, // any value -> Dynamic (tagged box)
-	"dynamic.asRef":       true,
-	"dynamic.materialize": true, // Dynamic -> a class or interface reference
-	"regexp.new":          true, // pattern, [flags] -> RegExp
+	"object.get":              true, // nominal static property table -> Dynamic
+	"object.hasOwn":           true,
+	"object.has":              true,
+	"object.checkedClassView": true, // nominal class view; invalid runtime types trap
+	"object.classOf":          true, // any object ref -> ClassValue
+	"classvalue.newArgs":      true,
+	"classvalue.new":          true, // ClassValue -> a class or interface reference
+	"dynamic.of":              true, // any value -> Dynamic (tagged box)
+	"dynamic.asRef":           true,
+	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
+	"regexp.new":              true, // pattern, [flags] -> RegExp
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
@@ -151,7 +153,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "i64.remainder2":
 		return nil, T(I64), true
-	case "number.remainder2", "number.fromI32":
+	case "number.remainder2", "number.fromI32", "number.ceil":
 		return nil, T(Number), true
 	case "dynamic.asNumber":
 		return nil, T(Number), true
