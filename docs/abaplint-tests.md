@@ -1,25 +1,105 @@
 # abaplint's own tests on TS-HG@Go
 
-## Batch C — stopped at class/view ABI boundary, integration not certified
+## Final batch C — third round, all 17 shards
 
-Second-round investigation at `479373b` hit the task's explicit ABI stop
-condition. The rule-config erased setter requires a live structural reference
-view across nominal storage and field accesses; a bridge-only cast relaxation
-or snapshot would not preserve JS identity and two-way writes. See the
-[Node reproduction, typed Go refusals and precise Dell handoff](traps-c-roots.md).
-No compiler/runtime change was made in this round. Selection-screen assignment,
-LSP own-key enumeration and chai.deep remain unworked here. Final gates,
-default-output comparison, zabapgit and a fresh all-17-shard run were not
-executed; **no new N/11,060, FAIL total or top-15 table is claimed**.
+**8,756/11,060 active Node tests (79.17%), FAIL 0: +180 over batch B's 8,576.**
+Fresh execution of all **625 files**, no exclusions, all **17** modules built
+and executed against source **`017c6ba`**. Original upstream remains read-only at
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Every final shard was rebuilt after
+the last semantic fix; focused gains are not summed into this total.
 
-The earlier [reviewed whitespace regexp root](traps-c-whitespace.md) passes its
-Node oracle and focused DDL shard: **17/32 passed, FAIL 0, 15 trapped** (+13 over
-batch B). Other focused batch-C evidence is in the roots document; focused gains
-are not added to a whole-suite total. First-round concurrent edits are no longer
-an active blocker, but the second-round ABI stop prevents certification. The
-last completed all-17-shard measurement below is still batch B.
+**A genuine Chai shim mismatch was found, reported, and fixed before continuing:**
+`.deep` did not persist on reused assertions. The incomplete run was stopped;
+actual-Chai Node regressions now check persistent flags, distinct accessor
+wrappers and `.eql` not setting `.deep`. No failed record was reclassified.
+See [root details, explicit refusal domains and the LSP ABI handoff](traps-c-roots.md).
+The 17 selection-screen assignments and all 32 DDL tests now pass. LSP's own-key
+root is **type/ABI work handed to Dell**, not a fabricated enumeration fix;
+rule-config live views and other Dell-owned roots remain untouched.
 
-## Final batch B — all 17 shards
+The independent whole-suite original-Mocha oracle reports **11,060 passed,
+0 failed, 32 pending (11,092 total)**. Observed owned titles reconcile as
+multisets with no unmatched titles, wiring failures, infrastructure failures or
+async-pending cases. **Registration parity is still false:** 279 Node cases do
+not register on Go; they remain not-run, never estimated as passes.
+
+| Shard under `test/` | Files | Batch B passed | Final C passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 52 | 54 | 0 | 27 | 139 | 81 | 216 + 4 |
+| `abap/expressions` | 11 | 41 | 41 | 0 | 9 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,274 | 1,302 | 0 | 22 | 49 | 1,332 | 1,363 + 10 |
+| `abap/types` | 6 | 21 | 22 | 0 | 7 | 0 | 29 | 29 + 0 |
+| root `*.ts` | 12 | 35 | 35 | 0 | 59 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 334 | 334 | 0 | 24 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 4 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 55 | 64 | 0 | 124 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 30 | 35 | 0 | 109 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 0 | 0 | 0 | 2 | 29 | 2 | 31 + 0 |
+| `rules` | 192 | 1,448 | 1,555 | 0 | 1,582 | 22 | 3,147 | 3,149 + 10 |
+| `utils` | 3 | 0 | 0 | 0 | 15 | 0 | 15 | 15 + 0 |
+| **Unique total** | **625** | **8,576** | **8,756** | **0** | **2,031** | **305** | **10,813** | **11,060 + 32** |
+
+**FAIL list: `[]`.** Not-run is unchanged: **26 skipped/focused + 279
+unregistered**. Each row's four outcome counts sum to its Node active + pending
+total. Typed lowering/runtime refusals remain trapped, never genuine assertion
+failures. Exact messages, locations, initialization refusals and per-shard
+counts are in [`abaplint-tests-latest.json`](abaplint-tests-latest.json).
+
+### Top 15 reached traps — final batch C
+
+Initialization failures are excluded. These are actual reached test counts,
+not diagnostic counts or inferred aggregate root sizes. Newly reached cases
+explain increases in surviving buckets after earlier traps disappear.
+
+| Tests | Reached trap / representative location |
+| ---: | --- |
+| 1,124 | `src/registry.ts:370`: assignment type mismatch — Dell-owned |
+| 427 | `src/edit_helper.ts:227`: foreach requires matching array — Dell-owned |
+| 186 | `src/rules/7bit_ascii.ts:38`: conversion/domain refusal — config ABI handoff |
+| 55 | `src/lsp/_lookup.ts:272`: `Object.keys(ref.extra)` lacks native own-key presence/order ABI |
+| 22 | `src/config.ts:11`: release/language conversion/domain refusal — Dell-owned |
+| 15 | `test/cds/cds_parser.ts:3879`: captured `parseView` has no lowered type — Dell-owned |
+| 13 | `src/rules/downport.ts:3556`: `getParameters` on dynamic; unresolved `importing` |
+| 9 | `src/rules/ambiguous_statement.ts:95`: invalid runnable-to-statement interface narrowing |
+| 9 | `src/rules/downport.ts:730`: unresolved captured local `fix` — Dell-owned closure work |
+| 9 | `test/rules/_utils.ts:154`: unresolved `expect` |
+| 8 | `src/objects/data_definition.ts:221`: conditional type mismatch |
+| 7 | `runtime/chai.ts:43`: conversion/domain refusal (not the removed `.deep` property trap) |
+| 7 | `src/objects/rename/rename_global_interface.ts:18`: assignment type mismatch |
+| 7 | `test/cds/cds_parser.ts:3822`: captured `parse` has no lowered type — Dell-owned |
+| 7 | `test/utils/name_validator.ts:7`: `patternKind` outside NamingRuleConfig shape; unresolved helper |
+
+### Final C gates and output audit
+
+With Go 1.26.0, `GOFLAGS=-buildvcs=false`, `GOCACHE=$HOME/.cache/go-build` and
+`ABAPITI_GRACECHECK=1`: **`go test ./... -short`, full tsfront/hir/cmd tests,
+`go vet ./...` and both all-shard/report self-tests pass**. Lint was attempted
+against `origin/feat/fit-traps-b`, but **unavailable**: `golangci-lint` is not on
+PATH; no lint verdict is claimed. The Grace golden changes only reviewed
+operation catalogue counts, not lexer program facts.
+
+Raw default `abaplint` **`diff -r` is nonempty and fully accounted for**, not
+claimed identical: unused ancestry-only union interfaces/adapters disappear,
+ancestry operands no longer take pre-test flow casts, one closure is renamed,
+and default assignments construct optional storage explicitly in 18 classes.
+All three ABAP mirrors agree; `names.json`, object-count README and containing
+zip change accordingly. [The compact inventory](evidence/traps-c-final.json)
+and [isolation builds/root explanations](traps-c-roots.md) cover every change.
+A fresh final-source rebuild matches the audited tree byte-for-byte.
+
+Fresh original Node and freshly generated Go agree byte-for-byte on zabapgit
+**clean (0 issues)** and **seeded (5 issues)**, also matching the pinned release
+kit; `go-target-check.py` independently passes both. No execution of newly
+emitted ABAP is claimed. Generated builds/closures, temporary snapshots, Node
+builds, kit, binaries and profiles were deleted. Only compact JSON/Markdown
+remains; no upstream edits, transpiler clone or push.
+
+## Historical final batch B — all 17 shards
 
 **8,576/11,060 active Node tests (77.54%), FAIL 0.** This is **+434** from the
 repaired integration base's 8,142, not a sum of focused reruns. All **625 files**
@@ -70,13 +150,14 @@ after a shard with FAIL, prints its actual failures, and cleans generated builds
 Not-run is **26 skipped/focused + 279 unregistered**, not omitted source files.
 Registration losses remain unsupported; they are not estimated as passes.
 
-Machine-readable final evidence: [`abaplint-tests-latest.json`](abaplint-tests-latest.json).
-Complete repaired-base evidence, including its **top 20 reached traps** and empty
+Historical machine-readable final evidence is retained at
+`origin/feat/fit-traps-b:docs/abaplint-tests-latest.json`; the current file now
+records the fresh batch-C run above. Complete repaired-base evidence, including its **top 20 reached traps** and empty
 failure list: [`abaplint-tests-traps-b-base.json`](abaplint-tests-traps-b-base.json).
 Both report actual whole-suite executions; the initial stopped run is not
 presented as a completed base measurement.
 
-## Top 15 reached traps across the final whole suite
+## Historical batch-B top 15 reached traps
 
 Initialization failures are excluded. These are reached test counts, not counts
 of lowering diagnostics. Messages are shortened here; exact normalized messages,
@@ -170,7 +251,8 @@ node tools/abaplint-tests-all-test.mjs
 node tools/abaplint-tests-report-test.mjs
 ```
 
-**All gates passed.** Compiler/runtime unit tests include independent Node
+**Batch-B gates passed.** Current batch-C gate results and the local lint
+limitation are recorded above. Compiler/runtime unit tests include independent Node
 oracles and explicit refusal/catch boundaries. Runtime-effect goldens were
 regenerated through `GRACE_FACTS_OUT` and inspected: only the two new catalogue
 operations' counts and one conservative record change.

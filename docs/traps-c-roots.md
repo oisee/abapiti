@@ -82,6 +82,50 @@ zero, cyclic graphs, holes versus undefined and missing-key semantics, and
 requires typed refusals for unproven/inherited properties. Focused original DDL
 is **32/32, FAIL 0**; selection-screen plus DDL is **49/49**.
 
+### Default-output audit and workload gates
+
+Default `abaplint -o <same-path> --quiet` was freshly rebuilt from
+`origin/feat/fit-traps-b@2169c5d` and the final source; raw `diff -r` is **not
+empty**, and is not represented as byte-identical. The compact
+[inventory and gate evidence](evidence/traps-c-final.json) accounts for every
+changed path: 409 logical ABAP files are mirrored byte-identically under
+`classes/`, `osg/`, and `native/lib/`; nine unused union interfaces disappear;
+one closure is renamed and is otherwise byte-identical after just the name/ID
+substitution. The remaining changed files are `names.json`, the A4H object-count
+README and containing zip. Whole-tree totals: 1,230 changed, 30 removed, 3 added.
+
+- **356 logical files:** exact deletion of the nine unused interfaces' declarations
+  and adapter methods, with all other bytes unchanged. This follows the natural
+  operand ancestry fix `508ca6f`, which no longer synthesizes narrowed union
+  storage merely to test an instance's ancestry.
+- **35 ancestry-only files + 4 shared files:** elimination of pre-test flow casts
+  and redundant temporaries, with downstream temporary-number changes. Includes
+  the retained union's source-comment location and runtime descriptor's renamed
+  closure. Exact source identities are in the inventory.
+- **14 defaults-only files + the same 4 shared files:** explicit optional storage
+  construction for default parameter assignments and consequent temporary
+  renumbering; constructor parameter-property reads correctly unwrap that storage.
+  The same frontend change that fixes absent-string defaults applies to present
+  numeric/boolean defaults. Node/Go default evaluation is independently checked.
+
+Isolation builds confirm `508ca6f` to the round-two `2886c4b` changes no ABAP or
+zip bytes (only two output-directory instructions in READMEs, because that
+attribution build used a different path). Round two to final changes exactly
+18 default-parameter classes and their zip. A final-source rebuild matches the
+audited final default tree byte-for-byte. No unrelated generated drift is
+accepted, and no new ABAP execution is claimed.
+
+Final **Grace-enabled short, tsfront/hir/cmd tests and vet pass**. Local lint was
+attempted against the requested origin base but cannot run: `golangci-lint` is
+not on PATH, so there is no lint verdict. Both all-shard/report self-tests pass.
+Fresh generated Go and freshly rebuilt original Node agree byte-for-byte on
+zabapgit **clean (0 issues)** and **seeded (5 issues)**, also matching the release
+kit. `go-target-check.py` independently passes both variants. The kit is the
+same SHA-256-pinned v0.1.1 artifact recorded in batch B. Final whole-suite totals
+are reported separately in [abaplint-tests.md](abaplint-tests.md), not inferred
+from focused runs. Generated closures/builds, snapshots, binaries and profiles
+are removed after measurement; only compact evidence is retained.
+
 ## Second-round stop (historical): rule configs require Dell-owned class/view ABI
 
 **Stopped at `479373b`, before changing compiler/runtime code.** The erased

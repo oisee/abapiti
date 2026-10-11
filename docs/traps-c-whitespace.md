@@ -1,5 +1,10 @@
 # Batch C: reviewed ECMAScript whitespace regexp
 
+Third-round integration is now complete: all 17 shards report **8,756/11,060,
+FAIL 0**; DDL is **32/32** after the independent Chai root was finished.
+See [final gates and counts](abaplint-tests.md) and [remaining-root/ABI details](traps-c-roots.md).
+The focused whitespace evidence and incomplete earlier rounds below are historical.
+
 `/\s+/g` now uses the shared reviewed-pattern table with the exact ECMAScript
 WhiteSpace + LineTerminator code points. It deliberately does not use RE2's
 ASCII `\s` or Unicode `White_Space`: U+0085 is excluded and U+FEFF included.
