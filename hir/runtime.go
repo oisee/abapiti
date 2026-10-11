@@ -22,6 +22,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.compareRegistryKey": {String, 1, false},
 	"string.compareObjectName":  {String, 1, false},
 	"dynamic.isNullish":         {Dynamic, 0, false},
+	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
@@ -114,6 +115,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	switch op {
 	case "xml.validate", "xml.parseSubset", "json.parseSubset", "dynamic.null":
 		return nil, T(Dynamic), true
+	case "dynamic.keys":
+		return nil, T(Array, T(String)), true
 	case "dynamic.get":
 		return []Type{T(String)}, T(Dynamic), true
 	case "dynamic.put":

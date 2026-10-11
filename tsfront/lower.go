@@ -352,7 +352,16 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		l.bodiesFile(f)
 		done()
 	}
+	if len(l.captureCells) > 0 {
+		l.distinguishNumberLocals()
+	}
+	l.finishCaptureCells()
+	l.pruneFunctionPlaceholders()
+	for _, pair := range l.callableBodies {
+		pair[0].Body = pair[1].Body
+	}
 	l.stabilizeUnionABI()
+	l.completeReturnBridges()
 	l.completeAsyncBridges()
 	l.completeCallArguments()
 	if l.unprunedFeatures {
@@ -501,9 +510,14 @@ type lowerer struct {
 	erasedCalls map[*hir.Expr]bool
 
 	// Retain checker binding identity for post-lowering boundary rewrites.
-	localSymbols map[*hir.Expr]*ast.Symbol
-	declSymbols  map[*hir.Stmt]*ast.Symbol
-	paramSymbols map[*hir.Method]map[string]*ast.Symbol
+	localSymbols       map[*hir.Expr]*ast.Symbol
+	declSymbols        map[*hir.Stmt]*ast.Symbol
+	captureCells       map[*ast.Symbol]hir.Type
+	captureParamNames  map[*ast.Symbol]string
+	functionBindings   map[*ast.Symbol]*hir.Stmt
+	callableBodies     [][2]*hir.Method
+	localSymbolMethods map[*hir.Expr]*hir.Method
+	paramSymbols       map[*hir.Method]map[string]*ast.Symbol
 }
 
 // funcRef names the module class and static method of a module function.
@@ -512,7 +526,7 @@ type funcRef struct {
 }
 
 // localFn is one arrow function lifted to a private method: its captures are
-// passed as leading parameters (they are immutable locals).
+// passed as leading parameters; mutable bindings travel as shared cells.
 type localFn struct {
 	method   *hir.Method
 	captures []localCapture

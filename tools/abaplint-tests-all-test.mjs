@@ -4,8 +4,29 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {discoverShards, selectShards, assertNoFailures} from './abaplint-tests-all.mjs';
+import {discoverShards, selectShards, assertNoFailures, runShards} from './abaplint-tests-all.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
+// A failing worker must drain its peer without ever launching queued work.
+let releasePeer, rejectFirst;
+const first = new Promise((_, reject) => { rejectFirst = reject; });
+const peer = new Promise(resolve => { releasePeer = resolve; });
+const started = [];
+let drained = false;
+const scheduled = runShards(['fail','peer','queued'], 2, async name => {
+ started.push(name);
+ if (name === 'fail') await first;
+ else { await peer; drained = true; }
+});
+rejectFirst(new Error('genuine FAIL'));
+await new Promise(resolve => setImmediate(resolve));
+assert.deepEqual(started, ['fail','peer']);
+assert.equal(drained,false);
+releasePeer();
+await assert.rejects(scheduled,/genuine FAIL/);
+assert.equal(drained,true);
+assert.deepEqual(started, ['fail','peer']);
+await assert.rejects(runShards([],0,async () => {}),/integer from 1 to 17/);
+
 const dir = mkdtempSync(join(tmpdir(),'abaplint-all-test-'));
 try {
  assertNoFailures('syntax', {results:[{status:'passed'},{status:'trapped',message:'refusal'}]});

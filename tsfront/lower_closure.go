@@ -8,10 +8,9 @@ import (
 
 // Escaping thunks: a parameterless arrow function with a void result that
 // is stored (the syntax checker's deferred FORM parameter checks) lowers to
-// a closure object. The object captures the enclosing locals it reads, by
-// value at creation (they must not be assigned afterwards, so the value is
-// the one JavaScript's reference capture would read), and the enclosing
-// `this`. Invocation `d()` is the thunk interface's call method.
+// a closure object. Immutable inputs are copied; mutable bindings share
+// lexical cells. Invocation `d()` is the thunk interface's call method.
+// Parameterized and value-returning functions use typed callable interfaces.
 
 const thunkInterfaceName = "closure.thunk"
 
@@ -55,6 +54,9 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 	if !l.integerOptions.TrapOnFailure || x != nil {
 		return x
 	}
+	if !l.isThunkType(l.ck.GetTypeAtLocation(n)) && !l.isThunkType(l.ck.GetContextualType(n, 0)) {
+		return nil
+	}
 	l.serial++
 	name := "closure." + itoa(l.serial)
 	m := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: l.thunkResult()}
@@ -67,29 +69,27 @@ func (l *lowerer) closureValue(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
-	if len(n.Parameters()) != 0 {
+	typ := hir.Type{Kind: hir.InterfaceRef, Name: thunkInterfaceName}
+	if l.integerOptions.TrapOnFailure && len(n.Parameters()) > 0 && l.isTestCallback(n) {
+		l.diagf(n, "unsupported-test-done", "done/parameterized callback is not run by the synchronous test host")
+		return nil
+	}
+	general := len(n.Parameters()) > 0 || !l.isThunkType(l.ck.GetTypeAtLocation(n)) && !l.isThunkType(l.ck.GetContextualType(n, 0))
+	if general {
 		if l.integerOptions.TrapOnFailure && l.isTestCallback(n) {
 			l.diagf(n, "unsupported-test-done", "done/parameterized callback is not run by the synchronous test host")
 			return nil
 		}
-		l.diagf(n, "unsupported-closure", "only parameterless thunks are lowered as closures")
-		return nil
-	}
-	if t := l.ck.GetTypeAtLocation(n); !l.isThunkType(t) && !l.isThunkType(l.ck.GetContextualType(n, 0)) {
-		l.diagf(n, "unsupported-closure", "only void thunks (or Promise test callbacks) are lowered as closures")
-		return nil
+		typ = l.functionType(n, l.ck.GetTypeAtLocation(n))
+		if l.callableMethod(typ) == nil {
+			return nil
+		}
 	}
 	body := n.Body()
 	if body == nil {
 		return nil
 	}
 	captures := l.freeLocals(n)
-	for _, c := range captures {
-		if l.assignedAfter(n, c.name) {
-			l.diagf(n, "unsupported-closure", "captured %s is assigned after the closure is created", c.name)
-			return nil
-		}
-	}
 	usesThis := touchesThis(body)
 	contextThis := l.integerOptions.TrapOnFailure && n.Kind == ast.KindFunctionExpression && usesThis && l.isTestCallback(n)
 	if contextThis {
@@ -101,7 +101,10 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	}
 	l.serial++
 	name := "closure." + itoa(l.serial)
-	c := &hir.Class{Node: l.node(n), Name: name, Implements: []string{l.thunkType().Name}}
+	c := &hir.Class{Node: l.node(n), Name: name, Implements: []string{typ.Name}}
+	if !general {
+		l.thunkType()
+	}
 	// Preserve the legacy serial-based target name, but identify the thunk by
 	// its enclosing qualified method and original TS location for certificates.
 	owner := l.relFile(l.file)
@@ -130,14 +133,32 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 			Y: hir.V(fname, t)})
 		args = append(args, value)
 	}
+	captureTypes := map[string]hir.Type{}
 	for _, captured := range captures {
 		cap := captured.name
 		t, ok := l.lookup(cap)
-		if !ok || t.Kind == hir.Void {
+		value := hir.V(cap, t)
+		if t.Kind == hir.Void {
+			value = l.functionValue(captured.node)
+			if value != nil {
+				t = l.functionType(captured.node, l.ck.GetTypeAtLocation(captured.node))
+				captureTypes[cap] = t
+			}
+		}
+		if !ok || t.Kind == hir.Void || value == nil {
 			l.diagf(n, "unsupported-closure", "captured %s has no lowered type", cap)
 			return nil
 		}
-		field(cap, t, hir.V(cap, t))
+		captureTypes[cap] = t
+		if l.bindingMutable(captured.symbol) && captured.symbol != nil && t.Kind != hir.Void {
+			captured.typ = t
+			l.captureCell(captured)
+		}
+		if cell, shared := l.captureCells[captured.symbol]; shared {
+			field(cap, cell, l.captureTransport(captured, cell))
+		} else {
+			field(cap, t, value)
+		}
 	}
 	outerType := hir.Type{}
 	if usesThis {
@@ -151,11 +172,26 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	ctor.Body = hir.B(init...)
 	c.Ctor = ctor
 	call := &hir.Method{Node: l.node(n), Name: "call", Virtual: true, Result: l.thunkResult()}
+	if general {
+		signature := l.callableMethod(typ)
+		call.Result = signature.Result
+		call.Params = append([]hir.Param(nil), signature.Params...)
+		for _, p := range n.Parameters() {
+			if p.Name() == nil || p.Name().Kind != ast.KindIdentifier {
+				l.diagf(p, "unsupported-closure", "function value parameter requires an identifier")
+				return nil
+			}
+			if ast.IsThisParameter(p) {
+				l.diagf(p, "unsupported-closure", "function value with explicit this parameter")
+				return nil
+			}
+		}
+	}
 	// The test boundary always returns a settled Promise<void>. Keep the
 	// producer's fulfillment type in a separate method, then drain it before
 	// reporting success. Ordinary compilation retains its void thunk ABI.
 	var invoke *hir.Method
-	if l.integerOptions.TrapOnFailure && l.settledEnabled {
+	if !general && l.integerOptions.TrapOnFailure && l.settledEnabled {
 		ret := l.ck.GetReturnTypeOfSignature(l.ck.GetSignaturesOfType(l.ck.GetTypeAtLocation(n), checker.SignatureKindCall)[0])
 		result := hir.T(hir.Void)
 		if ret.Symbol() != nil && ret.Symbol().Name == "Promise" && l.librarySymbol(ret.Symbol()) {
@@ -180,17 +216,26 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 
 	// Lower the body in a scope that sees only the captures (reads of the
 	// fields) and the captured this.
-	savedScope, savedMethod, savedPend, savedThis := l.scope, l.method, l.pend, l.thisOverride
+	savedScope, savedMethod, savedPend, savedThis, savedClass := l.scope, l.method, l.pend, l.thisOverride, l.class
 	l.scope = nil
 	l.push()
 	self := &hir.Expr{Kind: hir.This, Node: l.node(n), Type: hir.Ref(name)}
 	var prologue []*hir.Stmt
 	for _, captured := range captures {
 		cap := captured.name
-		t, _ := savedLookup(savedScope, cap)
+		t := captureTypes[cap]
 		l.declare(cap, t)
-		prologue = append(prologue, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: cap, Type: t,
-			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: cap, Type: t, X: self}})
+		if cell, shared := l.captureCells[captured.symbol]; shared {
+			t = cell
+		}
+		decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: cap, Type: t, X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: cap, Type: t, X: self}}
+		if general {
+			if l.declSymbols == nil {
+				l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+			}
+			l.declSymbols[decl] = captured.symbol
+		}
+		prologue = append(prologue, decl)
 	}
 	if usesThis {
 		l.thisOverride = &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "outer", Type: outerType, X: self}
@@ -201,6 +246,27 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		l.thisOverride = &hir.Expr{Node: l.node(n), Kind: hir.FieldGet, Name: "context", Type: outerType, X: self}
 	}
 	l.method = call
+	if l.unprunedFeatures {
+		l.class = c
+	}
+	var defaults *hir.Method
+	if general {
+		aliases := *call
+		aliases.Params = append([]hir.Param(nil), call.Params...)
+		for i, p := range n.Parameters() {
+			sourceName := p.Name().Text()
+			param := call.Params[i]
+			l.declare(sourceName, param.Type)
+			alias := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(p), Name: sourceName, Type: param.Type, X: hir.V(param.Name, param.Type)}
+			if l.declSymbols == nil {
+				l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+			}
+			l.declSymbols[alias] = l.ck.GetSymbolAtLocation(p.Name())
+			prologue = append(prologue, alias)
+			aliases.Params[i].Name = sourceName
+		}
+		defaults = &aliases
+	}
 	before := len(l.diags)
 	l.pend = nil
 	restore := l.withLocalFns(body)
@@ -210,9 +276,27 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	} else {
 		inner = l.functionBody(body)
 	}
+	if general {
+		pre := l.applyDefaults(n, defaults)
+		symbols := map[string]*ast.Symbol{}
+		for _, p := range n.Parameters() {
+			symbols[p.Name().Text()] = l.ck.GetSymbolAtLocation(p.Name())
+		}
+		for _, stmt := range pre {
+			walkNumberStmt(stmt, func(s *hir.Stmt) {}, func(e *hir.Expr) {
+				if e.Kind == hir.Local && symbols[e.Name] != nil {
+					if l.localSymbols == nil {
+						l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+					}
+					l.localSymbols[e] = symbols[e.Name]
+				}
+			})
+		}
+		prologue = append(prologue, pre...)
+	}
 	restore()
 	l.pop()
-	l.scope, l.method, l.pend, l.thisOverride = savedScope, savedMethod, savedPend, savedThis
+	l.scope, l.method, l.pend, l.thisOverride, l.class = savedScope, savedMethod, savedPend, savedThis, savedClass
 	if inner == nil {
 		return nil
 	}
@@ -228,68 +312,6 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	}
 	l.diagf(n, "note-closure", "thunk lowered as closure %s capturing %d locals", name, len(captures))
 	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(name), Args: args}
-}
-
-func savedLookup(scope []map[string]hir.Type, name string) (hir.Type, bool) {
-	for i := len(scope) - 1; i >= 0; i-- {
-		if t, ok := scope[i][name]; ok {
-			return t, true
-		}
-	}
-	return hir.Type{}, false
-}
-
-// assignedAfter reports an assignment or update of the local `name` in the
-// enclosing function body positioned after the closure expression.
-func (l *lowerer) assignedAfter(fn *ast.Node, name string) bool {
-	var body *ast.Node
-	for p := fn.Parent; p != nil; p = p.Parent {
-		switch p.Kind {
-		case ast.KindMethodDeclaration, ast.KindFunctionDeclaration, ast.KindConstructor, ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindGetAccessor, ast.KindSetAccessor:
-			body = p.Body()
-		}
-		if body != nil {
-			break
-		}
-	}
-	if body == nil {
-		return false
-	}
-	found := false
-	var walk func(*ast.Node)
-	walk = func(x *ast.Node) {
-		if x == nil || found {
-			return
-		}
-		switch x.Kind {
-		case ast.KindBinaryExpression:
-			b := x.AsBinaryExpression()
-			switch b.OperatorToken.Kind {
-			case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken, ast.KindSlashEqualsToken, ast.KindQuestionQuestionEqualsToken, ast.KindBarBarEqualsToken, ast.KindAmpersandAmpersandEqualsToken:
-				if b.Left.Kind == ast.KindIdentifier && b.Left.Text() == name && x.Pos() > fn.Pos() {
-					found = true
-					return
-				}
-			}
-		case ast.KindPostfixUnaryExpression, ast.KindPrefixUnaryExpression:
-			var operand *ast.Node
-			var op ast.Kind
-			if x.Kind == ast.KindPostfixUnaryExpression {
-				op = x.AsPostfixUnaryExpression().Operator
-				operand = x.AsPostfixUnaryExpression().Operand
-			} else {
-				op = x.AsPrefixUnaryExpression().Operator
-				operand = x.AsPrefixUnaryExpression().Operand
-			}
-			if (op == ast.KindPlusPlusToken || op == ast.KindMinusMinusToken) && operand.Kind == ast.KindIdentifier && operand.Text() == name && x.Pos() > fn.Pos() {
-				found = true
-				return
-			}
-		}
-		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
-	}
-	walk(body)
-	return found
 }
 
 // thunkCall lowers a parameterless thunk held in a local or object field.

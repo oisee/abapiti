@@ -518,6 +518,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			l.diagf(n, "note-thunk-type", "parameterless void function type lowered as the closure thunk interface")
 			return l.thunkType()
 		}
+		if l.unprunedFeatures && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 && len(l.ck.GetSignaturesOfType(l.ck.GetTypeAtLocation(n), checker.SignatureKindCall)) > 0 {
+			return l.functionType(n, t)
+		}
 		// Coverage-pruned builds retain their opaque ABI. Unpruned lowering
 		// carries the fulfillment type; producer certification is separate.
 		if t.Symbol() != nil && t.Symbol().Name == "Promise" && l.librarySymbol(t.Symbol()) {

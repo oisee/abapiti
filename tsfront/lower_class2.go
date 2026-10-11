@@ -142,7 +142,9 @@ func (l *lowerer) withLocalFns(body *ast.Node) func() {
 				for _, d := range list.AsVariableDeclarationList().Declarations.Nodes {
 					if d.Name() != nil && d.Name().Kind == ast.KindIdentifier && d.Initializer() != nil &&
 						(d.Initializer().Kind == ast.KindArrowFunction || d.Initializer().Kind == ast.KindFunctionExpression) {
-						l.pendingFns[d.Name().Text()] = d.Initializer()
+						if !l.unprunedFeatures || list.Flags&ast.NodeFlagsConst != 0 {
+							l.pendingFns[d.Name().Text()] = d.Initializer()
+						}
 					}
 				}
 			}
@@ -202,7 +204,10 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			return nil
 		}
 		lf := l.localFns[capture.name]
-		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil {
+		if l.isCallableValueType(capture.typ) {
+			lf = nil
+		}
+		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil && !l.isCallableValueType(capture.typ) {
 			delete(l.pendingFns, capture.name)
 			lf = l.liftLocalFn(capture.name, pending)
 		}
@@ -221,6 +226,9 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 			l.diagf(capture.node, "unsupported-call", "capture %s has no checked binding", capture.name)
 			return nil
 		}
+		if l.unprunedFeatures && l.bindingMutable(capture.symbol) {
+			capture.typ = l.captureCell(capture)
+		}
 		if !seen[capture.symbol] {
 			captures = append(captures, capture)
 			seen[capture.symbol] = true
@@ -236,9 +244,24 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		m.Params = append(m.Params, hir.Param{Name: c.name, Type: c.typ})
 	}
 	sigParams := fn.Parameters()
+	if l.unprunedFeatures {
+		if l.paramSymbols == nil {
+			l.paramSymbols = map[*hir.Method]map[string]*ast.Symbol{}
+		}
+		l.paramSymbols[m] = map[string]*ast.Symbol{}
+		for _, p := range sigParams {
+			if p.Name() != nil && p.Name().Kind == ast.KindIdentifier {
+				l.paramSymbols[m][p.Name().Text()] = l.ck.GetSymbolAtLocation(p.Name())
+			}
+		}
+	}
 	l.push()
 	for i, c := range captures {
-		l.declare(c.name, m.Params[i].Type)
+		typ := m.Params[i].Type
+		if cell, ok := l.captureCells[c.symbol]; ok && cell.Equal(typ) {
+			typ = l.cellValueType(cell)
+		}
+		l.declare(c.name, typ)
 	}
 	for _, p := range sigParams {
 		if p.Name() == nil || p.Name().Kind != ast.KindIdentifier {
@@ -332,8 +355,59 @@ func (l *lowerer) functionBody(body *ast.Node) *hir.Stmt {
 }
 
 // freeLocals lists the enclosing-method local names an arrow function reads
-// without assigning them (and without declaring them itself).
+// including writes, resolved by checked binding identity across nested scopes.
 func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
+	if !l.unprunedFeatures {
+		return l.legacyFreeLocals(fn)
+	}
+	declared := map[*ast.Symbol]bool{}
+	used := map[string][]*ast.Node{}
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil {
+			return
+		}
+		switch x.Kind {
+		case ast.KindPropertyAccessExpression:
+			walk(x.Expression())
+			return
+		case ast.KindParameter, ast.KindVariableDeclaration, ast.KindFunctionDeclaration, ast.KindFunctionExpression:
+			if x.Name() != nil && x.Name().Kind == ast.KindIdentifier {
+				declared[l.ck.GetSymbolAtLocation(x.Name())] = true
+			}
+		case ast.KindIdentifier:
+			if _, isLocal := l.lookup(x.Text()); isLocal {
+				used[x.Text()] = append(used[x.Text()], x)
+			}
+			return
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(fn)
+	var names []string
+	for name := range used {
+		names = append(names, name)
+	}
+	sortStrings(names)
+	var out []localCapture
+	for _, name := range names {
+		for _, node := range used[name] {
+			symbol := l.ck.GetSymbolAtLocation(node)
+			if declared[symbol] {
+				continue
+			}
+			typ, _ := l.checkedBindingType(symbol)
+			if typ.Kind == hir.Void {
+				typ, _ = l.lookup(name)
+			}
+			out = append(out, localCapture{name: name, typ: typ, symbol: symbol, node: node})
+			break
+		}
+	}
+	return out
+}
+
+func (l *lowerer) legacyFreeLocals(fn *ast.Node) []localCapture {
 	declared := map[string]bool{}
 	assigned := map[string]bool{}
 	used := map[string][]*ast.Node{}

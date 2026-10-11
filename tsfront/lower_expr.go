@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
+		return x
+	}
 	if l.isGeneratorABIValue(x) || l.erasedCalls[x] {
 		return x
 	}
@@ -399,44 +402,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		u := n.AsPostfixUnaryExpression()
 		return l.updateExpression(n, u.Operand, u.Operator, false)
 	case ast.KindConditionalExpression:
-		c := n.AsConditionalExpression()
-		x := l.condition(c.Condition)
-		if value, ok := constantBool(x); ok {
-			// The other branch is dead in JavaScript too; it is not lowered.
-			l.diagf(n, "note-dead-branch", "conditional with a constant condition keeps only the live branch")
-			branch := c.WhenFalse
-			if value {
-				branch = c.WhenTrue
-			}
-			live := l.expr(branch)
-			if live != nil && x.Kind == hir.Seq {
-				live = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: live.Type, Stmt: x.Stmt, Y: live}
-			}
-			return live
-		}
-		hint := l.hint
-		if hint.Kind == hir.Void || hint.Kind == "" {
-			l.hint = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
-		}
-		branchHint := l.hint
-		y := l.expr(c.WhenTrue)
-		l.hint = branchHint
-		z := l.expr(c.WhenFalse)
-		l.hint = hint
-		if x == nil || y == nil || z == nil {
-			return nil
-		}
-		result := y.Type
-		if !y.Type.Equal(z.Type) {
-			result = hint
-			if result.Kind == hir.Void || result.Kind == "" {
-				result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
-			}
-			if result.Kind == hir.Void || result.Kind == "" {
-				return nil
-			}
-		}
-		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: x, Y: l.coerce(y, result), Z: l.coerce(z, result)}
+		return l.conditionalExpression(n)
 	case ast.KindAsExpression:
 		return l.asExpression(n)
 	case ast.KindSatisfiesExpression:
@@ -455,24 +421,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			l.hint = l.hint.Args[0]
 		}
 		if len(els) == 0 {
-			if l.hint.Kind != hir.Array && l.hint.Kind != hir.OrderedSet {
-				if t := l.ck.GetContextualType(n, 0); t != nil {
-					if arr := l.singleArrayConstituent(t); arr != nil {
-						// A tagged (union) context: the one array constituent
-						// gives the element type; the value is boxed later.
-						t = arr
-					}
-					l.hint = l.mapCheckerType(n, t)
-				}
-			}
-			if l.hint.Kind == hir.Optional && len(l.hint.Args) == 1 {
-				l.hint = l.hint.Args[0]
-			}
-			if l.hint.Kind == hir.Array || l.hint.Kind == hir.OrderedSet {
-				return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: l.hint}
-			}
-			l.diagf(n, "unsupported-array", "empty array literal outside a statement context")
-			return nil
+			return l.emptyArrayLiteral(n)
 		}
 		if l.hint.Kind == hir.ClassRef && strings.HasPrefix(l.hint.Name, "tuple.") {
 			// Construct positional fields in their individual contexts.
@@ -609,6 +558,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 		}
 	}
 	if t, ok := l.lookup(name); ok {
+		if t.Kind == hir.Void {
+			if value := l.functionValue(n); value != nil {
+				return value
+			}
+		}
 		x := hir.V(name, t)
 		x.Node = l.node(n)
 		if l.localSymbols == nil {
@@ -623,12 +577,19 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 		}
 		l.localSymbols[x] = symbol
+		if l.localSymbolMethods == nil {
+			l.localSymbolMethods = map[*hir.Expr]*hir.Method{}
+		}
+		l.localSymbolMethods[x] = l.method
 		if t.Kind == hir.Optional && len(l.guards) > 0 {
 			if typ, guarded := l.guards[l.resolve(n)]; guarded && t.Args[0].Equal(typ) {
 				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ, X: x}
 			}
 		}
 		return x
+	}
+	if value := l.functionValue(n); value != nil {
+		return value
 	}
 	sym := l.resolve(n)
 	if sym == nil {
@@ -668,6 +629,11 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
+	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
+		if value := l.functionValue(n); value != nil {
+			return value
+		}
+	}
 	p := n.AsPropertyAccessExpression()
 	if x, ok := l.numberStatic(n, p); ok {
 		return x
@@ -938,6 +904,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
+		if t, ok := l.lookup(name); ok && l.isCallableValueType(t) {
+			if t.Name == thunkInterfaceName {
+				x, _ := l.thunkCall(n, callee)
+				return x
+			}
+			return l.functionValueCall(n, callee)
+		}
 		if lf, ok := l.localFns[name]; ok {
 			return l.localFnCall(n, lf, callee)
 		}
@@ -967,6 +940,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	}
 	if x, ok := l.thunkCall(n, callee); ok {
 		return x
+	}
+	if l.unprunedFeatures && callee.Kind == ast.KindPropertyAccessExpression {
+		if field, ok := l.fieldOf(l.resolve(callee)); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
+			return l.functionValueCall(n, callee)
+		}
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		p := callee.AsPropertyAccessExpression()
@@ -1254,8 +1232,12 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: name,
 				Type: l.methodsBy[recvCast.Type.Name+"."+name].Result, X: recvCast, Args: args}
 		}
-		// Library operation, dispatched on the lowered receiver type.
+		// The call's result context is not the receiver's construction
+		// context (e.g. Array<T>[] .flat() produces Array<T>).
+		outputHint := l.hint
+		l.hint = hir.Type{}
 		recv := l.callReceiverExpr(p.Expression)
+		l.hint = outputHint
 		if recv == nil {
 			return nil
 		}
@@ -1573,10 +1555,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, false
 			}
 			lowered := make([]*hir.Expr, 0, len(args))
-			for _, arg := range args {
+			for index, arg := range args {
 				x := l.expr(arg)
 				if x == nil {
 					return nil, true
+				}
+				if l.unprunedFeatures && index == 2 {
+					x = l.coerce(x, recv.Type.Args[0])
 				}
 				lowered = append(lowered, x)
 			}

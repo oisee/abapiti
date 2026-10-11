@@ -1,0 +1,1998 @@
+{
+  "mergedBase": "3f94f0e12cb9921f32e29ef8490531ad7e9c5ee8",
+  "baselineCompilerCommit": "dcabc8f",
+  "changedCompilerCommit": "9cf42a9",
+  "fullClosure": {
+    "before": {
+      "summary": {
+        "blocking": 48,
+        "rootBlocking": 35,
+        "cascadeBlocking": 13,
+        "hirErrors": 117,
+        "byCategory": {
+          "assume-integer": 10,
+          "unsupported-array": 2,
+          "unsupported-call": 4,
+          "unsupported-callback": 1,
+          "unsupported-expr": 21,
+          "unsupported-json": 2,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 16,
+          "objects": 6,
+          "rules": 8,
+          "src": 18
+        },
+        "byRootMessage": [
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 9
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+            "count": 2
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 2
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 30
+      },
+      "allBlockingMessages": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 9
+        },
+        {
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 9
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "empty array literal outside a statement context",
+          "count": 2
+        },
+        {
+          "message": "identifier importing is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "message": "method getStr on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+          "count": 1
+        },
+        {
+          "message": "identifier Object is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier XMLParser is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier regex is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)",
+          "count": 1
+        },
+        {
+          "message": "method getParameters on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new RegExp requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "new XMLParser is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "diagnostics": [
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/_lookup.ts:272:36",
+          "message": "identifier Object is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:31:14",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:32:14",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:80:15",
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:86:12",
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/help.ts:46:5",
+          "message": "delete supports ordinary lowered records only"
+        },
+        {
+          "category": "unsupported-json",
+          "loc": "src/lsp/help.ts:47:26",
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        },
+        {
+          "category": "unsupported-json",
+          "loc": "src/lsp/help.ts:103:18",
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/help.ts:105:51",
+          "message": "identifier text is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/lsp/help.ts:243:58",
+          "message": "method getStr on classref is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/lsp/help.ts:243:58",
+          "message": "method getStr on classref is not lowered"
+        },
+        {
+          "category": "unsupported-callback",
+          "loc": "src/lsp/references.ts:40:12",
+          "message": "callback KindPropertyAccessExpression is not an arrow function"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:99:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:110:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:117:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-statement",
+          "loc": "src/lsp/semantic.ts:50:7",
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)"
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:114:56",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:122:62",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/rules/downport.ts:3556:27",
+          "message": "method getParameters on dynamic is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/downport.ts:3557:13",
+          "message": "identifier importing is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/downport.ts:3558:36",
+          "message": "identifier importing is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/rules/identical_conditions.ts:23:12",
+          "message": "find on primitive arrays needs an absence-preserving callback ABI"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/rules/object_naming.ts:126:30",
+          "message": "new RegExp requires a lowered string pattern"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/object_naming.ts:128:51",
+          "message": "identifier regex is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/remove_descriptions.ts:106:20",
+          "message": "identifier XMLParser is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-new",
+          "loc": "src/rules/remove_descriptions.ts:106:16",
+          "message": "new XMLParser is not a lowered class"
+        }
+      ],
+      "hirErrors": [
+        "node 106290 (src/abap/5_syntax/spaghetti_scope.ts:280:22): call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+        "node 126142 (src/abap/types/basic/structure_type.ts:48:32): invalid checked integer conversion",
+        "node 7026 (src/ddic.ts:353:3): method may fall through without return",
+        "node 7176 (src/lsp/_lookup.ts:238:3): missing expression",
+        "node 148302 (src/lsp/_lookup.ts:272:5): condition must be bool",
+        "node 7212 (src/lsp/code_actions.ts:17:3): missing expression",
+        "node 149119 (src/lsp/code_actions.ts:30:11): call argument type mismatch: i64 <- void in runtime .",
+        "node 149120 (src/lsp/code_actions.ts:30:11): invalid assignment target",
+        "node 7212 (src/lsp/code_actions.ts:17:3): missing expression",
+        "node 149119 (src/lsp/code_actions.ts:30:11): call argument type mismatch: i64 <- void in runtime .",
+        "node 0 (): invalid literal",
+        "node 149121 (src/lsp/code_actions.ts:30:11): non-numeric arithmetic",
+        "node 0 (): invalid checked integer conversion",
+        "node 7313 (src/lsp/dump_scope.ts:12:3): missing expression",
+        "node 150538 (src/lsp/dump_scope.ts:31:7): call argument type mismatch: string <- void in runtime .",
+        "node 7313 (src/lsp/dump_scope.ts:12:3): missing expression",
+        "node 150547 (src/lsp/dump_scope.ts:32:7): call argument type mismatch: string <- void in runtime .",
+        "node 0 (): invalid checked integer conversion",
+        "node 7314 (src/lsp/dump_scope.ts:45:3): missing expression",
+        "node 150710 (src/lsp/dump_scope.ts:86:5): call argument type mismatch: string <- void in runtime .",
+        "node 7317 (src/lsp/help.ts:39:3): missing expression",
+        "node 150902 (src/lsp/help.ts:47:5): call argument type mismatch: string <- void in runtime .",
+        "node 7319 (src/lsp/help.ts:93:3): method may fall through without return",
+        "node 0 (): call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+        "node 152550 (src/lsp/language_server.ts:84:5): assignment type mismatch",
+        "node 7643 (src/lsp/references.ts:19:3): method may fall through without return",
+        "node 153195 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+        "node 153355 (src/lsp/rename.ts:95:18): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+        "node 153374 (src/lsp/rename.ts:98:52): assignment type mismatch",
+        "node 153479 (src/lsp/rename.ts:106:18): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+        "node 153488 (src/lsp/rename.ts:109:52): assignment type mismatch",
+        "node 153567 (src/lsp/rename.ts:116:52): assignment type mismatch",
+        "node 153581 (src/lsp/rename.ts:116:83): assignment type mismatch",
+        "node 153961 (src/lsp/semantic.ts:78:33): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 154051 (src/lsp/semantic.ts:99:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 154084 (src/lsp/semantic.ts:101:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 155656 (src/objects/_abap_object.ts:148:11): call argument type mismatch: string <- dynamic in runtime .",
+        "node 155669 (src/objects/_abap_object.ts:149:9): call argument type mismatch: string <- dynamic in runtime .",
+        "node 155681 (src/objects/_abap_object.ts:151:7): call argument type mismatch: string <- dynamic in runtime .",
+        "node 165264 (src/objects/proxy_object.ts:81:5): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 9312 (src/objects/rename/renamer.ts:93:3): missing expression",
+        "node 168282 (src/objects/rename/renamer.ts:104:7): condition must be bool",
+        "node 9312 (src/objects/rename/renamer.ts:93:3): missing expression",
+        "node 168295 (src/objects/rename/renamer.ts:107:14): condition must be bool",
+        "node 9313 (src/objects/rename/renamer.ts:125:3): missing expression",
+        "node 168375 (src/objects/rename/renamer.ts:132:7): condition must be bool",
+        "node 168398 (src/objects/rename/renamer.ts:135:11): unresolved field range",
+        "node 168405 (src/objects/rename/renamer.ts:135:34): unresolved field range",
+        "node 168417 (src/objects/rename/renamer.ts:138:27): unresolved field range",
+        "node 168427 (src/objects/rename/renamer.ts:139:12): unresolved field range",
+        "node 168436 (src/objects/rename/renamer.ts:139:54): unresolved field range",
+        "node 168443 (src/objects/rename/renamer.ts:140:9): unresolved field newText",
+        "node 168451 (src/objects/rename/renamer.ts:141:26): unresolved field range",
+        "node 179034 (src/rules/align_parameters.ts:137:60): invalid checked integer conversion",
+        "node 179743 (src/rules/align_pseudo_comments.ts:62:84): invalid checked integer conversion",
+        "node 179965 (src/rules/align_type_expressions.ts:119:61): invalid checked integer conversion",
+        "node 181702 (src/rules/catch_and_raise.ts:73:21): call argument type mismatch: string <- regexp in runtime .",
+        "node 183802 (src/rules/cds_field_order.ts:128:18): call argument type mismatch: string <- regexp in runtime .",
+        "node 189299 (src/rules/contains_tab.ts:67:82): invalid checked integer conversion",
+        "node 190860 (src/rules/definitions_top.ts:183:36): invalid checked integer conversion",
+        "node 194010 (src/rules/downport.ts:896:36): invalid checked integer conversion",
+        "node 194274 (src/rules/downport.ts:949:36): invalid checked integer conversion",
+        "node 194756 (src/rules/downport.ts:1055:38): invalid checked integer conversion",
+        "node 194857 (src/rules/downport.ts:1081:38): invalid checked integer conversion",
+        "node 194958 (src/rules/downport.ts:1102:38): invalid checked integer conversion",
+        "node 195059 (src/rules/downport.ts:1122:38): invalid checked integer conversion",
+        "node 195159 (src/rules/downport.ts:1147:38): invalid checked integer conversion",
+        "node 195331 (src/rules/downport.ts:1199:38): invalid checked integer conversion",
+        "node 195564 (src/rules/downport.ts:1285:40): invalid checked integer conversion",
+        "node 195798 (src/rules/downport.ts:1345:36): invalid checked integer conversion",
+        "node 195921 (src/rules/downport.ts:1371:36): invalid checked integer conversion",
+        "node 196173 (src/rules/downport.ts:1430:36): invalid checked integer conversion",
+        "node 196520 (src/rules/downport.ts:1529:36): invalid checked integer conversion",
+        "node 198435 (src/rules/downport.ts:1972:36): invalid checked integer conversion",
+        "node 198755 (src/rules/downport.ts:2053:36): invalid checked integer conversion",
+        "node 199065 (src/rules/downport.ts:2148:38): invalid checked integer conversion",
+        "node 199221 (src/rules/downport.ts:2186:18): invalid checked integer conversion",
+        "node 199363 (src/rules/downport.ts:2224:36): invalid checked integer conversion",
+        "node 200285 (src/rules/downport.ts:2420:38): invalid checked integer conversion",
+        "node 200482 (src/rules/downport.ts:2464:38): invalid checked integer conversion",
+        "node 200758 (src/rules/downport.ts:2531:38): invalid checked integer conversion",
+        "node 201132 (src/rules/downport.ts:2630:38): invalid checked integer conversion",
+        "node 201347 (src/rules/downport.ts:2685:36): invalid checked integer conversion",
+        "node 202424 (src/rules/downport.ts:2924:20): invalid checked integer conversion",
+        "node 202619 (src/rules/downport.ts:2974:20): invalid checked integer conversion",
+        "node 202781 (src/rules/downport.ts:3015:33): invalid checked integer conversion",
+        "node 203054 (src/rules/downport.ts:3100:33): invalid checked integer conversion",
+        "node 203219 (src/rules/downport.ts:3145:20): invalid checked integer conversion",
+        "node 203235 (src/rules/downport.ts:3147:20): invalid checked integer conversion",
+        "node 204216 (src/rules/downport.ts:3417:40): invalid checked integer conversion",
+        "node 204512 (src/rules/downport.ts:3497:38): invalid checked integer conversion",
+        "node 10835 (src/rules/downport.ts:3520:3): missing expression",
+        "node 204807 (src/rules/downport.ts:3557:9): condition must be bool",
+        "node 10835 (src/rules/downport.ts:3520:3): missing expression",
+        "node 204810 (src/rules/downport.ts:3558:11): call argument type mismatch: string <- void in runtime .",
+        "node 10836 (src/rules/downport.ts:3574:3): method may fall through without return",
+        "node 193434 (src/rules/downport.ts:730:11): unresolved local fix",
+        "node 193442 (src/rules/downport.ts:731:9): unresolved local fix",
+        "node 193445 (src/rules/downport.ts:733:9): unresolved local fix",
+        "node 193446 (src/rules/downport.ts:733:32): unresolved local fix",
+        "node 11025 (src/rules/identical_conditions.ts:22:3): method may fall through without return",
+        "node 211678 (src/rules/in_statement_indentation.ts:111:107): invalid checked integer conversion",
+        "node 211994 (src/rules/indentation.ts:149:108): invalid checked integer conversion",
+        "node 213764 (src/rules/line_break_multiple_parameters.ts:68:87): invalid checked integer conversion",
+        "node 11647 (src/rules/object_naming.ts:109:3): missing expression",
+        "node 221422 (src/rules/object_naming.ts:128:5): condition must be bool",
+        "node 229467 (src/rules/remove_descriptions.ts:124:11): call argument type mismatch: string <- dynamic in runtime .",
+        "node 229494 (src/rules/remove_descriptions.ts:132:7): call argument type mismatch: string <- dynamic in runtime ."
+      ]
+    },
+    "after": {
+      "summary": {
+        "blocking": 46,
+        "rootBlocking": 33,
+        "cascadeBlocking": 13,
+        "hirErrors": 117,
+        "byCategory": {
+          "assume-integer": 10,
+          "unsupported-call": 4,
+          "unsupported-callback": 1,
+          "unsupported-expr": 21,
+          "unsupported-json": 2,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 1,
+          "unsupported-regex": 1,
+          "unsupported-statement": 1
+        },
+        "byArea": {
+          "lsp": 16,
+          "objects": 4,
+          "rules": 8,
+          "src": 18
+        },
+        "byRootMessage": [
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 9
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+            "count": 2
+          },
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 2
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 1
+          },
+          {
+            "message": "new X requires a lowered string pattern",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 29
+      },
+      "allBlockingMessages": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 9
+        },
+        {
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 9
+        },
+        {
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+          "count": 3
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "identifier importing is not a lowered local or module value",
+          "count": 2
+        },
+        {
+          "message": "method getStr on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "callback KindPropertyAccessExpression is not an arrow function",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "find on primitive arrays needs an absence-preserving callback ABI",
+          "count": 1
+        },
+        {
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)",
+          "count": 1
+        },
+        {
+          "message": "identifier Object is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier XMLParser is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier regex is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)",
+          "count": 1
+        },
+        {
+          "message": "method getParameters on dynamic is not lowered",
+          "count": 1
+        },
+        {
+          "message": "new RegExp requires a lowered string pattern",
+          "count": 1
+        },
+        {
+          "message": "new XMLParser is not a lowered class",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+          "count": 1
+        },
+        {
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+          "count": 1
+        }
+      ],
+      "diagnostics": [
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/ddic.ts:386:30",
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/ddic.ts:388:37",
+          "message": "identifier packedLength is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/_lookup.ts:272:36",
+          "message": "identifier Object is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:31:14",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:32:14",
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:80:15",
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/dump_scope.ts:86:12",
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/help.ts:46:5",
+          "message": "delete supports ordinary lowered records only"
+        },
+        {
+          "category": "unsupported-json",
+          "loc": "src/lsp/help.ts:47:26",
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        },
+        {
+          "category": "unsupported-json",
+          "loc": "src/lsp/help.ts:103:18",
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/lsp/help.ts:105:51",
+          "message": "identifier text is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/lsp/help.ts:243:58",
+          "message": "method getStr on classref is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/lsp/help.ts:243:58",
+          "message": "method getStr on classref is not lowered"
+        },
+        {
+          "category": "unsupported-callback",
+          "loc": "src/lsp/references.ts:40:12",
+          "message": "callback KindPropertyAccessExpression is not an arrow function"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:99:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:110:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/lsp/rename.ts:117:7",
+          "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-statement",
+          "loc": "src/lsp/semantic.ts:50:7",
+          "message": "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/rules/downport.ts:3556:27",
+          "message": "method getParameters on dynamic is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/downport.ts:3557:13",
+          "message": "identifier importing is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/downport.ts:3558:36",
+          "message": "identifier importing is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/rules/identical_conditions.ts:23:12",
+          "message": "find on primitive arrays needs an absence-preserving callback ABI"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/rules/object_naming.ts:126:30",
+          "message": "new RegExp requires a lowered string pattern"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/object_naming.ts:128:51",
+          "message": "identifier regex is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/rules/remove_descriptions.ts:106:20",
+          "message": "identifier XMLParser is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-new",
+          "loc": "src/rules/remove_descriptions.ts:106:16",
+          "message": "new XMLParser is not a lowered class"
+        }
+      ],
+      "hirErrors": [
+        "node 106290 (src/abap/5_syntax/spaghetti_scope.ts:280:22): call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+        "node 126142 (src/abap/types/basic/structure_type.ts:48:32): invalid checked integer conversion",
+        "node 7026 (src/ddic.ts:353:3): method may fall through without return",
+        "node 7176 (src/lsp/_lookup.ts:238:3): missing expression",
+        "node 148302 (src/lsp/_lookup.ts:272:5): condition must be bool",
+        "node 7212 (src/lsp/code_actions.ts:17:3): missing expression",
+        "node 149119 (src/lsp/code_actions.ts:30:11): call argument type mismatch: i64 <- void in runtime .",
+        "node 149120 (src/lsp/code_actions.ts:30:11): invalid assignment target",
+        "node 7212 (src/lsp/code_actions.ts:17:3): missing expression",
+        "node 149119 (src/lsp/code_actions.ts:30:11): call argument type mismatch: i64 <- void in runtime .",
+        "node 0 (): invalid literal",
+        "node 149121 (src/lsp/code_actions.ts:30:11): non-numeric arithmetic",
+        "node 0 (): invalid checked integer conversion",
+        "node 7313 (src/lsp/dump_scope.ts:12:3): missing expression",
+        "node 150538 (src/lsp/dump_scope.ts:31:7): call argument type mismatch: string <- void in runtime .",
+        "node 7313 (src/lsp/dump_scope.ts:12:3): missing expression",
+        "node 150547 (src/lsp/dump_scope.ts:32:7): call argument type mismatch: string <- void in runtime .",
+        "node 0 (): invalid checked integer conversion",
+        "node 7314 (src/lsp/dump_scope.ts:45:3): missing expression",
+        "node 150710 (src/lsp/dump_scope.ts:86:5): call argument type mismatch: string <- void in runtime .",
+        "node 7317 (src/lsp/help.ts:39:3): missing expression",
+        "node 150902 (src/lsp/help.ts:47:5): call argument type mismatch: string <- void in runtime .",
+        "node 7319 (src/lsp/help.ts:93:3): method may fall through without return",
+        "node 0 (): call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+        "node 152550 (src/lsp/language_server.ts:84:5): assignment type mismatch",
+        "node 7643 (src/lsp/references.ts:19:3): method may fall through without return",
+        "node 153195 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+        "node 153355 (src/lsp/rename.ts:95:18): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+        "node 153374 (src/lsp/rename.ts:98:52): assignment type mismatch",
+        "node 153479 (src/lsp/rename.ts:106:18): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references",
+        "node 153488 (src/lsp/rename.ts:109:52): assignment type mismatch",
+        "node 153567 (src/lsp/rename.ts:116:52): assignment type mismatch",
+        "node 153581 (src/lsp/rename.ts:116:83): assignment type mismatch",
+        "node 153961 (src/lsp/semantic.ts:78:33): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 154051 (src/lsp/semantic.ts:99:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 154084 (src/lsp/semantic.ts:101:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "node 155656 (src/objects/_abap_object.ts:148:11): call argument type mismatch: string <- dynamic in runtime .",
+        "node 155669 (src/objects/_abap_object.ts:149:9): call argument type mismatch: string <- dynamic in runtime .",
+        "node 155681 (src/objects/_abap_object.ts:151:7): call argument type mismatch: string <- dynamic in runtime .",
+        "node 165318 (src/objects/proxy_object.ts:81:5): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 0 (): assignment type mismatch",
+        "node 9312 (src/objects/rename/renamer.ts:93:3): missing expression",
+        "node 168336 (src/objects/rename/renamer.ts:104:7): condition must be bool",
+        "node 9312 (src/objects/rename/renamer.ts:93:3): missing expression",
+        "node 168349 (src/objects/rename/renamer.ts:107:14): condition must be bool",
+        "node 9313 (src/objects/rename/renamer.ts:125:3): missing expression",
+        "node 168429 (src/objects/rename/renamer.ts:132:7): condition must be bool",
+        "node 168452 (src/objects/rename/renamer.ts:135:11): unresolved field range",
+        "node 168459 (src/objects/rename/renamer.ts:135:34): unresolved field range",
+        "node 168471 (src/objects/rename/renamer.ts:138:27): unresolved field range",
+        "node 168481 (src/objects/rename/renamer.ts:139:12): unresolved field range",
+        "node 168490 (src/objects/rename/renamer.ts:139:54): unresolved field range",
+        "node 168497 (src/objects/rename/renamer.ts:140:9): unresolved field newText",
+        "node 168505 (src/objects/rename/renamer.ts:141:26): unresolved field range",
+        "node 179088 (src/rules/align_parameters.ts:137:60): invalid checked integer conversion",
+        "node 179797 (src/rules/align_pseudo_comments.ts:62:84): invalid checked integer conversion",
+        "node 180019 (src/rules/align_type_expressions.ts:119:61): invalid checked integer conversion",
+        "node 181756 (src/rules/catch_and_raise.ts:73:21): call argument type mismatch: string <- regexp in runtime .",
+        "node 183856 (src/rules/cds_field_order.ts:128:18): call argument type mismatch: string <- regexp in runtime .",
+        "node 189353 (src/rules/contains_tab.ts:67:82): invalid checked integer conversion",
+        "node 190914 (src/rules/definitions_top.ts:183:36): invalid checked integer conversion",
+        "node 194064 (src/rules/downport.ts:896:36): invalid checked integer conversion",
+        "node 194328 (src/rules/downport.ts:949:36): invalid checked integer conversion",
+        "node 194810 (src/rules/downport.ts:1055:38): invalid checked integer conversion",
+        "node 194911 (src/rules/downport.ts:1081:38): invalid checked integer conversion",
+        "node 195012 (src/rules/downport.ts:1102:38): invalid checked integer conversion",
+        "node 195113 (src/rules/downport.ts:1122:38): invalid checked integer conversion",
+        "node 195213 (src/rules/downport.ts:1147:38): invalid checked integer conversion",
+        "node 195385 (src/rules/downport.ts:1199:38): invalid checked integer conversion",
+        "node 195618 (src/rules/downport.ts:1285:40): invalid checked integer conversion",
+        "node 195852 (src/rules/downport.ts:1345:36): invalid checked integer conversion",
+        "node 195975 (src/rules/downport.ts:1371:36): invalid checked integer conversion",
+        "node 196227 (src/rules/downport.ts:1430:36): invalid checked integer conversion",
+        "node 196574 (src/rules/downport.ts:1529:36): invalid checked integer conversion",
+        "node 198489 (src/rules/downport.ts:1972:36): invalid checked integer conversion",
+        "node 198809 (src/rules/downport.ts:2053:36): invalid checked integer conversion",
+        "node 199119 (src/rules/downport.ts:2148:38): invalid checked integer conversion",
+        "node 199275 (src/rules/downport.ts:2186:18): invalid checked integer conversion",
+        "node 199417 (src/rules/downport.ts:2224:36): invalid checked integer conversion",
+        "node 200339 (src/rules/downport.ts:2420:38): invalid checked integer conversion",
+        "node 200536 (src/rules/downport.ts:2464:38): invalid checked integer conversion",
+        "node 200812 (src/rules/downport.ts:2531:38): invalid checked integer conversion",
+        "node 201186 (src/rules/downport.ts:2630:38): invalid checked integer conversion",
+        "node 201401 (src/rules/downport.ts:2685:36): invalid checked integer conversion",
+        "node 202478 (src/rules/downport.ts:2924:20): invalid checked integer conversion",
+        "node 202673 (src/rules/downport.ts:2974:20): invalid checked integer conversion",
+        "node 202835 (src/rules/downport.ts:3015:33): invalid checked integer conversion",
+        "node 203108 (src/rules/downport.ts:3100:33): invalid checked integer conversion",
+        "node 203273 (src/rules/downport.ts:3145:20): invalid checked integer conversion",
+        "node 203289 (src/rules/downport.ts:3147:20): invalid checked integer conversion",
+        "node 204270 (src/rules/downport.ts:3417:40): invalid checked integer conversion",
+        "node 204566 (src/rules/downport.ts:3497:38): invalid checked integer conversion",
+        "node 10835 (src/rules/downport.ts:3520:3): missing expression",
+        "node 204861 (src/rules/downport.ts:3557:9): condition must be bool",
+        "node 10835 (src/rules/downport.ts:3520:3): missing expression",
+        "node 204864 (src/rules/downport.ts:3558:11): call argument type mismatch: string <- void in runtime .",
+        "node 10836 (src/rules/downport.ts:3574:3): method may fall through without return",
+        "node 193488 (src/rules/downport.ts:730:11): unresolved local fix",
+        "node 193496 (src/rules/downport.ts:731:9): unresolved local fix",
+        "node 193499 (src/rules/downport.ts:733:9): unresolved local fix",
+        "node 193500 (src/rules/downport.ts:733:32): unresolved local fix",
+        "node 11025 (src/rules/identical_conditions.ts:22:3): method may fall through without return",
+        "node 211732 (src/rules/in_statement_indentation.ts:111:107): invalid checked integer conversion",
+        "node 212048 (src/rules/indentation.ts:149:108): invalid checked integer conversion",
+        "node 213818 (src/rules/line_break_multiple_parameters.ts:68:87): invalid checked integer conversion",
+        "node 11647 (src/rules/object_naming.ts:109:3): missing expression",
+        "node 221476 (src/rules/object_naming.ts:128:5): condition must be bool",
+        "node 229521 (src/rules/remove_descriptions.ts:124:11): call argument type mismatch: string <- dynamic in runtime .",
+        "node 229548 (src/rules/remove_descriptions.ts:132:7): call argument type mismatch: string <- dynamic in runtime ."
+      ]
+    }
+  },
+  "defaultOutput": {
+    "targets": "all,go",
+    "sameOutputPath": true,
+    "differenceBytes": 0,
+    "includes": "Go sources and binary, ABAP sources, source maps, README files and abapGit zip"
+  },
+  "originalWholeSuiteReference": {
+    "total": 11092,
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "provenance": "First fresh original-Node full run; reused for both compilers after checking pin, exhaustive roots and title multiset. Later timeout-only attempts retained separately."
+  },
+  "focused": {
+    "before": {
+      "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+      "codeCommit": "dcabc8f26873f5b28c003a0ee801093155f9b306",
+      "mainCommit": "0693e013512d36c5c76b3d4c5820f33509a2978e",
+      "artifacts": "/tmp/abapiti-test-shards/all-REbd0B",
+      "artifactPrefix": "",
+      "shards": [
+        {
+          "name": "objects",
+          "files": 26,
+          "passed": 98,
+          "failed": 0,
+          "trapped": 46,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 145,
+          "total": 145,
+          "node": {
+            "passed": 144,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unmatched": 0,
+          "initialization": [],
+          "failures": []
+        }
+      ],
+      "uniqueTotal": {
+        "passed": 98,
+        "failed": 0,
+        "trapped": 46,
+        "asyncPending": 0,
+        "notRun": 1,
+        "registered": 145,
+        "total": 145,
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "nodeTotal": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1,
+        "total": 145
+      },
+      "selectedSuite": {
+        "shards": [
+          "objects"
+        ],
+        "files": 26,
+        "excluded": [
+          "test/abap/_utils.ts",
+          "test/abap/abap_parser.ts",
+          "test/abap/ast.ts",
+          "test/abap/builtin.ts",
+          "test/abap/combi.ts",
+          "test/abap/combi_size.ts",
+          "test/abap/concat_tokens.ts",
+          "test/abap/cross_object_macros.ts",
+          "test/abap/expressions/_ast_utils.ts",
+          "test/abap/expressions/field_sub.ts",
+          "test/abap/expressions/reuse.ts",
+          "test/abap/expressions/select.ts",
+          "test/abap/expressions/source.ts",
+          "test/abap/expressions/sql_compare.ts",
+          "test/abap/expressions/sql_from.ts",
+          "test/abap/expressions/sql_in.ts",
+          "test/abap/expressions/sql_into.ts",
+          "test/abap/expressions/sql_set_op.ts",
+          "test/abap/expressions/string_template.ts",
+          "test/abap/find_global_definitions.ts",
+          "test/abap/lexer/count.ts",
+          "test/abap/lexer/lexer.ts",
+          "test/abap/lexer/type.ts",
+          "test/abap/macros.ts",
+          "test/abap/macros_via_include.ts",
+          "test/abap/native_sql_colon.ts",
+          "test/abap/nesting.ts",
+          "test/abap/nodes/structure_node.ts",
+          "test/abap/qualified_name.ts",
+          "test/abap/sql_path_ast.ts",
+          "test/abap/statement_parser.ts",
+          "test/abap/statements/add.ts",
+          "test/abap/statements/add_corresponding.ts",
+          "test/abap/statements/aliases.ts",
+          "test/abap/statements/append.ts",
+          "test/abap/statements/assert.ts",
+          "test/abap/statements/assign.ts",
+          "test/abap/statements/assign_local_copy.ts",
+          "test/abap/statements/at.ts",
+          "test/abap/statements/at_first.ts",
+          "test/abap/statements/at_last.ts",
+          "test/abap/statements/at_line_selection.ts",
+          "test/abap/statements/at_pf.ts",
+          "test/abap/statements/at_selection_screen.ts",
+          "test/abap/statements/at_user_command.ts",
+          "test/abap/statements/authority_check.ts",
+          "test/abap/statements/back.ts",
+          "test/abap/statements/break.ts",
+          "test/abap/statements/break_id.ts",
+          "test/abap/statements/call.ts",
+          "test/abap/statements/call_badi.ts",
+          "test/abap/statements/call_database.ts",
+          "test/abap/statements/call_dialog.ts",
+          "test/abap/statements/call_function.ts",
+          "test/abap/statements/call_kernel.ts",
+          "test/abap/statements/call_ole.ts",
+          "test/abap/statements/call_screen.ts",
+          "test/abap/statements/call_selection_screen.ts",
+          "test/abap/statements/call_subscreen.ts",
+          "test/abap/statements/call_transaction.ts",
+          "test/abap/statements/call_transformation.ts",
+          "test/abap/statements/case.ts",
+          "test/abap/statements/case_type.ts",
+          "test/abap/statements/catch.ts",
+          "test/abap/statements/catch_system_exceptions.ts",
+          "test/abap/statements/chain.ts",
+          "test/abap/statements/check.ts",
+          "test/abap/statements/check_select_options.ts",
+          "test/abap/statements/class_data.ts",
+          "test/abap/statements/class_data_begin.ts",
+          "test/abap/statements/class_deferred.ts",
+          "test/abap/statements/class_definition.ts",
+          "test/abap/statements/class_definition_load.ts",
+          "test/abap/statements/class_implementation.ts",
+          "test/abap/statements/class_local_friends.ts",
+          "test/abap/statements/cleanup.ts",
+          "test/abap/statements/clear.ts",
+          "test/abap/statements/close_cursor.ts",
+          "test/abap/statements/close_dataset.ts",
+          "test/abap/statements/collect.ts",
+          "test/abap/statements/commit.ts",
+          "test/abap/statements/commit_entities.ts",
+          "test/abap/statements/communication.ts",
+          "test/abap/statements/compute.ts",
+          "test/abap/statements/concatenate.ts",
+          "test/abap/statements/condense.ts",
+          "test/abap/statements/constant_begin.ts",
+          "test/abap/statements/constant_end.ts",
+          "test/abap/statements/constants.ts",
+          "test/abap/statements/contexts.ts",
+          "test/abap/statements/continue.ts",
+          "test/abap/statements/controls.ts",
+          "test/abap/statements/convert.ts",
+          "test/abap/statements/convert_text.ts",
+          "test/abap/statements/create_data.ts",
+          "test/abap/statements/create_object.ts",
+          "test/abap/statements/create_ole.ts",
+          "test/abap/statements/data.ts",
+          "test/abap/statements/data_begin.ts",
+          "test/abap/statements/data_end.ts",
+          "test/abap/statements/define.ts",
+          "test/abap/statements/delete_cluster.ts",
+          "test/abap/statements/delete_database.ts",
+          "test/abap/statements/delete_dataset.ts",
+          "test/abap/statements/delete_dynpro.ts",
+          "test/abap/statements/delete_internal.ts",
+          "test/abap/statements/delete_memory.ts",
+          "test/abap/statements/delete_report.ts",
+          "test/abap/statements/delete_textpool.ts",
+          "test/abap/statements/demand.ts",
+          "test/abap/statements/describe.ts",
+          "test/abap/statements/detail.ts",
+          "test/abap/statements/do.ts",
+          "test/abap/statements/dynpro_loop.ts",
+          "test/abap/statements/editor_call.ts",
+          "test/abap/statements/end_chain.ts",
+          "test/abap/statements/end_enhancement.ts",
+          "test/abap/statements/end_enhancement_section.ts",
+          "test/abap/statements/end_of_page.ts",
+          "test/abap/statements/end_of_selection.ts",
+          "test/abap/statements/endcatch.ts",
+          "test/abap/statements/enddefine.ts",
+          "test/abap/statements/endexec.ts",
+          "test/abap/statements/endmodule.ts",
+          "test/abap/statements/endon.ts",
+          "test/abap/statements/endprovide.ts",
+          "test/abap/statements/enhancement.ts",
+          "test/abap/statements/enhancement_point.ts",
+          "test/abap/statements/enhancement_section.ts",
+          "test/abap/statements/events.ts",
+          "test/abap/statements/exec_sql.ts",
+          "test/abap/statements/exit.ts",
+          "test/abap/statements/export.ts",
+          "test/abap/statements/export_dynpro.ts",
+          "test/abap/statements/extract.ts",
+          "test/abap/statements/fetch_next_cursor.ts",
+          "test/abap/statements/field.ts",
+          "test/abap/statements/field_group.ts",
+          "test/abap/statements/fields.ts",
+          "test/abap/statements/fieldsymbol.ts",
+          "test/abap/statements/file_enum.ts",
+          "test/abap/statements/find.ts",
+          "test/abap/statements/form.ts",
+          "test/abap/statements/form_definition.ts",
+          "test/abap/statements/format.ts",
+          "test/abap/statements/free.ts",
+          "test/abap/statements/free_memory.ts",
+          "test/abap/statements/free_object.ts",
+          "test/abap/statements/function_pool.ts",
+          "test/abap/statements/generate_dynpro.ts",
+          "test/abap/statements/generate_report.ts",
+          "test/abap/statements/generate_subroutine.ts",
+          "test/abap/statements/get.ts",
+          "test/abap/statements/get_badi.ts",
+          "test/abap/statements/get_bit.ts",
+          "test/abap/statements/get_cursor.ts",
+          "test/abap/statements/get_dataset.ts",
+          "test/abap/statements/get_locale.ts",
+          "test/abap/statements/get_parameter.ts",
+          "test/abap/statements/get_permissions.ts",
+          "test/abap/statements/get_pf_status.ts",
+          "test/abap/statements/get_property.ts",
+          "test/abap/statements/get_reference.ts",
+          "test/abap/statements/get_run_time.ts",
+          "test/abap/statements/get_time.ts",
+          "test/abap/statements/hide.ts",
+          "test/abap/statements/if.ts",
+          "test/abap/statements/import.ts",
+          "test/abap/statements/import_dynpro.ts",
+          "test/abap/statements/import_nametab.ts",
+          "test/abap/statements/include.ts",
+          "test/abap/statements/include_type.ts",
+          "test/abap/statements/infotypes.ts",
+          "test/abap/statements/initialization.ts",
+          "test/abap/statements/input.ts",
+          "test/abap/statements/insert_database.ts",
+          "test/abap/statements/insert_field_group.ts",
+          "test/abap/statements/insert_internal.ts",
+          "test/abap/statements/insert_report.ts",
+          "test/abap/statements/insert_textpool.ts",
+          "test/abap/statements/interface.ts",
+          "test/abap/statements/interface_def.ts",
+          "test/abap/statements/interface_deferred.ts",
+          "test/abap/statements/leave.ts",
+          "test/abap/statements/load_of_program.ts",
+          "test/abap/statements/load_report.ts",
+          "test/abap/statements/local.ts",
+          "test/abap/statements/log_point.ts",
+          "test/abap/statements/loop.ts",
+          "test/abap/statements/loop_at_screen.ts",
+          "test/abap/statements/loop_extract.ts",
+          "test/abap/statements/merge_database.ts",
+          "test/abap/statements/message.ts",
+          "test/abap/statements/method.ts",
+          "test/abap/statements/method_def.ts",
+          "test/abap/statements/modify_database.ts",
+          "test/abap/statements/modify_entities.ts",
+          "test/abap/statements/modify_internal.ts",
+          "test/abap/statements/modify_line.ts",
+          "test/abap/statements/modify_screen.ts",
+          "test/abap/statements/module.ts",
+          "test/abap/statements/move.ts",
+          "test/abap/statements/move_corresponding.ts",
+          "test/abap/statements/new_line.ts",
+          "test/abap/statements/new_page.ts",
+          "test/abap/statements/nodes.ts",
+          "test/abap/statements/on_change.ts",
+          "test/abap/statements/open_cursor.ts",
+          "test/abap/statements/open_dataset.ts",
+          "test/abap/statements/overlay.ts",
+          "test/abap/statements/pack.ts",
+          "test/abap/statements/parameter.ts",
+          "test/abap/statements/perform.ts",
+          "test/abap/statements/position.ts",
+          "test/abap/statements/print_control.ts",
+          "test/abap/statements/process_after_input.ts",
+          "test/abap/statements/process_before_output.ts",
+          "test/abap/statements/process_on_help_request.ts",
+          "test/abap/statements/process_on_value_request.ts",
+          "test/abap/statements/program.ts",
+          "test/abap/statements/provide.ts",
+          "test/abap/statements/put.ts",
+          "test/abap/statements/raise.ts",
+          "test/abap/statements/raise_entity_event.ts",
+          "test/abap/statements/raise_event.ts",
+          "test/abap/statements/ranges.ts",
+          "test/abap/statements/read_dataset.ts",
+          "test/abap/statements/read_entities.ts",
+          "test/abap/statements/read_line.ts",
+          "test/abap/statements/read_report.ts",
+          "test/abap/statements/read_table.ts",
+          "test/abap/statements/read_textpool.ts",
+          "test/abap/statements/receive.ts",
+          "test/abap/statements/refresh.ts",
+          "test/abap/statements/refresh_control.ts",
+          "test/abap/statements/reject.ts",
+          "test/abap/statements/replace.ts",
+          "test/abap/statements/report.ts",
+          "test/abap/statements/reserve.ts",
+          "test/abap/statements/resume.ts",
+          "test/abap/statements/rollback.ts",
+          "test/abap/statements/scan.ts",
+          "test/abap/statements/scroll_list.ts",
+          "test/abap/statements/search.ts",
+          "test/abap/statements/select.ts",
+          "test/abap/statements/select_loop.ts",
+          "test/abap/statements/selectionscreen.ts",
+          "test/abap/statements/selectoption.ts",
+          "test/abap/statements/set_bit.ts",
+          "test/abap/statements/set_blank.ts",
+          "test/abap/statements/set_country.ts",
+          "test/abap/statements/set_cursor.ts",
+          "test/abap/statements/set_dataset.ts",
+          "test/abap/statements/set_extended_check.ts",
+          "test/abap/statements/set_handler.ts",
+          "test/abap/statements/set_language.ts",
+          "test/abap/statements/set_left.ts",
+          "test/abap/statements/set_locale.ts",
+          "test/abap/statements/set_locks.ts",
+          "test/abap/statements/set_margin.ts",
+          "test/abap/statements/set_parameter.ts",
+          "test/abap/statements/set_pf_status.ts",
+          "test/abap/statements/set_property.ts",
+          "test/abap/statements/set_run_time.ts",
+          "test/abap/statements/set_screen.ts",
+          "test/abap/statements/set_titlebar.ts",
+          "test/abap/statements/set_update_task.ts",
+          "test/abap/statements/set_user_command.ts",
+          "test/abap/statements/shift.ts",
+          "test/abap/statements/skip.ts",
+          "test/abap/statements/sort.ts",
+          "test/abap/statements/sort_dataset.ts",
+          "test/abap/statements/split.ts",
+          "test/abap/statements/start_of_selection.ts",
+          "test/abap/statements/static.ts",
+          "test/abap/statements/static_begin.ts",
+          "test/abap/statements/static_end.ts",
+          "test/abap/statements/stop.ts",
+          "test/abap/statements/submit.ts",
+          "test/abap/statements/subtract.ts",
+          "test/abap/statements/subtract_corresponding.ts",
+          "test/abap/statements/sum.ts",
+          "test/abap/statements/summary.ts",
+          "test/abap/statements/supply.ts",
+          "test/abap/statements/suppress_dialog.ts",
+          "test/abap/statements/syntax_check.ts",
+          "test/abap/statements/system_call.ts",
+          "test/abap/statements/tables.ts",
+          "test/abap/statements/test_injection.ts",
+          "test/abap/statements/test_seam.ts",
+          "test/abap/statements/top_of_page.ts",
+          "test/abap/statements/transfer.ts",
+          "test/abap/statements/translate.ts",
+          "test/abap/statements/truncate_dataset.ts",
+          "test/abap/statements/type.ts",
+          "test/abap/statements/type_begin.ts",
+          "test/abap/statements/type_end.ts",
+          "test/abap/statements/type_enum.ts",
+          "test/abap/statements/type_enum_begin.ts",
+          "test/abap/statements/type_enum_end.ts",
+          "test/abap/statements/type_mesh.ts",
+          "test/abap/statements/type_pool.ts",
+          "test/abap/statements/type_pools.ts",
+          "test/abap/statements/uline.ts",
+          "test/abap/statements/unassign.ts",
+          "test/abap/statements/unpack.ts",
+          "test/abap/statements/update_database.ts",
+          "test/abap/statements/verification_message.ts",
+          "test/abap/statements/wait.ts",
+          "test/abap/statements/when.ts",
+          "test/abap/statements/when_others.ts",
+          "test/abap/statements/when_type.ts",
+          "test/abap/statements/while.ts",
+          "test/abap/statements/window.ts",
+          "test/abap/statements/with.ts",
+          "test/abap/statements/with_large.ts",
+          "test/abap/statements/write.ts",
+          "test/abap/structure_errors.ts",
+          "test/abap/structures/_combi.ts",
+          "test/abap/structures/any.ts",
+          "test/abap/structures/case.ts",
+          "test/abap/structures/catch_system_exceptions.ts",
+          "test/abap/structures/chain.ts",
+          "test/abap/structures/class_data.ts",
+          "test/abap/structures/class_definition.ts",
+          "test/abap/structures/class_global.ts",
+          "test/abap/structures/class_implementation.ts",
+          "test/abap/structures/constants.ts",
+          "test/abap/structures/data.ts",
+          "test/abap/structures/define.ts",
+          "test/abap/structures/do.ts",
+          "test/abap/structures/dynpro_logic.ts",
+          "test/abap/structures/exec_sql.ts",
+          "test/abap/structures/form.ts",
+          "test/abap/structures/if.ts",
+          "test/abap/structures/interface.ts",
+          "test/abap/structures/interface_global.ts",
+          "test/abap/structures/loop.ts",
+          "test/abap/structures/loop_at_screen.ts",
+          "test/abap/structures/method.ts",
+          "test/abap/structures/on_change.ts",
+          "test/abap/structures/select.ts",
+          "test/abap/structures/try.ts",
+          "test/abap/structures/type_enum.ts",
+          "test/abap/structures/types.ts",
+          "test/abap/structures/when_type.ts",
+          "test/abap/structures/while.ts",
+          "test/abap/structures/with.ts",
+          "test/abap/syntax/basic_types.ts",
+          "test/abap/syntax/basic_variables.ts",
+          "test/abap/syntax/fugr_import_export.ts",
+          "test/abap/syntax/modify.ts",
+          "test/abap/syntax/spaghetti_scope.ts",
+          "test/abap/syntax/syntax.ts",
+          "test/abap/syntax/syntax_atselection.ts",
+          "test/abap/syntax/when_type.ts",
+          "test/abap/types/class_definition.ts",
+          "test/abap/types/form_definition.ts",
+          "test/abap/types/interface_definition.ts",
+          "test/abap/types/message.ts",
+          "test/abap/types/method_parameters.ts",
+          "test/abap/types/types.ts",
+          "test/abap/unknown.ts",
+          "test/artifacts_objects.ts",
+          "test/cds/cds_lexer.ts",
+          "test/cds/cds_parser.ts",
+          "test/config.ts",
+          "test/ddic_references.ts",
+          "test/ddic_references_top.ts",
+          "test/ddl/tabl.ts",
+          "test/edit_helper.ts",
+          "test/get_abap.ts",
+          "test/lsp/_apply_edit.ts",
+          "test/lsp/code_lens.ts",
+          "test/lsp/definition.ts",
+          "test/lsp/diagnostics.ts",
+          "test/lsp/formatting.ts",
+          "test/lsp/help.ts",
+          "test/lsp/highlight.ts",
+          "test/lsp/hover.ts",
+          "test/lsp/implementation.ts",
+          "test/lsp/inlay_hints.ts",
+          "test/lsp/references.ts",
+          "test/lsp/rename_global_class.ts",
+          "test/lsp/rename_method.ts",
+          "test/lsp/rename_variable.ts",
+          "test/lsp/semantic.ts",
+          "test/lsp/symbols.ts",
+          "test/msag_references.ts",
+          "test/objects/rename/rename_data_element.ts",
+          "test/objects/rename/rename_domain.ts",
+          "test/objects/rename/rename_global_class.ts",
+          "test/objects/rename/rename_global_interface.ts",
+          "test/objects/rename/rename_icf_service.ts",
+          "test/objects/rename/rename_message_class.ts",
+          "test/objects/rename/rename_program.ts",
+          "test/objects/rename/rename_table.ts",
+          "test/objects/rename/rename_table_type.ts",
+          "test/pretty_printer/pretty_printer.ts",
+          "test/registry.ts",
+          "test/rules/7bit_ascii.ts",
+          "test/rules/_utils.ts",
+          "test/rules/abapdoc.ts",
+          "test/rules/add_test_attributes.ts",
+          "test/rules/aff_and_xml.ts",
+          "test/rules/align_parameters.ts",
+          "test/rules/align_pseudo_comments.ts",
+          "test/rules/align_type_expressions.ts",
+          "test/rules/allowed_object_naming.ts",
+          "test/rules/ambiguous_statement.ts",
+          "test/rules/avoid_use.ts",
+          "test/rules/begin_end_names.ts",
+          "test/rules/begin_single_include.ts",
+          "test/rules/call_transaction_authority_check.ts",
+          "test/rules/catch_and_raise.ts",
+          "test/rules/cds_association_name.ts",
+          "test/rules/cds_check_syntax.ts",
+          "test/rules/cds_comment_style.ts",
+          "test/rules/cds_field_order.ts",
+          "test/rules/cds_legacy_view.ts",
+          "test/rules/cds_naming.ts",
+          "test/rules/cds_parser_error.ts",
+          "test/rules/chain_mainly_declarations.ts",
+          "test/rules/change_if_to_case.ts",
+          "test/rules/check_abstract.ts",
+          "test/rules/check_comments.ts",
+          "test/rules/check_ddic.ts",
+          "test/rules/check_include.ts",
+          "test/rules/check_subrc.ts",
+          "test/rules/check_syntax.ts",
+          "test/rules/check_text_elements.ts",
+          "test/rules/check_transformation_exists.ts",
+          "test/rules/class_attribute_names.ts",
+          "test/rules/classic_exceptions_overlap.ts",
+          "test/rules/clear_exporting_parameters.ts",
+          "test/rules/cloud_types.ts",
+          "test/rules/colon_missing_space.ts",
+          "test/rules/commented_code.ts",
+          "test/rules/constant_classes.ts",
+          "test/rules/constructor_visibility_public.ts",
+          "test/rules/contains_tab.ts",
+          "test/rules/cyclic_oo.ts",
+          "test/rules/cyclomatic_complexity.ts",
+          "test/rules/dangerous_statement.ts",
+          "test/rules/db_operation_in_loop.ts",
+          "test/rules/definitions_top.ts",
+          "test/rules/description_empty.ts",
+          "test/rules/double_space.ts",
+          "test/rules/downport.ts",
+          "test/rules/dynpro_checks.ts",
+          "test/rules/easy_to_find_messages.ts",
+          "test/rules/empty_event.ts",
+          "test/rules/empty_line_in_statement.ts",
+          "test/rules/empty_statement.ts",
+          "test/rules/empty_structure.ts",
+          "test/rules/exit_or_check.ts",
+          "test/rules/expand_macros.ts",
+          "test/rules/exporting.ts",
+          "test/rules/forbidden_identifier.ts",
+          "test/rules/forbidden_pseudo_and_pragma.ts",
+          "test/rules/forbidden_void_type.ts",
+          "test/rules/form_tables_obsolete.ts",
+          "test/rules/fully_type_constants.ts",
+          "test/rules/fully_type_itabs.ts",
+          "test/rules/function_module_recommendations.ts",
+          "test/rules/functional_writing.ts",
+          "test/rules/global_class.ts",
+          "test/rules/identical_conditions.ts",
+          "test/rules/identical_contents.ts",
+          "test/rules/identical_descriptions.ts",
+          "test/rules/identical_form_names.ts",
+          "test/rules/identical_move.ts",
+          "test/rules/if_in_if.ts",
+          "test/rules/implement_methods.ts",
+          "test/rules/implicit_start_of_selection.ts",
+          "test/rules/in_statement_indentation.ts",
+          "test/rules/indentation.ts",
+          "test/rules/index_completely_contained.ts",
+          "test/rules/inline_data_old_versions.ts",
+          "test/rules/intf_referencing_clas.ts",
+          "test/rules/invalid_table_index.ts",
+          "test/rules/keep_single_parameter_on_one_line.ts",
+          "test/rules/keyword_case.ts",
+          "test/rules/line_break_multiple_parameters.ts",
+          "test/rules/line_break_style.ts",
+          "test/rules/line_length.ts",
+          "test/rules/line_only_punc.ts",
+          "test/rules/local_class_naming.ts",
+          "test/rules/local_testclass_consistency.ts",
+          "test/rules/local_variable_names.ts",
+          "test/rules/macro_naming.ts",
+          "test/rules/main_file_contents.ts",
+          "test/rules/many_parentheses.ts",
+          "test/rules/max_one_method_parameter_per_line.ts",
+          "test/rules/max_one_statement.ts",
+          "test/rules/message_exists.ts",
+          "test/rules/method_implemented_twice.ts",
+          "test/rules/method_length.ts",
+          "test/rules/method_overwrites_builtin.ts",
+          "test/rules/method_parameter_names.ts",
+          "test/rules/mix_returning.ts",
+          "test/rules/modify_only_own_db_tables.ts",
+          "test/rules/msag_consistency.ts",
+          "test/rules/names_no_dash.ts",
+          "test/rules/nesting.ts",
+          "test/rules/newline_between_methods.ts",
+          "test/rules/no_aliases.ts",
+          "test/rules/no_chained_assignment.ts",
+          "test/rules/no_comments_between_methods.ts",
+          "test/rules/no_dynamic_stuff.ts",
+          "test/rules/no_exclamation_escape.ts",
+          "test/rules/no_external_form_calls.ts",
+          "test/rules/no_inline_in_optional_branches.ts",
+          "test/rules/no_macros.ts",
+          "test/rules/no_mandt_in_database_operations.ts",
+          "test/rules/no_prefixes.ts",
+          "test/rules/no_public_attributes.ts",
+          "test/rules/no_yoda_conditions.ts",
+          "test/rules/object_naming.ts",
+          "test/rules/obsolete_statement.ts",
+          "test/rules/omit_parameter_name.ts",
+          "test/rules/omit_preceding_zeros.ts",
+          "test/rules/omit_receiving.ts",
+          "test/rules/parser_702_chaining.ts",
+          "test/rules/parser_bad_exceptions.ts",
+          "test/rules/parser_error.ts",
+          "test/rules/parser_missing_space.ts",
+          "test/rules/pragma_style.ts",
+          "test/rules/prefer_abap_bool.ts",
+          "test/rules/prefer_corresponding.ts",
+          "test/rules/prefer_inline.ts",
+          "test/rules/prefer_insert_into_table.ts",
+          "test/rules/prefer_is_not.ts",
+          "test/rules/prefer_pragmas.ts",
+          "test/rules/prefer_raise_exception_new.ts",
+          "test/rules/prefer_returning_to_exporting.ts",
+          "test/rules/prefer_xsdbool.ts",
+          "test/rules/preferred_compare_operator.ts",
+          "test/rules/prefix_is_current_class.ts",
+          "test/rules/reduce_procedural_code.ts",
+          "test/rules/reduce_string_templates.ts",
+          "test/rules/redundant_conversion.ts",
+          "test/rules/release_idoc.ts",
+          "test/rules/remove_descriptions.ts",
+          "test/rules/rfc_error_handling.ts",
+          "test/rules/select_add_order_by.ts",
+          "test/rules/select_performance.ts",
+          "test/rules/select_single_full_key.ts",
+          "test/rules/selection_screen_naming.ts",
+          "test/rules/selection_screen_texts_missing.ts",
+          "test/rules/sequential_blank.ts",
+          "test/rules/short_case.ts",
+          "test/rules/sicf_consistency.ts",
+          "test/rules/slow_parameter_passing.ts",
+          "test/rules/smim_consistency.ts",
+          "test/rules/space_before_colon.ts",
+          "test/rules/space_before_dot.ts",
+          "test/rules/sql_escape_host_variables.ts",
+          "test/rules/sql_value_conversion.ts",
+          "test/rules/start_at_tab.ts",
+          "test/rules/static_call_via_instance.ts",
+          "test/rules/strict_sql.ts",
+          "test/rules/superclass_final.ts",
+          "test/rules/superfluous_value.ts",
+          "test/rules/sy_modification.ts",
+          "test/rules/sy_read_restriction.ts",
+          "test/rules/tables_declared_locally.ts",
+          "test/rules/try_without_catch.ts",
+          "test/rules/type_begin_single_include.ts",
+          "test/rules/type_form_parameters.ts",
+          "test/rules/types_naming.ts",
+          "test/rules/uncaught_exception.ts",
+          "test/rules/unknown_types.ts",
+          "test/rules/unnecessary_chaining.ts",
+          "test/rules/unnecessary_pragma.ts",
+          "test/rules/unnecessary_return.ts",
+          "test/rules/unreachable_code.ts",
+          "test/rules/unsecure_fae.ts",
+          "test/rules/unused_ddic.ts",
+          "test/rules/unused_macros.ts",
+          "test/rules/unused_methods.ts",
+          "test/rules/unused_types.ts",
+          "test/rules/unused_variables.ts",
+          "test/rules/use_bool_expression.ts",
+          "test/rules/use_class_based_exceptions.ts",
+          "test/rules/use_line_exists.ts",
+          "test/rules/use_new.ts",
+          "test/rules/when_others_last.ts",
+          "test/rules/whitespace_end.ts",
+          "test/rules/wrong_abapdoc_position.ts",
+          "test/rules/xml_bom.ts",
+          "test/rules/xml_consistency.ts",
+          "test/serialization.ts",
+          "test/severity.ts",
+          "test/skip_logic.ts",
+          "test/utils/cyclomatic_complexity_stats.ts",
+          "test/utils/method_length_stats.ts",
+          "test/utils/name_validator.ts",
+          "test/version.ts"
+        ],
+        "active": 144
+      },
+      "countingRule": "Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.",
+      "asyncInitializationFailures": 0,
+      "registrationParity": true,
+      "top20Traps": [
+        {
+          "message": "unsupported-array src/objects/domain.ts: empty array literal outside a statement context; unsupported-array src/objects/domain.ts: empty array literal outside a statement context",
+          "count": 13,
+          "shards": {
+            "objects": 13
+          },
+          "example": "src/objects/domain.ts:100:3: lowering trap: unsupported-array src/objects/domain.ts:114:56: empty array literal outside a statement context; unsupported-array src/objects/domain.ts:122:62: empty array literal outside a statement context"
+        },
+        {
+          "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+          "count": 5,
+          "shards": {
+            "objects": 5
+          },
+          "example": "src/objects/_abap_object.ts:126:3: lowering trap: src/objects/_abap_object.ts:126:3: HIR verification: node 166346 (src/objects/_abap_object.ts:148:11): call argument type mismatch: string <- dynamic in runtime ."
+        },
+        {
+          "message": "test/objects/table.ts: HIR verification: assignment type mismatch",
+          "count": 4,
+          "shards": {
+            "objects": 4
+          },
+          "example": "test/objects/table.ts:894:46: lowering trap: test/objects/table.ts:894:46: HIR verification: node 36578 (test/objects/table.ts:950:11): assignment type mismatch"
+        },
+        {
+          "message": "test/objects/data_element.ts: config JSON own-property order is unproven for shape.ab52cdf98c95f84f6599e72bb9b12ba345f6fa171688e63718d6287098872783",
+          "count": 3,
+          "shards": {
+            "objects": 3
+          },
+          "example": "test/objects/data_element.ts:17:1: config JSON own-property order is unproven for shape.ab52cdf98c95f84f6599e72bb9b12ba345f6fa171688e63718d6287098872783"
+        },
+        {
+          "message": "unsupported-closure test/objects/malformed_xml.ts: captured wrapValues has no lowered type",
+          "count": 3,
+          "shards": {
+            "objects": 3
+          },
+          "example": "test/objects/malformed_xml.ts:71:49: lowering trap: unsupported-closure test/objects/malformed_xml.ts:71:49: captured wrapValues has no lowered type"
+        },
+        {
+          "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "src/objects/_abstract_object.ts:134:3: input is outside the reviewed abapGit XML subset"
+        },
+        {
+          "message": "src/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "test/objects/table_type.ts: HIR verification: assignment type mismatch",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "test/objects/table_type.ts:239:41: lowering trap: test/objects/table_type.ts:239:41: HIR verification: node 37335 (test/objects/table_type.ts:320:11): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-array test/objects/malformed_xml.ts: empty array literal outside a statement context; unsupported-array test/objects/malformed_xml.ts: empty array literal outside a statement context; unsupported-array test/objects/malformed_xml.ts: empty array literal outside a statement context",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "test/objects/malformed_xml.ts:45:56: lowering trap: unsupported-array test/objects/malformed_xml.ts:58:62: empty array literal outside a statement context; unsupported-array test/objects/malformed_xml.ts:60:53: empty array literal outside a statement context; unsupported-array test/objects/malformed_xml.ts:62:70: empty array literal outside a statement context"
+        },
+        {
+          "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/proxy_object.ts:70:3: lowering trap: src/objects/proxy_object.ts:70:3: HIR verification: node 175956 (src/objects/proxy_object.ts:81:5): assignment type mismatch"
+        },
+        {
+          "message": "src/registry.ts: unreviewed JavaScript regexp //i",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/registry.ts:196:3: unreviewed JavaScript regexp //i"
+        },
+        {
+          "message": "test/objects/data_definition.ts: HIR verification: assignment type mismatch",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/data_definition.ts:270:27: lowering trap: test/objects/data_definition.ts:270:27: HIR verification: node 31262 (test/objects/data_definition.ts:337:11): assignment type mismatch"
+        },
+        {
+          "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-array test/objects/malformed_xml.ts: empty array literal outside a statement context",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/malformed_xml.ts:143:53: lowering trap: unsupported-array test/objects/malformed_xml.ts:151:59: empty array literal outside a statement context"
+        },
+        {
+          "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/number_range.ts:36:3: lowering trap: unsupported-call src/objects/number_range.ts:51:33: call to KindIdentifier is not lowered"
+        },
+        {
+          "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/table.ts:132:56: lowering trap: unsupported-call test/objects/table.ts:141:7: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts:143:12: method getComponents on classref is not lowered"
+        },
+        {
+          "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/table.ts:701:39: lowering trap: unsupported-call test/objects/table.ts:733:7: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts:735:24: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts:736:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:737:12: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/table.ts:740:19: lowering trap: unsupported-call test/objects/table.ts:808:7: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts:810:24: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts:811:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:812:12: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:813:12: identifier components is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value; unsupported-assignment test/objects/table.ts: assignment to found is not lowered; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/table.ts:1103:24: lowering trap: unsupported-call test/objects/table.ts:1182:7: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts:1184:24: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts:1186:17: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:1186:17: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts:1187:12: identifier found is not a lowered local or module value; unsupported-assignment test/objects/table.ts:1189:5: assignment to found is not lowered; unsupported-expr test/objects/table.ts:1190:12: identifier found is not a lowered local or module value"
+        }
+      ]
+    }
+  },
+  "gates": {
+    "vet": "PASS",
+    "shortTests": "PASS; ABAPITI_GRACECHECK=1, -short -p 8 -timeout 60m",
+    "graceGolden": "PASS in final short gate; exported lexer report previously matched",
+    "backendGuard": "PASS (explicit verbose execution and final short gate)",
+    "lint": "PASS; 0 new issues since 3f94f0e; canary 5/5; golangci-lint 2.13.2",
+    "parallelHarnessTests": "PASS; includes drain-on-FAIL regression",
+    "defaultOutput": "PASS; raw diff -r empty at same output path"
+  }
+}
