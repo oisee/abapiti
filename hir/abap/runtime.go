@@ -19,6 +19,11 @@ func (e *emitter) runtime(t hir.Type) {
 	line := func(s string) { def.WriteString(s + "\n") }
 	method := func(n, s string) { impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n") }
 	switch t.Kind {
+	case hir.Promise:
+		if t.Args[0].Kind != hir.Void {
+			line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
+		}
+		line("DATA rejection TYPE REF TO " + e.promiseExceptionBase() + ".")
 	case hir.Optional:
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
@@ -171,7 +176,11 @@ func (e *emitter) exception(t hir.Type) string {
 	if _, ok := e.files[file]; ok {
 		return name
 	}
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+	base := "cx_no_check"
+	if e.promiseUsed {
+		base = e.promiseExceptionBase()
+	}
+	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 	return name
 }
 

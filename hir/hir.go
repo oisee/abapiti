@@ -6,12 +6,14 @@ import "strings"
 type Kind string
 
 const (
-	Bool         Kind = "bool"
-	Number       Kind = "number"
-	I32          Kind = "i32"
-	I64          Kind = "i64"
-	String       Kind = "string"
-	Optional     Kind = "optional"
+	Bool     Kind = "bool"
+	Number   Kind = "number"
+	I32      Kind = "i32"
+	I64      Kind = "i64"
+	String   Kind = "string"
+	Optional Kind = "optional"
+	// Promise is an already-settled value, never a scheduler or a thenable.
+	Promise      Kind = "promise"
 	ClassRef     Kind = "classref"
 	InterfaceRef Kind = "interfaceref"
 	ClassValue   Kind = "classvalue"
@@ -51,7 +53,7 @@ func (t Type) String() string {
 }
 func (t Type) Equal(u Type) bool { return t.String() == u.String() }
 func (t Type) IsRef() bool {
-	return t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet || t.Kind == RegExp || t.Kind == Dynamic || t.Kind == ClassValue
+	return t.Kind == Promise || t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet || t.Kind == RegExp || t.Kind == Dynamic || t.Kind == ClassValue
 }
 
 type Node struct {
@@ -132,6 +134,9 @@ const (
 	CheckedNumericConvert ExprKind = "checked_numeric_convert"
 	NumericMinMax         ExprKind = "numeric_minmax"
 	RuntimeOp             ExprKind = "runtime"
+	PromiseFulfill        ExprKind = "promise.fulfill"
+	PromiseReject         ExprKind = "promise.reject"
+	PromiseAwait          ExprKind = "promise.await"
 	// ClassOf is the class value of a statically known class (a descriptor
 	// reference at run time).
 	ClassOf ExprKind = "classof"
@@ -175,6 +180,8 @@ const (
 	Trap  StmtKind = "trap"
 	Throw StmtKind = "throw"
 	Try   StmtKind = "try"
+	// Async catches only source-language throws and returns a settled rejection.
+	Async StmtKind = "async"
 	// Finally runs Body, then Else exactly once: after normal completion, or
 	// before re-raising whatever left Body (Body has no return/break/continue).
 	Finally StmtKind = "finally"

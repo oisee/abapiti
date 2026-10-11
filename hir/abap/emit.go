@@ -14,6 +14,7 @@ import (
 )
 
 type emitter struct {
+	promiseUsed  bool
 	p            *hir.Program
 	names        *hir.Names
 	files        map[string]string
@@ -62,6 +63,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 		names = hir.NewReadableNames(p, "LNT")
 	}
 	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
+	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.scanUsage()
 	e.findStaticConstants()
 	e.findConstSets()
@@ -164,6 +166,10 @@ func (e *emitter) typ(t hir.Type) string {
 	case hir.Dynamic:
 		e.dynamicUsed = true
 		return "REF TO " + e.name("runtime.dynamic")
+	case hir.Promise:
+		e.promiseUsed = true
+		e.runtime(t)
+		return "REF TO " + e.name("runtime."+t.String())
 	case hir.Optional:
 		if t.Args[0].IsRef() {
 			return e.typ(t.Args[0])
@@ -686,6 +692,10 @@ func (b *body) expr(x *hir.Expr) string {
 		return ""
 	}
 	e, t := b.e, x.Type
+	if t.Kind == hir.Void && x.Kind == hir.PromiseAwait {
+		b.awaitPromise(x, "")
+		return ""
+	}
 	if t.Kind == hir.Void {
 		if x.Kind == hir.RuntimeOp {
 			// A void runtime operation at statement level (dynamic.put).
@@ -711,6 +721,25 @@ func (b *body) expr(x *hir.Expr) string {
 	}
 	n := b.temp(t)
 	switch x.Kind {
+	case hir.PromiseFulfill:
+		b.line(n + " = NEW #( ).")
+		if x.X != nil && t.Args[0].Kind == hir.Void {
+			b.expr(x.X)
+		} else if x.X != nil {
+			b.line(n + "->value = " + b.value(x.X, t.Args[0]) + ".")
+		}
+	case hir.PromiseReject:
+		v := b.expr(x.X)
+		ex := b.rawTemp("REF TO " + e.exception(x.X.Type))
+		b.line(ex + " = NEW #( ).")
+		b.line(ex + "->payload = " + v + ".")
+		if e.promiseUsed {
+			b.promisePayload(ex+"->source_value", v, x.X.Type)
+		}
+		b.line(n + " = NEW #( ).")
+		b.line(n + "->rejection = " + ex + ".")
+	case hir.PromiseAwait:
+		b.awaitPromise(x, n)
 	case hir.Lit:
 		if x.Value == nil {
 			break
@@ -2128,12 +2157,24 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line(n + " = NEW #( ).")
 		b.line(n + "->source_location = " + b.expr(hir.L(hir.T(hir.String), s.Name)) + ".")
 		b.line("RAISE EXCEPTION " + n + ".")
+	case hir.Async:
+		n := b.rawTemp("REF TO " + e.promiseExceptionBase())
+		b.line("TRY.")
+		b.stmt(s.Body)
+		b.line("CATCH " + e.promiseExceptionBase() + " INTO " + n + ".")
+		b.line("result = NEW #( ).")
+		b.line("result->rejection = " + n + ".")
+		b.line("RETURN.")
+		b.line("ENDTRY.")
 	case hir.Throw:
 		name := e.exception(s.X.Type)
 		n := b.rawTemp("REF TO " + name)
 		v := b.expr(s.X)
 		b.line(n + " = NEW #( ).")
 		b.line(n + "->payload = " + v + ".")
+		if e.promiseUsed {
+			b.promisePayload(n+"->source_value", v, s.X.Type)
+		}
 		b.line("RAISE EXCEPTION " + n + ".")
 	case hir.Finally:
 		// Normal completion runs the finally block after the TRY; anything
@@ -2149,12 +2190,17 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.stmt(s.Else)
 	case hir.Try:
 		name := e.exception(s.Type)
+		value := "payload"
+		if e.promiseUsed && s.Type.Kind == hir.Dynamic {
+			name = e.promiseExceptionBase()
+			value = "source_value"
+		}
 		n := b.rawTemp("REF TO " + name)
 		b.line("TRY.")
 		b.stmt(s.Body)
 		b.line("CATCH " + name + " INTO " + n + ".")
 		v := b.temp(s.Type)
-		b.line(v + " = " + n + "->payload.")
+		b.line(v + " = " + n + "->" + value + ".")
 		old, ok := b.locals[s.Name]
 		b.locals[s.Name] = v
 		b.stmt(s.Else)

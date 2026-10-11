@@ -1237,6 +1237,10 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 		e.Args[i] = p.rewriteExpr(e.Args[i], env, info)
 	}
 	switch e.Kind {
+	case hir.PromiseFulfill:
+		if e.X != nil {
+			e.X = rangeConversion(e.X, e.Type.Args[0], info.exprs[e.X])
+		}
 	case hir.Local:
 		if t, ok := env[e.Name]; ok {
 			e.Type = t

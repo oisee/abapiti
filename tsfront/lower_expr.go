@@ -126,6 +126,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 			x = l.naturalExpr(n)
 		}
 	}
+	if x != nil && !l.settledCallUse(n, x) {
+		x = nil
+	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
 	}
@@ -276,6 +279,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		return matched
 	}
 	switch n.Kind {
+	case ast.KindAwaitExpression:
+		return l.awaitSettled(n)
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
 		// Preflight already diagnosed lone units. Never pass them to HIR,
 		// where ordinary Go rune conversion would irreversibly replace them.
@@ -865,6 +870,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.promiseStatic(n); handled {
+		return x
+	}
 	callee := n.Expression()
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
@@ -1540,6 +1548,10 @@ func (l *lowerer) callArgs(at *ast.Node, args []*ast.Node, params []hir.Param) (
 // newExpression lowers allocations of lowered classes; `new Set([..])` is
 // only allowed in statement contexts (see collectionInit).
 func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
+	if sym := l.resolve(n.Expression()); sym != nil && sym.Name == "Promise" && l.librarySymbol(sym) {
+		l.diagf(n, "unsupported-async", "Promise constructors are refused: executor settlement and deferred resolve require a scheduler")
+		return nil
+	}
 	if x, ok := l.newRegExp(n); ok {
 		return x
 	}

@@ -141,6 +141,9 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		return l.forOfStatement(n)
 	case ast.KindReturnStatement:
 		r := n.AsReturnStatement()
+		if l.asyncMethods[l.method] {
+			return l.asyncReturn(n, r.Expression)
+		}
 		if r.Expression == nil || (l.method != nil && l.method.Result.Kind == hir.Void && isUndefinedKeyword(r.Expression)) {
 			if l.method != nil && l.method.Result.Kind == hir.Optional {
 				return &hir.Stmt{Kind: hir.Return, Node: l.node(n), X: &hir.Expr{Kind: hir.Lit, Type: l.method.Result}}

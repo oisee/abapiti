@@ -61,6 +61,8 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
+		settledEnabled:    coverage == nil,
+		asyncMethods:      map[*hir.Method]bool{},
 		integerOptions:    options,
 		integerExceptions: map[*ast.Node]IntegerException{},
 		floatSites:        map[string]bool{},
@@ -330,6 +332,8 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // state of the pass being run.
 type lowerer struct {
 	lspConstructors   bool
+	settledEnabled    bool
+	asyncMethods      map[*hir.Method]bool
 	integerOptions    LowerOptions
 	integerExceptions map[*ast.Node]IntegerException
 	floatSites        map[string]bool
