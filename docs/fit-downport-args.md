@@ -63,7 +63,7 @@ The original Node oracle is rebuilt from the clean pinned source. The selected
 shard's owned results reconcile exactly with its Node oracle, with zero
 unmatched titles and zero failures. The exhaustive summary correctly rejects a
 selected-shard run; focused evidence records the completed report directly and
-makes no whole-suite Go claim. The full 17-shard branch measurement is running.
+makes no whole-suite Go claim. The full 17-shard branch result follows.
 
 ## Gates
 
@@ -92,3 +92,86 @@ diff -r /tmp/downport-evidence/default-base /tmp/downport-evidence/default-after
 ```
 
 The recursive diff is empty, including the Go executable and packaged ABAP.
+
+## Completed branch tests
+
+[Full 17-shard evidence](fit-downport-args-after.json): **9,573/11,060 active
+tests passed (86.56%), FAIL 0, 1,214 trapped, 305 not-run**. All 625 files and
+17 shards reconcile exactly with the original Node title multiset; no files are
+excluded, no titles are unmatched, and no infrastructure failures remain. Node
+passes 11,060 active tests with 32 pending. Go not-run is 26 skipped/focused plus
+279 unregistered; these are not counted as passes. Async-pending is zero.
+
+| Shard | Passed | FAIL | Trapped | Not-run |
+| --- | ---: | ---: | ---: | ---: |
+| `abap` | 55 | 0 | 26 | 139 |
+| `abap/expressions` | 41 | 0 | 9 | 57 |
+| `abap/lexer` | 200 | 0 | 0 | 0 |
+| `abap/nodes` | 2 | 0 | 0 | 0 |
+| `abap/statements` | 4942 | 0 | 20 | 0 |
+| `abap/structures` | 138 | 0 | 0 | 2 |
+| `abap/syntax` | 1275 | 0 | 49 | 49 |
+| `abap/types` | 21 | 0 | 8 | 0 |
+| `root` | 61 | 0 | 33 | 0 |
+| `cds` | 334 | 0 | 24 | 1 |
+| `ddl` | 4 | 0 | 28 | 0 |
+| `lsp` | 65 | 0 | 123 | 5 |
+| `objects` | 61 | 0 | 83 | 1 |
+| `objects/rename` | 0 | 0 | 31 | 0 |
+| `pretty_printer` | 0 | 0 | 2 | 29 |
+| `rules` | 2366 | 0 | 771 | 22 |
+| `utils` | 8 | 0 | 7 | 0 |
+| **TOTAL** | **9,573** | **0** | **1,214** | **305** |
+
+```sh
+ABAPITI_TESTS_SCRATCH=/tmp/downport-evidence/after-shards \
+  node tools/abaplint-tests-all.mjs ~/.cache/kits/abaplint-577f875e \
+  /tmp/downport-evidence/after-tests.json
+```
+
+The first full attempt reached every shard but had two measurement failures:
+the independent Node statements shard timed out one ADD test at its original
+250 ms limit, and the utils harness exited 2 with a truncated runtime stack.
+A fresh original-source statements oracle passes all 4,962 tests with unchanged
+timeouts. The unchanged compiler freshly lowers/emits/builds/runs utils: eight
+passes, seven typed traps, zero failures. The successful retry records replace
+only those two records, then the **unchanged** exhaustive summary guards pass.
+The first-attempt records are retained in `/tmp/downport-evidence/first-attempt`;
+the utils crash cause is not established. No failing assertion is relabeled.
+
+Retry/reconciliation commands (scripts are disposable, not source edits):
+
+```sh
+node /tmp/downport-evidence/retry-oracle.mjs
+node /tmp/downport-evidence/materialize-utils.mjs
+$AFTER_ABAPITI abaplint-tests /tmp/downport-evidence/utils-retry \
+  -o /tmp/downport-evidence/utils-retry-out
+node tools/abaplint-tests-report.mjs \
+  /tmp/downport-evidence/after-shards/all-Dfi333/node-utils.json \
+  /tmp/downport-evidence/after-shards/all-Dfi333/go-utils.json \
+  /tmp/downport-evidence/after-shards/all-Dfi333/report-utils.json
+node tools/abaplint-tests-summary.mjs \
+  /tmp/downport-evidence/after-shards/all-Dfi333 \
+  /tmp/downport-evidence/after-tests.json
+```
+
+## Case delta and next roots
+
+[Per-title transitions and next-trap evidence](fit-downport-args-cases.json):
+rules **2,301→2,366 passes**, **836→771 traps**, FAIL **0→0**, not-run **22→22**.
+All 2,301 previously passing rules still pass, all original registered titles
+match, and no case becomes failed or not-run.
+
+The argument-mismatch category is **224→0**. Of its 224 original cases,
+**56 now pass** and 168 reach these later refusals:
+
+| Next trap | Cases | Why it remains |
+| --- | ---: | --- |
+| `uniqueName` (`downport.ts:3161`): unlowered `crypto`/`hash` | 140 | The Node `crypto.createHash("sha1").update(...).digest("hex")` value/API has no TS→HIR lowering. Its whole method refuses before the class-definition guard. |
+| `addFix` (`downport.ts:728:20`): unresolved local `fix` | 18 | The lifted callback’s mutable optional edit capture has an unresolved HIR binding. |
+| `outlineNewObject` (`downport.ts:3520`): dynamic `getParameters`, unlowered `importing` | 10 | The method on the dynamic receiver is unsupported; the later locals cascade. |
+
+The whole Downport title group changes from **31 passes / 267 traps / five
+not-run** to **87 passes / 211 traps / five not-run**, with FAIL zero. The same
+general receiver fix also frees **nine ambiguous-statement rule cases** from
+the related narrowing refusal. No source-site exception is introduced.
