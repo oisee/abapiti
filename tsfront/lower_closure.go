@@ -89,7 +89,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	if body == nil {
 		return nil
 	}
-	captures := l.freeLocals(n)
+	captures := l.testFixtureCaptures(n, l.freeLocals(n))
 	usesThis := touchesThis(body)
 	contextThis := l.integerOptions.TrapOnFailure && n.Kind == ast.KindFunctionExpression && usesThis && l.isTestCallback(n)
 	if contextThis {

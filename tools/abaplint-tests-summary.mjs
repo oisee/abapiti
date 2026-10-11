@@ -25,7 +25,7 @@ for (const {id:name, name:label} of specs) {
  const row = {name:label, files:closure.roots.length,
   passed:report.passed, failed:report.failed, trapped:report.trapped, asyncPending:report.asyncPending ?? 0, notRun:report.notRun,
   registered:report.registered, total:report.total, node:{passed:node.passed, failed:node.failed, pending:node.pending},
-  notRunReasons:report.notRunReasons, unmatched:report.unmatched.length,
+  notRunReasons:report.notRunReasons, unregisteredTitles:report.unregisteredTitles ?? [], unmatched:report.unmatched.length,
   initialization:(run.initialization ?? []).map(r => ({...r, action:clean(r.action), message:clean(r.message)})),
   failures:run.results.filter(r => r.status === 'failed').map(r => ({title:r.title, message:clean(r.message).replace(/0x[0-9a-f]+/g,'<address>')}))};
  if (node.borrowed) row.borrowed = {...node.borrowed, registered:run.borrowedRegistered, rawRegistered:run.rawRegistered};

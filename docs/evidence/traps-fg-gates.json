@@ -1,0 +1,73 @@
+{
+  "parents": ["dd140d6", "6a20ee4"],
+  "measuredSemanticCommit": "ac868c0f56d670174ef29c6f6603ee1be9e30361",
+  "finalAmendment": "Certification documentation/evidence only; semantic trees remain identical",
+  "semanticTrees": {
+    "hir": "5db07d2ba79751a8573eb568420cc55b28263e6d",
+    "tsfront": "48288e58d48ce7223dc14520a967c7aef258e668",
+    "tools": "1426ee3c6c93ea30907eb6a89112a48314d4585b",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d"
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "shardNiceness": 10
+  },
+  "passedGates": [
+    "go test ./... -short -timeout=30m",
+    "go test ./tsfront/... ./hir/... ./cmd/... -timeout=30m",
+    "go vet ./...",
+    "node tools/abaplint-tests-report-test.mjs",
+    "node tools/abaplint-tests-all-test.mjs"
+  ],
+  "goldens": {
+    "export": "GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront -run '^TestLexerFactsReport$' -count=1",
+    "exportMatchesCommittedG": true,
+    "lexerFactsSHA256": "7281eb9f30846711b8f9d7aaa59244a9fef1222d144db71ced79ef79125065dd",
+    "goldenDiffs": [],
+    "justification": "One split operation; G already contains the reconciled runtime-catalogue entries. Full Grace tests check the remaining goldens."
+  },
+  "defaultOutput": {
+    "baseline": "origin/feat/fit-traps-g@dd140d6 (compiler built from git archive)",
+    "command": "abapiti abaplint -o <same absolute path> --quiet",
+    "outputPath": "/home/alice/dev/abapiti/.local/worktrees/fg/.local/fg/default",
+    "comparison": "diff -r default-base default",
+    "diffExit": 0,
+    "files": 6312,
+    "aggregateSHA256": "76411d64c34d829aa9387a131ac4edbccd3bf83cb2d712c7b7be447db1679761",
+    "hashEncoding": "sorted relative path + NUL + file bytes",
+    "changedFiles": [],
+    "justification": "No default-output changes, including A4H zip bytes."
+  },
+  "zabapgit": {
+    "kitZipSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "freshOriginalNodeBuild": true,
+    "goEmission": "abapiti abaplint --target go -o <scratch>/go-target --quiet",
+    "independentCheck": "python3 tools/go-target-check.py <kit> <scratch>/go-target/go/zabaplint-go",
+    "directComparison": "cmp fresh-node-{clean,seeded}.txt fresh-go-{clean,seeded}.txt",
+    "clean": {
+      "issues": 0,
+      "nodeGoKitByteIdentical": true,
+      "goSeconds": 8.743,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "seeded": {
+      "issues": 5,
+      "nodeGoKitByteIdentical": true,
+      "goSeconds": 8.870,
+      "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+    }
+  },
+  "fullSuiteEvidence": "traps-fg-final.json",
+  "discardedRuns": "Early gate/test-harness attempts before conflict/test resolution; no Go/Node value mismatch. All final gates use frozen semantic source.",
+  "cleanup": {
+    "retained": "Compact JSON/Markdown only",
+    "discarded": "Archived source/compiler, generated output, binaries, source closures, kit, raw records and logs",
+    "pushed": false,
+    "transpilerCloned": false
+  }
+}

@@ -742,6 +742,13 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Dynamic {
+		// Consume only the existing checked any[] reference adapter. Parsed
+		// arrays share that storage; other iterable/object payloads refuse.
+		// Save the receiver once; ForEach observes its live length/values.
+		array := hir.T(hir.Array, hir.T(hir.Dynamic))
+		x = l.tempInit(f.Expression, array, l.coerce(x, array))
+	}
 	if abi := l.generatorABIFor(x.Type); abi != nil {
 		if decls[0].Name().Kind != ast.KindIdentifier {
 			l.diagf(n, "unsupported-generator", "generator for-of needs an identifier binding")

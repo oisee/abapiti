@@ -21,6 +21,14 @@ try {
  const r=JSON.parse(readFileSync(join(dir,'report.json'),'utf8'));
  assert.deepEqual([r.passed,r.failed,r.trapped,r.asyncPending,r.notRun,r.total],[1,0,2,1,2,6]);
  assert.deepEqual(r.notRunReasons,{asyncOrDone:1,skippedOrFocused:0,unregistered:1});
+ assert.deepEqual(r.unregisteredTitles,['unregistered']);
+ // Missing duplicates are retained as a multiset, including pending titles.
+ const duplicates = {...oracle,total:9,titles:[...oracle.titles,'unregistered','missing pending','missing pending']};
+ writeFileSync(join(dir,'duplicates.json'),JSON.stringify(duplicates));
+ execFileSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-report.mjs'),join(dir,'duplicates.json'),join(dir,'go.json'),join(dir,'duplicates-report.json')]);
+ const dr=JSON.parse(readFileSync(join(dir,'duplicates-report.json'),'utf8'));
+ assert.deepEqual(dr.unregisteredTitles,['unregistered','unregistered','missing pending','missing pending']);
+ assert.equal(dr.notRunReasons.unregistered,4);
  assert.equal(r.unmatched.length,1);
  assert.deepEqual(r.initialization,run.initialization); assert.equal(r.asyncInitializationFailures,1);
  assert.equal(r.topTraps.length,1);assert.equal(r.topTraps[0].count,2);
@@ -35,6 +43,7 @@ try {
  const s=JSON.parse(readFileSync(join(dir,'summary.json'),'utf8'));
  assert.equal(s.uniqueTotal.total,24); assert.equal(s.uniqueTotal.asyncOrDone,4);
  assert.equal(s.uniqueTotal.asyncPending,4); assert.equal(s.uniqueTotal.unregistered,4); assert.equal(s.registrationParity,false);
+ assert.deepEqual(s.shards.map(row=>row.unregisteredTitles),Array(4).fill(['unregistered']));
  assert.equal(s.asyncInitializationFailures,4); assert.equal(s.top20Traps[0].count,8); assert.equal(s.shards.length,4);
  console.log('report multiset, async, unregistered, unmatched, four-shard summary, trap ranking: ok');
 } finally {rmSync(dir,{recursive:true,force:true});}

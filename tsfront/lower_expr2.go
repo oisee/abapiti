@@ -395,6 +395,11 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 	if p == nil {
 		return nil, true
 	}
+	if l.unprunedFeatures && p.Type.Kind == hir.Dynamic {
+		// Config/indexed reads erase a real string payload. Use the existing
+		// checked scalar unbox; RegExp/object/coercible payloads still refuse.
+		p = l.coerce(p, hir.T(hir.String))
+	}
 	if p.Type.Kind != hir.String {
 		l.diagf(args[0], "unsupported-regex", "new RegExp requires a lowered string pattern")
 		return nil, true
@@ -404,6 +409,9 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 		f := l.expr(args[1])
 		if f == nil {
 			return nil, true
+		}
+		if l.unprunedFeatures && f.Type.Kind == hir.Dynamic {
+			f = l.coerce(f, hir.T(hir.String))
 		}
 		if f.Type.Kind != hir.String {
 			l.diagf(args[1], "unsupported-regex", "new RegExp requires string flags")

@@ -108,6 +108,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.regexSplit {
+		e.extendedRegex = true
+		runtime += regexSplitRuntimeSource
+	}
 	if e.extraRuntimeKeys {
 		runtime += ownKeysSource
 	}
@@ -167,6 +171,7 @@ type emitter struct {
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
+	regexSplit        bool
 	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
