@@ -1,0 +1,73 @@
+# Rules closure batch
+
+Base: origin/main `f834c16` (includes #89, `abaplint --full`). Branch:
+`feat/fit-rules`. Scope: TS to HIR, `src/rules/` except `downport.ts`.
+The misc-roots batch notes were read before selecting work; its implementations
+and the other assigned batches are excluded.
+
+## Commands
+
+Node on PATH: `export PATH="$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH"`.
+Build and generated-Go builds use `GOMAXPROCS=2 GOFLAGS=-p=2`.
+
+```sh
+go build -p 2 -o /tmp/fit-rules/main ./cmd/abapiti
+/tmp/fit-rules/main abaplint --full -o /tmp/fit-rules/before
+python3 tools/rules-gap.py /tmp/fit-rules/before/evidence/registry-blocking.json
+go vet ./hir/... ./tsfront/... ./internal/... ./cmd/...
+go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...
+/tmp/fit-rules/main abaplint -o /tmp/fit-rules/default-main --target all,go
+```
+
+After each root, build the branch binary and repeat `abaplint --full`, the
+message/owner count, vet/short tests, and `abaplint --target all,go` to a separate
+output directory. The CLI embeds the output path in README files and Go build
+metadata, so generate both binaries at `/tmp/fit-rules/default-main`: move the
+baseline directory to `default-baseline`, run the branch at `default-main`,
+and compare `diff -r /tmp/fit-rules/default-baseline /tmp/fit-rules/default-main`.
+The diff must be empty before pushing.
+Full measurement uses the default assume-int mode; no reachability modification
+or other branch commits are needed. Evidence stays under `/tmp/fit-rules`.
+The reporting script attributes cascades to their initiating root, so the void
+local errors downstream of unsupported regexp calls count toward that owner,
+not as independent void ABI fixes.
+
+## Completed roots
+
+| Root | Rules before → after | Total before → after | HIR errors before → after |
+| --- | --- | --- | --- |
+| Primitive find: parser_702_chaining and short_case | 113 → 108 (root group 5 → 0) | 635 → 630 | 394 → 390 |
+
+Primitive find uses the existing optional-result dense callback mechanism with
+new source fingerprints for these two consumers. The parser receiver is a
+private four-string literal. ShortCase's supported config boundary produces
+dense JSON string arrays; the whole consumer class is pinned, with predicates
+that only compare strings and never mutate/escape the array. Arbitrary sparse
+programmatic configs are outside that boundary. Missing and found-empty-string
+results remain distinct; the caller still applies JavaScript truthiness.
+Tests compare generated Go with Node for matches, absence, empty receivers,
+visit order and early termination, verify ABAP emission, reject stale pins,
+and keep unproven primitive find blocked. Required vet and short tests pass;
+the path-consistent all,go default `diff -r` is empty. This does not duplicate the
+misc-roots adapter for identical_conditions.
+
+## Remaining ownership
+
+The baseline is 635 total blockers: 113 rules blockers (66 roots, 47 cascades).
+Remaining root work and excluded owner counts are recorded below as each step
+is measured. This is a closure measurement, not an assertion that the 11,060
+abaplint tests pass.
+
+| Excluded owner | Rules blockers including cascades at baseline |
+| --- | --- |
+| String repeat | 16 |
+| String match | 28 |
+| RegExp, including exec result types/void locals and downstream assignments | 37 |
+| Small builtins | 7 |
+| Misc-roots: callback returns, contains_tab density, identical_conditions, XMLParser | 7 |
+| Math/typeof, LSP types, independent void ABI, object literals | 0 |
+
+These are disjoint attribution counts of existing diagnostics, not predictions
+of final net reductions: removing a blocker can expose another root. In
+particular, contains_tab's dense callback adapter exposes the currently silent
+two-argument string.indexOf overload; the follow-on belongs here.
