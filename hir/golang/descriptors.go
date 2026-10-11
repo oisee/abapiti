@@ -47,5 +47,9 @@ func (e *emitter) descriptor(c *hir.Class) {
 		extraFactory = ",ArgsFactory:" + e.argumentFactory(c, ctor)
 	}
 	e.line("var %s = classDescriptor{Name:str(%q),Parent:%s,Statics:[]jsString{%s},Factory:%s%s}", e.name("descriptor."+c.Name), tsName, parent, strings.Join(names, ","), factory, extraFactory)
-	e.line("func (self *%s) descriptor() *classDescriptor {return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))
+	if e.liveClasses[c.Name] {
+		e.line("func (self *%s) descriptor() *classDescriptor {if self!=nil && self.viewSource!=nil {return nil};return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))
+	} else {
+		e.line("func (self *%s) descriptor() *classDescriptor {return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))
+	}
 }

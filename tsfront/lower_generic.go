@@ -103,7 +103,11 @@ func (l *lowerer) eraseGenericOverrides() {
 				} else if p.Type.Kind == hir.Dynamic && unboxOp(actual.Type) != "" {
 					// An erased `any` slot into the implementation's type: the
 					// checked unboxing raises for another payload.
-					x = l.rtOp(unboxOp(actual.Type), x, actual.Type)
+					op := unboxOp(actual.Type)
+					if l.unprunedFeatures && actual.Type.Kind == hir.ClassRef && actual.Type.Name != hir.RootObject {
+						op = "dynamic.classView"
+					}
+					x = l.rtOp(op, x, actual.Type)
 				} else if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
 					x = &hir.Expr{Kind: hir.Narrow, Type: actual.Type, X: x}
 				}

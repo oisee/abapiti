@@ -18,6 +18,7 @@ var supportedOps = map[string]bool{
 	"string.toLowerCase":   true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
 	"object.checkedClassView": true,
+	"dynamic.classView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
@@ -239,6 +240,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "dynamic.classView":
+		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {

@@ -92,6 +92,10 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	for _, name := range order {
 		f := fields[name]
 		value := "self." + e.member(f.Name)
+		owner := e.fieldOwner(c, f.Name)
+		if e.liveClasses[owner.Name] {
+			value = "self." + e.getter(owner.Name) + "()." + e.name("view.read."+owner.Name+"."+f.Name) + "()"
+		}
 		e.line("case str(%q):", f.Name)
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			e.line("if !%s.Has {return nil};return box(%s.Value)", value, value)
@@ -99,7 +103,11 @@ func (e *emitter) shapeFields(c *hir.Class) {
 			e.line("return box(%s)", value)
 		}
 	}
-	e.line("};return nil }")
+	if len(e.liveClasses) > 0 && c.Structural {
+		e.line("};if self.viewExtras!=nil {return self.viewExtras.get(key).Value};return nil }")
+	} else {
+		e.line("};return nil }")
+	}
 	e.line("func (self *%s) dynamicPut(key jsString, value *dynamic) {", e.obj(c.Name))
 	e.line("if self==nil {panic(newRangeFault())};switch key {")
 	for _, name := range order {
@@ -108,10 +116,21 @@ func (e *emitter) shapeFields(c *hir.Class) {
 		if typ.Kind == hir.Optional {
 			typ = typ.Args[0]
 		}
-		if typ.Kind != hir.String && typ.Kind != hir.Bool && typ.Kind != hir.Number && typ.Kind != hir.Dynamic {
+		if !(len(e.liveClasses) > 0 && c.Structural) && typ.Kind != hir.String && typ.Kind != hir.Bool && typ.Kind != hir.Number && typ.Kind != hir.Dynamic {
 			continue
 		}
-		e.line("case str(%q): self.%s=%s(value);return", name, e.member(name), e.materializer(f.Type))
+		owner := e.fieldOwner(c, f.Name)
+		if len(e.liveClasses) > 0 && c.Structural {
+			e.line("case str(%q): self.%s=%s;return", name, e.member(name), e.viewValue(f.Type, "value"))
+		} else if e.liveClasses[owner.Name] {
+			e.line("case str(%q): self.%s().%s(%s(value));return", name, e.getter(owner.Name), e.name("view.write."+owner.Name+"."+f.Name), e.materializer(f.Type))
+		} else {
+			e.line("case str(%q): self.%s=%s(value);return", name, e.member(name), e.materializer(f.Type))
+		}
 	}
-	e.line("};panic(newTrap(\"dynamic field assignment outside certified storage\")) }")
+	if len(e.liveClasses) > 0 && c.Structural {
+		e.line("};if key==str(\"__proto__\") {panic(newTrap(\"prototype mutation through class view is unsupported\"))};if self.viewExtras==nil {self.viewExtras=&orderedMap[jsString,*dynamic]{}};self.viewExtras.set(key,value) }")
+	} else {
+		e.line("};panic(newTrap(\"dynamic field assignment outside certified storage\")) }")
+	}
 }
