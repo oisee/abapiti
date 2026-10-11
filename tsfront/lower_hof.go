@@ -7,8 +7,9 @@ import (
 )
 
 // Array higher-order calls, inlined into loops at the call site (ADR-0006).
-// A callback may be a single expression, a block with exactly one `return e`,
-// or a plain module-function reference; anything else is a diagnostic. The
+// A callback may be a single expression, a block ending in `return e` (early
+// returns through blocks/if have a local completion boundary), or a plain
+// module-function reference; other completion shapes are diagnostic. The
 // receiver is hoisted into a temporary through the prelude mechanism, so
 // chains (filter().map()) desugar into consecutive loops.
 
@@ -182,8 +183,8 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 
 // callbackBody lowers a callback to its value expression and its parameter
 // names (the caller binds them). Supported: `x => expr`, `(x, i, a) => expr`,
-// `x => { return expr; }` with exactly one return, a plain identifier naming
-// a module function, and destructured first parameters.
+// blocks ending in a value return (including early returns through if), a plain
+// identifier naming a module function, and destructured first parameters.
 func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
 	savedPending := l.pend
 	l.pend = nil
@@ -265,8 +266,11 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		}
 		for _, s := range stmts[:last] {
 			if l.containsReturn(s) {
-				l.diagf(n, "unsupported-callback", "callback block must have exactly one return")
-				return nil, nil, false
+				x := l.inlineReturnBody(cb)
+				if x == nil {
+					return nil, nil, false
+				}
+				return &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: x.Type, Stmt: hir.B(l.pend...), Y: x}, names, true
 			}
 		}
 		// Leading statements run per element, before the result value.

@@ -6,6 +6,15 @@ import "github.com/oisee/abapiti/hir"
 // Stack/result pushes target other arrays. Membership cannot change while iterating.
 func registryDenseCallbacks() []Entry {
 	return []Entry{
+		{ID: "abaplint-dense-callback-Conditions", Key: Key{"src/rules/identical_conditions.ts", "Conditions", "KindClassDeclaration"}, SHA256: "21cf16383017e886f690e12dd0b42606d8c3091c8b79f20be0c695485de8bfbd", Rationale: "entire class pins the private dense string array: only push/reset writes, callback only searches; primitive result stays optional, including empty-string matches", Patterns: &Patterns{DenseCallbacks: map[string]bool{
+			"this.arr.find(x => this.arr.indexOf(x) !== this.arr.lastIndexOf(x))": true,
+		}}},
+		{ID: "abaplint-dense-callback-ContainsTab.runParsed", Key: Key{"src/rules/contains_tab.ts", "ContainsTab.runParsed", "KindMethodDeclaration"}, SHA256: "87981dd2ae6f07809bb3f0334e50255738f2380cebb03ec392f5ac0713595c0a", Rationale: "split creates a dense local array; callback only reads lines, pushes to distinct issues, and never exposes lines", Patterns: &Patterns{DenseCallbacks: map[string]bool{
+			"lines.forEach((_, i) => {\n      const tabCol = lines[i].indexOf(\"\\t\");\n      if (tabCol >= 0) {\n        let tabAmount = 1;\n        while (lines[i].indexOf(\"\\t\", tabCol + tabAmount - 1) >= 0){\n          tabAmount++;\n        }\n        issues.push(this.createIssue(i, tabCol, tabAmount, file));\n      }\n    })": true,
+		}}},
+		{ID: "abaplint-dense-callback-Catch.findCommonSuperclass", Key: Key{"src/abap/5_syntax/statements/catch.ts", "Catch.findCommonSuperclass", "KindMethodDeclaration"}, SHA256: "7bff4859c41356390913e1ff9f90c7bb191878341a06f8930683e211560f382f", Rationale: "local lineages and lineage arrays are built densely by push; nested predicates only read them and never expose array identities", Patterns: &Patterns{DenseCallbacks: map[string]bool{
+			"lineages.every(lineage =>\n      lineage.some(item => item.getName().toUpperCase() === candidate.getName().toUpperCase()))": true,
+		}}},
 		{ID: "abaplint-dense-callback-TypeUtils.listAllInterfaces", Key: Key{"src/abap/5_syntax/_type_utils.ts", "TypeUtils.listAllInterfaces", "KindMethodDeclaration"}, SHA256: "333459b8eabcdf4380d6478559d29ae57cb49951189f03e96d19cdbd79ce8101", Rationale: "source-pinned dense arrays and stable membership: inline callback only reads receiver or replaces current slot; pushes affect a distinct stack/result; generalise later", Patterns: &Patterns{DenseCallbacks: map[string]bool{
 			"cdef.getImplementing().forEach(i => stack.push(i.name))":                               true,
 			"this.scope.findClassDefinition(s)?.getImplementing().forEach(i => stack.push(i.name))": true,

@@ -172,7 +172,7 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 		return nil
 	}
 	if recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
-		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map (%s)", recv.Type.String())
+		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map (%s); nominal shapes need enumerable own/inherited property order and prototype metadata", recv.Type.String())
 		return nil
 	}
 	keys := l.rtOp("map.keys", recv, hir.T(hir.Array, hir.T(hir.String)))
