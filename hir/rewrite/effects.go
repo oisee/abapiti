@@ -84,6 +84,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"map.values":                {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"number.fromI32":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.index":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"object.checkedClassView":   {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "Receiver", Conservative: "Unproven nominal class assertions keep identity only in the checked runtime domain; ABAP refuses."},
 	"number.ceil":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.remainder2":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"number.toString":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
