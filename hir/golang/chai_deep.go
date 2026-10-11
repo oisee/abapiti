@@ -92,6 +92,15 @@ func chaiEqual(a,b *dynamic,seen map[chaiPair]bool) bool {
  default:panic(newTrap("chai deep equality type is unsupported"))
  }
 }
+// Chai's shallow array include uses indexOf: strict equality, not the
+// SameValueZero of Array.includes. Holes are skipped; NaN never matches.
+// This tests-only operation reads boxed storage without converting/copying it.
+func chaiarrayInclude(a,b *dynamic) bool {
+ if chaiKind(a)!=8 {panic(newTrap("chai shallow include requires an array"))}
+ x,ok:=a.Value.(chaiArray);if !ok {panic(newTrap("chai array storage is unsupported"))}
+ for i:=0;i<x.chaiLength();i++ {if x.chaiHas(i)&&dynEqual(x.chaiAt(i),b) {return true}}
+ return false
+}
 // 2 = no assertion (empty object subset); 1 = included; 0 = not included.
 func chaideepInclude(a,b *dynamic) int32 {
  switch chaiKind(a) {

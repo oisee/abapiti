@@ -51,7 +51,7 @@ export class Assertion {
     if (typeof this.value === "string") {
       this.check(this.value.includes(String(expected)), "contain check", message);
     } else {
-      this.check((this.value as any[]).includes(expected), "contain check", message);
+      this.check(chaiArrayInclude(this.value, expected), "contain check", message);
     }
   }
   public include(expected: any, message = ""): void { this.contain(expected, message); }
@@ -72,7 +72,9 @@ export class Assertion {
 // replaced. Unsupported JS representations raise a typed refusal, not equality.
 export function chaiDeepEqual(actual: any, expected: any): boolean { throw new Error("chai deep intrinsic unavailable"); }
 export function chaiDeepInclude(actual: any, expected: any): number { throw new Error("chai deep intrinsic unavailable"); }
+export function chaiArrayInclude(actual: any, expected: any): boolean { throw new Error("chai array include intrinsic unavailable"); }
+export function chaiFail(message: string): void { throw new Error(message); }
 export function expect(value: any, message = ""): Assertion { return new Assertion(value, message); }
 export namespace expect {
-  export function fail(message: string): never { throw new Error(message); }
+  export function fail(message: string): void { chaiFail(message); }
 }

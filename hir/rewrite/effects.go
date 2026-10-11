@@ -70,6 +70,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.null":              {Reads: OpReads{Receiver: false, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"dynamic.of":                {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"dynamic.put":               {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
+	"chai.arrayInclude":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai strict array inclusion; nonarrays and snapshot escapes refuse; ABAP refuses."},
 	"chai.box":                  {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only boxing; parsed/native snapshot escapes refuse; ABAP refuses."},
 	"chai.deepEqual":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai data graph; unproven enumerable storage refuses; ABAP refuses."},
 	"chai.deepInclude":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai subset assertion; unsupported property/type domains refuse; ABAP refuses."},

@@ -9,7 +9,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true,
+	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true,
 	"string.sha1Hex": true,
 	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
@@ -185,7 +185,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
 		code = "dynNull()"
-	case "chai.deepEqual", "chai.deepInclude":
+	case "chai.deepEqual", "chai.deepInclude", "chai.arrayInclude":
 		code = strings.ReplaceAll(x.Op, ".", "") + "(" + a + "," + args[0] + ")"
 	case "dynamic.strictEquals":
 		code = "dynEqual(" + a + "," + args[0] + ")"

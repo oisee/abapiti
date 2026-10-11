@@ -25,6 +25,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
+	"chai.arrayInclude":         {Dynamic, 1, false},
 	"chai.deepEqual":            {Dynamic, 1, false},
 	"chai.deepInclude":          {Dynamic, 1, false},
 	"dynamic.asBoolean":         {Dynamic, 0, false},
@@ -117,7 +118,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String), T(Dynamic)}, T(Void), true
 	case "chai.deepInclude":
 		return []Type{T(Dynamic)}, i, true
-	case "dynamic.strictEquals", "chai.deepEqual":
+	case "dynamic.strictEquals", "chai.deepEqual", "chai.arrayInclude":
 		return []Type{T(Dynamic)}, T(Bool), true
 	case "dynamic.isNullish", "dynamic.asBoolean":
 		return nil, T(Bool), true

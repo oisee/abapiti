@@ -1864,7 +1864,13 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 	if t := n.Expression(); t != nil && t.Kind == ast.KindIdentifier && t.Text() == "Set" {
 		args := n.Arguments()
 		if len(args) == 1 {
+			// The Set result's construction context is not the iterable's
+			// storage type. In particular, a conditional's empty array arm
+			// must not become a Set while its map arm stays an Array.
+			savedHint := l.hint
+			l.hint = hir.Type{}
 			a := l.expr(args[0])
+			l.hint = savedHint
 			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
 				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
 				fresh := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}
