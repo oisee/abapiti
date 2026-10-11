@@ -33,6 +33,11 @@ Structure matching shifted the token array with `splice`, which made that stage 
 ### C1. Rule idea: inline a single-use CAST — **issue** [#4423](https://github.com/abaplint/abaplint/issues/4423)
 Not about abaplint's own TypeScript but a new rule with a quick fix that would clean up generated ABAP like ours (and hand-written code).
 
+## Discussion items (bigger ideas, after abaplint 100 %)
+
+### D1. Rules written as Grace patterns, compiled into abaplint rules
+abaplint rules are hand-written TypeScript classes (`IRule`: `run(obj)` walks the ABAP AST and returns issues with optional fixes). A rule that uses TypeScript outside what abapiti supports can't run in the compiled abaplint. Instead of failing silently, it is refused with its location. Idea: write shape-based rules declaratively as Grace patterns (pattern → issue / quick fix, with side conditions) over abaplint's statement/expression nodes, and generate the `IRule` class from them. The generated rule runs in vanilla abaplint on Node and, through abapiti, unchanged on ABAP and Go. It is always inside the supported subset because it is generated. Shape-only rules (single-use CAST, redundant CONV, `xsdbool` before `IF`) need nothing else. Rules that need types or scopes need an adapter onto abaplint's syntax results. Hand-written rules stay possible; [ts-style.md](ts-style.md) plus a pre-ship check keeps them compilable. First candidate: the single-use CAST rule, [#4423](https://github.com/abaplint/abaplint/issues/4423).
+
 ## How to add an entry
 
 Write: the site (file and function, upstream commit 577f875e), what to change, why (HIR / ABAP / speed), and the evidence (numbers, tests unlocked, a profile). Link the abapiti PR or doc where we hit it.
