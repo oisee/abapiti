@@ -267,6 +267,7 @@ func dynRef(d *dynamic) any {
 }
 func integerString(x int64) jsString     { return str(strconv.FormatInt(x, 10)) }
 func numberRemainder2(x float64) float64 { return math.Mod(x, 2) }
+func numberCeil(x float64) float64 { return math.Ceil(x) }
 func dynString(d *dynamic) jsString {
 	if d == nil || d.Tag != 1 {
 		panic(newRangeFault())

@@ -898,6 +898,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, handled := l.mathCeilCall(n); handled {
+		return x
+	}
 	if x, handled := l.jsonCall(n); handled {
 		return x
 	}

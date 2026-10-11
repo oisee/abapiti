@@ -30,6 +30,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"i64.toString":              {I64, 0, false},
 	"i64.remainder2":            {I64, 0, false},
 	"number.remainder2":         {Number, 0, false},
+	"number.ceil":               {Number, 0, false},
 	"number.index":              {Number, 0, false}, "number.fromI32": {I32, 0, false}, "number.toString": {Number, 0, false},
 	"string.length": {String, 0, false}, "string.concat": {String, 1, false},
 	"string.slice": {String, 2, false}, "string.substring": {String, 2, false}, "string.charCodeAt": {String, 1, false},
@@ -151,7 +152,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "i64.remainder2":
 		return nil, T(I64), true
-	case "number.remainder2", "number.fromI32":
+	case "number.remainder2", "number.fromI32", "number.ceil":
 		return nil, T(Number), true
 	case "dynamic.asNumber":
 		return nil, T(Number), true
