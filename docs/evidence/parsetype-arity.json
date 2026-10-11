@@ -1,0 +1,2138 @@
+{
+  "base": "0ca327c96f530d1bfbca3b97c721db243234498c",
+  "harness": "f51056bd2139b3e2dc779079773fbd6d1538cd7c",
+  "abaplint": "577f875e",
+  "fullClosure": {
+    "before": {
+      "summary": {
+        "blocking": 347,
+        "rootBlocking": 136,
+        "cascadeBlocking": 211,
+        "hirErrors": 284,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-assignment": 11,
+          "unsupported-call": 81,
+          "unsupported-callback": 1,
+          "unsupported-expr": 227,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 2,
+          "unsupported-regex": 4,
+          "unsupported-statement": 1,
+          "unsupported-type": 11
+        },
+        "byArea": {
+          "abap/types": 6,
+          "lsp": 17,
+          "objects": 34,
+          "rules": 279,
+          "src": 11
+        },
+        "byRootMessage": [
+          {
+            "message": "method X on string is not lowered",
+            "count": 72
+          },
+          {
+            "message": "assignment to X is not lowered",
+            "count": 11
+          },
+          {
+            "message": "checker type X is not a lowered declaration",
+            "count": 11
+          },
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 9
+          },
+          {
+            "message": "method X on regexp is not lowered",
+            "count": 5
+          },
+          {
+            "message": "replace with a non-literal pattern is not lowered",
+            "count": 4
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "element access on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "forEach needs a source-pinned dense/stable receiver proof",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 62
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 2,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 1,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method exec on regexp is not lowered": 5,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "rootBlockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method exec on regexp is not lowered": 5,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "verificationByMessage": {
+        "assignment type mismatch": 17,
+        "call argument type mismatch: array<classref<builtin.object>> <- void in runtime .": 3,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .": 2,
+        "call argument type mismatch: i32 <- void in runtime .": 1,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 38,
+        "call arity mismatch": 22,
+        "condition must be bool": 40,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "foreach requires matching array": 3,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 2,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "invalid narrowing optional<optional<string>> to optional<string>": 2,
+        "method may fall through without return": 18,
+        "missing expression": 84,
+        "nested optional": 3,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4,
+        "unsupported collection key dynamic": 5
+      },
+      "aritySites": [
+        "src/abap/5_syntax/expressions/select.ts:292:30",
+        "src/abap/5_syntax/expressions/select.ts:328:22",
+        "src/abap/5_syntax/expressions/select.ts:361:22",
+        "src/abap/5_syntax/expressions/select.ts:402:24",
+        "src/abap/5_syntax/expressions/select.ts:429:20",
+        "src/abap/5_syntax/expressions/select.ts:477:18",
+        "src/abap/5_syntax/expressions/sql_compare.ts:81:20",
+        "src/abap/5_syntax/global_definitions/find_global_definitions.ts:39:9",
+        "src/ddic.ts:195:21",
+        "src/ddic.ts:200:21",
+        "src/ddic.ts:205:21",
+        "src/ddic.ts:210:21",
+        "src/ddic.ts:230:23",
+        "src/ddic.ts:268:21",
+        "src/ddic.ts:282:21",
+        "src/ddic.ts:317:14",
+        "src/ddic.ts:331:21",
+        "src/ddic.ts:345:21",
+        "src/lsp/help.ts:49:26",
+        "src/objects/lock_object.ts:59:16",
+        "src/objects/maintenance_and_transport_object.ts:62:16",
+        "src/abap/5_syntax/expressions/_check_database_fields.ts:22:16"
+      ]
+    },
+    "after": {
+      "summary": {
+        "blocking": 347,
+        "rootBlocking": 136,
+        "cascadeBlocking": 211,
+        "hirErrors": 262,
+        "byCategory": {
+          "assume-integer": 2,
+          "unsupported-array": 2,
+          "unsupported-assignment": 11,
+          "unsupported-call": 81,
+          "unsupported-callback": 1,
+          "unsupported-expr": 227,
+          "unsupported-lsp-call": 5,
+          "unsupported-new": 2,
+          "unsupported-regex": 4,
+          "unsupported-statement": 1,
+          "unsupported-type": 11
+        },
+        "byArea": {
+          "abap/types": 6,
+          "lsp": 17,
+          "objects": 34,
+          "rules": 279,
+          "src": 11
+        },
+        "byRootMessage": [
+          {
+            "message": "method X on string is not lowered",
+            "count": 72
+          },
+          {
+            "message": "assignment to X is not lowered",
+            "count": 11
+          },
+          {
+            "message": "checker type X is not a lowered declaration",
+            "count": 11
+          },
+          {
+            "message": "identifier X is not a lowered local or module value",
+            "count": 9
+          },
+          {
+            "message": "method X on regexp is not lowered",
+            "count": 5
+          },
+          {
+            "message": "replace with a non-literal pattern is not lowered",
+            "count": 4
+          },
+          {
+            "message": "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered",
+            "count": 3
+          },
+          {
+            "message": "empty array literal outside a statement context",
+            "count": 2
+          },
+          {
+            "message": "new X is not a lowered class",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "callback KindPropertyAccessExpression is not an arrow function",
+            "count": 1
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "element access on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "for-in needs a string-keyed map (classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "forEach needs a source-pinned dense/stable receiver proof",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 56
+      },
+      "blockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 2,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 1,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method exec on regexp is not lowered": 5,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "rootBlockingByMessage": {
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 1,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier crypto is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method exec on regexp is not lowered": 5,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "verificationByMessage": {
+        "assignment type mismatch": 17,
+        "call argument type mismatch: array<classref<builtin.object>> <- void in runtime .": 3,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .": 4,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: dynamic <- classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> in runtime .": 2,
+        "call argument type mismatch: i32 <- void in runtime .": 1,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 3,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- regexp in runtime .": 2,
+        "call argument type mismatch: string <- void in runtime .": 38,
+        "condition must be bool": 40,
+        "conditional type mismatch": 4,
+        "expression type mismatch: classref<src/abap/nodes/statement_node.ts.StatementNode> / optional<interfaceref<union.ef34b1fae8df131c6c97185482820bb32cd957a6b0ed51ce6b23465fc63eb844>>": 1,
+        "foreach requires matching array": 3,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 2,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 3,
+        "invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>": 1,
+        "invalid narrowing optional<optional<string>> to optional<string>": 2,
+        "method may fall through without return": 18,
+        "missing expression": 84,
+        "nested optional": 3,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6,
+        "unresolved local fix": 4,
+        "unsupported collection key dynamic": 5
+      },
+      "aritySites": []
+    }
+  },
+  "rules": {
+    "before": {
+      "total": 3159,
+      "passed": 10,
+      "failed": 0,
+      "trapped": 1596,
+      "notRun": 1553,
+      "registered": 3074,
+      "notRunReasons": {
+        "asyncOrDone": 1458,
+        "skippedOrFocused": 10,
+        "unregistered": 85
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1321,
+          "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "src/abap/5_syntax/global_definitions/find_global_definitions.ts: HIR verification: call arity mismatch",
+          "count": 245,
+          "example": "src/abap/5_syntax/global_definitions/find_global_definitions.ts:24:3: lowering trap: src/abap/5_syntax/global_definitions/find_global_definitions.ts:24:3: HIR verification: node 141875 (src/abap/5_syntax/global_definitions/find_global_definitions.ts:39:9): call arity mismatch"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 10,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "module binding test/rules/line_break_style.ts.module.crlf was not initialized",
+          "count": 2,
+          "example": "test/rules/line_break_style.ts:40:37: lowering trap: module binding test/rules/line_break_style.ts.module.crlf was not initialized"
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/check_comments.ts",
+          "action": "test/rules/check_comments.ts:152:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/fully_type_constants.ts",
+          "action": "test/rules/fully_type_constants.ts:131:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:292:1",
+          "message": "test/rules/keyword_case.ts:292:1: lowering trap: unsupported-callback test/rules/keyword_case.ts:292:40: callback block must end with a return of a value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "test/rules/keyword_case.ts:304:1: lowering trap: unsupported-expr test/rules/keyword_case.ts:304:10: identifier testLowerCaseGlobalClassSuite2 is not a lowered local or module value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_break_style.ts",
+          "action": "test/rules/line_break_style.ts:32:1",
+          "message": "test/rules/line_break_style.ts:32:1: lowering trap: node 43814 (test/rules/line_break_style.ts:32:26): not supported in the Go prototype: JavaScript regexp /\\n/g",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "test/rules/line_length.ts:17:1: lowering trap: unsupported-expr test/rules/line_length.ts:17:29: assignment inside an expression is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/method_length.ts",
+          "action": "test/rules/method_length.ts:229:1",
+          "message": "test/rules/method_length.ts:8:44: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/newline_between_methods.ts",
+          "action": "test/rules/newline_between_methods.ts:199:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/no_dynamic_stuff.ts",
+          "action": "test/rules/no_dynamic_stuff.ts:124:1",
+          "message": "test/rules/no_dynamic_stuff.ts:124:1: lowering trap: test/rules/no_dynamic_stuff.ts:124:1: HIR verification: node 47187 (test/rules/no_dynamic_stuff.ts:124:42): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/no_dynamic_stuff.ts",
+          "action": "test/rules/no_dynamic_stuff.ts:134:1",
+          "message": "test/rules/no_dynamic_stuff.ts:134:1: lowering trap: test/rules/no_dynamic_stuff.ts:134:1: HIR verification: node 47227 (test/rules/no_dynamic_stuff.ts:134:45): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
+          "status": "trapped"
+        }
+      ],
+      "asyncInitializationFailures": 0
+    },
+    "after": {
+      "total": 3159,
+      "passed": 15,
+      "failed": 104,
+      "trapped": 1487,
+      "notRun": 1553,
+      "registered": 3074,
+      "notRunReasons": {
+        "asyncOrDone": 1458,
+        "skippedOrFocused": 10,
+        "unregistered": 85
+      },
+      "unmatched": [],
+      "topTraps": [
+        {
+          "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 1321,
+          "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "src/edit_helper.ts: HIR verification: foreach requires matching array",
+          "count": 105,
+          "example": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22485 (src/edit_helper.ts:227:5): foreach requires matching array"
+        },
+        {
+          "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
+          "count": 18,
+          "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
+        },
+        {
+          "message": "src/rules/obsolete_statement.ts: HIR verification: call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement",
+          "count": 17,
+          "example": "src/rules/obsolete_statement.ts:157:3: lowering trap: src/rules/obsolete_statement.ts:157:3: HIR verification: node 256123 (src/rules/obsolete_statement.ts:237:23): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement"
+        },
+        {
+          "message": "src/artifacts_objects.ts: src/artifacts_objects.ts:8",
+          "count": 10,
+          "example": "src/artifacts_objects.ts:8:3: src/artifacts_objects.ts:8"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/",
+          "count": 6,
+          "example": "src/rules/line_only_punc.ts:46:3: lowering trap: node 248303 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/"
+        },
+        {
+          "message": "unsupported-call src/rules/contains_tab.ts: forEach needs a source-pinned dense/stable receiver proof",
+          "count": 4,
+          "example": "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^check /i",
+          "count": 3,
+          "example": "src/rules/exit_or_check.ts:46:3: lowering trap: node 240554 (src/rules/exit_or_check.ts:67:45): not supported in the Go prototype: JavaScript regexp /^check /i"
+        },
+        {
+          "message": "module binding test/rules/line_break_style.ts.module.crlf was not initialized",
+          "count": 2,
+          "example": "test/rules/line_break_style.ts:40:37: lowering trap: module binding test/rules/line_break_style.ts.module.crlf was not initialized"
+        },
+        {
+          "message": "not supported in the Go prototype: JavaScript regexp /^0+/",
+          "count": 1,
+          "example": "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 257497 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/"
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/check_comments.ts",
+          "action": "test/rules/check_comments.ts:152:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/fully_type_constants.ts",
+          "action": "test/rules/fully_type_constants.ts:131:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:292:1",
+          "message": "test/rules/keyword_case.ts:292:1: lowering trap: unsupported-callback test/rules/keyword_case.ts:292:40: callback block must end with a return of a value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "test/rules/keyword_case.ts:304:1: lowering trap: unsupported-expr test/rules/keyword_case.ts:304:10: identifier testLowerCaseGlobalClassSuite2 is not a lowered local or module value",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_break_style.ts",
+          "action": "test/rules/line_break_style.ts:32:1",
+          "message": "test/rules/line_break_style.ts:32:1: lowering trap: node 43814 (test/rules/line_break_style.ts:32:26): not supported in the Go prototype: JavaScript regexp /\\n/g",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "test/rules/line_length.ts:17:1: lowering trap: unsupported-expr test/rules/line_length.ts:17:29: assignment inside an expression is not lowered",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/method_length.ts",
+          "action": "test/rules/method_length.ts:229:1",
+          "message": "test/rules/method_length.ts:8:44: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/newline_between_methods.ts",
+          "action": "test/rules/newline_between_methods.ts:199:1",
+          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
+        },
+        {
+          "file": "test/rules/no_dynamic_stuff.ts",
+          "action": "test/rules/no_dynamic_stuff.ts:124:1",
+          "message": "test/rules/no_dynamic_stuff.ts:124:1: lowering trap: test/rules/no_dynamic_stuff.ts:124:1: HIR verification: node 47187 (test/rules/no_dynamic_stuff.ts:124:42): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/no_dynamic_stuff.ts",
+          "action": "test/rules/no_dynamic_stuff.ts:134:1",
+          "message": "test/rules/no_dynamic_stuff.ts:134:1: lowering trap: test/rules/no_dynamic_stuff.ts:134:1: HIR verification: node 47227 (test/rules/no_dynamic_stuff.ts:134:45): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
+          "status": "trapped"
+        }
+      ],
+      "asyncInitializationFailures": 0
+    },
+    "cohorts": {
+      "historical196": {
+        "total": 196,
+        "before": {
+          "trapped": 196
+        },
+        "after": {
+          "trapped": 88,
+          "passed": 4,
+          "failed": 104
+        },
+        "results": [
+          {
+            "title": "test begin_end_names rule fixes Fix \"TYPES: BEGIN OF moo, dsf TYPE string, END OF bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test begin_end_names rule fixes Fix \"TYPES: BEGIN OF ENUM moo, blah, END OF ENUM bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test begin_end_names rule fixes Fix \"DATA: BEGIN OF foo, BEGIN OF bar2, f TYPE string, END OF bar1, END OF foo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test begin_end_names rule fixes Fix \"DATA: BEGIN OF foo, BEGIN OF bar2, f TYPE string, END OF bar2, END OF fooaaa.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test chain_mainly_declarations rule fixes Fix \"SORT: foo,\n  bar,\n  xxx.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test chain_mainly_declarations rule fixes Fix \"SORT: foo,bar, xxx.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test commented_code rule fixes Fix \"* CONTINUE.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test commented_code rule fixes Fix \"\" ASSERT 0 = 1.\nWRITE: / ex->get_longtext( ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test contains_tab rule fixes Fix \"IF 1 = 1.\t\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof"
+          },
+          {
+            "title": "test contains_tab rule fixes Fix \"data: lt_file\ttype solix_tab.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof"
+          },
+          {
+            "title": "test contains_tab rule fixes Fix \"\t\t\tIF foo = bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof"
+          },
+          {
+            "title": "test contains_tab rule fixes Fix \"IF foo\t\t\t = bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof"
+          },
+          {
+            "title": "dangerous_statement RAP query provider ignores dynamic SQL by default",
+            "before": "trapped",
+            "after": "passed",
+            "message": ""
+          },
+          {
+            "title": "dangerous_statement RAP query provider finds dynamic SQL in RAP provider method when configured off",
+            "before": "trapped",
+            "after": "passed",
+            "message": ""
+          },
+          {
+            "title": "test double_space rule fixes Fix \"DATA:  foo TYPE c.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test double_space rule fixes Fix \"call( var     ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test double_space rule fixes Fix \"call(     var ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test double_space rule fixes Fix \"REPORT     zfoobar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test double_space rule fixes Fix \"IF ( foo = bar AND\n       moo IS NOT INITIAL                    ) OR\n     boo IS INITIAL.\nENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test empty_line_in_statement rule fixes Fix \"\nWRITE\n\nbar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test empty_statement rule fixes Fix \"types f1 type c.  .\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test empty_statement rule fixes Fix \"types f2 type c.\n  .\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test empty_statement rule fixes Fix \"types f3 type c..\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test empty_statement rule fixes Fix \"  .\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test exporting rule fixes Fix \"methodname( EXPORTING iv_foo = '1' ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test exporting rule fixes Fix \"methodname( EXPORTING  iv_foo = '2' ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test exporting rule fixes Fix \"methodname(  EXPORTING iv_foo = '3' ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test exporting rule fixes Fix \"methodname( EXPORTING\niv_foo = '4' ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test exporting rule fixes Fix \"methodname( EXPORTING\n\niv_foo = '5' ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar( ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar( EXPORTING iv_param = '1' CHANGING cv_param = lt_foo ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test functional_writing rule fixes Fix \"CALL METHOD foo=>bar EXPORTING iv_param = '1' CHANGING cv_param = lt_foo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test in_statement_indentation rule fixes Fix \"IF foo = bar\n  AND moo = loo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test line_break_multiple_parameters rule fixes Fix \"method( para1 = value para2 = value ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test many_parentheses rule fixes Fix \"IF ( destination IS INITIAL ). ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test many_parentheses rule fixes Fix \"IF ( ldate > ldate ) OR ( ldate = ldate AND ltime > ltime ). ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test many_parentheses rule fixes Fix \"IF <field> IS INITIAL OR ( 1 = 2 ). ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test max_one_statement rule fixes Fix \"WRITE 'hello'.WRITE 'world'.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test no_exclamation_escape rule fixes Fix \"DATA !foo TYPE i.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test no_exclamation_escape rule fixes Fix \"methods CONVERT changing !CO_sdf type ref to ZCL_sdf optional.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test omit_preceding_zeros rule fixes Fix \"call function 'MOO'\nexceptions\n  others = 01.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 257495 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"DATA foo TYPE xfeld.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"DATA foo TYPE XFELD.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"CLASS lcl DEFINITION. PUBLIC SECTION. CLASS-DATA foo TYPE sap_bool. ENDCLASS. CLASS lcl IMPLEMENTATION. ENDCLASS.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"CONSTANTS c TYPE boole_d VALUE 'X'.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"TYPES ty TYPE flag.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_abap_bool rule fixes Fix \"FIELD-SYMBOLS <fs> TYPE xfeld.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"foo = boolc( NOT variable = 42 ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF foo = bar AND NOT variable = 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable = 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable <> 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable < 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable > 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable <= 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable >= 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable IS INITIAL. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"WHILE NOT variable IS INITIAL. ENDWHILE.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable BETWEEN 42 AND 42. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_is_not rule fixes Fix \"IF NOT variable IN range. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error\n  EXPORTING\n    previous = exception.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_raise_exception_new rule fixes Fix \"RAISE EXCEPTION TYPE cx_generation_error\n  EXPORTING\n    previous = exception\n    something = nothing.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test prefer_xsdbool rule fixes Fix \"DATA(sdf) = boolc( 1 = 2 ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo EQ bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo NE bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo >< bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo GT bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo GE bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo LE bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo LT bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"SELECT * FROM foo INTO TABLE bar WHERE moo EQ boo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo = bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo <> bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo > bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo >= bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo <= bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"IF foo < bar. ENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test preferred_compare_operator rule fixes Fix \"SELECT * FROM foo INTO TABLE bar WHERE moo = boo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test redundant_conversion rule fixes Fix \"DATA source TYPE string.\nDATA target TYPE string.\ntarget = CONV string( source ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test redundant_conversion rule fixes Fix \"DATA source TYPE i.\nDATA target TYPE i.\ntarget = CONV i( source + 1 ) * 2.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test redundant_conversion rule fixes Fix \"CLASS lcl DEFINITION.\n  PUBLIC SECTION.\n    CLASS-METHODS run IMPORTING value TYPE string.\nENDCLASS.\nCLASS lcl IMPLEMENTATION.\n  METHOD run.\n  ENDMETHOD.\nENDCLASS.\nDATA source TYPE string.\nlcl=>run( CONV #( source ) ).\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "Rule: slow_parameter_passing test slow_parameter_passing rule fixes Fix \"CLASS lcl DEFINITION.\n  PUBLIC SECTION.\n    METHODS bar IMPORTING VALUE(sdf) TYPE string.\nENDCLASS.\nCLASS lcl IMPLEMENTATION.\n  METHOD bar.\n    WRITE sdf.\n  ENDMETHOD.\nENDCLASS.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "unknown_types Rule TABL, error",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule SELECT-OPTIONS, this becomes a void reference",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE ddic allowed in PROGs, 1",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE ddic allowed in PROGs, 2",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE ddic should give error in a class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule check CLAS can use itself",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule protected and private attribute",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule ms_metadata could not be resolved, expect error",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule mi_ixml should be void",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule mi_ixml should be void",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule reference type in interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule two classes",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule data reference to itself",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule swag typing",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule cyclic referencing classes via types",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule should not be able to find interface type without prefix",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule TYPE reference itself via prefix",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule local interface prefix is current",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule local class prefix is current",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule events",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule events, exclamation mark",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule events, via interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule types, zcl_zlib",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type from super class in implementation",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule global class with local class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule events, void class name",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule factory, reference itself locally",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interface tilde typing name, implementation",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interface tilde typing name, definition",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule testclass referencing local class in global class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule events via alias",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Two interfaces and a program",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Type from super",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule unknown type in interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Type from super via interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule APPEND INITIAL LINE with inline",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule METHOD with LIKE interface variable",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule BEGIN with LIKE LINE OF",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE types",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule INTERFACE, local type reference",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE LINE OF me->worksheet->sheet_content",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interface with unknown method parameter reference",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule clas with unknown method parameter reference",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interface with TYPE data",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule data reference LIKE REF TO",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule constant referenced via chain",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule dynamic should become void",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule ENUM type",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule EVENTS, implicit SENDER parameter",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule reference private type from private method",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule reference unknown type in class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE RANGE OF constant",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Refer to TYPE from TYPE POOL",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Unknown constant, should be voided with value undefined",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Constant, found",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule structured constants",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule determine type, INSERT INITIAL LINE INTO TABLE",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule use enum type from interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type in interface from interface via alias",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule global class, method returning type unknown",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Unknown implemented interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule ok, LIKE LINE OF is_message-sub-lines",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type in class method parameter via alias from interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type to aliased type",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule event defined in class, local handler for itself",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule reference to itself, voided structure type",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type pool and class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule expect error, ZNOTFOUND not found",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule class events",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule TYPES, key field not part of structure",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule DATA, key field not part of structure",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule DATA, ok field part of structure",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule DATA, ok sub field",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule key ok, its table_line",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule escaped key field name",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule Type is outside errorNamespace, but known, field does not exists, expect error",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule intf, returning parameter cannot be generic",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule intf, returning parameter cannot be generic",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE other method parameter",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE exporting method parameter",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule CREATE DATA",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule CREATE DATA, ok",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule CREATE DATA, ok, intf",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule CREATE DATA, err, intf",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule aliased constant from super interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule BEGIN + OCCURS + INCLUDE STRUCTURE",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule BEGIN + OCCURS + INCLUDE STRUCTURE, more voided",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interfaces and data aliases",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule interfaces and types",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule table key stuff",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule dynamic select option",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule dynamic select count into inline data",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule type alias via interface",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE unknown in OO",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule LIKE LINE OF unknown in OO",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule basic DATA COMMON PART, types begin",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule basic DATA COMMON PART, types basic",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule aliased via class via intf",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule parameters default sub",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule INCLUDE STRUCTURE data",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule TYPE REF TO voided structure with include",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule TYPES BEGIN OF MESH",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule TYPES BEGIN OF MESH in class",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "unknown_types Rule sy datum sub",
+            "before": "trapped",
+            "after": "failed",
+            "message": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+          },
+          {
+            "title": "test use_bool_expression rule fixes Fix \"\nIF lv_state IS INITIAL.\n  rv_bool = abap_false.\nELSE.\n  rv_bool = abap_true.\nENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test use_bool_expression rule fixes Fix \"\nIF lv_state IS INITIAL.\n  rv_bool = abap_true.\nELSE.\n  rv_bool = abap_false.\nENDIF.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test use_new rule fixes Fix \"CREATE OBJECT ro_upload TYPE zcl_abapgit_ecatt_val_obj_upl.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar EXPORTING foo = bar.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "test use_new rule fixes Fix \"CREATE OBJECT foobar EXPORTING foo = bar boo = moo.\"",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          },
+          {
+            "title": "rule, xml_bom reports XML files without a BOM",
+            "before": "trapped",
+            "after": "passed",
+            "message": ""
+          },
+          {
+            "title": "rule, xml_bom accepts XML files with a BOM",
+            "before": "trapped",
+            "after": "passed",
+            "message": ""
+          },
+          {
+            "title": "rule, xml_bom adds a BOM with its quick fix",
+            "before": "trapped",
+            "after": "trapped",
+            "message": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array"
+          }
+        ],
+        "afterByMessage": {
+          "(passed)": 4,
+          "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array": 83,
+          "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain": 104,
+          "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof": 4,
+          "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 257495 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/": 1
+        },
+        "passingTitles": [
+          "dangerous_statement RAP query provider ignores dynamic SQL by default",
+          "dangerous_statement RAP query provider finds dynamic SQL in RAP provider method when configured off",
+          "rule, xml_bom reports XML files without a BOM",
+          "rule, xml_bom accepts XML files with a BOM"
+        ]
+      },
+      "current245": {
+        "total": 245,
+        "before": {
+          "trapped": 245
+        },
+        "after": {
+          "trapped": 136,
+          "passed": 5,
+          "failed": 104
+        },
+        "afterByMessage": {
+          "(passed)": 5,
+          "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22483 (src/edit_helper.ts:227:5): foreach requires matching array": 105,
+          "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain": 104,
+          "src/rules/contains_tab.ts:47:3: lowering trap: unsupported-call src/rules/contains_tab.ts:51:5: forEach needs a source-pinned dense/stable receiver proof": 4,
+          "src/rules/exit_or_check.ts:46:3: lowering trap: node 240552 (src/rules/exit_or_check.ts:67:45): not supported in the Go prototype: JavaScript regexp /^check /i": 3,
+          "src/rules/line_only_punc.ts:46:3: lowering trap: node 248301 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/": 6,
+          "src/rules/obsolete_statement.ts:157:3: lowering trap: src/rules/obsolete_statement.ts:157:3: HIR verification: node 256121 (src/rules/obsolete_statement.ts:237:23): call argument type mismatch: optional<map<string,array<classref<src/edit_helper.ts.ITextEdit>>>> <- optional<dynamic> in call src/issue.ts.Issue.atStatement": 17,
+          "src/rules/omit_preceding_zeros.ts:36:3: lowering trap: node 257495 (src/rules/omit_preceding_zeros.ts:48:39): not supported in the Go prototype: JavaScript regexp /^0+/": 1
+        },
+        "passingTitles": [
+          "dangerous_statement RAP query provider ignores dynamic SQL by default",
+          "dangerous_statement RAP query provider finds dynamic SQL in RAP provider method when configured off",
+          "rule, line_break_style, xml accepts XML files with LF",
+          "rule, xml_bom reports XML files without a BOM",
+          "rule, xml_bom accepts XML files with a BOM"
+        ]
+      }
+    }
+  },
+  "commands": {
+    "environment": "export PATH=\"$HOME/.local/opt/node-v26.9.0-linux-x64/bin:$PATH\" GOMAXPROCS=1 GOFLAGS=-p=2",
+    "baselineBuild": "git archive 0ca327c96f530d1bfbca3b97c721db243234498c | tar -x -C /tmp/parsetype-baseline; (cd /tmp/parsetype-baseline && go build -o /tmp/parsetype-before-bin ./cmd/abapiti)",
+    "featureBuild": "go build -o /tmp/parsetype-after-bin ./cmd/abapiti",
+    "fullBefore": "/tmp/parsetype-before-bin abaplint --full -o /tmp/parsetype-full-before",
+    "fullAfter": "/tmp/parsetype-after-bin abaplint --full -o /tmp/parsetype-full-final",
+    "rulesBefore": "/tmp/parsetype-harness-before-bin abaplint-tests /tmp/parsetype-rules -o /tmp/parsetype-rules-before > /tmp/parsetype-rules-before.json 2> /tmp/parsetype-rules-before.log",
+    "rulesAfter": "/tmp/parsetype-harness-after-bin abaplint-tests /tmp/parsetype-rules -o /tmp/parsetype-rules-after-final > /tmp/parsetype-rules-after-final.json 2> /tmp/parsetype-rules-after-final.log",
+    "defaultBefore": "/tmp/parsetype-before-bin abaplint -o /tmp/parsetype-default --target all,go",
+    "preserveDefault": "cp -a /tmp/parsetype-default /tmp/parsetype-default-before; rm -rf /tmp/parsetype-default",
+    "defaultAfter": "/tmp/parsetype-after-bin abaplint -o /tmp/parsetype-default --target all,go",
+    "defaultDiff": "diff -r /tmp/parsetype-default-before /tmp/parsetype-default",
+    "vet": "go vet ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "short": "go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "focused": "go test -short -p 2 ./tsfront -run TestCallArity -count=1"
+  },
+  "defaultDiff": {
+    "exitCode": 0,
+    "outputBytes": 0
+  },
+  "measurementNotes": [
+    "The harness is combined locally only and is not part of the pushed feature branch.",
+    "Both harness copies reuse the same verification declaration maps during body recovery, with a local equivalence test; recovery checks and trap semantics are unchanged.",
+    "The historical cohort uses title occurrence, preserving the two duplicated titles.",
+    "New failures were hidden by the former arity trap; all ten formerly passing tests still pass.",
+    "The synchronous host and registrations are unchanged.",
+    "The final rules run precedes removal of an unused zero-parameter inline array-callback rejection. A local AST audit of every source in the materialized rules program finds zero such callbacks. The removed rejection is exercised by the focused inlineZeroCallback regression, and final full/default measurements use the final code."
+  ],
+  "zeroCallbackAudit": {
+    "command": "go test -short -p 2 ./tsfront -run TestMeasurementZeroCallbacks -v -count=1 (disposable harness checkout)",
+    "arrayMethods": [
+      "map",
+      "filter",
+      "some",
+      "reduce",
+      "find",
+      "sort",
+      "forEach",
+      "every"
+    ],
+    "zeroParameterInlineCallbacks": 0,
+    "exitCode": 0
+  },
+  "checks": {
+    "vet": {
+      "exitCode": 0,
+      "outputBytes": 0
+    },
+    "short": {
+      "exitCode": 0,
+      "packages": [
+        "./hir/...",
+        "./tsfront/...",
+        "./internal/...",
+        "./cmd/..."
+      ],
+      "parallelPackages": 2
+    },
+    "focused": {
+      "exitCode": 0,
+      "testPattern": "TestCallArity",
+      "goExecutionAndABAPEmission": true
+    },
+    "defaultDiff": {
+      "exitCode": 0,
+      "outputBytes": 0
+    },
+    "verifierCacheEquivalence": {
+      "exitCode": 0,
+      "localOnly": true
+    }
+  }
+}

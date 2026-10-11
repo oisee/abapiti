@@ -300,9 +300,6 @@ func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			return l.invokeThunk(n, x), true
 		}
 	}
-	if len(n.Arguments()) != 0 {
-		return nil, false
-	}
 	// Named functions have their own direct-call path; only stored values
 	// use the thunk interface. Do not re-evaluate a method's receiver here.
 	if callee.Kind == ast.KindIdentifier {
@@ -326,6 +323,10 @@ func (l *lowerer) thunkCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	}
 	if x.Type.Kind != hir.InterfaceRef || x.Type.Name != thunkInterfaceName {
 		return nil, false
+	}
+	x = l.callReceiver(n, x, nil)
+	if _, ok := l.callArgs(n, n.Arguments(), nil); !ok {
+		return nil, true
 	}
 	return l.invokeThunk(n, x), true
 }

@@ -73,7 +73,20 @@ func (l *lowerer) eraseGenericOverrides() {
 				continue
 			}
 			name := m.Name
-			m.Name += "_instantiated_" + c.Name
+			baseName := name + "_instantiated_" + c.Name
+			m.Name = baseName
+			// A later union can widen a bridge again. Keep its new target
+			// distinct from the original specialized implementation.
+			for suffix := 2; ; suffix++ {
+				used := false
+				for _, existing := range c.Methods {
+					used = used || existing != m && existing.Name == m.Name
+				}
+				if !used {
+					break
+				}
+				m.Name = baseName + "_" + itoa(suffix)
+			}
 			bridge := &hir.Method{Node: m.Node, Name: name, Virtual: true, Result: slot.Result}
 			l.bridgeTargets[bridge] = m
 			args := []*hir.Expr{}

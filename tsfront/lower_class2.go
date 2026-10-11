@@ -250,7 +250,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 				typ = hir.T(hir.Optional, typ)
 			}
 		}
-		m.Params = append(m.Params, hir.Param{Name: p.Name().Text(), Type: typ})
+		m.Params = append(m.Params, hir.Param{Name: p.Name().Text(), Type: typ, Variadic: p.AsParameterDeclaration().DotDotDotToken != nil})
 		l.declare(p.Name().Text(), typ)
 	}
 	if fn.Type() != nil {
@@ -289,10 +289,15 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		return nil
 	}
 	restoreFns := l.withLocalFns(body)
+	defaults := *m
+	defaults.Params = m.Params[len(captures):]
+	pre := l.applyDefaults(fn, &defaults)
 	inner := l.functionBody(body)
 	restoreFns()
-	l.applyFnDefaults(sigParams, m)
 	m.Body = inner
+	if len(pre) > 0 {
+		m.Body = hir.B(append(pre, inner)...)
+	}
 	l.method = savedMethod
 	l.pop()
 	lf := &localFn{method: m, captures: captures, owner: l.class}
@@ -317,16 +322,6 @@ func (l *lowerer) functionBody(body *ast.Node) *hir.Stmt {
 		stmt = &hir.Stmt{Kind: hir.Return, Node: l.node(body), X: l.expr(body)}
 	}
 	return hir.B(append(l.pend, stmt)...)
-}
-
-// Lifted defaults are rejected until their capture offsets and evaluation
-// order can be represented faithfully in a prologue.
-func (l *lowerer) applyFnDefaults(params []*ast.ParameterDeclarationNode, m *hir.Method) {
-	for _, p := range params {
-		if p.Initializer() != nil {
-			l.diagf(p, "unsupported-lifted-default", "default of lifted function parameter %s is not lowered", p.Name().Text())
-		}
-	}
 }
 
 // freeLocals lists the enclosing-method local names an arrow function reads

@@ -159,9 +159,13 @@ func (l *lowerer) tempInit(at *ast.Node, t hir.Type, x *hir.Expr) *hir.Expr {
 // parameter is the accumulator, the second the element.
 func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, init *ast.Node) (*hir.Expr, bool) {
 	body, params, ok := l.callbackBody(n, cb, elem)
-	if !ok || len(params) != 2 {
-		l.diagf(n, "unsupported-call", "reduce callback must take (accumulator, element)")
+	if !ok || len(params) < 1 || len(params) > 4 {
+		l.diagf(n, "unsupported-call", "reduce callback needs at most four parameters")
 		return nil, true
+	}
+	if len(params) == 1 {
+		l.serial++
+		params = append(params, "e"+itoa(l.serial))
 	}
 	accT := l.lookupTypeOf(params[0])
 	if accT.Kind == hir.Void {
@@ -176,10 +180,18 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 	acc := l.tempInit(n, accT, acc0)
 	l.declare(params[0], accT)
 	l.declare(params[1], elem)
-	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: params[1], Type: elem, X: recv,
-		Body: hir.B(
-			&hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: accT, X: acc},
-			&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: acc, Y: body})})
+	var pre []*hir.Stmt
+	if len(params) >= 3 {
+		index := hir.V(params[2], hir.T(hir.Number))
+		l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: index.Name, Type: index.Type, X: hir.L(index.Type, -1)})
+		pre = append(pre, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index, Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})
+	}
+	if len(params) >= 4 {
+		l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[3], Type: recv.Type, X: recv})
+	}
+	pre = append(pre, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: accT, X: acc},
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: acc, Y: body})
+	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: params[1], Type: elem, X: recv, Body: hir.B(pre...)})
 	return acc, true
 }
 
@@ -199,10 +211,7 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			if sym := l.resolve(cb); sym != nil {
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
-						l.serial++
-						v := "e" + itoa(l.serial)
-						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(cb), Owner: ref.owner, Name: ref.method,
-							Type: l.callbackResultType(ref), Args: []*hir.Expr{hir.V(v, elem)}}, []string{v}, true
+						return l.namedCallbackBody(n, cb, elem, ref)
 					}
 				}
 			}
@@ -212,7 +221,33 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		l.diagf(n, "unsupported-callback", "callback %s is not an arrow function", cb.Kind.String())
 		return nil, nil, false
 	}
+	// Defaults, rest and omitted tails need a callee prologue and an
+	// explicit argument adapter, just like ordinary calls. Keep simple
+	// callbacks inlined to preserve existing output.
+	limit := 3
+	if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression {
+		switch callee.Name().Text() {
+		case "sort":
+			limit = 2
+		case "reduce":
+			limit = 4
+		}
+	}
+	adapt := len(cb.Parameters()) > limit
+	for _, p := range cb.Parameters() {
+		adapt = adapt || p.Initializer() != nil || p.AsParameterDeclaration().DotDotDotToken != nil
+	}
+	if adapt {
+		l.serial++
+		lf := l.liftLocalFn("callback_"+itoa(l.serial), cb)
+		if lf == nil {
+			return nil, nil, false
+		}
+		ref := funcRef{owner: lf.owner.Name, method: lf.method.Name}
+		return l.callbackInvocation(n, cb, elem, ref, lf)
+	}
 	params := cb.Parameters()
+
 	var names []string
 	for _, pn := range params {
 		p := pn
@@ -226,12 +261,6 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			continue
 		}
 		names = append(names, p.Name().Text())
-	}
-	if len(names) == 0 {
-		l.serial++
-		name := "unused" + itoa(l.serial)
-		l.declare(name, elem)
-		names = append(names, name)
 	}
 	// Parameter types come from the checker (the element for the first
 	// parameter of map/filter/some, the accumulator for reduce, the index
@@ -251,6 +280,11 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			}
 		}
 		l.declare(p, t)
+	}
+	if len(names) == 0 {
+		l.serial++
+		names = append(names, "e"+itoa(l.serial))
+		l.declare(names[0], elem)
 	}
 	body := cb.Body()
 	if body == nil {
@@ -501,7 +535,7 @@ func (l *lowerer) callArgsMethod(at *ast.Node, args []*ast.Node, m *hir.Method, 
 		fixed--
 	}
 	for i, arg := range args {
-		if i < fixed && arg.Kind == ast.KindSpreadElement {
+		if arg.Kind == ast.KindSpreadElement && (i < fixed || fixed == len(params)) {
 			return l.tupleSpreadArgs(at, args, params)
 		}
 	}
@@ -509,33 +543,17 @@ func (l *lowerer) callArgsMethod(at *ast.Node, args []*ast.Node, m *hir.Method, 
 	if len(params) > 0 && params[len(params)-1].Variadic {
 		rest := params[len(params)-1]
 		fixed := params[:len(params)-1]
-		if len(args) < len(fixed) {
-			// Optional trailing fixed parameters may be omitted.
-			for i, p := range fixed {
-				if i < len(args) || p.Type.Kind != hir.Optional {
-					continue
-				}
-			}
-		}
 		fixedArgsIn := args
 		if len(fixedArgsIn) > len(fixed) {
 			fixedArgsIn = fixedArgsIn[:len(fixed)]
 		}
-		out, ok := l.fixedArgs(at, fixedArgsIn, fixed)
+		out, ok := l.fixedArgs(at, fixedArgsIn, fixed, true)
 		if !ok {
 			return nil, false
 		}
 		restArgs := []*ast.Node{}
 		if len(args) > len(fixed) {
 			restArgs = args[len(fixed):]
-		}
-		// Evaluate fixed arguments before constructing/evaluating the rest array.
-		for i, arg := range out {
-			l.serial++
-			name := "arg" + itoa(l.serial)
-			l.declare(name, arg.Type)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(at), Name: name, Type: arg.Type, X: arg})
-			out[i] = hir.V(name, arg.Type)
 		}
 		arr := l.tempVar(at, rest.Type)
 		for _, ra := range restArgs {
@@ -568,12 +586,25 @@ func (l *lowerer) callArgsMethod(at *ast.Node, args []*ast.Node, m *hir.Method, 
 		}
 		return append(out, arr), true
 	}
-	out, ok := l.fixedArgs(at, args, params)
+	out, ok := l.fixedArgs(at, args, params, false)
 	return out, ok
 }
 
 // fixedArgs lowers arguments for a fixed parameter list.
-func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) ([]*hir.Expr, bool) {
+func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, restPrelude bool) ([]*hir.Expr, bool) {
+	snapshot := func(value *hir.Expr) *hir.Expr {
+		if restPrelude {
+			l.serial++
+			name := "arg" + itoa(l.serial)
+			l.declare(name, value.Type)
+			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(at), Name: name, Type: value.Type, X: value})
+			return hir.V(name, value.Type)
+		}
+		if len(args) > len(params) {
+			return l.tempInit(at, value.Type, value)
+		}
+		return value
+	}
 	out := make([]*hir.Expr, 0, len(params))
 	for i, p := range params {
 		if i < len(args) {
@@ -588,19 +619,30 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param) 
 				return nil, false
 			}
 			a = l.presentValue(args[i], a, p.Type)
-			out = append(out, l.coerce(a, p.Type))
+			out = append(out, snapshot(l.coerce(a, p.Type)))
 			continue
 		}
 		if p.Type.Kind == hir.Optional {
-			out = append(out, &hir.Expr{Kind: hir.Lit, Type: p.Type})
+			out = append(out, snapshot(&hir.Expr{Kind: hir.Lit, Type: p.Type}))
 			continue
 		}
 		l.diagf(at, "unsupported-call", "missing argument for parameter %s", p.Name)
 		return nil, false
 	}
 	if len(args) > len(params) {
-		l.diagf(args[len(params)], "unsupported-call", "too many arguments (%d for %d)", len(args), len(params))
-		return nil, false
+		// All supplied arguments run left to right, including arguments
+		// ignored by the callee. Save accepted values before extra effects.
+		for _, arg := range args[len(params):] {
+			if arg.Kind == ast.KindSpreadElement {
+				l.diagf(arg, "unsupported-call", "extra spread requires a finite tuple")
+				return nil, false
+			}
+			value := l.expr(arg)
+			if value == nil {
+				return nil, false
+			}
+			l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(arg), X: value})
+		}
 	}
 	return out, true
 }
@@ -632,7 +674,7 @@ func (l *lowerer) spreadPush(n *ast.Node, recv *hir.Expr, spread *ast.Node) *hir
 // Evaluate each source once before distributing its elements to parameters.
 func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.Param) ([]*hir.Expr, bool) {
 	var values []*hir.Expr
-	for _, arg := range args {
+	for argIndex, arg := range args {
 		if arg.Kind != ast.KindSpreadElement {
 			x := l.expr(arg)
 			if x == nil {
@@ -649,7 +691,11 @@ func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.P
 		if x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "tuple.") {
 			c := l.classByName(x.Type.Name)
 			for _, field := range c.Fields {
-				values = append(values, &hir.Expr{Kind: hir.FieldGet, Node: l.node(arg), Type: field.Type, Name: field.Name, X: x})
+				value := &hir.Expr{Kind: hir.FieldGet, Node: l.node(arg), Type: field.Type, Name: field.Name, X: x}
+				if argIndex+1 < len(args) {
+					value = l.tempInit(arg, value.Type, value)
+				}
+				values = append(values, value)
 			}
 		} else {
 			t := l.ck.GetTypeAtLocation(arg.Expression())
@@ -658,7 +704,11 @@ func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.P
 				return nil, false
 			}
 			for i := 0; l.ck.GetPropertyOfType(t, itoa(i)) != nil; i++ {
-				values = append(values, &hir.Expr{Kind: hir.IndexGet, Node: l.node(arg), Type: x.Type.Args[0], X: x, Y: hir.L(hir.T(hir.I32), i)})
+				value := &hir.Expr{Kind: hir.IndexGet, Node: l.node(arg), Type: x.Type.Args[0], X: x, Y: hir.L(hir.T(hir.I32), i)}
+				if argIndex+1 < len(args) {
+					value = l.tempInit(arg, value.Type, value)
+				}
+				values = append(values, value)
 			}
 		}
 	}
@@ -684,4 +734,104 @@ func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.P
 		}
 	}
 	return out, true
+}
+
+// Named callbacks use the implementation's physical ABI, rather than making
+// a one-argument HIR call regardless of its declared parameters. Array
+// callbacks receive element, index, array; absent optional tails stay absent.
+func (l *lowerer) namedCallbackBody(at, cb *ast.Node, elem hir.Type, ref funcRef) (*hir.Expr, []string, bool) {
+	return l.callbackInvocation(at, cb, elem, ref, nil)
+}
+
+func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRef, lf *localFn) (*hir.Expr, []string, bool) {
+	var method *hir.Method
+	for _, c := range l.out.Classes {
+		if c.Name == ref.owner {
+			for _, m := range c.Methods {
+				if m.Name == ref.method {
+					method = m
+					break
+				}
+			}
+		}
+	}
+	if method == nil {
+		return nil, nil, false
+	}
+	params := method.Params
+	var args []*hir.Expr
+	if lf != nil {
+		params = params[len(lf.captures):]
+		for _, capture := range lf.captures {
+			value := hir.V(capture.name, capture.typ)
+			if l.localSymbols == nil {
+				l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+			}
+			l.localSymbols[value] = capture.symbol
+			args = append(args, value)
+		}
+	}
+	types := []hir.Type{elem, hir.T(hir.Number), hir.T(hir.Array, elem)}
+	minimum := 1
+	if callee := at.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression {
+		switch callee.Name().Text() {
+		case "sort":
+			types, minimum = []hir.Type{elem, elem}, 2
+		case "reduce":
+			acc := elem
+			if len(at.Arguments()) > 1 {
+				acc = l.mapCheckerType(at, l.ck.GetTypeAtLocation(at.Arguments()[1]))
+			}
+			types, minimum = []hir.Type{acc, elem, hir.T(hir.Number), hir.T(hir.Array, elem)}, 2
+		}
+	}
+	count := len(params)
+	if count > 0 && params[count-1].Variadic {
+		count = len(types)
+	}
+	if count > len(types) {
+		count = len(types)
+	}
+	if count < minimum {
+		count = minimum
+	}
+	var names []string
+	var supplied []*hir.Expr
+	for i := 0; i < count; i++ {
+		l.serial++
+		names = append(names, "e"+itoa(l.serial))
+		supplied = append(supplied, hir.V(names[i], types[i]))
+	}
+	for i, p := range params {
+		if p.Variadic {
+			arr := l.tempVar(cb, p.Type)
+			tail := supplied
+			if i < len(tail) {
+				tail = tail[i:]
+			} else {
+				tail = nil
+			}
+			for _, value := range tail {
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(cb), X: l.rtOp("array.push", arr, hir.T(hir.I32), l.coerce(value, p.Type.Args[0]))})
+			}
+			args = append(args, arr)
+			break
+		}
+		if i < len(supplied) {
+			args = append(args, l.coerce(supplied[i], p.Type))
+		} else if p.Type.Kind == hir.Optional {
+			args = append(args, &hir.Expr{Kind: hir.Lit, Type: p.Type})
+		} else {
+			l.diagf(cb, "unsupported-callback", "missing callback argument for parameter %s", p.Name)
+			return nil, nil, false
+		}
+	}
+	call := &hir.Expr{Kind: hir.DirectCall, Node: l.node(cb), Owner: ref.owner, Name: ref.method, Type: method.Result, Args: args}
+	if lf != nil && !method.Static {
+		call.Kind, call.Owner, call.X = hir.VirtualCall, "", l.this(lf.owner)
+	}
+	if len(l.pend) > 0 {
+		call = &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: call.Type, Stmt: hir.B(l.pend...), Y: call}
+	}
+	return call, names, true
 }
