@@ -32,7 +32,16 @@ func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
 		l.diagf(n, "unsupported-json", "JSON.%s requires exactly one argument; revivers/replacers/space are unsupported", name)
 		return nil, true
 	}
+	// A fresh literal passed directly to stringify has no nominal storage
+	// identity to preserve. Build it in the existing tagged-record domain so
+	// source insertion order and undefined fields survive; never retrofit
+	// guessed declaration order onto an aliased/native instance.
+	savedHint := l.hint
+	if name == "stringify" && args[0].Kind == ast.KindObjectLiteralExpression {
+		l.hint = hir.T(hir.Dynamic)
+	}
 	value := l.expr(args[0])
+	l.hint = savedHint
 	if value == nil {
 		return nil, true
 	}

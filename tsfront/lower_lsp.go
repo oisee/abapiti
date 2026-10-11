@@ -56,6 +56,16 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 	if !l.lspSymbol(sym) {
 		return nil, false
 	}
+	// A field declared in this library (e.g. TextEdit.newText) is still
+	// an ordinary string/number receiver. Only the merged namespace value
+	// denotes an LSP factory; library provenance alone is not sufficient.
+	namespace := false
+	for _, decl := range sym.Declarations {
+		namespace = namespace || decl.Kind == ast.KindModuleDeclaration
+	}
+	if !namespace {
+		return nil, false
+	}
 	name := sym.Name
 	args := n.Arguments()
 	supported := (name == "Position" && method == "create" && len(args) == 2) ||

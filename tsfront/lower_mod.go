@@ -435,7 +435,7 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 
 func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Class, body *[]*hir.Stmt) {
 	for _, stmt := range statements {
-		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 {
+		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/")) {
 			l.diagf(stmt, "unsupported-top-level", "mutable module variables are not lowered")
 			continue
 		}

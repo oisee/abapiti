@@ -873,6 +873,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, handled := l.jsonCall(n); handled {
 		return x
 	}
+	if x, handled := l.xmlParserCall(n); handled {
+		return x
+	}
 	if x, handled := l.promiseStatic(n); handled {
 		return x
 	}
