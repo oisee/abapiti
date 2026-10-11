@@ -32,6 +32,11 @@ func TestRegistrationLocalHelpersNodeOracle(t *testing.T) {
      fixtures[0] = "mutated";
      if (first() !== "mutated") throw new Error("snapshot capture");
    });
+   function joined(extra?: string[]): string { return fixtures.concat(["third"], extra ?? []).join("|"); }
+   it("multi-array fixture helper", () => {
+     if (joined(["fourth"]) !== fixtures.join("|") + "|third|fourth") throw new Error("wrong concat");
+     if (joined() !== fixtures.join("|") + "|third") throw new Error("wrong default concat");
+   });
  });
  describe("later", () => it("independent", () => {}));`
 	// Imported aliases must be certified by binding identity, not spelling.
@@ -52,7 +57,7 @@ func TestRegistrationLocalHelpersNodeOracle(t *testing.T) {
 		Results                 []struct{ Title string }
 		Initialization          []any
 	}
-	if err = json.Unmarshal([]byte(stdout), &got); err != nil || code != 0 || got.Passed != 6 || got.Failed != 0 || got.Trapped != 0 || len(got.Initialization) != 0 {
+	if err = json.Unmarshal([]byte(stdout), &got); err != nil || code != 0 || got.Passed != 7 || got.Failed != 0 || got.Trapped != 0 || len(got.Initialization) != 0 {
 		t.Fatalf("code %d: %s\n%s", code, stdout, stderr)
 	}
 	js := `const titles=[]; const suites=[]; function describe(t,f){suites.push(t);try{f()}finally{suites.pop()}} function it(t,f){titles.push([...suites,t].join(" "));f()} const suite=describe;` + "\n" + source + "\nconsole.log(JSON.stringify(titles));"

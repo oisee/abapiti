@@ -1573,6 +1573,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":
+			if l.unprunedFeatures && len(args) != 1 {
+				return l.concatArrays(n, recv, args), true
+			}
 			return l.rtOp("array.concat", recv, recv.Type, one()), true
 		case "slice":
 			a := one()
@@ -1652,6 +1655,40 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	}
 	return l.syntaxLibraryCall(n, name, recv)
+}
+
+// Multi-argument array concat evaluates all argument expressions before reading
+// receiver/argument elements. Save references, not snapshots, then copy them.
+// Scalars, spread calls and incompatible element storage stay explicit refusals.
+func (l *lowerer) concatArrays(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hir.Expr {
+	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	values := make([]*hir.Expr, 0, len(args))
+	for _, arg := range args {
+		if arg.Kind == ast.KindSpreadElement {
+			l.diagf(arg, "unsupported-array", "concat spread arguments require a callable rest ABI")
+			return nil
+		}
+		old := l.hint
+		l.hint = recv.Type
+		x := l.expr(arg)
+		l.hint = old
+		if x == nil {
+			return nil
+		}
+		if !x.Type.Equal(recv.Type) {
+			l.diagf(arg, "unsupported-array", "concat requires compatible array arguments, got %s", x.Type)
+			return nil
+		}
+		values = append(values, l.tempInit(arg, x.Type, x))
+	}
+	if len(values) == 0 {
+		return l.rtOp("array.slice0", recv, recv.Type)
+	}
+	result := recv
+	for _, x := range values {
+		result = l.rtOp("array.concat", result, recv.Type, x)
+	}
+	return result
 }
 
 // replaceCall lowers s.replace(pattern, with): a RegExp (literal or

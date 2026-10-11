@@ -7,6 +7,9 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	// Existing class-view emitter/runtime support; catalogue entry was lost
+	// at the yolo-4 merge. This does not change its storage/conversion ABI.
+	"dynamic.classView":    true,
 	"json.stringifyConfig": true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,

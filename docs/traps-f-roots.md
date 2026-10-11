@@ -45,6 +45,19 @@ refuse before argument preludes; no catchable ReferenceError is fabricated.
 Receiver-dependent suites keep their existing refusal. The original array/object
 references are retained, so fixture mutations are visible through helper calls.
 
+The first completed owned syntax rerun then isolated a second owned root at
+`syntax.ts:16492`: `fixtures.concat([program], extra ?? [])`. The old single-
+argument array lowering emitted a nil operand for two arguments. The unpruned
+Go path now evaluates receiver and **all** compatible-array arguments once in
+JS order, saves their live references, and only then concatenates using existing
+array operations. Zero arguments uses the existing fresh slice operation;
+scalar/rest/incompatible-storage arguments refuse. A Node regression covers
+argument mutations of the receiver and an earlier argument, receiver identity,
+fresh result/empty concat, sparse copy/JSON, structural fixture rows and omitted
+optional extra data. The registration-helper regression also runs this exact
+multi-array pattern through a captured named helper after live fixture mutation.
+No new array storage, type ABI or runtime operation was added.
+
 This does **not** recover capture-free named parser/config helper declarations,
 Downport's core closures, arbitrary callable objects or asynchronous scheduling.
 Dell's `parse`, `parseView` and `getConfig` roots remain outside this certificate.
@@ -149,9 +162,28 @@ passes.
 Unchanged type/ABI roots include ClearExportingParameters' parsed `skipNames`
 array-to-native-string-array live bridge, IReferenceExtras own keys, Registry
 assignment, constructor/interface and rename return bridges, NameValidator,
-primitive-array find callback ABI, and `_abap_object`'s dynamic unescape argument.
+primitive-array find callback ABI, and ABAPObject's erased native record keys.
 Downport fix/getParameters, captured parser/config declarations, async and panics
 remain Dell-owned. Existing E/C write-ups supply their detailed oracle contracts.
+
+### ABAPObject.findTexts — native string-key record versus Dynamic key
+
+The selected 13-test `string <- dynamic` bucket is **not** unescape or parseInt.
+A temporary untrapped lowering of the original byte-pinned core isolates the
+first invalid operation: `map.get(this.texts, id)` at
+`src/objects/_abap_object.ts:148:11`, with key source `:148:22`.
+RuntimeSignature requires String; the `id` local still has Dynamic storage.
+The same pair occurs in `map.set` at 149 and `map.get` at 151. `id` was produced
+by `typeof t?.ID === "string" ? t.ID.toUpperCase() : undefined`, then checked
+against undefined before these accesses. `this.texts` is native
+`Record<string, Record<string, {entry:string, maxLength:number}>>` storage.
+The scalar flow/storage bridge and record PropertyKey boundary need to agree;
+this is not permission to pass arbitrary boxed values directly into a native
+string-key map, nor to silently snapshot the XML graph. Required Dell oracles:
+string/nonstring/missing ID, uppercase IDs, R without KEY, non-R missing KEY,
+empty/optional keys and text/length values, and incompatible key domains
+refusing rather than creating invented properties. No map-key/coercion ABI code
+was changed. The raw probe and its source closure are deleted after diagnosis.
 
 ## Grace / certification status
 
@@ -159,6 +191,20 @@ Fresh base export already differs from its committed lexer golden by one runtime
 catalogue record (`dynamic.classView`), with no lexer method/call facts changed.
 F adds one `string.splitRegex` record (two read facts); the inspected final golden
 changes only six catalogue counts. No lexer oracle was edited.
+The base also omitted the already-implemented ABAP `dynamic.classView` operation
+from its backend capability map. Only that catalogue entry is restored, after
+checking the existing emitter/runtime; no class-view storage, conversion or
+property code is changed. The old Go regexp refusal test is updated to reject
+repeated captures/oversized bounds instead of the now-certified `a{2}` and `\s`.
+The inherited qualified-alias checked-view test used two unrelated classes,
+although the existing implementation requires declared nominal ancestry. Its
+positive fixture now declares `Child extends Base`; a new negative fixture keeps
+the original sibling assertion refused. No assertion/class-view code is changed.
+The first full/owned certification attempts were stopped before completion when
+the owned multi-array concat trap was found (not a genuine FAIL). Final execution
+prioritizes rules and syntax via `ABAPITI_TESTS_FIRST` but still executes and
+reconciles every shard/whole-suite title; the ordering helper has partition and
+unchanged-total regression tests.
 
 Final all-shard execution, default-output audit, workload and gates will be
 recorded here after fresh final-source runs. No passing whole-suite claim is made

@@ -31,11 +31,41 @@ static literal(): number { return 3 as const; }
 	}
 }
 
+// The checked-view domain requires declared nominal ancestry. A sibling
+// assertion is still refused; changing that ABI is not a fixture repair.
+func TestQualifiedTypeAssertionSiblingRefuses(t *testing.T) {
+	dir := t.TempDir()
+	for name, text := range map[string]string{
+		"defs.ts":       `export class Base {} export class Child {value=7;} export {Child as const};`,
+		"probe.ts":      `import * as N from "./defs"; export function cast(x:N.Base):N.Child {return x as N.const;}`,
+		"tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, diags, err := p.LowerWithOptions([]string{"defs.ts", "probe.ts"}, LowerOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	refused := false
+	for _, d := range diags {
+		refused = refused || strings.Contains(d.String(), "type assertion requires checker-proven narrowing")
+	}
+	if !hasBlocking(diags) || !refused {
+		t.Fatalf("missing sibling refusal: %v", diags)
+	}
+}
+
 func TestQualifiedTypeAssertionCheckedClassView(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
 		"defs.ts": `export class Base {}
-export class Child { value: number = 7; }
+export class Child extends Base { value: number = 7; }
 export {Child as const};`,
 		"probe.ts": `import * as N from "./defs";
 export function cast(x: N.Base): N.Child { return x as N.const; }`,
