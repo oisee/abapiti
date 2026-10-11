@@ -204,6 +204,8 @@ func (l *lowerer) indexParamAssigned(body *hir.Stmt, symbol *ast.Symbol) bool {
 
 // HIR requires distinct local names. Normalize source shadowing by checker
 // binding before name-keyed range analysis, leaving synthetic locals alone.
+// A source binding can have multiple HIR declarations (for example, a shared
+// switch body). All copies must use the same name as their symbol-bound reads.
 func (l *lowerer) distinguishNumberLocals() {
 	for _, c := range l.out.Classes {
 		for _, m := range numberMethods(c) {
@@ -234,6 +236,10 @@ func (l *lowerer) distinguishNumberLocals() {
 					return
 				}
 				symbol := l.declSymbols[s]
+				if name, ok := renamed[symbol]; symbol != nil && ok {
+					s.Name = name
+					return
+				}
 				name := s.Name
 				if prior, ok := bindingNames[symbol]; symbol != nil && ok {
 					s.Name = prior
@@ -248,6 +254,8 @@ func (l *lowerer) distinguishNumberLocals() {
 						}
 					}
 					used[s.Name] = true
+				}
+				if symbol != nil {
 					renamed[symbol] = s.Name
 				}
 				seen[name] = true
