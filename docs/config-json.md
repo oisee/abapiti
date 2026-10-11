@@ -42,10 +42,11 @@ and fields outside a pinned default literal refuse explicitly. General
 `JSON.stringify` call sites are outside this adapter. The frozen, manifest-driven zabapgit build retains its original observation-only
 trap to preserve every default artifact. A validated override variant enables
 the writer only for lowering without that manifest, including full-closure
-measurement and the Go test harness. The Go writer and its native-class methods
-are emitted only when this operation is present. ABAP
-emission returns an error naming `json.stringifyConfig`; it does not substitute
-a shallow copy, omit data, or fabricate a result.
+measurement and the Go test harness. The Go and ABAP writers are emitted only when this operation is present.
+ABAP now implements the same config round trip; its native default graph,
+typed projection, nesting, numeric formatting, escaping, undefined values,
+and cycle refusal are checked against Node on osgo and OSG-JS. See
+[the ABAP implementation and gates](config-json-abap.md).
 
 ## Reproduce
 

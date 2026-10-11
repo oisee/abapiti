@@ -2,11 +2,12 @@
 import {createRequire} from "node:module";
 import {readFileSync, readdirSync} from "node:fs";
 import {join, resolve} from "node:path";
-const [dir, osg] = process.argv.slice(2);
+const [dir, osg, mode] = process.argv.slice(2);
+const config702 = mode === "config-json-v702";
 const require = createRequire(join(resolve(osg || "."), "package.json"));
 const abaplint = require("@abaplint/core");
 const config = abaplint.Config.getDefault();
-config.get().syntax.version = abaplint.Version.v750;
+config.get().syntax.version = config702 ? abaplint.Version.v702 : abaplint.Version.v750;
 config.get().syntax.errorNamespace = ".*";
 config.get().rules = {parser_error: true, check_syntax: true};
 const ruleNames = new Set(abaplint.ArtifactsRules.getRules().map(rule => rule.getMetadata().key));
@@ -36,7 +37,8 @@ for (const n of files) {
   }
   constructs.inline ||= /\bDATA\s*\(/i.test(code);
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
-  reg.addFile(new abaplint.MemoryFile(n, src));
+  if (!config702 || /^z_runtime_(?:conf|json|mate)_/.test(n)) reg.addFile(new abaplint.MemoryFile(n, src));
+  else if (!n.includes("testclasses")) reg.addDependency(new abaplint.MemoryFile(n, src));
 }
 if (!constructs.inline || !constructs.instance) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
 function walk(dir) {
@@ -50,5 +52,5 @@ walk(join(osg, ".local/lars/open-abap-core/src"));
 reg.parse();
 const issues = reg.findIssues();
 for (const i of issues) console.error(`${i.getFilename()}:${i.getStart().getRow()}: ${i.getMessage()}`);
-console.log(`HIR ABAP v750: ${files.length} files, ${issues.length} issues`);
+console.log(`HIR ABAP ${config702 ? "config JSON v702" : "v750"}: ${files.length} files, ${issues.length} issues`);
 process.exitCode = issues.length ? 1 : 0;

@@ -38,8 +38,8 @@ func TestConfigJSONV8(t *testing.T) {
 
 func TestConfigJSONRefusals(t *testing.T) {
 	p := configJSONFixture()
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifyConfig") {
-		t.Fatalf("ABAP must refuse explicitly: %v", err)
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatalf("ABAP config JSON emission: %v", err)
 	}
 	main := `d:=parseJSON(str("{}"));d.put(str("self"),d);func(){defer func(){if _,ok:=recover().(trap);!ok {panic("cycle must trap")}}();stringifyConfig(d)}();fmt.Println("ok")`
 	if got := execute(t, p, main); got != "ok\n" {

@@ -14,6 +14,7 @@ import (
 )
 
 type emitter struct {
+	configJSON   bool
 	promiseUsed  bool
 	p            *hir.Program
 	names        *hir.Names
@@ -86,6 +87,9 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	}
 	for _, c := range p.Classes {
 		e.class(c)
+	}
+	if e.configJSON {
+		e.configJSONRuntime()
 	}
 	e.support()
 	e.markArrays()
@@ -1559,10 +1563,6 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
-	if x.Op == "json.stringifyConfig" {
-		b.e.err = fmt.Errorf("node %d (%s): json.stringifyConfig is not implemented on ABAP; refusing the config JSON round trip", x.ID, x.Source)
-		return
-	}
 	if b.constSetHas(x, n) {
 		return
 	}
@@ -1574,6 +1574,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	a := b.expr(x.X)
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
+	if x.Op == "json.stringifyConfig" {
+		ps = []hir.Type{hir.T(hir.Optional, hir.T(hir.Dynamic)), hir.T(hir.Optional, hir.T(hir.String))}
+	}
 	for i, v := range x.Args {
 		args = append(args, b.value(v, ps[i]))
 	}
@@ -1830,6 +1833,34 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "json.stringifyConfig":
+		b.e.configJSON = true
+		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))
+		b.line("IF " + a + " IS NOT BOUND.")
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.RegistryJSONSubsetError") + ".")
+		b.line("ENDIF.")
+		if c := b.e.classBy("src/version.ts.VersionNew"); c != nil {
+			v := b.rawTemp("REF TO " + b.e.name(c.Name))
+			b.line("IF ( " + args[1] + " IS NOT BOUND OR " + args[1] + "->has = abap_false ) AND " + args[0] + " IS BOUND.")
+			b.line("IF " + args[0] + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.line("TRY.")
+			b.line(v + " ?= " + args[0] + "->oval.")
+			b.line("CATCH cx_sy_move_cast_error.")
+			b.line("CLEAR " + v + ".")
+			b.line("ENDTRY.")
+			b.line("IF " + v + " IS BOUND.")
+			if b.e.materialized[c.Name] {
+				b.line("IF " + v + "->" + b.e.name("builtin.materializedSource") + " IS NOT BOUND.")
+			}
+			b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.RegistryJSONSubsetError") + ".")
+			if b.e.materialized[c.Name] {
+				b.line("ENDIF.")
+			}
+			b.line("ENDIF.\nENDIF.\nENDIF.")
+		}
+		b.line("CREATE OBJECT " + w + ".")
+		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
+		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
 		return
