@@ -1144,7 +1144,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: owner.Name, Name: hm.Name, Type: hm.Result, Args: args}
 			}
-			recv := l.expr(p.Expression)
+			recv := l.callReceiverExpr(p.Expression)
 			if recv == nil {
 				return nil
 			}
@@ -1258,7 +1258,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// context (e.g. Array<T>[] .flat() produces Array<T>).
 		outputHint := l.hint
 		l.hint = hir.Type{}
-		recv := l.expr(p.Expression)
+		recv := l.callReceiverExpr(p.Expression)
 		l.hint = outputHint
 		if recv == nil {
 			return nil
@@ -2873,5 +2873,15 @@ func (l *lowerer) callReceiver(at *ast.Node, recv *hir.Expr, params []hir.Param)
 	if prelude || count > len(params) {
 		return l.tempInit(at, recv.Type, recv)
 	}
+	return recv
+}
+
+// callReceiverExpr lowers the receiver in its own type context. The surrounding
+// hint describes the call result, which need not have the receiver's shape.
+func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
+	outputHint := l.hint
+	l.hint = hir.Type{}
+	recv := l.expr(n)
+	l.hint = outputHint
 	return recv
 }

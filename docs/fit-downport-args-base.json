@@ -1,0 +1,55 @@
+{
+  "measurement": "focused rules shard, not a whole-suite Go measurement",
+  "baseCommit": "5767b63737090241e1725edf12ec0bd2a27dd60d",
+  "selectedFiles": 192,
+  "node": {
+    "passed": 3148,
+    "failed": 1,
+    "pending": 10,
+    "total": 3159
+  },
+  "wholeSuiteNodeOracle": {
+    "passed": 11059,
+    "failed": 1,
+    "pending": 32,
+    "total": 11092
+  },
+  "report": {
+    "total": 3159,
+    "passed": 2301,
+    "failed": 0,
+    "trapped": 836,
+    "asyncPending": 0,
+    "notRun": 22,
+    "registered": 3147,
+    "notRunReasons": {
+      "asyncOrDone": 0,
+      "skippedOrFocused": 10,
+      "unregistered": 12
+    },
+    "unmatched": [],
+    "initialization": [
+      {
+        "file": "test/rules/keyword_case.ts",
+        "action": "/tmp/downport-evidence/rules-base-shards/all-wgmMdJ/rules/test/rules/keyword_case.ts:289:1",
+        "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/keyword_case.ts",
+        "action": "/tmp/downport-evidence/rules-base-shards/all-wgmMdJ/rules/test/rules/keyword_case.ts:304:1",
+        "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/line_length.ts",
+        "action": "/tmp/downport-evidence/rules-base-shards/all-wgmMdJ/rules/test/rules/line_length.ts:17:1",
+        "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+        "status": "trapped"
+      }
+    ],
+    "asyncInitializationFailures": 0
+  },
+  "summaryNote": "The unchanged exhaustive-summary guard correctly rejects a selected-shard run. Counts above come from the completed shard report and reconciled owned results.",
+  "downportArgumentMismatchCount": 224
+}
