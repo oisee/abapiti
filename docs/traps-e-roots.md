@@ -186,5 +186,19 @@ as a harness/string repair. Captured registry `getConfig`, parse/parseView,
 LSP own-key metadata, DDIC locals, local-class lowering, async and panic work
 remain outside this batch.
 
-Final measurements and gate/output audit are recorded in
-[abaplint-tests.md](abaplint-tests.md).
+## Final certification
+
+Fresh final execution: **8,876/11,060, FAIL 0**, all 17 shards and 625 files,
+2,075 trapped, 141 not-run; **+16** from the measured merged base. Both previously
+failed Downport titles pass. The four owned roots are gone, but downstream
+Dell-owned traps remain refused rather than receiving estimated pass credit.
+
+Grace-enabled short/full tsfront/hir/cmd tests and vet pass. Fresh default output
+is byte-identical to `origin/feat/fit-traps-c` by raw `diff -r` (6,312 files).
+Fresh Node and final-source Go agree byte-for-byte on zabapgit clean (0 issues)
+and seeded (5 issues), independently checked against the pinned kit. Only
+compact evidence remains; generated closures/builds, snapshots, probes, kit,
+Node builds, binaries and profiles were removed. No upstream edits, transpiler
+clone or push. Final tables/top 15 and audit are in
+[abaplint-tests.md](abaplint-tests.md) and
+[evidence/traps-e-final.json](evidence/traps-e-final.json).
