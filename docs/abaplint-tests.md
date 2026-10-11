@@ -1,5 +1,14 @@
 # abaplint's own tests on TS-HG@Go
 
+## Batch C — partial, integration not certified
+
+The [reviewed whitespace regexp root](traps-c-whitespace.md) passes its Node
+oracle and focused DDL shard: **17/32 passed, FAIL 0, 15 trapped** (+13 over
+batch B). This is not a whole-suite total. Concurrent edits from another process
+in this worktree prevented safe completion of batch-C integration; the last
+completed all-17-shard measurement below is still batch B. No new all-suite,
+default-output or zabapgit gate is claimed.
+
 ## Final batch B — all 17 shards
 
 **8,576/11,060 active Node tests (77.54%), FAIL 0.** This is **+434** from the
