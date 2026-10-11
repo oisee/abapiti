@@ -1487,7 +1487,42 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("string.toLowerCase", recv, str), true
 		case "split":
-			return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
+			// Keep the existing literal/string ABI and default output unchanged.
+			if len(args) == 1 && l.ck.GetTypeAtLocation(args[0]).IsStringLike() {
+				return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
+			}
+			if len(args) < 1 || len(args) > 2 {
+				l.diagf(n, "unsupported-call", "string.split requires a typed separator and optional numeric limit")
+				return nil, true
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			pattern := l.presentValue(args[0], l.expr(args[0]), hir.Type{})
+			if pattern == nil {
+				return nil, true
+			}
+			if len(args) == 2 {
+				pattern = l.tempInit(n, pattern.Type, pattern)
+			}
+			if pattern.Type.Kind == hir.RegExp {
+				limit := hir.L(hir.T(hir.Number), float64(4294967295))
+				if len(args) == 2 {
+					limit = l.expr(args[1])
+					if limit == nil {
+						return nil, true
+					}
+					if limit.Type.Kind != hir.Number && limit.Type.Kind != hir.I32 && limit.Type.Kind != hir.I64 {
+						l.diagf(n, "unsupported-call", "regexp split limit must be a number")
+						return nil, true
+					}
+					limit = l.coerce(limit, hir.T(hir.Number))
+				}
+				return l.rtOp("string.splitRegex", recv, hir.T(hir.Array, str), pattern, limit), true
+			}
+			if pattern.Type.Kind != hir.String || len(args) != 1 {
+				l.diagf(n, "unsupported-call", "string.split separator/limit type is not lowered")
+				return nil, true
+			}
+			return l.rtOp("string.split", recv, hir.T(hir.Array, str), pattern), true
 		case "toString":
 			return recv, true
 		}

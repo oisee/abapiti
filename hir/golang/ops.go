@@ -29,7 +29,7 @@ var supportedOps = map[string]bool{
 
 	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
 
-	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
+	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.splitRegex": true, "string.toUpperCase": true, "set.fromArray": true,
 	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
 	"map.delete": true, "string.trimStart": true, "string.trimEnd": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
@@ -105,6 +105,9 @@ func (b *body) runtime(x *hir.Expr) string {
 			flags = args[1]
 		}
 		code = "newRegExp(" + args[0] + "," + flags + ")"
+	case "string.splitRegex":
+		b.e.regexSplit = true
+		code = a + ".splitRegex(" + strings.Join(args, ",") + ")"
 	case "string.replaceRegex":
 		code = a + ".replaceRegex(" + strings.Join(args, ",") + ")"
 	case "regexp.match_test":

@@ -49,6 +49,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.trimStart":   {String, 0, false}, "string.trimEnd": {String, 0, false},
 	"map.delete":          {OrderedMap, 1, true},
 	"string.replaceRegex": {String, 2, false},
+	"string.splitRegex":   {String, 2, false},
 	"array.reverse":       {Array, 0, true},
 	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.has": {Array, 1, false}, "array.delete": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
 	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
@@ -161,6 +162,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, i, true
 	case "string.split":
 		return []Type{T(String)}, T(Array, T(String)), true
+	case "string.splitRegex":
+		return []Type{T(RegExp), T(Number)}, T(Array, T(String)), true
 	case "string.replaceRegex":
 		return []Type{T(RegExp), T(String)}, T(String), true
 	case "number.index":

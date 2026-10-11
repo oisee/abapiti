@@ -1,5 +1,7 @@
 package jsregex
 
+const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
+
 // TranslateSubset certifies a grammar over UTF-16 units, not arbitrary RE2
 // syntax. Non-u ASCII case folding is explicit; Unicode flags/escapes,
 // lookarounds, backreferences, lazy/bounded repeats and repeated captures refuse.
@@ -16,6 +18,11 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 		}
 		seen[c] = true
 		insensitive = insensitive || c == 'i'
+	}
+	// End followed by start can match only the empty input. Keep the JS
+	// non-m assertions absolute, including when execution starts later.
+	if pattern == "$^" {
+		return `\z\A`, true
 	}
 	// This delimited-string language's local negative lookahead is regular.
 	// A slash run can escape its following quote at any length; it can leave
@@ -128,6 +135,13 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 				atom = "[A-Za-z0-9_]"
 			case 'W':
 				atom = "[^A-Za-z0-9_]"
+			case 's':
+				atom = execSpace
+			case 'S':
+				atom = "[^" + execSpace[1:len(execSpace)-1] + "]"
+			case 'b', 'B':
+				atom = "\\" + string(escaped)
+				assertion = true
 			case 'd':
 				atom = "[0-9]"
 			case 'D':
@@ -183,7 +197,17 @@ func (p *subsetParser) class() (string, bool) {
 	}
 	var set [128]bool
 	any := false
+	extra := ""
 	for p.pos < len(p.pattern) && p.pattern[p.pos] != ']' {
+		if p.pos+1 < len(p.pattern) && p.pattern[p.pos:p.pos+2] == `\s` {
+			p.pos += 2
+			if p.pos < len(p.pattern) && p.pattern[p.pos] == '-' {
+				return "", false
+			}
+			extra += execSpace[1 : len(execSpace)-1]
+			any = true
+			continue
+		}
 		c, special, ok := p.classUnit(&set)
 		if !ok {
 			return "", false
@@ -233,7 +257,7 @@ func (p *subsetParser) class() (string, bool) {
 			out += string(byte(c))
 		}
 	}
-	return out + "]", true
+	return out + extra + "]", true
 }
 func (p *subsetParser) classUnit(set *[128]bool) (byte, bool, bool) {
 	if p.pos == len(p.pattern) {
