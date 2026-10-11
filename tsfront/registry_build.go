@@ -256,7 +256,7 @@ func LowerRegistryWithOptions(dir string, files []string, registry *overrides.Re
 		}
 	}
 	for _, c := range prog.Classes {
-		if c.Super != "" && trapped[c.Super] && !trapped[c.Name] {
+		if !options.TrapOnFailure && c.Super != "" && trapped[c.Super] && !trapped[c.Name] {
 			r.TrappedBases = append(r.TrappedBases, fmt.Sprintf("constructed class %s extends type-only %s", c.Name, c.Super))
 		}
 	}
@@ -298,8 +298,8 @@ func (r *RegistryLowering) Evidence(dump bool) (map[string][]byte, error) {
 	out["registry-blocking.json"] = append(data, '\n')
 	var trapEvidence []struct{ Class, Method, Location string }
 	for _, c := range r.Prog.Classes {
-		for _, m := range c.Methods {
-			if m.Body != nil && m.Body.Kind == hir.Block && len(m.Body.List) == 1 && m.Body.List[0].Kind == hir.Trap {
+		for _, m := range append(append([]*hir.Method{}, c.Methods...), c.Ctor) {
+			if m != nil && m.Body != nil && m.Body.Kind == hir.Block && len(m.Body.List) == 1 && m.Body.List[0].Kind == hir.Trap {
 				trapEvidence = append(trapEvidence, struct{ Class, Method, Location string }{c.Name, m.Name, m.Body.List[0].Name})
 			}
 		}

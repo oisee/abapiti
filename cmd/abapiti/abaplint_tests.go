@@ -13,7 +13,7 @@ import (
 
 var abaplintTestsCmd = &cobra.Command{
 	Use:   "abaplint-tests <materialized-test-closure> -o <outdir>",
-	Short: "Build and run abaplint's own tests on TS-HG@Go (unpruned spike)",
+	Short: "Build and run abaplint's own tests on TS-HG@Go (trap failed bodies)",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runAbaplintTests,
 }
@@ -29,7 +29,7 @@ func runAbaplintTests(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	// Evidence is always written, including when the strict translation gate fails.
+	// Evidence is always written, including when a structural gate fails.
 	if err = writeEvidence(filepath.Join(out, "evidence"), lowering); err != nil {
 		return err
 	}
@@ -66,6 +66,17 @@ func runAbaplintTests(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "test closure: %d files, %d blocking diagnostics, %d HIR errors, %d coverage traps\n", report.Files, report.Blocking, report.HIRErrors, report.CoverageTraps)
 	files, err := tsfront.EmitAbaplintTests(args[0], lowering)
+	// The Go emitter can add target-specific traps (e.g. unreviewed regexps).
+	if evidenceErr := writeEvidence(filepath.Join(out, "evidence"), lowering); evidenceErr != nil {
+		return evidenceErr
+	}
+	diagnostics, diagnosticErr := json.MarshalIndent(lowering.Diagnostics, "", "  ")
+	if diagnosticErr != nil {
+		return diagnosticErr
+	}
+	if diagnosticErr = writeSources(filepath.Join(out, "evidence"), map[string]string{"test-diagnostics.json": string(diagnostics) + "\n"}); diagnosticErr != nil {
+		return diagnosticErr
+	}
 	if err != nil {
 		return err
 	}

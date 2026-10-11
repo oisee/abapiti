@@ -13,11 +13,11 @@ try {
  if (!mocha) throw new Error("upstream mocha is not installed");
  let raw;
  try {
-  raw = execFileSync(process.execPath, [mocha,"--reporter","json", ...files.map(f => join(dirname(build.core), f.replace(/\.ts$/, ".js")))], {encoding:"utf8"});
+  raw = execFileSync(process.execPath, [mocha,"--reporter","json", ...files.map(f => join(dirname(build.core), f.replace(/\.ts$/, ".js")))], {encoding:"utf8", maxBuffer:128*1024*1024});
  } catch (e) { if (!e.stdout) throw e; raw = e.stdout; }
  const result = JSON.parse(raw);
- const summary = {passed:result.stats.passes,failed:result.stats.failures,failures:result.failures.map(t => ({title:t.fullTitle,message:t.err.message})),
-  titles:result.passes.map(t => t.fullTitle)};
+ const summary = {total:result.stats.tests, passed:result.stats.passes,failed:result.stats.failures,pending:result.stats.pending,failures:result.failures.map(t => ({title:t.fullTitle,message:t.err.message})),
+  titles:result.tests.map(t => t.fullTitle)};
  writeFileSync(resolve(output), JSON.stringify(summary,null,2)+"\n");
  console.log(JSON.stringify(summary));
 } finally { build.dispose(); }
