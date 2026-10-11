@@ -74,9 +74,12 @@ type Class struct {
 	Name, Super string
 	Implements  []string
 	Abstract    bool
-	Fields      []Field
-	Methods     []*Method
-	Ctor        *Method
+	// Structural distinguishes frontend data shapes from prototype-bearing classes.
+	Structural bool `json:",omitempty"`
+	ViewUnsafe bool `json:",omitempty"`
+	Fields     []Field
+	Methods    []*Method
+	Ctor       *Method
 }
 type Interface struct {
 	Node

@@ -88,6 +88,7 @@ var SpecialOps = map[string]bool{
 	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
 	"dynamic.of":              true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":           true,
+	"dynamic.classView":       true, // live structural storage, never a nominal assertion
 	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
 	"regexp.new":              true, // pattern, [flags] -> RegExp
 
