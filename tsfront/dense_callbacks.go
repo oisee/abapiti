@@ -94,6 +94,13 @@ func (l *lowerer) arrayCallbackLoop(n *ast.Node, operation string, receiver *hir
 }
 
 func (l *lowerer) denseCallbackStatements(n, callback *ast.Node, elem hir.Type) (*hir.Stmt, []string, bool) {
+	if callback.Kind == ast.KindPropertyAccessExpression || callback.Kind == ast.KindCallExpression {
+		value, names, ok := l.methodCallbackBody(n, callback, elem)
+		if !ok {
+			return nil, nil, false
+		}
+		return hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: value}), names, true
+	}
 	if callback.Kind != ast.KindArrowFunction && callback.Kind != ast.KindFunctionExpression {
 		l.diagf(n, "unsupported-callback", "dense callback must be an inline function")
 		return nil, nil, false

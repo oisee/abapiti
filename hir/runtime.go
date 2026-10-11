@@ -27,7 +27,6 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
-	"chai.throwMatch":           {InterfaceRef, 1, false},
 	"chai.arrayInclude":         {Dynamic, 1, false},
 	"chai.deepEqual":            {Dynamic, 1, false},
 	"chai.deepInclude":          {Dynamic, 1, false},
@@ -88,6 +87,7 @@ var SpecialOps = map[string]bool{
 	"object.classOf":          true, // any object ref -> ClassValue
 	"classvalue.newArgs":      true,
 	"classvalue.new":          true, // ClassValue -> a class or interface reference
+	"chai.throwMatch":         true, // tests-only thunk or boxed parameterless callable
 	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
 	"dynamic.of":              true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":           true,
@@ -123,8 +123,6 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, T(Dynamic), true
 	case "dynamic.put":
 		return []Type{T(String), T(Dynamic)}, T(Void), true
-	case "chai.throwMatch":
-		return []Type{T(String)}, b, t.Name == "closure.thunk"
 	case "chai.deepInclude":
 		return []Type{T(Dynamic)}, i, true
 	case "dynamic.strictEquals", "chai.deepEqual", "chai.arrayInclude":

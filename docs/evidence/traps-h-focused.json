@@ -1,0 +1,542 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "policy": "Focused original-Node and generated-Go executions only. No estimated or synthesized registrations/passes. Every borrowed execution checked for FAIL before ownership subtraction.",
+  "phases": [
+    {
+      "phase": 1,
+      "source": "uncommitted H prototype based on d45f3c1",
+      "scope": [
+        "abap",
+        "abap/expressions",
+        "abap/structures",
+        "abap/types",
+        "lsp",
+        "rules"
+      ],
+      "counts": {
+        "passed": 3391,
+        "failed": 0,
+        "trapped": 377,
+        "asyncPending": 0,
+        "notRun": 80,
+        "registered": 3784,
+        "total": 3848,
+        "asyncOrDone": 0,
+        "skippedOrFocused": 16,
+        "unregistered": 64
+      },
+      "shards": [
+        {
+          "name": "abap",
+          "files": 18,
+          "passed": 168,
+          "failed": 0,
+          "trapped": 48,
+          "notRun": 4,
+          "registered": 216,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 0,
+            "unregistered": 4
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "abap/expressions",
+          "files": 11,
+          "passed": 42,
+          "failed": 0,
+          "trapped": 8,
+          "notRun": 57,
+          "registered": 50,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 0,
+            "unregistered": 57
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "abap/structures",
+          "files": 30,
+          "passed": 138,
+          "failed": 0,
+          "trapped": 0,
+          "notRun": 2,
+          "registered": 139,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 1
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "abap/types",
+          "files": 6,
+          "passed": 28,
+          "failed": 0,
+          "trapped": 1,
+          "notRun": 0,
+          "registered": 29,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 0,
+            "unregistered": 0
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 109,
+          "failed": 0,
+          "trapped": 79,
+          "notRun": 5,
+          "registered": 193,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "rules",
+          "files": 192,
+          "passed": 2906,
+          "failed": 0,
+          "trapped": 241,
+          "notRun": 12,
+          "registered": 3157,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 10,
+            "unregistered": 2
+          },
+          "unmatched": 0
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "source": "uncommitted H prototype based on d45f3c1",
+      "scope": [
+        "lsp",
+        "rules"
+      ],
+      "counts": {
+        "passed": 3016,
+        "failed": 0,
+        "trapped": 319,
+        "asyncPending": 0,
+        "notRun": 17,
+        "registered": 3350,
+        "total": 3352,
+        "asyncOrDone": 0,
+        "skippedOrFocused": 15,
+        "unregistered": 2
+      },
+      "shards": [
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 110,
+          "failed": 0,
+          "trapped": 78,
+          "notRun": 5,
+          "registered": 193,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unmatched": 0
+        },
+        {
+          "name": "rules",
+          "files": 192,
+          "passed": 2906,
+          "failed": 0,
+          "trapped": 241,
+          "notRun": 12,
+          "registered": 3157,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 10,
+            "unregistered": 2
+          },
+          "unmatched": 0
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "source": "uncommitted H prototype based on d45f3c1",
+      "scope": [
+        "rules"
+      ],
+      "counts": {
+        "passed": 2906,
+        "failed": 0,
+        "trapped": 241,
+        "asyncPending": 0,
+        "notRun": 12,
+        "registered": 3157,
+        "total": 3159,
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "shards": [
+        {
+          "name": "rules",
+          "files": 192,
+          "passed": 2906,
+          "failed": 0,
+          "trapped": 241,
+          "notRun": 12,
+          "registered": 3157,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 10,
+            "unregistered": 2
+          },
+          "unmatched": 0
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "source": "c863bec (frozen semantic source)",
+      "scope": [
+        "rules"
+      ],
+      "counts": {
+        "passed": 2909,
+        "failed": 0,
+        "trapped": 238,
+        "asyncPending": 0,
+        "notRun": 12,
+        "registered": 3157,
+        "total": 3159,
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "shards": [
+        {
+          "name": "rules",
+          "files": 192,
+          "passed": 2909,
+          "failed": 0,
+          "trapped": 238,
+          "notRun": 12,
+          "registered": 3157,
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 10,
+            "unregistered": 2
+          },
+          "unmatched": 0
+        }
+      ]
+    }
+  ],
+  "firstTouchedTop20": [
+    {
+      "count": 180,
+      "message": "src/rules/function_module_recommendations.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "abap": 17,
+        "lsp": 23,
+        "rules": 140
+      },
+      "location": "src/rules/function_module_recommendations.ts:125:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 33,
+      "message": "src/lsp/_lookup.ts: own-key enumeration requires original structural property storage",
+      "shards": {
+        "lsp": 33
+      },
+      "location": "src/lsp/_lookup.ts:238:3: own-key enumeration requires original structural property storage"
+    },
+    {
+      "count": 32,
+      "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+      "shards": {
+        "rules": 32
+      },
+      "location": "src/objects/_abap_object.ts:126:3"
+    },
+    {
+      "count": 31,
+      "message": "test/abap/nesting.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "abap": 31
+      },
+      "location": "test/abap/nesting.ts:253:72: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 16,
+      "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 16
+      },
+      "location": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 16,
+      "message": "unsupported-call src/rules/downport.ts: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier importing is not a l…",
+      "shards": {
+        "rules": 16
+      },
+      "location": "src/rules/downport.ts:3520:3"
+    },
+    {
+      "count": 9,
+      "message": "unsupported-call src/rules/identical_conditions.ts: find on primitive arrays needs an absence-preserving callback ABI",
+      "shards": {
+        "rules": 9
+      },
+      "location": "src/rules/identical_conditions.ts:22:3"
+    },
+    {
+      "count": 8,
+      "message": "src/rules_runner.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "lsp": 2,
+        "rules": 6
+      },
+      "location": "src/rules_runner.ts:133:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 5,
+      "message": "src/lsp/rename.ts: HIR verification: call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
+      "shards": {
+        "lsp": 5
+      },
+      "location": "src/lsp/rename.ts:71:3"
+    },
+    {
+      "count": 5,
+      "message": "unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]]…",
+      "shards": {
+        "abap-expressions": 5
+      },
+      "location": "test/abap/expressions/sql_set_op.ts:16:51"
+    },
+    {
+      "count": 4,
+      "message": "src/lsp/implementation.ts: HIR verification: call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
+      "shards": {
+        "lsp": 4
+      },
+      "location": "src/lsp/implementation.ts:22:3"
+    },
+    {
+      "count": 4,
+      "message": "src/pretty_printer/pretty_printer.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "lsp": 4
+      },
+      "location": "src/pretty_printer/pretty_printer.ts:16:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 3,
+      "message": "src/objects/data_element.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 3
+      },
+      "location": "src/objects/data_element.ts:207:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 3,
+      "message": "unsupported-expr src/rules/remove_descriptions.ts: identifier XMLParser is not a lowered local or module value; unsupported-new src/rules/remove_descriptions.ts: new XMLParser is not a lowered class",
+      "shards": {
+        "rules": 3
+      },
+      "location": "src/rules/remove_descriptions.ts:103:3"
+    },
+    {
+      "count": 2,
+      "message": "src/abap/5_syntax/spaghetti_scope.ts: HIR verification: call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
+      "shards": {
+        "lsp": 2
+      },
+      "location": "src/abap/5_syntax/spaghetti_scope.ts:272:3"
+    },
+    {
+      "count": 2,
+      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "lsp": 1,
+        "rules": 1
+      },
+      "location": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 2,
+      "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "abap-expressions": 2
+      },
+      "location": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 2,
+      "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 2
+      },
+      "location": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 2,
+      "message": "test/rules/unused_ddic.ts: config JSON own-property order is unproven for shape.e1f04f67e7ac787cfb77fd7a8aa6b81dc4d91e166ec8b93cdfa32c0136489603",
+      "shards": {
+        "rules": 2
+      },
+      "location": "test/rules/unused_ddic.ts:196:25: config JSON own-property order is unproven for shape.e1f04f67e7ac787cfb77fd7a8aa6b81dc4d91e166ec8b93cdfa32c0136489603"
+    },
+    {
+      "count": 2,
+      "message": "unsupported-type test/rules/unused_variables.ts: object literal property skipAbstract is not in shape src/rules/unused_variables.ts.UnusedVariablesConf; unsupported-expr test/rules/unused_variables.ts: identifier issues is not a lowered local or module value",
+      "shards": {
+        "rules": 2
+      },
+      "location": "test/rules/unused_variables.ts:1447:18"
+    }
+  ],
+  "finalRulesTop20": [
+    {
+      "count": 140,
+      "message": "src/rules/function_module_recommendations.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 140
+      },
+      "location": "src/rules/function_module_recommendations.ts:125:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 32,
+      "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+      "shards": {
+        "rules": 32
+      },
+      "location": "src/objects/_abap_object.ts:126:3"
+    },
+    {
+      "count": 18,
+      "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 18
+      },
+      "location": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 16,
+      "message": "unsupported-call src/rules/downport.ts: method getParameters on dynamic is not lowered; unsupported-expr src/rules/downport.ts: identifier importing is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier importing is not a l…",
+      "shards": {
+        "rules": 16
+      },
+      "location": "src/rules/downport.ts:3520:3"
+    },
+    {
+      "count": 9,
+      "message": "unsupported-call src/rules/identical_conditions.ts: find on primitive arrays needs an absence-preserving callback ABI",
+      "shards": {
+        "rules": 9
+      },
+      "location": "src/rules/identical_conditions.ts:22:3"
+    },
+    {
+      "count": 6,
+      "message": "src/rules_runner.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 6
+      },
+      "location": "src/rules_runner.ts:133:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 4,
+      "message": "src/objects/data_element.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 4
+      },
+      "location": "src/objects/data_element.ts:207:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 3,
+      "message": "src/rules/remove_descriptions.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+      "shards": {
+        "rules": 3
+      },
+      "location": "src/rules/remove_descriptions.ts:103:3"
+    },
+    {
+      "count": 2,
+      "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 2
+      },
+      "location": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 2,
+      "message": "unsupported-type test/rules/unused_variables.ts: object literal property skipAbstract is not in shape src/rules/unused_variables.ts.UnusedVariablesConf; unsupported-expr test/rules/unused_variables.ts: identifier issues is not a lowered local or module value",
+      "shards": {
+        "rules": 2
+      },
+      "location": "test/rules/unused_variables.ts:1447:18"
+    },
+    {
+      "count": 1,
+      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 1
+      },
+      "location": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 1,
+      "message": "src/objects/enhancement_spot.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 1
+      },
+      "location": "src/objects/enhancement_spot.ts:42:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 1,
+      "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 1
+      },
+      "location": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 1,
+      "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
+      "shards": {
+        "rules": 1
+      },
+      "location": "src/rules/line_only_punc.ts:46:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "count": 1,
+      "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+      "shards": {
+        "rules": 1
+      },
+      "location": "src/objects/number_range.ts:36:3"
+    },
+    {
+      "count": 1,
+      "message": "unsupported-type test/rules/unnecessary_pragma.ts: object literal property allowNoTextGlobal is not in shape src/rules/unnecessary_pragma.ts.UnnecessaryPragmaConf; unsupported-expr test/rules/unnecessary_pragma.ts: identifier issues is not a lowered local or m…",
+      "shards": {
+        "rules": 1
+      },
+      "location": "test/rules/unnecessary_pragma.ts:87:60"
+    }
+  ]
+}

@@ -6,6 +6,12 @@ package jsregex
 // Reviewed maps pattern/flags to a compiled language and an optional whole-input
 // exclusion. Do not mutate: both target emitters and the Go runtime use it.
 var Reviewed = map[string][2]string{
+	// These non-u naming classes use a literal hyphen adjacent to \\d.
+	// Review the exact languages, not arbitrary legacy class ranges.
+	`^(\/[A-Z_\d]{3,8}\/)?[A-Z_-\d<> ]+$/i`: {`^(/[A-Za-z_0-9]{3,8}/)?[A-Za-z_0-9<> \-]+\z`, ""},
+	`^[A-Z_-\d/<> ]+$/i`:                    {`^[A-Za-z_0-9/<> \-]+\z`, ""},
+	// The empty case-insensitive constructor used by ClassAttributeNames.
+	`/i`: {`(?:)`, ""},
 	// Exact bounded ASCII naming grammars; not general bounded-repeat support.
 	`^((\/[A-Z_\d]{3,8}\/)|[a-zA-Z0-9]{3}|CI_)\w+$/`: {`^((/[A-Z_0-9]{3,8}/)|[a-zA-Z0-9]{3}|CI_)[A-Za-z0-9_]+\z`, ""},
 	`^[a-zA-Z]{1,3}_.*$/i`:                           {`^[A-Za-z]{1,3}_[^\n\r\x{2028}\x{2029}]*\z`, ""},

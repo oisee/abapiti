@@ -210,7 +210,11 @@ func (b *body) runtime(x *hir.Expr) string {
 				}
 			}
 		}
-		code = "chaiThrowMatch(func(){" + call + "}," + args[0] + ")"
+		if x.X.Type.Kind == hir.Dynamic {
+			code = "chaiThrowMatch(" + b.e.chaiAction() + "(" + a + ")," + args[0] + ")"
+		} else {
+			code = "chaiThrowMatch(func(){" + call + "}," + args[0] + ")"
+		}
 	case "chai.deepEqual", "chai.deepInclude", "chai.arrayInclude":
 		code = strings.ReplaceAll(x.Op, ".", "") + "(" + a + "," + args[0] + ")"
 	case "dynamic.strictEquals":
