@@ -30,8 +30,9 @@ The additional runtime families are `&[1-9][0-9]*` with `g`, and patterns matchi
 before compilation; invalid syntax is a trap. On Go, literal and dynamic constructors also use `TranslateSubset` from
 `hir/jsregex/subset.go`: ordered alternation, capture-safe groups, ASCII
 word/digit classes, JS whitespace (`\s`/`\S`, including `\s` inside classes),
-ASCII word boundaries (`\b`/`\B`), non-u ASCII case folding and non-m absolute
-anchors. `$^` matches only empty input. Dynamic constructors activate this same
+ASCII word boundaries (`\b`/`\B`), capture-safe greedy bounded repetitions
+(up to RE2's 1000 bound; repeated captures, malformed/oversized bounds and lazy
+repeats refuse), non-u ASCII case folding and non-m absolute anchors. `$^` matches only empty input. Dynamic constructors activate this same
 translator even when no non-table literal occurs in the program. Unknown or
 uncertified patterns/flag sequences produce
 `unreviewed JavaScript regexp /pattern/flags`; this is not arbitrary RE2 fallback.

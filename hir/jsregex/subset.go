@@ -1,10 +1,11 @@
 package jsregex
 
+// ECMAScript WhiteSpace + LineTerminator, excluding historical U+180E.
 const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
 
 // TranslateSubset certifies a grammar over UTF-16 units, not arbitrary RE2
 // syntax. Non-u ASCII case folding is explicit; Unicode flags/escapes,
-// lookarounds, backreferences, lazy/bounded repeats and repeated captures refuse.
+// lookarounds, backreferences, lazy repeats and repeated captures refuse.
 func TranslateSubset(pattern, flags string) (string, bool) {
 	if pattern == "" {
 		return "", false
@@ -19,8 +20,7 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 		seen[c] = true
 		insensitive = insensitive || c == 'i'
 	}
-	// End followed by start can match only the empty input. Keep the JS
-	// non-m assertions absolute, including when execution starts later.
+	// End followed by start matches only empty input, regardless of cursor.
 	if pattern == "$^" {
 		return `\z\A`, true
 	}
@@ -135,17 +135,19 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 				atom = "[A-Za-z0-9_]"
 			case 'W':
 				atom = "[^A-Za-z0-9_]"
-			case 's':
-				atom = execSpace
-			case 'S':
-				atom = "[^" + execSpace[1:len(execSpace)-1] + "]"
-			case 'b', 'B':
-				atom = "\\" + string(escaped)
-				assertion = true
 			case 'd':
 				atom = "[0-9]"
 			case 'D':
 				atom = "[^0-9]"
+			case 'b', 'B':
+				// Both engines use ASCII word membership on our UTF-16 unit
+				// input. Non-u/i folding is ASCII-only; u flags still refuse.
+				atom = "\\" + string(escaped)
+				assertion = true
+			case 's':
+				atom = execSpace
+			case 'S':
+				atom = "[^" + execSpace[1:]
 			default:
 				if !subsetPunctuation(escaped) {
 					return "", false, false
@@ -162,7 +164,16 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 		}
 		if p.pos < len(p.pattern) {
 			q := p.pattern[p.pos]
-			if q == '*' || q == '+' || q == '?' {
+			if q == '{' {
+				repeat, max, ok := p.boundedRepeat()
+				if !ok || assertion || cap && (max < 0 || max > 1) {
+					return "", false, false
+				}
+				atom += repeat
+				if p.pos < len(p.pattern) && (p.pattern[p.pos] == '*' || p.pattern[p.pos] == '+' || p.pattern[p.pos] == '?' || p.pattern[p.pos] == '{') {
+					return "", false, false
+				}
+			} else if q == '*' || q == '+' || q == '?' {
 				if assertion || cap && q != '?' {
 					return "", false, false
 				}
@@ -183,6 +194,44 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 	return out, captures, !group && branch
 }
 
+// RE2's bounded-repeat limit is 1000. Larger or malformed counts remain
+// refusals; repeated captures are screened by expression above.
+func (p *subsetParser) boundedRepeat() (string, int, bool) {
+	start := p.pos
+	p.pos++
+	count := func() (int, bool) {
+		begin, n := p.pos, 0
+		for p.pos < len(p.pattern) && p.pattern[p.pos] >= '0' && p.pattern[p.pos] <= '9' {
+			n = n*10 + int(p.pattern[p.pos]-'0')
+			p.pos++
+			if n > 1000 {
+				return 0, false
+			}
+		}
+		return n, p.pos > begin && !(p.pos > begin+1 && p.pattern[begin] == '0')
+	}
+	min, ok := count()
+	if !ok {
+		return "", 0, false
+	}
+	max := min
+	if p.pos < len(p.pattern) && p.pattern[p.pos] == ',' {
+		p.pos++
+		max = -1
+		if p.pos < len(p.pattern) && p.pattern[p.pos] != '}' {
+			max, ok = count()
+			if !ok || max < min {
+				return "", 0, false
+			}
+		}
+	}
+	if p.pos == len(p.pattern) || p.pattern[p.pos] != '}' {
+		return "", 0, false
+	}
+	p.pos++
+	return p.pattern[start:p.pos], max, true
+}
+
 func subsetPunctuation(c byte) bool {
 	return c >= 32 && c <= 126 && !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9')
 }
@@ -196,16 +245,14 @@ func (p *subsetParser) class() (string, bool) {
 		p.pos++
 	}
 	var set [128]bool
-	any := false
-	extra := ""
+	any, whitespace := false, false
 	for p.pos < len(p.pattern) && p.pattern[p.pos] != ']' {
 		if p.pos+1 < len(p.pattern) && p.pattern[p.pos:p.pos+2] == `\s` {
 			p.pos += 2
 			if p.pos < len(p.pattern) && p.pattern[p.pos] == '-' {
 				return "", false
 			}
-			extra += execSpace[1 : len(execSpace)-1]
-			any = true
+			any, whitespace = true, true
 			continue
 		}
 		c, special, ok := p.classUnit(&set)
@@ -257,7 +304,10 @@ func (p *subsetParser) class() (string, bool) {
 			out += string(byte(c))
 		}
 	}
-	return out + extra + "]", true
+	if whitespace {
+		out += execSpace[1 : len(execSpace)-1]
+	}
+	return out + "]", true
 }
 func (p *subsetParser) classUnit(set *[128]bool) (byte, bool, bool) {
 	if p.pos == len(p.pattern) {

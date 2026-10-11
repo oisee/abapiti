@@ -33,6 +33,18 @@ func TestGoRegExpSplitNodeOracle(t *testing.T) {
  }}`)
 }
 
+// Exercise F's bounded grammar through G's split/capture/limit implementation.
+func TestGoRegExpBoundedSplitNodeOracle(t *testing.T) {
+	regexNodeOracle(t, `class Probe {static run():string {
+ const patterns:RegExp[]=[/a{2}/,/a{0,2}/,/a{1,3}b{1,}/,/(a{1,2})/,/(a){1}/];
+ const inputs:string[]=['','a','aa','aaa','aaaa','xaaay','aaabbb','😀aa😀'];
+ let out='';for(const re of patterns){re.lastIndex=3;for(const input of inputs){
+ for(const limit of [0,1,2,3,20]){const parts=input.split(re,limit);out+=parts.length+':'+parts.join('|')+';';}
+ out+=re.test(input)+':'+re.lastIndex+';';}}
+ return out;
+ }}`)
+}
+
 func TestGoDynamicRegExpCheckedSubsetNodeOracle(t *testing.T) {
 	regexNodeOracle(t, `class Probe {static run():string {
  const patterns:string[]=['<abapGit\\b[^>]*\\bversion="([^"]+)"','^v\\d\\.\\d\\.\\d$','\\s+','[\\s.,:(]+','\\S+','[^\\s]+','\\bword\\B','$^'];

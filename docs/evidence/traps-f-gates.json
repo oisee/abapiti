@@ -1,0 +1,128 @@
+{
+  "base": "7c2d33fc52beef1bbdb7bc6ee38ff1b3b44010ab",
+  "goSemanticCommit": "98c43e3ce9fc68427dc7717ee3f1e206a522a403",
+  "defaultOutput": {
+    "command": "abapiti abaplint -o <same absolute path> --quiet",
+    "diffExit": 0,
+    "files": 6312,
+    "sha256": "4578924f674ae117caea492551a6c5620bbe15354748f43b63046026a089c426",
+    "hashEncoding": "sorted relative path + NUL + file bytes",
+    "outputPath": "/home/alice/dev/abapiti/.local/worktrees/trapsf/.local/traps-f/default-last"
+  },
+  "optionalGoOutput": {
+    "command": "abapiti abaplint -o <same absolute path> --target all,go --quiet",
+    "changed": [
+      "go/runtime.go",
+      "go/zabaplint-go"
+    ],
+    "otherFilesIdentical": true,
+    "justification": "Dynamic RegExp constructors install the same checked subset translator as literals; runtime.go gains only that translator/dispatch and the Go executable is rebuilt from it. All default ABAP/zip bytes are unchanged."
+  },
+  "workload": {
+    "kitZipSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "freshOriginalNodeBuild": true,
+    "independentGoTargetCheck": {
+      "clean": {
+        "seconds": [
+          9.71068600891158
+        ],
+        "median_seconds": 9.71068600891158,
+        "byte_identical": true,
+        "issues": 0
+      },
+      "seeded": {
+        "seconds": [
+          10.471842887811363
+        ],
+        "median_seconds": 10.471842887811363,
+        "byte_identical": true,
+        "issues": 5
+      }
+    },
+    "clean": {
+      "issues": 0,
+      "nodeGoKitByteIdentical": true,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "seeded": {
+      "issues": 5,
+      "nodeGoKitByteIdentical": true,
+      "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+    }
+  },
+  "graceGolden": {
+    "baseAlreadyStale": "dynamic.classView catalogue record",
+    "ownedAddition": "string.splitRegex catalogue record; receiver and argument reads",
+    "changed": "Six catalogue-count lines only; no lexer methods/call-site facts or lexer oracle changes"
+  },
+  "tests": {
+    "environment": {
+      "GOCACHE": "$HOME/.cache/go-build",
+      "GOTOOLCHAIN": "go1.26.0",
+      "GOFLAGS": "-buildvcs=false",
+      "ABAPITI_GRACECHECK": "1",
+      "GOMAXPROCS": "4"
+    },
+    "commands": [
+      "go test ./... -short -timeout=30m",
+      "go test ./tsfront/... ./hir/... ./cmd/... -timeout=30m",
+      "go vet ./...",
+      "node tools/abaplint-tests-report-test.mjs",
+      "node tools/abaplint-tests-all-test.mjs"
+    ],
+    "allPassed": true,
+    "timeoutNote": "Initial package-wide 10m short-test deadline expired with tests still progressing; rerun with 30m, no test exclusions, passed."
+  },
+  "selectedBaseComparison": {
+    "shards": [
+      "abap",
+      "abap/expressions",
+      "abap/structures",
+      "abap/syntax",
+      "rules"
+    ],
+    "base": {
+      "passed": 4378,
+      "failed": 0,
+      "trapped": 497,
+      "notRun": 124,
+      "unregistered": 105,
+      "skipped": 19
+    },
+    "final": {
+      "passed": 4580,
+      "failed": 0,
+      "trapped": 334,
+      "notRun": 85,
+      "unregistered": 64,
+      "skipped": 21
+    },
+    "passDelta": 202,
+    "fullBaseRun": false
+  },
+  "fullSuite": {
+    "command": "ABAPITI_GRACECHECK=1 ABAPITI_TESTS_FIRST=rules,abap/syntax nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/evidence/traps-f-final.json",
+    "files": 625,
+    "shards": 17,
+    "passed": 10376,
+    "failed": 0,
+    "trapped": 624,
+    "asyncPending": 0,
+    "notRun": 92,
+    "registered": 11028,
+    "total": 11092,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 28,
+    "unregistered": 64,
+    "titlesReconciled": true,
+    "unmatched": 0,
+    "excluded": 0,
+    "evidence": "traps-f-final.json"
+  },
+  "cleanup": {
+    "retained": "compact JSON/Markdown only",
+    "discarded": "generated Go/binaries, archived compiler/source, materialized closures, raw records/logs, kit checkout and profiles",
+    "push": false,
+    "transpilerClone": false
+  }
+}
