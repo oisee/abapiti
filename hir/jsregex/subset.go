@@ -5,6 +5,11 @@ package jsregex
 // dot is one UTF-16 unit excluding all four line terminators. Groups, backrefs,
 // assertions, Unicode escapes and class folding remain explicit refusals.
 func TranslateSubset(pattern, flags string) (string, bool) {
+	// Empty RegExp source is canonicalized to (?:) by JS. The current runtime
+	// does not retain that form, so refuse rather than expose a guessed source.
+	if pattern == "" {
+		return "", false
+	}
 	insensitive := false
 	seen := map[byte]bool{}
 	for i := 0; i < len(flags); i++ {

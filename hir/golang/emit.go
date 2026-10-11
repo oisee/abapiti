@@ -323,7 +323,14 @@ func (e *emitter) class(c *hir.Class) {
 		e.shapeFields(c)
 	}
 	if source {
-		e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+		if e.configJSON {
+			// Boxing historically returns the parsed input record. After native
+			// writes that record is stale; refuse this escape rather than let a
+			// later dynamic JSON writer silently serialize the old values.
+			e.line("func (self *%s) dynamicSource() *dynamic {if self==nil {return nil};if self.source!=nil && stringifyConfig(self)!=stringifyConfig(self.source) {panic(newTrap(%q))};return self.source}", e.obj(c.Name), "boxing a changed parsed native projection is unsupported")
+		} else {
+			e.line("func (self *%s) dynamicSource() *dynamic {return self.source}", e.obj(c.Name))
+		}
 	} else {
 		e.line("func (self *%s) dynamicSource() *dynamic {return nil}", e.obj(c.Name))
 	}

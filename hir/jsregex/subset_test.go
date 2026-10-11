@@ -3,7 +3,7 @@ package jsregex
 import "testing"
 
 func TestSubsetRefusesUnmodeledSyntax(t *testing.T) {
-	for _, pattern := range []string{`(a)`, `a|b`, `a{2}`, `\1`, `\w`, `\p{Letter}`, `[a-z]`, `(?=a)`, `a*?`, `a**`, `a$b`, `^é`} {
+	for _, pattern := range []string{"", `(a)`, `a|b`, `a{2}`, `\1`, `\w`, `\p{Letter}`, `[a-z]`, `(?=a)`, `a*?`, `a**`, `a$b`, `^é`} {
 		flags := ""
 		if pattern == `[a-z]` {
 			flags = "i"

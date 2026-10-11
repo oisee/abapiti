@@ -17,7 +17,7 @@ func TestJSONParsedShapeLiveFields(t *testing.T) {
 	}
 	p.Classes = append(p.Classes, c)
 	n := hir.NewNames()
-	main := `d:=parseJSON(str("{\"b\":\"old\",\"extra\":1,\"a\":\"x\"}"));v:=&` + n.Get("struct."+c.Name) + `{source:d,` + n.Get("member.a") + `:str("x"),` + n.Get("member.b") + `:str("new")};fmt.Println(stringifyConfig(v).String())`
+	main := `d:=parseJSON(str("{\"b\":\"old\",\"extra\":1,\"a\":\"x\"}"));v:=&` + n.Get("struct."+c.Name) + `{source:d,` + n.Get("member.a") + `:str("x"),` + n.Get("member.b") + `:str("new")};fmt.Println(stringifyConfig(v).String());func(){defer func(){if _,ok:=recover().(trap);!ok {panic("stale projection boxing must refuse")}}();box(v);panic("boxed stale fields")}()`
 	if got := execute(t, p, main); got != "{\"b\":\"new\",\"extra\":1,\"a\":\"x\"}\n" {
 		t.Fatal(got)
 	}
