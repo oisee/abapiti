@@ -39,6 +39,21 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	for _, c := range p.Classes {
+		check := func(s *hir.Stmt) {
+			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+					e.extraRuntimeKeys = true
+				}
+			})
+		}
+		if c.Ctor != nil {
+			check(c.Ctor.Body)
+		}
+		for _, m := range c.Methods {
+			check(m.Body)
+		}
+	}
+	for _, c := range p.Classes {
 		for _, m := range c.Methods {
 			e.checkOps(m.Body)
 		}
@@ -93,6 +108,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.extraRuntimeKeys {
+		runtime += ownKeysSource
+	}
 	if len(e.liveClasses) > 0 {
 		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
 		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
@@ -108,8 +126,12 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
 	}
-	if e.usesArrayPresence || e.usesArrayDeletion {
+	if e.usesArrayPresence || e.usesArrayDeletion || len(e.liveClasses) > 0 {
 		runtime = sparseRuntime(runtime)
+	}
+	if len(e.liveClasses) > 0 {
+		runtime = liveArrayRuntime(runtime)
+		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
 	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
@@ -152,6 +174,7 @@ type emitter struct {
 	code              strings.Builder
 	err               error
 	extra             strings.Builder
+	extraRuntimeKeys  bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool
@@ -300,6 +323,9 @@ func (e *emitter) effective(c *hir.Class) []string {
 }
 func (e *emitter) class(c *hir.Class) {
 	e.descriptor(c)
+	if e.extraRuntimeKeys {
+		e.ownKeyClass(c)
+	}
 	if e.configJSON {
 		e.configJSONClass(c)
 	}
@@ -656,8 +682,15 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		code = a + ".get(" + i + ").Value"
+		if len(e.liveClasses) > 0 {
+			code = "liveArrayRead(" + a + "," + i + ")"
+		}
 		if x.X.Type.Args[0].IsRef() {
-			code = "castRef[" + e.typ(t) + "](" + code + ")"
+			if len(e.liveClasses) > 0 && t.Kind == hir.Dynamic {
+				code = "box(" + code + ")"
+			} else {
+				code = "castRef[" + e.typ(t) + "](" + code + ")"
+			}
 		}
 	case hir.New:
 		a := []string{}
@@ -875,14 +908,18 @@ func (b *body) expr(x *hir.Expr) string {
 			helper = "numberMax"
 		}
 		a := b.expr(x.X)
+		items := a + ".Items"
+		if len(e.liveClasses) > 0 {
+			items = a + ".values()"
+		}
 		if x.Y == nil {
 			if t.Kind == hir.Number {
-				code = helper + "Array(" + a + ".Items)"
+				code = helper + "Array(" + items + ")"
 			} else {
 				n := b.temp(t, "0")
-				b.line("if len(%s.Items)==0 {panic(newRangeFault())}", a)
-				b.line("%s=%s.Items[0]", n, a)
-				b.line("for _,v:=range %s.Items { %s=%s(%s,v) }", a, n, x.Op, n)
+				b.line("if len(%s)==0 {panic(newRangeFault())}", items)
+				b.line("%s=%s[0]", n, items)
+				b.line("for _,v:=range %s { %s=%s(%s,v) }", items, n, x.Op, n)
 				return n
 			}
 		} else {
@@ -1018,13 +1055,24 @@ func (b *body) stmt(s *hir.Stmt) {
 		a := b.expr(s.X)
 		index := b.fresh()
 		e.mark(s.Node, "loop")
-		b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
+		if len(e.liveClasses) > 0 {
+			b.line("for %s:=0; int32(%s)<%s.length(); %s++ {", index, index, a, index)
+		} else {
+			b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
+		}
 		if e.profile {
 			b.line("%s++", trips)
 		}
 		code := a + ".Items[" + index + "]"
+		if len(e.liveClasses) > 0 {
+			code = "liveArrayRead(" + a + ",int32(" + index + "))"
+		}
 		if s.Type.IsRef() {
-			code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
+			if len(e.liveClasses) > 0 && s.Type.Kind == hir.Dynamic {
+				code = "box(" + code + ")"
+			} else {
+				code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
+			}
 		}
 		n := b.temp(s.Type, code)
 		old := b.locals

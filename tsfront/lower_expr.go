@@ -1574,10 +1574,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, false
 			}
 			lowered := make([]*hir.Expr, 0, len(args))
-			for _, arg := range args {
+			for index, arg := range args {
 				x := l.expr(arg)
 				if x == nil {
 					return nil, true
+				}
+				if l.unprunedFeatures && index == 2 {
+					x = l.coerce(x, recv.Type.Args[0])
 				}
 				lowered = append(lowered, x)
 			}

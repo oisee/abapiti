@@ -17,6 +17,7 @@ var supportedOps = map[string]bool{
 	"string.toLowerCase":   true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
 	"object.checkedClassView": true,
+	"dynamic.keys":            true,
 	"dynamic.classView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
@@ -86,6 +87,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
+		if len(b.e.liveClasses) > 0 {
+			code = a + ".length()"
+		}
 	case "map.size":
 		code = "int32(len(" + a + ".Entries))"
 	case "string.startsWith", "string.endsWith", "string.indexOf", "string.at", "string.replaceFirst", "string.repeatIndent", "string.parseInt10", "string.parseInt10i64", "string.substr", "string.slice", "string.charAt", "string.replaceAll", "string.split":
@@ -216,6 +220,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "dynamic.keys":
+		code = "dynamicKeys(" + a + ")"
+		b.e.extraRuntimeKeys = true
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.asRef":
