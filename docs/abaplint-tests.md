@@ -1,5 +1,25 @@
 # abaplint's own tests on TS-HG@Go
 
+## Latest async integration — rebased harness
+
+Fresh before/after measurements against `f51056b` are in
+[`abaplint-tests-async.md`](abaplint-tests-async.md) and its companion JSON.
+
+| Shard | Build | Passed | Failed | Trapped | Async-pending | Not-run | Registered | Node total |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `rules` | before | 5 | 0 | 1,601 | 0 | 1,553 | 3,074 | 3,159 |
+| `rules` | after | 5 | 0 | 1,914 | 1,145 | 95 | 3,074 | 3,159 |
+| `lexer` | before | 200 | 0 | 0 | 0 | 0 | 200 | 200 |
+| `lexer` | after | 200 | 0 | 0 | 0 | 0 | 200 | 200 |
+| `statements` | before | 433 | 21 | 4,508 | 0 | 0 | 4,962 | 4,962 |
+| `statements` | after | 433 | 21 | 4,508 | 0 | 0 | 4,962 | 4,962 |
+| `structures` | before | 23 | 1 | 114 | 0 | 2 | 139 | 140 |
+| `structures` | after | 23 | 1 | 114 | 0 | 2 | 139 | 140 |
+| **Unique total** | **before** | **661** | **22** | **6,223** | **0** | **1,555** | **8,375** | **8,461** |
+| **Unique total** | **after** | **661** | **22** | **6,536** | **1,145** | **97** | **8,375** | **8,461** |
+
+The round-two report below is the baseline historical measurement.
+
 ## Latest N/total — harness round 2
 
 Pinned upstream: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`
@@ -131,8 +151,9 @@ The remaining 22 **non-trap failures are not all assertion mismatches**:
   not a chai comparison. This generic node ABI is still missing; it is not
   reclassified as a pass or silently hidden as an assertion-shim fix.
 
-Deep chains, hooks, general async execution/Promise draining, real timers, and
-arbitrary chai APIs remain unsupported or uncertified. Unsupported constructs
+Deep chains, general pending async execution, real timers, and arbitrary chai
+APIs remain unsupported or uncertified. Settled Promise draining and suite hooks
+are covered by the async integration linked above. Unsupported constructs
 trap; assertions are not no-ops.
 
 ## Reproduce and evidence
@@ -145,7 +166,7 @@ and run original upstream mocha/chai, never our shims.
 export GOCACHE="$HOME/.cache/go-build"
 export GOTOOLCHAIN=go1.26.0
 export GOFLAGS=-buildvcs=false
-UPSTREAM=/home/alice/dev/abaplint
+UPSTREAM=~/dev/abaplint
 mkdir -p .local
 RUN=$(mktemp -d "$PWD/.local/tests-run.XXXXXX")
 go build -o "$RUN/abapiti" ./cmd/abapiti
@@ -200,7 +221,7 @@ Passed with the stated environment:
 ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...
 go vet ./...
 node tools/abaplint-tests-report-test.mjs
-node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint
+node tools/abaplint-tests-runtime-test.mjs ~/dev/abaplint
 ```
 
 Built the reference executable from **`git archive origin/main` (`54a521c`)**
