@@ -1,0 +1,60 @@
+{
+  "base": "ea61e2333829405d03e893c7d7d30fce954b5848",
+  "gates": {
+    "grace_go_test": 0,
+    "go_vet": 0,
+    "a4h_diff_bytes": 0,
+    "syntax_oracle": "regenerated with tools/syntax-features-oracle.mjs; unchanged",
+    "node_report_tests": "passed",
+    "node_runtime_contract": "6 scenarios passed"
+  },
+  "shards": [
+    {
+      "name": "rules",
+      "total": 3159,
+      "passed": 5,
+      "failed": 0,
+      "trapped": 1601,
+      "notRun": 1553,
+      "registered": 3074
+    },
+    {
+      "name": "abap/lexer",
+      "total": 200,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 0,
+      "registered": 200
+    },
+    {
+      "name": "abap/statements",
+      "total": 4962,
+      "passed": 433,
+      "failed": 21,
+      "trapped": 4508,
+      "notRun": 0,
+      "registered": 4962
+    },
+    {
+      "name": "abap/structures",
+      "total": 140,
+      "passed": 23,
+      "failed": 1,
+      "trapped": 114,
+      "notRun": 2,
+      "registered": 139
+    }
+  ],
+  "totals": {
+    "passed": 661,
+    "failed": 22,
+    "trapped": 6223,
+    "notRun": 1555,
+    "registered": 8375,
+    "total": 8461,
+    "asyncOrDone": 1458,
+    "unregistered": 86
+  },
+  "resolution": "Retained main localFnMemberName and harness trapBodyDiagnostics. Lexer facts regenerated using absolute GRACE_FACTS_OUT with ABAPITI_GRACECHECK=1: only op_aliases/op_allocates/op_may_raise/op_reads/op_writes changed. All CI suites retained; feature lint uses --fixture. Neither side had osgo-known-gaps handling. This base has no hir/abap/ops.go or backend coverage guard; main small builtins emission tests retained, harness string.repeat is catalogued in Go supportedOps (harness emits Go only)."
+}

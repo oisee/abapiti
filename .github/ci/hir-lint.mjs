@@ -2,7 +2,8 @@
 import {createRequire} from "node:module";
 import {readFileSync, readdirSync} from "node:fs";
 import {join, resolve} from "node:path";
-const [dir, osg] = process.argv.slice(2);
+const [dir, osg, mode] = process.argv.slice(2);
+if (mode !== undefined && mode !== "--fixture") throw new Error(`Unknown mode: ${mode}`);
 const require = createRequire(join(resolve(osg || "."), "package.json"));
 const abaplint = require("@abaplint/core");
 const config = abaplint.Config.getDefault();
@@ -38,7 +39,7 @@ for (const n of files) {
   constructs.instance ||= /\bIS INSTANCE OF\b/i.test(code);
   reg.addFile(new abaplint.MemoryFile(n, src));
 }
-if (!constructs.inline || !constructs.instance) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
+if (mode !== "--fixture" && (!constructs.inline || !constructs.instance)) throw new Error("HIR corpus must contain inline DATA and IS INSTANCE OF");
 function walk(dir) {
   for (const f of readdirSync(dir, {withFileTypes: true})) {
     const path = join(dir, f.name);
