@@ -1,18 +1,17 @@
 {
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
-  "codeCommit": "069d94578dfd928a5a5c9b80f6b0b832f16cf004",
-  "mainCommit": "54a521cd51c0494d73e2740fbe9d6328d286d0c6",
-  "artifacts": ".local/harness-round2",
-  "artifactPrefix": "round2-",
+  "codeCommit": "8acc4f2555f806ce414ef46da5f9e14bcd07ede2",
+  "mainCommit": "ea61e2333829405d03e893c7d7d30fce954b5848",
+  "artifacts": "docs/abaplint-tests-latest.json (compact summary only)",
   "shards": [
     {
       "name": "rules",
       "files": 192,
       "passed": 5,
       "failed": 0,
-      "trapped": 1601,
-      "notRun": 1553,
-      "registered": 3074,
+      "trapped": 1674,
+      "notRun": 1480,
+      "registered": 3147,
       "total": 3159,
       "node": {
         "passed": 3149,
@@ -22,22 +21,10 @@
       "notRunReasons": {
         "asyncOrDone": 1458,
         "skippedOrFocused": 10,
-        "unregistered": 85
+        "unregistered": 12
       },
       "unmatched": 0,
       "initialization": [
-        {
-          "file": "test/rules/check_comments.ts",
-          "action": "test/rules/check_comments.ts:152:1",
-          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
-          "status": "failed"
-        },
-        {
-          "file": "test/rules/fully_type_constants.ts",
-          "action": "test/rules/fully_type_constants.ts:131:1",
-          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
-          "status": "failed"
-        },
         {
           "file": "test/rules/keyword_case.ts",
           "action": "test/rules/keyword_case.ts:289:1",
@@ -46,51 +33,15 @@
         },
         {
           "file": "test/rules/keyword_case.ts",
-          "action": "test/rules/keyword_case.ts:292:1",
-          "message": "test/rules/keyword_case.ts:292:1: lowering trap: unsupported-callback test/rules/keyword_case.ts:292:40: callback block must end with a return of a value",
-          "status": "trapped"
-        },
-        {
-          "file": "test/rules/keyword_case.ts",
           "action": "test/rules/keyword_case.ts:304:1",
-          "message": "test/rules/keyword_case.ts:304:1: lowering trap: unsupported-expr test/rules/keyword_case.ts:304:10: identifier testLowerCaseGlobalClassSuite2 is not a lowered local or module value",
-          "status": "trapped"
-        },
-        {
-          "file": "test/rules/line_break_style.ts",
-          "action": "test/rules/line_break_style.ts:32:1",
-          "message": "test/rules/line_break_style.ts:32:1: lowering trap: node 42678 (test/rules/line_break_style.ts:32:26): not supported in the Go prototype: JavaScript regexp /\\n/g",
-          "status": "trapped"
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "failed"
         },
         {
           "file": "test/rules/line_length.ts",
           "action": "test/rules/line_length.ts:17:1",
-          "message": "test/rules/line_length.ts:17:1: lowering trap: unsupported-expr test/rules/line_length.ts:17:29: assignment inside an expression is not lowered",
-          "status": "trapped"
-        },
-        {
-          "file": "test/rules/method_length.ts",
-          "action": "test/rules/method_length.ts:229:1",
-          "message": "test/rules/method_length.ts:8:44: value outside supported numeric, ordering or conversion domain",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
           "status": "failed"
-        },
-        {
-          "file": "test/rules/newline_between_methods.ts",
-          "action": "test/rules/newline_between_methods.ts:199:1",
-          "message": "test/rules/_utils.ts:169:23: value outside supported numeric, ordering or conversion domain",
-          "status": "failed"
-        },
-        {
-          "file": "test/rules/no_dynamic_stuff.ts",
-          "action": "test/rules/no_dynamic_stuff.ts:124:1",
-          "message": "test/rules/no_dynamic_stuff.ts:124:1: lowering trap: test/rules/no_dynamic_stuff.ts:124:1: HIR verification: node 45818 (test/rules/no_dynamic_stuff.ts:124:42): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
-          "status": "trapped"
-        },
-        {
-          "file": "test/rules/no_dynamic_stuff.ts",
-          "action": "test/rules/no_dynamic_stuff.ts:134:1",
-          "message": "test/rules/no_dynamic_stuff.ts:134:1: lowering trap: test/rules/no_dynamic_stuff.ts:134:1: HIR verification: node 45858 (test/rules/no_dynamic_stuff.ts:134:45): call argument type mismatch: classref<src/rules/no_dynamic_stuff.ts.NoDynamicStuffConf> <- string in call test/rules/no_dynamic_stuff.ts.module.conf",
-          "status": "trapped"
         }
       ],
       "failures": []
@@ -121,8 +72,8 @@
     {
       "name": "abap/statements",
       "files": 286,
-      "passed": 433,
-      "failed": 21,
+      "passed": 434,
+      "failed": 20,
       "trapped": 4508,
       "notRun": 0,
       "registered": 4962,
@@ -171,10 +122,6 @@
         {
           "title": "IMPORT KeyUser allowed statement version, \"IMPORT foo FROM INTERNAL TABLE lt_tab.\" should be IMPORT KeyUser allowed",
           "message": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
-        },
-        {
-          "title": "LOOP AT SCREEN statement version should fail, \"LOOP AT SCREEN.\" should not be recognized",
-          "message": "{classref<src/abap/2_statements/combi.ts.FailCombinatorError> <address>}"
         },
         {
           "title": "MESSAGE statement version, \"MESSAGE e100(/foo/bar) WITH <fs>-sdf <fs>-sdf <fs>-sdf INTO l_message.\" should be MESSAGE",
@@ -229,8 +176,8 @@
     {
       "name": "abap/structures",
       "files": 30,
-      "passed": 23,
-      "failed": 1,
+      "passed": 24,
+      "failed": 0,
       "trapped": 114,
       "notRun": 2,
       "registered": 139,
@@ -254,44 +201,31 @@
           "status": "trapped"
         }
       ],
-      "failures": [
-        {
-          "title": "structure combi statement sta1 match",
-          "message": "test/abap/structures/_combi.ts:37:20: value outside supported numeric, ordering or conversion domain"
-        }
-      ]
+      "failures": []
     }
   ],
   "uniqueTotal": {
-    "passed": 661,
-    "failed": 22,
-    "trapped": 6223,
-    "notRun": 1555,
-    "registered": 8375,
+    "passed": 663,
+    "failed": 20,
+    "trapped": 6296,
+    "notRun": 1482,
+    "registered": 8448,
     "total": 8461,
     "asyncOrDone": 1458,
-    "unregistered": 86
+    "unregistered": 13
   },
   "asyncInitializationFailures": 0,
   "registrationParity": false,
   "top20Traps": [
     {
       "message": "src/config.ts: src/config.ts:69",
-      "count": 4883,
+      "count": 6278,
       "shards": {
-        "rules": 261,
+        "rules": 1656,
         "statements": 4508,
         "structures": 114
       },
       "example": "src/config.ts:11:3: src/config.ts:69"
-    },
-    {
-      "message": "unsupported-call test/rules/_utils.ts: forEach needs a source-pinned dense/stable receiver proof",
-      "count": 1321,
-      "shards": {
-        "rules": 1321
-      },
-      "example": "test/rules/_utils.ts:41:24: lowering trap: unsupported-call test/rules/_utils.ts:47:11: forEach needs a source-pinned dense/stable receiver proof"
     },
     {
       "message": "unsupported-expr test/rules/_utils.ts: identifier JSON is not a lowered local or module value",
@@ -300,57 +234,104 @@
         "rules": 18
       },
       "example": "test/rules/_utils.ts:10:1: lowering trap: unsupported-expr test/rules/_utils.ts:13:21: identifier JSON is not a lowered local or module value"
-    },
-    {
-      "message": "module binding test/rules/line_break_style.ts.module.crlf was not initialized",
-      "count": 1,
-      "shards": {
-        "rules": 1
-      },
-      "example": "test/rules/line_break_style.ts:40:37: lowering trap: module binding test/rules/line_break_style.ts.module.crlf was not initialized"
     }
   ],
   "verification": {
-    "goEnvironment": {
+    "environment": {
       "GOCACHE": "$HOME/.cache/go-build",
       "GOTOOLCHAIN": "go1.26.0",
-      "GOFLAGS": "-buildvcs=false",
-      "ABAPITI_GRACECHECK": "1"
+      "GOFLAGS": "-buildvcs=false"
     },
-    "goTest": {
-      "command": "go test ./tsfront/... ./hir/... ./cmd/...",
-      "exitCode": 0,
-      "log": "round2-gates-test.log"
-    },
-    "goVet": {
-      "command": "go vet ./...",
-      "exitCode": 0,
-      "log": "round2-gates-vet.log"
-    },
-    "nodeRuntimeContract": {
-      "command": "node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint",
-      "passed": true
-    },
-    "nodeReportSummaryContract": {
-      "command": "node tools/abaplint-tests-report-test.mjs",
-      "passed": true
-    },
-    "defaultComparison": {
-      "mainCommit": "54a521cd51c0494d73e2740fbe9d6328d286d0c6",
+    "gates": [
+      {
+        "command": "ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...",
+        "exitCode": 0
+      },
+      {
+        "command": "go vet ./...",
+        "exitCode": 0
+      },
+      {
+        "command": "node tools/abaplint-tests-report-test.mjs",
+        "exitCode": 0
+      },
+      {
+        "command": "node tools/abaplint-tests-runtime-test.mjs /home/alice/dev/abaplint",
+        "exitCode": 0
+      }
+    ],
+    "defaultBuild": {
+      "referenceCommit": "ea61e2333829405d03e893c7d7d30fce954b5848",
       "referenceSource": "git archive origin/main",
-      "target": "all (default)",
-      "freshOutputs": true,
-      "sameOutputPath": ".local/harness-round2/default",
+      "target": "all",
       "referenceExitCode": 0,
-      "harnessExitCode": 0,
-      "diffBytes": 0,
-      "diff": "round2-default.diff"
+      "branchExitCode": 0,
+      "sameOutputSpelling": ".local/tfe-default/output",
+      "files": 6339,
+      "differentFiles": [],
+      "byteIdentical": true,
+      "includesA4HZip": true,
+      "aggregateSHA256": "46880a52fbbc560b70c47644a4cfe569310cf03eccb89066e35a7e9ee56c3950"
     },
-    "pr100": {
-      "branch": "origin/feat/fit-misc-roots",
-      "revision": "f51a5b6",
-      "mergedIntoMain": false,
-      "coversRulesUtilsLine47": false
+    "fourShards": {
+      "freshOriginalMochaOracles": true,
+      "freshGeneratedGoExecutions": true,
+      "allSelectedFilesSorted": true,
+      "unmatchedTitles": 0,
+      "structuresRetry": "After the sequential command timed out during the structures build, executed its unchanged generated Go with GOMAXPROCS=4 and go run -p=4; reconciled against the fresh oracle."
+    },
+    "cleanup": {
+      "retainedEvidence": "Only committed JSON/markdown summaries",
+      "generatedOutputsRemoved": true,
+      "binariesRemoved": true,
+      "sourceClosuresRemoved": true,
+      "rawResultsAndLogsRemoved": true,
+      "transpilerCloned": false
+    },
+    "graceGolden": "Only runtime-catalogue counts changed for array.has and array.delete; 61 lexer call sites and method facts unchanged."
+  },
+  "deltaFromPrevious": {
+    "passed": 2,
+    "registered": 73,
+    "forEachReachedTrapsRemoved": 1321,
+    "uninitializedCrlfReachedTrapsRemoved": 1,
+    "ordinaryRuntimeFailuresFixed": 2,
+    "unregisteredBefore": 86,
+    "unregisteredAfter": 13
+  },
+  "remainingRegistration": [
+    {
+      "file": "test/rules/keyword_case.ts",
+      "action": "289",
+      "tests": 5,
+      "reason": "Plain spread object cannot be stored through nominal KeywordCaseConf reference ABI."
+    },
+    {
+      "file": "test/rules/keyword_case.ts",
+      "action": "304",
+      "tests": 5,
+      "reason": "Same nominal config-reference ABI; branching map initializer now succeeds."
+    },
+    {
+      "file": "test/rules/line_length.ts",
+      "action": "17",
+      "tests": 2,
+      "reason": "Assignment correctly returns number 400, not LineLengthConf; nominal setConfig storage refuses numeric config."
+    },
+    {
+      "file": "test/abap/structures/_combi.ts",
+      "action": "276",
+      "tests": 1,
+      "reason": "Block-local Normal class: fresh constructor identity and capture ABI unsupported."
     }
+  ],
+  "jsonSerialization": {
+    "tests": 18,
+    "site": "test/rules/_utils.ts:13:21",
+    "function": "fullErrorNamespace",
+    "exactMessage": "identifier JSON is not a lowered local or module value",
+    "execution": "Whole helper body traps at lowering; JSON.stringify is not executed.",
+    "input": "Config.getDefault().get(): IConfig with syntax.errorNamespace changed to \".\". Entire nested global/dependencies/syntax/rules config graph, including rule-config field objects; primitive strings, booleans, numbers, enum values, optional undefined properties and arrays.",
+    "status": "Reported precisely; generic JSON.stringify graph serialization not implemented. Config round-trip implementation left untouched."
   }
 }
