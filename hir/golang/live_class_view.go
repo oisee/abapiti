@@ -7,6 +7,8 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
+func (e *emitter) liveStorage() bool { return len(e.liveClasses) > 0 || e.usesLiveArrays }
+
 // liveView retains native references unchanged and attaches a data-only layout
 // to structural storage. All embedded ancestor layouts share that same source.
 func (e *emitter) liveView(t hir.Type) string {
@@ -65,7 +67,11 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 		}
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	case hir.Array:
-		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + e.viewValue(t.Args[0], "d") + "})"
+		decode := e.viewValue(t.Args[0], "d")
+		if t.Args[0].Kind == hir.String {
+			decode = "liveStringElement(d)"
+		}
+		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + decode + "})"
 	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	default:

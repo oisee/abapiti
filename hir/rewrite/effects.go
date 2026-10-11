@@ -59,6 +59,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"lsp.isRenameFile":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.keys":              {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.classView":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},
+	"dynamic.arrayView":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A typed array view aliases original storage and checks each element read."},
 	"dynamic.asRef":             {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "Receiver"},
 	"dynamic.asString":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"object.get":                {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},

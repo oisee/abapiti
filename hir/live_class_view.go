@@ -73,6 +73,39 @@ func classViewTargets(p *Program) map[string]bool {
 			stmt(m.Body)
 		}
 	}
+	// Nested structural rows use the same field ABI and must be sealed before
+	// inlining can erase evidence of prototype dispatch. Nominal field types
+	// retain their separate checked-reference boundary.
+	classes := map[string]*Class{}
+	for _, c := range p.Classes {
+		classes[c.Name] = c
+	}
+	seen := map[string]bool{}
+	var expand func(string)
+	var row func(Type)
+	row = func(t Type) {
+		if t.Kind == Optional || t.Kind == Array {
+			row(t.Args[0])
+		} else if t.Kind == ClassRef {
+			if c := classes[t.Name]; c != nil && c.Structural {
+				out[c.Name] = true
+				expand(c.Name)
+			}
+		}
+	}
+	expand = func(name string) {
+		for c := classes[name]; c != nil && !seen[c.Name]; c = classes[c.Super] {
+			seen[c.Name] = true
+			for _, f := range c.Fields {
+				if !f.Static {
+					row(f.Type)
+				}
+			}
+		}
+	}
+	for name := range out {
+		expand(name)
+	}
 	return out
 }
 

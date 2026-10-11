@@ -21,6 +21,7 @@ var supportedOps = map[string]bool{
 	"object.checkedClassView": true,
 	"dynamic.keys":            true,
 	"dynamic.classView":       true,
+	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
@@ -89,7 +90,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
-		if x.Op == "array.length" && len(b.e.liveClasses) > 0 {
+		if x.Op == "array.length" && b.e.liveStorage() {
 			code = a + ".length()"
 		}
 	case "map.size":
@@ -271,6 +272,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		b.e.extraRuntimeKeys = true
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
+	case "dynamic.arrayView":
+		code = b.e.viewValue(x.Type, a)
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {

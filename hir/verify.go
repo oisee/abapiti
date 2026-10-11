@@ -1009,6 +1009,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "dynamic.classView needs Dynamic in and a named class reference out")
 		}
 		args(nil)
+	case "dynamic.arrayView":
+		if a.Kind != Dynamic || t.Kind != Array || len(t.Args) != 1 || t.Args[0].Kind != String {
+			v.fail(e.Node, "dynamic.arrayView needs Dynamic in and a string array out")
+		}
+		args(nil)
 	case "dynamic.asRef":
 		if a.Kind != Dynamic || !(ref(t) || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet) {
 			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")

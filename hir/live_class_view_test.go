@@ -2,6 +2,38 @@ package hir
 
 import "testing"
 
+func TestLiveStringArrayViewTyping(t *testing.T) {
+	for _, receiver := range []Type{T(Dynamic), T(String)} {
+		for _, result := range []Type{T(Array, T(String)), T(Array, T(Number)), T(String)} {
+			op := &Expr{Kind: RuntimeOp, Op: "dynamic.arrayView", X: V("source", receiver), Type: result}
+			p := &Program{Classes: []*Class{{Name: "Probe", Methods: []*Method{{Name: "view", Static: true, Params: []Param{{Name: "source", Type: receiver}}, Result: result, Body: B(&Stmt{Kind: Return, X: op})}}}}}
+			want := receiver.Kind == Dynamic && result.Equal(T(Array, T(String)))
+			if errors := Verify(p); (len(errors) == 0) != want {
+				t.Fatalf("receiver=%s result=%s: %v", receiver, result, errors)
+			}
+		}
+	}
+}
+
+func TestLiveNestedRowViewBoundary(t *testing.T) {
+	row := &Class{Name: "Row", Structural: true, Fields: []Field{{Name: "name", Type: T(String)}, {Name: "next", Type: T(Optional, Ref("Row"))}}}
+	nominal := &Class{Name: "Native"}
+	conf := &Class{Name: "Conf", Fields: []Field{{Name: "rows", Type: T(Array, Ref("Row"))}, {Name: "native", Type: Ref("Native")}}}
+	use := &Class{Name: "Use", Methods: []*Method{{Name: "view", Static: true, Body: B(&Stmt{Kind: ExprStmt, X: &Expr{Kind: RuntimeOp, Op: "dynamic.classView", Type: Ref("Conf"), X: V("input", T(Dynamic))}})}}}
+	p := &Program{Classes: []*Class{conf, row, nominal, use}}
+	views := LiveClassViewLayouts(p)
+	if !views["Conf"] || !views["Row"] || views["Native"] {
+		t.Fatalf("nested rows only: %v", views)
+	}
+	row.Methods = []*Method{{Name: "read", Result: T(String), Body: B(&Stmt{Kind: Return, X: &Expr{Kind: FieldGet, Name: "name", Type: T(String), X: &Expr{Kind: This, Type: Ref("Row")}}})}}
+	use.Methods = append(use.Methods, &Method{Name: "dispatch", Body: B(&Stmt{Kind: ExprStmt, X: &Expr{Kind: VirtualCall, Name: "read", Type: T(String), X: V("row", Ref("Row"))}})})
+	SealLiveClassViewBoundary(p)
+	use.Methods = use.Methods[:1]
+	if !row.ViewUnsafe || LiveClassViewLayouts(p)["Row"] {
+		t.Fatal("inlining must preserve a nested row's prototype refusal")
+	}
+}
+
 func TestDataClassViewBoundary(t *testing.T) {
 	base := &Class{Name: "Base", Abstract: true, Fields: []Field{{Name: "optional", Type: T(Optional, T(String))}}}
 	child := &Class{Name: "Child", Super: "Base", Fields: []Field{{Name: "value", Type: T(Number)}}}
