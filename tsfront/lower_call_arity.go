@@ -25,8 +25,17 @@ func (l *lowerer) stabilizeUnionABI() {
 func (l *lowerer) unionABIStamp() string {
 	var out strings.Builder
 	for _, c := range l.out.Classes {
-		out.WriteString(itoa(len(c.Methods)))
-		out.WriteByte(';')
+		out.WriteString(c.Name)
+		for _, m := range c.Methods {
+			out.WriteString(m.Name)
+			out.WriteString(m.Result.String())
+			for _, p := range m.Params {
+				out.WriteString(p.Name)
+				out.WriteString(p.Type.String())
+				out.WriteByte(';')
+			}
+			out.WriteByte(';')
+		}
 	}
 	for _, i := range l.out.Interfaces {
 		out.WriteString(i.Name)

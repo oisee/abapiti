@@ -3,16 +3,29 @@ package golang
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
 )
 
 func TestChaiDeepRuntimeNodeOracle(t *testing.T) {
-	if _, err := os.Stat("/home/alice/dev/abaplint/node_modules/chai"); err != nil {
+	root := os.Getenv("ABAPITI_TESTS_UPSTREAM")
+	if root == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			t.Fatal(err)
+		}
+		root = filepath.Join(home, "dev", "abaplint")
+	}
+	chai := filepath.Join(root, "node_modules", "chai")
+	if _, err := os.Stat(chai); err != nil {
+		chai = filepath.Join(root, "packages", "core", "node_modules", "chai")
+	}
+	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}
-	script := `const {expect}=require('/home/alice/dev/abaplint/node_modules/chai');
+	script := `const {expect}=require(process.argv[1]);
  function eq(a,b){try{expect(a).deep.equal(b);return true}catch(e){return false}}
  function inc(a,b){try{expect(a).deep.include(b);return true}catch(e){return false}}
  const a={},b={};a.self=a;b.self=b;
@@ -23,7 +36,7 @@ func TestChaiDeepRuntimeNodeOracle(t *testing.T) {
  function shallow(a,b){try{expect(a).contain(b);return true}catch(e){return false}}
  const item={x:1},nested=[1];
  console.log(shallow([NaN],NaN),shallow([0],-0),shallow(new Array(1),undefined),shallow([undefined],undefined),shallow([item],item),shallow([item],{x:1}),shallow([nested],nested));`
-	want, err := exec.Command("node", "-e", script).CombinedOutput()
+	want, err := exec.Command("node", "-e", script, chai).CombinedOutput()
 	if err != nil {
 		t.Fatal(err, string(want))
 	}
