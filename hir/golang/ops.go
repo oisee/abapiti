@@ -15,7 +15,7 @@ var supportedOps = map[string]bool{
 	"string.replaceRegex":  true,
 	"string.toLowerCase":   true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
-	"object.classOf": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"object.classOf": true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
@@ -151,6 +151,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		}
 	case "object.classOf":
 		code = "classOf(" + a + ")"
+	case "classvalue.newArgs":
+		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ".ArgsFactory(" + args[0] + "))"
 	case "classvalue.new":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ".Factory())"
 	case "classvalue.name":

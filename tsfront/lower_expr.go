@@ -1773,7 +1773,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		if cv != nil && cv.Type.Kind == hir.Optional && cv.Type.Args[0].Kind == hir.ClassValue {
 			cv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.ClassValue), X: cv}
 		}
-		if cv != nil && cv.Type.Kind == hir.ClassValue && len(n.Arguments()) == 0 {
+		if cv != nil && cv.Type.Kind == hir.ClassValue {
 			result := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			if result.Kind == hir.Dynamic {
 				result = hir.Ref(hir.RootObject)
@@ -1781,7 +1781,24 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if l.hint.Kind == hir.ClassRef || l.hint.Kind == hir.InterfaceRef {
 				result = l.hint
 			}
-			return l.rtOp("classvalue.new", cv, result)
+			if len(n.Arguments()) == 0 {
+				return l.rtOp("classvalue.new", cv, result)
+			}
+			saved := l.tempInit(n.Expression(), cv.Type, cv)
+			arrayType := hir.T(hir.Array, hir.T(hir.Dynamic))
+			values := l.tempVar(n, arrayType)
+			for _, arg := range n.Arguments() {
+				if arg.Kind == ast.KindSpreadElement {
+					l.diagf(arg, "unsupported-constructor", "dynamic constructor spread arguments are unsupported")
+					return nil
+				}
+				value := l.expr(arg)
+				if value == nil {
+					return nil
+				}
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("array.push", values, hir.T(hir.I32), l.coerce(value, hir.T(hir.Dynamic)))})
+			}
+			return l.rtOp("classvalue.newArgs", saved, result, values)
 		}
 	}
 	// Context supplies the element types of an empty collection before

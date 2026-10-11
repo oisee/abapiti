@@ -30,12 +30,12 @@ fact counts
   narrowed 13
   new 58
   noncounter_write 32
-  op_aliases 110
-  op_allocates 110
-  op_conservative 11
-  op_may_raise 110
-  op_reads 165
-  op_writes 110
+  op_aliases 111
+  op_allocates 111
+  op_conservative 12
+  op_may_raise 111
+  op_reads 167
+  op_writes 111
   param 216
   pure 70
   raises 36

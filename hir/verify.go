@@ -966,14 +966,18 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "classof needs an object receiver")
 		}
 		eq(t, T(ClassValue))
-	case "classvalue.new":
+	case "classvalue.new", "classvalue.newArgs":
 		if a.Kind != ClassValue {
 			v.fail(e.Node, "classvalue.new needs a class value")
 		}
 		if !ref(t) {
 			v.fail(e.Node, "classvalue.new needs a reference result")
 		}
-		args(nil)
+		if e.Op == "classvalue.newArgs" {
+			args([]Type{T(Array, T(Dynamic))})
+		} else {
+			args(nil)
+		}
 	case "dynamic.of":
 		if a.Kind == Void {
 			v.fail(e.Node, "void box")

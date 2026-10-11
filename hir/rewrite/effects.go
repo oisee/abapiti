@@ -48,6 +48,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"array.unshift":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"classvalue.has":            {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"classvalue.name":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"classvalue.newArgs":        {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Dynamic constructor invocation may run arbitrary constructor effects."},
 	"classvalue.new":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Dynamic constructor and initializer effects remain unknown until call targets are resolved."},
 	"clock.telemetry":           {Reads: OpReads{Receiver: false, Args: false, Global: true}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"dynamic.asBoolean":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},

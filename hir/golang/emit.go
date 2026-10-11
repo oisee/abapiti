@@ -91,6 +91,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.constructorArgs {
+		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
+	}
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
 	}
@@ -125,6 +128,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	constructorArgs   bool
 	configJSON        bool
 	promiseUsed       bool
 	profile           bool
@@ -1089,6 +1093,9 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	}
 	if x.Kind == hir.New && x.Type.Kind == hir.RegExp || x.Kind == hir.RuntimeOp && x.Op == "regexp.new" {
 		e.checkRegexp(x)
+	}
+	if x.Kind == hir.RuntimeOp && x.Op == "classvalue.newArgs" {
+		e.constructorArgs = true
 	}
 	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
 		e.configJSON = true
