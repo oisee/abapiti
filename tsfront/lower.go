@@ -370,6 +370,12 @@ type lowerer struct {
 	generatorKeyLoops  map[*hir.Stmt]bool
 	generatorYield     *hir.Expr
 	generatorABIs      map[string]*generatorABI
+	settledDispatches  map[settledDispatchKey]settledDispatchResult
+	settledProofs      map[settledProofKey]*settledProof
+	settledActive      *settledProofKey
+	settledShapes      []*ast.Node
+	settledWorldChecks []*ast.Node
+	settledWorldReady  bool
 	integerOptions     LowerOptions
 	integerExceptions  map[*ast.Node]IntegerException
 	floatSites         map[string]bool

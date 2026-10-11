@@ -74,7 +74,7 @@ func (l *lowerer) awaitSettled(n *ast.Node) *hir.Expr {
 	l.settlementFailure = ""
 	if !l.certifiedSettled(operand, map[*ast.Node]bool{}) {
 		if l.settlementFailure != "" {
-			l.diagf(n, "unsupported-async", "IProgress.tick settlement proof failed: %s", l.settlementFailure)
+			l.diagf(n, "unsupported-async", "settlement proof failed (not certified already-settled): %s", l.settlementFailure)
 			return nil
 		}
 		l.diagf(n, "unsupported-async", "await provider is not certified already-settled (open progress providers, pending promises and arbitrary thenables need a scheduler)")
@@ -106,14 +106,17 @@ func (l *lowerer) mayThenable(n *ast.Node) bool {
 }
 
 // Certification follows producers, never a Promise annotation or an interface
-// signature. Const aliases and source bodies are inspected recursively; external
-// providers, constructor executors and cycles have no settlement proof.
+// signature. Dispatch and transitive source bodies are re-derived per Lower.
 func (l *lowerer) certifiedSettled(n *ast.Node, seen map[*ast.Node]bool) bool {
-	if n == nil || seen[n] {
+	if n == nil || seen[n] && n.Kind != ast.KindCallExpression {
 		return false
 	}
-	seen[n] = true
-	defer delete(seen, n)
+	// Call cycles are handled by the body graph. Value/alias cycles still
+	// refuse: revisiting a Promise annotation is not a producer proof.
+	if n.Kind != ast.KindCallExpression {
+		seen[n] = true
+		defer delete(seen, n)
+	}
 	if n.Kind == ast.KindParenthesizedExpression {
 		return l.certifiedSettled(n.Expression(), seen)
 	}
@@ -143,32 +146,26 @@ func (l *lowerer) certifiedSettled(n *ast.Node, seen map[*ast.Node]bool) bool {
 		}
 		return false
 	}
-	sym := l.resolve(n.Expression())
-	if sym == nil {
+	if l.isProgressDispatch(n) {
+		return l.closedProgressCall(n, seen)
+	}
+	targets, reason := l.settledDispatch(n)
+	if reason != "" {
+		l.settlementFailure = reason
 		return false
 	}
-	if l.closedProgressCall(n, seen) {
-		return true
+	if len(targets) == 0 {
+		return false
 	}
-	for _, d := range sym.Declarations {
-		if d.Body() == nil {
-			continue
-		}
-		// Virtual dispatch may select an override. Only a direct receiver freshly
-		// constructed here, static/module functions, or private methods are pinned.
-		if d.Kind == ast.KindMethodDeclaration && d.ModifierFlags()&(ast.ModifierFlagsStatic|ast.ModifierFlagsPrivate) == 0 {
-			callee := n.Expression()
-			if callee.Kind != ast.KindPropertyAccessExpression {
-				return false
+	for _, d := range targets {
+		if !l.certifiedSettledBody(d, seen) {
+			if l.settlementFailure == "" {
+				l.settlementFailure = l.settledLabel(d) + " is not provably already-settled"
 			}
-			recv := callee.AsPropertyAccessExpression().Expression
-			if recv.Kind != ast.KindNewExpression {
-				return false
-			}
+			return false
 		}
-		return l.certifiedSettledBody(d, seen)
 	}
-	return false
+	return true
 }
 
 func (l *lowerer) builtinPromiseCall(n *ast.Node) (string, bool) {
@@ -311,11 +308,8 @@ func (l *lowerer) producerHasAwait(n *ast.Node, seen map[*ast.Node]bool) bool {
 	if l.progressCallHasAwait(n, seen) {
 		return true
 	}
-	sym := l.resolve(n.Expression())
-	if sym == nil {
-		return false
-	}
-	for _, d := range sym.Declarations {
+	targets, _ := l.settledDispatch(n)
+	for _, d := range targets {
 		if l.settledBodyHasAwait(d, seen) {
 			return true
 		}
@@ -383,18 +377,14 @@ func (l *lowerer) certifiedUndefinedValue(n *ast.Node, seen map[*ast.Node]bool) 
 	return false
 }
 
-func (l *lowerer) certifiedSettledBody(d *ast.Node, seen map[*ast.Node]bool) bool {
+func (l *lowerer) checkSettledBody(d *ast.Node, seen map[*ast.Node]bool, returning bool) bool {
 	if d == nil || d.Body() == nil {
 		return false
 	}
-	if seen[d] {
-		return false
-	}
-	seen[d] = true
-	async := d.ModifierFlags()&ast.ModifierFlagsAsync != 0
 	if d.Body().Kind != ast.KindBlock {
-		defer delete(seen, d)
-		return (async && !l.mayThenable(d.Body())) || l.certifiedSettled(d.Body(), seen)
+		if returning && l.mayThenable(d.Body()) && !l.certifiedSettled(d.Body(), seen) {
+			return false
+		}
 	}
 	safe := true
 	var walk func(*ast.Node)
@@ -411,26 +401,22 @@ func (l *lowerer) certifiedSettledBody(d *ast.Node, seen map[*ast.Node]bool) boo
 		}
 		if x.Kind == ast.KindReturnStatement && x.AsReturnStatement().Expression != nil {
 			v := x.AsReturnStatement().Expression
-			if (!async || l.mayThenable(v)) && !l.certifiedSettled(v, seen) {
+			if returning && l.mayThenable(v) && !l.certifiedSettled(v, seen) {
 				safe = false
 				return
 			}
 		}
-		if x.Kind == ast.KindNewExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier && x.Expression().Text() == "Promise" {
+		if x.Kind == ast.KindNewExpression && !l.settledConstruction(x, seen) {
 			safe = false
 			return
 		}
-		if x.Kind == ast.KindCallExpression && x.Expression() != nil && x.Expression().Kind == ast.KindIdentifier {
-			switch x.Expression().Text() {
-			case "setTimeout", "setInterval", "queueMicrotask":
-				safe = false
-				return
-			}
+		if x.Kind == ast.KindCallExpression && !l.settledBodyCall(x, seen) {
+			safe = false
+			return
 		}
 		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
 	}
 	walk(d.Body())
-	delete(seen, d)
 	return safe
 }
 
