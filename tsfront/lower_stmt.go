@@ -287,6 +287,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
 		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if hint, ok := l.testModuleArrayContext(d); ok {
+			typ = hint
+		}
 		if typ.Kind == hir.Void {
 
 			return nil

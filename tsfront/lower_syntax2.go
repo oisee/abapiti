@@ -110,10 +110,14 @@ func (l *lowerer) sortWithComparator(n *ast.Node, recv *hir.Expr, cb *ast.Node) 
 // moduleStatements lowers module-level if and expression statements, in
 // source order, into the module initializer after the module constants.
 func (l *lowerer) moduleStatements(f *ast.SourceFile) []*hir.Stmt {
+	return l.moduleStatementList(l.statementNodes(f))
+}
+
+func (l *lowerer) moduleStatementList(statements []*ast.Node) []*hir.Stmt {
 	var out []*hir.Stmt
 	l.push()
 	defer l.pop()
-	for _, stmt := range l.statementNodes(f) {
+	for _, stmt := range statements {
 		switch stmt.Kind {
 		case ast.KindIfStatement, ast.KindExpressionStatement:
 			if !l.moduleInitializer(stmt) {
