@@ -382,19 +382,19 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpI32DivS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s / %s.", r, a, b)
+			c.emitDivisionCall("div_s32", r, a, b)
 		case OpI32DivU:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>div_u32( iv_a = %s iv_b = %s ).", r, a, b)
+			c.emitDivisionCall("div_u32", r, a, b)
 		case OpI32RemS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s MOD %s.", r, a, b)
+			c.emitDivisionCall("rem_s32", r, a, b)
 		case OpI32RemU:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>rem_u32( iv_a = %s iv_b = %s ).", r, a, b)
+			c.emitDivisionCall("rem_u32", r, a, b)
 
 		// Bitwise
 		case OpI32And:
@@ -692,19 +692,19 @@ func (c *compiler) emitInstructions(f *Function, code []Instruction, stack *virt
 		case OpI64DivS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s / %s.", r, a, b)
+			c.emitDivisionCall("div_s64", r, a, b)
 		case OpI64DivU:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>div_u64( iv_a = %s iv_b = %s ).", r, a, b)
+			c.emitDivisionCall("div_u64", r, a, b)
 		case OpI64RemS:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = %s MOD %s.", r, a, b)
+			c.emitDivisionCall("rem_s64", r, a, b)
 		case OpI64RemU:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
-			c.line("%s = zcl_wasm_rt=>rem_u64( iv_a = %s iv_b = %s ).", r, a, b)
+			c.emitDivisionCall("rem_u64", r, a, b)
 		case OpI64And:
 			b, a := stack.pop(), stack.pop()
 			r := stack.push()
