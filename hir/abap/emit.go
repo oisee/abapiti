@@ -766,15 +766,45 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line(target + " = '" + fmt.Sprint(x.Value) + "'.")
 		}
 	case hir.NumericMinMax:
-		a, z := b.expr(x.X), b.expr(x.Y)
+		a := b.expr(x.X)
 		op := "<"
 		if x.Op == "max" {
 			op = ">"
 		}
-		b.line(n + " = " + z + ".")
-		b.line("IF " + a + " " + op + " " + z + ".")
-		b.line(n + " = " + a + ".")
-		b.line("ENDIF.")
+		combine := func(v string) {
+			if t.Kind == hir.Number {
+				// Portable ABAP has no signbit; comparing zeros loses their sign.
+				b.line("IF " + n + " = 0 AND " + v + " = 0.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+				b.line("ENDIF.")
+			}
+			b.line("IF " + v + " " + op + " " + n + ".")
+			b.line(n + " = " + v + ".")
+			b.line("ENDIF.")
+		}
+		if x.Y == nil {
+			// An empty input yields Infinity, which neither ABAP f nor an
+			// integer can hold: trap instead of returning a wrong value.
+			b.line("IF lines( " + a + "->items ) = 0.")
+			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+			b.line("ENDIF.")
+			b.line("READ TABLE " + a + "->items INDEX 1 INTO " + n + ".")
+			row := b.temp(t)
+			b.line("LOOP AT " + a + "->items INTO " + row + " FROM 2.")
+			combine(row)
+			b.line("ENDLOOP.")
+		} else {
+			z := b.expr(x.Y)
+			// Keep the established integer output byte-for-byte.
+			b.line(n + " = " + z + ".")
+			if t.Kind == hir.Number {
+				combine(a)
+			} else {
+				b.line("IF " + a + " " + op + " " + z + ".")
+				b.line(n + " = " + a + ".")
+				b.line("ENDIF.")
+			}
+		}
 	case hir.CheckedNumericConvert:
 		a := b.expr(x.X)
 		loName := "check_lo_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n")

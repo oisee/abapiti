@@ -46,6 +46,15 @@ try {
     assert.equal(missing.status, 1, missing.stderr + missing.stdout);
     assert.match(missing.stderr, new RegExp(`global class must contain ${section} SECTION`));
   }
+  const numericReason = '" Math.min: empty input yields Infinity, not representable by ABAP f or integers';
+  const explained = run(numericReason + '\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.');
+  assert.equal(explained.status, 0, explained.stderr + explained.stdout);
+  const strayReason = run(numericReason);
+  assert.equal(strayReason.status, 1, strayReason.stderr + strayReason.stdout);
+  assert.match(strayReason.stderr, /comment/);
+  const comment = run('" arbitrary comment');
+  assert.equal(comment.status, 1, comment.stderr + comment.stdout);
+  assert.match(comment.stderr, /comment/);
   const invalid = run("CALL METHOD t1->missing.");
   assert.equal(invalid.status, 1, invalid.stderr + invalid.stdout);
   assert.match(invalid.stdout, /[1-9]\d* issues/);
