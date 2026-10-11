@@ -1,0 +1,334 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "codeCommit": "a1c19a78b12d663ad0d4ea93dd867470d94bc232",
+  "artifacts": "transient builds removed; compact summary only",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 1415,
+      "failed": 0,
+      "trapped": 1722,
+      "asyncPending": 0,
+      "notRun": 22,
+      "registered": 3147,
+      "total": 3159,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 12
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:289:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/keyword_case.ts",
+          "action": "test/rules/keyword_case.ts:304:1",
+          "message": "src/rules/keyword_case.ts:129:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        },
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 4942,
+      "failed": 0,
+      "trapped": 20,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/structures",
+      "files": 30,
+      "passed": 138,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 2,
+      "registered": 139,
+      "total": 140,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 1
+      },
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/structures/_combi.ts",
+          "action": "test/abap/structures/_combi.ts:276:1",
+          "message": "test/abap/structures/_combi.ts:276:39: lowering trap: unsupported-statement test/abap/structures/_combi.ts:277:3: KindClassDeclaration is not lowered; unsupported-expr test/abap/structures/_combi.ts:282:25: identifier Normal is not a lowered local or module value",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 6695,
+    "failed": 0,
+    "trapped": 1742,
+    "asyncPending": 0,
+    "notRun": 24,
+    "registered": 8448,
+    "total": 8461,
+    "asyncOrDone": 0,
+    "unregistered": 13
+  },
+  "asyncInitializationFailures": 0,
+  "registrationParity": false,
+  "top20Traps": [
+    {
+      "message": "src/registry.ts: HIR verification: assignment type mismatch",
+      "count": 986,
+      "shards": {
+        "rules": 986
+      },
+      "example": "src/registry.ts:370:3: lowering trap: src/registry.ts:370:3: HIR verification: node 0 (): assignment type mismatch"
+    },
+    {
+      "message": "src/rules/downport.ts: HIR verification: call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .",
+      "count": 194,
+      "shards": {
+        "rules": 194
+      },
+      "example": "src/rules/downport.ts:713:3: lowering trap: src/rules/downport.ts:713:3: HIR verification: node 0 (): call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime ."
+    },
+    {
+      "message": "src/edit_helper.ts: HIR verification: foreach requires matching array",
+      "count": 187,
+      "shards": {
+        "rules": 187
+      },
+      "example": "src/edit_helper.ts:220:1: lowering trap: src/edit_helper.ts:220:1: HIR verification: node 22525 (src/edit_helper.ts:227:5): foreach requires matching array"
+    },
+    {
+      "message": "src/rules/7bit_ascii.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 121,
+      "shards": {
+        "rules": 121
+      },
+      "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/obsolete_statement.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 72,
+      "shards": {
+        "rules": 72
+      },
+      "example": "src/rules/obsolete_statement.ts:157:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/xml_utils.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 30,
+      "shards": {
+        "rules": 30
+      },
+      "example": "src/xml_utils.ts:1:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-expr src/rules/downport.ts: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier hash is not a lowered local or module value",
+      "count": 29,
+      "shards": {
+        "rules": 29
+      },
+      "example": "src/rules/downport.ts:3161:3: lowering trap: unsupported-expr src/rules/downport.ts:3174:20: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts:3175:23: identifier hash is not a lowered local or module value"
+    },
+    {
+      "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 20,
+      "shards": {
+        "statements": 20
+      },
+      "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/",
+      "count": 18,
+      "shards": {
+        "rules": 18
+      },
+      "example": "src/rules/line_only_punc.ts:46:3: lowering trap: node 281244 (src/rules/line_only_punc.ts:61:17): not supported in the Go prototype: JavaScript regexp /^\\)?\\. *(\\\".*)?$/"
+    },
+    {
+      "message": "src/rules/avoid_use.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 17,
+      "shards": {
+        "rules": 17
+      },
+      "example": "src/rules/avoid_use.ts:72:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/ambiguous_statement.ts: HIR verification: invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>",
+      "count": 9,
+      "shards": {
+        "rules": 9
+      },
+      "example": "src/rules/ambiguous_statement.ts:89:3: lowering trap: src/rules/ambiguous_statement.ts:89:3: HIR verification: node 247748 (src/rules/ambiguous_statement.ts:95:29): invalid narrowing interfaceref<src/abap/2_statements/statement_runnable.ts.IStatementRunnable> to interfaceref<src/abap/2_statements/statements/_statement.ts.IStatement>"
+    },
+    {
+      "message": "unsupported-expr test/rules/_utils.ts: identifier expect is not a lowered local or module value",
+      "count": 9,
+      "shards": {
+        "rules": 9
+      },
+      "example": "test/rules/_utils.ts:138:1: lowering trap: unsupported-expr test/rules/_utils.ts:154:7: identifier expect is not a lowered local or module value"
+    },
+    {
+      "message": "src/rules/selection_screen_texts_missing.ts: HIR verification: assignment type mismatch",
+      "count": 8,
+      "shards": {
+        "rules": 8
+      },
+      "example": "src/rules/selection_screen_texts_missing.ts:62:3: lowering trap: src/rules/selection_screen_texts_missing.ts:62:3: HIR verification: node 298050 (src/rules/selection_screen_texts_missing.ts:63:60): assignment type mismatch"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /\\d\\d\\d/",
+      "count": 7,
+      "shards": {
+        "rules": 7
+      },
+      "example": "src/rules/msag_consistency.ts:43:3: lowering trap: node 284814 (src/rules/msag_consistency.ts:54:38): not supported in the Go prototype: JavaScript regexp /\\d\\d\\d/"
+    },
+    {
+      "message": "src/rules/exit_or_check.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 6,
+      "shards": {
+        "rules": 6
+      },
+      "example": "src/rules/exit_or_check.ts:46:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /\\.fugr\\.(#\\w+#)?sapl/i",
+      "count": 4,
+      "shards": {
+        "rules": 4
+      },
+      "example": "src/objects/function_group.ts:120:3: lowering trap: node 228788 (src/objects/function_group.ts:121:19): not supported in the Go prototype: JavaScript regexp /\\.fugr\\.(#\\w+#)?sapl/i"
+    },
+    {
+      "message": "not supported in the Go prototype: JavaScript regexp /@EndUserText\\.label: '([\\w,.:-=#%&() ]+)'/",
+      "count": 3,
+      "shards": {
+        "rules": 3
+      },
+      "example": "src/objects/data_definition.ts:145:3: lowering trap: node 224643 (src/objects/data_definition.ts:146:57): not supported in the Go prototype: JavaScript regexp /@EndUserText\\.label: '([\\w,.:-=#%&() ]+)'/"
+    },
+    {
+      "message": "src/rules/keyword_case.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 3,
+      "shards": {
+        "rules": 3
+      },
+      "example": "src/rules/keyword_case.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/unused_variables.ts: HIR verification: nested optional",
+      "count": 3,
+      "shards": {
+        "rules": 3
+      },
+      "example": "src/rules/unused_variables.ts:214:3: lowering trap: src/rules/unused_variables.ts:214:3: HIR verification: node 306230 (src/rules/unused_variables.ts:231:20): nested optional"
+    },
+    {
+      "message": "unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value",
+      "count": 3,
+      "shards": {
+        "rules": 3
+      },
+      "example": "src/ddic.ts:353:3: lowering trap: unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value"
+    }
+  ],
+  "baseCommit": "ce2f789",
+  "comparisonReference": "236da867641c41f9f48c03f08ef1401d1c6e4ba3",
+  "verification": {
+    "environment": {
+      "GOCACHE": "$HOME/.cache/go-build",
+      "GOTOOLCHAIN": "go1.26.0",
+      "GOFLAGS": "-buildvcs=false",
+      "ABAPITI_GRACECHECK": "1"
+    },
+    "shortAll": "PASS",
+    "graceTsfrontHirCmd": "PASS (non-short)",
+    "vet": "PASS",
+    "nodeReportContract": "PASS",
+    "nodeHostContract": "PASS (8 scenarios; not TS-HG@Go)",
+    "defaultAllTargets": {
+      "reference": "236da867641c41f9f48c03f08ef1401d1c6e4ba3",
+      "files": 6339,
+      "diffLines": 0,
+      "command": "abaplint -o .local/default-output --target all --quiet"
+    },
+    "full": {
+      "blocking": 33,
+      "root": 27,
+      "cascade": 6,
+      "hirErrors": 143,
+      "filesWithErrors": 39
+    },
+    "measurement": "same measurement-only reusable declaration index as docs/evidence/train-2-verifier-index.patch; every original body checked; no production verifier changes"
+  }
+}

@@ -39,6 +39,29 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 		chain = append(chain, parent)
 		ruleConfig = ruleConfig || parent.Name == "src/rules/_basic_rule_config.ts.BasicRuleConfig"
 	}
+	// Parsed data shapes retain their original key order, but field storage is
+	// live: serialization must not replay the stale input graph after writes.
+	materializable := c.Super == "" && !c.Abstract && len(c.Methods) == 0 && c.Ctor != nil && len(c.Ctor.Params) == len(c.Fields)
+	if materializable {
+		e.line("if self!=nil && self.source!=nil {")
+		e.line("w.enter(self);defer w.leave(self);entries:=[]entry[jsString,any]{};seen:=map[jsString]bool{}")
+		e.line("for _,item:=range self.source.Value.(*orderedMap[jsString,*dynamic]).Entries {key:=item.Key;seen[key]=true;var value any=item.Value;switch key {")
+		for _, f := range c.Fields {
+			if !f.Static {
+				e.line("case str(%q): value=self.%s", f.Name, e.member(f.Name))
+			}
+		}
+		e.line("};entries=append(entries,entry[jsString,any]{key,value})}")
+		// Without a write-order ABI, adding multiple new keys cannot be ordered.
+		e.line("added:=0")
+		for _, f := range c.Fields {
+			if !f.Static {
+				e.line("if !seen[str(%q)] {if _,ok:=w.value(self.%s);ok {added++;entries=append(entries,entry[jsString,any]{str(%q),self.%s})}}", f.Name, e.member(f.Name), f.Name, e.member(f.Name))
+			}
+		}
+		e.line("if added>1 {panic(newTrap(%q))};return w.object(entries)", "JSON new own-key insertion order is unproven for "+c.Name)
+		e.line("}")
+	}
 	// Only default rule configuration classes have a declaration-order proof.
 	// Other boxed instances must refuse rather than serialize Go implementation fields.
 	if !pinned && !ruleConfig {
@@ -111,7 +134,7 @@ func containsJSONKey(keys []string, key string) bool {
 }
 
 const configJSONRuntimeSource = `
-// This writer is emitted only for the source-pinned default-config adapter.
+// Usage-gated JSON data-graph writer; native own-key order must be proven.
 type configJSONWriter struct { active map[any]bool }
 func (w *configJSONWriter) enter(v any) {if w.active[v] {panic(newTrap("cyclic config JSON graph"))};w.active[v]=true}
 func (w *configJSONWriter) leave(v any) {delete(w.active,v)}
@@ -129,7 +152,7 @@ func stringifyConfig(v any) jsString {w:=&configJSONWriter{active:map[any]bool{}
 func (v optional[T]) configJSONOptional() (any,bool) {return v.Value,v.Has}
 func (a *array[T]) configJSON(w *configJSONWriter) jsString {
  if a==nil {return str("null")};w.enter(a);defer w.leave(a)
- out:=str("[");for i,v:=range a.Items {if i>0 {out+=str(",")};s,ok:=w.value(v);if !ok {s=str("null")};out+=s};return out+str("]")
+ out:=str("[");for i:=range a.Items {if i>0 {out+=str(",")};s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")};out+=s};return out+str("]")
 }
 func (m *orderedMap[K,V]) configJSON(w *configJSONWriter) jsString {
  if m==nil {return str("null")};w.enter(m);defer w.leave(m)
@@ -155,8 +178,8 @@ func (w *configJSONWriter) value(v any) (jsString,bool) {
  case *dynamic:
   if x.Tag==tagNull {return str("null"),true};if x.Tag==10 {return "",false};return w.value(x.Value)
  }
- if s,ok:=v.(interface{dynamicSource()*dynamic});ok {if d:=s.dynamicSource();d!=nil {return w.value(d)}}
  if s,ok:=v.(interface{configJSON(*configJSONWriter)jsString});ok {return s.configJSON(w),true}
+ if s,ok:=v.(interface{dynamicSource()*dynamic});ok {if d:=s.dynamicSource();d!=nil {return w.value(d)}}
  panic(newTrap("unsupported config JSON value"))
 }
 func jsonNumber(n float64) jsString {

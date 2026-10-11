@@ -14,7 +14,7 @@ func RegistryDeployment() []Entry {
 		{"src/objects/_iobject.ts", "IObject", "KindInterfaceDeclaration"},
 	}
 	entries := []Entry{
-		{ID: "abaplint-deployment-factory", Key: Key{"src/artifacts_objects.ts", "ArtifactsObjects.newObject", "KindMethodDeclaration"}, SHA256: "35aeaedb7b7aa7d9db79b05357ff0494df605b9000820b974c615fc571703bb5", Rationale: "authorized CLAS/INTF/PROG/TYPE/XSLT factory; other object types raise the located coverage trap", References: refs, Method: func() *hir.Method {
+		{ID: "abaplint-deployment-factory", Key: Key{"src/artifacts_objects.ts", "ArtifactsObjects.newObject", "KindMethodDeclaration"}, SHA256: "35aeaedb7b7aa7d9db79b05357ff0494df605b9000820b974c615fc571703bb5", Rationale: "authorized CLAS/INTF/PROG/TYPE/XSLT deployment factory; unpruned closure executes the source namespace inventory and constructor arguments", References: refs, UnprunedMethod: artifactsNewObject, Method: func() *hir.Method {
 			result := hir.Type{Kind: hir.InterfaceRef, Name: "src/objects/_iobject.ts.IObject"}
 			m := &hir.Method{Name: "newObject", Static: true, Result: result, Params: []hir.Param{{Name: "name", Type: hir.T(hir.String)}, {Name: "type", Type: hir.T(hir.String)}}}
 			var body []*hir.Stmt
@@ -27,7 +27,7 @@ func RegistryDeployment() []Entry {
 			m.Body = hir.B(body...)
 			return m
 		}},
-		{ID: "abaplint-deployment-reflection-trap", Key: Key{"src/artifacts_objects.ts", "ArtifactsObjects.buildObjectMap", "KindMethodDeclaration"}, SHA256: "60600506cb27de399926e1e11c7f3f02603e9965b8bc753c0c44e23261ecdc6d", Rationale: "reflective inventory replaced by the explicit five-type factory; direct invocation traps", Method: func() *hir.Method {
+		{ID: "abaplint-deployment-reflection-trap", Key: Key{"src/artifacts_objects.ts", "ArtifactsObjects.buildObjectMap", "KindMethodDeclaration"}, SHA256: "60600506cb27de399926e1e11c7f3f02603e9965b8bc753c0c44e23261ecdc6d", Rationale: "deployment inventory refuses direct invocation; unpruned closure preserves ordered namespace enumeration, dummy constructor calls and last type-key wins", UnprunedMethod: artifactsBuildObjectMap, Method: func() *hir.Method {
 			return &hir.Method{Name: "buildObjectMap", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.Trap, Name: "src/artifacts_objects.ts:20"})}
 		}},
 	}

@@ -482,20 +482,23 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional && dst.Kind == hir.Optional {
+		return &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}
+	}
 	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic && !x.Type.Equal(dst) {
 		boxed := l.coerce(x, hir.T(hir.Dynamic))
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: boxed, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
 	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.Optional && dst.Args[0].Kind != hir.Dynamic {
 		base := dst.Args[0]
-		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool || l.unprunedFeatures && base.IsRef() {
 			x = l.tempInit(nil, x.Type, x)
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(x, base)}
 		}
 	}
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && dst.Kind == hir.Optional {
 		base := dst.Args[0]
-		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool || l.unprunedFeatures && base.IsRef() {
 			x = l.tempInit(nil, x.Type, x)
 			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}

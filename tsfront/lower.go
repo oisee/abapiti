@@ -64,6 +64,7 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
 	l := &lowerer{
+		unprunedFeatures:   coverage == nil,
 		settledEnabled:     coverage == nil,
 		generatorEnabled:   true,
 		asyncMethods:       map[*hir.Method]bool{},
@@ -364,6 +365,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	// The source-pinned deployment is frozen; new generic semantics apply to
+	// unpruned lowering, never perturb its serials or emitted artifacts.
+	unprunedFeatures   bool
 	lspConstructors    bool
 	settledEnabled     bool
 	asyncMethods       map[*hir.Method]bool

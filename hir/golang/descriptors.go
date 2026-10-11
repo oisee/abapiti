@@ -42,6 +42,10 @@ func (e *emitter) descriptor(c *hir.Class) {
 	if callable {
 		factory = "func() any {return " + e.name("new."+c.Name) + "(" + strings.Join(args, ",") + ")} "
 	}
-	e.line("var %s = classDescriptor{Name:str(%q),Parent:%s,Statics:[]jsString{%s},Factory:%s}", e.name("descriptor."+c.Name), tsName, parent, strings.Join(names, ","), factory)
+	extraFactory := ""
+	if e.constructorArgs {
+		extraFactory = ",ArgsFactory:" + e.argumentFactory(c, ctor)
+	}
+	e.line("var %s = classDescriptor{Name:str(%q),Parent:%s,Statics:[]jsString{%s},Factory:%s%s}", e.name("descriptor."+c.Name), tsName, parent, strings.Join(names, ","), factory, extraFactory)
 	e.line("func (self *%s) descriptor() *classDescriptor {return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))
 }
