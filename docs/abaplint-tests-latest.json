@@ -325,12 +325,7 @@
           "status": "trapped"
         }
       ],
-      "failures": [
-        {
-          "title": "syntax.ts, Check Variables inline character literal passed to string method parameter is not compatible",
-          "message": "assertion failed: expected 0 to equal 1"
-        }
-      ],
+      "failures": [],
       "borrowed": {
         "files": [
           "test/get_abap.ts",
@@ -715,9 +710,9 @@
     },
     {
       "message": "src/rules/downport.ts: HIR verification: call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime .",
-      "count": 224,
+      "count": 226,
       "shards": {
-        "rules": 224
+        "rules": 226
       },
       "example": "src/rules/downport.ts:713:3: lowering trap: src/rules/downport.ts:713:3: HIR verification: node 0 (): call argument type mismatch: classref<src/abap/nodes/expression_node.ts.ExpressionNode> <- array<classref<src/abap/nodes/expression_node.ts.ExpressionNode>> in runtime ."
     },
@@ -734,28 +729,15 @@
       "example": "src/rules/7bit_ascii.ts:38:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/xml_utils.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 104,
-      "shards": {
-        "abap-syntax": 20,
-        "root": 1,
-        "lsp": 10,
-        "objects": 6,
-        "objects-rename": 4,
-        "rules": 63
-      },
-      "example": "src/xml_utils.ts:1:1: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "not supported in the Go prototype: JavaScript regexp /@EndUserText\\.label: '([\\w,.:-=#%&() ]+)'/",
-      "count": 88,
+      "message": "src/objects/data_definition.ts: HIR verification: conditional type mismatch",
+      "count": 90,
       "shards": {
         "abap-syntax": 3,
-        "lsp": 2,
-        "objects": 9,
-        "rules": 74
+        "lsp": 1,
+        "objects": 15,
+        "rules": 71
       },
-      "example": "src/objects/data_definition.ts:145:3: lowering trap: node 202932 (src/objects/data_definition.ts:146:57): not supported in the Go prototype: JavaScript regexp /@EndUserText\\.label: '([\\w,.:-=#%&() ]+)'/"
+      "example": "src/objects/data_definition.ts:209:3: lowering trap: src/objects/data_definition.ts:209:3: HIR verification: node 203869 (src/objects/data_definition.ts:221:9): conditional type mismatch"
     },
     {
       "message": "src/rules/obsolete_statement.ts: value outside supported numeric, ordering or conversion domain",
@@ -769,37 +751,24 @@
       "message": "unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts: identifier packedLength is not a lowered local or module value",
       "count": 61,
       "shards": {
-        "abap-syntax": 8,
-        "root": 1,
-        "lsp": 2,
-        "objects": 8,
-        "objects-rename": 8,
-        "rules": 34
+        "rules": 59
       },
-      "example": "src/ddic.ts:353:3: lowering trap: unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value; unsupported-expr src/ddic.ts:386:30: identifier Math is not a lowered local or module value; unsupported-expr src/ddic.ts:388:37: identifier packedLength is not a lowered local or module value"
+      "example": "src/rules/xml_consistency.ts:51:3: unreviewed JavaScript regexp /<abapGit\\b[^>]*\\bversion=\"([^\"]+)\"/"
     },
     {
       "message": "unsupported-expr src/lsp/_lookup.ts: identifier Object is not a lowered local or module value",
-      "count": 53,
+      "count": 55,
       "shards": {
-        "lsp": 53
+        "lsp": 55
       },
       "example": "src/lsp/_lookup.ts:238:3: lowering trap: unsupported-expr src/lsp/_lookup.ts:272:36: identifier Object is not a lowered local or module value"
     },
     {
-      "message": "not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/",
-      "count": 38,
-      "shards": {
-        "rules": 38
-      },
-      "example": "src/rules/xml_consistency.ts:51:3: lowering trap: node 309939 (src/rules/xml_consistency.ts:67:50): not supported in the Go prototype: JavaScript regexp /^v\\d\\.\\d\\.\\d$/"
-    },
-    {
       "message": "unsupported-array src/objects/domain.ts: empty array literal outside a statement context; unsupported-array src/objects/domain.ts: empty array literal outside a statement context",
-      "count": 34,
+      "count": 37,
       "shards": {
         "abap": 1,
-        "objects": 10,
+        "objects": 13,
         "objects-rename": 1,
         "rules": 22
       },
@@ -807,9 +776,9 @@
     },
     {
       "message": "unsupported-expr src/rules/downport.ts: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts: identifier hash is not a lowered local or module value",
-      "count": 29,
+      "count": 30,
       "shards": {
-        "rules": 29
+        "rules": 30
       },
       "example": "src/rules/downport.ts:3161:3: lowering trap: unsupported-expr src/rules/downport.ts:3174:20: identifier crypto is not a lowered local or module value; unsupported-expr src/rules/downport.ts:3175:23: identifier hash is not a lowered local or module value"
     },
@@ -855,10 +824,11 @@
       "example": "src/rules/object_naming.ts:109:3: lowering trap: unsupported-regex src/rules/object_naming.ts:126:30: new RegExp requires a lowered string pattern; unsupported-expr src/rules/object_naming.ts:128:51: identifier regex is not a lowered local or module value"
     },
     {
-      "message": "src/rules/no_prefixes.ts: unreviewed JavaScript regexp /^[LGM].?_/i",
-      "count": 15,
+      "message": "src/objects/_abap_object.ts: HIR verification: call argument type mismatch: string <- dynamic in runtime .",
+      "count": 17,
       "shards": {
-        "rules": 15
+        "objects": 4,
+        "rules": 13
       },
       "example": "src/rules/no_prefixes.ts:66:3: unreviewed JavaScript regexp /^[LGM].?_/i"
     },

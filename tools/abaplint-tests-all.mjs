@@ -2,7 +2,7 @@
 // One binary per direct test directory. Keep syntax together: helpers import
 // syntax.ts, which registers tests; splitting its roots would count them twice.
 // No source editing, test extraction, or oracle-synthesized Go registrations.
-import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync} from 'node:fs';
+import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {homedir, tmpdir} from 'node:os';
@@ -31,6 +31,19 @@ export function discoverShards(upstream) {
  return {upstreamPin, files, shards:[...groups].map(([name, roots]) => ({name, id:name.replaceAll('/', '-'), roots})), excluded:[]};
 }
 
+// Focused measurements retain the same ownership and FAIL checks as full runs.
+export function selectShards(plan, selection) {
+ if (!selection) return plan;
+ const names = selection.split(',').map(name => name.trim());
+ if (names.some(name => !name) || new Set(names).size !== names.length) throw new Error('shard selection must contain distinct nonempty names');
+ for (const name of names) if (!plan.shards.some(shard => shard.name === name)) throw new Error(`unknown test shard: ${name}`);
+ const shards = plan.shards.filter(shard => names.includes(shard.name));
+ if (shards.length === plan.shards.length) return plan;
+ const files = shards.flatMap(shard => shard.roots).sort();
+ const selected = new Set(files);
+ return {...plan, shards, files, excluded:plan.files.filter(file => !selected.has(file)), partial:true};
+}
+
 // Never continue trap work past an assertion mismatch (or other genuine
 // failed throw). Runtime/lowering refusals already have typed trap statuses.
 export function assertNoFailures(name, run) {
@@ -45,10 +58,16 @@ function main() {
  const scratch = process.env.ABAPITI_TESTS_SCRATCH ?? join(tmpdir(), 'abapiti-test-shards');
  mkdirSync(scratch, {recursive:true});
  const run = mkdtempSync(join(scratch, 'all-'));
- const plan = discoverShards(upstream);
+ const plan = selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS);
  const env = {...process.env, GOCACHE:join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
+ }
+ const compiler = process.env.ABAPITI_TESTS_COMPILER;
+ if (compiler) {
+  const revision = process.env.ABAPITI_TESTS_COMPILER_COMMIT;
+  if (!revision) throw new Error('ABAPITI_TESTS_COMPILER requires ABAPITI_TESTS_COMPILER_COMMIT');
+  plan.compilerCommit = command('git', ['rev-parse', '--verify', `${revision}^{commit}`], {encoding:'utf8'}).trim();
  }
  let oracleBuild, finished = false;
  function oracle(id, roots) {
@@ -60,8 +79,9 @@ function main() {
   oracleBuild = buildUpstream(upstream);
   writeFileSync(join(run,'shards.json'), JSON.stringify(plan));
   // Independent whole-suite run detects cross-shard omissions and duplicate roots.
-  oracle('all', plan.files);
-  command('go', ['build', '-o', join(run,'abapiti'), './cmd/abapiti'], {stdio:'inherit'});
+  if (!plan.partial) oracle('all', plan.files);
+  if (compiler) copyFileSync(resolve(compiler), join(run,'abapiti'));
+  else command('go', ['build', '-o', join(run,'abapiti'), './cmd/abapiti'], {stdio:'inherit'});
   for (const {name, id, roots} of plan.shards) {
    console.error(`=== ${name}: ${roots.length} files ===`);
    const closure = join(run, id), build = join(run, `${id}-out`);
@@ -102,7 +122,7 @@ function main() {
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
   console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const row of [...summary.shards, {name:'TOTAL', ...summary.uniqueTotal, node:summary.nodeTotal}]) console.log(`| ${row.name} | ${row.passed} | ${row.failed} | ${row.trapped} | ${row.asyncPending} | ${row.notRun} | ${row.registered} | ${row.node.passed + row.node.failed}+${row.node.pending} pending |`);
-  console.log(`${summary.uniqueTotal.passed}/${summary.wholeSuite.active}; Node total including pending: ${summary.wholeSuite.total}`);
+  console.log(`${summary.uniqueTotal.passed}/${summary.wholeSuite?.active ?? summary.nodeTotal.passed + summary.nodeTotal.failed}; Node total including pending: ${summary.nodeTotal.total}`);
   if (summary.shards.some(s => s.infrastructureFailure || s.unmatched)) process.exitCode = 1;
   finished = true;
  } finally {
