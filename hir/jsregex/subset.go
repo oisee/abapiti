@@ -17,6 +17,14 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 		seen[c] = true
 		insensitive = insensitive || c == 'i'
 	}
+	// This delimited-string language's local negative lookahead is regular.
+	// A slash run can escape its following quote at any length; it can leave
+	// the quote unconsumed at length >=2 (single slashes followed by a final
+	// paired slash). Before an ordinary unit any nonempty slash run works.
+	// Certify the whole language, not arbitrary lookahead syntax.
+	if pattern == `^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$` && !insensitive {
+		return `^'(?:[^'\\]|''|\\+'|\\+[^'\\]|\\{2,})*'\z`, true
+	}
 	p := subsetParser{pattern: pattern, insensitive: insensitive}
 	out, _, ok := p.expression(false)
 	return out, ok && p.pos == len(pattern)
