@@ -265,8 +265,7 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		}
 		for _, s := range stmts[:last] {
 			if l.containsReturn(s) {
-				l.diagf(n, "unsupported-callback", "callback block must have exactly one return")
-				return nil, nil, false
+				return l.callbackWithReturns(cb, names)
 			}
 		}
 		// Leading statements run per element, before the result value.
@@ -291,6 +290,33 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		x = &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: x.Type, Stmt: hir.B(l.pend...), Y: x}
 	}
 	return x, names, true
+}
+
+// A callback with early returns uses an ordinary lifted method, so a return
+// exits that invocation and cannot escape the surrounding array operation.
+func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, []string, bool) {
+	l.serial++
+	lf := l.liftLocalFn("callback_"+itoa(l.serial), cb)
+	if lf == nil || lf.method.Result.Kind == hir.Void {
+		return nil, nil, false
+	}
+	var args []*hir.Expr
+	for _, capture := range lf.captures {
+		value := hir.V(capture.name, capture.typ)
+		if l.localSymbols == nil {
+			l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+		}
+		l.localSymbols[value] = capture.symbol
+		args = append(args, value)
+	}
+	for index, name := range names {
+		args = append(args, hir.V(name, lf.method.Params[len(lf.captures)+index].Type))
+	}
+	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(cb), X: l.this(l.class), Name: lf.method.Name, Type: lf.method.Result, Args: args}
+	if lf.method.Static {
+		call.Kind, call.Owner, call.X = hir.DirectCall, lf.owner.Name, nil
+	}
+	return call, names, true
 }
 
 // destructurePattern declares the fields of an object or array binding

@@ -870,6 +870,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-call", "call without a callee")
 		return nil
 	}
+	inline := callee
+	for inline.Kind == ast.KindParenthesizedExpression {
+		inline = inline.Expression()
+	}
+	if inline.Kind == ast.KindArrowFunction {
+		l.serial++
+		if lf := l.liftLocalFn("immediate_"+itoa(l.serial), inline); lf != nil {
+			return l.localFnCall(n, lf, inline)
+		}
+		return nil
+	}
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()

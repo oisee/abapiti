@@ -408,6 +408,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(x, base)}
 		}
 	}
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && dst.Kind == hir.Optional {
+		base := dst.Args[0]
+		if base.Kind == hir.String || base.Kind == hir.Number || base.Kind == hir.Bool {
+			x = l.tempInit(nil, x.Type, x)
+			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}
+			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}
+		}
+	}
 	if x.Type.Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
 		op := map[hir.Kind]string{hir.String: "dynamic.asString", hir.Number: "dynamic.asNumber", hir.Bool: "dynamic.asBoolean"}[dst.Kind]
 		return l.rtOp(op, x, dst)
