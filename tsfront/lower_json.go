@@ -8,6 +8,9 @@ import (
 // JSON intrinsics are recognized by their default-library binding, never by
 // spelling alone. Revivers, replacers and indentation remain explicit refusals.
 func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
+	if !l.unprunedFeatures {
+		return nil, false
+	}
 	c := n.Expression()
 	if c == nil || c.Kind != ast.KindPropertyAccessExpression {
 		return nil, false
