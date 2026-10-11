@@ -224,7 +224,7 @@ No trap, unsupported assertion, or lost registration was bypassed to inflate N.
 ## Evidence and cleanup
 
 Compact logs and JSON summaries are in the requested scratchpad `train/` directory
-under `/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad`.
+under `<scratch>`.
 Generated Go/ABAP builds, copied test closures, original oracle builds, runtime
 outputs, baseline source extraction, and executables were deleted after runs.
 Only compact evidence and this committed report remain. No push was performed.

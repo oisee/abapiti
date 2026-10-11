@@ -2,7 +2,7 @@
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
   "codeCommit": "f0e8efe67c660d1441bf768e18197b53a99c9eca",
   "mainCommit": "0693e013512d36c5c76b3d4c5820f33509a2978e",
-  "artifacts": "/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/shards/all-j2dAXE",
+  "artifacts": "<scratch>/shards/all-j2dAXE",
   "artifactPrefix": "",
   "shards": [
     {
