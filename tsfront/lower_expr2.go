@@ -461,6 +461,9 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		if x == nil {
 			return nil, false
 		}
+		if l.unprunedFeatures && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.Dynamic) {
+			return l.rtOp("dynamic.keys", l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Array, hir.T(hir.String))), true
+		}
 		// Object.keys(undefined) throws in JavaScript: the checked narrowing
 		// raises for an absent record the checker typed present.
 		x = l.presentValue(args[0], x, hir.Type{})

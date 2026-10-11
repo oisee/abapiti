@@ -244,6 +244,14 @@ func (l *lowerer) forInStatement(n *ast.Node) *hir.Stmt {
 	if recv == nil {
 		return nil
 	}
+	if l.unprunedFeatures && (recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.Dynamic) {
+		keys := l.rtOp("dynamic.keys", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Array, hir.T(hir.String)))
+		l.push()
+		l.declare(name, hir.T(hir.String))
+		body := l.scopeBlock(f.Statement)
+		l.pop()
+		return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: hir.T(hir.String), X: keys, Body: body}
+	}
 	if recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
 		l.diagf(n, "unsupported-statement", "for-in needs a string-keyed map (%s)", recv.Type.String())
 		return nil

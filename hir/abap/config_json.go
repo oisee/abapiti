@@ -251,6 +251,9 @@ ENDMETHOD.
 				fail()
 				break
 			}
+			if e.liveClasses[c.Name] {
+				line("IF p0->%s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", e.name("view.source"), call(hir.T(hir.Dynamic), "p0->"+e.name("view.source")))
+			}
 			order, ok := configJSONOrder(e, c)
 			if !ok {
 				fail()

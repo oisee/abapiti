@@ -406,6 +406,13 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 }
 
 func (e *emitter) class(c *hir.Class) {
+	if e.liveClasses[c.Name] && c.Ctor == nil {
+		// Even a data class with no initializers needs a source-binding constructor.
+		copy := *c
+		copy.Ctor = &hir.Method{Node: c.Node, Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}
+		c = &copy
+	}
+
 	var b strings.Builder
 	s := "CLASS " + e.name(c.Name) + " DEFINITION PUBLIC"
 	if c.Super != "" {
@@ -2017,6 +2024,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		b.line("CREATE OBJECT " + w + ".")
 		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
+		return
+	case "dynamic.keys":
+		b.e.liveRuntime()
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
 		return
 	case "dynamic.classView":
 		b.liveView(x, n, a)
