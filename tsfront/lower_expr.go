@@ -1469,7 +1469,42 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("string.toLowerCase", recv, str), true
 		case "split":
-			return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
+			// Keep the existing literal/string ABI and default output unchanged.
+			if len(args) == 1 && l.ck.GetTypeAtLocation(args[0]).IsStringLike() {
+				return l.rtOp("string.split", recv, hir.T(hir.Array, str), one()), true
+			}
+			if len(args) < 1 || len(args) > 2 {
+				l.diagf(n, "unsupported-call", "string.split requires a typed separator and optional numeric limit")
+				return nil, true
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			pattern := l.presentValue(args[0], l.expr(args[0]), hir.Type{})
+			if pattern == nil {
+				return nil, true
+			}
+			if len(args) == 2 {
+				pattern = l.tempInit(n, pattern.Type, pattern)
+			}
+			if pattern.Type.Kind == hir.RegExp {
+				limit := hir.L(hir.T(hir.Number), float64(4294967295))
+				if len(args) == 2 {
+					limit = l.expr(args[1])
+					if limit == nil {
+						return nil, true
+					}
+					if limit.Type.Kind != hir.Number && limit.Type.Kind != hir.I32 && limit.Type.Kind != hir.I64 {
+						l.diagf(n, "unsupported-call", "regexp split limit must be a number")
+						return nil, true
+					}
+					limit = l.coerce(limit, hir.T(hir.Number))
+				}
+				return l.rtOp("string.splitRegex", recv, hir.T(hir.Array, str), pattern, limit), true
+			}
+			if pattern.Type.Kind != hir.String || len(args) != 1 {
+				l.diagf(n, "unsupported-call", "string.split separator/limit type is not lowered")
+				return nil, true
+			}
+			return l.rtOp("string.split", recv, hir.T(hir.Array, str), pattern), true
 		case "toString":
 			return recv, true
 		}
@@ -1539,6 +1574,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "length":
 			return l.rtOp("array.length", recv, i32), true
 		case "concat":
+			if l.unprunedFeatures && len(args) != 1 {
+				return l.concatArrays(n, recv, args), true
+			}
 			return l.rtOp("array.concat", recv, recv.Type, one()), true
 		case "slice":
 			a := one()
@@ -1621,6 +1659,40 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	}
 	return l.syntaxLibraryCall(n, name, recv)
+}
+
+// Multi-argument array concat evaluates all argument expressions before reading
+// receiver/argument elements. Save references, not snapshots, then copy them.
+// Scalars, spread calls and incompatible element storage stay explicit refusals.
+func (l *lowerer) concatArrays(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hir.Expr {
+	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	values := make([]*hir.Expr, 0, len(args))
+	for _, arg := range args {
+		if arg.Kind == ast.KindSpreadElement {
+			l.diagf(arg, "unsupported-array", "concat spread arguments require a callable rest ABI")
+			return nil
+		}
+		old := l.hint
+		l.hint = recv.Type
+		x := l.expr(arg)
+		l.hint = old
+		if x == nil {
+			return nil
+		}
+		if !x.Type.Equal(recv.Type) {
+			l.diagf(arg, "unsupported-array", "concat requires compatible array arguments, got %s", x.Type)
+			return nil
+		}
+		values = append(values, l.tempInit(arg, x.Type, x))
+	}
+	if len(values) == 0 {
+		return l.rtOp("array.slice0", recv, recv.Type)
+	}
+	result := recv
+	for _, x := range values {
+		result = l.rtOp("array.concat", result, recv.Type, x)
+	}
+	return result
 }
 
 // replaceCall lowers s.replace(pattern, with): a RegExp (literal or

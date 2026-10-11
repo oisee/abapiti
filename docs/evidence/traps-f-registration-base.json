@@ -1,0 +1,234 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "compilerCommit": "7c2d33fc52beef1bbdb7bc6ee38ff1b3b44010ab",
+  "measurement": "Five selected shards only; fresh original Node titles minus executed Go registered-title multiset. Not a full base run.",
+  "totalUnregistered": 105,
+  "shards": [
+    {
+      "name": "abap",
+      "passed": 163,
+      "failed": 0,
+      "trapped": 53,
+      "registered": 216,
+      "total": 220,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 4
+      },
+      "unregisteredTitles": [
+        "Structure, test error messages, specific IF foo = bar.",
+        "Structure, test error messages, specific IF foo = bar. moo = boo.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE. ENDIF."
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36238 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "abap/expressions",
+      "passed": 42,
+      "failed": 0,
+      "trapped": 8,
+      "registered": 50,
+      "total": 107,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 57
+      },
+      "unregisteredTitles": [
+        "Test expression matchers, todo: refactor \"cs_tstcp\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy-fdpos)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp(sy-fdpos)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foobar(3)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"(sy)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(42)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(sy-fdpos)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(123-fdpos)\" should not match FieldLength",
+        "Test expression matchers, todo: refactor \"+sy-fdpos\" should match FieldOffset",
+        "Test expression matchers, todo: refactor \"+123-fdpos\" should not match FieldOffset",
+        "Test expression matchers, todo: refactor \"foobar(3)\" should match Target",
+        "Test expression matchers, todo: refactor \"method( foo )-stream->rema( )\" should match MethodCallChain",
+        "Test expression matchers, todo: refactor \"method( foo )->rema( )\" should match MethodCallChain",
+        "Test expression matchers, todo: refactor \"method( )\" should match MethodCall",
+        "Test expression matchers, todo: refactor \"method #( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method asdf( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method a( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method ( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"foo(2)\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"TYPE abap_bool DEFAULT abap_true\" should match Type",
+        "Test expression matchers, todo: refactor \"TYPE lcl_perce_repo=>ty_sum_tt\" should match Type",
+        "Test expression matchers, todo: refactor \"TYPE STANDARD TABLE\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"22\" should match Integer",
+        "Test expression matchers, todo: refactor \"22\" should match Constant",
+        "Test expression matchers, todo: refactor \"22\" should not match Field",
+        "Test expression matchers, todo: refactor \"s_bar\" should match Field",
+        "Test expression matchers, todo: refactor \"1250_data\" should match Field",
+        "Test expression matchers, todo: refactor \"foo\" should match Field",
+        "Test expression matchers, todo: refactor \"zquery\" should match Field",
+        "Test expression matchers, todo: refactor \"_foobar\" should match Field",
+        "Test expression matchers, todo: refactor \"%bar\" should match Field",
+        "Test expression matchers, todo: refactor \"%bar%\" should match Field",
+        "Test expression matchers, todo: refactor \"-\" should not match Field",
+        "Test expression matchers, todo: refactor \"+\" should not match Field",
+        "Test expression matchers, todo: refactor \"*\" should not match Field",
+        "Test expression matchers, todo: refactor \"22\" should not match FieldChain",
+        "Test expression matchers, todo: refactor \"foobar\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"22foo\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foo22\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"text-001\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foo(2)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"e070-trkorr\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"foo\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"s_trkorr\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"bar\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"-\" should not match FieldSub",
+        "Test expression matchers, todo: refactor \"foo type string\" should match MethodParam",
+        "Test expression matchers, todo: refactor \"type string\" should match Type",
+        "Test expression matchers, todo: refactor \"type string\" should not match TypeTable",
+        "Test expression matchers, todo: refactor \"type index table\" should not match Type",
+        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"type range of string\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"%_C_POINTER\" should match TypeNameOrInfer",
+        "Test expression matchers, todo: refactor \"<Z-BAR>\" should match FieldSymbol"
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:10:1",
+          "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30122 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:70:1",
+          "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30337 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "abap/structures",
+      "passed": 138,
+      "failed": 0,
+      "trapped": 0,
+      "registered": 139,
+      "total": 140,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 1
+      },
+      "unregisteredTitles": [
+        "structure combi, complex1 complex1 match"
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/structures/_combi.ts",
+          "action": "test/abap/structures/_combi.ts:276:1",
+          "message": "test/abap/structures/_combi.ts:276:39: lowering trap: unsupported-statement test/abap/structures/_combi.ts:277:3: KindClassDeclaration is not lowered; unsupported-expr test/abap/structures/_combi.ts:282:25: identifier Normal is not a lowered local or module value",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "abap/syntax",
+      "passed": 1310,
+      "failed": 0,
+      "trapped": 14,
+      "registered": 1332,
+      "total": 1373,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 8,
+        "unregistered": 41
+      },
+      "unregisteredTitles": [
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A1, actual is the same DDIC structure",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A2, actual includes the formal structure plus extra fields",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A4, prefix component type differs",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A5, actual shorter than formal",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A6, actual is elementary",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A7, actual is an internal table",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A8, actual is an object reference",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A9, VALUE() pass-by-value variant",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A10, CHANGING instead of USING",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A11, merged USING + CHANGING positional list",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A12, formal STRUCTURE of a voided DDIC name",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A13, actual is a generic field symbol",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A14, nested, formal has a substructure, actual has it plus extra",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing A16, DDIC formal is flat, actual nests the same layout, approximation limit",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B1, actual is STANDARD TABLE OF ddic WITH DEFAULT KEY",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B2, actual is WITH EMPTY KEY",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B3, actual from SELECT ... INTO TABLE @DATA()",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B4, actual is LIKE ddic OCCURS 0 WITH HEADER LINE",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B5, actual row includes the formal structure plus extra fields",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B6, actual is a SORTED TABLE, known gap",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B7, actual row shorter than formal",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B8, actual row component type differs",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B9, actual is a flat structure, not a table",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B10, TABLES formal STRUCTURE of a voided DDIC name",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing B11, TABLES and USING STRUCTURE params in one FORM",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing C1, USING p TYPE ddic, actual longer",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing C2, USING p LIKE ddic, actual longer",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing C4, untyped USING, actual longer",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing C5, untyped TABLES",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing D1, wrong number of parameters",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing D2, two bad STRUCTURE params, only the first is reported",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing D3, PERFORM ... IN PROGRAM is skipped",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing D4, dynamic PERFORM is skipped",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E1, actual is the header line of a LIKE ddic OCCURS table",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E2, TABLES actual passed as an explicit table body",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E3, per parameter dispatch, STRUCTURE relaxed but TYPE still strict",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E4, reordered components with differing lengths",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E5, FORM in an INCLUDE, PERFORM in the main program",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing E6, formal typed via a DDIC table type, actual EMPTY KEY",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing gap, FORM parameters typed against program-local names are never checked",
+        "syntax.ts, PERFORM parameters, STRUCTURE typing gap, TABLES accepts sorted and hashed tables"
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/syntax/syntax.ts",
+          "action": "test/abap/syntax/syntax.ts:16428:1",
+          "message": "test/abap/syntax/syntax.ts:16428:61: lowering trap: test/abap/syntax/syntax.ts:16428:61: HIR verification: node 72319 (test/abap/syntax/syntax.ts:16428:61): expression type mismatch: classref<test/abap/syntax/syntax.ts.module> / classref<closure.72273>",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "rules",
+      "passed": 2725,
+      "failed": 0,
+      "trapped": 422,
+      "registered": 3157,
+      "total": 3159,
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "unregisteredTitles": [
+        "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+        "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ]
+    }
+  ]
+}

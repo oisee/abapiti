@@ -45,6 +45,16 @@ export function selectShards(plan, selection) {
  return {...plan, shards, files, excluded:plan.files.filter(file => !selected.has(file)), partial:true};
 }
 
+// Execute selected high-risk shards first without excluding roots or changing
+// whole-suite accounting. Useful when owned repairs must fail fast before gates.
+export function prioritizeShards(plan, selection) {
+ if (!selection) return plan;
+ selectShards(plan, selection); // shared validation, including duplicate/unknown names
+ const names = selection.split(',').map(name => name.trim());
+ const first = names.map(name => plan.shards.find(shard => shard.name === name));
+ return {...plan, shards:[...first, ...plan.shards.filter(shard => !names.includes(shard.name))]};
+}
+
 // Never continue trap work past an assertion mismatch (or other genuine
 // failed throw). Runtime/lowering refusals already have typed trap statuses.
 export function assertNoFailures(name, run) {
@@ -72,7 +82,7 @@ async function main() {
  const scratch = process.env.ABAPITI_TESTS_SCRATCH ?? join(tmpdir(), 'abapiti-test-shards');
  mkdirSync(scratch, {recursive:true});
  const run = mkdtempSync(join(scratch, 'all-'));
- const plan = selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS);
+ const plan = prioritizeShards(selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS), process.env.ABAPITI_TESTS_FIRST);
  const env = {...process.env, GOCACHE:join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});

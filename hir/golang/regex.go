@@ -18,6 +18,7 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 	pattern := x.Args[0]
 	flags := ""
 	if pattern.Kind != hir.Lit {
+		e.extendedRegex = true
 		return
 	}
 	p, ok := pattern.Value.(string)
@@ -26,6 +27,7 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 	}
 	if len(x.Args) > 1 {
 		if x.Args[1].Kind != hir.Lit {
+			e.extendedRegex = true
 			return
 		}
 		flags, ok = x.Args[1].Value.(string)

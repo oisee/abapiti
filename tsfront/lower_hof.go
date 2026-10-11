@@ -492,6 +492,18 @@ func (l *lowerer) lookupTypeOf(name string) hir.Type {
 // constants are passed as leading arguments, re-read at the call site (they
 // are never assigned).
 func (l *lowerer) localFnCall(n *ast.Node, lf *localFn, callee *ast.Node) *hir.Expr {
+	if l.integerOptions.TrapOnFailure {
+		if sym := l.resolve(callee); sym != nil && sym.ValueDeclaration != nil {
+			d := sym.ValueDeclaration
+			if d.Kind == ast.KindVariableDeclaration && d.Initializer() != nil && d.Initializer().Kind == ast.KindArrowFunction && l.testRegistrationHelper(d.Initializer()) && n.Pos() < d.End() {
+				// Suite const arrows need a source-order initialization proof.
+				// Refuse before argument preludes; do not fabricate a ready
+				// function binding or a catchable JavaScript ReferenceError.
+				l.diagf(n, "unsupported-call", "suite arrow %s is used before its initialization", sym.Name)
+				return nil
+			}
+		}
+	}
 	args := []*hir.Expr{}
 	for _, c := range lf.captures {
 		if c.typ.Kind == hir.Void {

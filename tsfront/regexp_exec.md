@@ -27,14 +27,49 @@ without Go's broader Unicode case folding.
 
 The additional runtime families are `&[1-9][0-9]*` with `g`, and patterns matching
 `^\^[A-Za-z0-9_|()?]+\$?$` with empty flags or `i`. These families are checked
-before compilation; invalid syntax is a trap. Other dynamic patterns/flag
-sequences produce `unreviewed JavaScript regexp /pattern/flags`. Static patterns
-outside Go's reviewed language fail emission. Unknown/duplicate static flags
+before compilation; invalid syntax is a trap. On Go, literal and dynamic constructors also use `TranslateSubset` from
+`hir/jsregex/subset.go`: ordered alternation, capture-safe groups, ASCII
+word/digit classes, JS whitespace (`\s`/`\S`, including `\s` inside classes),
+ASCII word boundaries (`\b`/`\B`), capture-safe greedy bounded repetitions
+(up to RE2's 1000 bound; repeated captures, malformed/oversized bounds and lazy
+repeats refuse), non-u ASCII case folding and non-m absolute anchors. `$^` matches only empty input. Dynamic constructors activate this same
+translator even when no non-table literal occurs in the program. Unknown or
+uncertified patterns/flag sequences produce
+`unreviewed JavaScript regexp /pattern/flags`; this is not arbitrary RE2 fallback.
+Static patterns outside Go's reviewed language fail emission. Unknown/duplicate static flags
 fail lowering; `m` is restricted to reviewed translations. Backreferences,
 arbitrary lookaround, Unicode mode, named captures, `.groups`, and `.input` are
 not added by this change. A RegExp object passed as the constructor pattern is
 refused; regex *literals* as constructor patterns preserve their original flags
 unless overridden.
+
+## Go String.split with a RegExp
+
+`string.splitRegex` is a separate typed operation; a RegExp never enters the
+string-separator ABI. It follows non-u JS @@split's private-sticky-clone semantics, using equivalent
+full-subject leftmost-first enumeration over the certified regular language:
+receiver/separator/limit evaluation order, UTF-16 unit advancement, original
+anchor context, suppressed leading/trailing empty matches, numbered capture
+splicing, and numeric ToUint32 limit (including truncation, wraparound and
+nonfinite values). The original RegExp's lastIndex is ignored and preserved.
+Enumeration suppresses empty matches at the preceding separator end and does
+not attempt a match at the final input boundary. It does not reuse exec's
+bounded-repeat start-prefix wrapper, so split cursors above 1000 are supported.
+Empty input returns `[]` if the separator matches empty, otherwise `[""]`.
+Leading/trailing **nonempty** separators preserve empty result elements.
+
+Both abaplint regexp split sites (`catch_and_raise` and `cds_field_order`) use
+this operation. Captured patterns must certify in the capture-safe subset;
+older table reviews of repeated exec captures are not extended to split.
+An actually unmatched capture that would be appended refuses with a typed
+`nullable string-element ABI` trap: the current string[] ABI cannot preserve
+undefined through all slice/iteration/escape operations. It is not emitted as
+an empty string or hole. Captures not reached because of the limit need no ABI
+extension. Non-number limits, undefined separators, custom species/@@split and
+Unicode-mode regexps are not added. ABAP explicitly refuses this Go-only op;
+its legacy string split runtime is unchanged. Live Node differentials in
+`regex_split_test.go` and `regex_split_edges_test.go` cover the supported domain
+and assert the typed refusal for unmatched/repeated capture domains.
 
 String.replace accepts RegExp objects and string pattern/replacement variables.
 A variable string pattern replaces the first literal occurrence, including the

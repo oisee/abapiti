@@ -3,16 +3,17 @@ package jsregex
 
 // Pinned abaplint patterns reviewed as ASCII token grammars.
 // Dot excludes all four JS line terminators; word/digit remain ASCII.
-const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}]`
-
 // Reviewed maps pattern/flags to a compiled language and an optional whole-input
 // exclusion. Do not mutate: both target emitters and the Go runtime use it.
 var Reviewed = map[string][2]string{
-	`\s+/g`:                           {execSpace + `+`, ""},
-	`[.{,]DEFAULTSEARCHELEMENT:TRUE/`: {`[.{,]DEFAULTSEARCHELEMENT:TRUE`, ""},
-	`[.{,]SEARCHABLE:TRUE/`:           {`[.{,]SEARCHABLE:TRUE`, ""},
-	`\/\/.*$/gm`:                      {`//[^\n\r\x{2028}\x{2029}]*`, ""},
-	`''/g`:                            {`''`, ""},
+	// Exact bounded ASCII naming grammars; not general bounded-repeat support.
+	`^((\/[A-Z_\d]{3,8}\/)|[a-zA-Z0-9]{3}|CI_)\w+$/`: {`^((/[A-Z_0-9]{3,8}/)|[a-zA-Z0-9]{3}|CI_)[A-Za-z0-9_]+\z`, ""},
+	`^[a-zA-Z]{1,3}_.*$/i`:                           {`^[A-Za-z]{1,3}_[^\n\r\x{2028}\x{2029}]*\z`, ""},
+	`\s+/g`:                                          {execSpace + `+`, ""},
+	`[.{,]DEFAULTSEARCHELEMENT:TRUE/`:                {`[.{,]DEFAULTSEARCHELEMENT:TRUE`, ""},
+	`[.{,]SEARCHABLE:TRUE/`:                          {`[.{,]SEARCHABLE:TRUE`, ""},
+	`\/\/.*$/gm`:                                     {`//[^\n\r\x{2028}\x{2029}]*`, ""},
+	`''/g`:                                           {`''`, ""},
 	`\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi`: {`\b[dD][eE][fF][iI][nN][eE]` + execSpace + `+(?:[A-Za-z0-9_]+` + execSpace + `+)*?[bB][eE][hH][aA][vV][iI][oO][rR]` + execSpace + `+[fF][oO][rR]` + execSpace + `+([A-Za-z0-9_/]+)(?:` + execSpace + `+[aA][lL][iI][aA][sS]` + execSpace + `+([A-Za-z0-9_]+))?`, ""},
 	"(a)(b)/g":                          {"(a)(b)", ""},
 	"(a)(b)/y":                          {"(a)(b)", ""},
