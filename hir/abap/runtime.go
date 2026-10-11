@@ -204,7 +204,8 @@ func (e *emitter) support() {
 		// Match metadata is absent from ordinary array runtimes.
 		e.typ(hir.T(hir.Array, hir.T(hir.String)))
 		file := e.name("runtime."+hir.T(hir.Array, hir.T(hir.String)).String()) + ".clas.abap"
-		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
+		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
+		e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
 	}
 	if e.dynamicUsed {
 		e.classvalueRuntime()
@@ -396,6 +397,7 @@ func (e *emitter) regexpRuntime() {
 	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 DATA source TYPE string.
+DATA flags TYPE string.
 DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
@@ -414,6 +416,7 @@ DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
 DATA escaped TYPE abap_bool.
+me->flags = flags.
 n = strlen( pattern ).
 WHILE i < n.
   c = pattern+i(1).
@@ -543,6 +546,9 @@ IF sy-subrc = 0.
 ENDIF.
 ENDMETHOD.
 METHOD replace.
+IF p1 CS '$'.
+  RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
 result = p0.
 IF excluded IS NOT INITIAL.
   IF ignore_case = abap_true.
@@ -577,6 +583,7 @@ ENDCLASS.
 		e.files[file] = strings.Replace(e.files[file], "METHODS test IMPORTING", "METHODS match IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE "+arr+".\nMETHODS test IMPORTING", 1)
 		e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD match.
 DATA part TYPE string.
+DATA idx TYPE i.
 IF excluded IS NOT INITIAL.
   IF ignore_case = abap_true.
     FIND REGEX excluded IN p0 IGNORING CASE.
@@ -614,9 +621,12 @@ LOOP AT matches INTO DATA(hit).
   IF global = abap_false.
     LOOP AT hit-submatches INTO DATA(group).
       IF group-offset < 0.
-        RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+        idx = lines( result->items ).
+        INSERT idx INTO TABLE result->match_missing.
+        CLEAR part.
+      ELSE.
+        part = p0+group-offset(group-length).
       ENDIF.
-      part = p0+group-offset(group-length).
       APPEND part TO result->items.
     ENDLOOP.
   ENDIF.
@@ -624,6 +634,15 @@ ENDLOOP.
 ENDMETHOD.
 ENDCLASS.
 `
+	}
+	if e.execUsed {
+		e.regexpExecRuntime(name)
+	}
+	if e.dynamicRegexpUsed {
+		e.regexpDynamicRuntime(name)
+	}
+	if e.matchUsed || e.dynamicRegexpUsed {
+		e.regexpPCRERuntime(name)
 	}
 }
 

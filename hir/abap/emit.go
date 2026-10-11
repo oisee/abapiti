@@ -1,4 +1,5 @@
-// Package abap lowers verified object HIR to ABAP 7.50.
+// Package abap lowers verified object HIR to ABAP 7.50 style.
+// PCRE regex features require ABAP 7.55 or later.
 package abap
 
 import (
@@ -11,6 +12,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 type emitter struct {
@@ -24,7 +26,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
-	matchUsed                                       bool
+	matchUsed, execUsed, dynamicRegexpUsed          bool
 	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef
 	descOrder                                       map[string][]string
@@ -229,8 +231,17 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex" || x.Op == "string.match") {
+			e.execUsed = true
+			e.matchUsed = true
+		}
 		if x.Type.Kind == hir.RegExp {
 			e.regexpUsed = true
+			if x.Kind == hir.New && len(x.Args) > 0 && (x.Args[0].Kind != hir.Lit || (len(x.Args) > 1 && x.Args[1].Kind != hir.Lit)) {
+				e.dynamicRegexpUsed = true
+				e.execUsed = true
+				e.matchUsed = true
+			}
 		}
 		if x.Type.Kind == hir.Dynamic {
 			e.dynamicUsed = true
@@ -868,7 +879,7 @@ func (b *body) expr(x *hir.Expr) string {
 			e.regexpUsed = true
 			original := b.value(x.Args[0], hir.T(hir.String))
 			pattern, reject := original, ""
-			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok {
+			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok && (len(x.Args) < 2 || x.Args[1].Kind == hir.Lit) {
 				translated, excluded := regexPattern(raw)
 				if translated != raw || excluded != "" {
 					pattern = b.temp(hir.T(hir.String))
@@ -889,7 +900,29 @@ func (b *body) expr(x *hir.Expr) string {
 			if reject != "" {
 				s += " excluded_pattern = " + reject
 			}
+			if x.Args[0].Kind != hir.Lit || (len(x.Args) > 1 && x.Args[1].Kind != hir.Lit) {
+				s += " checked = abap_true"
+			}
 			b.line(s + ".")
+			if x.Args[0].Kind == hir.Lit && len(x.Args) > 1 && x.Args[1].Kind == hir.Lit {
+				raw, _ := x.Args[0].Value.(string)
+				flags, _ := x.Args[1].Value.(string)
+				if spec, ok := jsregex.Reviewed[raw+"/"+flags]; ok && (e.execUsed || e.matchUsed || e.dynamicRegexpUsed || strings.Contains(flags, "m")) {
+					compiled := b.temp(hir.T(hir.String))
+					b.stringLit(compiled, pcreRegexPattern(spec[0]))
+					if e.execUsed {
+						b.line(n + "->exec_pattern = " + compiled + ".")
+					}
+					b.line(n + "->posix = " + compiled + ".")
+					b.line(n + "->ignore_case = abap_false.")
+					if spec[1] != "" {
+						b.stringLit(compiled, pcreRegexPattern(spec[1]))
+						b.line(n + "->excluded = " + compiled + ".")
+					}
+				} else if strings.Contains(flags, "m") {
+					e.err = fmt.Errorf("JavaScript multiline regexp /%s/%s is outside the reviewed ABAP subset", raw, flags)
+				}
+			}
 			if pattern != original {
 				b.line(n + "->source = " + original + ".")
 			}
@@ -1350,7 +1383,7 @@ func (b *body) stringLit(n, s string) {
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff {
+		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff || r[0] == 0x2028 || r[0] == 0x2029 {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -1363,7 +1396,7 @@ func (b *body) stringLit(n, s string) {
 		}
 		k := 0
 		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && size+len(string(r[k]))*2 <= 120 {
+		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && r[k] != 0x2028 && r[k] != 0x2029 && size+len(string(r[k]))*2 <= 120 {
 			size += len(string(r[k])) * 2
 			k++
 		}
@@ -1551,6 +1584,24 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 		b.line("ENDIF.")
 		b.line(n + " = " + a + "->match_index.")
+		return
+	}
+	if x.Op == "regexp.lastIndex" {
+		b.line(n + " = " + a + "->last_index.")
+		return
+	}
+	if x.Op == "regexp.setLastIndex" {
+		v := args[0]
+		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < -2147483648 OR " + v + " > 2147483647.")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		b.line(a + "->last_index = " + v + ".")
+		return
+	}
+	if x.Op == "regexp.exec" {
+		b.e.matchUsed = true
+		b.e.execUsed = true
+		b.line(n + " = " + a + "->exec( " + args[0] + " ).")
 		return
 	}
 	if x.Op == "string.match" {
@@ -1790,6 +1841,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + a + ".")
 			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
 		case "string.replaceFirst":
+			if x.Args[1].Kind != hir.Lit {
+				b.line("IF " + args[1] + " CS '$'.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+				b.line("ENDIF.")
+			}
 			// JavaScript replace with a string pattern: the first occurrence
 			// only; an empty needle inserts before the first code unit.
 			b.line(n + " = " + a + ".")
@@ -1994,13 +2050,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "regexp.toString":
 		// JavaScript prints the flags in canonical order: g before i.
-		b.line(n + " = |/{ " + a + "->source }/|.")
-		b.line("IF " + a + "->global = abap_true.")
-		b.line(n + " = " + n + " && `g`.")
-		b.line("ENDIF.")
-		b.line("IF " + a + "->ignore_case = abap_true.")
-		b.line(n + " = " + n + " && `i`.")
-		b.line("ENDIF.")
+		b.line(n + " = |/{ " + a + "->source }/{ " + a + "->flags }|.")
 		return
 	}
 	switch x.Op {

@@ -328,7 +328,14 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		line := fmt.Sprintf("a4h/     abapGit zip, %d objects. Import it with abapGit (New Offline, package %s), then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from the ZABAPITI_CORPUS table (ZCL_ABAPITI_CORPUS, ZCL_ABAPITI_LOG must be installed) and prints ok=X when the issues match Node's.", objects, pkg, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
+		minRelease := "7.50"
+		for _, source := range emitted {
+			if strings.Contains(source, " PCRE ") {
+				minRelease = "7.55"
+				break
+			}
+		}
+		line := fmt.Sprintf("a4h/     abapGit zip, %d objects; requires ABAP %s. Import it with abapGit (New Offline, package %s), then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from the ZABAPITI_CORPUS table (ZCL_ABAPITI_CORPUS, ZCL_ABAPITI_LOG must be installed) and prints ok=X when the issues match Node's.", objects, minRelease, pkg, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
 		if err := os.WriteFile(filepath.Join(dir, "README.txt"), []byte(line+"\n"), 0644); err != nil {
 			return err
 		}

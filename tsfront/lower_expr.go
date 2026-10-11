@@ -821,6 +821,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		if recv.Type.Kind == hir.ClassValue {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
 		}
+	case "lastIndex":
+		if recv.Type.Kind == hir.RegExp {
+			return l.rtOp("regexp.lastIndex", recv, hir.T(hir.I32))
+		}
 	case "source":
 		if recv.Type.Kind == hir.RegExp {
 			return l.rtOp("regexp.source", recv, hir.T(hir.String))
@@ -1353,11 +1357,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "test":
 			return l.rtOp("regexp.test", recv, boolT, one()), true
 		case "exec":
-			// Only the match's truthiness is read: exec and test advance a
-			// global regexp's lastIndex alike.
-			if isConditionOnly(n) {
-				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
-				return l.rtOp("regexp.test", recv, boolT, one()), true
+			if len(args) == 1 {
+				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), one()), true
 			}
 		case "toString":
 			if len(args) == 0 {
@@ -1476,7 +1477,7 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		l.diagf(n, "unsupported-regex", "replace needs a pattern and a replacement")
 		return nil
 	}
-	if (args[0].Kind == ast.KindRegularExpressionLiteral && args[1].Kind != ast.KindStringLiteral && args[1].Kind != ast.KindNoSubstitutionTemplateLiteral) || ((args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && strings.Contains(args[1].Text(), "$")) {
+	if (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && strings.Contains(args[1].Text(), "$") {
 		l.diagf(args[1], "unsupported-regex", "replace requires a literal replacement without dollar substitutions")
 		return nil
 	}
@@ -1511,7 +1512,7 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
 	}
-	if pat != nil && pat.Type.Kind == hir.String && (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$") {
+	if pat != nil && pat.Type.Kind == hir.String {
 		if n.Expression().Name().Text() == "replace" {
 			l.diagf(n, "note-replace-first", "string replace with a dynamic string pattern replaces the first occurrence")
 			return l.rtOp("string.replaceFirst", recv, hir.T(hir.String), pat, with)
