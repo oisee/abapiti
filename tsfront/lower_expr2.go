@@ -337,6 +337,11 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 // objectStatic lowers the Object.* helpers the closure uses.
 func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	switch name {
+	case "assign":
+		if _, local := l.lookup("Object"); local || !l.librarySymbol(l.resolve(n.Expression().Expression())) {
+			return nil, false
+		}
+		return l.assignRecords(n), true
 	case "freeze":
 		// Object.freeze(x) is the identity here: nothing mutates through the
 		// frozen view in the closure.

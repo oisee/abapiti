@@ -1,0 +1,2656 @@
+{
+  "mainBase": "f834c16ea65c9bd691ca0fe788d0cfbda4332dfc",
+  "measurementPRHeads": {
+    "90": "3718cbee302047a492f868cb833c52bda85ed610",
+    "91": "23f317406f47a7668428ea6efdf5829628264b78",
+    "92": "197574c6139757ea2a199d5da10a9e4baf84f44d",
+    "95": "0d61c4e6a9eb488a4f8d343732cb4d4796dbaebb"
+  },
+  "commands": [
+    "abapiti abaplint --full -o <evidence-dir>",
+    "go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "abapiti abaplint -o /tmp/fit-objects-default --target all,go",
+    "diff -r /tmp/fit-objects-default-reference /tmp/fit-objects-default"
+  ],
+  "runs": {
+    "main_before": {
+      "totalBlocking": 635,
+      "totalRootBlocking": 355,
+      "totalCascadeBlocking": 280,
+      "hirErrors": 394,
+      "objectsBlocking": 151,
+      "objectsRootBlocking": 96,
+      "objectsByOwner": {
+        "AFF JSON": 10,
+        "Generator": 2,
+        "RegExp / pattern replacement": 8,
+        "duration clocks": 64,
+        "early-return callback": 1,
+        "fractional numeric conversion": 1,
+        "immediate arrow": 2,
+        "object literals / empty arrays": 9,
+        "record Object.assign": 1,
+        "small builtins": 3,
+        "string match": 13,
+        "text XML": 3,
+        "typeof": 8,
+        "void ABI": 4,
+        "vscode/lsp": 22
+      },
+      "objectsByExactMessage": {
+        "assignment to match is not lowered": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "call to KindParenthesizedExpression is not lowered": 1,
+        "callback block must have exactly one return": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 1,
+        "checker type RegExpMatchArray is not a lowered declaration": 2,
+        "identifier Date is not a lowered local or module value": 32,
+        "identifier JSON is not a lowered local or module value": 2,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier end is not a lowered local or module value": 15,
+        "identifier fileNewName is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier match is not a lowered local or module value": 6,
+        "identifier paramName is not a lowered local or module value": 2,
+        "identifier parsed is not a lowered local or module value": 8,
+        "identifier start is not a lowered local or module value": 17,
+        "identifier typeInformation is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 1,
+        "method create on map is not lowered": 15,
+        "method exec on regexp is not lowered": 1,
+        "method is on map is not lowered": 2,
+        "method match on string is not lowered": 4,
+        "method replace on map is not lowered": 5,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "new XMLParser is not a lowered class": 1,
+        "object literal needs a named lowered shape": 9,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 2,
+        "typeof comparison on optional<string> is not lowered": 6,
+        "void local requires a value-preserving result ABI": 4
+      },
+      "fullClosureByExactMessage": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindFunctionDeclaration is not lowered": 1,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "Math.min requires two arguments in this phase": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "call to KindIdentifier is not lowered": 2,
+        "call to KindParenthesizedExpression is not lowered": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "callback block must have exactly one return": 3,
+        "checker type DocumentSymbol is not a lowered declaration": 5,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 5,
+        "constructor of the object root is not lowered": 2,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "every needs a source-pinned dense/stable receiver proof": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier Date is not a lowered local or module value": 32,
+        "identifier JSON is not a lowered local or module value": 6,
+        "identifier Object is not a lowered local or module value": 4,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 2,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier ctor is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier end is not a lowered local or module value": 15,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fileNewName is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier index is not a lowered local or module value": 2,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 11,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier paramName is not a lowered local or module value": 2,
+        "identifier parsed is not a lowered local or module value": 8,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier range is not a lowered local or module value": 2,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier splitAt is not a lowered local or module value": 1,
+        "identifier start is not a lowered local or module value": 21,
+        "identifier symbol is not a lowered local or module value": 7,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier typeInformation is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 1,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "identifier workspace is not a lowered local or module value": 11,
+        "method create on classvalue is not lowered": 13,
+        "method create on map is not lowered": 15,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method is on map is not lowered": 2,
+        "method match on string is not lowered": 31,
+        "method repeat on string is not lowered": 40,
+        "method replace on map is not lowered": 5,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 2,
+        "object literal needs a named lowered shape": 17,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "top-level KindModuleDeclaration is not lowered": 81,
+        "typeof comparison on optional<string> is not lowered": 6,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "void local requires a value-preserving result ABI": 16
+      },
+      "objectsDiagnostics": [
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/_abap_object.ts:114:7",
+          "message": "identifier Object is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:66:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:78:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:79:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:79:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "checker type RegExpExecArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/behavior_definition.ts:69:17",
+          "message": "method exec on regexp is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:70:12",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:71:44",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-assignment",
+          "loc": "src/objects/behavior_definition.ts:72:7",
+          "message": "assignment to match is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:35:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:47:37",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:47:50",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:97:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:130:37",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:130:50",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:140:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:141:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:142:38",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:146:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:147:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:148:14",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:212:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:218:24",
+          "message": "identifier JSON is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:219:33",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:220:32",
+          "message": "identifier typeInformation is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:221:29",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:223:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:246:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:247:39",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:247:45",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:290:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:291:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:291:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:105:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:111:24",
+          "message": "identifier JSON is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:112:26",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:114:34",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:122:32",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:131:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:142:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:143:39",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:143:45",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:183:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:184:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:184:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:52:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:53:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:53:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:53:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:54:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:54:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:56:28",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:58:13",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/function_group.ts:158:28",
+          "message": "identifier XMLParser is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-new",
+          "loc": "src/objects/function_group.ts:158:24",
+          "message": "new XMLParser is not a lowered class"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/function_group.ts:159:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:46:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:65:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:66:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:66:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:75:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:101:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:102:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:102:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:80:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:94:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:95:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:95:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:61:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:75:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:76:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:76:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:53:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:54:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:54:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:58:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:60:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:67:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:67:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:96:22",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:109:11",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:128:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:129:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:131:28",
+          "message": "identifier paramName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:139:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:140:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:142:28",
+          "message": "identifier paramName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_data_element.ts:29:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_domain.ts:26:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:39:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:45:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:48:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_global_class.ts:58:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_interface.ts:39:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_interface.ts:42:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_global_interface.ts:50:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:22:25",
+          "message": "call to KindParenthesizedExpression is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:46:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:47:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:51:60",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:52:72",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:53:73",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:54:63",
+          "message": "identifier fileNewName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_icf_service.ts:55:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_message_class.ts:35:25",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_message_class.ts:36:24",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_message_class.ts:41:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:40:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:46:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:60:37",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:66:26",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_program.ts:72:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_table.ts:29:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_table_type.ts:28:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "method is on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "method is on map is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "binary operator KindInKeyword is not lowered"
+        },
+        {
+          "category": "unsupported-callback",
+          "loc": "src/objects/rename/renamer_helper.ts:39:5",
+          "message": "callback block must have exactly one return"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:57:21",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:63:9",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:166:23",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:168:11",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:204:26",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:206:11",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:207:23",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:209:11",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:224:27",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:225:17",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:244:21",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:250:9",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:283:27",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:53:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:70:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:71:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:71:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:58:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:77:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:78:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:78:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        }
+      ]
+    },
+    "main_after": {
+      "totalBlocking": 558,
+      "totalRootBlocking": 319,
+      "totalCascadeBlocking": 239,
+      "hirErrors": 330,
+      "objectsBlocking": 78,
+      "objectsRootBlocking": 62,
+      "objectsByOwner": {
+        "Generator": 2,
+        "RegExp / pattern replacement": 8,
+        "fractional numeric conversion": 1,
+        "object literals / empty arrays": 11,
+        "small builtins": 3,
+        "string match": 18,
+        "typeof": 8,
+        "void ABI": 5,
+        "vscode/lsp": 22
+      },
+      "objectsByExactMessage": {
+        "assignment to match is not lowered": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 1,
+        "checker type RegExpMatchArray is not a lowered declaration": 3,
+        "empty array literal outside a statement context": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier match is not a lowered local or module value": 8,
+        "identifier paramName is not a lowered local or module value": 2,
+        "identifier updatedUrl is not a lowered local or module value": 1,
+        "method create on map is not lowered": 15,
+        "method exec on regexp is not lowered": 1,
+        "method is on map is not lowered": 2,
+        "method match on string is not lowered": 5,
+        "method replace on map is not lowered": 5,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "object literal needs a named lowered shape": 9,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 2,
+        "typeof comparison on optional<string> is not lowered": 6,
+        "void local requires a value-preserving result ABI": 5
+      },
+      "fullClosureByExactMessage": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindFunctionDeclaration is not lowered": 1,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "Math.min requires two arguments in this phase": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "call to KindIdentifier is not lowered": 2,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type DocumentSymbol is not a lowered declaration": 5,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "constructor of the object root is not lowered": 2,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "every needs a source-pinned dense/stable receiver proof": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 3,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier ctor is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier paramName is not a lowered local or module value": 2,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier range is not a lowered local or module value": 2,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier splitAt is not a lowered local or module value": 1,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier symbol is not a lowered local or module value": 7,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 1,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "identifier workspace is not a lowered local or module value": 11,
+        "method create on classvalue is not lowered": 13,
+        "method create on map is not lowered": 15,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method is on map is not lowered": 2,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "method replace on map is not lowered": 5,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "object literal needs a named lowered shape": 17,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "top-level KindModuleDeclaration is not lowered": 81,
+        "typeof comparison on optional<string> is not lowered": 6,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "void local requires a value-preserving result ABI": 17
+      },
+      "objectsDiagnostics": [
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "checker type RegExpExecArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/behavior_definition.ts:69:17",
+          "message": "method exec on regexp is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:70:12",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:71:44",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-assignment",
+          "loc": "src/objects/behavior_definition.ts:72:7",
+          "message": "assignment to match is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:140:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:141:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:142:38",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:146:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:147:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:148:14",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:114:56",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:122:62",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:56:28",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:58:13",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:96:22",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:109:11",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:128:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:129:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:131:28",
+          "message": "identifier paramName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:139:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:140:29",
+          "message": "typeof comparison on optional<string> is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:142:28",
+          "message": "identifier paramName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_data_element.ts:29:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_domain.ts:26:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:39:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:45:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_class.ts:48:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_global_class.ts:58:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_interface.ts:39:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_global_interface.ts:42:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_global_interface.ts:50:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_icf_service.ts:25:13",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:25:21",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/rename/rename_icf_service.ts:25:13",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:27:11",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:29:27",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:30:42",
+          "message": "identifier guidIndex is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:46:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:47:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:51:60",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:52:72",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:53:73",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_icf_service.ts:55:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_message_class.ts:35:25",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_message_class.ts:36:24",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_message_class.ts:41:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:40:22",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:46:20",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:60:37",
+          "message": "method replace on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_program.ts:66:26",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_program.ts:72:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_table.ts:29:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_table_type.ts:28:12",
+          "message": "object literal needs a named lowered shape"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "method is on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "method is on map is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "binary operator KindInKeyword is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:57:21",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:63:9",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:166:23",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:168:11",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:204:26",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:206:11",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:207:23",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:209:11",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:224:27",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:225:17",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:244:21",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/renamer_helper.ts:250:9",
+          "message": "method create on map is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-binding",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "void local requires a value-preserving result ABI"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:283:27",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "cascade": true
+        }
+      ]
+    },
+    "projection_before": {
+      "totalBlocking": 455,
+      "totalRootBlocking": 195,
+      "totalCascadeBlocking": 260,
+      "hirErrors": 358,
+      "objectsBlocking": 112,
+      "objectsRootBlocking": 57,
+      "objectsByOwner": {
+        "AFF JSON": 10,
+        "Generator": 2,
+        "RegExp / pattern replacement": 10,
+        "duration clocks": 64,
+        "early-return callback": 1,
+        "fractional numeric conversion": 1,
+        "immediate arrow": 2,
+        "record Object.assign": 1,
+        "small builtins": 3,
+        "string match": 13,
+        "text XML": 3,
+        "vscode/lsp": 2
+      },
+      "objectsByExactMessage": {
+        "assignment to match is not lowered": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "call to KindParenthesizedExpression is not lowered": 1,
+        "callback block must have exactly one return": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 1,
+        "checker type RegExpMatchArray is not a lowered declaration": 2,
+        "identifier Date is not a lowered local or module value": 32,
+        "identifier JSON is not a lowered local or module value": 2,
+        "identifier Object is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier end is not a lowered local or module value": 15,
+        "identifier fileNewName is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier match is not a lowered local or module value": 6,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier parsed is not a lowered local or module value": 8,
+        "identifier start is not a lowered local or module value": 17,
+        "identifier typeInformation is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "method exec on regexp is not lowered": 1,
+        "method match on string is not lowered": 4,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "new XMLParser is not a lowered class": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 2,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1
+      },
+      "fullClosureByExactMessage": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "call to KindParenthesizedExpression is not lowered": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "callback block must have exactly one return": 3,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 5,
+        "constructor of the object root is not lowered": 2,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "every needs a source-pinned dense/stable receiver proof": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier Date is not a lowered local or module value": 32,
+        "identifier JSON is not a lowered local or module value": 6,
+        "identifier Object is not a lowered local or module value": 4,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 2,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier ctor is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier end is not a lowered local or module value": 15,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fileNewName is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier index is not a lowered local or module value": 2,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 11,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier parsed is not a lowered local or module value": 8,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 21,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier typeInformation is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 31,
+        "method repeat on string is not lowered": 40,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 2,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "objectsDiagnostics": [
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/_abap_object.ts:114:7",
+          "message": "identifier Object is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:66:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:78:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:79:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/authorization_check_field.ts:79:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "checker type RegExpExecArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/behavior_definition.ts:69:17",
+          "message": "method exec on regexp is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:70:12",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:71:44",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-assignment",
+          "loc": "src/objects/behavior_definition.ts:72:7",
+          "message": "assignment to match is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:35:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:47:37",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/cds_metadata_extension.ts:47:50",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:97:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:130:37",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:130:50",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:140:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:141:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:142:38",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:146:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:147:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:148:14",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:212:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:218:24",
+          "message": "identifier JSON is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:219:33",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:220:32",
+          "message": "identifier typeInformation is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:221:29",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:223:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:246:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:247:39",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:247:45",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:290:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:291:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_element.ts:291:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:105:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:111:24",
+          "message": "identifier JSON is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:112:26",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:114:34",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:122:32",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:131:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:142:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:143:39",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:143:45",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:183:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:184:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/domain.ts:184:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:52:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:53:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/enhancement_implementation.ts:53:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:53:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:54:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/extension_index.ts:54:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:56:28",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:58:13",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/function_group.ts:158:28",
+          "message": "identifier XMLParser is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-new",
+          "loc": "src/objects/function_group.ts:158:24",
+          "message": "new XMLParser is not a lowered class"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/function_group.ts:159:24",
+          "message": "identifier parsed is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:46:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:65:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:66:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/icf_service.ts:66:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:75:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:101:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:102:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/lock_object.ts:102:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:80:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:94:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:95:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/maintenance_and_transport_object.ts:95:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:61:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:75:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:76:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/mime_object.ts:76:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:40:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:53:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:54:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/number_range.ts:54:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:58:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:60:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:67:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/proxy_object.ts:67:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:22:25",
+          "message": "call to KindParenthesizedExpression is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:46:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:47:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:51:60",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:52:72",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:53:73",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:54:63",
+          "message": "identifier fileNewName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "binary operator KindInKeyword is not lowered"
+        },
+        {
+          "category": "unsupported-callback",
+          "loc": "src/objects/rename/renamer_helper.ts:39:5",
+          "message": "callback block must have exactly one return"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:204:26",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:206:11",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:209:98",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:224:27",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:225:52",
+          "message": "identifier newFilename is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:283:27",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:53:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:70:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:71:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/transaction.ts:71:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:58:19",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:77:17",
+          "message": "identifier Date is not a lowered local or module value"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:78:37",
+          "message": "identifier end is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/web_mime.ts:78:43",
+          "message": "identifier start is not a lowered local or module value",
+          "cascade": true
+        }
+      ]
+    },
+    "projection_after": {
+      "totalBlocking": 377,
+      "totalRootBlocking": 158,
+      "totalCascadeBlocking": 219,
+      "hirErrors": 294,
+      "objectsBlocking": 38,
+      "objectsRootBlocking": 22,
+      "objectsByOwner": {
+        "Generator": 2,
+        "RegExp / pattern replacement": 10,
+        "fractional numeric conversion": 1,
+        "object literals / empty arrays": 2,
+        "small builtins": 3,
+        "string match": 18,
+        "vscode/lsp": 2
+      },
+      "objectsByExactMessage": {
+        "assignment to match is not lowered": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 1,
+        "checker type RegExpMatchArray is not a lowered declaration": 3,
+        "empty array literal outside a statement context": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier match is not a lowered local or module value": 8,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "method exec on regexp is not lowered": 1,
+        "method match on string is not lowered": 5,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 2,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1
+      },
+      "fullClosureByExactMessage": {
+        "?? needs an optional or tagged left operand": 2,
+        "KindLabeledStatement is not lowered": 1,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 1,
+        "assignment to abap is not lowered": 5,
+        "assignment to code is not lowered": 1,
+        "assignment to fix1 is not lowered": 1,
+        "assignment to indentation is not lowered": 2,
+        "assignment to match is not lowered": 2,
+        "async body must be excluded by validated workload coverage": 1,
+        "binary operator KindInKeyword is not lowered": 1,
+        "callback KindPropertyAccessExpression is not an arrow function": 1,
+        "checker type Generator<IObject, void, undefined> is not a lowered declaration": 1,
+        "checker type RegExpExecArray is not a lowered declaration": 5,
+        "checker type RegExpMatchArray is not a lowered declaration": 6,
+        "constructor of the object root is not lowered": 2,
+        "delete supports ordinary lowered records only": 1,
+        "element access on classref is not lowered": 1,
+        "empty array literal outside a statement context": 2,
+        "every needs a source-pinned dense/stable receiver proof": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 3,
+        "for-in needs a string-keyed map (classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>)": 1,
+        "forEach needs a source-pinned dense/stable receiver proof": 2,
+        "identifier JSON is not a lowered local or module value": 4,
+        "identifier Object is not a lowered local or module value": 3,
+        "identifier RegExp is not a lowered local or module value": 1,
+        "identifier XMLParser is not a lowered local or module value": 1,
+        "identifier XMLValidator is not a lowered local or module value": 1,
+        "identifier abap is not a lowered local or module value": 7,
+        "identifier bodyCode is not a lowered local or module value": 1,
+        "identifier candidates is not a lowered local or module value": 1,
+        "identifier carriage is not a lowered local or module value": 2,
+        "identifier cleanOldName is not a lowered local or module value": 3,
+        "identifier code is not a lowered local or module value": 11,
+        "identifier column is not a lowered local or module value": 4,
+        "identifier crypto is not a lowered local or module value": 1,
+        "identifier ctor is not a lowered local or module value": 1,
+        "identifier data is not a lowered local or module value": 1,
+        "identifier escaped is not a lowered local or module value": 1,
+        "identifier fix is not a lowered local or module value": 31,
+        "identifier fix1 is not a lowered local or module value": 25,
+        "identifier fix2 is not a lowered local or module value": 1,
+        "identifier found is not a lowered local or module value": 4,
+        "identifier guidIndex is not a lowered local or module value": 1,
+        "identifier hash is not a lowered local or module value": 1,
+        "identifier icfServices is not a lowered local or module value": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier indent is not a lowered local or module value": 3,
+        "identifier indentation is not a lowered local or module value": 67,
+        "identifier isException is not a lowered local or module value": 1,
+        "identifier issue is not a lowered local or module value": 5,
+        "identifier label is not a lowered local or module value": 2,
+        "identifier match is not a lowered local or module value": 13,
+        "identifier message is not a lowered local or module value": 2,
+        "identifier newFilename is not a lowered local or module value": 1,
+        "identifier outlineFor is not a lowered local or module value": 4,
+        "identifier packedLength is not a lowered local or module value": 1,
+        "identifier pattern is not a lowered local or module value": 3,
+        "identifier regex is not a lowered local or module value": 1,
+        "identifier res is not a lowered local or module value": 2,
+        "identifier result is not a lowered local or module value": 2,
+        "identifier spaces is not a lowered local or module value": 2,
+        "identifier start is not a lowered local or module value": 4,
+        "identifier text is not a lowered local or module value": 1,
+        "identifier updatedUrl is not a lowered local or module value": 2,
+        "identifier usedForbiddenToken is not a lowered local or module value": 2,
+        "identifier value is not a lowered local or module value": 3,
+        "method delete on map is not lowered": 1,
+        "method exec on regexp is not lowered": 5,
+        "method flat on array is not lowered": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 1,
+        "method match on string is not lowered": 32,
+        "method repeat on string is not lowered": 40,
+        "method toLocaleLowerCase on string is not lowered": 2,
+        "method toLocaleUpperCase on string is not lowered": 1,
+        "method trimEnd on string is not lowered": 2,
+        "new RegExp is not a lowered class": 1,
+        "new XMLParser is not a lowered class": 1,
+        "operands cannot preserve the result type classref<src/objects/class.ts.Class> (left classref<src/objects/class.ts.Class>, right optional<dynamic>)": 1,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "replace with a non-literal pattern is not lowered": 4,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "unary KindPlusPlusToken is not lowered": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types documentChanges.push with 1 arguments is not lowered": 3
+      },
+      "objectsDiagnostics": [
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/behavior_definition.ts:69:9",
+          "message": "checker type RegExpExecArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/behavior_definition.ts:69:17",
+          "message": "method exec on regexp is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:70:12",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/behavior_definition.ts:71:44",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-assignment",
+          "loc": "src/objects/behavior_definition.ts:72:7",
+          "message": "assignment to match is not lowered"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:140:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:140:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:141:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:142:38",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/data_definition.ts:146:11",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/data_definition.ts:146:19",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:147:9",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/data_definition.ts:148:14",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:114:56",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "unsupported-array",
+          "loc": "src/objects/domain.ts:122:62",
+          "message": "empty array literal outside a statement context"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:56:28",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/function_group.ts:58:13",
+          "message": "method toLocaleLowerCase on string is not lowered"
+        },
+        {
+          "category": "assume-integer",
+          "loc": "src/objects/number_range.ts:51:33",
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/rename_icf_service.ts:25:13",
+          "message": "checker type RegExpMatchArray is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:25:21",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:27:11",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:29:27",
+          "message": "identifier match is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:30:42",
+          "message": "identifier guidIndex is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:46:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-call",
+          "loc": "src/objects/rename/rename_icf_service.ts:47:26",
+          "message": "method match on string is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:51:60",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:52:72",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/rename_icf_service.ts:53:73",
+          "message": "identifier cleanOldName is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:104:11",
+          "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-lsp-call",
+          "loc": "src/objects/rename/renamer.ts:107:18",
+          "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer.ts:132:11",
+          "message": "binary operator KindInKeyword is not lowered"
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:204:26",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:206:11",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:209:98",
+          "message": "identifier updatedUrl is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-regex",
+          "loc": "src/objects/rename/renamer_helper.ts:224:27",
+          "message": "replace with a non-literal pattern is not lowered"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:225:52",
+          "message": "identifier newFilename is not a lowered local or module value",
+          "cascade": true
+        },
+        {
+          "category": "unsupported-type",
+          "loc": "src/objects/rename/renamer_helper.ts:281:11",
+          "message": "checker type Generator<IObject, void, undefined> is not a lowered declaration"
+        },
+        {
+          "category": "unsupported-expr",
+          "loc": "src/objects/rename/renamer_helper.ts:283:27",
+          "message": "identifier icfServices is not a lowered local or module value",
+          "cascade": true
+        }
+      ]
+    }
+  }
+}

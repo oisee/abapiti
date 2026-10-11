@@ -377,6 +377,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return l.union(n, parts, optional)
 	}
 	flags := t.Flags()
+	if flags&checker.TypeFlagsIntersection != 0 {
+		// Object.assign's inferred result can intersect identical record views.
+		// Only the pure index-signature layout shares the ordered-record ABI.
+		if len(l.ck.GetPropertiesOfType(t)) == 0 {
+			if infos := l.ck.GetIndexInfosOfType(t); len(infos) == 1 {
+				key := l.mapCheckerType(n, infos[0].KeyType())
+				value := l.mapCheckerType(n, infos[0].ValueType())
+				if key.Kind == hir.String && value.Kind != hir.Void {
+					return hir.T(hir.OrderedMap, key, value)
+				}
+			}
+		}
+	}
 	switch {
 	case flags&checker.TypeFlagsTypeParameter != 0:
 		// Generic parameters erase to their constraint.
