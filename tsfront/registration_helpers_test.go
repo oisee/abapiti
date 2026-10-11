@@ -118,7 +118,11 @@ func TestRegistrationFixtureProofBoundaries(t *testing.T) {
 		Passed, Failed, Trapped int
 		Initialization          []any
 	}
-	if err = json.Unmarshal([]byte(stdout), &got); err != nil || code != 1 || got.Passed != 1 || got.Failed != 0 || got.Trapped != 4 || len(got.Initialization) != 0 {
+	// Shared lexical bindings (main 37f425c) run the capture-free, escaping and
+	// late-write fixtures with JS semantics; each body checks the JS value, so
+	// passing is the correct outcome. Reading a const arrow before its
+	// declaration still traps.
+	if err = json.Unmarshal([]byte(stdout), &got); err != nil || code != 1 || got.Passed != 4 || got.Failed != 0 || got.Trapped != 1 || len(got.Initialization) != 0 {
 		t.Fatalf("code %d: %s\n%s", code, stdout, stderr)
 	}
 }
