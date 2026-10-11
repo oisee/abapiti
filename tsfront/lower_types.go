@@ -61,6 +61,9 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 	case ast.KindParenthesizedType:
 		return l.mapTypeNode(n.Type())
 	case ast.KindTypeOperator:
+		if n.AsTypeOperatorNode().Operator == ast.KindKeyOfKeyword {
+			return l.mapTypeNodeViaChecker(n)
+		}
 		// `readonly T[]` parses as a readonly type operator; readonlyness of
 		// the elements is not part of the HIR type.
 		return l.mapTypeNode(n.Type())

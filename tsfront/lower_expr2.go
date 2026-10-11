@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -48,6 +50,12 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
 		}
 	case hir.ClassRef:
+		if arg.Kind != ast.KindStringLiteral {
+			key := l.expr(arg)
+			if key != nil && key.Type.Kind == hir.String {
+				return l.rtOp("dynamic.get", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), key)
+			}
+		}
 		if arg.Kind == ast.KindStringLiteral {
 			for c := l.classByName(recv.Type.Name); c != nil; c = l.classByName(c.Super) {
 				for _, field := range c.Fields {
@@ -412,6 +420,54 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		switch x.Type.Kind {
 		case hir.OrderedMap:
 			return l.rtOp("map.keys", x, hir.T(hir.Array, x.Type.Args[0])), true
+		case hir.ClassRef:
+			// ES2022 public class fields are own properties, including fields
+			// initialized by super(). No dynamic additions/deletions are lowered.
+			if c := l.classByName(x.Type.Name); c != nil && x.Type.Name != hir.RootObject && c.Ctor != nil && len(c.Ctor.Params) == 0 {
+				x = l.tempInit(n, x.Type, x)
+				l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("dynamic.get", l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), ""))})
+				out := l.tempVar(n, hir.T(hir.Array, hir.T(hir.String)))
+				var keys []string
+				var fields func(*hir.Class)
+				fields = func(c *hir.Class) {
+					if c == nil {
+						return
+					}
+					fields(l.classByName(c.Super))
+					for _, f := range c.Fields {
+						if f.Static {
+							continue
+						}
+						found := false
+						for _, k := range keys {
+							if k == f.Name {
+								found = true
+							}
+						}
+						if !found {
+							keys = append(keys, f.Name)
+						}
+					}
+				}
+				fields(c)
+				// Own integer-index keys precede other strings, in numeric order.
+				index := func(s string) (uint64, bool) {
+					v, err := strconv.ParseUint(s, 10, 32)
+					return v, err == nil && v < 4294967295 && strconv.FormatUint(v, 10) == s
+				}
+				sort.SliceStable(keys, func(i, j int) bool {
+					a, ai := index(keys[i])
+					b, bi := index(keys[j])
+					if ai && bi {
+						return a < b
+					}
+					return ai && !bi
+				})
+				for _, key := range keys {
+					l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", out, hir.T(hir.I32), hir.L(hir.T(hir.String), key))})
+				}
+				return out, true
+			}
 		}
 	case "values":
 		args := n.Arguments()

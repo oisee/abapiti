@@ -435,6 +435,7 @@ type lowerer struct {
 	synthsByName  map[string]*hir.Class
 
 	// Retain checker binding identity for post-lowering boundary rewrites.
+	erasedCalls  map[*hir.Expr]bool
 	localSymbols map[*hir.Expr]*ast.Symbol
 	declSymbols  map[*hir.Stmt]*ast.Symbol
 	paramSymbols map[*hir.Method]map[string]*ast.Symbol

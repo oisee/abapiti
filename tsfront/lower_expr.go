@@ -144,6 +144,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.erasedCalls[x] {
+		return x
+	}
 	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
 		// The checker sees the declared sibling class; the local holds the
 		// common base and may carry any of the assigned classes.
@@ -331,6 +334,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		}
 		if receiver == nil || key == nil {
 			return nil
+		}
+		if receiver.Type.Kind == hir.Array && numberType(key.Type) {
+			return l.rtOp("array.delete", receiver, hir.T(hir.Bool), l.indexValue(key))
 		}
 		// Maps share the OrderedMap representation with records, but delete on a
 		// Map only removes an own property, never an entry.
@@ -1106,6 +1112,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// The checker typed the receiver present (`if (map[k]) map[k].f()`).
 				recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recv.Type.Args[0], X: recv}
 			}
+			// In unpruned tests, a generic array may actually contain another
+			// implementation of its erased constraint. Dispatch common methods
+			// through that constraint instead of asserting a nominal element cast.
+			erasedReceiver := false
+			if l.integerOptions.TrapOnFailure && recv.Kind == hir.IndexGet && recv.X != nil && recv.X.Kind == hir.Narrow && recv.X.X != nil && recv.X.X.Kind == hir.VirtualCall && recv.X.X.Type.Kind == hir.Array && recv.X.X.Type.Args[0].Kind == hir.InterfaceRef {
+				if common := l.interfaceMethod(recv.X.X.Type.Args[0].Name, name); common != nil {
+					recv = &hir.Expr{Kind: hir.IndexGet, Node: recv.Node, Type: recv.X.X.Type.Args[0], X: recv.X.X, Y: recv.Y}
+					hm = common
+					erasedReceiver = true
+				}
+			}
 			// Ordinary calls must use the erased virtual slot. The specialized
 			// implementation name is reserved for its bridge and super calls.
 			slot := hm
@@ -1157,7 +1174,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: slot.Name, Type: slot.Result, X: recv, Args: args}
-			if !slot.Result.Equal(hm.Result) && hm.Result.Kind != hir.Void {
+			if erasedReceiver {
+				if l.erasedCalls == nil {
+					l.erasedCalls = map[*hir.Expr]bool{}
+				}
+				l.erasedCalls[call] = true
+			}
+			if !slot.Result.Equal(hm.Result) && hm.Result.Kind != hir.Void && !erasedReceiver {
 				return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hm.Result, X: call}
 			}
 			return call
@@ -1511,9 +1534,13 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		return nil
 	}
 	if args[0].Kind == ast.KindRegularExpressionLiteral {
-		if args[0].Text() == `/\r/g` && args[1].Kind == ast.KindStringLiteral && !strings.Contains(args[1].Text(), "$") {
-			l.diagf(n, "note-regex-mapped", "literal global carriage-return replacement")
-			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), "\r"), with)
+		if (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`) && args[1].Kind == ast.KindStringLiteral && !strings.Contains(args[1].Text(), "$") {
+			needle := "\r"
+			if args[0].Text() == `/\n/g` {
+				needle = "\n"
+			}
+			l.diagf(n, "note-regex-mapped", "literal global line-break replacement")
+			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
 		}
 		if (args[0].Text() == `/^/g` || args[0].Text() == `/$/g`) || strings.Contains(args[0].Text(), `\0`) {
 			l.diagf(n, "unsupported-regex", "anchor or octal replacement semantics are not lowered")
@@ -1952,7 +1979,29 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.coerce(y, result), Z: l.coerce(left, result)}
 
-	case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
+	case ast.KindEqualsToken:
+		// Evaluate a property reference before the RHS, once, and return the
+		// assigned value (not the receiver). Keep other expression targets
+		// fail-closed until their reference evaluation ABI is available.
+		if b.Left.Kind == ast.KindPropertyAccessExpression {
+			target := l.assignTarget(b.Left)
+			if target != nil && target.Kind == hir.FieldGet {
+				target.X = l.tempInit(n, target.X.Type, target.X)
+				keep := l.hint
+				l.hint = target.Type
+				value := l.expr(b.Right)
+				l.hint = keep
+				if value == nil {
+					return nil
+				}
+				value = l.tempInit(n, target.Type, l.coerce(value, target.Type))
+				l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: value})
+				return value
+			}
+		}
+		l.diagf(n, "unsupported-expr", "assignment expression needs a field reference")
+		return nil
+	case ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 		l.diagf(n, "unsupported-expr", "assignment inside an expression is not lowered")
 		return nil
 	}
