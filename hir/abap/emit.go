@@ -1367,12 +1367,6 @@ func (b *body) truth(n, a string, t hir.Type) {
 	b.line(n + " = xsdbool( " + test + " ).")
 }
 func (b *body) stringLit(n, s string) {
-	// Keep source scans for unsupported PCRE instructions unambiguous. The
-	// abaplint grammar itself contains this keyword as data, not as an opcode.
-	if s == "PCRE" {
-		b.line(n + " = `PC` && `RE`.")
-		return
-	}
 	// String templates preserve trailing blanks. Chunk before escaping so source
 	// tokens always fit the 255-byte envelope (also bounds UTF-16 source length).
 	if s == "" {
