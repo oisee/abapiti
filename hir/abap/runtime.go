@@ -201,8 +201,9 @@ func (e *emitter) support() {
 		opt := e.typ(hir.T(hir.Optional, hir.T(hir.String)))
 		hidden, impl := "", ""
 		if e.descriptors {
-			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
+			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
 			impl = "METHOD " + e.name("builtin.classOf") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.classOf") + ".\nresult = me->" + e.name("builtin.classOf") + "( ).\nENDMETHOD.\n"
+			impl += "METHOD " + e.name("builtin.nativeConstructor") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.nativeConstructor") + ".\nresult = me->" + e.name("builtin.nativeConstructor") + "( ).\nENDMETHOD.\n"
 		}
 		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + hidden + "DATA " + e.member("message") + " TYPE string.\nMETHODS constructor IMPORTING " + e.param("message") + " TYPE " + opt + " OPTIONAL.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nIF " + e.param("message") + " IS BOUND.\n" + e.member("message") + " = " + e.param("message") + "->value.\nENDIF.\nENDMETHOD.\n" + impl + "ENDCLASS.\n"
 	}
@@ -237,7 +238,7 @@ func (e *emitter) classvalueRuntime() {
 	e.types[id] = true
 	name := e.name(id)
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
-	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nDATA name TYPE string.\nDATA emitted TYPE string.\nDATA parent TYPE REF TO " + name + ".\nDATA static_names TYPE " + arr + ".\nMETHODS constructor IMPORTING name TYPE string emitted TYPE string parent TYPE REF TO " + name + " static_names TYPE " + arr + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nme->name = name.\nme->emitted = emitted.\nme->parent = parent.\nme->static_names = static_names.\nENDMETHOD.\nMETHOD has.\nDATA s TYPE string.\nIF static_names IS NOT BOUND.\nRETURN.\nENDIF.\nLOOP AT static_names->items INTO s.\nIF s = p0.\nresult = abap_true.\nRETURN.\nENDIF.\nENDLOOP.\nENDMETHOD.\nENDCLASS.\n"
+	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nDATA name TYPE string.\nDATA emitted TYPE string.\nDATA lexical TYPE abap_bool.\nDATA parent TYPE REF TO " + name + ".\nDATA static_names TYPE " + arr + ".\nMETHODS constructor IMPORTING name TYPE string emitted TYPE string parent TYPE REF TO " + name + " static_names TYPE " + arr + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nme->name = name.\nme->emitted = emitted.\nme->parent = parent.\nme->static_names = static_names.\nENDMETHOD.\nMETHOD has.\nDATA s TYPE string.\nIF static_names IS NOT BOUND.\nRETURN.\nENDIF.\nLOOP AT static_names->items INTO s.\nIF s = p0.\nresult = abap_true.\nRETURN.\nENDIF.\nENDLOOP.\nENDMETHOD.\nENDCLASS.\n"
 }
 
 // descriptorOf returns the static descriptor reference expression for a class.
@@ -355,9 +356,17 @@ func (e *emitter) descriptorShards() {
 			continue
 		}
 		fmt.Fprintf(&dispatch, "WHEN `%s`.\nCREATE OBJECT result TYPE %s.\n", strings.ToUpper(e.name(c.Name)), e.name(c.Name))
+		if c.Scoped {
+			fmt.Fprintf(&dispatch, "IF p0->lexical = abap_true.\nDATA scoped%d TYPE REF TO %s.\nscoped%d ?= result.\nscoped%d->%s = p0.\nENDIF.\n", len(dispatch.String()), e.name(c.Name), len(dispatch.String()), len(dispatch.String()), e.name("class.lexicalDescriptor"))
+		}
 	}
 	dispatch.WriteString("WHEN OTHERS.\nCREATE OBJECT result TYPE (class_name).\nENDCASE.\n")
-	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\nENDCLASS.\n"
+	extraSignature, extraImpl := "", ""
+	if e.constructorArgs {
+		extraSignature = "CLASS-METHODS new_args IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " p1 TYPE " + e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))) + " RETURNING VALUE(result) TYPE REF TO object.\n"
+		extraImpl = "METHOD new_args.\n" + e.argumentFactoryABAP() + "ENDMETHOD.\n"
+	}
+	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\n" + extraImpl + "ENDCLASS.\n"
 }
 
 // staticsOf lists the raw member names of the static members of a class.

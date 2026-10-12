@@ -17,9 +17,10 @@ var supportedOps = map[string]bool{
 	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,
-	"string.replaceRegex": true,
-	"string.toLowerCase":  true,
-	"object.classOf":      true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
+	"string.replaceRegex":     true,
+	"string.toLowerCase":      true,
+	"object.checkedClassView": true,
+	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
@@ -39,7 +40,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays and native-record deletion require a Go storage ABI.
-var unsupportedOps = map[string]bool{"dynamic.delete": true, "json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "object.checkedClassView": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "classvalue.newArgs": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
+var unsupportedOps = map[string]bool{"dynamic.delete": true, "json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

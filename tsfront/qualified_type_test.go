@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Qualified assertions used to panic before reaching the checker because the
@@ -94,9 +93,7 @@ export function cast(x: N.Base): N.Child { return x as N.const; }`,
 		if !strings.Contains(hir.Dump(prog), "object.checkedClassView") {
 			t.Fatal("qualified alias lost its checked nominal boundary")
 		}
-		if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "object.checkedClassView") {
-			t.Fatalf("ABAP must refuse unproven nominal views: %v", err)
-		}
+		requireCheckedClassViewABAP(t, prog)
 		names := hir.NewNames()
 		entry := goEntry("probe.ts.module", "cast")
 		child := names.Get("new.defs.ts.Child")

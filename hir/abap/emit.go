@@ -15,16 +15,17 @@ import (
 )
 
 type emitter struct {
-	liveClasses  map[string]bool
-	configJSON   bool
-	promiseUsed  bool
-	p            *hir.Program
-	names        *hir.Names
-	files        map[string]string
-	types        map[string]bool
-	err          error
-	valueSlots   map[string]bool
-	materialized map[string]bool
+	liveClasses     map[string]bool
+	constructorArgs bool
+	configJSON      bool
+	promiseUsed     bool
+	p               *hir.Program
+	names           *hir.Names
+	files           map[string]string
+	types           map[string]bool
+	err             error
+	valueSlots      map[string]bool
+	materialized    map[string]bool
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
@@ -82,7 +83,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
-		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
+		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
 	}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
@@ -471,11 +472,14 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	if e.descriptors {
+		if c.Scoped {
+			fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("class.lexicalDescriptor"), e.name("runtime.classvalue"))
+		}
 		if c.Super != "" {
-			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\n", e.name("builtin.classOf"))
+			fmt.Fprintf(&b, "METHODS %s REDEFINITION.\nMETHODS %s REDEFINITION.\n", e.name("builtin.classOf"), e.name("builtin.nativeConstructor"))
 		} else {
 			fmt.Fprintf(&b, "INTERFACES %s.\n", e.name("runtime.described"))
-			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("builtin.classOf"), e.name("runtime.classvalue"))
+			fmt.Fprintf(&b, "METHODS %s RETURNING VALUE(result) TYPE REF TO %s.\nMETHODS %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("builtin.classOf"), e.name("runtime.classvalue"), e.name("builtin.nativeConstructor"), e.name("runtime.classvalue"))
 		}
 	}
 	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
@@ -512,7 +516,19 @@ func (e *emitter) class(c *hir.Class) {
 		if c.Super == "" {
 			fmt.Fprintf(&b, "METHOD %s~%s.\nresult = me->%s( ).\nENDMETHOD.\n", e.name("runtime.described"), name, name)
 		}
-		if e.liveClasses[c.Name] {
+		if c.Super == "" {
+			fmt.Fprintf(&b, "METHOD %s~%s.\nresult = me->%s( ).\nENDMETHOD.\n", e.name("runtime.described"), e.name("builtin.nativeConstructor"), e.name("builtin.nativeConstructor"))
+		}
+		fmt.Fprintf(&b, "METHOD %s.\n", e.name("builtin.nativeConstructor"))
+		if c.Structural {
+			b.WriteString("RAISE EXCEPTION TYPE " + e.classRefusal() + ".\n")
+		} else {
+			fmt.Fprintf(&b, "result = me->%s( ).\nIF result IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\n", name, e.classRefusal())
+		}
+		b.WriteString("ENDMETHOD.\n")
+		if c.Scoped {
+			fmt.Fprintf(&b, "METHOD %s.\nresult = me->%s.\nENDMETHOD.\n", name, e.name("class.lexicalDescriptor"))
+		} else if e.liveClasses[c.Name] {
 			fmt.Fprintf(&b, "METHOD %s.\nIF %s IS NOT BOUND.\nresult = %s.\nENDIF.\nENDMETHOD.\n", name, e.name("view.source"), e.descriptorOf(c.Name))
 		} else {
 			fmt.Fprintf(&b, "METHOD %s.\nresult = %s.\nENDMETHOD.\n", name, e.descriptorOf(c.Name))
@@ -1192,7 +1208,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + a + " IS BOUND AND " + a + "->" + e.name("view.source") + " IS BOUND.\n" + n + " = abap_false.\nENDIF.")
 		}
 	case hir.FreshClassOf:
-		e.err = fmt.Errorf("node %d: fresh lexical constructor descriptors are unsupported in ABAP", x.ID)
+		b.freshClassDescriptor(x, n)
 	case hir.ClassOf:
 		e.descriptors = true
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
@@ -2113,25 +2129,31 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.e.telemetryRuntime()
 		b.line(n + " = " + b.e.name("runtime.telemetry") + "=>now( ).")
 		return
+	case "object.checkedClassView":
+		// A nominal assertion is not a structural adapter: preserve the
+		// original object and let a failed downcast raise, just like castRef.
+		b.line(n + " ?= " + a + ".")
+		return
 	case "object.classOf":
 		b.e.descriptors = true
-		if x.X.Type.Kind == hir.Optional {
-			b.line("IF " + a + " IS BOUND.")
-			b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
-			b.line("ENDIF.")
-			return
-		}
-		if x.X.Type.Kind == hir.ClassRef && x.X.Type.Name == hir.RootObject {
-			b.e.err = fmt.Errorf("node %d (%s): classOf on the object root is not emitted", x.ID, x.Source)
-			return
-		}
-		b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
+		ref := b.rawTemp("REF TO " + b.e.name("runtime.described"))
+		trap := b.e.classRefusal()
+		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
+		b.line("TRY.\n" + ref + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.")
+		b.line(n + " = " + ref + "->" + b.e.name("builtin.nativeConstructor") + "( ).")
 		return
 	case "classvalue.name":
 		b.line(n + " = " + a + "->name.")
 		return
 	case "classvalue.has":
 		b.line(n + " = " + a + "->has( p0 = " + args[0] + " ).")
+		return
+	case "classvalue.newArgs":
+		b.e.descriptors = true
+		b.e.constructorArgs = true
+		obj := b.rawTemp("REF TO object")
+		b.line(obj + " = " + b.e.name("runtime.classvalue.factory") + "=>new_args( p0 = " + a + " p1 = " + args[0] + " ).")
+		b.line(n + " ?= " + obj + ".")
 		return
 	case "classvalue.new":
 		b.e.descriptors = true
