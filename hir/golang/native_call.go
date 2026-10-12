@@ -55,12 +55,19 @@ func (b *body) nativeCall0(x *hir.Expr, receiver string) string {
 		if m == nil || m.Static || len(m.Params) != 0 {
 			continue
 		}
+		if m.Result.Kind == hir.Void {
+			// An erased void slot does not certify the JS return value.
+			// Use an existing value bridge, otherwise refuse that ABI.
+			value, _ := e.method(c, name+"_value")
+			if value == nil || value.Static || len(value.Params) != 0 || value.Result.Kind == hir.Void {
+				continue
+			}
+			m = value
+		}
 		cases++
 		out.WriteString("case *" + e.obj(c.Name) + ":if v==nil {panic(newRangeFault())};")
 		call := "v." + e.member(m.Name) + "()"
-		if m.Result.Kind == hir.Void {
-			out.WriteString(call + ";return nil;")
-		} else if m.Result.Kind == hir.Optional && !m.Result.Args[0].IsRef() {
+		if m.Result.Kind == hir.Optional && !m.Result.Args[0].IsRef() {
 			out.WriteString("result:=" + call + ";if !result.Has {return nil};return box(result.Value);")
 		} else {
 			out.WriteString("return box(" + call + ");")
