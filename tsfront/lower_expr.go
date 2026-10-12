@@ -708,6 +708,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	if x, handled := l.unionFieldAccess(n); handled {
+		return x
+	}
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
 		if f.Static {

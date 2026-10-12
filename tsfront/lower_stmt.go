@@ -619,6 +619,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 			}
 			return nil
 		}
+		if x, handled := l.unionFieldAccess(lhs); handled {
+			return x
+		}
 		sym := l.resolve(lhs)
 		f, hasField := l.fieldOf(sym)
 		if sym != nil && hasField {
