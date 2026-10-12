@@ -1,19 +1,66 @@
-# OSGO Chai: emitter implemented; host certification blocked
+# OSGO Chai: unit and lexer pass; statements still blocked
 
-**6 Chai operations emitted; 30 ABAP fixture files with 0 syntax issues;
-43 generated ABAP unit assertions; 32 direct real-Chai oracle checks;
-0 changed bytes in default Go output versus `bef1975` (9 files, executable included).
-New OSGO passes, FAIL, traps and execution times are unmeasured.**
+**43 generated ABAP assertions execute successfully on pinned OSGO;
+lexer 200/200, FAIL 0, traps 0, unregistered 0. Statements 429/4,962,
+FAIL 0, 4,533 traps, unregistered 0. This is a two-shard measurement,
+not full-suite certification or permission to merge O1.**
 
-| Shard | Historical baseline pass / Node active | Baseline FAIL | Baseline traps | Baseline OSG phases (s) | After this change |
-| --- | ---: | ---: | ---: | ---: | --- |
-| `abap/lexer` | 85 / 200 | 0 | 115 | 266.517 | Not run: O1 exit guard blocked |
-| `abap/statements` | 433 / 4,962 | 0 | 4,529 | 348.681 | Not run: O1 exit guard blocked |
+| Shard | O1 baseline pass / active | After Chai pass / active | FAIL | Traps | Active unregistered | Host phases (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 85 / 200 | **200 / 200** | 0 | 0 | 0 | 245.701 |
+| `abap/statements` | 433 / 4,962 | **429 / 4,962** | 0 | 4,533 | 0 | 451.846 |
+| **TOTAL** | **518 / 5,162** | **629 / 5,162** | **0** | **4,533** | **0** | **697.547** |
 
-Baseline numbers are from [osgo-suite-gap.md](osgo-suite-gap.md), **not** a fresh
-measurement or a certificate for this branch. There is no claim of a pass gain
-or post-change FAIL 0. The expected ABAP answers below have not yet been compared
-with actual OSGO execution.
+Measured 12 Oct 2026 with compiler `93cb475`, OSG
+`f557e12f4217addcec7834b0607234aecf9b723a`, unchanged original Node
+oracle `577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Both shards have
+complete registration parity and no Node-pending titles.
+[Compact host evidence](evidence/osgo-chai-host.json).
+
+Lexer gains all 115 previously trapped cases. In statements, **4,528** former
+Chai lowering traps now reach **`json5.parse`**, which still has no ABAP
+emitter (`src/config.ts:99:31`). Removing the Chai refusals did not turn those
+cases into passes. Five more cases trap with the native message
+`An exception was raised.`; O1 had one such case, so four former passes are
+lost. Two unmodified statements runs give the same counts. A focused diagnostic
+replay attributes the four extra traps; no trap is credited as a pass.
+
+`Result.getNodes()` (`src/abap/2_statements/result.ts:78`) allocates
+`new Array(this.nodeCount)` and fills it backwards. The Chai-enabled emitter
+refuses nonempty preallocation before padding, so this pattern is outside its
+current sparse-array ABI even when later fully filled. A focused
+replay of the five exact affected titles, with observational logging around
+`abap.Raise` in a temporary generated-Go copy, confirms **four**
+`Z_EXCEPTION_CH_7F15176A28F44D` raises from `Result.getNodes()` at generated
+ABAP line 348. The RECEIVE version-failure case and three WITH version-failure
+cases are the four regressions. The fifth, LOOP AT SCREEN, is the pre-existing
+native trap. The replay is diagnostic evidence, not a changed certification
+suite; exact titles and frames are retained in the compact evidence. The
+existing sparse safeguards remain intact. Fixing preallocation requires the
+array storage ABI to preserve missing slots while permitting later filling;
+this branch is not merge-ready while the four coverage regressions remain.
+
+## Host compatibility repairs and completed gates
+
+The real host run caught two OSG frontend limits that source syntax checks
+had not caught. Plain `FIND FIRST OCCURRENCE OF ... IN ...` preserves ABAP's
+case-sensitive substring default and avoids unsupported `SUBSTRING` and
+`RESPECTING CASE` forms. The real-Chai `BOOM`/`boom` answers remain unchanged.
+Chai catches translated payload exceptions explicitly, rather than passing
+OSG's runtime `exc` representation from `CATCH cx_root` into a reference
+parameter. Native faults and coverage refusals propagate directly.
+
+The generated unit executes all **43** assertions with **SUCCESS**, including
+cycles, duplicates, signed-zero boundaries, mutation, translated string/Error
+throws, settled rejection draining and refusal propagation. The synthetic
+host classifier also executes successfully: **1 pass / 2 intentional assertion
+failures / 1 explicit trap**, with the expected failure message. These intentional
+fixture failures are outside the upstream suite's FAIL count.
+
+`go vet ./...`, `go test -short -p 2 ./...`, uncached Grace lexer facts and
+lint against `origin/main` pass; lint reports **0 new issues, canary 5/5**.
+Default Go output from `e29f167` and the changed compiler, generated at the same
+path, is byte-identical: **0 changed bytes**, executable included.
 
 ## Implemented observation boundary
 
@@ -42,13 +89,13 @@ exact count retains the independent synthetic-occurrence/nonfinite checks.
   occurrence at a time, with either strict or deep comparison. Deep object
   inclusion requires property presence as well as value equality, preserves
   the empty-subset no-assertion result `2`, and refuses unmodeled inherited
-  properties. String matching is case-sensitive `FIND ... SUBSTRING`, **not**
+  properties. String matching is case-sensitive `FIND ...`, **not**
   ABAP's case-insensitive `CS`.
 - Throw matching invokes an action once and ignores its return value. Certified
   typed thunks drain settled rejections; erased action dispatch accepts only
   compiled parameterless closures. Only translated string/native Error
   payloads supply a substring message. Coverage refusals, unsupported payloads
-  and native host faults are re-raised, never converted to a successful match.
+  and native host faults propagate, never converted to a successful match.
 
 ### Explicit remaining representation limits
 
@@ -79,7 +126,7 @@ production code changed.
   fixture with **43 assertions**, also covering typed-array mutation, typed
   thunk rejection draining and explicit refusal propagation. Node checks and
   emission passed; independent ABAP syntax lint: **30 files, 0 issues**.
-  **The generated ABAP assertions have not been executed on a host.**
+  The generated ABAP assertions now execute successfully on OSGO, as measured above.
 - The existing frontend real-Chai/Go differential remains intact and green.
   It uses a fresh lowering for its new ABAP emission check, so ABAP passes
   cannot mutate the Go oracle's HIR.
@@ -88,7 +135,7 @@ production code changed.
   **`1 pass / 2 intentional failures / 1 trap`**: the former equality coverage
   trap must now be an assertion failure with the exact message
   `assertion failed: expected 1 to equal 2`. Its explicit Date refusal and
-  `expect.fail` checks remain. This host-only portion is **pending**, not green.
+  `expect.fail` checks remain. This host-only portion now passes on OSGO.
 - Passed `go vet ./...`; `go test -short -p 2 ./...` (**227.35 s**, then final
   cache-confirming run **2.50 s**); Grace-enabled, uncached
   `TestLexerFactsReport` (**5.77 s**); lint against `origin/main`: **0 new issues,
@@ -99,53 +146,16 @@ production code changed.
 
 Implementation commit: `17e1ff4`.
 
-## O1 guard and required continuation
+## Earlier blocked attempt and continuation
 
-The required guard is:
+The initial builder stopped before OSG execution because its sandbox could not
+see the concurrent O1 job's exit marker. O1 subsequently finished; the current
+coordinator read `pi o1 exit=0` and merged its repaired head `63b91b7` before
+host validation. The original factory defect is repaired in `3ab143c`.
 
-```
-/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/o1/pi.log
-```
-
-It must contain `pi o1 exit=` before **any OSG/OSGO invocation**. In this
-agent's sandbox only its own scratch directory is mounted under the temporary
-namespace; the O1 log is absent. O1 was also observed still running. No host
-invocation was attempted, no marker was fabricated, and another process's exit
-or output was not substituted for that guard. Independent `@abaplint/core`
-syntax lint reads dependency sources only; it does not execute OSG.
-
-After the actual guard becomes readable and passes, regenerate and execute:
-
-```sh
-export GOCACHE=/mnt/ssd-510/osg/go-build TMPDIR=/mnt/ram/abapiti/tmp
-export TRANSPILER=/mnt/ssd-510/osg/abapiti/transpiler-ee5c2cd1
-export npm_config_cache=/mnt/ssd-510/osg/abapiti/npm-cache
-export GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false GOMAXPROCS=4
-export NODE_OPTIONS=--max-old-space-size=32768
-export ABAPITI_OSG_HOME=/mnt/ssd-510/osg/abapiti/open-steamgate
-work=$(mktemp -d "$TMPDIR/osgo-chai.XXXXXX")
-ABAPITI_TEST_OUT="$work/fixtures" nice -n 10 go test -count=1 \
-  ./hir/abap -run '^TestChaiFixtures$'
-nice -n 10 node "$ABAPITI_OSG_HOME/tools/gogen/unit.mjs" \
-  --input "$work/fixtures/TestChaiFixtures" \
-  --class Z_CHAIPROBE_F9474CFB5E78BB --jobs 1 --no-cache \
-  --out "$work/unit" > "$work/unit.json"
-# Synthetic classifier: two expected assertion failures, one explicit trap.
-nice -n 10 go test -count=1 ./tsfront \
-  -run '^TestAbaplintTestHostOSGEmission$'
-ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/lexer,abap/statements \
-  ABAPITI_TESTS_SCRATCH="$work/shards" nice -n 10 node \
-  tools/abaplint-tests-all.mjs /home/alice/dev/abaplint "$work/shards.json"
-```
-
-Require the unit to pass first. A genuine answer mismatch must stop work, be
-root-caused and receive a regression before running the upstream shards.
-Record each shard's N, FAIL, traps, registration parity and host phase times;
-FAIL must remain zero. Update this document with measured numbers, not an
-estimate based on the removed catalogue entries.
-
-Own generation/archive/output scratch was removed. OSG was verified clean at
-`f557e12f4217addcec7834b0607234aecf9b723a` and was not modified. No OSG invocation
-from this job created a cache; the concurrent O1 job's cache was deliberately
-left untouched. After host continuation, remove its invocation scratch and
-`tools/gogen/.out/go-cache` only once the clone is free.
+O1 itself remains blocked by 85 unregistered rules tests; see
+[train-o1.md](train-o1.md). Chai's lexer result does not certify the classview
+operations or those initializers. Next work is the JSON5 emitter, the array storage ABI
+for the four preallocation refusals, and the pre-existing LOOP AT SCREEN trap. Preserve FAIL 0
+and registration accounting; do not remove sparse refusals merely to regain a
+passing count.
