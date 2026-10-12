@@ -1,4 +1,84 @@
-# TS-HA@OSGO M0: suite gap and first shard
+# TS-HA@OSGO: pin bump blocked; historical M0 suite gap
+
+## New pin: stopped on a mandatory OSG-JS wrong answer
+
+OSG **`f557e12f4217addcec7834b0607234aecf9b723a`** is pinned, with green
+kernel-conformance CI (`38221901138`). Ancestry checks include #714
+(`70b2c0193`), inbox 047 (`6f743d2b7`), #698 (`d858ca022`), #700
+(`f4f872892`), #701 (`221cc4981`), and inbox 041 (`e7dd62ce2`).
+Compact evidence: [osgo-pin-bump.json](evidence/osgo-pin-bump.json).
+
+**No new-pin suite or full-CI certificate.** The mandatory, unchanged
+`TestEmitRegExpExec` differential returned a **wrong answer on OSG-JS** after
+replacing absolute lookarounds with `\A`/`\z`: expected captures/indices beginning
+`2:ab:a:b|1:a|4:a|reset:0|sticky:0:2:true`, but actual output began
+`|last:0:true:0|anchor:true`. CI, registry and shard processes were stopped as
+soon as the wrong answer was inspected; no failure exemption was added.
+
+**Root cause:** the required OSG-JS path uses the pinned transpiler/runtime
+`ee5c2cd1`, whose `packages/runtime/src/abap_regex.ts` does not translate
+`\A` or `\z` before constructing JavaScript `RegExp`. JavaScript treats these
+escapes as literal `A` and `z`. New-pin OSGO supports the anchors, but that
+alone does not certify the required second host. The unsafe anchor migration
+was **withdrawn**. The external OSG and transpiler sources were not modified.
+The next gate needs an upstream, pinned transpiler anchor fix, followed by
+reapplying the migration and rerunning both hosts and both shards.
+
+| New-pin shard | Node-active denominator from M0 | Credited pass | FAIL | Traps | Times | Result |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `abap/lexer` | 200 | 0 | unmeasured | unmeasured | unmeasured | stopped during generated-Go build; no runner report |
+| `abap/statements` | 4,962 | 0 | unmeasured | unmeasured | unmeasured | not started; sequentially follows lexer |
+
+**Statements result: unmeasured, not FAIL 0, not 4,962 traps.** No returned
+registrations or assertion results are invented. The old-pin 85/200 lexer
+result below must not be presented as a new-pin run.
+
+### Completed checks and retained changes
+
+- Removed both broad gap entries (`FIND PCRE`, submatch `LOOP`). Retained the
+  existing FIRST/APPEND and groups-copy forms; optional simplifications were
+  not needed. The original narrow OSGO negative-lookbehind exemption in
+  `hir-unit.sh` is unchanged; BDEF's real lookbehind remains a host refusal,
+  not a passing native exec test. Trying `\b` instead also hit an explicit
+  host refusal, so that attempt was withdrawn without changing the fixture.
+- Restored scalar-key Map/Set hashed secondary keys. Reference keys retain
+  their linear identity lookups: #698 explicitly refuses a secondary-key
+  component of type `ref`. Scalar Set deletion uses `DELETE TABLE … WITH TABLE
+  KEY by_k COMPONENTS k`, not the zero `sy-tabix` from a hashed read. The optional
+  `DELETE … WHERE` change was skipped. #701's move-then-clear optimization is
+  already present; no `<dir>` literal workaround remains to revert for inbox 041.
+- A completed `osgo-unit.sh` attempt passed **4,077/4,077**, FAIL **0**. The
+  final HIR run passed OSGO fixtures apart from the existing narrowly recorded
+  exec refusal, then stopped on the OSG-JS assertion mismatch. These scripts
+  now live in `.github/workflows/osd-m1.yml`, not current `ci.yml`.
+- Fresh vanilla Node on the existing zabapgit check kit: **clean 0**,
+  SHA-256 `5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9`;
+  **seeded 5**, SHA-256
+  `7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7`.
+  OSGO clean parity genuinely passed: **117.799 s execution**, **262.771 s
+  discovery/frontend/emission/build/execution**, zero retries. Execution includes
+  embedded input decoding/loading and the check. Seeded OSGO was stopped before
+  a report: **unmeasured**. Long registry runs use `GOGEN_UNIT_TIMEOUT_MS=900000`.
+- The generated registry unit driver previously failed unconditionally just
+  to display its report, including when `ok=X`. It now asserts the returned
+  hash-parity boolean and clears it on caught exceptions; a dedicated regression
+  checks this contract. No corpus assertion or expected hash was relaxed.
+- Default output against `git archive c921e37`, generated at the same path:
+  **6,312 files**, **151 changed files**, exactly **50 class identities (48 Maps,
+  2 Sets)** copied into `classes`, `osg`, `native/lib`, plus those same **50 zip
+  members**. Every change was checked against only these transformations:
+  (1) scalar collection declaration gains `WITH UNIQUE HASHED KEY by_k COMPONENTS k`;
+  (2) scalar Map/Set reads gain `WITH KEY by_k COMPONENTS k`;
+  (3) scalar Set deletion becomes `DELETE TABLE … WITH TABLE KEY by_k COMPONENTS k`.
+  Reference-key collections, default regex runtime, names, interfaces, other
+  classes, drivers and READMEs are byte-identical.
+- Before anchor withdrawal: `ABAPITI_GRACECHECK=1 go test ./... -short`,
+  `go vet ./...`, and the live OSG classification regression passed. No final
+  post-withdrawal certificate is claimed: testing stopped after the wrong answer.
+  Scratch outputs and temporary artifacts were removed; OSG stays clean at the
+  new pin, with `tools/gogen/.out/go-cache` removed. No clone or push.
+
+## Historical M0 at 7720f6e29 (unchanged evidence)
 
 **85/200 lexer tests passed; FAIL 0; 115 trapped; 200 registered; no missing,
 pending, unmatched, or initialization-failure titles.** Fresh original Node:
@@ -159,9 +239,11 @@ measurements—not weakening assertions.
 
 ## Reproduction
 
-Use the existing clean checkout at `f557e12f4217addcec7834b0607234aecf9b723a`
-(OSG main CI green, run `38138596313`). Historical M0 evidence below remains
-bound to its original pin; it is not relabelled as a new-pin measurement:
+The current checkout is `f557e12f4217addcec7834b0607234aecf9b723a`
+(OSG main CI green). The following invocation is the reproduction recipe,
+**not a completed new-pin certificate**; resolve the blocker above before
+reapplying the anchor migration and certifying both hosts. Historical M0
+measurements remain bound to their original pin:
 
 ```sh
 export GOCACHE=/mnt/ssd-510/osg/go-build TMPDIR=/mnt/ram/abapiti/tmp

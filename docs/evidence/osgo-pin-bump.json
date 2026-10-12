@@ -1,0 +1,74 @@
+{
+  "schema": "abapiti-osgo-pin-bump-v1",
+  "status": "blocked; no new-pin shard or full CI certificate",
+  "baseline": "c921e37",
+  "measuredCommit": "abcbaf061187fe47c9ee2dbadf0548168b3103b7",
+  "anchorWithdrawalCommit": "03537a6",
+  "osgPin": "f557e12f4217addcec7834b0607234aecf9b723a",
+  "transpilerPin": "ee5c2cd1a45aaac6be503a46fc903ce95a946877",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgCI": {"run": 38221901138, "name": "kernel conformance (heavy)", "conclusion": "success", "headSha": "f557e12f4217addcec7834b0607234aecf9b723a"},
+  "ancestorChecks": {
+    "714": "70b2c0193",
+    "047": "6f743d2b7",
+    "698": "d858ca022",
+    "700": "f4f872892",
+    "701": "221cc4981",
+    "041": "e7dd62ce2",
+    "allIncluded": true
+  },
+  "reverts": {
+    "absoluteAnchors": "withdrawn after mandatory OSG-JS assertion mismatch; old absolute lookarounds retained",
+    "broadFINDPCREGap": "removed",
+    "submatchLOOPGap": "removed",
+    "matchRuntimeSimplifications": "optional; retained FIRST/APPEND and groups copy",
+    "hashedCollections": "restored for scalar keys only; reference keys remain linear because new-pin OSG rejects secondary key reference components",
+    "setDelete": "scalar keys use DELETE TABLE WITH TABLE KEY by_k COMPONENTS k; reference keys retain READ/DELETE INDEX; optional DELETE WHERE skipped",
+    "701": "move-then-clear optimization already present",
+    "041": "no remaining workaround found, including git history search for <dir>"
+  },
+  "wrongAnswer": {
+    "suite": "hir-unit.sh / osgjs / TestEmitRegExpExec",
+    "class": "Z_PROBE_TS_PRO_A4572E9BF33A53",
+    "method": "OBSERVATIONS",
+    "status": "FAILURE",
+    "expected": "2:ab:a:b|1:a|4:a|reset:0|sticky:0:2:true|empty:0:0|last:2:true:0|at:1:3|anchor:true|Xab|XX|XX|ZBOOKING:true|cds:true|entity:ZONE|entity:ZTWO",
+    "actual": "|last:0:true:0|anchor:true|Xab|XX|XX|cds:true",
+    "rootCause": "ee5c2cd1 packages/runtime/src/abap_regex.ts does not translate PCRE \\A or \\z before new RegExp; JavaScript interprets them as literal A and z",
+    "action": "stopped CI, registry and shard processes; withdrew unsafe migration; no assertion exemption or weakened test"
+  },
+  "ci": {
+    "workflow": ".github/workflows/osd-m1.yml (not current ci.yml)",
+    "osgoUnitCompletedAttempt": {"tests": 4077, "success": 4077, "failure": 0, "notCompiled": 0, "error": 0},
+    "finalHIR": "aborted at the OSG-JS wrong answer; OSGO exec has the pre-existing narrowly checked negative-lookbehind NOT_COMPILED exemption, unchanged from c921e37",
+    "finalOSGOUnitRepeat": "not reached after final HIR stop"
+  },
+  "registry": {
+    "fixture": "zabapgit-check-kit (existing stoker/prof-kit)",
+    "driverFix": "generated RegistryRunTest previously failed unconditionally to display report; now asserts returned hash-parity boolean and clears it on caught exceptions",
+    "clean": {"nodeIssues": 0, "nodeSHA256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9", "nodeMs": 10844.579229, "osgoStatus": "SUCCESS", "osgoRunMs": 117799, "osgoTotalMs": 262771, "retries": 0},
+    "seeded": {"nodeIssues": 5, "nodeSHA256": "7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7", "nodeMs": 12112.568732, "osgoStatus": "unmeasured; stopped before a trustworthy report"},
+    "timingDefinition": "OSGO run includes embedded-input decoding/loading, registry check and assertion; total also includes discovery, frontend and Go emission/build; GOGEN_UNIT_TIMEOUT_MS=900000"
+  },
+  "shards": [
+    {"name": "abap/lexer", "nodeActiveAtExistingPin": 200, "passed": null, "failed": null, "trapped": null, "timingMs": null, "status": "no runner report; stopped during generated-Go build at mandatory OSG-JS wrong answer"},
+    {"name": "abap/statements", "nodeActiveAtExistingPin": 4962, "passed": null, "failed": null, "trapped": null, "timingMs": null, "status": "not started; sequentially follows lexer"}
+  ],
+  "defaultOutputDiff": {
+    "baseline": "c921e37; git archive, no new clone",
+    "sameOutputPath": true,
+    "files": 6312,
+    "changedFiles": 151,
+    "changedClassIdentities": 50,
+    "maps": 48,
+    "sets": 2,
+    "copies": ["classes", "osg", "native/lib"],
+    "changedZipMembers": 50,
+    "changes": ["scalar collection unique hashed secondary key by_k", "scalar Map/Set READ WITH KEY by_k COMPONENTS k", "scalar Set DELETE TABLE WITH TABLE KEY by_k COMPONENTS k"],
+    "unchanged": "reference-key collections, regex runtime in default workload, names, interfaces, non-runtime classes, drivers and READMEs",
+    "validation": "every changed text file matched exactly these transformations; every changed zip member matched its corresponding emitted class"
+  },
+  "gatesBeforeAnchorWithdrawal": {"ABAPITI_GRACECHECK=1 go test ./... -short": 0, "go vet ./...": 0, "liveOSGClassificationRegression": 0},
+  "gatesAfterAnchorWithdrawal": "not rerun: hard stop after wrong answer",
+  "cleanup": "generated closures, build modules/binaries, scratch baseline, raw reports and invocation temporaries removed; OSG clean at new pin; tools/gogen/.out/go-cache removed; no clone or push"
+}
