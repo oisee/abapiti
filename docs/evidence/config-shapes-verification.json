@@ -1,0 +1,1534 @@
+{
+  "schema": "config-shapes/1",
+  "baseCommit": "4b6a465c5663360a5f08cb249ef7cb936dfe36df",
+  "semanticCommit": "ca46a94a36928c9c955833cd6b33315c0964b6b4",
+  "testCommit": "ca46a94a36928c9c955833cd6b33315c0964b6b4",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "scope": [
+    "root",
+    "objects",
+    "pretty_printer",
+    "rules",
+    "utils"
+  ],
+  "sourceBlobs": {
+    "tsfront/lower.go": {
+      "before": "551596fd6536a4961503941797024228c2d9d776",
+      "after": "3fa944887d57dbfa3f81eec1fafae1041c8a2405"
+    },
+    "tsfront/lower_class.go": {
+      "before": "3a27de83f7660f74e77a1e584e5b0072a3541119",
+      "after": "5fe3730301804fa997cc1a0939dd0382df027a66"
+    },
+    "tsfront/lower_expr.go": {
+      "before": "f7f5702c1748974cf90f8c21424187bb2837eedf",
+      "after": "5394f19e456913ed183be354856046e3591a8177"
+    },
+    "tsfront/lower_stmt.go": {
+      "before": "78ca4cc372f28b98a793a88a41145cb179516599",
+      "after": "a672f5f47c4f2d9f34ba82cc0939eda802d3621b"
+    },
+    "tsfront/lower_types.go": {
+      "before": "5a297afdd10f20a6bed9fb009e3254128cf683a9",
+      "after": "94c74240c677816891a860a5f3d8d18cb666d76b"
+    },
+    "tsfront/literal_absence.go": {
+      "before": null,
+      "after": "5e1439b3dfdc975378eb000733019bae217f4f6f"
+    },
+    "tsfront/shape_write.go": {
+      "before": null,
+      "after": "866671e5f6d3ca1cffe3173ac2b738782b5f4477"
+    },
+    "tsfront/comparison_scalar.go": {
+      "before": null,
+      "after": "1c18646c427984a143f1af0dcbd50c65c5767580"
+    },
+    "hir/hir.go": {
+      "before": "88136773e279852c3698c141178da6ce11c84d04",
+      "after": "b44733d288df7def69aff56a13d57550e47803d2"
+    },
+    "hir/golang/live_class_view.go": {
+      "before": "943b83a4b46a3e9cad6e9605d9a462cb3ae2a15d",
+      "after": "73b6306247f90f72ad36a04a1d93efd17e2010e7"
+    }
+  },
+  "before": {
+    "totals": {
+      "passed": 3362,
+      "failed": 0,
+      "trapped": 69,
+      "asyncPending": 0,
+      "notRun": 13,
+      "registered": 3442,
+      "total": 3444,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 11,
+      "unregistered": 2
+    },
+    "rootCounts": {
+      "Config applyUnspecifiedRules write": 2,
+      "Domain conversion": 19,
+      "Pretty-printer config writes": 9,
+      "NameValidator config literal": 7
+    },
+    "allTrapMessages": [
+      {
+        "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 19
+      },
+      {
+        "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered",
+        "count": 7
+      },
+      {
+        "message": "unsupported-type test/utils/name_validator.ts: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts: identifier ruleViolated is not a lowered local or module value",
+        "count": 7
+      },
+      {
+        "message": "unsupported-assignment test/config.ts: assignment to property applyUnspecifiedRules is not lowered",
+        "count": 2
+      },
+      {
+        "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
+        "count": 2
+      },
+      {
+        "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+        "count": 2
+      },
+      {
+        "message": "src/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property sequential_blank is not lowered",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "unsupported-type test/rules/unused_variables.ts: object literal property skipAbstract is not in shape src/rules/unused_variables.ts.UnusedVariablesConf; unsupported-expr test/rules/unused_variables.ts: identifier issues is not a lowered local or module value",
+        "count": 2
+      },
+      {
+        "message": "unsupported-json test/config.ts: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported; unsupported-expr test/config.ts: identifier confString is not a lowered local or module value; unsupported-expr test/config.ts: identifier conf is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-expr test/registry.ts: delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+        "count": 1
+      },
+      {
+        "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
+        "count": 1
+      },
+      {
+        "message": "src/objects/function_group.ts: input is outside the reviewed abapGit XML subset",
+        "count": 1
+      },
+      {
+        "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value; unsupported-assignment test/objects/table.ts: assignment to found is not lowered; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-expr test/pretty_printer/pretty_printer.ts: delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "src/objects/enhancement_spot.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "unsupported-type test/rules/unnecessary_pragma.ts: object literal property allowNoTextGlobal is not in shape src/rules/unnecessary_pragma.ts.UnnecessaryPragmaConf; unsupported-expr test/rules/unnecessary_pragma.ts: identifier issues is not a lowered local or module value",
+        "count": 1
+      }
+    ],
+    "fullClosure": {
+      "blocking": 29,
+      "rootBlocking": 19,
+      "cascadeBlocking": 10,
+      "hirErrors": 77,
+      "byCategory": {
+        "assume-integer": 10,
+        "unsupported-call": 2,
+        "unsupported-expr": 15,
+        "unsupported-json": 2
+      },
+      "byArea": {
+        "lsp": 10,
+        "objects": 1,
+        "src": 18
+      },
+      "byRootMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 9
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        }
+      ],
+      "files": 20,
+      "allBlockingByMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 9
+        },
+        {
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 9
+        },
+        {
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method getStr on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        }
+      ],
+      "ownedCategoryBlocking": 0
+    }
+  },
+  "after": {
+    "totals": {
+      "passed": 3404,
+      "failed": 0,
+      "trapped": 27,
+      "asyncPending": 0,
+      "notRun": 13,
+      "registered": 3442,
+      "total": 3444,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 11,
+      "unregistered": 2
+    },
+    "rootCounts": {},
+    "allTrapMessages": [
+      {
+        "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
+        "count": 2
+      },
+      {
+        "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+        "count": 2
+      },
+      {
+        "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2
+      },
+      {
+        "message": "unsupported-json test/config.ts: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported; unsupported-expr test/config.ts: identifier confString is not a lowered local or module value; unsupported-expr test/config.ts: identifier conf is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-expr test/registry.ts: delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+        "count": 1
+      },
+      {
+        "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
+        "count": 1
+      },
+      {
+        "message": "src/objects/function_group.ts: input is outside the reviewed abapGit XML subset",
+        "count": 1
+      },
+      {
+        "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "unsupported-call test/objects/table.ts: chai expect.fail supports only one message argument; unsupported-call test/objects/table.ts: method getComponents on classref is not lowered; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier components is not a lowered local or module value; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value; unsupported-assignment test/objects/table.ts: assignment to found is not lowered; unsupported-expr test/objects/table.ts: identifier found is not a lowered local or module value",
+        "count": 1
+      },
+      {
+        "message": "test/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "unsupported-expr test/pretty_printer/pretty_printer.ts: delete supports ordinary lowered records only",
+        "count": 1
+      },
+      {
+        "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      },
+      {
+        "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1
+      }
+    ],
+    "fullClosure": {
+      "blocking": 29,
+      "rootBlocking": 19,
+      "cascadeBlocking": 10,
+      "hirErrors": 77,
+      "byCategory": {
+        "assume-integer": 10,
+        "unsupported-call": 2,
+        "unsupported-expr": 15,
+        "unsupported-json": 2
+      },
+      "byArea": {
+        "lsp": 10,
+        "objects": 1,
+        "src": 18
+      },
+      "byRootMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+          "count": 9
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method X on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+          "count": 1
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+          "count": 1
+        }
+      ],
+      "files": 20,
+      "allBlockingByMessage": [
+        {
+          "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+          "count": 9
+        },
+        {
+          "message": "identifier packedLength is not a lowered local or module value",
+          "count": 9
+        },
+        {
+          "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2
+        },
+        {
+          "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 2
+        },
+        {
+          "message": "method getStr on classref is not lowered",
+          "count": 2
+        },
+        {
+          "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+          "count": 1
+        },
+        {
+          "message": "delete supports ordinary lowered records only",
+          "count": 1
+        },
+        {
+          "message": "identifier text is not a lowered local or module value",
+          "count": 1
+        },
+        {
+          "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+          "count": 1
+        }
+      ],
+      "ownedCategoryBlocking": 0
+    }
+  },
+  "blockingDiagnostics": {
+    "before": [
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:31:14",
+        "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:32:14",
+        "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:80:15",
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:86:12",
+        "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/help.ts:46:5",
+        "message": "delete supports ordinary lowered records only"
+      },
+      {
+        "category": "unsupported-json",
+        "loc": "src/lsp/help.ts:47:26",
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+      },
+      {
+        "category": "unsupported-json",
+        "loc": "src/lsp/help.ts:103:18",
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/help.ts:105:51",
+        "message": "identifier text is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "src/lsp/help.ts:243:58",
+        "message": "method getStr on classref is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "src/lsp/help.ts:243:58",
+        "message": "method getStr on classref is not lowered"
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/objects/number_range.ts:51:33",
+        "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+      }
+    ],
+    "after": [
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/ddic.ts:386:30",
+        "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/ddic.ts:388:37",
+        "message": "identifier packedLength is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:31:14",
+        "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:32:14",
+        "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:80:15",
+        "message": "string coercion of array<string> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/dump_scope.ts:86:12",
+        "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/help.ts:46:5",
+        "message": "delete supports ordinary lowered records only"
+      },
+      {
+        "category": "unsupported-json",
+        "loc": "src/lsp/help.ts:47:26",
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+      },
+      {
+        "category": "unsupported-json",
+        "loc": "src/lsp/help.ts:103:18",
+        "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "src/lsp/help.ts:105:51",
+        "message": "identifier text is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "src/lsp/help.ts:243:58",
+        "message": "method getStr on classref is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "src/lsp/help.ts:243:58",
+        "message": "method getStr on classref is not lowered"
+      },
+      {
+        "category": "assume-integer",
+        "loc": "src/objects/number_range.ts:51:33",
+        "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+      }
+    ]
+  },
+  "registeredTitleSequenceUnchanged": true,
+  "ownedTransitions": [
+    {
+      "root": "Config applyUnspecifiedRules write",
+      "shard": "root",
+      "title": "Config should not do anything bad if you have an old config, old behavior for false",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/config.ts:80:86: lowering trap: unsupported-assignment test/config.ts:82:5: assignment to property applyUnspecifiedRules is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Config applyUnspecifiedRules write",
+      "shard": "root",
+      "title": "Config should not do anything bad if you have an old config, new behavior for true",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/config.ts:88:85: lowering trap: unsupported-assignment test/config.ts:90:5: assignment to property applyUnspecifiedRules is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "objects",
+      "title": "Domain, parse main xml Has fixed values",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "objects",
+      "title": "Domain, parse main xml Single value",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "objects",
+      "title": "Domain, parse main xml fixed values, and interval values",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case REPORT zfoo.WRITE: `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case report zfoo.write: `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case REPORT ZBAR.DATA(X) = `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case report ZFOO.data(X) = `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: `FOO` ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: 'FOO' ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: |FOO| ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Config is undefined run without config",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:242:28: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:246:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:247:5: assignment to property sequential_blank is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Pretty-printer config writes",
+      "shard": "pretty_printer",
+      "title": "Config is default/true run with rules set to true",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:255:36: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:259:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:260:5: assignment to property sequential_blank is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes no constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes not enough constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes extra constant implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes constants in non-public section",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (chaining)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (correct)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (misspelled)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (missing)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (wrong type)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (wrong type, case mismatch)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, constant classes implementing class does not exist",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths no issues when all texts are within 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths DD07V fixed value DDTEXT exceeds 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths DD07_TEXTS translation DDTEXT exceeds 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "Domain conversion",
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths multiple violations across DD01V, DD07V_TAB and DD07_TEXTS",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator violates a rule if the pattern is required and the name does not match",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:6:80: lowering trap: unsupported-type test/utils/name_validator.ts:7:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:8:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is required and the name matches",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:11:81: lowering trap: unsupported-type test/utils/name_validator.ts:12:92: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:13:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator violates a rule if the pattern is forbidden and the name matches",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:16:74: lowering trap: unsupported-type test/utils/name_validator.ts:17:87: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:18:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is forbidden and the name does not match",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:21:89: lowering trap: unsupported-type test/utils/name_validator.ts:22:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:23:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is ignored",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:26:59: lowering trap: unsupported-type test/utils/name_validator.ts:30:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:32:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the name is ignored",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:35:56: lowering trap: unsupported-type test/utils/name_validator.ts:39:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:41:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "root": "NameValidator config literal",
+      "shard": "utils",
+      "title": "Name validator behaves as if patternKind = required if it is omitted",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:44:63: lowering trap: unsupported-type test/utils/name_validator.ts:48:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:50:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    }
+  ],
+  "changedCases": [
+    {
+      "shard": "root",
+      "title": "Config should not do anything bad if you have an old config, old behavior for false",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/config.ts:80:86: lowering trap: unsupported-assignment test/config.ts:82:5: assignment to property applyUnspecifiedRules is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "root",
+      "title": "Config should not do anything bad if you have an old config, new behavior for true",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/config.ts:88:85: lowering trap: unsupported-assignment test/config.ts:90:5: assignment to property applyUnspecifiedRules is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse main xml Has fixed values",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse main xml Single value",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse main xml fixed values, and interval values",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "objects",
+      "title": "View, parse XML test",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "objects",
+      "title": "View, parse XML database view with 2 append views",
+      "before": "trapped",
+      "after": "trapped",
+      "beforeMessage": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case REPORT zfoo.WRITE: `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case report zfoo.write: `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case REPORT ZBAR.DATA(X) = `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case report ZFOO.data(X) = `foo`.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: `FOO` ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: 'FOO' ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Fix keyword case WRITE: |FOO| ##NO_TEXT.",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Config is undefined run without config",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:242:28: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:246:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:247:5: assignment to property sequential_blank is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "pretty_printer",
+      "title": "Config is default/true run with rules set to true",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/pretty_printer/pretty_printer.ts:255:36: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:259:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:260:5: assignment to property sequential_blank is not lowered",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes no constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes not enough constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes extra constant implemented",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes constants in non-public section",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (chaining)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (correct)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (misspelled)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes domain name constant (missing)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (wrong type)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes all constants implemented (wrong type, case mismatch)",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, constant classes implementing class does not exist",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "unknown_types Rule badi reference",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/enhancement_spot.ts:42:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: unnecessary_pragma NO_TEXT added by SE24, one issue in default config",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/rules/unnecessary_pragma.ts:87:60: lowering trap: unsupported-type test/rules/unnecessary_pragma.ts:95:65: object literal property allowNoTextGlobal is not in shape src/rules/unnecessary_pragma.ts.UnnecessaryPragmaConf; unsupported-expr test/rules/unnecessary_pragma.ts:96:12: identifier issues is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: unused_variables, single file Abstract",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/rules/unused_variables.ts:1447:18: lowering trap: unsupported-type test/rules/unused_variables.ts:1458:43: object literal property skipAbstract is not in shape src/rules/unused_variables.ts.UnusedVariablesConf; unsupported-expr test/rules/unused_variables.ts:1459:12: identifier issues is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: unused_variables, single file select, order by dynamic",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/rules/unused_variables.ts:1462:34: lowering trap: unsupported-type test/rules/unused_variables.ts:1467:43: object literal property skipAbstract is not in shape src/rules/unused_variables.ts.UnusedVariablesConf; unsupported-expr test/rules/unused_variables.ts:1468:12: identifier issues is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths no issues when all texts are within 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths DD07V fixed value DDTEXT exceeds 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths DD07_TEXTS translation DDTEXT exceeds 60 characters",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "rules",
+      "title": "rule, xml_consistency, DOMA text lengths multiple violations across DD01V, DD07V_TAB and DD07_TEXTS",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator violates a rule if the pattern is required and the name does not match",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:6:80: lowering trap: unsupported-type test/utils/name_validator.ts:7:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:8:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is required and the name matches",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:11:81: lowering trap: unsupported-type test/utils/name_validator.ts:12:92: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:13:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator violates a rule if the pattern is forbidden and the name matches",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:16:74: lowering trap: unsupported-type test/utils/name_validator.ts:17:87: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:18:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is forbidden and the name does not match",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:21:89: lowering trap: unsupported-type test/utils/name_validator.ts:22:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:23:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the pattern is ignored",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:26:59: lowering trap: unsupported-type test/utils/name_validator.ts:30:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:32:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator does not violate a rule if the name is ignored",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:35:56: lowering trap: unsupported-type test/utils/name_validator.ts:39:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:41:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    },
+    {
+      "shard": "utils",
+      "title": "Name validator behaves as if patternKind = required if it is omitted",
+      "before": "trapped",
+      "after": "passed",
+      "beforeMessage": "test/utils/name_validator.ts:44:63: lowering trap: unsupported-type test/utils/name_validator.ts:48:8: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:50:12: identifier ruleViolated is not a lowered local or module value",
+      "afterMessage": ""
+    }
+  ],
+  "commands": [
+    "export GOMAXPROCS=2 GOFLAGS=-p=2",
+    "git archive 4b6a465 | tar -x -C \"$SCRATCH/base\"",
+    "go -C \"$SCRATCH/base\" build -p 2 -o \"$SCRATCH/base-abapiti\" ./cmd/abapiti",
+    "go build -p 2 -o \"$SCRATCH/branch-abapiti\" ./cmd/abapiti",
+    "ABAPITI_TESTS_SHARDS=root,objects,pretty_printer,rules,utils ABAPITI_TESTS_WORKERS=1 ABAPITI_TESTS_COMPILER=\"$SCRATCH/base-abapiti\" ABAPITI_TESTS_COMPILER_COMMIT=4b6a465 node tools/abaplint-tests-all.mjs \"$UPSTREAM\" \"$SCRATCH/before.json\"",
+    "ABAPITI_TESTS_SCRATCH=\"$SCRATCH/after-shards\" ABAPITI_TESTS_SHARDS=root,objects,pretty_printer,rules,utils ABAPITI_TESTS_WORKERS=1 ABAPITI_TESTS_COMPILER=\"$SCRATCH/branch-abapiti\" ABAPITI_TESTS_COMPILER_COMMIT=ca46a94 node tools/abaplint-tests-all.mjs \"$UPSTREAM\" \"$SCRATCH/after.json\"",
+    "\"$SCRATCH/base-abapiti\" abaplint --full -o \"$SCRATCH/full-before\"",
+    "\"$SCRATCH/branch-abapiti\" abaplint --full -o \"$SCRATCH/full-after\"",
+    "\"$SCRATCH/base-abapiti\" abaplint -o \"$SCRATCH/default\" --target all,go",
+    "mv \"$SCRATCH/default\" \"$SCRATCH/default-reference\"",
+    "\"$SCRATCH/branch-abapiti\" abaplint -o \"$SCRATCH/default\" --target all,go",
+    "diff -r \"$SCRATCH/default-reference\" \"$SCRATCH/default\"",
+    "go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "ABAPITI_GRACECHECK=1 go test -short -p 2 -timeout 40m ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "./.github/ci/lint.sh gate origin/integ/train-8"
+  ],
+  "gates": {
+    "vet": 0,
+    "shortTestsWithGrace": 0,
+    "graceGoldenUnchanged": true,
+    "defaultBackendOperationTest": "TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend passed in cmd/abapiti short tests",
+    "lint": {
+      "exit": 0,
+      "newIssues": 0,
+      "canary": "5/5",
+      "version": "2.13.2",
+      "serialAfterTests": true
+    },
+    "defaultOutput": {
+      "diffExit": 0,
+      "diffBytes": 0,
+      "files": 6321,
+      "sameEmissionPath": true,
+      "includes": "Go executable, ABAP archives and every emitted source file"
+    }
+  },
+  "versions": {
+    "node": "26.9.0",
+    "typescript": "6.0.3",
+    "compilerBuildGo": "1.26.9",
+    "shardGo": "1.26.0"
+  },
+  "scopeLimits": [
+    "Only the five selected shards were measured; no full 17-shard pass claim.",
+    "No upstream source or tests were changed.",
+    "ABAP runtime execution was not performed; existing backends may explicitly refuse primitive-backed views.",
+    "No push or PR: task specifies no credentials and local branch commits."
+  ],
+  "blockingDiagnosticsIdentical": true,
+  "regressedCases": []
+}
