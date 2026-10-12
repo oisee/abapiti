@@ -1,90 +1,133 @@
-# Train O1: blocked TS-HA@OSGO certification
+# Train O1: TS-HA@OSGO certification remains blocked
 
 ## Numbers and verdict
 
-**4,077/4,077 CI OSG unit tests pass, FAIL 0. Zabapgit clean (0 issues) and
-seeded (5 issues) match fresh Node on OSGO. All requested compiler gates pass
-after one merge-only test correction. Certification is nevertheless BLOCKED:**
-all five selected unpruned harness shards fail Go compilation before execution.
-There is **no new harness FAIL-0 certificate** and no credited classview gain.
+**518/8,594 Node-active tests pass; FAIL 0; 7,991 traps; 85 active titles
+unregistered. All five selected shards compile and execute. Full certification
+is still BLOCKED by rules registration parity, not by the repaired constructor
+factory. No measured classview pass gain is credited.**
 
-| OSGO harness shard | Credited passes / Node active | Runtime FAIL | Runtime traps | Active not-run | Pending outside denominator |
-| --- | ---: | --- | --- | ---: | ---: |
-| `abap/lexer` | 0 / 200 | unmeasured | unmeasured | 200 | 0 |
-| `abap/statements` | 0 / 4,962 | unmeasured | unmeasured | 4,962 | 0 |
-| `objects` | 0 / 144 | unmeasured | unmeasured | 144 | 1 |
-| `rules` | 0 / 3,149 | unmeasured | unmeasured | 3,149 | 10 |
-| `abap/structures` | 0 / 139 | unmeasured | unmeasured | 139 | 1 |
-| **TOTAL** | **0 / 8,594** | **unmeasured** | **unmeasured** | **8,594** | **12** |
-
-Original Node passes **8,594/8,594 active tests**, with 12 pending. OSGO returns
-no runner JSON and registers no titles. The reporter's empty-result FAIL/trap
-zeros are **not measurements**; every active title is not-run, not trapped.
-The reconciled four-shard retry exits **1** for infrastructure failures; its
-host compiler exits **2**. No genuine runtime wrong answer was observed.
-
-| Shard | OSG frontend s | Go emission s | Failed Go build s | Run s | Host phase total s |
+| OSGO harness shard | Pass / Node active | FAIL | Traps | Active not-run (unregistered) | Node pending outside denominator |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `abap/lexer` | 144.544 | 13.078 | 3.145 | 0 | 160.767 |
-| `abap/statements` | 207.438 | 15.722 | 3.908 | 0 | 227.068 |
-| `objects` | 114.987 | 10.845 | 3.048 | 0 | 128.880 |
-| `rules` | 194.846 | 14.919 | 5.414 | 0 | 215.179 |
-| `abap/structures` | 148.982 | 10.309 | 2.848 | 0 | 162.139 |
+| `abap/lexer` | 85 / 200 | 0 | 115 | 0 | 0 |
+| `abap/statements` | 433 / 4,962 | 0 | 4,529 | 0 | 0 |
+| `objects` | 0 / 144 | 0 | 144 | 0 | 1 |
+| `rules` | 0 / 3,149 | 0 | 3,064 | 85 | 10 |
+| `abap/structures` | 0 / 139 | 0 | 139 | 0 | 1 |
+| **TOTAL** | **518 / 8,594** | **0** | **7,991** | **85** | **12** |
 
-These are failed-build phase totals, not execution or performance comparisons.
-TypeScript/HIR lowering and ABAP emission are outside them. Runs overlapped
-local gates and CI checks. Each shard has **0 blocking lowering diagnostics,
-0 HIR errors, 0 overlong ABAP lines**, maximum line length **255 bytes**, and
-maximum object name **29 bytes**.
+Fresh original Node passes **8,594/8,594 active tests**, with 12 pending.
+OSGO registers **8,521/8,606** titles including those pending titles; all 12
+pending titles are skipped, not credited as passes. Total not-run is therefore
+**97 = 85 active unregistered + 12 Node-pending skipped**. There are **0**
+unmatched titles, assertion failures, failed initializers, async-pending cases,
+or host infrastructure failures. The unchanged all-shard orchestrator exits
+**0**, but its summary explicitly reports **registrationParity=false**. That
+exit is not a complete-suite certificate. Each individual host exits **1**
+because of traps. No wrong answer was observed; absent registrations are not
+relabeled as traps or passes.
+
+| Shard | OSG frontend s | Go emission s | Go build s | Run s | Host phase total s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 112.993 | 9.733 | 105.448 | 0.043 | 228.217 |
+| `abap/statements` | 130.676 | 11.212 | 152.037 | 4.733 | 298.658 |
+| `objects` | 109.799 | 10.227 | 113.679 | 0.814 | 234.519 |
+| `rules` | 184.569 | 14.830 | 313.955 | 2.897 | 516.251 |
+| `abap/structures` | 103.639 | 9.798 | 106.952 | 0.097 | 220.486 |
+| **TOTAL** | | | | | **1,498.131** |
+
+These are measured host phases, excluding TypeScript/HIR lowering and ABAP
+emission. Shards ran sequentially; lexer overlapped local compiler gates.
+Every shard has **0 blocking lowering diagnostics, 0 HIR errors, 0 overlong
+ABAP lines**, maximum line length **255 bytes**, and maximum object name
+**29 bytes**. All generated Go builds succeed, including the large rules closure.
 
 Pre-classview at the **same OSG pin**: lexer **85/200, FAIL 0, 115 traps,
 266.517 s**; statements **433/4,962, FAIL 0, 4,529 traps, 348.681 s**
-([prior evidence](osgo-suite-gap.md)). Those completed executions must not be
-replaced by this train's unmeasured runtime counts. No pre-classview OSGO
+([prior evidence](osgo-suite-gap.md)). Pass/trap counts are **unchanged**.
+The new times are not a controlled speed comparison. No pre-classview OSGO
 objects/rules/structures measurements are available in the assigned evidence.
 
-Compact evidence: [train-o1.json](evidence/train-o1.json).
+Other requested results: **4,077/4,077 CI OSG unit tests pass, FAIL 0**;
+zabapgit clean (**0 issues**) and seeded (**5 issues**) match fresh Node on
+OSGO. All requested compiler gates pass on the repaired head. Default output
+against `4fe2486` is **identical: 6,315 files, 0 changed paths**.
 
-## Scope and first blocker
+Final compact evidence: [train-o1-resume.json](evidence/train-o1-resume.json).
+The [initial blocked-run evidence](evidence/train-o1.json) remains immutable
+historical evidence; its null runtime counts are superseded by this retry.
 
-Compiler merge head: **`bef1975`**, branch `integ/o1`; baseline `origin/main`:
-**`a15e063be697ba4709d68c93377c7ca9fa6bcd01`**. Classview tip: `9016fba`.
-OSG remains clean at **`f557e12f4217addcec7834b0607234aecf9b723a`**;
-OSG-JS transpiler/runtime is **`ee5c2cd1a45aaac6be503a46fc903ce95a946877`**.
-Original abaplint pin: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`.
+## Scope and repaired factory blocker
 
-The lexer first exposed the shared `classvalue.newArgs` factory compilation
-failure. Remaining harness work was paused for attribution, then the requested
-high-risk closures were attempted unchanged. All reproduce the same blocker:
+Validated compiler head: **`3ab143ca63fcab0081c20c6e078bedde5beb2e3c`**,
+branch `integ/o1`; original merge head `bef1975`; pre-repair report `4fe2486`.
+Baseline `origin/main`: **`a15e063be697ba4709d68c93377c7ca9fa6bcd01`**;
+classview tip `9016fba`. OSG remains clean at
+**`f557e12f4217addcec7834b0607234aecf9b723a`**; OSG-JS transpiler/runtime:
+**`ee5c2cd1a45aaac6be503a46fc903ce95a946877`**. Original abaplint pin:
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`.
 
-```text
-z_runtime_clas_c216c6067abdc6.clas.abap:3183:
-cannot use p1.items[idx0 - 1] (variable of interface type any)
-as *Z_RUNTIME_DYNA_A429568D5BE89E value in assignment: need type assertion
-```
+The initial run stopped on an inherited classview factory compile defect:
+`READ TABLE p1->items ... INTO d` read an erased `REF TO object` table entry
+into a narrower Dynamic reference. The standalone `TestClassArgsFactoryABAP`
+fixture reproduced the same OSG-generated Go error as all five shards. That
+source was then byte-identical to `origin/osgo-classview`, not merge fallout.
 
-`hir/abap/class_abi.go:111` emits `READ TABLE p1->items INDEX ... INTO d`,
-where `d` is a Dynamic reference. The established `arrayStorage` ABI erases
-reference arrays to `STANDARD TABLE OF REF TO object`; OSG consequently stores
-the entries as Go `any`. The factory does not insert a checked cast when reading
-an erased entry into the narrower reference. The standalone emitted
-`TestClassArgsFactoryABAP` fixture reproduces those same Go compilation errors,
-without the full test closure (compile-only, with an empty Go main).
+The coordinator repaired it in **`3ab143c`**: read into a raw `REF TO object`
+temporary, then use **`?=`** to retain the checked, identity-preserving cast.
+The unchanged standalone test was exported and compiled using the pinned OSG
+frontend/emitter and copied Go runtime, with an empty main:
 
-**This is an inherited classview implementation defect, not merge fallout.**
-The factory source is byte-identical to `origin/osgo-classview`, SHA-256
-`0c1dafe8a8404c65b7ea5882b966a5e9b8bb15ba730d02f686e449bb706dff15`.
-The same reference-array erasure exists on that branch and predates classview
-(`5515481a`). Its documentation explicitly had no OSGO execution validation.
-The factory is activated by the unpruned shared artifacts closure, even on the
-lexer shard; the pruned zabapgit workload does not activate this argument
-factory. No factory, runtime, harness, OSG source or exemption was changed here.
+- **20 ABAP files**, 0 overlong lines; maximum line **239 bytes**, object name
+  **29 bytes**.
+- Frontend **2.835 s**, Go emission **0.065 s**, build **1.278 s**, empty-main
+  execution **0.005 s**, **exit 0**.
+- This is a **compilation regression check**, not an argument-factory semantic
+  execution certificate. All five subsequent real harness shards also compile.
 
-**Follow-up outside this task's merge-only scope:** repair the erased argument
-read using an explicit identity-preserving checked conversion, exercise valid,
-absent and wrongly typed arguments on the host, and rerun all five shards.
-Do not re-refuse `newArgs`, drop registrations, or treat a missing runner report
-as FAIL 0 to make the train appear certified.
+No additional compiler, runtime, test, harness, OSG source, or exemption changes
+were made during the resume.
+
+## Remaining blocker: rules initialization and registration
+
+Rules records **nine trapped initialization actions**, leaving **85** original
+Node-active titles unregistered. These are separate from the **3,064** trapped
+registered test bodies. Exact actions/messages are retained in the final JSON.
+
+| Upstream file under `test/rules/` | Initialization action suffix (after `z_member_test__`) | Native message | Active titles missing |
+| --- | --- | --- | ---: |
+| `check_comments.ts` | `5641f70838341e` | `CX_SY_MOVE_CAST_ERROR in ?=` | 16 |
+| `fully_type_constants.ts` | `5641f70838341e` | `CX_SY_MOVE_CAST_ERROR in ?=` | 16 |
+| `keyword_case.ts` | `3607df2fd950eb`, `84533fc8724cf1` | `CX_SY_MOVE_CAST_ERROR in ?=` | 10 |
+| `line_length.ts` | `ccf00c576bdfc6` | `Casting failed, types not compatible` | 2 |
+| `method_length.ts` | `56cb87476a9398` | `CX_SY_MOVE_CAST_ERROR in ?=` | 16 |
+| `newline_between_methods.ts` | `bba63f7978dcab` | `CX_SY_MOVE_CAST_ERROR in ?=` | 15 |
+| `no_dynamic_stuff.ts` | `0a497c851020f7`, `5641f70838341e` | `An exception was raised.` | 10 |
+
+An **emission-only diagnostic replay of the unchanged 192-root rules closure**
+confirms the initialization actions call `testRule`,
+`testRuleWithVariableConfig`, or `testRulesWithFile` before registration.
+The shared helpers construct the descriptor-selected rule and checked-cast it
+to `IRule`; config dispatch also contains checked casts. The boxing probes
+against `view.storage` catch their own cast failures. The native report has no
+throw-site backtrace, so it does **not** identify which downstream cast escaped.
+Do not attribute these traps to the coordinator's repaired `newArgs` read, or
+claim they are proven merge fallout, without a focused host trace.
+
+A specific boundary visible in source: `line_length.ts:17` passes
+`new LineLengthConf().length = 400` as the config argument—**a Number**, not a
+native config reference. Emission boxes that Number before `setConfig`; the
+native-reference conversion refuses it. That is an unsupported input domain,
+not evidence of an assertion mismatch. Remaining initialization attribution
+and any classview repair belong to the implementation owner; no casts were
+removed, structural objects invented, or registrations synthesized here.
+
+Of the **7,991 registered-body traps**, **7,990** are explicit lowering
+refusals (primarily Chai boxing/equality, plus rules' `array.has` and JSON
+operations). The remaining **one** is the previously recorded statements
+native exception in `LOOP AT SCREEN statement version should fail, "LOOP AT
+SCREEN." should not be recognized`: `An exception was raised.` It is still
+unattributed, not a pass or a newly observed classview regression.
 
 ### Why these shards
 
@@ -93,59 +136,61 @@ or mocha/chai. **16/17 closures** contain `src/artifacts_objects.ts` (the two
 `newArgs` sites), `src/ddl/ddl_parser.ts` (root-object `classOf`), and
 `src/lsp/help.ts` (the other two root-object sites); only `abap/nodes` does not.
 The selected lexer/statements/objects/rules/structures closures all contain
-those shared sources. `objects` additionally owns the checked class-view sites
-in `test/objects/class.ts`; `abap/types` owns the documented examples in
+those shared sources. `objects` additionally owns checked class-view sites in
+`test/objects/class.ts`; `abap/types` owns the documented examples in
 `test/abap/types/types.ts`. `abap/structures` uniquely contains the fresh
 lexical-descriptor site in `test/abap/structures/_combi.ts`, so it was included
-in addition to the requested objects/rules coverage. Source membership is not
-an operation-reachability or passing-test count. Full membership evidence is
-retained in the JSON.
+in addition to requested objects/rules coverage. Membership is not operation
+reachability or a passing-test count. Full membership is retained in the
+initial JSON. Objects and structures compile, but **all their active tests
+trap**; this is not a runtime certificate for the four admitted classview groups.
 
 ## Merge fallout fixed and gates
 
 The M0 synthetic gap test asserted **26** unsupported catalogue entries.
 Classview intentionally admits `object.checkedClassView` and
-`classvalue.newArgs`, making the merged catalogue **24**. Only
-`tsfront/abaplint_tests_osg_test.go` changed: retain the exact catalogue-size
-check at 24 and explicitly assert both newly admitted names are absent.
-The two synthetic unsupported occurrences, one nonfinite literal, and the
-nonfinite emitter-refusal assertions remain unchanged. No semantic assertion
-or oracle was weakened; the host compilation defect remains visible.
+`classvalue.newArgs`, making the merged catalogue **24**. The prior merge-only
+correction in `tsfront/abaplint_tests_osg_test.go` retains the exact size check
+at 24 and explicitly asserts both admitted names are absent. The synthetic
+unsupported occurrences, nonfinite literal, and emitter-refusal assertions
+remain unchanged. No oracle or semantic assertion was weakened.
 
-| Final gate | Exit | Wall s |
+| Gate | Initial exit / wall s | Repaired-head exit |
 | --- | ---: | ---: |
-| `go vet ./...` | 0 | 0.65 |
-| `go test -short -p 2 ./...` | 0 | 238.65 |
-| `ABAPITI_GRACECHECK=1 go test -count=1 -run TestLexerFactsReport ./tsfront/` | 0 | 6.97 |
-| `TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend` (uncached) | 0 | 20.68 |
-| `./.github/ci/lint.sh gate origin/main` | 0 | 3.27 |
+| `go vet ./...` | 0 / 0.65 | 0 |
+| `go test -short -p 2 ./...` | 0 / 238.65 | 0 |
+| `ABAPITI_GRACECHECK=1 go test -count=1 -run TestLexerFactsReport ./tsfront/` | 0 / 6.97 | 0 |
+| `TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend` (uncached) | 0 / 20.68 | 0 |
+| `./.github/ci/lint.sh gate origin/main` | 0 / 3.27 | 0 |
 
-Lint: **0 new**, canary **5/5**, golangci-lint **2.13.2**. Lexer facts were
-exported separately and match the read-only golden and `origin/main`
-byte-for-byte: SHA-256
+Lint: **0 new**, canary **5/5**, golangci-lint **2.13.2**. The resume initially
+lacked the linter on PATH; rerunning with `/home/alice/go/bin` passes. Lexer
+facts match the unchanged golden and `origin/main`, SHA-256
 `c173befedf56bd12e57aa6af1ce51e3354f16d569f5d7cef60fed72af9923940`.
 **No golden diff or regeneration.**
 
 ## CI OSG checks and zabapgit parity
 
-The unchanged `.github/ci/osgo-unit.sh` and `hir-unit.sh` orchestration is
-currently wired in **`osd-m1.yml`**, not `ci.yml`. The existing pinned checkout
-and installed dependencies were reused; no setup reinstall was needed.
+The unchanged `.github/ci/osgo-unit.sh` and `hir-unit.sh` orchestration is wired
+in **`osd-m1.yml`**, not `ci.yml`. Initial checks reused the pinned checkout and
+installed dependencies. These results are retained, **not rerun after the
+factory fix**, as directed: fresh default output against `4fe2486` is identical
+and contains **no `METHOD new_args.`** in any default ABAP file.
 
 - OSG unit: **4,077/4,077 SUCCESS**, FAIL/error/not-compiled/skipped **0**;
   **120.65 s** wall.
 - HIR main fixtures: OSGO **490/491 SUCCESS**, FAIL **0**, **1** unchanged
   negative-lookbehind `NOT_COMPILED` exemption in `TestEmitRegExpExec`;
-  OSG-JS **491/491 SUCCESS**, FAIL **0**. That one refusal is not a pass.
-- ABAP syntax and verifier rejection checks pass. On **both** hosts, lexer
-  baseline is **44/44 cases, 4,663 tokens**; all **17** critic probe sets and
-  Number Fix 2 pass. Each host rejects all **3** intentional early-return,
-  skipped-case and wrong-token-count mutations with the expected FAIL.
-- `hir-unit.sh`, including both hosts and all probes: **exit 0, 1,503.12 s**.
+  OSG-JS **491/491 SUCCESS**, FAIL **0**. That refusal is not a pass.
+- ABAP syntax and verifier rejection checks pass. Both hosts: lexer baseline
+  **44/44 cases, 4,663 tokens**; all **17** critic probe sets and Number Fix 2
+  pass. Each host rejects all **3** intentional early-return, skipped-case and
+  wrong-token-count mutations with expected FAIL.
+- `hir-unit.sh`, both hosts and probes: **exit 0, 1,503.12 s**.
 
-Fresh original Node on the existing `stoker/prof-kit` matches the kit's exact
-output bytes: clean **0 issues, 20.013 s**, seeded **5 issues, 17.573 s**.
-Both embedded OSGO registry units are **SUCCESS** with unchanged SHA assertions:
+Fresh original Node matches the existing `stoker/prof-kit`'s exact bytes:
+clean **0 issues, 20.013 s**, seeded **5 issues, 17.573 s**. Both embedded OSGO
+registry units are **SUCCESS** with unchanged SHA assertions:
 
 | Input | OSG frontend s | Go emit s | Go build s | Unit run s | Unit wall s |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -159,21 +204,20 @@ REGISTRY ok=X want_issues=0 load_us=90949759 run_us=18119462 sha256=5feceb66ffc8
 REGISTRY ok=X want_issues=0 load_us=92375951 run_us=18666969 sha256=7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7
 ```
 
-The helper repeats the same compiled driver after verifying the successful unit
-result; walls **111.58/113.60 s**, not timings from the first unit invocation.
-`want_issues=0` is legacy CLI metadata, **not** a seeded issue-count assertion.
-The seeded acceptance is Node's five-issue dump hash. Hashes above exclude the
-CLI terminal newline; fresh exact-byte Node/kit hashes including it are retained
-in the train JSON. Full live report lines with stage timings are in the
-train JSON.
+The helper repeats the compiled driver after verifying the successful unit;
+walls **111.58/113.60 s**, not timings from the first invocation. `want_issues=0`
+is legacy CLI metadata, **not** a seeded issue-count assertion. Seeded acceptance
+is Node's five-issue dump hash. These hashes exclude the terminal newline;
+exact-byte hashes including it and full live report lines are in the initial JSON.
 
 ## Default-output diff: attribution, not unexplained churn
 
-Fresh default `abaplint` output was generated at **the same output path** from
-three executables: `origin/main`, **`ad3a671`** (pin bump + main, before
-classview), and this train. Main/pin have **6,312 files**; train has **6,315**.
-There are **5,943 changed or added paths**, **3 additions**, **0 removals**.
-The only overlap between the two change sets is the a4h zip.
+Initial default output was generated at the **same output path** using
+`origin/main`, **`ad3a671`** (pin bump + main, before classview), and the merged
+train. Main/pin have **6,312 files**; train has **6,315**. There are **5,943
+changed or added paths**, **3 additions**, **0 removals**. Only the a4h zip
+overlaps the two change sets. Fresh output from `3ab143c` against `4fe2486` is
+byte-identical at all **6,315 paths**, so this attribution remains valid:
 
 | File group | Pin hashed keys | Classview | Union |
 | --- | ---: | ---: | ---: |
@@ -191,31 +235,34 @@ The only overlap between the two change sets is the a4h zip.
   collections are unchanged. Exactly **50 zip members** change.
 - **Classview:** native-constructor methods/interface dispatch on **1,927**
   emitted program classes (including builtin Error), the `runtime.described`
-  interface, `runtime.classvalue` lexical
-  flag, and new `class.refusal` class: **1,930 ABAP paths per copy**. The three
-  additions are that refusal class's copies. `names.json` adds its identity
-  and `builtin.nativeConstructor`; README object count is **2,105 → 2,106**.
-  Exactly **1,931 zip members** change, including refusal-class metadata.
-- No other file group differs. The intermediate executable separates the
-  causes directly; changed-path inventory hashes are retained in the JSON.
+  interface, `runtime.classvalue` lexical flag, and new `class.refusal` class:
+  **1,930 ABAP paths per copy**. The three additions are refusal-class copies.
+  `names.json` adds its identity and `builtin.nativeConstructor`; README object
+  count **2,105 → 2,106**. Exactly **1,931 zip members** change, including
+  refusal-class metadata.
+- No other group differs. The intermediate executable directly separates the
+  causes; changed-path inventory hashes remain in the initial JSON. The final
+  default-output content-inventory hash is in the resume JSON.
 
 ## Reproduction and cleanup
 
-All substantive invocations used `nice -n 10`, Go **1.26.0**, Node **26.9.0**,
-`GOFLAGS=-buildvcs=false`, `GOMAXPROCS=4`, SSD Go/npm caches, RAM temporary
-storage, the supplied transpiler, and `NODE_OPTIONS=--max-old-space-size=32768`.
-The original all-shard harness was used without registration/oracle changes:
+Substantive invocations used `nice -n 10`, Go **1.26.0**, Node **26.9.0**,
+`GOFLAGS=-buildvcs=false`, `GOMAXPROCS=4`, supplied SSD Go/npm caches,
+`TMPDIR=/mnt/ram/abapiti/tmp`, supplied transpiler, and
+`NODE_OPTIONS=--max-old-space-size=32768`. The unchanged harness was run with:
 
 ```sh
-ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/lexer,abap/statements,objects,rules \
-  nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint RESULT.json
-# Initial work paused on the blocker; completed unchanged retry:
-ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/statements,objects,rules,abap/structures \
+ABAPITI_OSG_HOME=/mnt/ssd-510/osg/abapiti/open-steamgate \
+ABAPITI_TESTS_TARGET=osg \
+ABAPITI_TESTS_SHARDS=abap/lexer,abap/statements,objects,rules,abap/structures \
   nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint RESULT.json
 ```
 
-Generated closures, archives, binaries, fixtures, default-output trees, raw
-reports and owned RAM temporary files were removed after extracting evidence;
-OSG `tools/gogen/.out/go-cache` was deleted. The OSG checkout remains clean at
-the supplied pin. Only the merge-only test correction and this report/evidence
-are committed. **No push.**
+The initial standalone reproduction and final compilation probe use the same
+read-only host bridge with an **empty main** instead of the test-runner entry;
+neither is a semantic run. The rules emission-only probe executes no tests and
+changes no harness or oracle. Generated closures, archives, binaries, fixtures,
+default trees, raw reports and owned RAM temporary files were removed after
+extracting evidence; OSG `tools/gogen/.out/go-cache` was deleted. OSG remains
+clean at the supplied pin. The resume commits only documentation/evidence;
+coordinator's factory fix is retained unchanged. **No push.**
