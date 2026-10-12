@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 func TestXMLParserCallNodeOracle(t *testing.T) {
@@ -34,7 +35,19 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, ds, err := p.LowerWithOptions([]string{"main.ts"}, LowerOptions{TrapOnFailure: true})
+	span := `static parse(xml: string): string {return JSON.stringify(new Parser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(xml));}`
+	adapted := false
+	registry, err := overrides.New(overrides.Entry{FullSource: true, ID: "retired-xml-fixture", Key: overrides.Key{File: "main.ts", Symbol: "Probe.parse", Kind: "KindMethodDeclaration"}, SHA256: overrides.Fingerprint(span), Rationale: "retired adapter exercises general source lowering", Method: func() *hir.Method {
+		adapted = true
+		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(hir.T(hir.String), "adapter ran")})}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, ds, err := p.lowerWithOptions([]string{"main.ts"}, registry, nil, LowerOptions{TrapOnFailure: true})
+	if adapted {
+		t.Fatal("full closure invoked the retired adapter")
+	}
 	if err != nil || hasBlocking(ds) {
 		t.Fatal(err, ds)
 	}

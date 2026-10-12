@@ -43,7 +43,7 @@ as repairs. Compound messages retain every diagnostic in the JSON.
 | 18 | 2 | BasicVariables padStart | Repaired typed UTF-16 padStart; subsequent missing-local cascade disappears. |
 | 19 | 2 | CDS dynamic `get` / `getChildren` | Dell: erased node receiver needs checked original common-method dispatch, not a string operation. |
 | 20 | 2 | Chai `.all.members` | Repaired dense-array unordered members assertion, not a no-op fluent chain. |
-| 21 | 2 | CreateFile.is / DeleteFile.is | Repaired resolved-library structural predicates with checked truthiness/value distinction. |
+| 21 | 2 | CreateFile.is / DeleteFile.is | Predicates repaired independently; follow-up reaches `_apply_edit.ts:49` common edit-union `range`, handed to Dell. No body passes credited. |
 | 22 | 2 | UnusedVariablesConf `skipAbstract` | Dell: inherited structural rule-config view/shape. |
 | 23 | 1 | Chai enumerable keys | Dell: native ordered record storage versus Map shares physical representation; cannot invent enumerable keys or conflate Map with object. |
 | 24 | 1 | Help constructor metadata | Dell: erased `statement.constructor.name` / class-descriptor reflection ABI. |
@@ -63,7 +63,7 @@ as repairs. Compound messages retain every diagnostic in the JSON.
 | 41 | 1 | BasicVariables compound `.all` | Same members repair as ID 20. |
 | 42 | 1 | pretty-printer delete | Dell: live config own-property deletion/presence. |
 | 43 | 1 | Registry delete | Dell: native structure deletion / original own keys and optional presence. |
-| 44 | 1 | Config pretty JSON | Repaired literal indentation over the existing compact serializer; native graph domains unchanged. |
+| 44 | 1 | Config pretty JSON | Literal indentation repaired independently. Follow-up reaches Config's existing pinned strict-JSON package adapter on original JSON5 comments/trailing commas; Dell's config constructor/package-view handoff, not a credited pass or a new site override. |
 | 45 | 1 | UnnecessaryPragmaConf `allowNoTextGlobal` | Dell: inherited config structural view/shape. |
 
 ### Concrete conversion handoffs
@@ -93,11 +93,19 @@ original storage and must distinguish omitted from explicitly assigned undefined
   behavior in the reviewed ordinary-tag grammar and throws an actual synthesized
   Error for unterminated opening tags, with Node's exact UTF-16 context/message.
   Catches and `instanceof Error` work through the existing native payload ABI.
+  The two legacy XML site adapters are **retired in full closures**, not replaced
+  by new site overrides: the generic registry `FullSource` policy validates their
+  original fingerprints but lowers original source/catches through the general
+  library operation. Pruned workloads keep the existing strict adapters and bytes.
+  The registry regression retains stale-pin refusal and verifies pruned selection;
+  the XML Node oracle proves a retired fixture's builder is never invoked.
   CDATA, DTD, unknown entities and other unreviewed languages still raise typed
   refusals which catches cannot swallow. `xml_parser_call_test.go` compares
   original fast-xml-parser 5.10.1 output, error messages and refusal boundaries.
 - **Finite parseFloat:** typed string input, JS leading whitespace and longest
-  decimal prefix, optional exponent, signed zero, rounding and underflow. NaN
+  decimal prefix, optional exponent, signed zero, rounding and underflow. Numeric
+  assignment hints do not leak into the string argument; a contextual optional-
+  number/erased-string regression preserves the actual NumberRange pattern. NaN
   and Infinity refuse before escaping as a HIR Number. No whole-string Go numeric
   conversion replaces prefix parsing. **padStart** evaluates receiver/length/fill
   once in order, truncates numeric length, defaults to space, pads UTF-16 code
@@ -157,7 +165,13 @@ short-gate refusal, before completing all shards. It is not counted as a final
 suite measurement. The initial default diff had only a synthetic closure identity
 shift (106100 to 106104); an independently archived compiler with the broad
 checker-never change reverted recovered 106100. Corrected-source gates and the
-same-path default comparison are rerun; no unexplained identity diff is accepted.
+same-path default comparison recovered raw `diff -r` exit 0; no identity diff is
+accepted. A development full run on `1dc8749` measured **10,946 passes, FAIL 0,
+111 traps, 35 not-run** and exposed two unrepaired follow-ups: the strict legacy
+XML adapters still bypassed the new general call, and parseFloat inherited a
+numeric assignment hint. Adapter retirement and argument-context regressions
+were added before the final frozen-source rerun. This development result is not
+the final certificate.
 
 ## Certification
 

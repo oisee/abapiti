@@ -24,6 +24,23 @@ func TestRegistryFingerprint(t *testing.T) {
 	if _, ok, _ := r.Lookup(wrong, "42", ""); ok {
 		t.Fatal("matched another symbol")
 	}
+	retired := entry
+	retired.FullSource = true
+	legacy, err := New(retired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pruned, ok, err := legacy.WithReachability(true).Lookup(key, "42", "probe.ts:1")
+	if err != nil || !ok || pruned.Expression == nil {
+		t.Fatal("workload adapter changed", ok, err)
+	}
+	full, ok, err := legacy.WithReachability(false).Lookup(key, "42", "probe.ts:1")
+	if err != nil || !ok || full.Expression != nil || full.Assume != "source" {
+		t.Fatal("full closure did not retain checked original source", ok, err)
+	}
+	if _, _, err := legacy.WithReachability(false).Lookup(key, "43", "probe.ts:1"); err == nil {
+		t.Fatal("retirement bypassed fingerprint validation")
+	}
 	if len(r.Inventory()) != 1 {
 		t.Fatal("missing inventory")
 	}

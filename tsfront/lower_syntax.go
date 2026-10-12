@@ -319,7 +319,10 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			l.diagf(n, "unsupported-call", "parseFloat requires one typed string argument")
 			return nil, true
 		}
+		savedHint := l.hint
+		l.hint = hir.T(hir.String)
 		s := l.expr(args[0])
+		l.hint = savedHint
 		if s == nil {
 			return nil, true
 		}

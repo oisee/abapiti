@@ -16,11 +16,12 @@ func TestPadStartAndFiniteParseFloatNodeOracle(t *testing.T) {
  static size(): number {Probe.order += "N"; return 4.9;}
  static fill(): string {Probe.order += "F"; return "ab";}
  static parse(s: string): number {return parseFloat(s);}
+ static contextual(): number | undefined {const d:any=JSON.parse('{"p":"10.0"}');const n:number|undefined=parseFloat(d.p || "");return n;}
  static pad(n: number): string {return "x".padStart(n,"0");}
  static run(): string {
   const effect = Probe.recv().padStart(Probe.size(),Probe.fill());
   const pads=["a".padStart(4,"0"),"a".padStart(4,"xy"),"a".padStart(2,"😀"),"😀".padStart(3,"x"),"x".padStart(4),"x".padStart(),"x".padStart(-3,"0"),"x".padStart(0,"0"),"x".padStart(1.9,"0"),"x".padStart(4,""),"x".padStart(1e100,""),effect,Probe.order];
-  const numbers=[parseFloat(" 10.0tail"),parseFloat("\ufeff\u2007-.125e2x"),parseFloat("+1.e2!"),parseFloat("1e+"),parseFloat(".5suffix"),parseFloat("0xFF"),parseFloat("1_000"),parseFloat("-0"),parseFloat("1e-400"),parseFloat("9007199254740993")];
+  const numbers=[parseFloat(" 10.0tail"),parseFloat("\ufeff\u2007-.125e2x"),parseFloat("+1.e2!"),parseFloat("1e+"),parseFloat(".5suffix"),parseFloat("0xFF"),parseFloat("1_000"),parseFloat("-0"),parseFloat("1e-400"),parseFloat("9007199254740993"),Probe.contextual()!];
   return JSON.stringify(pads)+"/"+JSON.stringify(numbers);
  }
 }`
