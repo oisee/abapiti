@@ -44,6 +44,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
 					e.nonfiniteNumbers = true
 				}
+				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
+					e.recordDeletion = true
+					e.extraRuntimeKeys = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
 					e.usesLiveArrays = true
 				}
@@ -127,6 +131,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.extraRuntimeKeys {
 		runtime += ownKeysSource
+		if e.recordDeletion {
+			runtime += recordDeletionSource
+		}
 	}
 	if e.liveStorage() {
 		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
@@ -191,6 +198,7 @@ type emitter struct {
 	chaiActionUsed    bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	typeofUsed        bool
 	extendedRegex     bool
 	regexSplit        bool
 	constructorArgs   bool
@@ -208,6 +216,7 @@ type emitter struct {
 	lspGuards         bool
 	hirMath           bool
 	extraRuntimeKeys  bool
+	recordDeletion    bool
 	usesLiveArrays    bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
@@ -366,6 +375,13 @@ func (e *emitter) class(c *hir.Class) {
 		e.configJSONClass(c)
 	}
 	e.line("type %s struct {", e.obj(c.Name))
+	if e.recordDeletion && c.Super == "" {
+		e.line("deletedKeys map[jsString]bool")
+		e.line("deletionOrder *orderedMap[jsString,*dynamic]")
+	}
+	if c.Scoped {
+		e.line("lexicalDescriptor *classDescriptor")
+	}
 	if e.extraRuntimeKeys && c.Structural {
 		e.line("ownKeys *orderedMap[jsString,*dynamic]")
 	}
@@ -406,7 +422,10 @@ func (e *emitter) class(c *hir.Class) {
 		e.line("func (self *%s) structuralRecord() {}", e.obj(c.Name))
 	}
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
-	if e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] || len(e.liveClasses) > 0 && c.Structural {
+	if e.recordDeletion && c.Super == "" {
+		e.line("func (self *%s) propertyWritten(key jsString) {delete(self.deletedKeys,key);if self.deletionOrder!=nil {self.deletionOrder.set(key,nil)}}", e.obj(c.Name))
+	}
+	if e.recordDeletion || e.boxedFields[c.Name] || source && e.boxedShapes[c.Name] || len(e.liveClasses) > 0 && c.Structural {
 		e.shapeFields(c)
 	}
 	if e.liveClasses[c.Name] {
@@ -916,6 +935,8 @@ func (b *body) expr(x *hir.Expr) string {
 		v = b.value(x.Z, t)
 		b.line("%s=%s }", n, v)
 		return n
+	case hir.FreshClassOf:
+		code = e.name("fresh.descriptor."+x.Owner) + "()"
 	case hir.ClassOf:
 		code = "&" + e.name("descriptor."+x.Owner)
 	case hir.InstanceOf:
@@ -1093,6 +1114,15 @@ func (b *body) stmt(s *hir.Stmt) {
 			v := b.value(s.Y, s.X.Type)
 			b.line("%s.%s=%s", a, e.member(s.X.Name), v)
 			b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", a, a, s.X.Name)
+			if e.recordDeletion {
+				b.line("%s.propertyWritten(str(%q))", a, s.X.Name)
+			}
+		} else if s.X.Kind == hir.FieldGet && e.recordDeletion {
+			a := b.temp(s.X.X.Type, b.expr(s.X.X))
+			v := b.value(s.Y, s.X.Type)
+			c := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
+			b.line("%s.%s().%s=%s", a, e.getter(c.Name), e.member(s.X.Name), v)
+			b.line("%s.%s().propertyWritten(str(%q))", a, e.getter(c.Name), s.X.Name)
 		} else if s.X.Kind == hir.IndexGet {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)

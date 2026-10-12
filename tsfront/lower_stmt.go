@@ -91,6 +91,8 @@ func (l *lowerer) stmt(n *ast.Node) *hir.Stmt {
 		return control
 	}
 	switch n.Kind {
+	case ast.KindClassDeclaration:
+		if l.unprunedFeatures {return l.localClassDeclaration(n)}
 	case ast.KindLabeledStatement:
 		return l.labeledStatement(n)
 	case ast.KindBlock:

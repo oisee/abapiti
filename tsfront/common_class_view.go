@@ -30,6 +30,9 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 		}
 		decl := declarations[0]
 		cast := decl.X
+		for cast != nil && cast.Kind == hir.Seq {
+			cast = cast.Y
+		}
 		if cast == nil || cast.X == nil || !decl.Type.Equal(cast.Type) || (cast.Type.Kind != hir.ClassRef && !(cast.Type.Kind == hir.Optional && cast.Type.Args[0].Kind == hir.ClassRef)) {
 			continue
 		}
@@ -110,6 +113,16 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 				return
 			}
 			switch parent.Kind {
+			case hir.New:
+				class := l.classByName(parent.Type.Name)
+				found := false
+				for i, arg := range parent.Args {
+					if arg == x || arg.Kind == hir.Narrow && arg.X == x {
+						found = true
+						safe = safe && class != nil && class.Ctor != nil && i < len(class.Ctor.Params) && l.acceptsType(class.Ctor.Params[i].Type, source)
+					}
+				}
+				safe = safe && found
 			case hir.VirtualCall, hir.DirectCall:
 				if parent.X == x || parent.X != nil && parent.X.Kind == hir.Narrow && parent.X.X == x {
 					safe = safe && l.commonMethodOwner(source.Name, parent.Name) != "" && l.commonMethodOwner(source.Name, parent.Name) == l.commonMethodOwner(target.Name, parent.Name)
@@ -146,9 +159,20 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 		if optional {
 			storage = hir.T(hir.Optional, source)
 		}
-		decl.X, decl.Type = operand, storage
+		decl.Type = storage
 		if operand.Type.Kind == hir.InterfaceRef {
-			decl.X = l.rtOp("dynamic.classView", l.coerce(operand, hir.T(hir.Dynamic)), source)
+			operand = l.rtOp("dynamic.classView", l.coerce(operand, hir.T(hir.Dynamic)), source)
+		}
+		if decl.X == cast {
+			decl.X = operand
+		} else {
+			for seq := decl.X; seq != nil && seq.Kind == hir.Seq; seq = seq.Y {
+				seq.Type = storage
+				if seq.Y == cast {
+					seq.Y = operand
+					break
+				}
+			}
 		}
 		for alias := range names {
 			if alias != name {

@@ -1191,6 +1191,8 @@ func (b *body) expr(x *hir.Expr) string {
 		if len(e.liveClasses) > 0 && x.X.Type.Kind == hir.ClassRef && e.liveClasses[x.X.Type.Name] {
 			b.line("IF " + a + " IS BOUND AND " + a + "->" + e.name("view.source") + " IS BOUND.\n" + n + " = abap_false.\nENDIF.")
 		}
+	case hir.FreshClassOf:
+		e.err = fmt.Errorf("node %d: fresh lexical constructor descriptors are unsupported in ABAP", x.ID)
 	case hir.ClassOf:
 		e.descriptors = true
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
@@ -2155,7 +2157,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		b.boxDynamic(n, a, x.X.Type)
 		return
-	case "dynamic.typeof", "dynamic.toString", "dynamic.recordString":
+	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
 		if x.Op == "dynamic.recordString" {
 			b.line("IF " + a + " IS BOUND.")
 			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
@@ -2169,6 +2171,23 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			method = "to_string"
 		}
 		b.line(n + " = " + a + "->" + method + "( ).")
+		if x.Op == "dynamic.typeofValue" {
+			// Lifted function objects retain their ordinary reference representation;
+			// their real compiled class, rather than the reference tag, is callable.
+			for _, c := range b.e.p.Classes {
+				if !strings.HasPrefix(c.Name, "closure.") {
+					continue
+				}
+				for _, i := range c.Implements {
+					if i == "closure.thunk" || strings.HasPrefix(i, "closure.function.") {
+						b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + b.e.name(c.Name) + ".")
+						b.line(n + " = `function`.")
+						b.line("ENDIF.")
+						break
+					}
+				}
+			}
+		}
 		b.line("ELSE.")
 		b.line(n + " = `undefined`.")
 		b.line("ENDIF.")

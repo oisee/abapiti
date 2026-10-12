@@ -27,7 +27,7 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 		default:
 			t.Errorf("%s aliases %q", op, e.Aliases)
 		}
-		if e.Reads.Global != (op == "clock.telemetry" || op == "chai.throwMatch") {
+		if e.Reads.Global != (op == "clock.telemetry" || op == "chai.throwMatch" || op == "dynamic.call0" || op == "dynamic.toString") {
 			t.Errorf("%s global read", op)
 		}
 	}

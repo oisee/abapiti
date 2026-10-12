@@ -1,0 +1,23 @@
+{
+  "domains": [
+    {
+      "xml": "sdfsdf",
+      "actualConstructor": "DataElement",
+      "parsedConstructor": "UnknownType"
+    },
+    {
+      "xml": "<foo></bar>",
+      "actualConstructor": "DataElement",
+      "parsedConstructor": "UnknownType"
+    }
+  ],
+  "proxy": {
+    "actualConstructor": "ProxyObject",
+    "resultLength": 0,
+    "R3_NAME": {
+      "nested": ""
+    },
+    "R3_NAME_type": "object",
+    "R3_NAME_own": true
+  }
+}

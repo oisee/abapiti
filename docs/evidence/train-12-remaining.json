@@ -1,0 +1,96 @@
+[
+  {
+    "title": "LSP, help class",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/help.ts:93:3: config JSON own-property order is unproven for src/abap/4_file_information/_identifier.ts.Identifier",
+    "sites": [
+      "test/lsp/help.ts:25:3",
+      "test/lsp/help.ts:7:1"
+    ]
+  },
+  {
+    "title": "LSP, help CDS",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/help.ts:39:3: config JSON own-property order is unproven for src/abap/1_lexer/tokens/identifier.ts.Identifier",
+    "sites": [
+      "test/lsp/help.ts:39:3",
+      "test/lsp/help.ts:7:1"
+    ]
+  },
+  {
+    "title": "LSP, rename method rename method",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168691 (src/lsp/rename.ts:109:52): assignment type mismatch",
+    "sites": [
+      "test/lsp/rename_method.ts:10:3",
+      "test/lsp/rename_method.ts:8:1"
+    ]
+  },
+  {
+    "title": "LSP, rename variable simple",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/rename.ts:93:3: lowering trap: src/lsp/rename.ts:93:3: HIR verification: node 168590 (src/lsp/rename.ts:98:52): assignment type mismatch",
+    "sites": [
+      "test/lsp/rename_variable.ts:36:3",
+      "test/lsp/rename_variable.ts:8:1"
+    ]
+  },
+  {
+    "title": "LSP, rename variable method parameter",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/rename.ts:93:3: lowering trap: src/lsp/rename.ts:93:3: HIR verification: node 168590 (src/lsp/rename.ts:98:52): assignment type mismatch",
+    "sites": [
+      "test/lsp/rename_variable.ts:56:3",
+      "test/lsp/rename_variable.ts:8:1"
+    ]
+  },
+  {
+    "title": "LSP, semantic highlighting basic",
+    "shard": "lsp",
+    "status": "trapped",
+    "message": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169076 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+    "sites": [
+      "test/lsp/semantic.ts:10:3",
+      "test/lsp/semantic.ts:8:1"
+    ]
+  },
+  {
+    "title": "Domain, parse AFF json parser error",
+    "shard": "objects",
+    "status": "trapped",
+    "message": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset",
+    "sites": [
+      "test/objects/domain.ts:92:3",
+      "test/objects/domain.ts:7:1"
+    ]
+  },
+  {
+    "title": "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+    "shard": "rules",
+    "status": "not-run",
+    "message": "unregistered (no Go test registration)",
+    "sites": [
+      "test/rules/_utils.ts:60:9",
+      "test/rules/_utils.ts:39:11",
+      "test/rules/_utils.ts:36:3",
+      "test/rules/line_length.ts:17:9"
+    ]
+  },
+  {
+    "title": "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)",
+    "shard": "rules",
+    "status": "not-run",
+    "message": "unregistered (no Go test registration)",
+    "sites": [
+      "test/rules/_utils.ts:60:9",
+      "test/rules/_utils.ts:39:11",
+      "test/rules/_utils.ts:36:3",
+      "test/rules/line_length.ts:17:9"
+    ]
+  }
+]

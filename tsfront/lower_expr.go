@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && x.Type.Kind == hir.Optional && l.parameterMayBeAbsent(l.resolve(n)) {
+		return x
+	}
 	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && len(l.erasedScalars) > 0 && l.erasedScalars[l.resolve(n)] {
 		return x
 	}
@@ -386,6 +389,21 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		}
 		if base.Kind == hir.OrderedMap && base.Args[0].Kind == hir.String && key.Type.Kind == hir.Number {
 			key = l.primitiveString(n, key)
+		}
+		if base.Kind == hir.ClassRef || base.Kind == hir.Dynamic {
+			if key.Type.Kind == hir.Number {
+				key = l.primitiveString(n, key)
+			}
+			if key.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-expr", "delete requires a string property key")
+				return nil
+			}
+			if receiver.Type.Kind == hir.Optional && operand.Flags&ast.NodeFlagsOptionalChain != 0 {
+				saved := l.tempInit(n, receiver.Type, receiver)
+				present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: saved}
+				return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: saved}, Y: hir.L(hir.T(hir.Bool), true), Z: l.rtOp("dynamic.delete", l.coerce(present, hir.T(hir.Dynamic)), hir.T(hir.Bool), key)}
+			}
+			return l.rtOp("dynamic.delete", l.coerce(receiver, hir.T(hir.Dynamic)), hir.T(hir.Bool), key)
 		}
 		if base.Kind != hir.OrderedMap || !base.Args[0].Equal(key.Type) {
 			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
@@ -1319,7 +1337,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: method.Result, Name: name, X: recv, Args: args}
 		}
-		if recv.Type.Kind == hir.InterfaceRef {
+		if recv.Type.Kind == hir.InterfaceRef || l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
 			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
 				recv = l.callReceiver(n, recv, m.Params)
 				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
@@ -1328,10 +1346,23 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				l.diagf(n, "note-union-view", "%s is common to the receiver's union classes but not to %s", name, recv.Type.Name)
 				cast := &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: recv}
+				if recv.Type.Kind == hir.Dynamic {
+					cast = l.rtOp("dynamic.classView", recv, view)
+				}
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
 		}
 		x, handled := l.libraryCall(n, name, recv)
+		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
+			for _, c := range l.out.Classes {
+				if c.Structural {
+					continue
+				}
+				if m := l.unionMethods(hir.Ref(c.Name))[name]; m != nil && len(m.Params) == 0 {
+					return l.rtOp("dynamic.call0", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), name))
+				}
+			}
+		}
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
@@ -1913,7 +1944,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		}
 	}
 	// Construct through descriptor-valued locals as well as computed accesses.
-	if l.classOf(sym) == nil && (sym == nil || sym.Name != "Set" && sym.Name != "Map" && sym.Name != "Array") {
+	if (l.classOf(sym) == nil || l.classOf(sym).Scoped) && (sym == nil || sym.Name != "Set" && sym.Name != "Map" && sym.Name != "Array") {
 		cv := l.expr(n.Expression())
 		if cv != nil && cv.Type.Kind == hir.Dynamic {
 			cv = l.rtOp("dynamic.asClassValue", cv, hir.T(hir.ClassValue))
@@ -2332,8 +2363,33 @@ func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *h
 	if x == nil || y == nil {
 		return nil
 	}
+	if l.unprunedFeatures && !l.integerOptions.AssumeOnlyIntegerCalculations && (optionalNumericType(x.Type) || optionalNumericType(y.Type)) {
+		// Numeric coercion happens after both operands are evaluated, even
+		// when only the right operand may be absent.
+		x, y = l.tempInit(n, x.Type, x), l.tempInit(n, y.Type, y)
+		x, y = l.absentNumericOperand(x), l.absentNumericOperand(y)
+	}
 	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
+}
+
+// ToNumber(undefined) is NaN. Keep the operand's evaluation and use the
+// existing binary64 NaN-producing operation rather than a checked narrowing
+// or an integer zero. Present numeric values retain their original value.
+func (l *lowerer) absentNumericOperand(x *hir.Expr) *hir.Expr {
+	if !optionalNumericType(x.Type) {
+		return x
+	}
+	base := x.Type.Args[0]
+	number := hir.T(hir.Number)
+	return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: number,
+		X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x},
+		Y: l.rtOp("string.parseFloatNumber", hir.L(hir.T(hir.String), "NaN"), number),
+		Z: l.coerce(&hir.Expr{Kind: hir.Narrow, Type: base, X: x}, number)}
+}
+
+func optionalNumericType(t hir.Type) bool {
+	return t.Kind == hir.Optional && (t.Args[0].Kind == hir.Number || t.Args[0].Kind == hir.I32 || t.Args[0].Kind == hir.I64)
 }
 
 // instanceOf lowers `x instanceof C` to the boolean ancestry test; C may be
@@ -2344,7 +2400,7 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
-	if c := l.classOf(l.resolve(b.Right)); c != nil {
+	if c := l.classOf(l.resolve(b.Right)); c != nil && !c.Scoped {
 		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
 			// A box holding a string, number or class value is never an
 			// instance; an object reference is tested as such.
@@ -2368,6 +2424,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Owner: c.Name}
 	}
 	cv := l.expr(b.Right)
+	if cv != nil && cv.Type.Kind == hir.Dynamic && l.unprunedFeatures {
+		cv = l.rtOp("dynamic.asClassValue", cv, hir.T(hir.ClassValue))
+	}
 	if cv != nil && cv.Type.Kind == hir.ClassValue {
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Y: cv}
 	}
@@ -2860,7 +2919,7 @@ func (l *lowerer) indexValue(x *hir.Expr) *hir.Expr {
 }
 
 // templateExpr uses cooked scanner literals and evaluates substitutions once,
-// left to right. Object/array coercion requires JS ToPrimitive and is rejected.
+// left to right. Reviewed object/array coercion uses the dynamic runtime ABI.
 func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 	t := n.AsTemplateExpression()
 	result := l.expr(t.Head)
@@ -2906,8 +2965,15 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		if x.Type.Name == "builtin.Error" {
 			return l.errorToString(at, x)
 		}
+		if l.unprunedFeatures {
+			return l.rtOp("dynamic.toString", l.coerce(x, hir.T(hir.Dynamic)), s)
+		}
+	case hir.InterfaceRef, hir.Array:
+		if l.unprunedFeatures {
+			return l.rtOp("dynamic.toString", l.coerce(x, hir.T(hir.Dynamic)), s)
+		}
 	case hir.Optional:
-		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
+		if !l.unprunedFeatures && x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break
 		}
 		saved := l.pend

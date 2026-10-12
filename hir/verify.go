@@ -832,9 +832,14 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		if !(a.Kind == Optional && base.Equal(target)) && ((target.Kind != ClassRef && target.Kind != InterfaceRef && target.Kind != Array) || (!v.accepts(base, target) && !v.accepts(target, base) && !v.crossCastable(base, target))) {
 			v.fail(e.Node, "invalid narrowing "+a.String()+" to "+t.String())
 		}
-	case ClassOf:
+	case ClassOf, FreshClassOf:
+		if e.Kind == FreshClassOf && (v.classes[e.Owner] == nil || !v.classes[e.Owner].Scoped) {
+			v.fail(e.Node, "freshclassof requires a scoped class")
+		}
 		if v.classes[e.Owner] == nil {
 			v.fail(e.Node, "classof unresolved class "+e.Owner)
+		} else if e.Kind == ClassOf && v.classes[e.Owner].Scoped {
+			v.fail(e.Node, "scoped class requires a lexical descriptor binding")
 		}
 		eq(t, T(ClassValue))
 	case NumericMinMax:

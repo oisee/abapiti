@@ -184,8 +184,8 @@ func dumpExpr(e *Expr) string {
 		s = "narrow " + dumpExpr(e.X) + " to " + e.Type.String()
 	case Cast:
 		s = "cast " + dumpExpr(e.X) + " to " + e.Type.String()
-	case ClassOf:
-		s = "classof " + e.Owner
+	case ClassOf, FreshClassOf:
+		s = string(e.Kind) + " " + e.Owner
 	case Seq:
 		s = "seq " + dumpExpr(e.Y)
 	case RuntimeOp:

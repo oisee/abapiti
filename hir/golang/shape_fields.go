@@ -88,6 +88,9 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	if e.liveClasses[c.Name] {
 		e.line("if self.viewSource!=nil {return self.viewSource.get(key)}")
 	}
+	if e.recordDeletion {
+		e.line("if self.deletedKeys[key] {return nil}")
+	}
 	e.line("switch key {")
 	fields := map[string]hir.Field{}
 	var order []string
@@ -132,6 +135,9 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	if e.extraRuntimeKeys && c.Structural {
 		e.line("if self.ownKeys!=nil {self.ownKeys.set(key,nil)}")
 	}
+	if e.recordDeletion {
+		e.line("delete(self.deletedKeys,key);if self.deletionOrder!=nil {self.deletionOrder.set(key,nil)}")
+	}
 	e.line("switch key {")
 	for _, name := range order {
 		f := fields[name]
@@ -155,5 +161,9 @@ func (e *emitter) shapeFields(c *hir.Class) {
 		e.line("};if key==str(\"__proto__\") {panic(newTrap(\"prototype mutation through class view is unsupported\"))};if self.viewExtras==nil {self.viewExtras=&orderedMap[jsString,*dynamic]{}};self.viewExtras.set(key,value) }")
 	} else {
 		e.line("};panic(newTrap(\"dynamic field assignment outside certified storage\")) }")
+	}
+
+	if e.recordDeletion {
+		e.deleteFields(c, fields, order)
 	}
 }
