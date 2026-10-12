@@ -31,6 +31,15 @@ for (const {id:name, name:label} of specs) {
   failures:run.results.filter(r => r.status === 'failed').map(r => ({title:r.title, message:clean(r.message).replace(/0x[0-9a-f]+/g,'<address>')}))};
  if (node.borrowed) row.borrowed = {...node.borrowed, registered:run.borrowedRegistered, rawRegistered:run.rawRegistered};
  if (run.infrastructureFailure) row.infrastructureFailure = clean(run.infrastructureFailure);
+ if (run.osgEvidence) {
+  const reached = needle => run.infrastructureFailure ? null : run.results.filter(r => r.status === 'trapped' && r.message.includes(needle)).length;
+  row.osgEvidence = {...run.osgEvidence, refusalBodyImpact:{
+   measured:!run.infrastructureFailure && !!run.osgEvidence.gap,
+   runtime:(run.osgEvidence.gap?.unsupportedCatalogue ?? []).map(reason => ({reason, tests:reached(`runtime operation ${reason} has no ABAP emitter`)})),
+   refusals:(run.osgEvidence.gap?.refusals ?? []).map(({reason}) => ({reason, tests:reached(reason)})),
+   countingRule:'Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero.',
+  }};
+ }
  if (row.total !== node.total) throw new Error('oracle total mismatch');
  for (const key of Object.keys(nodeTotals)) nodeTotals[key] += node[key];
  for (const title of node.titles) titles.set(title, (titles.get(title) ?? 0) + 1);
@@ -64,7 +73,7 @@ function sumAudit(field) {
  for (const s of shards) for (const [key,n] of Object.entries(s[field])) total[key]=(total[key] ?? 0)+n;
  return total;
 }
-const result = {nodeActive:sumAudit('nodeActive'), nodePending:sumAudit('nodePending'), upstreamPin:pin, codeCommit:manifest?.compilerCommit ?? execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+const result = {...(manifest?.target ? {target:manifest.target} : {}), nodeActive:sumAudit('nodeActive'), nodePending:sumAudit('nodePending'), upstreamPin:pin, codeCommit:manifest?.compilerCommit ?? execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
  mainCommit:execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim(),
  artifacts:directory, artifactPrefix:prefix, shards, uniqueTotal:totals, nodeTotal:nodeTotals,
  ...(wholeSuite ? {wholeSuite} : {}),
@@ -74,6 +83,7 @@ const result = {nodeActive:sumAudit('nodeActive'), nodePending:sumAudit('nodePen
  registrationParity:shards.every(s => s.registered === s.total && s.unmatched === 0),
  allTraps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)),
  top20Traps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)).slice(0,20)};
+if (manifest?.target === 'osg') result.countingRule = 'Counts use only original Node-active titles; pending titles remain outside the denominator. Only the dedicated assertion marker is failed. Typed lowering/runtime refusals and other native ABAP exceptions are trapped; unsupported async/done and not-run remain separate. Infrastructure failures never manufacture test results. Refusal-body impacts may overlap and are not operation-execution counts.';
 if (existsSync(join(directory,'verification.json'))) result.verification = read('verification.json');
 writeFileSync(output,JSON.stringify(result,null,2)+'\n');
 console.log(JSON.stringify(totals));

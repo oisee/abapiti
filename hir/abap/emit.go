@@ -15,16 +15,20 @@ import (
 )
 
 type emitter struct {
-	liveClasses  map[string]bool
-	configJSON   bool
-	promiseUsed  bool
-	p            *hir.Program
-	names        *hir.Names
-	files        map[string]string
-	types        map[string]bool
-	err          error
-	valueSlots   map[string]bool
-	materialized map[string]bool
+	liveClasses     map[string]bool
+	configJSON      bool
+	promiseUsed     bool
+	p               *hir.Program
+	names           *hir.Names
+	files           map[string]string
+	types           map[string]bool
+	err             error
+	refusals        *[]error
+	currentMethod   *hir.Method
+	assertionOwners map[string]bool
+	currentNode     *hir.Node
+	valueSlots      map[string]bool
+	materialized    map[string]bool
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
@@ -56,10 +60,57 @@ func Emit(p *hir.Program) (map[string]string, error) {
 
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
+	return emitNamed(p, nil, nil)
+}
+
+// EmitTestNamed marks only explicitly identified assertion throws. The marker
+// extends the original payload wrapper, preserving source catch semantics.
+func EmitTestNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
+	return emitNamed(p, nil, assertionOwners)
+}
+
+// Audit runs the same emitter, collecting every refusal instead of retaining
+// only the final one. Sources are discarded: refused output is never runnable.
+// Like EmitNamed, it applies the target's HIR passes in place.
+func Audit(p *hir.Program) []error {
+	refusals := []error{}
+	_, _, err := emitNamed(p, &refusals, nil)
+	if err != nil && len(refusals) == 0 {
+		refusals = append(refusals, err)
+	}
+	return refusals
+}
+
+// Refusal carries the owning body even for synthetic ID-zero operands.
+// Signature/layout refusals deliberately carry no Method.
+type Refusal struct {
+	Method *hir.Method
+	Node   hir.Node
+	Err    error
+}
+
+func (r Refusal) Error() string { return r.Err.Error() }
+
+func (e *emitter) refuse(err error) {
+	e.err = err
+	if e.refusals != nil {
+		var method *hir.Method
+		var node hir.Node
+		if e.currentNode != nil {
+			method = e.currentMethod
+			node = *e.currentNode
+		} else if strings.HasPrefix(err.Error(), "node ") {
+			method = e.currentMethod
+		}
+		*e.refusals = append(*e.refusals, Refusal{Method: method, Node: node, Err: err})
+	}
+}
+
+func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
-	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); len(errors) > 0 {
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); refusals == nil && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
 	hir.SealLiveClassViewBoundary(p)
@@ -70,7 +121,7 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	if os.Getenv("ABAPITI_NAMES") == "readable" {
 		names = hir.NewReadableNames(p, "LNT")
 	}
-	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}}
+	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	if len(e.liveClasses) > 0 {
@@ -110,7 +161,11 @@ func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
 	for file, src := range e.files {
 		out, err := Format(src)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%s: %w", file, err)
+			if refusals == nil {
+				return nil, nil, fmt.Errorf("%s: %w", file, err)
+			}
+			e.refuse(fmt.Errorf("%s: %w", file, err))
+			continue
 		}
 		e.files[file] = out
 	}
@@ -194,7 +249,7 @@ func (e *emitter) typ(t hir.Type) string {
 		e.runtime(t)
 		return "REF TO " + e.name("runtime."+t.String())
 	default:
-		e.err = fmt.Errorf("unsupported ABAP type %s", t)
+		e.refuse(fmt.Errorf("unsupported ABAP type %s", t))
 		return "i"
 	}
 }
@@ -390,7 +445,7 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 		b.line(call + ".")
 	} else {
 		if slot.Result.Kind == hir.Void {
-			e.err = fmt.Errorf("class %s method %s: value-returning override of void superclass slot is unsupported", c.Name, slot.Name)
+			e.refuse(fmt.Errorf("class %s method %s: value-returning override of void superclass slot is unsupported", c.Name, slot.Name))
 			return ""
 		}
 		result := b.temp(slot.Result)
@@ -564,6 +619,8 @@ type body struct {
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	m = e.emittedMethod(c, m)
+	e.currentMethod = m
+	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
 	if !m.Static && name != "constructor" && e.liveClasses[c.Name] {
 		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
@@ -608,6 +665,8 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) string {
 	clone := *impl
 	clone.Result = e.emittedMethod(c, slot).Result
+	e.currentMethod = impl
+	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}}
 	for j, p := range impl.Params {
 		inherited := slot.Params[j]
@@ -615,7 +674,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 		// inherited optional slot. Reading only ->value would silently replace
 		// undefined with an initial primitive (or dereference an unbound ref).
 		if inherited.Type.Kind == hir.Optional && !inherited.Type.Args[0].IsRef() && p.Type.Kind != hir.Optional {
-			e.err = fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name)
+			e.refuse(fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name))
 			return ""
 		}
 		n := b.temp(p.Type)
@@ -756,6 +815,11 @@ func (b *body) expr(x *hir.Expr) string {
 		return ""
 	}
 	e, t := b.e, x.Type
+	if e.refusals != nil {
+		old := e.currentNode
+		e.currentNode = &x.Node
+		defer func() { e.currentNode = old }()
+	}
 	if t.Kind == hir.Void && x.Kind == hir.PromiseAwait {
 		b.awaitPromise(x, "")
 		return ""
@@ -826,7 +890,7 @@ func (b *body) expr(x *hir.Expr) string {
 			s := "abap_false"
 			value, ok := x.Value.(bool)
 			if !ok {
-				e.err = fmt.Errorf("node %d (%s): expected bool literal, got %T", x.ID, x.Source, x.Value)
+				e.refuse(fmt.Errorf("node %d (%s): expected bool literal, got %T", x.ID, x.Source, x.Value))
 				break
 			}
 			if value {
@@ -836,7 +900,7 @@ func (b *body) expr(x *hir.Expr) string {
 		case hir.I64:
 			value, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 64)
 			if err != nil {
-				e.err = fmt.Errorf("node %d (%s): invalid I64 literal: %w", x.ID, x.Source, err)
+				e.refuse(fmt.Errorf("node %d (%s): invalid I64 literal: %w", x.ID, x.Source, err))
 				break
 			}
 			b.int8Lit(target, value)
@@ -844,13 +908,13 @@ func (b *body) expr(x *hir.Expr) string {
 			// A numeric literal: a quoted one is text the runtime converts on every pass.
 			value, err := strconv.ParseInt(fmt.Sprint(x.Value), 10, 32)
 			if err != nil {
-				e.err = fmt.Errorf("node %d (%s): invalid I32 literal: %w", x.ID, x.Source, err)
+				e.refuse(fmt.Errorf("node %d (%s): invalid I32 literal: %w", x.ID, x.Source, err))
 				break
 			}
 			b.line(target + " = " + strconv.FormatInt(value, 10) + ".")
 		default:
 			if f, err := strconv.ParseFloat(fmt.Sprint(x.Value), 64); err == nil && (math.IsNaN(f) || math.IsInf(f, 0)) {
-				e.err = fmt.Errorf("node %d (%s): ABAP f cannot represent non-finite Number", x.ID, x.Source)
+				e.refuse(fmt.Errorf("node %d (%s): ABAP f cannot represent non-finite Number", x.ID, x.Source))
 				break
 			} else if err == nil && f == math.Trunc(f) && math.Abs(f) <= math.MaxInt32 && !(f == 0 && math.Signbit(f)) {
 				b.line(target + " = " + strconv.FormatInt(int64(f), 10) + ".")
@@ -1082,13 +1146,13 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 		if x.Op == "%" && t.Kind == hir.Number {
-			e.err = fmt.Errorf("node %d (%s): Number remainder requires an IEEE runtime", x.ID, x.Source)
+			e.refuse(fmt.Errorf("node %d (%s): Number remainder requires an IEEE runtime", x.ID, x.Source))
 			break
 		}
 		if x.Op == "/" && t.Kind == hir.Number {
 			divisor, err := strconv.ParseFloat(fmt.Sprint(x.Y.Value), 64)
 			if x.Y.Kind != hir.Lit || err != nil || divisor == 0 || math.IsNaN(divisor) || math.IsInf(divisor, 0) {
-				e.err = fmt.Errorf("node %d (%s): Number division requires a non-zero literal divisor", x.ID, x.Source)
+				e.refuse(fmt.Errorf("node %d (%s): Number division requires a non-zero literal divisor", x.ID, x.Source))
 				break
 			}
 		}
@@ -1192,7 +1256,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + a + " IS BOUND AND " + a + "->" + e.name("view.source") + " IS BOUND.\n" + n + " = abap_false.\nENDIF.")
 		}
 	case hir.FreshClassOf:
-		e.err = fmt.Errorf("node %d: fresh lexical constructor descriptors are unsupported in ABAP", x.ID)
+		e.refuse(fmt.Errorf("node %d: fresh lexical constructor descriptors are unsupported in ABAP", x.ID))
 	case hir.ClassOf:
 		e.descriptors = true
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
@@ -1278,7 +1342,7 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.RuntimeOp:
 		b.runtimeOp(x, n)
 	default:
-		e.err = fmt.Errorf("node %d: unsupported expression %s", x.ID, x.Kind)
+		e.refuse(fmt.Errorf("node %d: unsupported expression %s", x.ID, x.Kind))
 	}
 	return n
 }
@@ -1535,7 +1599,7 @@ func (b *body) int8Lit(target string, value int64) {
 func (b *body) literalString(x *hir.Expr) (string, bool) {
 	value, ok := x.Value.(string)
 	if !ok {
-		b.e.err = fmt.Errorf("node %d (%s): expected string literal, got %T", x.ID, x.Source, x.Value)
+		b.e.refuse(fmt.Errorf("node %d (%s): expected string literal, got %T", x.ID, x.Source, x.Value))
 	}
 	return value, ok
 }
@@ -1574,7 +1638,7 @@ func (b *body) call(x *hir.Expr, n string) {
 		// me reaches exactly the inherited implementation super names.
 		recv = "me->"
 	} else if x.Kind == hir.SuperCall && member != b.implemented {
-		e.err = fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name)
+		e.refuse(fmt.Errorf("node %d (%s): unsupported super call to %s from %s: SUPER-> can only call the previous implementation of the same method", x.ID, x.Source, callName, b.m.Name))
 		return
 	}
 	if m == nil {
@@ -1667,7 +1731,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "string.parseIntNumber" {
 		value, ok := finiteParseIntLiteral(x.X)
 		if !ok {
-			b.e.err = fmt.Errorf("node %d (%s): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported", x.ID, x.Source)
+			b.e.refuse(fmt.Errorf("node %d (%s): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported", x.ID, x.Source))
 			return
 		}
 		// The literal has no effects. Prove its Number value before emission;
@@ -2006,7 +2070,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		default:
 			// A new verified HIR string op is not automatically implemented
 			// on every target. Never leave its result silently initial.
-			b.e.err = fmt.Errorf("node %d (%s): unsupported ABAP runtime op %s", x.ID, x.Source, x.Op)
+			b.e.refuse(fmt.Errorf("node %d (%s): unsupported ABAP runtime op %s", x.ID, x.Source, x.Op))
 		}
 		return
 	}
@@ -2068,7 +2132,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "object.get", "object.hasOwn", "object.has":
 		if x.X.Type.Name == hir.RootObject {
-			b.e.err = fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op)
+			b.e.refuse(fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op))
 			return
 		}
 		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
@@ -2122,7 +2186,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			return
 		}
 		if x.X.Type.Kind == hir.ClassRef && x.X.Type.Name == hir.RootObject {
-			b.e.err = fmt.Errorf("node %d (%s): classOf on the object root is not emitted", x.ID, x.Source)
+			b.e.refuse(fmt.Errorf("node %d (%s): classOf on the object root is not emitted", x.ID, x.Source))
 			return
 		}
 		b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
@@ -2327,6 +2391,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.lastInit = ""
 	}
 	e := b.e
+	if e.refusals != nil {
+		old := e.currentNode
+		e.currentNode = &s.Node
+		defer func() { e.currentNode = old }()
+	}
 	switch s.Kind {
 	case hir.Block:
 		old := b.locals
@@ -2453,6 +2522,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("ENDTRY.")
 	case hir.Throw:
 		name := e.exception(s.X.Type)
+		if e.assertionOwners[s.SiteOwner] {
+			base := name
+			name = e.name("exception.testAssertion." + s.X.Type.String())
+			e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+		}
 		n := b.rawTemp("REF TO " + name)
 		v := b.expr(s.X)
 		b.line(n + " = NEW #( ).")
@@ -2572,7 +2646,7 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 		tag, field = "tag_class", "cval"
 	default:
 		if !t.IsRef() {
-			b.e.err = fmt.Errorf("dynamic boxing of %s is not supported", t)
+			b.e.refuse(fmt.Errorf("dynamic boxing of %s is not supported", t))
 			return
 		}
 	}

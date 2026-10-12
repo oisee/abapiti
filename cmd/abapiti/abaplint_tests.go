@@ -13,18 +13,30 @@ import (
 
 var abaplintTestsCmd = &cobra.Command{
 	Use:   "abaplint-tests <materialized-test-closure> -o <outdir>",
-	Short: "Build and run abaplint's own tests on TS-HG@Go (trap failed bodies)",
+	Short: "Build and run abaplint's own tests on Go or OSG (trap refused bodies)",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runAbaplintTests,
 }
 
 func init() {
 	abaplintTestsCmd.Flags().StringP("output", "o", "", "Output module and lowering evidence (required)")
+	abaplintTestsCmd.Flags().String("target", "go", "Test host: go or osg")
+	abaplintTestsCmd.Flags().String("osg-home", "", "Existing clean OSG checkout at the CI pin (never modified)")
+	abaplintTestsCmd.Flags().String("osg-runner", "tools/abaplint-tests-osg.mjs", "Path to the read-only OSG host bridge")
+	abaplintTestsCmd.Flags().Bool("gap-only", false, "Measure all ABAP emitter refusals without compiling (requires --target osg)")
 	_ = abaplintTestsCmd.MarkFlagRequired("output")
 	rootCmd.AddCommand(abaplintTestsCmd)
 }
 func runAbaplintTests(cmd *cobra.Command, args []string) error {
 	out, _ := cmd.Flags().GetString("output")
+	target, _ := cmd.Flags().GetString("target")
+	gapOnly, _ := cmd.Flags().GetBool("gap-only")
+	if target != "go" && target != "osg" {
+		return fmt.Errorf("--target: use go or osg")
+	}
+	if gapOnly && target != "osg" {
+		return fmt.Errorf("--gap-only requires --target osg")
+	}
 	lowering, err := tsfront.LowerAbaplintTests(args[0])
 	if err != nil {
 		return err
@@ -65,6 +77,20 @@ func runAbaplintTests(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "test closure: %d files, %d blocking diagnostics, %d HIR errors, %d coverage traps\n", report.Files, report.Blocking, report.HIRErrors, report.CoverageTraps)
+	if target == "osg" {
+		gap := tsfront.MeasureABAPTestGap(lowering)
+		raw, err := json.MarshalIndent(gap, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err = writeSources(filepath.Join(out, "evidence"), map[string]string{"abap-gap.json": string(raw) + "\n"}); err != nil {
+			return err
+		}
+		if gapOnly {
+			return nil
+		}
+		return runAbaplintTestsOSG(cmd, args[0], out, lowering)
+	}
 	files, err := tsfront.EmitAbaplintTests(args[0], lowering)
 	// The Go emitter can add target-specific traps (e.g. unreviewed regexps).
 	if evidenceErr := writeEvidence(filepath.Join(out, "evidence"), lowering); evidenceErr != nil {

@@ -68,12 +68,12 @@ func (e *emitter) slotForwarder(c *hir.Class, slot, impl *hir.Method) string {
 	args := []string{}
 	for j, p := range impl.Params {
 		if j >= len(slot.Params) {
-			e.err = fmt.Errorf("class %s method %s: implementation declares more parameters than its slot", c.Name, slot.Name)
+			e.refuse(fmt.Errorf("class %s method %s: implementation declares more parameters than its slot", c.Name, slot.Name))
 			return ""
 		}
 		inherited := slot.Params[j]
 		if inherited.Type.Kind == hir.Optional && !inherited.Type.Args[0].IsRef() && p.Type.Kind != hir.Optional {
-			e.err = fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name)
+			e.refuse(fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name))
 			return ""
 		}
 		args = append(args, e.param(p.Name)+" = "+b.convert(e.param(inherited.Name), inherited.Type, p.Type))
@@ -83,7 +83,7 @@ func (e *emitter) slotForwarder(c *hir.Class, slot, impl *hir.Method) string {
 	case emitted.Result.Kind == hir.Void:
 		b.line(call + ".")
 	case impl.Result.Kind == hir.Void:
-		e.err = fmt.Errorf("class %s method %s: void implementation of a value-returning slot", c.Name, slot.Name)
+		e.refuse(fmt.Errorf("class %s method %s: void implementation of a value-returning slot", c.Name, slot.Name))
 		return ""
 	default:
 		result := b.temp(impl.Result)
