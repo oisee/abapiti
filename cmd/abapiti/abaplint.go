@@ -362,7 +362,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			run := tsfront.Drivers().OSGRun
 			sources[run+".clas.abap"] = tsfront.RegistryRunClass(run, inputs, string(cfg), runSHA, 0, names)
 			sources[run+".clas.testclasses.abap"] = tsfront.RegistryRunTest(run, "")
-			what = fmt.Sprintf("the classes + %s with %d embedded files (its unit test fails with the report line; ok=X is the verdict)", strings.ToUpper(run), len(inputs))
+			what = fmt.Sprintf("the classes + %s with %d embedded files (its unit test prints the report and asserts hash parity; ok=X is the verdict)", strings.ToUpper(run), len(inputs))
 		}
 		if err := writeSources(dir, sources); err != nil {
 			return err

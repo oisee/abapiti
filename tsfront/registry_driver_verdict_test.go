@@ -12,6 +12,9 @@ func TestRegistryRunTestAssertsParity(t *testing.T) {
 			t.Fatal("registry driver must assert parity, not fail unconditionally", text)
 		}
 		statements := strings.Join(strings.Fields(text), " ")
+		if !strings.Contains(statements, "ENDTRY. WRITE / report. cl_abap_unit_assert=>assert_equals(") {
+			t.Fatal("registry timing report must print on success before asserting parity", text)
+		}
 		if !strings.Contains(statements, "CATCH cx_root INTO error. CLEAR ok.") {
 			t.Fatal("caught exceptions must not retain a successful verdict", text)
 		}
