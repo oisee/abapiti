@@ -45,9 +45,9 @@ export class Probe { run(value: A | B): number { return value.run(); } }
 	}
 }
 
-func TestRegistryDynamicPropertyAssignmentFailsClosed(t *testing.T) {
+func TestRegistryPrototypePropertyAssignmentFailsClosed(t *testing.T) {
 	requireDiagnostic(t, sourceProbe(t, `
-export class Probe { run(value: any): void { value.config = {}; } }
+export class Probe { run(value: any): void { value.__proto__ = {}; } }
 `), "unsupported-assignment")
 }
 
