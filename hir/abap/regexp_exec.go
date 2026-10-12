@@ -39,7 +39,7 @@ IF excluded IS NOT INITIAL.
     RETURN.
   ENDIF.
 ENDIF.
-search = '\A[\s\S]{' && |{ start }| && '}'.
+search = '(?<![\s\S])[\s\S]{' && |{ start }| && '}'.
 IF sticky = abap_false.
   search = search && '[\s\S]*?'.
 ENDIF.
