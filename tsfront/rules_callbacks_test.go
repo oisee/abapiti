@@ -137,13 +137,13 @@ func TestRulesDenseFindGoMatchesNode(t *testing.T) {
 	if want := strings.TrimSpace(string(out)); got != want {
 		t.Fatalf("Go %q, Node %q", got, want)
 	}
-	// A general primitive find remains refused without a receiver proof.
-	_, unproven, err := p.LowerWithOverrides([]string{"input.ts"}, nil)
-	if err != nil {
-		t.Fatal(err)
+	// The same dense ABI now checks each primitive slot without a source pin.
+	general, ds, err := p.LowerWithOverrides([]string{"input.ts"}, nil)
+	if err != nil || hasBlocking(ds) {
+		t.Fatal(err, ds)
 	}
-	if !hasBlocking(unproven) {
-		t.Fatal("unproven receiver accepted")
+	if other := runGoHIR(t, general, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())"); other != got {
+		t.Fatalf("checked dense find %q, pinned %q", other, got)
 	}
 }
 

@@ -166,9 +166,15 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	// Contextual construction already selected the result type. Fresh object
 	// literal types are structural views, not derived runtime classes.
-	if n.Flags&ast.NodeFlagsOptionalChain != 0 || n.Kind == ast.KindObjectLiteralExpression || n.Kind == ast.KindArrayLiteralExpression ||
+	if n.Kind == ast.KindObjectLiteralExpression || n.Kind == ast.KindArrayLiteralExpression {
+		return x
+	}
+	optionalAccess := n.Flags&ast.NodeFlagsOptionalChain != 0 ||
 		(n.Kind == ast.KindCallExpression && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().AsPropertyAccessExpression().QuestionDotToken != nil) ||
-		(n.Kind == ast.KindPropertyAccessExpression && n.AsPropertyAccessExpression().QuestionDotToken != nil) {
+		(n.Kind == ast.KindPropertyAccessExpression && n.AsPropertyAccessExpression().QuestionDotToken != nil)
+	if optionalAccess && (!l.unprunedFeatures || !l.optionalChainFlowPresent(n)) {
+		// A declared nonoptional type alone does not prove an erased value
+		// present. Narrow a chain only when flow eliminated declared absence.
 		return x
 	}
 	// An index signature does not prove that a particular key exists. Keep
@@ -194,6 +200,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	base := x.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
+	}
+	if l.collectionShapes[base.Name] ||
+		(base.Kind == hir.Array && len(base.Args) == 1 && (l.collectionShapes[base.Args[0].Name] || l.collectionElements[base.Args[0].String()])) ||
+		(x.Kind == hir.FieldGet && x.X != nil && l.collectionShapes[x.X.Type.Name]) {
+		// Structural inference may name only the first sibling. The collection
+		// owns the physical base slot; that inferred name is not a downcast proof.
+		return x
 	}
 	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
@@ -451,22 +464,22 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if hint.Kind == hir.Array {
 			elem = hint.Args[0]
 		} else {
-			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
+			if arr := l.singleArrayConstituent(t); arr != nil {
+				t = arr
+			}
+			if t == nil || (!l.ck.IsArrayType(t) && !t.IsTupleType()) {
+				t = l.ck.GetTypeAtLocation(n)
+			}
+			mapped := l.mapCheckerType(n, t)
+			if l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns) == nil {
+				mapped = l.inferredCollectionType(n, mapped)
+			}
 			if mapped.Kind == hir.Array {
 				elem = mapped.Args[0]
 			}
-			for _, el := range els {
-				if elem.Kind != hir.Void {
-					break
-				}
-				if el.Kind == ast.KindSpreadElement {
-					continue
-				}
-				elem = l.mapCheckerType(n, l.ck.GetTypeAtLocation(el))
-				break
-			}
 		}
-		if elem.Kind == hir.Void {
+		if elem.Kind == "" || elem.Kind == hir.Void {
 			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 			if mapped.Kind != hir.Array {
 				return nil
@@ -871,6 +884,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, handled := l.jsonCall(n); handled {
+		return x
+	}
+	if x, handled := l.xmlParserCall(n); handled {
 		return x
 	}
 	if x, handled := l.promiseStatic(n); handled {
@@ -1616,6 +1632,8 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
 			return l.rtOp("array.indexOf", recv, i32, one()), true
+		case "lastIndexOf":
+			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
 			return l.rtOp("array.includes", recv, boolT, one()), true
 		case "join":
@@ -2406,8 +2424,9 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	tagged := func(t hir.Type) bool {
 		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
 	}
-	if tagged(x.Type) || tagged(y.Type) {
-		if loose {
+	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type))
+	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
+		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
 			return nil
 		}
@@ -2498,6 +2517,26 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	if hasBlocking(l.diags[before:]) {
 		l.diags = l.diags[:before]
 		return x
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && mapped.Kind == hir.Optional &&
+		mapped.Args[0].Kind == hir.ClassRef && l.acceptsType(x.Type, mapped.Args[0]) {
+		value := x
+		if !x.Type.Equal(mapped.Args[0]) {
+			value = l.rtOp("object.checkedClassView", x, mapped.Args[0])
+		}
+		return l.optionalView(value, mapped)
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Optional && mapped.Kind == hir.Optional &&
+		x.Type.Args[0].Kind == hir.ClassRef && mapped.Args[0].Kind == hir.ClassRef &&
+		l.acceptsType(x.Type.Args[0], mapped.Args[0]) && !x.Type.Equal(mapped) {
+		// Assertions erase in JS. Keep undefined and check only the present
+		// nominal downcast using the existing trap-only class-view boundary.
+		saved := l.tempInit(n, x.Type, x)
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: saved}
+		value := l.rtOp("object.checkedClassView", present, mapped.Args[0])
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: mapped,
+			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved},
+			Y: &hir.Expr{Kind: hir.Lit, Type: mapped}, Z: value}
 	}
 	switch {
 	case x.Type.Kind == hir.Dynamic && mapped.Kind == hir.String:
@@ -2731,6 +2770,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		l.hint = hint
 		if a == nil {
 			return nil
+		}
+		if l.unprunedFeatures {
+			a = l.presentValue(value, a, ctor.Params[idx].Type)
 		}
 		args[idx] = l.coerce(a, ctor.Params[idx].Type)
 	}

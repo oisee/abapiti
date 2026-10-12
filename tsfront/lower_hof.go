@@ -19,6 +19,14 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return nil, false
 	}
 	elem := recv.Type.Args[0]
+	if len(args) > 0 && (args[0].Kind == ast.KindPropertyAccessExpression || args[0].Kind == ast.KindCallExpression) {
+		switch name {
+		case "map", "filter", "some", "reduce", "find", "forEach", "every", "sort":
+			// The receiver expression precedes callback lookup/bind. Keeping
+			// its live reference also prevents a second evaluation for arg 3.
+			recv = l.tempInit(n, recv.Type, recv)
+		}
+	}
 	switch name {
 	case "map", "filter", "some", "reduce", "find":
 	case "forEach", "every":
@@ -54,8 +62,10 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		if l.pinnedDenseCallback(n) {
 			return l.denseCallbackLoop(n, name, recv, args), true
 		}
-		l.diagf(n, "unsupported-call", "find on primitive arrays needs an absence-preserving callback ABI")
-		return nil, true
+		// Reuse the dense ABI with a checked Get at every visit. Its
+		// Optional result distinguishes a match of ""/0 from no match;
+		// a missing primitive slot refuses before callback invocation.
+		return l.arrayCallbackLoop(n, name, recv, args, true), true
 	}
 	body, params, ok := l.callbackBody(n, args[0], elem)
 	if !ok {
@@ -205,6 +215,11 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 // `x => { return expr; }` with exactly one return, a plain identifier naming
 // a module function, and destructured first parameters.
 func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
+	// Preparing a method reference (especially bind's receiver) belongs
+	// outside the loop. The callee adapter itself runs once per visit.
+	if cb.Kind == ast.KindPropertyAccessExpression || cb.Kind == ast.KindCallExpression {
+		return l.methodCallbackBody(n, cb, elem)
+	}
 	savedPending := l.pend
 	l.pend = nil
 	l.push()
@@ -249,7 +264,7 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			return nil, nil, false
 		}
 		ref := funcRef{owner: lf.owner.Name, method: lf.method.Name}
-		return l.callbackInvocation(n, cb, elem, ref, lf)
+		return l.callbackInvocation(n, cb, elem, ref, lf, nil)
 	}
 	params := cb.Parameters()
 
@@ -283,6 +298,15 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			} else {
 				l.diags = l.diags[:before]
 			}
+		}
+		if i == 0 && (l.collectionShapes[elem.Name] || l.collectionElements[elem.String()]) && params[i].Type() == nil {
+			// Inferred callback types can repeat the checker's first-row
+			// structural reduction. Bind the original collection's slot layout.
+			t = elem
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[params[i].Symbol()] = true
 		}
 		l.declare(p, t)
 	}
@@ -764,10 +788,10 @@ func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.P
 // a one-argument HIR call regardless of its declared parameters. Array
 // callbacks receive element, index, array; absent optional tails stay absent.
 func (l *lowerer) namedCallbackBody(at, cb *ast.Node, elem hir.Type, ref funcRef) (*hir.Expr, []string, bool) {
-	return l.callbackInvocation(at, cb, elem, ref, nil)
+	return l.callbackInvocation(at, cb, elem, ref, nil, nil)
 }
 
-func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRef, lf *localFn) (*hir.Expr, []string, bool) {
+func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRef, lf *localFn, receiver *hir.Expr) (*hir.Expr, []string, bool) {
 	var method *hir.Method
 	for _, c := range l.out.Classes {
 		if c.Name == ref.owner {
@@ -853,7 +877,9 @@ func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRe
 		}
 	}
 	call := &hir.Expr{Kind: hir.DirectCall, Node: l.node(cb), Owner: ref.owner, Name: ref.method, Type: method.Result, Args: args}
-	if lf != nil && !method.Static {
+	if receiver != nil {
+		call.Kind, call.Owner, call.X = hir.VirtualCall, "", receiver
+	} else if lf != nil && !method.Static {
 		call.Kind, call.Owner, call.X = hir.VirtualCall, "", l.localFnReceiver(lf)
 	}
 	if len(l.pend) > 0 {

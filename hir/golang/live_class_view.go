@@ -7,6 +7,22 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
+func (e *emitter) liveStorage() bool { return len(e.liveClasses) > 0 || e.usesLiveArrays }
+
+// A native reference array can receive a parsed row through a live alias.
+// Keep already compatible rows, and view tagged structural rows on the caller's
+// typed reads as well. Nominal assertions retain their separate cast boundary.
+func (e *emitter) arrayReference(t hir.Type, value string) string {
+	base := t
+	if base.Kind == hir.Optional {
+		base = base.Args[0]
+	}
+	if base.Kind == hir.ClassRef && e.liveClasses[base.Name] {
+		return "func() " + e.typ(t) + " {v:=" + value + ";if row,ok:=any(v).(" + e.typ(t) + ");ok {return row};return " + e.liveView(base) + "(box(v))}()"
+	}
+	return "castRef[" + e.typ(t) + "](" + value + ")"
+}
+
 // liveView retains native references unchanged and attaches a data-only layout
 // to structural storage. All embedded ancestor layouts share that same source.
 func (e *emitter) liveView(t hir.Type) string {
@@ -56,8 +72,10 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 	case hir.Number:
 		return "dynNumber(" + d + ")"
 	case hir.I32:
+		e.hirMath = true
 		return "func() int32 {v:=dynNumber(" + d + ");if v!=math.Trunc(v) || v < -2147483648 || v > 2147483647 {panic(newRangeFault())};return int32(v)}()"
 	case hir.I64:
+		e.hirMath = true
 		return "func() int64 {v:=dynNumber(" + d + ");if v!=math.Trunc(v) || v < -9007199254740991 || v > 9007199254740991 {panic(newRangeFault())};return int64(v)}()"
 	case hir.ClassRef:
 		if t.Name != hir.RootObject && e.liveClasses[t.Name] {
@@ -65,7 +83,11 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 		}
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	case hir.Array:
-		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + e.viewValue(t.Args[0], "d") + "})"
+		decode := e.viewValue(t.Args[0], "d")
+		if t.Args[0].Kind == hir.String {
+			decode = "liveStringElement(d)"
+		}
+		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + decode + "})"
 	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	default:

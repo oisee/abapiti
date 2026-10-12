@@ -84,7 +84,11 @@ func (e *emitter) collectBoxedShapes() {
 
 func (e *emitter) shapeFields(c *hir.Class) {
 	e.line("func (self *%s) dynamicGet(key jsString) *dynamic {", e.obj(c.Name))
-	e.line("if self==nil {panic(newRangeFault())};switch key {")
+	e.line("if self==nil {panic(newRangeFault())}")
+	if e.liveClasses[c.Name] {
+		e.line("if self.viewSource!=nil {return self.viewSource.get(key)}")
+	}
+	e.line("switch key {")
 	fields := map[string]hir.Field{}
 	var order []string
 	for base := c; base != nil; base = e.classBy(base.Super) {
@@ -119,6 +123,9 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	}
 	e.line("func (self *%s) dynamicPut(key jsString, value *dynamic) {", e.obj(c.Name))
 	e.line("if self==nil {panic(newRangeFault())}")
+	if e.liveClasses[c.Name] {
+		e.line("if self.viewSource!=nil {self.viewSource.put(key,value);return}")
+	}
 	if e.extraRuntimeKeys && c.Structural {
 		e.line("if self.ownKeys!=nil {self.ownKeys.set(key,nil)}")
 	}

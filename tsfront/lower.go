@@ -213,6 +213,17 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		l.signaturesFile(f)
 		done()
 	}
+	// Collection field inference needs all sibling ancestry/signatures, even
+	// when the field's class appears before those siblings in source order.
+	if l.unprunedFeatures {
+		for _, name := range files {
+			f, _ := p.File(name)
+			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			l.inferCollectionFields(f)
+			done()
+		}
+	}
 	// An implicit derived constructor forwards the inherited parameter list.
 	var inherit func(*hir.Class)
 	visited := map[*hir.Class]bool{}
@@ -301,6 +312,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				if hint, ok := l.testModuleArrayContext(d); ok {
 					typ = hint
 				}
+				typ = l.inferredDeclarationCollection(d, typ)
 				valid := typ.Kind != hir.Void && !hasBlocking(l.diags[before:])
 				l.diags = l.diags[:before]
 				if !valid {
@@ -467,7 +479,9 @@ type lowerer struct {
 	thisOverride *hir.Expr
 	// widenedLets: let symbols whose HIR type is the common base of their
 	// assignments; the checker's narrower view of them is not applied.
-	widenedLets map[*ast.Symbol]bool
+	widenedLets        map[*ast.Symbol]bool
+	collectionShapes   map[string]bool
+	collectionElements map[string]bool
 	// guards: locals proven present by an enclosing definedness guard
 	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
 	guards map[*ast.Symbol]hir.Type
@@ -804,6 +818,17 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	var typ hir.Type
 	var stmts []*hir.Stmt
 	switch {
+	case init == nil && l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/"):
+		// Executing `let x;` initializes the binding to undefined. Only
+		// storage that can represent absence is supported; never invent a
+		// primitive zero value. The existing readiness flag still protects
+		// declarations whose initializer throws before completion.
+		typ = l.mapCheckerType(d, l.ck.GetTypeAtLocation(d))
+		if !typ.IsRef() && typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+			l.diagf(d, "unsupported-static-init", "uninitialized test binding needs absence-preserving storage")
+			return nil
+		}
+		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, &hir.Expr{Kind: hir.Lit, Node: l.node(d), Type: typ}, typ)}
 	case d.Type() != nil:
 		typ = l.mapTypeNode(d.Type())
 		if typ.Kind == hir.Void {
@@ -831,6 +856,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		if hint, ok := l.testModuleArrayContext(d); ok {
 			mapped = hint
 		}
+		mapped = l.inferredDeclarationCollection(d, mapped)
 		if mapped.Kind == hir.Void && sym != nil {
 			before := len(l.diags)
 			mapped = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))

@@ -107,6 +107,9 @@ func (l *lowerer) eraseGenericOverrides() {
 					if l.unprunedFeatures && actual.Type.Kind == hir.ClassRef && actual.Type.Name != hir.RootObject {
 						op = "dynamic.classView"
 					}
+					if l.unprunedFeatures && actual.Type.Kind == hir.Array && actual.Type.Args[0].Kind == hir.String {
+						op = "dynamic.arrayView"
+					}
 					x = l.rtOp(op, x, actual.Type)
 				} else if !p.Type.Equal(actual.Type) && !(actual.Type.Kind == hir.ClassRef && actual.Type.Name == hir.RootObject) {
 					x = &hir.Expr{Kind: hir.Narrow, Type: actual.Type, X: x}

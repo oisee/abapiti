@@ -83,7 +83,17 @@ func (l *lowerer) arrayCallbackLoop(n *ast.Node, operation string, receiver *hir
 		body = append(body, &hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: l.toBool(n, expression)}, Body: hir.B(&hir.Stmt{Kind: hir.Assign, X: result, Y: hir.L(hir.T(hir.Bool), false)}, &hir.Stmt{Kind: hir.Break})})
 	}
 	if checkPresence {
-		body = []*hir.Stmt{{Kind: hir.If, Node: l.node(n), X: l.rtOp("array.has", recv, hir.T(hir.Bool), index), Body: hir.B(body...)}}
+		present := l.rtOp("array.has", recv, hir.T(hir.Bool), index)
+		if operation == "find" {
+			// Unlike forEach/every, find must visit holes as undefined. The
+			// dense primitive ABI cannot bind that value: refuse, never skip
+			// it or fabricate a zero. Has also enables live presence tracking.
+			body = append([]*hir.Stmt{{Kind: hir.If, Node: l.node(n),
+				X:    &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: present},
+				Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: "primitive find requires a present slot"})}}, body...)
+		} else {
+			body = []*hir.Stmt{{Kind: hir.If, Node: l.node(n), X: present, Body: hir.B(body...)}}
+		}
 	}
 	body = append(body, &hir.Stmt{Kind: hir.Assign, X: index, Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})
 	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit}, Body: hir.B(body...)})
@@ -94,6 +104,13 @@ func (l *lowerer) arrayCallbackLoop(n *ast.Node, operation string, receiver *hir
 }
 
 func (l *lowerer) denseCallbackStatements(n, callback *ast.Node, elem hir.Type) (*hir.Stmt, []string, bool) {
+	if callback.Kind == ast.KindPropertyAccessExpression || callback.Kind == ast.KindCallExpression {
+		value, names, ok := l.methodCallbackBody(n, callback, elem)
+		if !ok {
+			return nil, nil, false
+		}
+		return hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: value}), names, true
+	}
 	if callback.Kind != ast.KindArrowFunction && callback.Kind != ast.KindFunctionExpression {
 		l.diagf(n, "unsupported-callback", "dense callback must be an inline function")
 		return nil, nil, false

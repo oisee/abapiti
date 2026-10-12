@@ -1,6 +1,351 @@
 # abaplint's own tests on TS-HG@Go
 
-## Reconciled trap batches F + G — certified
+## Trap batch J — certified on train 7 + merged I
+
+**10,668/11,060 active tests passed (96.46%), FAIL 0.** Exactly **one final
+17-shard / 625-file run** completed from frozen semantic source **0694974**,
+based on **8bff252** (main **ab026e7** plus merged I). Original pinned upstream
+Node reports 11,060 passes, zero failures and 32 pending. Go reports **332 traps,
+zero async-pending, 92 not-run**. No exclusions, infrastructure/wiring failures,
+unmatched executions or borrowed FAILs; original owned/whole-suite Node title
+multisets reconcile. Registration parity is deliberately not fabricated.
+
+Not-run remains **0 async/done, 28 skipped/focused, 64 unregistered**
+(**60 active + four Node pending**). Missing titles and initialization refusals
+are retained in the final JSON. Dell-owned heterogeneous matcher tables, live
+config rows/arrays, Domain conversion, configs, tuples, async and panics are not
+repaired. See [root audit and handoffs](traps-j-roots.md),
+[focused baseline/repair measurements](evidence/traps-j-focused.json),
+[all-shard counts, missing multisets and top 20](evidence/traps-j-final.json), and
+[gate/default/workload certificate](evidence/traps-j-gates.json).
+
+Direct focused gains are **LSP +8, objects +7, rules +9**. The complete run also
+recovers one syntax case: **+25 over the merged-I baseline shard counts**, or
+**+54 versus the documented train-7 main** (not 54 passes attributed to J).
+Primitive find preserves missing results and refuses visited holes; its newly
+reached primitive lastIndexOf predicate uses existing loops and live membership.
+Compatible property-only interfaces share boxed original storage/identity, not
+copies. Optional Location/TypedIdentifier narrowing requires checked presence;
+optional nominal assertions now handle both present and optional base operands.
+The four exact Table assertion sites are **950, 965, 1021, 1096**.
+
+The erased structural `in` lowering is independently executed against Node,
+including required undefined, omitted/explicit undefined optional keys, mutation,
+JSON-record backing and Object.prototype keys. **The 23 renamer bodies still
+trap before execution at unresolved union field `range`, renamer.ts:135**. No
+passes or runtime progress are credited to them. Completing that common-element
+union view is handed to Dell; there is no fake TextEdit or source override.
+
+### All 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 199 | 0 | 17 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 44 | 0 | 6 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,962 | 0 | 0 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,354 | 0 | 9 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 74 | 0 | 20 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 155 | 0 | 33 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 124 | 0 | 20 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 21 | 0 | 10 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 2,972 | 0 | 175 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,668** | **0** | **332** | **92** | **11,028** | **11,060 + 32** |
+
+### Final top 20 reached traps
+
+Exact normalized messages, locations and shard contributions are in the JSON;
+initialization refusals are separate. These are reached boundaries, not forecasts.
+
+| Tests | Root / remaining boundary |
+| ---: | --- |
+| 195 | Recommendations: live/erased config-array rows to nominal Recommendations |
+| 23 | Renamer: unresolved `range` on erased edit union (line 135) |
+| 19 | Domain: native/optional conversion |
+| 18 | RulesRunner: erased exclude-array to native string-array |
+| 7 | Pretty-printer live erased `keyword_case` assignment |
+| 7 | NameValidator structural `patternKind` config field |
+| 5 | SQL set-op recursive tuple-union declaration |
+| 3 | class_data native/optional conversion |
+| 3 | LSP rename.ts:109:52 factory argument assignment (nullable version layout) |
+| 2 | `_abap_object.ts:151:82` remaining boundary |
+| 2 | `_abstract_object.ts:134` abapGit XML subset |
+| 2 | Dynpros conversion |
+| 2 | MessageClass conversion |
+| 2 | View conversion |
+| 2 | SpaceBeforeDot conversion |
+| 2 | when_type.ts unresolved `fn_visit` |
+| 2 | Config live erased `applyUnspecifiedRules` assignment |
+| 2 | Pretty-printer `keyword_case` + `sequential_blank` assignments |
+| 2 | NumberRange: KindIdentifier callable |
+| 2 | basic_variables.ts string `padStart` / subsequent fieldDefinitions cascade |
+
+### Final gates and parity
+
+Passed with `GOCACHE=$HOME/.cache/go-build`, `GOTOOLCHAIN=go1.26.0`,
+`GOFLAGS=-buildvcs=false`, `ABAPITI_GRACECHECK=1`, `GOMAXPROCS=4`:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront \
+  -run '^TestLexerFactsReport$' -count=1 -timeout 40m
+ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=rules,lsp,objects,objects/rename,abap \
+  nice -n 10 node tools/abaplint-tests-all.mjs ~/dev/abaplint \
+  docs/evidence/traps-j-final.json
+```
+
+**No golden edits:** regenerated lexer facts are byte-identical; no runtime
+catalogue entries were added. Default output versus an archived **8bff252**
+compiler has raw **`diff -r` exit 0 across 6,312 files**, including the zip, at
+the same absolute output path. No output changes need justification. Fresh Go,
+fresh original pinned Node and the release kit agree byte-for-byte on zabapgit
+**clean 0 / seeded 5**. The sparse primitive-find prototype mismatch was reported,
+root-caused and regressed before follow-up measurements; no mismatch is accepted.
+
+Final amendment changes only documentation/evidence, preserving measured semantic
+subtree hashes. Generated builds, closures, binaries, baseline archive, kit, raw
+records, facts and logs are deleted. Clean commit; no push or transpiler clone.
+
+## Trap batch I — historical, certified on train 6 + H
+
+**10,478/11,060 active tests passed (94.74%), FAIL 0.** Exactly **one final
+17-shard / 625-file run** completed from frozen semantic source **dcd1a1a**,
+based on **933e68f**. Fresh original pinned Node reports 11,060 passed, zero
+failed and 32 pending. Go reports **522 typed/domain traps, zero async-pending
+and 92 not-run**. No exclusions, infrastructure/wiring failures, unmatched
+titles or borrowed FAILs; complete owned/whole-suite title multisets reconcile.
+
+Not-run is unchanged: **0 async/done, 28 skipped/focused, 64 unregistered**
+(60 active + four Node pending). No registrations or passes are synthesized.
+See [precise roots and Dell handoffs](traps-i-roots.md),
+[focused measurements](evidence/traps-i-focused.json),
+[all-shard counts, missing multisets and top 20](evidence/traps-i-final.json),
+and [gate/default/workload certificate](evidence/traps-i-gates.json).
+
+The **+4 versus H** is directly measured: three Registry duplicate-filename
+checks and one malformed-DDIC-metadata check. Chai now invokes certified
+parameterless actions and **ignores their synchronous return values**, rather
+than casting value-returning callable storage to a void thunk. Original
+assertions, effect counts, genuine-failure fixtures and refusal boundaries are
+retained and expanded against Node. No general callable/config/class-view ABI
+is changed. Recommendations (**195**) and RulesRunner (**15**) remain precisely
+documented **live/erased configuration-storage conversions**, left to Dell under
+the stop rule. The new top 20 has no clearly owned harness/regex/string/JSON root.
+
+### All 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 168 | 0 | 48 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 42 | 0 | 8 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,353 | 0 | 10 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 74 | 0 | 20 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 110 | 0 | 78 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 107 | 0 | 37 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 10 | 0 | 21 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 2,909 | 0 | 238 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,478** | **0** | **522** | **92** | **11,028** | **11,060 + 32** |
+
+### Final top 20 reached traps
+
+Initialization refusals remain separate in the JSON. Exact normalized messages,
+representative locations and shard contributions are retained there.
+
+| Tests | Root / remaining boundary |
+| ---: | --- |
+| 195 | Recommendations: live config-array rows to nominal Recommendations |
+| 37 | `_abap_object.ts:148`: native string-key map receives Dynamic |
+| 33 | `lsp/_lookup.ts:238`: original structural own-key storage |
+| 31 | `nesting.ts:253`: sibling assertion/common-method view |
+| 25 | `domain.ts:100`: native/optional field conversion |
+| 23 | `renamer.ts`: TextDocumentEdit.is / RenameFile.is external callable ABI |
+| 22 | `config.ts:11`: explicit config conversion |
+| 16 | Downport dynamic getParameters/importing bridge |
+| 15 | PrettyPrinter constructor/config conversion |
+| 15 | RulesRunner: erased config exclude-array to native string-array |
+| 9 | IdenticalConditions primitive find absence-preserving ABI |
+| 7 | Pretty-printer live erased keyword_case assignment |
+| 7 | NameValidator patternKind structural config field |
+| 5 | LSP Rename prepareRename parameter view |
+| 5 | SQL set-op recursive tuple-union declaration |
+| 4 | LSP Implementation optional Location element |
+| 4 | DataElement native/optional conversion |
+| 4 | Table test native assignment view |
+| 3 | SpaghettiScope optional TypedIdentifier constructor argument |
+| 3 | class_data native/optional conversion |
+
+### Final gates and parity
+
+Passed with `GOCACHE=$HOME/.cache/go-build`, `GOTOOLCHAIN=go1.26.0`,
+`GOFLAGS=-buildvcs=false`, `ABAPITI_GRACECHECK=1`, `GOMAXPROCS=4`:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront \
+  -run '^TestLexerFactsReport$' -count=1 -timeout 40m
+ABAPITI_TESTS_WORKERS=3 ABAPITI_TESTS_FIRST=rules,lsp,root nice -n 10 \
+  node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-i-final.json
+```
+
+**No golden edits**: the lexer facts export is byte-identical to the committed
+golden; the existing Chai operation's SpecialOps typing preserves extracted
+runtime/effect facts. Default `abaplint` output versus an archived **933e68f**
+compiler has **raw `diff -r` exit 0 over all 6,312 files**, including the A4H
+zip, using the same absolute output path. There are no output changes to justify.
+Fresh emitted Go and fresh original pinned Node agree byte-for-byte on zabapgit
+**clean 0 / seeded 5**, independently matching the release kit.
+
+The final amendment changes only documentation/evidence, preserving measured
+semantic trees. Generated builds, source closures, binaries, archived baseline,
+kit, raw records, facts and logs are deleted; only compact Markdown/JSON remains.
+Clean commit, no push or transpiler clone. No genuine mismatch was encountered
+or accepted; scratch setup errors are disclosed in the root audit.
+
+## Trap batch H — historical, certified on the train-6 candidate
+
+**10,474/11,060 active tests passed (94.70%), FAIL 0.** Exactly **one final
+17-shard / 625-file run** completed from frozen semantic source `c863bec`,
+based on **`d45f3c1` (FG + main/yolo-5)**. Fresh original pinned Node reports
+11,060 passed, zero failed and 32 pending. Go reports **526 typed/domain traps,
+zero async-pending and 92 not-run**. No infrastructure/wiring failures,
+exclusions or unmatched titles occur; whole-suite and owned shard title
+multisets reconcile, including duplicates and borrowed registrations.
+
+Not-run remains **0 async/done, 28 skipped/focused, 64 unregistered**.
+Those 64 are **60 active + four Node pending**: 57 heterogeneous matcher rows,
+four structural pending rows, one block-local class and two primitive-config
+assignments. The audit confirms type/ABI boundaries delegated to Dell, not
+missing test files or harness discovery. No missing title is synthesized.
+See [root ownership and bounded domains](traps-h-roots.md),
+[exact missing multisets and final top 20](evidence/traps-h-final.json),
+[focused runs and reached-root audit](evidence/traps-h-focused.json), and
+[gate/default/workload certificate](evidence/traps-h-gates.json).
+
+Directly executed target recoveries: **12 References callbacks, five
+FormDefinition bodies, one LSP string split and three naming-regex cases**.
+The XMLParser and fresh-literal JSON repairs execute beyond their old lowering
+barriers but still reach native map-key or Domain/DataElement conversion traps;
+they are **not** credited as passes. The **+75 versus historical FG** also
+includes intervening main changes; it is not a 75-pass attribution to H.
+
+The pinned FormDefinition fixture actually initializes a mutable module `let`
+and reassigns it in a helper, with **no hook**. Test-module initialization now
+supports that live binding without weakening readiness guards; separate Node
+regressions certify before/beforeEach ordering. Static method references use
+the existing callback ABI; bounded `.bind(receiver)` keeps the saved receiver.
+Unbound instance methods are explicitly refused, never accidentally rebound.
+Only the checked shapes described in the root audit are certified.
+
+### All 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 168 | 0 | 48 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 42 | 0 | 8 | 57 | 50 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,942 | 0 | 20 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,353 | 0 | 10 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 71 | 0 | 23 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 110 | 0 | 78 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 106 | 0 | 38 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 10 | 0 | 21 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 2,909 | 0 | 238 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,474** | **0** | **526** | **92** | **11,028** | **11,060 + 32** |
+
+### Final top 20 reached traps
+
+Initialization refusals are separate in the JSON. Exact normalized diagnostics,
+representative locations and shard contributions are retained there; the labels
+below identify the reached storage/lowering boundary, not estimated wins.
+
+| Tests | Root / remaining boundary |
+| ---: | --- |
+| 195 | Recommendations config/row conversion domain |
+| 37 | `_abap_object.ts:148`: native string-key map receives Dynamic |
+| 33 | `lsp/_lookup.ts:238`: original structural own-key storage |
+| 31 | `nesting.ts:253`: sibling assertion/common-method view |
+| 25 | `domain.ts:100`: native/optional field conversion |
+| 23 | `renamer.ts`: TextDocumentEdit.is / RenameFile.is external callable ABI |
+| 22 | `config.ts:11`: explicit config conversion |
+| 16 | Downport dynamic getParameters/importing bridge |
+| 15 | PrettyPrinter constructor/config conversion |
+| 15 | RulesRunner conversion domain |
+| 9 | IdenticalConditions primitive find absence-preserving ABI |
+| 7 | Pretty-printer live erased keyword_case assignment |
+| 7 | NameValidator patternKind structural config field |
+| 5 | LSP Rename prepareRename parameter view |
+| 5 | SQL set-op recursive tuple-union declaration |
+| 4 | Chai throw thunk/callable conversion domain |
+| 4 | LSP Implementation optional Location element |
+| 4 | DataElement native/optional conversion |
+| 4 | Table test native assignment view |
+| 3 | SpaghettiScope optional TypedIdentifier constructor argument |
+
+### Final gates and output parity
+
+Passed from the frozen semantic source, with `GOCACHE=$HOME/.cache/go-build`,
+`GOTOOLCHAIN=go1.26.0`, `GOFLAGS=-buildvcs=false`, `GOMAXPROCS=4` and
+`ABAPITI_GRACECHECK=1`:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront \
+  -run '^TestLexerFactsReport$' -count=1 -timeout 40m
+ABAPITI_TESTS_WORKERS=3 ABAPITI_TESTS_FIRST=rules,lsp,abap/types nice -n 10 \
+  node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-h-final.json
+```
+
+**No golden changes**: the facts export is byte-identical to the committed lexer
+golden; no runtime operation or effect catalogue entry is added. Default
+`abaplint` output versus an archived **d45f3c1** compiler, using the same absolute
+output path, has **raw `diff -r` exit 0 across all 6,312 files**, including the
+A4H zip. There are no default-output changes to justify. Fresh emitted Go and
+fresh original pinned Node agree byte-for-byte on zabapgit **clean 0 / seeded 5**,
+independently matching the release kit via `go-target-check.py`.
+
+The final amendment adds only documentation/evidence, preserving the measured
+semantic trees. Earlier focused prototypes/gates and fixture-harness errors are
+disclosed in the root audit; no genuine value/assertion mismatch was accepted.
+Only compact Markdown/JSON is retained. Generated builds, closures, binaries,
+kit copies, raw records, facts and logs are deleted. Clean commit, no push,
+no transpiler clone.
+
+## Reconciled trap batches F + G — historical certified result
 
 **10,399/11,060 active tests passed (94.02%), FAIL 0.** All **17 shards / 625
 files** completed against fresh original Node at

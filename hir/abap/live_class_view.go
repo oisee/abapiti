@@ -46,7 +46,7 @@ func (e *emitter) liveClassDeclaration(b *strings.Builder, c *hir.Class) {
 	if e.liveRoot(c) {
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nINTERFACES %s.\n", e.name("view.source"), d, e.name("view.storage"))
 	}
-	if len(e.liveClasses) > 0 && c.Structural {
+	if len(e.liveClasses) > 0 && c.Structural && !e.liveClasses[c.Name] {
 		fmt.Fprintf(b, "INTERFACES %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.storage"), e.name("view.extras"), d)
 	}
 	if !e.liveClasses[c.Name] {
@@ -157,7 +157,7 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		fmt.Fprintf(out, "METHOD %s~structural.\nENDMETHOD.\n", storage)
 		fmt.Fprintf(out, "METHOD %s~source.\nresult = me->%s.\nENDMETHOD.\nMETHOD %s~get.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\nMETHOD %s~put.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", storage, e.name("view.source"), storage, e.name("view.refusal"), storage, e.name("view.refusal"))
 	}
-	if len(e.liveClasses) == 0 || !c.Structural {
+	if len(e.liveClasses) == 0 || !c.Structural || e.liveClasses[c.Name] {
 		return
 	}
 	fmt.Fprintf(out, "METHOD %s~structural.\nresult = abap_true.\nENDMETHOD.\nMETHOD %s~source.\nENDMETHOD.\n", storage, storage)

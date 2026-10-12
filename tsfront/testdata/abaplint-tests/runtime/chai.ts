@@ -41,11 +41,10 @@ export class Assertion {
     this.check(object && (this.value as object) instanceof expected, "instanceof check", message);
   }
   public instanceOf(expected: new () => any, message = ""): void { this.instanceof(expected, message); }
-  // Only existing parameterless void thunks are supported. Checked unboxing
-  // keeps unsupported function representations outside JavaScript catch.
+  // Chai ignores the return value of its synchronous action. The intrinsic
+  // invokes only certified parameterless callable storage, without a void cast.
   public throw(expected = "", message = ""): void {
-    const action = this.value as (() => void);
-    this.check(chaiThrowMatch(action, expected), "throw check", message);
+    this.check(chaiThrowMatch(this.value, expected), "throw check", message);
   }
   public contain(expected: any, message = ""): void {
     if (this.deeply) {
@@ -79,7 +78,7 @@ export class Assertion {
 // replaced. Unsupported JS representations raise a typed refusal, not equality.
 export function chaiDeepEqual(actual: any, expected: any): boolean { throw new Error("chai deep intrinsic unavailable"); }
 export function chaiDeepInclude(actual: any, expected: any): number { throw new Error("chai deep intrinsic unavailable"); }
-export function chaiThrowMatch(action: () => void, expected: string): boolean { throw new Error("chai throw intrinsic unavailable"); }
+export function chaiThrowMatch(action: any, expected: string): boolean { throw new Error("chai throw intrinsic unavailable"); }
 export function chaiArrayInclude(actual: any, expected: any): boolean { throw new Error("chai array include intrinsic unavailable"); }
 export function chaiFail(message: string): void { throw new Error(message); }
 export function expect(value: any, message = ""): Assertion { return new Assertion(value, message); }
