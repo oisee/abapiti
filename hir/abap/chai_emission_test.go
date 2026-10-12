@@ -14,13 +14,17 @@ func TestChaiEmission(t *testing.T) {
 		t.Fatal(err)
 	}
 	runtime := files[names.Get("runtime.chai")+".clas.abap"]
-	for _, part := range []string{"METHOD deepEqual.", "METHOD deepInclude.", "METHOD arrayInclude.", "METHOD members.", "METHOD throwMatch.", "METHOD box_ref.", "READ TABLE seen WITH KEY", "RESPECTING CASE", "RAISE EXCEPTION error", "p0->chai_zero_sign = 0"} {
+	for _, part := range []string{"METHOD deepEqual.", "METHOD deepInclude.", "METHOD arrayInclude.", "METHOD members.", "METHOD throwMatch.", "METHOD box_ref.", "READ TABLE seen WITH KEY", "FIND FIRST OCCURRENCE OF p1", "RAISE EXCEPTION error", "p0->chai_zero_sign = 0"} {
 		if !strings.Contains(runtime, part) {
 			t.Fatal("missing Chai semantic boundary", part)
 		}
 	}
-	if strings.Contains(runtime, " CS ") {
+	// Plain FIND defaults to case-sensitive substring matching on ABAP.
+	if strings.Contains(runtime, " CS ") || strings.Contains(runtime, "IGNORING CASE") {
 		t.Fatal("ABAP CS is not case-sensitive JS substring matching")
+	}
+	if strings.Contains(runtime, "CATCH cx_root") || !strings.Contains(runtime, "CATCH "+names.Get("exception.ts_throw")) {
+		t.Fatal("Chai must catch translated payloads and let native faults propagate")
 	}
 	for path, src := range files {
 		for _, line := range strings.Split(src, "\n") {

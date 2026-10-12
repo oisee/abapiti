@@ -68,8 +68,32 @@ func (b *body) chaiThrowTyped(n, a string, t hir.Type, expected string) {
 			b.line("IF " + value + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + b.e.name("exception.chaiRefusal") + ".\nENDIF.\nIF " + value + "->rejection IS BOUND.\nRAISE EXCEPTION " + value + "->rejection.\nENDIF.")
 		}
 	}
-	b.line("CATCH cx_root INTO " + error + ".")
+	b.line("CATCH " + b.e.chaiCatchTypes() + " INTO " + error + ".")
 	b.line(n + " = " + b.e.name("runtime.chai") + "=>match_error( p0 = " + error + " p1 = " + expected + " ).\nENDTRY.")
+}
+
+// Catch translated payloads only. Native faults and coverage refusals propagate
+// without passing through the Chai message adapter.
+func (e *emitter) chaiCatchTypes() string {
+	if e.promiseUsed {
+		return e.promiseExceptionBase()
+	}
+	types := []string{e.exception(hir.T(hir.String)), e.exception(hir.T(hir.Dynamic))}
+	if e.errorUsed {
+		types = append(types, e.exception(hir.Ref("builtin.Error")))
+	}
+	for _, c := range e.p.Classes {
+		if c.Name == "builtin.Error" {
+			continue
+		}
+		for parent := c.Super; parent != ""; parent = e.superOf(parent) {
+			if parent == "builtin.Error" {
+				types = append(types, e.exception(hir.Ref(c.Name)))
+				break
+			}
+		}
+	}
+	return strings.Join(types, " ")
 }
 
 func (e *emitter) chaiRuntime() {
@@ -227,7 +251,7 @@ func (e *emitter) chaiRuntime() {
 	if e.errorUsed {
 		errorMessage = "IF p0->tag = $D=>tag_ref AND p0->oval IS INSTANCE OF " + e.name("builtin.Error") + ".\nDATA native TYPE REF TO " + e.name("builtin.Error") + ".\nnative ?= p0->oval.\nresult = native->" + e.member("message") + ".\nRETURN.\nENDIF.\n" + errorMessage
 	}
-	source := strings.NewReplacer("$ARRAYS", arrays.String(), "$KIND", kind.String(), "$ENTRIES", entries.String(), "$BOX", box.String(), "$ACTION", action.String(), "$CATCH", catches.String(), "$MESSAGE", errorMessage).Replace(chaiRuntimeSource)
+	source := strings.NewReplacer("$ARRAYS", arrays.String(), "$KIND", kind.String(), "$ENTRIES", entries.String(), "$BOX", box.String(), "$ACTION", action.String(), "$CATCH_TYPES", e.chaiCatchTypes(), "$CATCH", catches.String(), "$MESSAGE", errorMessage).Replace(chaiRuntimeSource)
 	source = strings.NewReplacer("$D", d, "$N", name, "$T", trap).Replace(source)
 	e.files[name+".clas.abap"] = source
 }
@@ -473,7 +497,7 @@ IF p1->sval IS INITIAL.
 result = 1.
 RETURN.
 ENDIF.
-FIND FIRST OCCURRENCE OF SUBSTRING p1->sval IN p0->sval RESPECTING CASE.
+FIND FIRST OCCURRENCE OF p1->sval IN p0->sval.
 IF sy-subrc = 0.
 result = 1.
 ENDIF.
@@ -535,7 +559,7 @@ ENDMETHOD.
 METHOD throwMatch.
 TRY.
 invoke( p0 ).
-CATCH cx_root INTO DATA(error).
+CATCH $CATCH_TYPES INTO DATA(error).
 result = match_error( p0 = error p1 = p1 ).
 ENDTRY.
 ENDMETHOD.
@@ -548,7 +572,7 @@ IF p1 IS INITIAL.
 result = abap_true.
 RETURN.
 ENDIF.
-FIND FIRST OCCURRENCE OF SUBSTRING p1 IN message RESPECTING CASE.
+FIND FIRST OCCURRENCE OF p1 IN message.
 result = xsdbool( sy-subrc = 0 ).
 ENDMETHOD.
 ENDCLASS.

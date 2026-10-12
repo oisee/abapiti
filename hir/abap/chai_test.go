@@ -216,7 +216,7 @@ func TestChaiFixtures(t *testing.T) {
 		files[file] = formatted
 	}
 	all := files[runtime+".clas.abap"]
-	for _, part := range []string{"READ TABLE seen WITH KEY", "RESPECTING CASE", "RAISE EXCEPTION error", "p0->nval = 0 AND p1->nval = 0"} {
+	for _, part := range []string{"READ TABLE seen WITH KEY", "FIND FIRST OCCURRENCE OF p1", "RAISE EXCEPTION error", "p0->nval = 0 AND p1->nval = 0"} {
 		if !strings.Contains(all, part) {
 			t.Fatal("missing semantic boundary", part)
 		}
