@@ -159,7 +159,9 @@ measurements—not weakening assertions.
 
 ## Reproduction
 
-Use the existing clean checkout at `7720f6e29b41a6a12faee17ea65076ac6f046552`:
+Use the existing clean checkout at `f557e12f4217addcec7834b0607234aecf9b723a`
+(OSG main CI green, run `38138596313`). Historical M0 evidence below remains
+bound to its original pin; it is not relabelled as a new-pin measurement:
 
 ```sh
 export GOCACHE=/mnt/ssd-510/osg/go-build TMPDIR=/mnt/ram/abapiti/tmp
