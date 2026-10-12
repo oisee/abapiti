@@ -41,7 +41,18 @@ func (e *emitter) liveView(t hir.Type) string {
 	if !hir.DataClassView(e.p, t.Name) {
 		line("panic(newTrap(%q))", "structural class view requires data-only public ancestry: "+t.Name)
 	} else {
-		line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newTrap(\"structural class view refuses prototype-bearing source\"))}}")
+		primitiveReads := false
+		for c := e.classBy(t.Name); c != nil; c = e.classBy(c.Super) {
+			primitiveReads = primitiveReads || c.PrimitiveReads
+		}
+		// JS permits reading ordinary missing properties on primitive rule
+		// configs before a setter installs defaults. Keep the primitive as the
+		// backing value; writes still use the checked adapter and refuse.
+		allowed := "d.Tag!=tagObject"
+		if primitiveReads {
+			allowed += " && d.Tag!=1 && d.Tag!=3 && d.Tag!=4 && d.Tag!=5 && d.Tag!=6"
+		}
+		line("if %s {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newTrap(\"structural class view refuses prototype-bearing source\"))}}", allowed)
 		c := e.classBy(t.Name)
 		line("out:=&%s{}", e.obj(c.Name))
 		for base := c; base != nil; base = e.classBy(base.Super) {

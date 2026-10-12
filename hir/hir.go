@@ -77,9 +77,13 @@ type Class struct {
 	// Structural distinguishes frontend data shapes from prototype-bearing classes.
 	Structural bool `json:",omitempty"`
 	ViewUnsafe bool `json:",omitempty"`
-	Fields     []Field
-	Methods    []*Method
-	Ctor       *Method
+	// PrimitiveReads permits data views to read primitive backing values when
+	// the source explicitly checks a required public primitive field's absence.
+	// Writes remain checked, and prototype-dependent layouts still refuse.
+	PrimitiveReads bool `json:",omitempty"`
+	Fields         []Field
+	Methods        []*Method
+	Ctor           *Method
 }
 type Interface struct {
 	Node

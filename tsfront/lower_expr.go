@@ -147,6 +147,14 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && len(l.erasedScalars) > 0 && l.erasedScalars[l.resolve(n)] {
+		return x
+	}
+	if l.unprunedFeatures && x.Kind == hir.FieldGet && x.Type.Kind == hir.Optional && l.literalPropertyAbsentSymbol(l.resolve(n)) && !l.requiredFieldUse(n) {
+		// A required contextual declaration did not prove that erased literal
+		// data was present. Consumers can check or convert it when needed.
+		return x
+	}
 	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
 		return x
 	}
@@ -2688,6 +2696,16 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		}
 		l.diagf(n, "unsupported-type", "object literal needs a named lowered shape")
 		return nil
+	}
+	if l.unprunedFeatures && !l.shapeLike[target.Name] && !strings.HasPrefix(target.Name, "shape.") {
+		// A class annotation does not run a constructor on a JS literal.
+		// Keep its supplied properties in insertion order and attach only the
+		// existing certified data view, including inherited/absent fields.
+		record := l.dynamicRecordLiteral(n)
+		if record == nil {
+			return nil
+		}
+		return l.dynamicReference(record, hir.Ref(target.Name))
 	}
 	ctor := target.Ctor
 	props := n.AsObjectLiteralExpression().Properties.Nodes
