@@ -390,6 +390,21 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if base.Kind == hir.OrderedMap && base.Args[0].Kind == hir.String && key.Type.Kind == hir.Number {
 			key = l.primitiveString(n, key)
 		}
+		if base.Kind == hir.ClassRef || base.Kind == hir.Dynamic {
+			if key.Type.Kind == hir.Number {
+				key = l.primitiveString(n, key)
+			}
+			if key.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-expr", "delete requires a string property key")
+				return nil
+			}
+			if receiver.Type.Kind == hir.Optional && operand.Flags&ast.NodeFlagsOptionalChain != 0 {
+				saved := l.tempInit(n, receiver.Type, receiver)
+				present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: saved}
+				return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: saved}, Y: hir.L(hir.T(hir.Bool), true), Z: l.rtOp("dynamic.delete", l.coerce(present, hir.T(hir.Dynamic)), hir.T(hir.Bool), key)}
+			}
+			return l.rtOp("dynamic.delete", l.coerce(receiver, hir.T(hir.Dynamic)), hir.T(hir.Bool), key)
+		}
 		if base.Kind != hir.OrderedMap || !base.Args[0].Equal(key.Type) {
 			l.diagf(n, "unsupported-expr", "delete supports ordinary lowered records only")
 			return nil

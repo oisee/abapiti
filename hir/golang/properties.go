@@ -109,6 +109,9 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 		}
 	}
 
+	if e.recordDeletion {
+		line("if self.%s().deletedKeys[key] {return struct{value *dynamic;own,exists bool}{}}", e.getter(c.Name))
+	}
 	line("p,ok:=%s[key];var value *dynamic;if !read {return struct{value *dynamic;own,exists bool}{nil,p.own,ok}};switch p.slot {", table)
 	for i, p := range entries {
 		line("case %d:if ok {value=%s}", i, p.value)
