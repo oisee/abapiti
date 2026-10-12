@@ -6,6 +6,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"github.com/oisee/abapiti/internal/tsgo/stringutil"
 )
 
 // Class and interface lowering: two passes per file, signatures before
@@ -351,6 +352,9 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	}
 	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 || m.Name().Kind == ast.KindPrivateIdentifier, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
 	c.Fields = append(c.Fields, f)
+	if l.unprunedFeatures && !static && m.Initializer() == nil && typ.Kind != hir.Optional && m.Name().Kind != ast.KindPrivateIdentifier && m.ModifierFlags()&(ast.ModifierFlagsAmbient|ast.ModifierFlagsAbstract) == 0 && l.prog.prog.Options().GetUseDefineForClassFields() {
+		c.UndefinedDefineFields = true
+	}
 	if sym := m.Symbol(); sym != nil {
 		l.fields[sym] = f
 		if sym.Parent != nil {
@@ -630,6 +634,11 @@ func (l *lowerer) memberName(m *ast.Node, c *hir.Class) (string, bool) {
 	case ast.KindIdentifier, ast.KindPrivateIdentifier:
 		return name.Text(), true
 	case ast.KindStringLiteral:
+		if l.unprunedFeatures && m.Kind == ast.KindPropertyDeclaration {
+			// Literal field keys have no evaluation effects and use the same
+			// hashed HIR member ABI as identifiers (including integer keys).
+			return stringutil.CombineSurrogatePairs(name.Text()), true
+		}
 		l.diagf(m, "skipped-computed-name", "member with a string name %s is skipped", name.Text())
 	default:
 		l.diagf(m, "skipped-computed-name", "member with %s name is skipped", name.Kind.String())
@@ -766,7 +775,21 @@ func (l *lowerer) lowerConstructorBody(m *ast.Node, c *hir.Class) {
 func (l *lowerer) fieldInitializers(node *ast.Node, c *hir.Class, static bool) []*hir.Stmt {
 	var out []*hir.Stmt
 	for _, mem := range node.Members() {
-		if mem.Kind != ast.KindPropertyDeclaration || mem.Initializer() == nil || (mem.ModifierFlags()&ast.ModifierFlagsStatic != 0) != static {
+		if mem.Kind != ast.KindPropertyDeclaration || (mem.ModifierFlags()&ast.ModifierFlagsStatic != 0) != static {
+			continue
+		}
+		if mem.Initializer() == nil {
+			// Native define-field semantics create even an undefined optional
+			// key here. Record that ordinary write in constructor order; do not
+			// invent a zero primitive for required uninitialized storage.
+			if !static && l.unprunedFeatures && l.prog.prog.Options().GetUseDefineForClassFields() && mem.ModifierFlags()&(ast.ModifierFlagsAmbient|ast.ModifierFlagsAbstract) == 0 {
+				if name, ok := l.memberName(mem, c); ok {
+					t := l.declaredFieldType(c, name)
+					if t.Kind == hir.Optional {
+						out = append(out, &hir.Stmt{Kind: hir.Assign, Node: l.node(mem), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(mem), Name: name, Type: t, X: l.this(c)}, Y: &hir.Expr{Kind: hir.Lit, Type: t}})
+					}
+				}
+			}
 			continue
 		}
 		name, ok := l.memberName(mem, c)

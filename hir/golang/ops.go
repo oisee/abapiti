@@ -178,7 +178,7 @@ func (b *body) runtime(x *hir.Expr) string {
 			code += ".exists"
 		}
 	case "object.classOf":
-		code = "classOf(" + a + ")"
+		code = "nativeConstructor(" + a + ")"
 	case "classvalue.newArgs":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ".ArgsFactory(" + args[0] + "))"
 	case "classvalue.new":
@@ -217,6 +217,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "indentJSON(" + a + "," + args[0] + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
+		if c := b.e.classBy("builtin.SyntaxError"); c != nil {
+			b.e.usesTypedCatch = true
+			errType := hir.Ref(c.Name)
+			code = "parseJSONWithErrors(" + a + ",func(message jsString){panic(payload[" + b.e.typ(errType) + "]{Type:" + strconv.Quote(errType.String()) + ",Value:" + b.e.name("new."+c.Name) + "(present(message))})})"
+		}
 	case "json5.parse":
 		code = "parseJSON5(" + a + ",func(message jsString){panic(newTrap(\"JSON5 SyntaxError payload ABI is unsupported: \"+message.String()))})"
 	case "string.sha1Hex":

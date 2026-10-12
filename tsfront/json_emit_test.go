@@ -36,9 +36,20 @@ func TestGoJSONDataGraphNodeOracle(t *testing.T) {
 }
 
 func TestGoJSONUnprovenNativeOrderRefuses(t *testing.T) {
-	source := `class Native {b: number=1;a: number=2;} class Probe {static run(): string {return JSON.stringify(new Native());}}`
+	source := `class Native {b: number=1;a: number=2;}
+ class Unknown {b:number;a:number;constructor(){this.b=1;this.a=2;}}
+ class Probe {static run(): string {return JSON.stringify(new Native());} static bad():string {return JSON.stringify(new Unknown());}}`
+	// Keep the original fixture, now certified by exact Node bytes rather
+	// than its superseded blanket refusal. Retain an unproven-storage negative.
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	main := fmt.Sprintf(`func(){defer func(){if _,ok:=recover().(trap);!ok {panic("native order must refuse")}}();%s();panic("writer guessed order")}();fmt.Println("ok")`, goEntry("probe.ts.Probe", "run"))
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	main := fmt.Sprintf(`func(){defer func(){if _,ok:=recover().(trap);!ok {panic("native order must refuse")}}();%s();panic("writer guessed order")}();fmt.Println("ok")`, goEntry("probe.ts.Probe", "bad"))
 	if got := runGoHIR(t, p, main); got != "ok\n" {
 		t.Fatal(got)
 	}

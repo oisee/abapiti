@@ -266,6 +266,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if l.unprunedFeatures && x.Type.Kind == hir.ClassValue {
+		// Class/enum namespaces already have their value ABI. The checker's
+		// anonymous property shape is not an instance or a downcast proof.
+		return x
+	}
 	if typ.Kind == hir.Void || x.Type.Equal(typ) || ((x.Type.Kind == hir.Array || x.Type.Kind == hir.OrderedMap || x.Type.Kind == hir.OrderedSet) && typ.Kind != x.Type.Kind && typ.Kind != hir.Optional) {
 		return x
 	}
@@ -656,6 +661,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	}
 	p := n.AsPropertyAccessExpression()
+	if x, ok := l.enumNamespace(n); ok {
+		return x
+	}
 	if x, ok := l.numberStatic(n, p); ok {
 		return x
 	}

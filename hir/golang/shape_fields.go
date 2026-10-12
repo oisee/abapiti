@@ -129,7 +129,7 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	if e.liveClasses[c.Name] {
 		e.line("if self.viewSource!=nil {self.viewSource.put(key,value);return}")
 	}
-	if e.extraRuntimeKeys && c.Structural {
+	if e.tracksOwnKeys(c) {
 		e.line("if self.ownKeys!=nil {self.ownKeys.set(key,nil)}")
 	}
 	e.line("switch key {")

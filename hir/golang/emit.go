@@ -71,6 +71,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.err != nil {
 		return nil, nil, e.err
 	}
+	if e.nativeJSON {
+		e.extraRuntimeKeys = true
+	}
 	e.line("package %s", pkg)
 	interfaces := append([]*hir.Interface(nil), p.Interfaces...)
 	sort.Slice(interfaces, func(i, j int) bool { return interfaces[i].Name < interfaces[j].Name })
@@ -195,6 +198,7 @@ type emitter struct {
 	regexSplit        bool
 	constructorArgs   bool
 	configJSON        bool
+	nativeJSON        bool
 	promiseUsed       bool
 	profile           bool
 	sites             []emittedSite
@@ -366,7 +370,7 @@ func (e *emitter) class(c *hir.Class) {
 		e.configJSONClass(c)
 	}
 	e.line("type %s struct {", e.obj(c.Name))
-	if e.extraRuntimeKeys && c.Structural {
+	if e.tracksOwnKeys(c) {
 		e.line("ownKeys *orderedMap[jsString,*dynamic]")
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
@@ -474,6 +478,12 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("func %s(%s) %s {", e.name("new."+c.Name), params, e.ref(c.Name))
 	e.line("%s()", e.name("init."+c.Name))
 	e.line("self:=&%s{}", e.obj(c.Name))
+	if e.nativeJSON && !c.Structural {
+		e.line("keys:=&orderedMap[jsString,*dynamic]{}")
+		for base := c; base != nil; base = e.classBy(base.Super) {
+			e.line("self.%s().ownKeys=keys", e.getter(base.Name))
+		}
+	}
 	if ctor != nil {
 		e.line("%s(self%s)", e.body(owner.Name, "constructor"), comma(args))
 	}
@@ -1088,11 +1098,15 @@ func (b *body) stmt(s *hir.Stmt) {
 			a := b.expr(s.X.X)
 			v := b.value(s.Y, s.X.Type)
 			b.line("%s.%s().%s(%s)", a, e.getter(c.Name), e.name("view.write."+c.Name+"."+s.X.Name), v)
-		} else if s.X.Kind == hir.FieldGet && e.extraRuntimeKeys && e.classBy(s.X.X.Type.Name).Structural {
+		} else if s.X.Kind == hir.FieldGet && e.tracksOwnKeys(e.classBy(s.X.X.Type.Name)) {
 			a := b.temp(s.X.X.Type, b.expr(s.X.X))
 			v := b.value(s.Y, s.X.Type)
-			b.line("%s.%s=%s", a, e.member(s.X.Name), v)
-			b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", a, a, s.X.Name)
+			owner := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
+			storage := a + "." + e.getter(owner.Name) + "()"
+			b.line("%s.%s=%s", storage, e.member(s.X.Name), v)
+			if !strings.HasPrefix(s.X.Name, "#") {
+				b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", storage, storage, s.X.Name)
+			}
 		} else if s.X.Kind == hir.IndexGet {
 			a, i := b.expr(s.X.X), b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
@@ -1290,6 +1304,7 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	}
 	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
 		e.configJSON = true
+		e.nativeJSON = e.nativeJSON || x.Op == "json.stringifySubset"
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

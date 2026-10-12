@@ -100,6 +100,11 @@ func (l *lowerer) builtinError() string {
 					X: &hir.Expr{Kind: hir.This, Node: hir.Node{ID: l.nextID(), Source: name}, Type: hir.Ref(name)}},
 				Y: &hir.Expr{Kind: hir.Conditional, Type: msg, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: hir.V("message", hir.T(hir.Optional, msg))}, Y: hir.L(msg, ""), Z: &hir.Expr{Kind: hir.Narrow, Type: msg, X: hir.V("message", hir.T(hir.Optional, msg))}}})}}
 	l.out.Classes = append(l.out.Classes, c)
+	if l.unprunedFeatures {
+		// Native parser failures retain their Error ancestry and distinct
+		// constructor identity; they are not host traps or plain Error values.
+		l.out.Classes = append(l.out.Classes, &hir.Class{Node: c.Node, Name: "builtin.SyntaxError", Super: name})
+	}
 	l.diagf(nil, "note-builtin-error", "TypeScript Error mapped to the synthesized class builtin.Error")
 	return name
 }

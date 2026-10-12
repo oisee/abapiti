@@ -1195,6 +1195,10 @@ func (d *classDescriptor) has(k jsString) bool {
 	}
 	return false
 }
+func nativeConstructor(v any) *classDescriptor {
+ if m,ok:=v.(interface{constructorDescriptor()*classDescriptor});ok {if c:=m.constructorDescriptor();c!=nil {return c}}
+ panic(newTrap("constructor descriptor requires native prototype storage"))
+}
 func classOf(v any) *classDescriptor {
 	if nilRef(v) {
 		return nil
