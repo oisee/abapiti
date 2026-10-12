@@ -116,6 +116,9 @@ func (e *emitter) shapeFields(c *hir.Class) {
 			e.line("return box(%s)", value)
 		}
 	}
+	if _, shadowed := fields["constructor"]; !c.Structural && !shadowed {
+		e.line("case str(\"constructor\"): return box(self.constructorDescriptor())")
+	}
 	if len(e.liveClasses) > 0 && c.Structural {
 		e.line("};if self.viewExtras!=nil {return self.viewExtras.get(key).Value};return nil }")
 	} else {
