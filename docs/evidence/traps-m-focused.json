@@ -1,0 +1,234 @@
+{
+  "baseCommit": "8b2511b",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "baseline": {
+    "shards": [
+      {
+        "name": "root",
+        "files": 12,
+        "passed": 89,
+        "failed": 0,
+        "trapped": 5,
+        "notRun": 0,
+        "registered": 94,
+        "node": {
+          "passed": 94,
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      {
+        "name": "lsp",
+        "files": 16,
+        "passed": 178,
+        "failed": 0,
+        "trapped": 10,
+        "notRun": 5,
+        "registered": 193,
+        "node": {
+          "passed": 188,
+          "failed": 0,
+          "pending": 5
+        }
+      },
+      {
+        "name": "objects",
+        "files": 26,
+        "passed": 130,
+        "failed": 0,
+        "trapped": 14,
+        "notRun": 1,
+        "registered": 145,
+        "node": {
+          "passed": 144,
+          "failed": 0,
+          "pending": 1
+        }
+      },
+      {
+        "name": "rules",
+        "files": 192,
+        "passed": 3121,
+        "failed": 0,
+        "trapped": 26,
+        "notRun": 12,
+        "registered": 3157,
+        "node": {
+          "passed": 3149,
+          "failed": 0,
+          "pending": 10
+        }
+      }
+    ],
+    "total": {
+      "passed": 3518,
+      "failed": 0,
+      "trapped": 55,
+      "asyncPending": 0,
+      "notRun": 18,
+      "registered": 3589,
+      "total": 3591,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 16,
+      "unregistered": 2
+    }
+  },
+  "targetBodies": [
+    {
+      "shard": "root",
+      "title": "exclude list will exclude issues based on the local exclude patterns",
+      "status": "trapped",
+      "message": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "root",
+      "title": "severity an issue will have the severity specified in the config",
+      "status": "trapped",
+      "message": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "lsp",
+      "title": "LSP, help first character = DO",
+      "status": "trapped",
+      "message": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "objects",
+      "title": "malformed object XML ignores structured values where text is expected",
+      "status": "trapped",
+      "message": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "objects",
+      "title": "View, parse XML test",
+      "status": "trapped",
+      "message": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "objects",
+      "title": "View, parse XML database view with 2 append views",
+      "status": "trapped",
+      "message": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: dynpro_checks Element SDFSDF length longer than 132",
+      "status": "trapped",
+      "message": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: dynpro_checks overlapping dynpro fields",
+      "status": "trapped",
+      "message": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "rules",
+      "title": "Message rule no number",
+      "status": "trapped",
+      "message": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    }
+  ],
+  "probeStatusParity": {
+    "root": true,
+    "objects": true,
+    "rules": true,
+    "lsp": "all owned records identical; six extra original borrowed SQL-conversion passes"
+  },
+  "originalNodeObservation": {
+    "tests": 78,
+    "passed": 78,
+    "failed": 0,
+    "modules": 8,
+    "messageConstructorProbe": {
+      "command": "node --input-type=module; import original src/abap/types/message.ts; new Message(undefined,text,className)",
+      "missingAll": {
+        "number": "",
+        "className": "",
+        "message": ""
+      },
+      "missingNumber": {
+        "number": "",
+        "className": "ZAGTEST_EMPTY",
+        "message": "hello world"
+      }
+    }
+  },
+  "notes": [
+    "Four baseline shards, not a full base run.",
+    "Exact generated-Go frames and original JS values are preserved in docs/traps-m-roots.md.",
+    "Scratch probes only printed frames and retained the original typed refusal."
+  ],
+  "candidate": {
+    "semanticCommit": "b67770b",
+    "shards": [
+      {
+        "name": "lsp",
+        "files": 16,
+        "passed": 178,
+        "failed": 0,
+        "trapped": 10,
+        "notRun": 5,
+        "registered": 193,
+        "node": {
+          "passed": 188,
+          "failed": 0,
+          "pending": 5
+        }
+      }
+    ],
+    "allTraps": [
+      {
+        "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+        "count": 3,
+        "shards": {
+          "lsp": 3
+        },
+        "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168878 (src/lsp/rename.ts:109:52): assignment type mismatch"
+      },
+      {
+        "message": "test/lsp/_apply_edit.ts: HIR verification: unresolved field range",
+        "count": 2,
+        "shards": {
+          "lsp": 2
+        },
+        "example": "test/lsp/_apply_edit.ts:37:3: lowering trap: test/lsp/_apply_edit.ts:37:3: HIR verification: node 260552 (test/lsp/_apply_edit.ts:49:11): unresolved field range"
+      },
+      {
+        "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+        "count": 2,
+        "shards": {
+          "lsp": 2
+        },
+        "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      },
+      {
+        "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 1,
+        "shards": {
+          "lsp": 1
+        },
+        "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+      },
+      {
+        "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+        "count": 1,
+        "shards": {
+          "lsp": 1
+        },
+        "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169263 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+      },
+      {
+        "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+        "count": 1,
+        "shards": {
+          "lsp": 1
+        },
+        "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+      }
+    ],
+    "notes": [
+      "Help first character = DO now reaches DumpScope ToPrimitive, not the constructor read. No new body pass is credited."
+    ]
+  }
+}
