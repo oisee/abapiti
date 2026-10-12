@@ -1055,7 +1055,15 @@ func (d *dynamic) get(k jsString) *dynamic {
 		if m, ok := d.Value.(interface{ dynamicGet(jsString) *dynamic }); ok {
 			return m.dynamicGet(k)
 		}
+		if k == str("constructor") {
+			if m, ok := d.Value.(interface{ constructorDescriptor() *classDescriptor }); ok {
+				if c := m.constructorDescriptor(); c != nil {return box(c)}
+			}
+		}
 		panic(newRangeFault())
+	case 10:
+		if c, ok := d.Value.(*classDescriptor); ok && c != nil && k == str("name") {return box(c.Name)}
+		panic(newTrap("class descriptor property outside certified name read"))
 	case tagObject:
 		return d.Value.(*orderedMap[jsString, *dynamic]).get(k).Value
 	case tagArray:
