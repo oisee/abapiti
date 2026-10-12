@@ -1,0 +1,545 @@
+{
+  "schema": "abapiti-train-o1-v1",
+  "verdict": "BLOCKED: no unpruned OSGO harness execution certificate",
+  "mergeHead": "bef1975",
+  "mainCommit": "a15e063be697ba4709d68c93377c7ca9fa6bcd01",
+  "classviewCommit": "9016fba",
+  "osgPin": "f557e12f4217addcec7834b0607234aecf9b723a",
+  "transpilerPin": "ee5c2cd1a45aaac6be503a46fc903ce95a946877",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "mergeFix": {
+    "test": "TestABAPTestGapCountsSyntheticOccurrences",
+    "unsupportedCatalogue": {
+      "before": 26,
+      "after": 24
+    },
+    "newExplicitAssertions": [
+      "object.checkedClassView absent",
+      "classvalue.newArgs absent"
+    ]
+  },
+  "gates": {
+    "allExitZero": true,
+    "wallSeconds": {
+      "vet": 0.65,
+      "shortTests": 238.65,
+      "lexerFacts": 6.97,
+      "defaultRuntimeOps": 20.68,
+      "lint": 3.27
+    },
+    "lexerFactsSHA256": "c173befedf56bd12e57aa6af1ce51e3354f16d569f5d7cef60fed72af9923940",
+    "lintNewIssues": 0,
+    "lintCanary": "5/5",
+    "lintVersion": "2.13.2"
+  },
+  "ci": {
+    "osgoUnit": {
+      "passed": 4077,
+      "failed": 0,
+      "tests": 4077
+    },
+    "hirOsgo": {
+      "passed": 490,
+      "failed": 0,
+      "notCompiled": 1,
+      "tests": 491
+    },
+    "hirOsgjs": {
+      "passed": 491,
+      "failed": 0,
+      "tests": 491
+    },
+    "lexerCasesPerHost": 44,
+    "lexerTokens": 4663,
+    "criticProbeSetsPerHost": 17,
+    "expectedMutationFailuresPerHost": 3,
+    "numberFix2": "PASS both hosts",
+    "wallSeconds": [
+      120.65,
+      1503.12
+    ]
+  },
+  "registry": [
+    {
+      "variant": "clean",
+      "nodeOracle": {
+        "variant": "clean",
+        "issues": 0,
+        "dumpSHA": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+        "bytesSHA": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "wallSeconds": 20.01348271
+      },
+      "nodeIssues": 0,
+      "unitStatus": "SUCCESS",
+      "report": "REGISTRY ok=X want_issues=0 load_us=90949759 run_us=18119462 sha256=5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9 ms: lexer=1673 statements=8370 structures=4435 objects=14479 macros=1 globals=265 syntax=2812 allowed_object_naming=0 check_syntax=0 implement_methods=470 parser_error=7 superclass_final=35 unknown_types=25",
+      "timingMs": {
+        "frontend": 90546,
+        "emit": 14161,
+        "goBuild": 65882,
+        "run": 107248
+      },
+      "unitWallSeconds": 286.14
+    },
+    {
+      "variant": "seeded",
+      "nodeOracle": {
+        "variant": "seeded",
+        "issues": 5,
+        "dumpSHA": "7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7",
+        "bytesSHA": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+        "wallSeconds": 17.572594788999996
+      },
+      "nodeIssues": 5,
+      "unitStatus": "SUCCESS",
+      "report": "REGISTRY ok=X want_issues=0 load_us=92375951 run_us=18666969 sha256=7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7 ms: lexer=1658 statements=8909 structures=4471 objects=15038 macros=0 globals=250 syntax=2823 allowed_object_naming=0 check_syntax=0 implement_methods=460 parser_error=7 superclass_final=32 unknown_types=30",
+      "timingMs": {
+        "frontend": 121203,
+        "emit": 17627,
+        "goBuild": 79497,
+        "run": 114544
+      },
+      "unitWallSeconds": 342.41
+    }
+  ],
+  "shards": [
+    {
+      "name": "abap/lexer",
+      "rootFiles": 3,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "creditedPasses": 0,
+      "runtimeFailures": null,
+      "runtimeTraps": null,
+      "nodeActiveNotRun": 200,
+      "registered": 0,
+      "infrastructureFailure": "Go build: erased REF TO object table row assigned to Dynamic reference without checked cast",
+      "host": {
+        "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+        "timingMs": {
+          "frontend": 144544,
+          "emit": 13078,
+          "goBuild": 3145,
+          "run": 0
+        },
+        "status": 2,
+        "envelope": {
+          "files": 2349,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "loweringGate": {
+        "Files": 1545,
+        "Classes": 2109,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      }
+    },
+    {
+      "name": "abap/statements",
+      "rootFiles": 286,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "creditedPasses": 0,
+      "runtimeFailures": null,
+      "runtimeTraps": null,
+      "nodeActiveNotRun": 4962,
+      "registered": 0,
+      "infrastructureFailure": "Go build: erased REF TO object table row assigned to Dynamic reference without checked cast",
+      "host": {
+        "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+        "timingMs": {
+          "frontend": 207438,
+          "emit": 15722,
+          "goBuild": 3908,
+          "run": 0
+        },
+        "status": 2,
+        "envelope": {
+          "files": 2607,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "loweringGate": {
+        "Files": 1828,
+        "Classes": 2367,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      }
+    },
+    {
+      "name": "abap/structures",
+      "rootFiles": 30,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "creditedPasses": 0,
+      "runtimeFailures": null,
+      "runtimeTraps": null,
+      "nodeActiveNotRun": 139,
+      "registered": 0,
+      "infrastructureFailure": "Go build: erased REF TO object table row assigned to Dynamic reference without checked cast",
+      "host": {
+        "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+        "timingMs": {
+          "frontend": 148982,
+          "emit": 10309,
+          "goBuild": 2848,
+          "run": 0
+        },
+        "status": 2,
+        "envelope": {
+          "files": 2384,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "loweringGate": {
+        "Files": 1572,
+        "Classes": 2144,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      }
+    },
+    {
+      "name": "objects",
+      "rootFiles": 26,
+      "node": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1
+      },
+      "creditedPasses": 0,
+      "runtimeFailures": null,
+      "runtimeTraps": null,
+      "nodeActiveNotRun": 144,
+      "registered": 0,
+      "infrastructureFailure": "Go build: erased REF TO object table row assigned to Dynamic reference without checked cast",
+      "host": {
+        "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+        "timingMs": {
+          "frontend": 114987,
+          "emit": 10845,
+          "goBuild": 3048,
+          "run": 0
+        },
+        "status": 2,
+        "envelope": {
+          "files": 2518,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "loweringGate": {
+        "Files": 1567,
+        "Classes": 2276,
+        "Interfaces": 79,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      }
+    },
+    {
+      "name": "rules",
+      "rootFiles": 192,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "creditedPasses": 0,
+      "runtimeFailures": null,
+      "runtimeTraps": null,
+      "nodeActiveNotRun": 3149,
+      "registered": 0,
+      "infrastructureFailure": "Go build: erased REF TO object table row assigned to Dynamic reference without checked cast",
+      "host": {
+        "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+        "timingMs": {
+          "frontend": 194846,
+          "emit": 14919,
+          "goBuild": 5414,
+          "run": 0
+        },
+        "status": 2,
+        "envelope": {
+          "files": 4242,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "loweringGate": {
+        "Files": 1732,
+        "Classes": 3999,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      }
+    }
+  ],
+  "preClassview": {
+    "abap/lexer": {
+      "passed": 85,
+      "active": 200,
+      "failed": 0,
+      "trapped": 115,
+      "phaseSeconds": 266.517
+    },
+    "abap/statements": {
+      "passed": 433,
+      "active": 4962,
+      "failed": 0,
+      "trapped": 4529,
+      "phaseSeconds": 348.681
+    }
+  },
+  "siteClosureMembership": [
+    {
+      "name": "abap",
+      "roots": 18,
+      "files": 1559,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "abap/expressions",
+      "roots": 11,
+      "files": 1553,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "abap/lexer",
+      "roots": 3,
+      "files": 1545,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "abap/nodes",
+      "roots": 1,
+      "files": 726,
+      "sites": []
+    },
+    {
+      "name": "abap/statements",
+      "roots": 286,
+      "files": 1828,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "abap/structures",
+      "roots": 30,
+      "files": 1572,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts",
+        "test/abap/structures/_combi.ts"
+      ]
+    },
+    {
+      "name": "abap/syntax",
+      "roots": 8,
+      "files": 1550,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "abap/types",
+      "roots": 6,
+      "files": 1547,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts",
+        "test/abap/types/types.ts"
+      ]
+    },
+    {
+      "name": "root",
+      "roots": 12,
+      "files": 1552,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "cds",
+      "roots": 2,
+      "files": 1542,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "ddl",
+      "roots": 1,
+      "files": 1542,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "lsp",
+      "roots": 16,
+      "files": 1557,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "objects",
+      "roots": 26,
+      "files": 1567,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts",
+        "test/objects/class.ts"
+      ]
+    },
+    {
+      "name": "objects/rename",
+      "roots": 9,
+      "files": 1549,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "pretty_printer",
+      "roots": 1,
+      "files": 1542,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "rules",
+      "roots": 192,
+      "files": 1732,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    },
+    {
+      "name": "utils",
+      "roots": 3,
+      "files": 1543,
+      "sites": [
+        "src/artifacts_objects.ts",
+        "src/ddl/ddl_parser.ts",
+        "src/lsp/help.ts"
+      ]
+    }
+  ],
+  "defaultOutputDiff": {
+    "base": {
+      "main": "a15e063be697ba4709d68c93377c7ca9fa6bcd01",
+      "pin": "ad3a671",
+      "head": "bef1975"
+    },
+    "files": {
+      "main": 6312,
+      "pin": 6312,
+      "head": 6315
+    },
+    "added": [
+      "classes/z_class_refusa_99eac77bbe39ca.clas.abap",
+      "native/lib/z_class_refusa_99eac77bbe39ca.clas.abap",
+      "osg/z_class_refusa_99eac77bbe39ca.clas.abap"
+    ],
+    "removed": [],
+    "totalChanged": 5943,
+    "pinChanged": 151,
+    "classviewChanged": 5793,
+    "overlap": 1,
+    "groups": {
+      "a4h": 2,
+      "classes": 1980,
+      "names.json": 1,
+      "native": 1980,
+      "osg": 1980
+    },
+    "pinGroups": {
+      "a4h": 1,
+      "classes": 50,
+      "native": 50,
+      "osg": 50
+    },
+    "classviewGroups": {
+      "a4h": 2,
+      "classes": 1930,
+      "names.json": 1,
+      "native": 1930,
+      "osg": 1930
+    },
+    "pinPathsSHA256": "38b72265c2221719348685dc7a1878156030cfe6df6f652197fa6a62b369c877",
+    "classviewPathsSHA256": "8a9ec315d525c104c877c04f4d2518f140257881580fdc0de8eaadbfb410fb65",
+    "zipChangedMembers": {
+      "a4h/abaplint-577f875e-a4h.zip": {
+        "pin": 50,
+        "classview": 1931
+      }
+    }
+  },
+  "classABISHA256": "0c1dafe8a8404c65b7ea5882b966a5e9b8bb15ba730d02f686e449bb706dff15",
+  "runtimeCountingRule": "Null failures/traps mean unmeasured: Go compilation aborted before any runner report. Zero credited passes is not a runtime failure/trap count."
+}

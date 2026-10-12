@@ -108,7 +108,11 @@ func (e *emitter) argumentFactoryABAP() string {
 			for i, p := range ctor.Params {
 				d := b.temp(hir.T(hir.Dynamic))
 				b.line("IF p1 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
-				b.line(fmt.Sprintf("READ TABLE p1->items INDEX %d INTO %s.", i+1, d))
+				// Reference arrays are erased to REF TO object; read the
+				// entry erased and narrow it with a checked cast.
+				raw := b.rawTemp("REF TO object")
+				b.line(fmt.Sprintf("READ TABLE p1->items INDEX %d INTO %s.", i+1, raw))
+				b.line(d + " ?= " + raw + ".")
 				v := b.temp(p.Type)
 				b.constructorArgument(v, d, p.Type)
 				b.locals[p.Name] = v
