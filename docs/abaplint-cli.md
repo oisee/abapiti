@@ -55,6 +55,32 @@ integer assumption is supported; use `--assume-int=false` to measure binary64
 lowering instead. `--quiet` suppresses the narration, not the evidence.
 Source/IO failures remain errors; without `--full` the normal build is unchanged.
 
+### Other TypeScript projects
+
+```sh
+abapiti lower --full --tsconfig scratch/tsconfig.json -o out file.ts other.ts
+# Include the pinned core source at src/ to retain its fingerprinted adaptations:
+abapiti lower --full --tsconfig scratch/tsconfig.json --overrides registry \
+  --scope transpiler/src -o out src/registry.ts other-files.ts
+```
+
+File arguments are relative to the tsconfig directory. This command uses the
+same full-body lowering, numeric policy and HIR verifier, without reachability
+pruning, failure traps or target emission. Overrides default to `none`;
+`registry` explicitly enables the pinned abaplint registry inventory and its
+source validation. `--assume-int=false` selects binary64 measurement.
+
+Evidence includes the complete closure's lowering evidence and
+`closure-gap-summary.json`. `gap-summary.json` and `checker-diagnostics.json`
+are restricted by optional `--scope` (a tsconfig-relative directory), but the
+closure itself is **never** restricted. Root-message entries include an example
+location. Scoped HIR counts include only errors with a source location beneath
+that directory; global/synthetic errors remain in the complete evidence.
+Checker errors are recorded separately, not counted as lowering blockers.
+Gaps do not cause a failing exit status; source/IO/override failures do.
+See [the transpiler measurement](generality-transpiler.md) for a second-project
+example and its limitations.
+
 ## Limits
 
 The build is pruned to the code paths that checking `zabapgit_standalone` with abapGit's `ci/abaplint.json` executes (release v702, six rules). These are the paths recorded in `tsfront/testdata/registrycorpus/reachability.json`. Function bodies outside them are compiled as traps. Other inputs or rules may reach such a trap. In that case the check is refused, and the refusal names the TypeScript location of the missing code (for example `refused: this build has no code for src/rules/….ts:42`). It never gives a silently wrong answer.

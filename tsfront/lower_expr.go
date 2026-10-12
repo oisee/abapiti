@@ -1280,6 +1280,10 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// A receiver of a vendored but not-lowered class goes through a cast
 		// view interface grown for exactly this member.
 		if recvCast, ok := l.viewCast(p.Expression, name); ok {
+			if l.methodsBy[recvCast.Type.Name+"."+name] == nil {
+				l.diagf(n, "unsupported-call", "method %s on view %s has no lowered signature", name, recvCast.Type.Name)
+				return nil
+			}
 			recvCast = l.callReceiver(n, recvCast, l.methodsBy[recvCast.Type.Name+"."+name].Params)
 			args, ok2 := l.callArgsMethod(n, n.Arguments(), l.methodsBy[recvCast.Type.Name+"."+name], 0)
 			if !ok2 {

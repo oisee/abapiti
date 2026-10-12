@@ -1,0 +1,461 @@
+{
+  "schema": "generality-transpiler/1",
+  "frontendFixCommit": "ba4f47d",
+  "frontendBase": "a6122d22baa6e7013a93f81a0b8f802076930d29",
+  "frontendBaseLabel": "integ/train-13",
+  "transpilerRevision": "ee5c2cd1",
+  "coreRevision": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "requiredCoreVersion": "2.120.59",
+  "measuredCoreVersion": "2.120.56",
+  "inputs": {
+    "core": {
+      "files": 1541,
+      "manifestSHA256": "ccf9bc700380bb314bdb5192d65cd38552ca518a45d698f5e7a51c2a567ecc7e"
+    },
+    "transpiler": {
+      "files": 322,
+      "manifestSHA256": "2c6ea88554d0fb87d7907289d9bc6f8941454619c0cb392570ae983d6008b55f"
+    },
+    "harness": {
+      "files": 1,
+      "manifestSHA256": "d3c5ca7236d8e8c50399a51f167faac42ecd682ec79479f8bae2bb29cd814244"
+    },
+    "registryClosure": {
+      "files": 1538,
+      "manifestSHA256": "b36851be3a5b673bc3b5bce15e55df9ebdd0b2eaba76a71bfcf1a17f0059b7bc",
+      "allSourceHashesVerified": true
+    },
+    "source-map": {
+      "version": "0.8.0"
+    },
+    "@types/node": {
+      "version": "26.6.2"
+    },
+    "fast-xml-parser": {
+      "version": "5.10.1"
+    },
+    "json5": {
+      "version": "2.2.3"
+    },
+    "vscode-languageserver-types": {
+      "version": "3.18.0"
+    }
+  },
+  "manifestHashFormat": "SHA-256 of sorted lines: tsconfig-relative POSIX path + space + source SHA-256 + newline",
+  "tsconfig": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "target": "es2022",
+      "lib": [
+        "es2022"
+      ],
+      "noEmit": true,
+      "skipLibCheck": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "noImplicitAny": true,
+      "strictPropertyInitialization": false,
+      "esModuleInterop": true,
+      "types": [
+        "node"
+      ],
+      "paths": {
+        "@abaplint/core": [
+          "./src/index.ts"
+        ]
+      }
+    },
+    "include": [
+      "src/**/*.ts",
+      "transpiler/src/**/*.ts",
+      "harness/**/*.ts"
+    ]
+  },
+  "policy": {
+    "full": true,
+    "pruning": false,
+    "trapOnFailure": false,
+    "assumeInt": true,
+    "overrides": "registry",
+    "scope": "transpiler/src"
+  },
+  "versionSkew": {
+    "checkerDiagnostics": [],
+    "observedErrors": 0
+  },
+  "summary": {
+    "blocking": 139,
+    "rootBlocking": 95,
+    "cascadeBlocking": 44,
+    "hirErrors": 341,
+    "byCategory": {
+      "assume-integer": 1,
+      "skipped-cast-view": 1,
+      "unsupported-array": 2,
+      "unsupported-assignment": 4,
+      "unsupported-call": 25,
+      "unsupported-conditional-join": 1,
+      "unsupported-expr": 56,
+      "unsupported-new": 2,
+      "unsupported-number": 1,
+      "unsupported-regex": 35,
+      "unsupported-shortcircuit": 2,
+      "unsupported-statement": 3,
+      "unsupported-static-init": 1,
+      "unsupported-type": 5
+    },
+    "byArea": {
+      "db": 12,
+      "expressions": 57,
+      "handlers": 1,
+      "src": 52,
+      "statements": 10,
+      "structures": 7
+    },
+    "byRootMessage": [
+      {
+        "message": "replace requires a literal replacement without dollar substitutions",
+        "count": 35,
+        "example": "transpiler/src/db/populate_tables.ts:199:31",
+        "class": "b",
+        "reason": "String.replace replacement syntax: dollar-containing literals (including a lone dollar) and computed replacements are refused."
+      },
+      {
+        "message": "identifier X is not a lowered local or module value",
+        "count": 12,
+        "example": "transpiler/src/chunk.ts:205:32",
+        "class": "b",
+        "reason": "WeakMap/WeakSet, console.dir, Number.parseInt, source-map and residual locals from those API failures; not twelve independent language gaps."
+      },
+      {
+        "message": "assignment to X is not lowered",
+        "count": 4,
+        "example": "transpiler/src/expressions/sql_cond.ts:225:9",
+        "class": "b",
+        "reason": "One WeakMap-dependent assignment; three locals absent after refused String.replace calls. Assignment consequences are not tagged cascade."
+      },
+      {
+        "message": "method X on string is not lowered",
+        "count": 4,
+        "example": "transpiler/src/db/populate_tables.ts:37:61",
+        "class": "b",
+        "reason": "String.padEnd and String.search."
+      },
+      {
+        "message": "method X on void is not lowered",
+        "count": 4,
+        "example": "transpiler/src/traversal.ts:109:9",
+        "class": "b",
+        "reason": "WeakSet.add/has and WeakMap.set/get after their storage type was rejected."
+      },
+      {
+        "message": "push spread needs a matching array (array<classref<X>> <- array<classref<X>>)",
+        "count": 4,
+        "example": "transpiler/src/structures/class_implementation.ts:48:5",
+        "class": "a",
+        "reason": "Array spread/push cannot coerce structurally compatible record shapes."
+      },
+      {
+        "message": "unresolved static method X",
+        "count": 3,
+        "example": "transpiler/src/statements/data.ts:57:22",
+        "class": "a",
+        "reason": "Static and instance methods with the same name collide in the method identity (Traversal.setValues)."
+      },
+      {
+        "message": "KindTypeAliasDeclaration is not lowered",
+        "count": 2,
+        "example": "transpiler/src/expressions/corresponding_body.ts:21:5",
+        "class": "a",
+        "reason": "Block-local type aliases are handled as unsupported executable statements."
+      },
+      {
+        "message": "call to KindIdentifier is not lowered",
+        "count": 2,
+        "example": "transpiler/src/expressions/type_name_or_infer.ts:45:16",
+        "class": "a",
+        "reason": "Function values read from a record/property cannot be invoked in these contexts."
+      },
+      {
+        "message": "checker type X is not a lowered declaration",
+        "count": 2,
+        "example": "transpiler/src/chunk.ts:204:11",
+        "class": "b",
+        "reason": "source-map SourceMapGenerator is only checked, not implemented/lowered."
+      },
+      {
+        "message": "method X of transpiler/src/traversal.ts.Traversal is not static",
+        "count": 2,
+        "example": "transpiler/src/handlers/handle_type_pool.ts:29:26",
+        "class": "a",
+        "reason": "Static and instance setValues share a frontend identity; legal TS gets mistaken for an instance-only method."
+      },
+      {
+        "message": "new X is not a lowered class",
+        "count": 2,
+        "example": "transpiler/src/traversal.ts:60:82",
+        "class": "b",
+        "reason": "WeakSet/WeakMap constructors."
+      },
+      {
+        "message": "operands cannot preserve the result type interfaceref<X> (left optional<classref<X>>, right classref<X>)",
+        "count": 2,
+        "example": "transpiler/src/expressions/parameter_s.ts:13:44",
+        "class": "a",
+        "reason": "Short-circuit union result preservation across different nominal/structural views."
+      },
+      {
+        "message": "spread element needs an array",
+        "count": 2,
+        "example": "transpiler/src/initialization.ts:136:13",
+        "class": "b",
+        "reason": "Spreads whose operands already failed WeakMap access or default Array.sort lowering."
+      },
+      {
+        "message": "KindInterfaceDeclaration is not lowered",
+        "count": 1,
+        "example": "transpiler/src/expressions/value_body.ts:107:5",
+        "class": "a",
+        "reason": "Block-local interface declaration."
+      },
+      {
+        "message": "checker type X IReference[], { plain: Map<string, number[]>; virtual: Map<string, number[]>; }> is not a lowered declaration",
+        "count": 1,
+        "example": "transpiler/src/traversal.ts:19:7",
+        "class": "b",
+        "reason": "WeakMap with readonly array keys and record values."
+      },
+      {
+        "message": "compare.getChildren().length / 3: division can produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+        "count": 1,
+        "example": "transpiler/src/statements/read_table.ts:66:21",
+        "class": "a",
+        "reason": "Integer-mode division lacks an integrality proof; the numeric contract requires a source-pinned exception. This is a general policy limitation, not an override accidentally applied to transpiler."
+      },
+      {
+        "message": "method X on array is not lowered",
+        "count": 1,
+        "example": "transpiler/src/statements/assign.ts:118:21",
+        "class": "b",
+        "reason": "Array.toString on a regex match result."
+      },
+      {
+        "message": "method X on classref is not lowered",
+        "count": 1,
+        "example": "transpiler/src/index.ts:72:40",
+        "class": "a",
+        "reason": "Optional invocation of a function-valued property (options.only)."
+      },
+      {
+        "message": "method X on interfaceref is not lowered",
+        "count": 1,
+        "example": "transpiler/src/db/populate_tables.ts:121:27",
+        "class": "a",
+        "reason": "Dynamic method invocation through an any assertion (parseRaw2). The core API exists; the erased receiver lacks a callable member view."
+      },
+      {
+        "message": "method X on set is not lowered",
+        "count": 1,
+        "example": "transpiler/src/traversal.ts:460:7",
+        "class": "b",
+        "reason": "Set.forEach."
+      },
+      {
+        "message": "module initializer is not provably pure and order-independent",
+        "count": 1,
+        "example": "transpiler/src/expressions/type_name_or_infer.ts:17:56",
+        "class": "a",
+        "reason": "Module-level record of function values is not certified pure/order-independent."
+      },
+      {
+        "message": "no exact conditional join for optional<interfaceref<X>> and optional<classref<X>> (context optional<classref<X>>, inferred optional<classref<X>>)",
+        "count": 1,
+        "example": "transpiler/src/validation.ts:153:18",
+        "class": "a",
+        "reason": "Optional function-valued property conditional join maps inconsistent storage/callable views."
+      },
+      {
+        "message": "push spread needs a matching array (array<dynamic> <- nil)",
+        "count": 1,
+        "example": "transpiler/src/db/populate_tables.ts:125:11",
+        "class": "a",
+        "reason": "Spread/push of a dynamic value inferred through an any-cast method call; consequence of the dynamic dispatch gap."
+      },
+      {
+        "message": "remainder needs a proven nonnegative integral dividend (negative zero must remain binary64)",
+        "count": 1,
+        "example": "transpiler/src/expressions/string_template_source.ts:41:28",
+        "class": "a",
+        "reason": "Number remainder lacks the nonnegative/integral proof required to preserve negative-zero semantics."
+      },
+      {
+        "message": "sort needs an inline or lowered module comparator",
+        "count": 1,
+        "example": "transpiler/src/initialization.ts:136:16",
+        "class": "b",
+        "reason": "Default Array.sort without an explicit comparator."
+      },
+      {
+        "message": "type reference WeakMap is not a lowered declaration",
+        "count": 1,
+        "example": "transpiler/src/traversal.ts:61:40",
+        "class": "b",
+        "reason": "WeakMap type annotation."
+      },
+      {
+        "message": "type reference WeakSet is not a lowered declaration",
+        "count": 1,
+        "example": "transpiler/src/traversal.ts:60:42",
+        "class": "b",
+        "reason": "WeakSet type annotation."
+      },
+      {
+        "message": "view member X: union parameter is skipped",
+        "count": 1,
+        "example": "transpiler/src/chunk.ts:212:18",
+        "class": "b",
+        "reason": "Vendored source-map method signature adaptation fails (SourceMapGenerator.toJSON)."
+      }
+    ],
+    "files": 138
+  },
+  "rootClassification": {
+    "a": 23,
+    "b": 72,
+    "c": 0,
+    "d": 0
+  },
+  "closureTotals": {
+    "blocking": 159,
+    "rootBlocking": 106,
+    "cascadeBlocking": 53,
+    "hirErrors": 405
+  },
+  "excluded": {
+    "coreBlocking": 19,
+    "dependencyBlocking": 1,
+    "coreLocatedHIRErrors": 52,
+    "unlocatedHIRErrors": 12
+  },
+  "blockerFiles": 35,
+  "hirByMessage": [
+    {
+      "message": "call argument type mismatch: classref<X> <- classref<X> in virtual .append",
+      "count": 241,
+      "example": "transpiler/src/expressions/arith_operator.ts:14:16",
+      "exampleMessage": "call argument type mismatch: classref<transpiler/src/chunk.ts.SourceMapTraversal> <- classref<transpiler/src/traversal.ts.Traversal> in virtual .append"
+    },
+    {
+      "message": "missing expression",
+      "count": 25,
+      "example": "transpiler/src/db/populate_tables.ts:110:3",
+      "exampleMessage": "missing expression"
+    },
+    {
+      "message": "condition must be bool",
+      "count": 13,
+      "example": "transpiler/src/db/populate_tables.ts:123:7",
+      "exampleMessage": "condition must be bool"
+    },
+    {
+      "message": "method may fall through without return",
+      "count": 13,
+      "example": "transpiler/src/chunk.ts:200:3",
+      "exampleMessage": "method may fall through without return"
+    },
+    {
+      "message": "call argument type mismatch: string <- void in runtime .",
+      "count": 12,
+      "example": "transpiler/src/expressions/method_source.ts:103:11",
+      "exampleMessage": "call argument type mismatch: string <- void in runtime ."
+    },
+    {
+      "message": "unresolved class X",
+      "count": 8,
+      "example": "transpiler/src/chunk.ts:82:3",
+      "exampleMessage": "unresolved class transpiler/src/chunk.ts.SourceMapTraversal"
+    },
+    {
+      "message": "unsupported collection key dynamic",
+      "count": 8,
+      "example": "transpiler/src/traversal.ts:29:5",
+      "exampleMessage": "unsupported collection key dynamic"
+    },
+    {
+      "message": "call argument type mismatch: classref<X> <- classref<X> in virtual .ensureStartMapping",
+      "count": 6,
+      "example": "transpiler/src/structures/constants.ts:20:21",
+      "exampleMessage": "call argument type mismatch: classref<transpiler/src/chunk.ts.SourceMapTraversal> <- classref<transpiler/src/traversal.ts.Traversal> in virtual .ensureStartMapping"
+    },
+    {
+      "message": "missing interface implementation transpile",
+      "count": 5,
+      "example": "transpiler/src/expressions/field_chain.ts:9:1",
+      "exampleMessage": "missing interface implementation transpile"
+    },
+    {
+      "message": "non-numeric comparison",
+      "count": 2,
+      "example": "transpiler/src/unit_test.ts:167:13",
+      "exampleMessage": "non-numeric comparison"
+    },
+    {
+      "message": "assignment type mismatch",
+      "count": 1,
+      "example": "transpiler/src/traversal.ts:36:13",
+      "exampleMessage": "assignment type mismatch"
+    },
+    {
+      "message": "call argument type mismatch: classref<X> <- classref<X> in virtual .isGeneratedFunctionGroup",
+      "count": 1,
+      "example": "transpiler/src/handlers/handle_fugr.ts:16:12",
+      "exampleMessage": "call argument type mismatch: classref<src/objects/function_group.ts.FunctionGroup> <- classref<src/objects/_abap_object.ts.ABAPObject> in virtual .isGeneratedFunctionGroup"
+    },
+    {
+      "message": "call argument type mismatch: interfaceref<X> <- array<i64> in runtime .",
+      "count": 1,
+      "example": "transpiler/src/traversal.ts:38:9",
+      "exampleMessage": "call argument type mismatch: interfaceref<src/abap/5_syntax/_statement_syntax.ts.StatementSyntax> <- array<i64> in runtime ."
+    },
+    {
+      "message": "call argument type mismatch: string <- optional<string> in runtime .",
+      "count": 1,
+      "example": "transpiler/src/statements/assign.ts:90:11",
+      "exampleMessage": "call argument type mismatch: string <- optional<string> in runtime ."
+    },
+    {
+      "message": "duplicate member setValues",
+      "count": 1,
+      "example": "transpiler/src/traversal.ts:1132:3",
+      "exampleMessage": "duplicate member setValues"
+    },
+    {
+      "message": "dynamic.classView needs Dynamic in and a named class reference out",
+      "count": 1,
+      "example": "transpiler/src/statements/find.ts:47:11",
+      "exampleMessage": "dynamic.classView needs Dynamic in and a named class reference out"
+    },
+    {
+      "message": "invalid checked integer conversion",
+      "count": 1,
+      "example": "transpiler/src/chunk.ts:168:32",
+      "exampleMessage": "invalid checked integer conversion"
+    },
+    {
+      "message": "unsupported runtime op array.join on array<optional<string>>",
+      "count": 1,
+      "example": "transpiler/src/handlers/handle_abap.ts:141:44",
+      "exampleMessage": "unsupported runtime op array.join on array<optional<string>>"
+    }
+  ],
+  "rawClosureEvidenceSHA256": {
+    "registry-blocking.json": "e3703a80db98578dd5da4778964b231163c0b9fa73102828beb6cbdd73c4bf3a",
+    "registry-verify.txt": "e6cb6b6f1d45d5e3590973a80b0ae4c16b4a6a4c87b990f6b774fca2d0efd3c2",
+    "registry-overrides.json": "1b8a336a8c31b2e670d31b2ffa33c2b0d17174c2aeda0a160209a443723b797c"
+  },
+  "overrideInventory": {
+    "entries": 108,
+    "transpilerEntries": 0
+  },
+  "caveat": "Classifications group symptoms by their causal boundary. Root/cascade is the existing unresolved-local heuristic, not a complete dependency graph. HIR errors are not deduplicated or claimed independent."
+}
