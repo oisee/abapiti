@@ -1,6 +1,92 @@
 # abaplint's own tests on TS-HG@Go
 
-## Trap batch L — certified on d6c4f4a
+## Trap batch M — certified on 8b2511b
+
+**10,949/11,060 Node-active tests passed (99.00%), FAIL 0.** Exactly one
+frozen-source **17-shard / 625-file** run measured semantic commit **b67770b**,
+based on **8b2511b**. Fresh original pinned Node has **11,060 passes, zero
+failures, 32 pending**. Go has **108 traps in 32 groups**, zero async-pending.
+There are **no added body passes**: Help's constructor-name read is repaired,
+but that original test now reaches the existing DumpScope class-ToPrimitive
+ABI refusal. The Help conversion group disappears; DumpScope grows 1→2.
+Every other shard count and reached group is unchanged.
+
+**111 active non-passes = 108 traps + 3 unregistered + 0 skipped + 0 FAIL +
+0 async-pending.** Not-run remains **35 = 28 original Node-pending skips +
+7 unregistered (three active + four pending)**. Whole-suite/owned title
+multisets reconcile, with no exclusions, wiring errors, unmatched executions,
+borrowed FAILs or executed pending bodies. The seven initialization handoffs
+and [L's complete pending-source audit](traps-l-roots.md) remain unchanged.
+
+[Exact generated-Go conversion sites and JS values](traps-m-roots.md) trace
+all nine targeted bodies. Dynpros rejects absent **NAME**, MessageClass rejects
+absent **MSGNR before the constructor's own defaulting guard**, View rejects
+absent **KEYFLAG**, and SpaceBeforeDot rejects an omitted live-config
+**ignoreGlobalDefinition** boolean. These eight bodies remain Dell-owned
+absence/argument/row/config-storage handoffs; no empty string, false, copied row
+or parser default is fabricated. Help actually rejects the **first native
+`get("constructor")`**, not string conversion or a nil second read.
+
+The general Go repair exposes the existing stable nominal descriptor and its
+name, preserving constructor identity and original backing storage. Its
+[Node-oracle regression](../tsfront/constructor_name_test.go) covers field-free,
+field-backed and interface-erased instances, inheritance, identity, own JSON
+shadowing, effects and explicit structural/live-row/function-property refusals.
+No new site override, operation-catalogue entry, config view, enumeration,
+sibling assertion, range union or excluded ABI is changed.
+
+See [four baseline shards and one repaired LSP shard](evidence/traps-m-focused.json),
+[final counts and all 32 messages](evidence/traps-m-final.json), and
+[gate/default/workload certificate](evidence/traps-m-gates.json).
+
+### M: all 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 216 | 0 | 0 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 107 | 0 | 0 | 0 | 107 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,962 | 0 | 0 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,362 | 0 | 1 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 89 | 0 | 5 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 178 | 0 | 10 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 130 | 0 | 14 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 21 | 0 | 10 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 3,121 | 0 | 26 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,949** | **0** | **108** | **35** | **11,085** | **11,060 + 32** |
+
+### M: gates and parity
+
+Passed with Go 1.26.0, `GOCACHE=$HOME/.cache/go-build`, `-buildvcs=false`,
+`ABAPITI_GRACECHECK=1`, 40-minute test deadlines and nice-10 execution:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+```
+
+**No golden changes:** regenerated lexer facts equal the committed golden,
+including all 61 Grace call sites and the unchanged operation catalogue.
+Default `abaplint` output versus locally archived **8b2511b**, generated at the
+same absolute path, has **raw `diff -r` exit 0 / zero bytes / 6,312 files**.
+There are no default-output changes to justify. Fresh emitted Go, fresh original
+Node and the SHA256-pinned v0.1.1 kit agree byte-for-byte on zabapgit **clean 0 /
+seeded 5**. No genuine mismatch was encountered or accepted. Generated builds,
+closures, archives, kit, profiles, facts and logs are deleted; only compact
+evidence and implementation/regression source remain. Clean commits, no push,
+no transpiler clone and no weakened/deleted original tests.
+
+## Trap batch L — historical, certified on d6c4f4a
 
 **10,949/11,060 Node-active tests passed (99.00%), FAIL 0.** Exactly one
 frozen-source **17-shard / 625-file** run measured semantic commit **6410553**,
