@@ -43,6 +43,9 @@ func TestImportedEnumNamespaceNodeOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 	pkg := filepath.Join(home, "dev/abaplint/packages/core/node_modules/vscode-languageserver-types")
+	if _, err := os.Stat(pkg); err != nil {
+		t.Skip("upstream node_modules not installed: " + pkg)
+	}
 	out, err := exec.Command("node", "-e", `const L=require(process.argv[1]);if(require(process.argv[1]+"/package.json").version!=="3.18.0")throw Error("wrong LSP pin");let out="";for(const key in L.SemanticTokenTypes){out+=key+":";}process.stdout.write(out+L.SemanticTokenTypes.keyword);`, pkg).CombinedOutput()
 	if err != nil {
 		t.Fatal(err, string(out))
@@ -79,6 +82,9 @@ export class Probe {
 		t.Fatal(err)
 	}
 	typescript := filepath.Join(home, "dev/abaplint/node_modules/typescript")
+	if _, err := os.Stat(typescript); err != nil {
+		t.Skip("upstream node_modules not installed: " + typescript)
+	}
 	out, err := exec.Command("node", "-e", `const ts=require(process.argv[1]);const src=require("node:fs").readFileSync(process.argv[2],"utf8");const js=ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;new Function("exports",js)({});`, typescript, path).CombinedOutput()
 	if err != nil {
 		t.Fatal(err, string(out))
