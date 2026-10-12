@@ -15,6 +15,15 @@ message groups**, not just the top 20. Initialization refusals remain separate.
 The summary tool now retains `allTraps`; a 22-group regression proves that the
 long tail survives ranking and that its counts sum to the trapped total.
 
+The three unchanged initialization boundaries explain all seven unregistered
+Node titles: LineLength's primitive config assignment/conversion (two active
+rows), StructureErrors' matcher-factory erased class/shape narrowing (four Node
+pending rows), and `_combi`'s block-local `Normal` class declaration (one active
+row). The latter needs scoped constructor/class-value identity and capture-frame
+ABI, not hoisting one shared class. These are not reached body traps or passes;
+complete initialization messages and exact missing titles are retained in both
+JSON reports. No compiler panic or async boundary is repaired.
+
 ## Descending-order disposition of every base group
 
 IDs below are the 1-based order in the base JSON's `allTraps`, including tie
@@ -173,9 +182,83 @@ numeric assignment hint. Adapter retirement and argument-context regressions
 were added before the final frozen-source rerun. This development result is not
 the final certificate.
 
+## Final reached follow-ups and ownership
+
+The final run credits **14 real passes**, not merely compilable bodies: syntax
++8, objects +6; all other shard pass counts are unchanged. General parser errors
+now follow original catches. The malformed FunctionGroup test then reaches native
+ordered-map enumerable equality (the Chai key group grows 1→2); the valid-XML
+Domain test with a `.dtel.xml` filename reaches an erased sibling nominal assertion
+(the test/Domain conversion group grows 1→2). Both require original identity/live
+storage ABI work, not fake Domain instances or reflected Go fields. DataElement's
+parser-error case and NumberRange's finite percentage case pass. NumberRange's
+rule case lacks PERCENTAGE: Node's `parseFloat("")` is NaN. The finite operation
+correctly refuses; nonfinite Number representation is an explicit ABI handoff,
+not a fabricated percentage zero. LSP `range` and Config JSON5 follow-ups are
+listed above. No newly reached body is called a pass unless its oracle matched.
+
 ## Certification
 
-Final counts, all remaining messages, gates, default-output diff and clean/seeded
-workload comparisons will be recorded after the frozen-source final run. Only
-compact Markdown/JSON is retained; generated builds, closures, binaries, archive,
-kit, facts and logs are deleted. No push or transpiler clone.
+Frozen semantic source: **`af699145e6128aeb0997bbb6dc6a6e916c7b2759`**. The final
+17-shard / 625-file run is **10,948/11,060 passed, FAIL 0, 109 traps in 34 message
+groups**. Base was 10,934 passes / 123 traps in 45 groups. Not-run is unchanged:
+**35 = 0 async/done + 28 skipped/focused + 7 unregistered**. Original Node is
+11,060 passes + 32 pending. There are no unmatched records or wiring failures.
+All reached trap counts sum to 109; initialization traps and every missing title
+remain separate in the evidence. Six borrowed LSP registrations reconcile as
+passes before owner de-duplication.
+
+Complete messages, counts, examples and ownership—not just top20—are in
+[`traps-k-final.json`](evidence/traps-k-final.json), `allTraps`. The descending
+remaining list is:
+
+| Count | Remaining message/root (full compound spelling in JSON) |
+| ---: | --- |
+| 29 | Renamer unresolved `range` |
+| 19 | Domain conversion |
+| 7 | PrettyPrinter `keyword_case` write |
+| 7 | NameValidator missing `patternKind` shape + dependent local |
+| 3 | ClassData conversion |
+| 3 | LSP Rename assignment mismatch |
+| 2 | Chai native object enumerable keys |
+| 2 | ABAPObject nonfinite MAXLENGTH parseInt |
+| 2 | Dynpros conversion |
+| 2 | MessageClass conversion |
+| 2 | RenamerHelper conversion |
+| 2 | View conversion |
+| 2 | SpaceBeforeDot config conversion |
+| 2 | LSP apply-edit unresolved `range` |
+| 2 | Test/Domain erased sibling conversion |
+| 2 | Config `applyUnspecifiedRules` write |
+| 2 | PrettyPrinter `keyword_case` + `sequential_blank` writes |
+| 2 | CDS dynamic `get` / `getChildren` + dependent local |
+| 2 | UnusedVariables `skipAbstract` shape + dependent local |
+| 1 | Config strict-JSON package boundary on JSON5 |
+| 1 | Help conversion |
+| 1 | Semantic classvalue narrowing |
+| 1 | Domain strict-JSON package error boundary |
+| 1 | EnhancementSpot conversion |
+| 1 | NumberRange parseFloat nonfinite result |
+| 1 | ProxyObject assignment mismatch |
+| 1 | LineOnlyPunc config conversion |
+| 1 | Type test live-view conversion |
+| 1 | CDS dynamic `getFirstToken` + dependent local |
+| 1 | DumpScope class ToPrimitive (two coercions) |
+| 1 | Help native delete |
+| 1 | PrettyPrinter native delete |
+| 1 | Registry native delete |
+| 1 | UnnecessaryPragma `allowNoTextGlobal` shape + dependent local |
+
+Gates, commands, semantic subtree hashes and raw workload hashes are in
+[`traps-k-gates.json`](evidence/traps-k-gates.json): short suite, full
+Grace-enabled tsfront/hir/cmd suite, vet and runner regressions all pass. The only
+golden change is seven operation-catalog effect entries: 125→132 and read facts
+188→200, conservative count still 21; all 61 lexer Grace call sites and behavior
+are unchanged. Regenerated facts match the updated golden byte-for-byte.
+
+Default output is **raw `diff -r` exit 0, zero diff bytes, 6,312 files**, against
+locally archived `4b6a465`, using the same absolute output path. Clean/seeded
+zabapgit kit v0.1.1 outputs match freshly built original Node and kit expectations
+byte-for-byte: **0 / 5 issues**. Only compact Markdown/JSON is retained; generated
+builds, closures, binaries, archives, kit, facts and logs are deleted. No push,
+transpiler clone, new site override, deleted/weakened test, or accepted mismatch.

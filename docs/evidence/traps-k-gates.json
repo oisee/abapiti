@@ -1,0 +1,102 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "measuredSemanticCommit": "af699145e6128aeb0997bbb6dc6a6e916c7b2759",
+  "semanticTrees": {
+    "hir": "5192ae7d4aa566a98b8c7898ac8b88997e72dad5",
+    "tsfront": "caaff5e8c486e3051c5e1999a0d0416d7f28c115",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d",
+    "tools": "3257e7886f93e45192fcbeb3e0c66b78682bc4fe"
+  },
+  "toolchain": {
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "GOCACHE": "$HOME/.cache/go-build",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "testTimeout": "40m",
+    "shardNice": 10,
+    "workers": 2
+  },
+  "gates": {
+    "shortSuite": {
+      "command": "go test ./... -short -timeout 40m",
+      "status": 0
+    },
+    "fullGrace": {
+      "command": "go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m",
+      "status": 0
+    },
+    "vet": {"command": "go vet ./...", "status": 0},
+    "runnerRegressions": {
+      "status": 0,
+      "commands": ["node tools/abaplint-tests-report-test.mjs", "node tools/abaplint-tests-all-test.mjs"]
+    },
+    "golden": {
+      "command": "GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m; cmp <scratch>/lexer.facts tsfront/testdata/lexer.facts.golden",
+      "status": 0,
+      "SHA256": "69e2329421a6f1bb5b3b2d2471736477dd3e3025ea052775418bda217a2ec614",
+      "updated": true,
+      "reason": "Seven new runtime operation effect records: op_aliases/allocates/may_raise/writes 125 to 132, reads 188 to 200. Conservative count remains 21; lexer behavior and all 61 Grace call-site records are unchanged. No other golden changed."
+    },
+    "defaultOutput": {
+      "baseCommit": "4b6a465c5663360a5f08cb249ef7cb936dfe36df",
+      "baseBuild": "git archive 4b6a465, locally extracted read-only source; no transpiler clone",
+      "sameAbsoluteOutputPath": true,
+      "command": "diff -r <base-output> <candidate-output>",
+      "status": 0,
+      "diffBytes": 0,
+      "files": 6312
+    },
+    "zabapgit": {
+      "status": 0,
+      "kit": "v0.1.1",
+      "kitZIP_SHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+      "NodeOracle": "fresh original pinned upstream, TypeScript 6.0.3; tools/statements-upstream.mjs and tools/hir-go-check.mjs --node-worker",
+      "config": "abaplint.json",
+      "deps": "deps.txt",
+      "rawByteComparisons": true,
+      "workloads": {
+        "clean": {
+          "issues": 0,
+          "GoSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "NodeSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "kitSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+        },
+        "seeded": {
+          "issues": 5,
+          "GoSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "NodeSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "kitSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+        }
+      }
+    },
+    "allShards": {
+      "command": "ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=objects,rules,lsp,abap/syntax,root nice -n 10 node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-k-final.json",
+      "status": 0,
+      "finalRuns": 1,
+      "baseRuns": 1,
+      "developmentFullRuns": 1,
+      "interruptedCandidateRuns": 1,
+      "shards": 17,
+      "files": 625,
+      "passed": 10948,
+      "failed": 0,
+      "trapped": 109,
+      "trapGroups": 34,
+      "asyncPending": 0,
+      "notRun": 35,
+      "notRunReasons": {"asyncOrDone": 0, "skippedOrFocused": 28, "unregistered": 7},
+      "activeDenominator": 11060,
+      "base": {"passed": 10934, "failed": 0, "trapped": 123, "trapGroups": 45, "notRun": 35}
+    }
+  },
+  "notes": [
+    "Final documentation/evidence commit changes no semantic subtree; the measured semantic commit remains an ancestor.",
+    "Genuine XML EOF-text prototype mismatch was stopped, reported, root-caused and Node-regressed before changed-source shards. No mismatch is accepted.",
+    "Broad checker-never mapping initially refused an unchanged never-array oracle and shifted a default closure ID. Explicit function-result annotations alone now map to void; repaired gates pass and raw default diff is empty.",
+    "Development follow-up exposed strict legacy XML adapters and leaked parseFloat result hints. Two existing adapters are retired in full closures through a generic source-selection policy; default adapters remain unchanged. No new site override added.",
+    "Native union/layout/config-view, nonfinite-number and package-error ABI handoffs are documented; newly reached bodies are not credited as passes.",
+    "No tests weakened/deleted, no transpiler clone, no push."
+  ],
+  "artifactsDeleted": true
+}
