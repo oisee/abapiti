@@ -10,6 +10,7 @@ var supportedOps = map[string]bool{
 	"json.stringifyConfig": true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
+	"dynamic.arrayView":    true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,

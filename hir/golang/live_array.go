@@ -47,6 +47,10 @@ func liveArrayRuntime(source string) string {
 }
 
 const liveArraySource = `
+func liveStringElement(d *dynamic) jsString {
+ if d==nil || d.Tag!=1 {panic(newTrap("live string array requires a string element"))}
+ return dynString(d)
+}
 func liveArrayRead[T any](a *array[T],i int32) T {
  v:=a.get(i);if a.live==nil || v.Has {return v.Value};var z T
  if nilRef(z) {return z};r:=reflect.ValueOf(z)
@@ -55,6 +59,9 @@ func liveArrayRead[T any](a *array[T],i int32) T {
 }
 func liveArrayElement[T any](d *dynamic) T {
  var z T
+ // Erased reference arrays also hold parsed records/arrays. Keep their tags:
+ // the raw map/table is not a nominal object, and nil is a present undefined.
+ if reflect.TypeOf(z)==nil && (d==nil || d.Tag==tagObject || d.Tag==tagArray) {return any(d).(T)}
  switch any(z).(type) {
  case int32:n:=dynNumber(d);if n!=math.Trunc(n)||n< -2147483648||n>2147483647 {panic(newRangeFault())};return any(int32(n)).(T)
  case int64:n:=dynNumber(d);if n!=math.Trunc(n)||n< -9007199254740991||n>9007199254740991 {panic(newRangeFault())};return any(int64(n)).(T)
@@ -74,7 +81,7 @@ type liveArrayStorage interface {
  liveDelete(int32) bool
 }
 func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
- if d==nil {panic(newRangeFault())}
+ if d==nil {return nil}
  a,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("live typed array requires array storage"))}
  // Check existing present elements before publishing a view. Future reads check
  // again, so caller writes can never bypass the element representation boundary.

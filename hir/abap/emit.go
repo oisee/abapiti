@@ -2032,6 +2032,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.classView":
 		b.liveView(x, n, a)
 		return
+	case "dynamic.arrayView":
+		b.e.liveRuntime()
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
+		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
 		return

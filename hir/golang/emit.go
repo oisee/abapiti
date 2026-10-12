@@ -41,6 +41,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
+					e.usesLiveArrays = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
 					e.extraRuntimeKeys = true
 				}
@@ -115,7 +118,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.extraRuntimeKeys {
 		runtime += ownKeysSource
 	}
-	if len(e.liveClasses) > 0 {
+	if e.liveStorage() {
 		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
 		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
 	}
@@ -130,13 +133,13 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
 	}
-	if e.usesArrayPresence || e.usesArrayDeletion || len(e.liveClasses) > 0 {
+	if e.usesArrayPresence || e.usesArrayDeletion || e.liveStorage() {
 		runtime = sparseRuntime(runtime)
 	}
 	if e.chaiDeep {
 		runtime += chaiDeepRuntimeSource
 	}
-	if len(e.liveClasses) > 0 {
+	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
@@ -168,6 +171,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	chaiDeep          bool
 	chaiThrow         bool
+	chaiActionUsed    bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
 	extendedRegex     bool
@@ -186,6 +190,7 @@ type emitter struct {
 	extra             strings.Builder
 	lspGuards         bool
 	extraRuntimeKeys  bool
+	usesLiveArrays    bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool
@@ -702,14 +707,14 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		code = a + ".get(" + i + ").Value"
-		if len(e.liveClasses) > 0 {
+		if e.liveStorage() {
 			code = "liveArrayRead(" + a + "," + i + ")"
 		}
 		if x.X.Type.Args[0].IsRef() {
-			if len(e.liveClasses) > 0 && t.Kind == hir.Dynamic {
+			if e.liveStorage() && t.Kind == hir.Dynamic {
 				code = "box(" + code + ")"
 			} else {
-				code = "castRef[" + e.typ(t) + "](" + code + ")"
+				code = e.arrayReference(t, code)
 			}
 		}
 	case hir.New:
@@ -955,7 +960,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		a := b.expr(x.X)
 		items := a + ".Items"
-		if len(e.liveClasses) > 0 {
+		if e.liveStorage() {
 			items = a + ".values()"
 		}
 		if x.Y == nil {
@@ -1106,7 +1111,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		a := b.expr(s.X)
 		index := b.fresh()
 		e.mark(s.Node, "loop")
-		if len(e.liveClasses) > 0 {
+		if e.liveStorage() {
 			b.line("for %s:=0; int32(%s)<%s.length(); %s++ {", index, index, a, index)
 		} else {
 			b.line("for %s:=0; %s<len(%s.Items); %s++ {", index, index, a, index)
@@ -1115,14 +1120,14 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("%s++", trips)
 		}
 		code := a + ".Items[" + index + "]"
-		if len(e.liveClasses) > 0 {
+		if e.liveStorage() {
 			code = "liveArrayRead(" + a + ",int32(" + index + "))"
 		}
 		if s.Type.IsRef() {
-			if len(e.liveClasses) > 0 && s.Type.Kind == hir.Dynamic {
+			if e.liveStorage() && s.Type.Kind == hir.Dynamic {
 				code = "box(" + code + ")"
 			} else {
-				code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
+				code = e.arrayReference(s.Type, code)
 			}
 		}
 		n := b.temp(s.Type, code)

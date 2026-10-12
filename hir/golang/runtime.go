@@ -802,7 +802,9 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
- return &jsRegExp{Source:pattern.replaceAll(str("/"), str("\\/")),Flags:flags,compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
+ source:=pattern.replaceAll(str("/"),str("\\/"))
+ if pattern=="" {source=str("(?:)")}
+ return &jsRegExp{Source:source,Flags:flags,compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
 
 }
 func compileCheckedRegexp(translated, pattern, flags string) *regexp.Regexp {
