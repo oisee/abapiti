@@ -54,7 +54,30 @@ Local short tests, vet, lint (0 new issues, canary 5/5), and uncached Grace
 lexer facts pass. Default Go generation at the same path is byte-identical
 to baseline `5822a07`, including the executable (raw diff exit 0, 0 bytes).
 
-Full lexer, statements and root shard measurements are in progress.
+Complete [shard evidence](evidence/osgo-json5-subset-shards.json):
+
+| Shard | Passed / Node-active | Wrong answers | Traps | Unregistered |
+| --- | ---: | ---: | ---: | ---: |
+| abap/lexer | 200 / 200 | 0 | 0 | 0 |
+| abap/statements | 429 / 4,962 | 0 | 4,533 | 0 |
+| root | 8 / 94 | 0 | 86 | 0 |
+
+All 429 former statements passes remain passes, verified by the full title
+multiset in the [baseline comparison](evidence/osgo-json5-subset-statements-comparison.json).
+The count is unchanged: 4,528 former JSON5 emitter traps now reach a native
+cast trap. The other five statements traps remain, including the four known
+sparse-array regressions and the pre-existing LOOP AT SCREEN case.
+
+The [original Config JSON5 test](evidence/osgo-json5-subset-next-boundary.json)
+was executed and remains trapped on json.stringifySubset and json.indent;
+it is not reported as a pass. A minimal parsed nested-object probe reproduces
+CX_SY_MOVE_CAST_ERROR in runtime.dynamic.as_ref before any assertion.
+The next work is structural field views, array storage, and generic JSON
+serialization. No further JSON5 syntax is required by that Config test.
+
+The compiler was built while the implementation was uncommitted, with base
+5822a07; the same implementation was subsequently committed as 179a863.
+The original measurement metadata is retained alongside this explanation.
 No full-suite pass claim or merge has been made. The four sparse-array
 regressions documented in [osgo-chai.md](osgo-chai.md) still require a
 presence-aware storage ABI; these guards have not been weakened.
