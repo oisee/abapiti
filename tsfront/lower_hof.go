@@ -297,6 +297,15 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 				l.diags = l.diags[:before]
 			}
 		}
+		if i == 0 && (l.collectionShapes[elem.Name] || l.collectionElements[elem.String()]) && params[i].Type() == nil {
+			// Inferred callback types can repeat the checker's first-row
+			// structural reduction. Bind the original collection's slot layout.
+			t = elem
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[params[i].Symbol()] = true
+		}
 		l.declare(p, t)
 	}
 	if len(names) == 0 {

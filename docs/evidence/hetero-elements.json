@@ -1,0 +1,650 @@
+{
+  "base": "933e68fc1ebf8d73a73d29c227631b7d6525fd70",
+  "semanticCommit": "57c003fed6bab2407e748775efae3ab830bd3d55",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "scope": {
+    "shards": [
+      "abap/expressions"
+    ],
+    "files": 11,
+    "active": 107,
+    "wholeSuiteMeasured": false
+  },
+  "before": {
+    "counts": {
+      "passed": 42,
+      "failed": 0,
+      "trapped": 8,
+      "asyncPending": 0,
+      "notRun": 57,
+      "registered": 50,
+      "total": 107,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 0,
+      "unregistered": 57
+    },
+    "node": {
+      "passed": 107,
+      "failed": 0,
+      "pending": 0,
+      "total": 107
+    },
+    "initialization": [
+      {
+        "file": "test/abap/expressions/reuse.ts",
+        "action": "test/abap/expressions/reuse.ts:10:1",
+        "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30120 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
+        "status": "trapped"
+      },
+      {
+        "file": "test/abap/expressions/reuse.ts",
+        "action": "test/abap/expressions/reuse.ts:70:1",
+        "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30335 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
+        "status": "trapped"
+      }
+    ],
+    "trapGroups": [
+      {
+        "message": "unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts: empty array literal needs an inferable contextual element type",
+        "count": 5,
+        "shards": {
+          "abap-expressions": 5
+        },
+        "example": "test/abap/expressions/sql_set_op.ts:16:51: lowering trap: unsupported-type test/abap/expressions/sql_set_op.ts:20:9: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts:20:24: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts:21:44: empty array literal needs an inferable contextual element type"
+      },
+      {
+        "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2,
+        "shards": {
+          "abap-expressions": 2
+        },
+        "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+      },
+      {
+        "message": "unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [...])[]] | [...])[]])[]] | [...] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [...])[]] | [...])[]])[]] | [...] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts: empty array literal needs an inferable contextual element type",
+        "count": 1,
+        "shards": {
+          "abap-expressions": 1
+        },
+        "example": "test/abap/expressions/sql_set_op.ts:411:64: lowering trap: unsupported-type test/abap/expressions/sql_set_op.ts:415:9: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [...])[]] | [...])[]])[]] | [...] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts:415:24: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [...])[]] | [...])[]])[]] | [...] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts:416:44: empty array literal needs an inferable contextual element type"
+      }
+    ]
+  },
+  "after": {
+    "counts": {
+      "passed": 105,
+      "failed": 0,
+      "trapped": 2,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 107,
+      "total": 107,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 0,
+      "unregistered": 0
+    },
+    "node": {
+      "passed": 107,
+      "failed": 0,
+      "pending": 0,
+      "total": 107
+    },
+    "initialization": [],
+    "trapGroups": [
+      {
+        "message": "src/config.ts: value outside supported numeric, ordering or conversion domain",
+        "count": 2,
+        "shards": {
+          "abap-expressions": 2
+        },
+        "example": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+      }
+    ]
+  },
+  "newlyRegistered": {
+    "counts": {
+      "passed": 57
+    },
+    "results": [
+      {
+        "title": "Test expression matchers, todo: refactor \"cs_tstcp\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"cs_tstcp-param\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"cs_tstcp-param(sy)\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"cs_tstcp-param(sy-fdpos)\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"cs_tstcp(sy-fdpos)\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foobar(3)\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"(sy)\" should match FieldLength",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"(42)\" should match FieldLength",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"(sy-fdpos)\" should match FieldLength",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"(123-fdpos)\" should not match FieldLength",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"+sy-fdpos\" should match FieldOffset",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"+123-fdpos\" should not match FieldOffset",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foobar(3)\" should match Target",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method( foo )-stream->rema( )\" should match MethodCallChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method( foo )->rema( )\" should match MethodCallChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method( )\" should match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method #( )\" should not match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method asdf( )\" should not match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method a( )\" should not match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"method ( )\" should not match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo(2)\" should not match MethodCall",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"TYPE abap_bool DEFAULT abap_true\" should match Type",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"TYPE lcl_perce_repo=>ty_sum_tt\" should match Type",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"TYPE STANDARD TABLE\" should match TypeTable",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"22\" should match Integer",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"22\" should match Constant",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"22\" should not match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"s_bar\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"1250_data\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"zquery\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"_foobar\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"%bar\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"%bar%\" should match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"-\" should not match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"+\" should not match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"*\" should not match Field",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"22\" should not match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foobar\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"22foo\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo22\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"text-001\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo(2)\" should match FieldChain",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"e070-trkorr\" should match FieldSub",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo\" should match FieldSub",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"s_trkorr\" should match FieldSub",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"bar\" should match FieldSub",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"-\" should not match FieldSub",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"foo type string\" should match MethodParam",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type string\" should match Type",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type string\" should not match TypeTable",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type index table\" should not match Type",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"type range of string\" should match TypeTable",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"%_C_POINTER\" should match TypeNameOrInfer",
+        "status": "passed"
+      },
+      {
+        "title": "Test expression matchers, todo: refactor \"<Z-BAR>\" should match FieldSymbol",
+        "status": "passed"
+      }
+    ],
+    "duplicateTitlesPreserved": true
+  },
+  "existingTrapGain": 6,
+  "remainingTraps": [
+    {
+      "title": "SELECT privileged access level statement version, \"SELECT * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_level INTO TABLE @DATA(lt).\" should be SELECT privileged access level",
+      "message": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "title": "SELECT privileged access level statement version, \"SELECT SINGLE * FROM ztab WITH PRIVILEGED ACCESS LEVEL @lv_level INTO @DATA(ls).\" should be SELECT privileged access level",
+      "message": "src/config.ts:11:3: value outside supported numeric, ordering or conversion domain"
+    }
+  ],
+  "fullClosure": {
+    "before": {
+      "summary": {
+        "blocking": 36,
+        "rootBlocking": 24,
+        "cascadeBlocking": 12,
+        "hirErrors": 100,
+        "byCategory": {
+          "assume-integer": 10,
+          "unsupported-call": 4,
+          "unsupported-expr": 18,
+          "unsupported-json": 2,
+          "unsupported-lsp-call": 2
+        },
+        "byArea": {
+          "lsp": 10,
+          "objects": 4,
+          "rules": 4,
+          "src": 18
+        },
+        "byRootMessage": [
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 9
+          },
+          {
+            "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+            "count": 2
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 24
+      },
+      "blockingByMessage": {
+        "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported": 2,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 9,
+        "delete supports ordinary lowered records only": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 9,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 2,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1
+      },
+      "hirErrorsByMessage": {
+        "assignment type mismatch": 6,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- void in runtime .": 5,
+        "condition must be bool": 4,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 44,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 4,
+        "method may fall through without return": 4,
+        "missing expression": 11,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6
+      },
+      "matcherTableRootOccurrences": 0
+    },
+    "after": {
+      "summary": {
+        "blocking": 36,
+        "rootBlocking": 24,
+        "cascadeBlocking": 12,
+        "hirErrors": 100,
+        "byCategory": {
+          "assume-integer": 10,
+          "unsupported-call": 4,
+          "unsupported-expr": 18,
+          "unsupported-json": 2,
+          "unsupported-lsp-call": 2
+        },
+        "byArea": {
+          "lsp": 10,
+          "objects": 4,
+          "rules": 4,
+          "src": 18
+        },
+        "byRootMessage": [
+          {
+            "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+            "count": 9
+          },
+          {
+            "message": "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+            "count": 2
+          },
+          {
+            "message": "method X on classref is not lowered",
+            "count": 2
+          },
+          {
+            "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+            "count": 2
+          },
+          {
+            "message": "delete supports ordinary lowered records only",
+            "count": 1
+          },
+          {
+            "message": "find on primitive arrays needs an absence-preserving callback ABI",
+            "count": 1
+          },
+          {
+            "message": "in requires a record or a literal property X a lowered shape (got classref<X>)",
+            "count": 1
+          },
+          {
+            "message": "method X on dynamic is not lowered",
+            "count": 1
+          },
+          {
+            "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+            "count": 1
+          },
+          {
+            "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered",
+            "count": 1
+          },
+          {
+            "message": "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered",
+            "count": 1
+          }
+        ],
+        "files": 24
+      },
+      "blockingByMessage": {
+        "JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported": 2,
+        "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)": 9,
+        "delete supports ordinary lowered records only": 1,
+        "find on primitive arrays needs an absence-preserving callback ABI": 1,
+        "identifier importing is not a lowered local or module value": 2,
+        "identifier packedLength is not a lowered local or module value": 9,
+        "identifier text is not a lowered local or module value": 1,
+        "in requires a record or a literal property on a lowered shape (got classref<builtin.object>)": 1,
+        "method getParameters on dynamic is not lowered": 1,
+        "method getStr on classref is not lowered": 2,
+        "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)": 1,
+        "string coercion of array<string> requires JavaScript ToPrimitive": 1,
+        "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive": 2,
+        "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive": 1,
+        "vscode-languageserver-types RenameFile.is with 1 arguments is not lowered": 1,
+        "vscode-languageserver-types TextDocumentEdit.is with 1 arguments is not lowered": 1
+      },
+      "hirErrorsByMessage": {
+        "assignment type mismatch": 6,
+        "call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .": 1,
+        "call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename": 1,
+        "call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .references": 2,
+        "call argument type mismatch: i64 <- void in runtime .": 2,
+        "call argument type mismatch: string <- dynamic in runtime .": 5,
+        "call argument type mismatch: string <- void in runtime .": 5,
+        "condition must be bool": 4,
+        "invalid assignment target": 1,
+        "invalid checked integer conversion": 44,
+        "invalid literal": 1,
+        "invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>": 4,
+        "method may fall through without return": 4,
+        "missing expression": 11,
+        "non-numeric arithmetic": 1,
+        "unresolved field newText": 1,
+        "unresolved field range": 6
+      },
+      "matcherTableRootOccurrences": 0
+    },
+    "scopeNote": "Production registry closure, without the reachability manifest. The matcher test-module initializer is outside this closure; its exact HIR and readiness traps are recorded in before.initialization."
+  },
+  "defaultOutput": {
+    "base": "933e68f",
+    "targets": "all,go",
+    "sameAbsoluteOutputPath": true,
+    "diffExit": 0,
+    "files": 6321
+  },
+  "gates": {
+    "vet": true,
+    "short": true,
+    "backendOps": true,
+    "lint": {
+      "newIssues": 0,
+      "canaries": "5/5",
+      "version": "2.13.2"
+    },
+    "grace": {
+      "byteIdentical": true,
+      "sha256": "7281eb9f30846711b8f9d7aaa59244a9fef1222d144db71ced79ef79125065dd"
+    }
+  },
+  "environment": {
+    "GOMAXPROCS": "2",
+    "GOFLAGS": "-p=2",
+    "Go": "1.26.9",
+    "harnessGeneratedGoToolchain": "go1.26.0",
+    "Node": "v26.9.0",
+    "shardWorkers": 1
+  },
+  "commands": {
+    "buildBase": "git archive 933e68f | tar -x -C \"$scratch/base-src\"; (cd \"$scratch/base-src\" && go build -o \"$scratch/base\" ./cmd/abapiti)",
+    "buildAfter": "go build -o \"$scratch/after\" ./cmd/abapiti",
+    "beforeShard": "ABAPITI_TESTS_SHARDS=abap/expressions ABAPITI_TESTS_WORKERS=1 ABAPITI_TESTS_COMPILER=\"$scratch/base\" ABAPITI_TESTS_COMPILER_COMMIT=933e68f node tools/abaplint-tests-all.mjs \"$scratch/upstream\" \"$scratch/before.json\"",
+    "afterShard": "ABAPITI_TESTS_SHARDS=abap/expressions ABAPITI_TESTS_WORKERS=1 ABAPITI_TESTS_COMPILER=\"$scratch/after\" ABAPITI_TESTS_COMPILER_COMMIT=57c003fed6bab2407e748775efae3ab830bd3d55 node tools/abaplint-tests-all.mjs \"$scratch/upstream\" \"$scratch/after.json\"",
+    "fullBefore": "\"$scratch/base\" abaplint --full -o \"$scratch/gap-before\"",
+    "fullAfter": "\"$scratch/after\" abaplint --full -o \"$scratch/gap-after\"",
+    "defaultBefore": "\"$scratch/base\" abaplint -o \"$scratch/default\" --target all,go --quiet; mv \"$scratch/default\" \"$scratch/default-before\"",
+    "defaultAfter": "\"$scratch/after\" abaplint -o \"$scratch/default\" --target all,go --quiet; diff -r \"$scratch/default-before\" \"$scratch/default\"",
+    "vet": "go vet ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+    "short": "go test -short -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/... -timeout 40m",
+    "grace": "ABAPITI_GRACECHECK=1 GRACE_FACTS_OUT=\"$scratch/lexer.facts\" go test -p 2 ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m",
+    "backendOps": "go test -short -p 2 ./cmd/abapiti -run ^TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend$ -count=1 -v",
+    "lint": "./.github/ci/lint.sh gate origin/feat/fit-traps-h"
+  },
+  "rawRecordRetention": "A read-only fs.watch observer copied the original runner's Go/Node records to scratch before its normal cleanup. Compiler, runner, original tests and reporter were unmodified. Only compact derived evidence is committed.",
+  "relatedABI": [
+    {
+      "root": "test/abap/structures/_combi.ts:276",
+      "activeTests": 1,
+      "status": "unchanged",
+      "reason": "Block-local constructor identity and captures require a separate class ABI; hoisting changes semantics."
+    },
+    {
+      "root": "test/rules/line_length.ts:17",
+      "activeTests": 2,
+      "status": "unchanged",
+      "reason": "The assignment returns primitive 400. Preserving primitive config property reads and numeric comparison domains requires erased configuration ABI work; replacing it with an object changes semantics."
+    }
+  ],
+  "exploratoryRuns": "The broad general-union experiment was reverted after unrelated interface verification errors. Focused tuple-index, generator-context, computed-key and inferred destructuring regressions were repaired, then the full short gate passed. An overlapping lint canary caused a temporary gate failure; final lint and vet/short gates ran separately. No original abaplint assertion mismatch was encountered.",
+  "publication": {
+    "branch": "feat/fit-hetero-elements",
+    "pushed": false,
+    "pullRequest": false,
+    "reason": "Local commit only, per the task-specific no-credentials instruction."
+  }
+}

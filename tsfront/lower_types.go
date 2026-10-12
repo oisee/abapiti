@@ -650,13 +650,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 
 // synthFromProperties builds a shape class from a list of property symbols.
 func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Class {
+	return l.synthFromPropertyTypes(n, props, nil)
+}
+
+func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots map[string]hir.Type) *hir.Class {
 	var fields []hir.Field
 	var identity strings.Builder
 	for _, p := range props {
 		before := len(l.diags)
 		pt := l.ck.GetTypeOfSymbol(p)
 		var ft hir.Type
-		if pt != nil && pt.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) != 0 {
+		if slot, ok := slots[p.Name]; ok {
+			ft = slot
+		} else if pt != nil && pt.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) != 0 {
 			ft = hir.T(hir.Optional, hir.Ref(hir.RootObject))
 		} else if l.isNeverArray(pt) {
 			// An empty literal's never[]: matches any array field of a
