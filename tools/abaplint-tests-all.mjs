@@ -154,7 +154,8 @@ async function main() {
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
   console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const row of [...summary.shards, {name:'TOTAL', ...summary.uniqueTotal, node:summary.nodeTotal}]) console.log(`| ${row.name} | ${row.passed} | ${row.failed} | ${row.trapped} | ${row.asyncPending} | ${row.notRun} | ${row.registered} | ${row.node.passed + row.node.failed}+${row.node.pending} pending |`);
-  console.log(`${summary.uniqueTotal.passed}/${summary.wholeSuite?.active ?? summary.nodeTotal.passed + summary.nodeTotal.failed}; Node total including pending: ${summary.nodeTotal.total}`);
+  console.log(`${summary.nodeActive?.passed ?? summary.uniqueTotal.passed}/${summary.wholeSuite?.active ?? summary.nodeTotal.passed + summary.nodeTotal.failed} (Node-active only); Node total including pending: ${summary.nodeTotal.total}`);
+  if (summary.nodeActive) console.log(`Node-active not passing: ${summary.nodeActive.notPassing} = ${summary.nodeActive.trapped} traps + ${summary.nodeActive.unregistered} unregistered + ${summary.nodeActive.skipped} skipped + ${summary.nodeActive.failed} FAIL + ${summary.nodeActive.asyncPending} async-pending; Node-pending outside denominator: ${summary.nodePending.total}`);
   if (summary.shards.some(s => s.infrastructureFailure || s.unmatched)) process.exitCode = 1;
   finished = true;
  } finally {

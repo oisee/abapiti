@@ -894,6 +894,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, handled := l.mathCeilCall(n); handled {
 		return x
 	}
+	if x, handled := l.json5Call(n); handled {
+		return x
+	}
 	if x, handled := l.jsonCall(n); handled {
 		return x
 	}

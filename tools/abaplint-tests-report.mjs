@@ -12,6 +12,15 @@ const report = {total:oracle.total ?? oracle.titles.length, passed:0, failed:0, 
 report.initialization = run.initialization ?? [];
 report.asyncInitializationFailures = report.initialization.filter(r => r.message.includes('unsupported-async')).length;
 const traps = new Map();
+const pending = new Map();
+for (const title of oracle.pendingTitles ?? []) pending.set(title, (pending.get(title) ?? 0) + 1);
+const audited = Array.isArray(oracle.pendingTitles);
+if (audited) {
+ for (const [title,n] of pending) if (n !== available.get(title)) throw new Error(`ambiguous active/pending title collision: ${title}`);
+ report.nodeActive = {total:oracle.titles.length - oracle.pendingTitles.length, passed:0, failed:0, trapped:0, asyncPending:0, skipped:0, unregistered:0};
+ report.nodePending = {total:oracle.pendingTitles.length, skipped:0, unregistered:0};
+ report.skippedOrFocusedTests = [];
+}
 for (const r of run.results) {
  const n = available.get(r.title) ?? 0;
  if (!n) {report.unmatched.push(r); continue;}
@@ -19,6 +28,15 @@ for (const r of run.results) {
  const key = {passed:'passed', failed:'failed', trapped:'trapped', 'not-run':'notRun', 'async-pending':'asyncPending'}[r.status];
  if (!key) throw new Error(`unknown result status ${r.status}`);
  report[key]++;
+ if (audited) {
+  const nodePending = pending.has(r.title);
+  if (nodePending && key !== 'notRun') throw new Error(`harness executed Node-pending test: ${r.title} (${r.status})`);
+  if (key === 'notRun') {
+   if (nodePending) report.nodePending.skipped++;
+   else report.nodeActive.skipped++;
+   report.skippedOrFocusedTests.push({title:r.title, node:nodePending ? 'pending' : 'active', message:r.message});
+  } else report.nodeActive[key]++;
+ }
  if (key === 'notRun') report.notRunReasons[(r.message.includes('unsupported-async') || r.message.includes('unsupported-test-done')) ? 'asyncOrDone' : 'skippedOrFocused']++;
  if (key === 'trapped') {
   // Group diagnostic text, not a closure's varying creation location. Keep an
@@ -32,6 +50,13 @@ for (const r of run.results) {
 report.unregisteredTitles = [...available].flatMap(([title, count]) => Array(count).fill(title));
 report.notRunReasons.unregistered = report.unregisteredTitles.length;
 report.notRun += report.notRunReasons.unregistered;
+if (audited) {
+ for (const title of report.unregisteredTitles) report[pending.has(title) ? 'nodePending' : 'nodeActive'].unregistered++;
+ const a=report.nodeActive;
+ a.notPassing=a.total-a.passed;
+ if (a.total !== a.passed+a.failed+a.trapped+a.asyncPending+a.skipped+a.unregistered) throw new Error('Node-active reconciliation mismatch');
+ if (report.nodePending.total !== report.nodePending.skipped+report.nodePending.unregistered) throw new Error('Node-pending reconciliation mismatch');
+}
 report.topTraps = [...traps.values()].sort((a,b)=>b.count-a.count || a.message.localeCompare(b.message)).slice(0,20);
 if (report.passed+report.failed+report.trapped+report.asyncPending+report.notRun !== report.total) throw new Error('oracle reconciliation did not sum to total');
 writeFileSync(output,JSON.stringify(report,null,2)+'\n');
