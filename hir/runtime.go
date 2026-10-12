@@ -36,6 +36,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
+	"dynamic.delete":            {Dynamic, 1, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
 	"chai.arrayInclude":         {Dynamic, 1, false},
 	"chai.members":              {Dynamic, 2, false},
@@ -131,6 +132,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Dynamic), true
 	case "dynamic.keys":
 		return nil, T(Array, T(String)), true
+	case "dynamic.delete":
+		return []Type{T(String)}, T(Bool), true
 	case "dynamic.get":
 		return []Type{T(String)}, T(Dynamic), true
 	case "dynamic.put":

@@ -107,6 +107,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"number.toString":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"object.classOf":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"map.delete":                {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"dynamic.delete":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "Receiver", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"record.delete":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"regexp.match_test":         {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "Catchable", Aliases: "None", Conservative: "Target regex engine may reject a supported-looking pattern at execution."},
 	"regexp.new":                {Reads: OpReads{Receiver: false, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Pattern and flags validation differs between runtimes."},

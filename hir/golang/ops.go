@@ -28,7 +28,7 @@ var supportedOps = map[string]bool{
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "xml.parseWithErrors": true, "dynamic.materialize": true, "json.parseSubset": true, "json5.parse": true, "json.indent": true,
-	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
+	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.delete": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
 	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
@@ -99,6 +99,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
 	case "array.matchIndex":
 		code = a + ".matchIndex()"
+	case "dynamic.delete":
+		code = a + ".deleteProperty(" + args[0] + ")"
 	case "record.delete":
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
 	case "array.length", "set.size":

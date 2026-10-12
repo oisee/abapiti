@@ -44,8 +44,15 @@ func (e *emitter) ownKeyClass(c *hir.Class) {
 	}
 	visit(c)
 	e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};bag:=&orderedMap[jsString,*dynamic]{}", e.obj(c.Name))
+	if e.recordDeletion {
+		e.line("if self.deletionOrder!=nil {return self.deletionOrder.keys()}")
+	}
 	for _, key := range keys {
-		e.line("bag.set(str(%q),nil)", key)
+		if e.recordDeletion {
+			e.line("if !self.deletedKeys[str(%q)] {bag.set(str(%q),nil)}", key, key)
+		} else {
+			e.line("bag.set(str(%q),nil)", key)
+		}
 	}
 	e.line("return dynamicKeys(&dynamic{Tag:tagObject,Value:bag})}")
 }
