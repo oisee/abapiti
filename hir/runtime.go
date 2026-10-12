@@ -33,6 +33,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.compareObjectName":  {String, 1, false},
 	"dynamic.isNullish":         {Dynamic, 0, false},
 	"dynamic.recordString":      {Dynamic, 0, false},
+	"dynamic.typeofValue":       {Dynamic, 0, false},
 	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.put":               {Dynamic, 2, true},
@@ -198,7 +199,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Number), true
 	case "dynamic.asNumber":
 		return nil, T(Number), true
-	case "dynamic.typeof", "dynamic.toString", "dynamic.recordString":
+	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
 		return nil, T(String), true
 	case "dynamic.isNumber":
 		return nil, b, true

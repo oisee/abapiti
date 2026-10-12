@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"dynamic.typeofValue":   true,
 	"dynamic.recordString":  true,
 	"string.parseIntNumber": true, "number.isNaN": true,
 	"json.stringifyConfig": true,

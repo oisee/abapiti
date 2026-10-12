@@ -198,6 +198,7 @@ type emitter struct {
 	chaiActionUsed    bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
+	typeofUsed        bool
 	extendedRegex     bool
 	regexSplit        bool
 	constructorArgs   bool

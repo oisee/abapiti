@@ -231,14 +231,84 @@ func (l *lowerer) namespaceRef(n *ast.Node) (*hir.Expr, bool) {
 	return nil, false
 }
 
-// typeofExpr lowers `typeof x` compared with a string, the only use in the
-// closure: dispatch on the dynamic box, or a statically true test on class
-// values.
+// typeofValue reads nominal fields through their raw property ABI before a
+// live view can impose its declared primitive conversion. This is confined to
+// unpruned closures; ordinary consumers retain their checked field reads.
+func (l *lowerer) typeofValue(x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures {
+		return x
+	}
+	switch x.Kind {
+	case hir.Seq:
+		y := l.typeofValue(x.Y)
+		raw := *x
+		raw.Y, raw.Type = y, y.Type
+		return &raw
+	case hir.Narrow:
+		y := l.typeofValue(x.X)
+		if y.Type.Kind == hir.Dynamic {
+			return y
+		}
+	case hir.FieldGet:
+		if x.X.Type.Kind == hir.ClassRef {
+			return l.rtOp("object.get", x.X, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), x.Name))
+		}
+	}
+	return x
+}
+
+func (l *lowerer) isTypeofFunction(t hir.Type) bool {
+	if l.isHIRThunk(t) || l.callableMethod(t) != nil {
+		return true
+	}
+	if t.Kind == hir.ClassRef {
+		if c := l.classByName(t.Name); c != nil {
+			for _, name := range c.Implements {
+				if strings.HasPrefix(name, "closure.function.") {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// typeofTag evaluates its operand once, preserving absence and raw dynamic tags.
+func (l *lowerer) typeofTag(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x.Type.Kind == hir.Dynamic {
+		return l.rtOp("dynamic.typeofValue", x, hir.T(hir.String))
+	}
+	if x.Type.Kind == hir.Optional {
+		saved := l.tempInit(n, x.Type, x)
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: saved}
+		tag := l.typeofTag(n, present)
+		if tag == nil {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.String), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved}, Y: hir.L(hir.T(hir.String), "undefined"), Z: tag}
+	}
+	tag := staticTypeofTag(x.Type.Kind)
+	if l.isTypeofFunction(x.Type) {
+		tag = "function"
+	}
+	if tag == "" {
+		l.diagf(n, "unsupported-expr", "typeof on %s is not lowered", x.Type.Kind)
+		return nil
+	}
+	return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.String), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: x}), Y: hir.L(hir.T(hir.String), tag)}
+}
+
+// typeofExpr preserves raw tags in full closures and the established
+// statically typed lowering in pruned workloads.
 func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 	u := n.AsTypeOfExpression()
-	x := l.expr(u.Expression)
+	x := l.typeofValue(l.expr(u.Expression))
 	if x == nil {
 		return nil, false
+	}
+	if l.unprunedFeatures {
+		tag := l.typeofTag(n, x)
+		return tag, tag != nil
 	}
 	// The comparison is built by the caller through binary(); here we only
 	// answer the three-way test as a small tagged value.
@@ -254,13 +324,24 @@ func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 	return nil, false
 }
 
-// typeofCompare lowers `typeof x === "string"|"function"` (or !==).
+// typeofCompare lowers typeof comparisons against JavaScript tag strings.
 func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated bool) *hir.Expr {
-	e := l.expr(x)
+	e := l.typeofValue(l.expr(x))
 	if e == nil {
 		return nil
 	}
 	var test *hir.Expr
+	if l.unprunedFeatures {
+		tag := l.typeofTag(n, e)
+		if tag == nil {
+			return nil
+		}
+		op := "=="
+		if negated {
+			op = "!="
+		}
+		return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: hir.T(hir.Bool), Op: op, X: tag, Y: hir.L(hir.T(hir.String), want)}
+	}
 	switch e.Type.Kind {
 	case hir.Dynamic:
 		test = &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "==", X: l.rtOp("dynamic.typeof", e, hir.T(hir.String)), Y: hir.L(hir.T(hir.String), want)}
