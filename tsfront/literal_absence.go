@@ -10,6 +10,18 @@ import (
 // initializes it from erased data. Decide the storage layout before signatures
 // and bodies, so every constructor and alias sees the same optional field ABI.
 func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
+	if n.Kind == ast.KindPropertyAccessExpression {
+		if prop := l.resolve(n); prop != nil {
+			typ := l.ck.GetTypeOfSymbol(prop)
+			if primitivePresenceType(typ) && typeMayBeUndefined(typ) {
+				// Optional scalar reads can preserve a primitive receiver's
+				// missing property, including when a local holds the result.
+				for _, decl := range prop.Declarations {
+					l.checkedFields[decl] = true
+				}
+			}
+		}
+	}
 	if n.Kind == ast.KindPropertyAccessExpression && truthinessUse(n) {
 		// A condition observes JS truthiness, including an omitted field on a
 		// live view. Keep the value until ToBoolean performs that observation.
@@ -187,4 +199,38 @@ func (l *lowerer) requiredFieldUse(n *ast.Node) bool {
 		return primitivePresenceType(context) && !typeMayBeUndefined(context)
 	}
 	return false
+}
+
+// Only scalar optional fields certify missing-property reads on primitives.
+func primitivePresenceHIR(t hir.Type) bool {
+	return t.Kind == hir.String || t.Kind == hir.Number || t.Kind == hir.Bool
+}
+
+// A data layout with an explicitly optional scalar read can receive a
+// primitive backing value. Numeric relations must keep missing sibling fields
+// optional too; other required reads retain their checked conversion boundary.
+func (l *lowerer) scanOptionalNumericRelations(n *ast.Node) {
+	if n.Kind == ast.KindBinaryExpression {
+		b := n.AsBinaryExpression()
+		switch b.OperatorToken.Kind {
+		case ast.KindLessThanToken, ast.KindLessThanEqualsToken, ast.KindGreaterThanToken, ast.KindGreaterThanEqualsToken:
+			for _, operand := range []*ast.Node{b.Left, b.Right} {
+				if operand.Kind != ast.KindPropertyAccessExpression {
+					continue
+				}
+				prop := l.resolve(operand)
+				if prop == nil || l.ck.GetTypeOfSymbol(prop).Flags()&checker.TypeFlagsNumberLike == 0 {
+					continue
+				}
+				for _, decl := range prop.Declarations {
+					for guarded := range l.checkedFields {
+						if guarded.Parent == decl.Parent && guarded.Type() != nil && typeMayBeUndefined(l.ck.GetTypeAtLocation(guarded)) {
+							l.markPrimitiveAbsence(prop)
+						}
+					}
+				}
+			}
+		}
+	}
+	n.ForEachChild(func(child *ast.Node) bool { l.scanOptionalNumericRelations(child); return false })
 }

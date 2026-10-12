@@ -86,7 +86,7 @@ type Class struct {
 	// Scoped classes use a fresh lexical constructor descriptor per evaluation.
 	Scoped bool `json:",omitempty"`
 	// PrimitiveReads permits data views to read primitive backing values when
-	// the source explicitly checks a required public primitive field's absence.
+	// the source preserves a public scalar field's absence.
 	// Writes remain checked, and prototype-dependent layouts still refuse.
 	PrimitiveReads bool `json:",omitempty"`
 	// UndefinedDefineFields marks native define-field creation whose required

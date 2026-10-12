@@ -189,6 +189,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			f, _ := p.File(name)
 			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 			l.file, l.ck = f, ck
+			l.scanOptionalNumericRelations(f.AsNode())
 			l.scanAbsenceParameters(f.AsNode())
 			done()
 		}

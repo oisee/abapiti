@@ -369,7 +369,7 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 		}
 	}
 	primitiveAbsence := !static && l.absentFields[m] && (typ.Kind == hir.String || typ.Kind == hir.Number || typ.Kind == hir.Bool)
-	c.PrimitiveReads = c.PrimitiveReads || primitiveAbsence && l.checkedFields[m]
+	c.PrimitiveReads = c.PrimitiveReads || !static && l.checkedFields[m] && (primitiveAbsence || typ.Kind == hir.Optional && primitivePresenceHIR(typ.Args[0]))
 	if (m.QuestionToken() != nil || primitiveAbsence) && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
