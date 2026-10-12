@@ -7,7 +7,7 @@
 
 > **🎉 11,060 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
 >
-> [The goal](#goal-100--of-abaplint) is reached: every Node-active test of abaplint's own suite (625 files, all 17 shards) passes on abaplint compiled from its TypeScript by abapiti and run as Go. Measured 12 Oct 2026 on train 13, twice, on two machines ([train 13](docs/train-13.md)).
+> [The goal](#goal-100--of-abaplint) is reached: every Node-active test of abaplint's own suite (625 files, all 17 shards) passes on abaplint compiled from its TypeScript by abapiti and run as Go. Measured 12 Oct 2026 on train 13, twice, on two machines ([train 13](docs/train-13.md)); released as [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0).
 >
 > 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17) → 10,167 → 10,255 → 10,452 → 10,614 → 10,934 → 11,022 → 11,032 → 11,051 → **11,060**
 >
@@ -16,7 +16,7 @@
 > | abaplint tests passing, all 17 shards | **11,060** of 11,060 (100 %) | 11,060 |
 > | wrong answers (tests that run and disagree with Node) | **0** | 0 |
 > | tests trapped / not registered on Go | **0 / 0** | 0 |
-> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19) | 0 |
+> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 >
 > The 32 tests that Node itself skips (`it.skip`) are outside the denominator. Next: the same suite on the ABAP hosts (OSGO, then A4H), and a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
@@ -49,19 +49,19 @@ A seeded variant with one error per rule equals vanilla on every host too. What 
 
 > **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
 
-### Goal: 100 % of abaplint
+### Goal: 100 % of abaplint — reached
 
-The next goal is the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files and 11,060 mocha tests; on Node all of them pass. The test files themselves are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run first on TS-HG@Go, the fastest host. The other hosts follow, and nothing goes to A4H before it passes on OSGO/OSGB. Optimisations wait until this is done.
+The goal was the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files; 11,060 of its mocha tests are active on Node (32 more are `it.skip` there too). The test files are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run on TS-HG@Go, the fastest host.
 
-Where it stands (12 Oct 2026):
+Where it stands (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0)):
 
 | Measure | Today | Target |
 |---|---|---|
-| abaplint tests passing on the compiled abaplint (TS-HG@Go) | **11,051 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
-| Functions the suite and all rules need that are still traps ([`tools/fit-gap.mjs`](tools/fit-gap.mjs)) | 529 of 3,366 | 0 |
-| Unique blocking diagnostics when lowering all of core without pruning (`abapiti abaplint --full`) | **37** (644 → 33 in train 3 → 48 → 42 → 37) | 0 |
+| abaplint tests passing on the compiled abaplint (TS-HG@Go) | **11,060 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
+| Tests trapped / not registered on Go | **0 / 0** | 0 |
+| Unique blocking diagnostics, all of core lowered without pruning (`abapiti abaplint --full` since it exists) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 
-The lexer and file-information layers are already fully covered. Most of the gap is in the rules (191 functions, 75 of them in `downport`), the objects (111) and `abap/types` (49).
+Next: the same suite on the ABAP hosts (OSGO first; nothing goes to A4H before it passes there), then a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
 
 > **`wasm/` and `abap/wasm_compiler/`: experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.**
 
@@ -137,7 +137,7 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 
 ## News
 
-**2026-10-12 — 100 % of abaplint's own tests on the compiled abaplint.** All 11,060 Node-active tests pass on abaplint compiled by abapiti (TS-HG@Go), with 0 wrong answers, confirmed by two independent full runs. It took thirteen integration trains in two days (9,022 → 11,060 since the suite was wired up in full). Every new lowering came with a Node oracle. Each genuine mismatch caught on the way was stopped, root-caused and kept as a regression; one reached an integration train (train 9) and was fixed before it was merged, none reached main.
+**2026-10-12 — 🎉 [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0): 100 % of abaplint's own tests on the compiled abaplint.** All 11,060 Node-active tests pass on abaplint compiled by abapiti (TS-HG@Go), with 0 wrong answers, confirmed by two independent full runs. It took thirteen integration trains in two days (9,022 → 11,060 since the suite was wired up in full). Every new lowering came with a Node oracle. Each genuine mismatch caught on the way was stopped, root-caused and kept as a regression; one reached an integration train (train 9) and was fixed before it was merged, none reached main.
 
 **2026-10-10 — v0.3.0: 4× faster on open-steamgate, a Go target faster than Node, readable names.**
 - **TS-HA@OSGO 61 s → 14–17 s, close to Node (13–14 s).** The biggest steps: `toUpperCase` on ASCII text through `TRANSLATE` (2.1×), numeric literals emitted as numbers instead of text, and open-steamgate's own fixes found on our input ([#701](https://github.com/oisee/open-steamgate/pull/701), [#706](https://github.com/oisee/open-steamgate/pull/706), [#707](https://github.com/oisee/open-steamgate/pull/707)).
