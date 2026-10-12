@@ -46,9 +46,9 @@ func pcreRegexPattern(pattern string) string {
 		}
 		switch {
 		case !inClass && c == '^':
-			out.WriteString(`(?<![\s\S])`)
+			out.WriteString(`\A`)
 		case !inClass && c == '$':
-			out.WriteString(`(?![\s\S])`)
+			out.WriteString(`\z`)
 		case !inClass && c == ' ':
 			// ABAP PCRE defaults to extended mode, which drops unescaped spaces and
 			// treats # as a comment; hex escapes mean the same in PCRE, JS and RE2.
@@ -104,9 +104,9 @@ WHILE i < strlen( p0 ).
     in_class = abap_false.
     result = result && c.
   ELSEIF in_class = abap_false AND c = '^'.
-    result = result && '(?<![\s\S])'.
+    result = result && '\A'.
   ELSEIF in_class = abap_false AND c = '$'.
-    result = result && '(?![\s\S])'.
+    result = result && '\z'.
   ELSE.
     result = result && c.
   ENDIF.
