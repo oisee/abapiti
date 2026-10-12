@@ -344,7 +344,7 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 			typ = hir.T(hir.Void)
 		}
 	}
-	primitiveAbsence := !static && m.ModifierFlags()&ast.ModifierFlagsPrivate == 0 && m.Name().Kind != ast.KindPrivateIdentifier && l.absentFields[m] && (typ.Kind == hir.String || typ.Kind == hir.Number || typ.Kind == hir.Bool)
+	primitiveAbsence := !static && l.absentFields[m] && (typ.Kind == hir.String || typ.Kind == hir.Number || typ.Kind == hir.Bool)
 	c.PrimitiveReads = c.PrimitiveReads || primitiveAbsence && l.checkedFields[m]
 	if (m.QuestionToken() != nil || primitiveAbsence) && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
@@ -493,7 +493,7 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 		if qt := p.QuestionToken(); qt != nil {
 			q = true
 		}
-		if q && typ.Kind != hir.Optional {
+		if (q || l.absentParams[p]) && typ.Kind != hir.Optional {
 			l.diagf(p, "note-optional-param", "optional parameter %s lowered as a required Optional", name)
 			typ = hir.T(hir.Optional, typ)
 		}

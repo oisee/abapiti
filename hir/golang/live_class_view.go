@@ -121,6 +121,9 @@ func (e *emitter) liveFields(c *hir.Class) {
 		if e.extraRuntimeKeys && c.Structural {
 			metadata = ";if self.ownKeys!=nil {self.ownKeys.set(str(" + fmt.Sprintf("%q", f.Name) + "),nil)}"
 		}
+		if e.recordDeletion {
+			metadata += ";self.propertyWritten(str(" + fmt.Sprintf("%q", f.Name) + "))"
+		}
 		e.line("func (self *%s) %s(value %s) {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {self.viewSource.put(str(%q),%s);return};self.%s=value%s}", e.obj(c.Name), write, e.typ(f.Type), f.Name, value, e.member(f.Name), metadata)
 	}
 }

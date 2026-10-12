@@ -1,0 +1,224 @@
+{
+  "blocking": 26,
+  "rootBlocking": 17,
+  "cascadeBlocking": 9,
+  "hirErrors": 67,
+  "byCategory": {
+    "assume-integer": 10,
+    "unsupported-call": 2,
+    "unsupported-expr": 14
+  },
+  "byArea": {
+    "lsp": 7,
+    "objects": 1,
+    "src": 18
+  },
+  "byRootMessage": [
+    {
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=X)",
+      "count": 9
+    },
+    {
+      "message": "method X on classref is not lowered",
+      "count": 2
+    },
+    {
+      "message": "string coercion of classref<X> requires JavaScript ToPrimitive",
+      "count": 2
+    },
+    {
+      "message": "delete supports ordinary lowered records only",
+      "count": 1
+    },
+    {
+      "message": "parseFloat(attributes?.PERCENTAGE || X): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=X)",
+      "count": 1
+    },
+    {
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+      "count": 1
+    },
+    {
+      "message": "string coercion of interfaceref<X> requires JavaScript ToPrimitive",
+      "count": 1
+    }
+  ],
+  "files": 19,
+  "command": "abapiti abaplint --full \"$UPSTREAM\" -o \"$SCRATCH/full-before\"",
+  "runtimeConversionDomainBlocking": 0,
+  "blockingByExactMessage": [
+    {
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)",
+      "count": 9
+    },
+    {
+      "message": "delete supports ordinary lowered records only",
+      "count": 1
+    },
+    {
+      "message": "identifier packedLength is not a lowered local or module value",
+      "count": 9
+    },
+    {
+      "message": "method getStr on classref is not lowered",
+      "count": 2
+    },
+    {
+      "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)",
+      "count": 1
+    },
+    {
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive",
+      "count": 1
+    },
+    {
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "count": 2
+    },
+    {
+      "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive",
+      "count": 1
+    }
+  ],
+  "diagnostics": [
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/ddic.ts:386:30",
+      "message": "Math.ceil((parseInt(input.length, 10) + 1) / 2): Math.ceil requires integral-result evidence; requires a fingerprinted integer exception (sha256=970cb1095eeebfd00ed627dca0619727c5737a65837a5f9a2bf9a5bf533d1967)"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/ddic.ts:388:37",
+      "message": "identifier packedLength is not a lowered local or module value",
+      "cascade": true
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/lsp/dump_scope.ts:31:14",
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/lsp/dump_scope.ts:32:14",
+      "message": "string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/lsp/dump_scope.ts:80:15",
+      "message": "string coercion of array<string> requires JavaScript ToPrimitive"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/lsp/dump_scope.ts:86:12",
+      "message": "string coercion of interfaceref<src/abap/types/_interface_definition.ts.IInterfaceDefinition> requires JavaScript ToPrimitive"
+    },
+    {
+      "category": "unsupported-expr",
+      "loc": "src/lsp/help.ts:46:5",
+      "message": "delete supports ordinary lowered records only"
+    },
+    {
+      "category": "unsupported-call",
+      "loc": "src/lsp/help.ts:243:58",
+      "message": "method getStr on classref is not lowered"
+    },
+    {
+      "category": "unsupported-call",
+      "loc": "src/lsp/help.ts:243:58",
+      "message": "method getStr on classref is not lowered"
+    },
+    {
+      "category": "assume-integer",
+      "loc": "src/objects/number_range.ts:51:33",
+      "message": "parseFloat(attributes?.PERCENTAGE || \"\"): numeric conversion may produce a fraction; requires a fingerprinted integer exception (sha256=6057221d0c2f66121742754d3d30f7b1d7354957869bbd58fc632ac35e82d9dc)"
+    }
+  ]
+}

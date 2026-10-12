@@ -1,0 +1,72 @@
+{
+  "baseCommit": "b4cba6363f96073e870f0bfb45252397b085ad55",
+  "originMain": "e2ba6ac0f447ff8d989a7b50f2dae7fe5182cbb5",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "compilerSHA256": "f6f2ee8473f6cfc1f1037be26557e00dc45cb238f666041423c6c96aa84a47bf",
+  "compilerSourceBlobs": {
+    "tsfront/common_class_view.go": "072f2f40e73fdf225fe84b7b7ca554b5b2ad4941",
+    "tsfront/literal_absence.go": "f9f288a91e16259a08bdf6d5bb4702a2c6b45ae0",
+    "tsfront/lower.go": "952bcdf6c55895f4e6d3fbc544200d6632622172",
+    "tsfront/lower_class.go": "20fd094931742ccf7b63a0c2a716c617e0b72468",
+    "tsfront/lower_expr.go": "d74cb94f1d5724a5fc993c27126469d453e07b71",
+    "tsfront/lower_types.go": "0c3a8595439d5089058e4b71e4b5972dbdb5b943",
+    "tsfront/sibling_method_view.go": "f563fc0e7baf1045f159500365771ecd203b594b",
+    "tsfront/last_absence_test.go": "37ba9bceff0a7050c561e92ca4096471f02d5321"
+  },
+  "compilerGo": "go1.26.9",
+  "harnessGo": "go1.26.0",
+  "shards": [
+    "abap/types",
+    "root",
+    "objects",
+    "rules"
+  ],
+  "fullSuiteMeasured": false,
+  "gates": [
+    {
+      "command": "GOMAXPROCS=2 go vet -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+      "exit": 0
+    },
+    {
+      "command": "GOMAXPROCS=2 go test -short -timeout 30m -p 2 ./hir/... ./tsfront/... ./internal/... ./cmd/...",
+      "exit": 0
+    },
+    {
+      "command": "GOMAXPROCS=2 ABAPITI_GRACECHECK=1 go test -short -timeout 30m -p 2 ./tsfront -run Test(LexerFactsReport|EmitRegistryFeatures|EmitRegistrySingletons)$",
+      "exit": 0
+    },
+    {
+      "command": "GOMAXPROCS=2 go test -short -p 2 ./cmd/abapiti -run TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend",
+      "exit": 0
+    },
+    {
+      "command": "GOMAXPROCS=2 GOFLAGS=-p=2 ./.github/ci/lint.sh gate origin/integ/train-11",
+      "exit": 0,
+      "result": "0 new issues; canary 5/5; golangci-lint 2.13.2"
+    },
+    {
+      "command": "diff -r \"$SCRATCH/default-base\" \"$SCRATCH/default-after\" (both emitted at the same absolute output path with --target all,go)",
+      "exit": 0,
+      "bytes": 0
+    }
+  ],
+  "lexerFactsSHA256": "054de5e26ce9ec214baa5ad618d1deae312a4f9c0235ab8060b80967c1956618",
+  "goldenChanged": false,
+  "originMainDefaultComparison": {
+    "empty": false,
+    "inheritedFromTrain11": true,
+    "differingFiles": [
+      "go/hir.go",
+      "go/hir_profile.go",
+      "go/runtime.go",
+      "go/zabaplint-go",
+      "sites.json"
+    ]
+  },
+  "developmentNotes": [
+    "Superseded intermediate shard runs were stopped before claiming measurements.",
+    "A broad truthiness prototype caused native parameter-property and string-layout verification failures in local tests; boolean field widening was bounded and guarded parameters separated, then the complete short suite passed.",
+    "The initial short-suite run reached its default ten-minute timeout under contention; final certification uses -timeout 30m.",
+    "No upstream source or assertion was changed; no genuine FAIL was accepted."
+  ]
+}
