@@ -72,7 +72,7 @@ func (e *emitter) materializer(t hir.Type) string {
 	case hir.ClassRef:
 		c := e.classBy(t.Name)
 		if c == nil || c.Super != "" || c.Abstract || len(c.Methods) > 0 || c.Ctor == nil || len(c.Ctor.Params) != len(c.Fields) {
-			e.err = fmt.Errorf("materialization requires a data shape, got %s", t.String())
+			e.refuse(fmt.Errorf("materialization requires a data shape, got %s", t.String()))
 			return name
 		}
 		if e.materialized == nil {
@@ -86,7 +86,7 @@ func (e *emitter) materializer(t hir.Type) string {
 		var arguments []string
 		for i, field := range c.Fields {
 			if field.Static || c.Ctor.Params[i].Name != field.Name || !c.Ctor.Params[i].Type.Equal(field.Type) {
-				e.err = fmt.Errorf("materialization requires field constructor ABI for %s", t.String())
+				e.refuse(fmt.Errorf("materialization requires field constructor ABI for %s", t.String()))
 				return name
 			}
 			local := fmt.Sprintf("field%d", i)
@@ -106,7 +106,7 @@ func (e *emitter) materializer(t hir.Type) string {
 		}
 		line("result->%s = p0.", e.name("builtin.materializedSource"))
 	default:
-		e.err = fmt.Errorf("materialization does not support %s", t.String())
+		e.refuse(fmt.Errorf("materialization does not support %s", t.String()))
 		return name
 	}
 	line("ENDMETHOD.\nENDCLASS.")

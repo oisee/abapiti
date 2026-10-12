@@ -2,7 +2,7 @@
 // One binary per direct test directory. Keep syntax together: helpers import
 // syntax.ts, which registers tests; splitting its roots would count them twice.
 // No source editing, test extraction, or oracle-synthesized Go registrations.
-import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync} from 'node:fs';
+import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync, existsSync} from 'node:fs';
 import {resolve, join, dirname} from 'node:path';
 import {execFile, execFileSync} from 'node:child_process';
 import {promisify} from 'node:util';
@@ -75,6 +75,12 @@ export async function runShards(shards, workers, runShard) {
   for (const result of settled) if (result.status === 'rejected') throw result.reason;
 }
 
+// Preserve host refusals and timings even when no runner JSON was produced.
+export function readOSGEvidence(build) {
+ const read = file => existsSync(join(build,file)) ? JSON.parse(readFileSync(join(build,file))) : null;
+ return {gap:read('evidence/abap-gap.json'),gate:read('evidence/test-gate.json'),host:read('osg/timing.json')};
+}
+
 async function main() {
  const [upstreamArg = join(homedir(), 'dev/abaplint'), outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
  const upstream = resolve(upstreamArg), output = resolve(outputArg);
@@ -83,7 +89,12 @@ async function main() {
  mkdirSync(scratch, {recursive:true});
  const run = mkdtempSync(join(scratch, 'all-'));
  const plan = prioritizeShards(selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS), process.env.ABAPITI_TESTS_FIRST);
- const env = {...process.env, GOCACHE:join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
+ const target = process.env.ABAPITI_TESTS_TARGET ?? 'go';
+ if (!['go','osg'].includes(target)) throw new Error('ABAPITI_TESTS_TARGET must be go or osg');
+ if (target === 'osg' && !process.env.ABAPITI_OSG_HOME) throw new Error('ABAPITI_OSG_HOME is required for osg');
+ if (target === 'osg') plan.target = target;
+ const targetArgs = target === 'osg' ? ['--target','osg','--osg-home',process.env.ABAPITI_OSG_HOME,'--osg-runner',join(tools,'abaplint-tests-osg.mjs')] : [];
+ const env = {...process.env, GOCACHE:process.env.GOCACHE ?? join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
  }
@@ -117,7 +128,7 @@ async function main() {
     if (foreign.length) borrowed = executeOracle(oracleBuild, upstream, foreign);
     let execution;
     try {
-     execution = {...await promisify(execFile)(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
+     execution = {...await promisify(execFile)(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
     } catch (error) {
      execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
     }
@@ -127,11 +138,13 @@ async function main() {
      throw new Error(`harness exit ${execution.status}: ${execution.error?.message ?? ''}\n${execution.stderr?.slice(-6000) ?? ''}`);
     }
     if (![0,1].includes(execution.status)) throw new Error(`unexpected harness exit ${execution.status}`);
+
    } catch (error) {
     // Infrastructure failure is explicit and all oracle cases remain not-run.
     result = {results:[], initialization:[], infrastructureFailure:String(error)};
     console.error(String(error));
    } finally {
+    if (target === 'osg') result.osgEvidence = readOSGEvidence(build);
     rmSync(build, {recursive:true, force:true});
     rmSync(closure, {recursive:true, force:true});
     mkdirSync(closure);

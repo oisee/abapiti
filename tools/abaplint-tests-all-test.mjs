@@ -4,7 +4,7 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {discoverShards, selectShards, prioritizeShards, assertNoFailures, runShards} from './abaplint-tests-all.mjs';
+import {discoverShards, selectShards, prioritizeShards, assertNoFailures, runShards, readOSGEvidence} from './abaplint-tests-all.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
 // A failing worker must drain its peer without ever launching queued work.
 let releasePeer, rejectFirst;
@@ -124,6 +124,36 @@ try {
  assert.deepEqual(tail.top20Traps,tail.allTraps.slice(0,20));
  assert.equal(tail.allTraps.reduce((n, item) => n + item.count,0),tail.uniqueTotal.trapped);
  assert.match(tail.allTraps[21].message,/boundary-21/);
+ assert.equal(tail.target,undefined);
+ assert.equal(tail.shards[0].osgEvidence,undefined);
+ // ABAP-only evidence survives transient-build cleanup; one refused body may
+ // contain multiple operations, so impacts must not be summed as test totals.
+ partial.target = 'osg';
+ writeFileSync(join(dir,'shards.json'),JSON.stringify(partial));
+ tailRun.results[1].message = 'runtime operation chai.box has no ABAP emitter; runtime operation chai.deepEqual has no ABAP emitter; other refusal';
+ tailRun.osgEvidence = {gap:{unsupportedCatalogue:['chai.box','chai.deepEqual','array.has'],refusals:[{reason:'other refusal'}]},gate:{Blocking:0},host:{timingMs:{goBuild:123,run:4}}};
+ writeFileSync(join(dir,'go-root.json'),JSON.stringify(tailRun));
+ summarize();
+ const osg = JSON.parse(readFileSync(join(dir,'summary.json')));
+ assert.equal(osg.target,'osg');
+ assert.match(osg.countingRule,/Only the dedicated assertion marker is failed/);
+ assert.deepEqual(osg.shards[0].osgEvidence.refusalBodyImpact.runtime.map(r=>r.tests),[1,1,0]);
+ assert.equal(osg.shards[0].osgEvidence.refusalBodyImpact.refusals[0].tests,1);
+ assert.deepEqual(osg.shards[0].osgEvidence.host,tailRun.osgEvidence.host);
+ assert.equal(osg.shards[0].osgEvidence.refusalBodyImpact.measured,true);
+ mkdirSync(join(dir,'evidence'));
+ mkdirSync(join(dir,'osg'));
+ writeFileSync(join(dir,'evidence/abap-gap.json'),JSON.stringify(tailRun.osgEvidence.gap));
+ writeFileSync(join(dir,'evidence/test-gate.json'),JSON.stringify(tailRun.osgEvidence.gate));
+ writeFileSync(join(dir,'osg/timing.json'),JSON.stringify(tailRun.osgEvidence.host));
+ assert.deepEqual(readOSGEvidence(dir),tailRun.osgEvidence);
+ assert.deepEqual(readOSGEvidence(join(dir,'absent')),{gap:null,gate:null,host:null});
+ tailRun.infrastructureFailure = 'OSG native panic escaped ABAP CATCH';
+ writeFileSync(join(dir,'go-root.json'),JSON.stringify(tailRun));
+ summarize();
+ const refused = JSON.parse(readFileSync(join(dir,'summary.json')));
+ assert.equal(refused.shards[0].osgEvidence.refusalBodyImpact.measured,false);
+ assert.equal(refused.shards[0].osgEvidence.refusalBodyImpact.runtime[0].tests,null);
  partial.files.push('test/missing.ts');
  writeFileSync(join(dir,'shards.json'),JSON.stringify(partial));
  assert.throws(summarize,/disjoint exhaustive partition/);

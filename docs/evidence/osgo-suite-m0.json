@@ -1,0 +1,1248 @@
+{
+  "schema": "abapiti-osgo-suite-m0-v1",
+  "baseCommit": "07714f1ed674d277f4d6bb17bf4db60aa8cebcf6",
+  "implementationCommit": "94fe0a7f459a66777857c2ab0c407fd55dbea281",
+  "implementationTrees": {
+    "cmd": "c5c9d0dbc85adba8ca0723ee9a29a9fbf487141b",
+    "hir": "b94e22031f8cd6eafc7a1a03865283af2dd5b164",
+    "tsfront": "b36500ce565b199155be01154dd315c897f209a1",
+    "tools": "6d1af95d8795b1e64023fb71557d91727c3fa430"
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "7720f6e29b41a6a12faee17ea65076ac6f046552",
+  "target": "osg",
+  "inline": "classic",
+  "fullClosure": {
+    "roots": 625,
+    "shards": 17,
+    "manifestSHA256": "8bc69eca3e2735470d1f5aa2b955127eaf378f13cd0b781c750e2493185fa189",
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "CoverageTraps": 0,
+    "Ranked": [],
+    "runtimeOperationsPresent": 24,
+    "runtimeSites": 192,
+    "otherRefusalSites": 76,
+    "gap": {
+      "files": 2166,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "array.delete",
+        "array.has",
+        "chai.arrayInclude",
+        "chai.box",
+        "chai.deepEqual",
+        "chai.deepInclude",
+        "chai.members",
+        "chai.throwMatch",
+        "classvalue.newArgs",
+        "dynamic.call0",
+        "dynamic.delete",
+        "json.indent",
+        "json.stringifySubset",
+        "json5.parse",
+        "lsp.isCreateFile",
+        "lsp.isDeleteFile",
+        "lsp.isRenameFile",
+        "lsp.isTextDocumentEdit",
+        "number.ceil",
+        "object.checkedClassView",
+        "string.padStart",
+        "string.parseFloat",
+        "string.parseFloatNumber",
+        "string.sha1Hex",
+        "string.splitRegex",
+        "xml.parseWithErrors"
+      ],
+      "runtime": [
+        {
+          "reason": "array.has",
+          "sites": 23,
+          "examples": [
+            "closure.121552.invoke:0:46 ()",
+            "closure.162302.invoke:0:48 ()",
+            "closure.162439.invoke:0:33 ()"
+          ]
+        },
+        {
+          "reason": "chai.arrayInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234574:55 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.box",
+          "sites": 10,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:12 (runtime/chai.ts:53:40)",
+            "runtime/chai.ts.Assertion.contain:234545:15 (runtime/chai.ts:53:52)",
+            "runtime/chai.ts.Assertion.contain:234574:56 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.deepEqual",
+          "sites": 2,
+          "examples": [
+            "runtime/chai.ts.Assertion.eql:234434:10 (runtime/chai.ts:35:76)",
+            "runtime/chai.ts.Assertion.equal:234387:11 (runtime/chai.ts:27:44)"
+          ]
+        },
+        {
+          "reason": "chai.deepInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:11 (runtime/chai.ts:53:40)"
+          ]
+        },
+        {
+          "reason": "chai.members",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.members:234597:10 (runtime/chai.ts:67:28)"
+          ]
+        },
+        {
+          "reason": "chai.throwMatch",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.throw:234527:17 (runtime/chai.ts:49:31)"
+          ]
+        },
+        {
+          "reason": "classvalue.newArgs",
+          "sites": 2,
+          "examples": [
+            "src/artifacts_objects.ts.ArtifactsObjects.buildObjectMap:0:7 ()",
+            "src/artifacts_objects.ts.ArtifactsObjects.newObject:0:160 ()"
+          ]
+        },
+        {
+          "reason": "dynamic.call0",
+          "sites": 6,
+          "examples": [
+            "closure.131654.invoke:131710:61 (test/cds/cds_parser.ts:3852:17)",
+            "closure.131654.invoke:131710:62 (test/cds/cds_parser.ts:3852:17)",
+            "src/lsp/help.ts.Help.outputNodes:357917:39 (src/lsp/help.ts:243:58)"
+          ]
+        },
+        {
+          "reason": "dynamic.delete",
+          "sites": 3,
+          "examples": [
+            "closure.163115.invoke:163142:20 (test/pretty_printer/pretty_printer.ts:183:14)",
+            "closure.165667.invoke:165693:19 (test/registry.ts:460:12)",
+            "src/lsp/help.ts.Help.dumpDDLS:357329:55 (src/lsp/help.ts:46:5)"
+          ]
+        },
+        {
+          "reason": "json.indent",
+          "sites": 3,
+          "examples": [
+            "closure.132424.invoke:132437:23 (test/config.ts:73:39)",
+            "src/lsp/help.ts.Help.dumpDDLS:357338:67 (src/lsp/help.ts:47:41)",
+            "src/lsp/help.ts.Help.dumpInfo:357486:24 (src/lsp/help.ts:103:33)"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset",
+          "sites": 34,
+          "examples": [
+            "closure.132323.invoke:132348:38 (test/config.ts:40:44)",
+            "closure.132363.invoke:132374:7 (test/config.ts:47:44)",
+            "closure.132391.invoke:132409:29 (test/config.ts:62:44)"
+          ]
+        },
+        {
+          "reason": "json5.parse",
+          "sites": 1,
+          "examples": [
+            "src/config.ts.Config.constructor:347437:4 (src/config.ts:99:31)"
+          ]
+        },
+        {
+          "reason": "lsp.isCreateFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451409:33 (test/lsp/_apply_edit.ts:25:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isDeleteFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451433:42 (test/lsp/_apply_edit.ts:27:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isRenameFile",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374587:30 (src/objects/rename/renamer.ts:107:32)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451390:25 (test/lsp/_apply_edit.ts:23:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isTextDocumentEdit",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374561:16 (src/objects/rename/renamer.ts:104:31)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451371:18 (test/lsp/_apply_edit.ts:21:39)"
+          ]
+        },
+        {
+          "reason": "number.ceil",
+          "sites": 9,
+          "examples": [
+            "src/ddic.ts.DDIC.textToType:350199:472 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350306:418 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350413:364 (src/ddic.ts:386:40)"
+          ]
+        },
+        {
+          "reason": "object.checkedClassView",
+          "sites": 77,
+          "examples": [
+            "closure.121425.invoke:121471:40 (test/abap/types/types.ts:33:18)",
+            "closure.150518.invoke:150556:47 (test/objects/class.ts:333:18)",
+            "closure.150585.invoke:150623:47 (test/objects/class.ts:367:18)"
+          ]
+        },
+        {
+          "reason": "string.padStart",
+          "sites": 3,
+          "examples": [
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:32 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:51 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:64 ()"
+          ]
+        },
+        {
+          "reason": "string.parseFloatNumber",
+          "sites": 3,
+          "examples": [
+            "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:370916:161 (src/objects/number_range.ts:51:44)",
+            "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+            "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+          ]
+        },
+        {
+          "reason": "string.sha1Hex",
+          "sites": 1,
+          "examples": [
+            "src/rules/downport.ts.Downport.uniqueName:409750:46 (src/rules/downport.ts:3174:53)"
+          ]
+        },
+        {
+          "reason": "string.splitRegex",
+          "sites": 2,
+          "examples": [
+            "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+            "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+          ]
+        },
+        {
+          "reason": "xml.parseWithErrors",
+          "sites": 3,
+          "examples": [
+            "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:362225:11 (src/objects/_abstract_object.ts:140:101)",
+            "src/objects/function_group.ts.FunctionGroup.getTextSymbols:368034:17 (src/objects/function_group.ts:158:111)",
+            "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:435906:2 (src/rules/remove_descriptions.ts:106:103)"
+          ]
+        }
+      ],
+      "refusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 25264 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 25264 src/objects/_dynpros.ts:27:19]",
+            "node 293890 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 293890 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 295597 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 295597 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "classOf on the object root is not emitted",
+          "sites": 3,
+          "examples": [
+            "node 351748 (src/ddl/ddl_parser.ts:97:20): classOf on the object root is not emitted [hasKey@src/ddl/ddl_parser.ts:94:3; node 351748 src/ddl/ddl_parser.ts:97:20]",
+            "node 357914 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 357914 src/lsp/help.ts:243:19]",
+            "node 357924 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 357924 src/lsp/help.ts:243:19]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 121213 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 121236 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 121259 test/abap/types/message.ts:23:12]"
+          ]
+        },
+        {
+          "reason": "erased structural object.has is not emitted on ABAP",
+          "sites": 2,
+          "examples": [
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@src/objects/rename/renamer.ts:125:3; node 0 ]",
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@test/lsp/_apply_edit.ts:37:3; node 0 ]"
+          ]
+        },
+        {
+          "reason": "fresh lexical constructor descriptors are unsupported in ABAP",
+          "sites": 1,
+          "examples": [
+            "node 72913: fresh lexical constructor descriptors are unsupported in ABAP [invoke@test/abap/structures/_combi.ts:276:39; node 72913 test/abap/structures/_combi.ts:277:3]"
+          ]
+        }
+      ]
+    },
+    "limits": {
+      "nonfiniteLiteralSites": 0,
+      "lineEnvelopeRefusals": 0,
+      "nameRefusals": 0,
+      "defaultHashedNameUpperBoundBytes": 29
+    }
+  },
+  "impactRule": "No test-to-function reachability map is supplied by the unpruned harness. Counts measure tests reaching refused owning bodies; operations within a body may be inactive. Groups overlap. The 15 unrun shards and the aborted statements shard have unmeasured test-body impact, not zero.",
+  "selectedSuite": {
+    "shards": [
+      "abap/lexer",
+      "abap/statements"
+    ],
+    "files": 289,
+    "excludedFiles": 336,
+    "active": 5162
+  },
+  "nodeActive": {
+    "total": 5162,
+    "passed": 85,
+    "failed": 0,
+    "trapped": 115,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 4962,
+    "notPassing": 5077
+  },
+  "nodePending": {
+    "total": 0,
+    "skipped": 0,
+    "unregistered": 0
+  },
+  "uniqueTotal": {
+    "passed": 85,
+    "failed": 0,
+    "trapped": 115,
+    "asyncPending": 0,
+    "notRun": 4962,
+    "registered": 200,
+    "total": 5162,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 0,
+    "unregistered": 4962
+  },
+  "nodeTotal": {
+    "passed": 5162,
+    "failed": 0,
+    "pending": 0,
+    "total": 5162
+  },
+  "registrationParity": false,
+  "shards": [
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 85,
+      "failed": 0,
+      "trapped": 115,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 200,
+        "passed": 85,
+        "failed": 0,
+        "trapped": 115,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 115
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "initialization": [],
+      "failures": [],
+      "osgEvidence": {
+        "gap": {
+          "files": 1545,
+          "nonfiniteLiteralSites": 0,
+          "unsupportedCatalogue": [
+            "array.delete",
+            "array.has",
+            "chai.arrayInclude",
+            "chai.box",
+            "chai.deepEqual",
+            "chai.deepInclude",
+            "chai.members",
+            "chai.throwMatch",
+            "classvalue.newArgs",
+            "dynamic.call0",
+            "dynamic.delete",
+            "json.indent",
+            "json.stringifySubset",
+            "json5.parse",
+            "lsp.isCreateFile",
+            "lsp.isDeleteFile",
+            "lsp.isRenameFile",
+            "lsp.isTextDocumentEdit",
+            "number.ceil",
+            "object.checkedClassView",
+            "string.padStart",
+            "string.parseFloat",
+            "string.parseFloatNumber",
+            "string.sha1Hex",
+            "string.splitRegex",
+            "xml.parseWithErrors"
+          ],
+          "runtime": [
+            {
+              "reason": "array.has",
+              "sites": 3,
+              "examples": [
+                "src/rules/contains_tab.ts.ContainsTab.runParsed_instantiated_src/rules/contains_tab.ts.ContainsTab:0:15 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:13 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:41 ()"
+              ]
+            },
+            {
+              "reason": "chai.arrayInclude",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:31345:55 (runtime/chai.ts:62:35)"
+              ]
+            },
+            {
+              "reason": "chai.box",
+              "sites": 10,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:31314:12 (runtime/chai.ts:53:40)",
+                "runtime/chai.ts.Assertion.contain:31316:15 (runtime/chai.ts:53:52)",
+                "runtime/chai.ts.Assertion.contain:31345:56 (runtime/chai.ts:62:35)"
+              ]
+            },
+            {
+              "reason": "chai.deepEqual",
+              "sites": 2,
+              "examples": [
+                "runtime/chai.ts.Assertion.eql:31205:10 (runtime/chai.ts:35:76)",
+                "runtime/chai.ts.Assertion.equal:31158:11 (runtime/chai.ts:27:44)"
+              ]
+            },
+            {
+              "reason": "chai.deepInclude",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:31314:11 (runtime/chai.ts:53:40)"
+              ]
+            },
+            {
+              "reason": "chai.members",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.members:31368:10 (runtime/chai.ts:67:28)"
+              ]
+            },
+            {
+              "reason": "chai.throwMatch",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.throw:31298:17 (runtime/chai.ts:49:31)"
+              ]
+            },
+            {
+              "reason": "classvalue.newArgs",
+              "sites": 2,
+              "examples": [
+                "src/artifacts_objects.ts.ArtifactsObjects.buildObjectMap:0:7 ()",
+                "src/artifacts_objects.ts.ArtifactsObjects.newObject:0:160 ()"
+              ]
+            },
+            {
+              "reason": "dynamic.call0",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.outputNodes:154633:39 (src/lsp/help.ts:243:58)",
+                "src/lsp/help.ts.Help.outputNodes:154643:20 (src/lsp/help.ts:243:58)"
+              ]
+            },
+            {
+              "reason": "dynamic.delete",
+              "sites": 1,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:154045:55 (src/lsp/help.ts:46:5)"
+              ]
+            },
+            {
+              "reason": "json.indent",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:154054:67 (src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpInfo:154202:24 (src/lsp/help.ts:103:33)"
+              ]
+            },
+            {
+              "reason": "json.stringifySubset",
+              "sites": 4,
+              "examples": [
+                "src/lsp/_lookup.ts.LSPLookup.referenceHover:151498:207 (src/lsp/_lookup.ts:273:45)",
+                "src/lsp/help.ts.Help.dumpDDLS:154054:68 (src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpDDLS:154090:112 (src/lsp/help.ts:57:35)"
+              ]
+            },
+            {
+              "reason": "json5.parse",
+              "sites": 1,
+              "examples": [
+                "src/config.ts.Config.constructor:144209:4 (src/config.ts:99:31)"
+              ]
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:171344:30 (src/objects/rename/renamer.ts:107:32)"
+              ]
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:171318:16 (src/objects/rename/renamer.ts:104:31)"
+              ]
+            },
+            {
+              "reason": "number.ceil",
+              "sites": 9,
+              "examples": [
+                "src/ddic.ts.DDIC.textToType:146971:472 (src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:147078:418 (src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:147185:364 (src/ddic.ts:386:40)"
+              ]
+            },
+            {
+              "reason": "object.checkedClassView",
+              "sites": 2,
+              "examples": [
+                "src/abap/nodes/statement_node.ts.StatementNode.concatTokensVirtual:127235:11 (src/abap/nodes/statement_node.ts:119:21)",
+                "src/abap/nodes/statement_node.ts.StatementNode.concatTokensVirtual:127249:28 (src/abap/nodes/statement_node.ts:120:21)"
+              ]
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "sites": 3,
+              "examples": [
+                "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:167673:161 (src/objects/number_range.ts:51:44)",
+                "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+                "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+              ]
+            },
+            {
+              "reason": "string.sha1Hex",
+              "sites": 1,
+              "examples": [
+                "src/rules/downport.ts.Downport.uniqueName:206507:46 (src/rules/downport.ts:3174:53)"
+              ]
+            },
+            {
+              "reason": "string.splitRegex",
+              "sites": 2,
+              "examples": [
+                "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+                "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+              ]
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "sites": 3,
+              "examples": [
+                "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:158982:11 (src/objects/_abstract_object.ts:140:101)",
+                "src/objects/function_group.ts.FunctionGroup.getTextSymbols:164791:17 (src/objects/function_group.ts:158:111)",
+                "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:232663:2 (src/rules/remove_descriptions.ts:106:103)"
+              ]
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "sites": 66,
+              "examples": [
+                "node 146073 (src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@src/ddic.ts:353:3; node 146073 src/ddic.ts:433:53]",
+                "node 146140 (src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@src/ddic.ts:353:3; node 146140 src/ddic.ts:433:53]",
+                "node 146207 (src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@src/ddic.ts:353:3; node 146207 src/ddic.ts:433:53]"
+              ]
+            },
+            {
+              "reason": "classOf on the object root is not emitted",
+              "sites": 3,
+              "examples": [
+                "node 148464 (src/ddl/ddl_parser.ts:97:20): classOf on the object root is not emitted [hasKey@src/ddl/ddl_parser.ts:94:3; node 148464 src/ddl/ddl_parser.ts:97:20]",
+                "node 154630 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 154630 src/lsp/help.ts:243:19]",
+                "node 154640 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 154640 src/lsp/help.ts:243:19]"
+              ]
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "sites": 1,
+              "examples": [
+                "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@src/objects/rename/renamer.ts:125:3; node 0 ]"
+              ]
+            }
+          ]
+        },
+        "gate": {
+          "Files": 1545,
+          "Classes": 2109,
+          "Interfaces": 75,
+          "Blocking": 0,
+          "HIRErrors": 0,
+          "CoverageTraps": 0,
+          "Ranked": []
+        },
+        "host": {
+          "pin": "7720f6e29b41a6a12faee17ea65076ac6f046552",
+          "timingMs": {
+            "frontend": 101089,
+            "emit": 9990,
+            "goBuild": 90974,
+            "run": 39
+          },
+          "status": 1,
+          "envelope": {
+            "files": 2348,
+            "maxLineBytes": 255,
+            "overlongLines": 0,
+            "maxObjectNameBytes": 29
+          }
+        },
+        "refusalBodyImpact": {
+          "runtime": [
+            {
+              "reason": "array.delete",
+              "tests": 0
+            },
+            {
+              "reason": "array.has",
+              "tests": 0
+            },
+            {
+              "reason": "chai.arrayInclude",
+              "tests": 0
+            },
+            {
+              "reason": "chai.box",
+              "tests": 115
+            },
+            {
+              "reason": "chai.deepEqual",
+              "tests": 115
+            },
+            {
+              "reason": "chai.deepInclude",
+              "tests": 0
+            },
+            {
+              "reason": "chai.members",
+              "tests": 0
+            },
+            {
+              "reason": "chai.throwMatch",
+              "tests": 0
+            },
+            {
+              "reason": "classvalue.newArgs",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.call0",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.delete",
+              "tests": 0
+            },
+            {
+              "reason": "json.indent",
+              "tests": 0
+            },
+            {
+              "reason": "json.stringifySubset",
+              "tests": 0
+            },
+            {
+              "reason": "json5.parse",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isCreateFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isDeleteFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "tests": 0
+            },
+            {
+              "reason": "number.ceil",
+              "tests": 0
+            },
+            {
+              "reason": "object.checkedClassView",
+              "tests": 0
+            },
+            {
+              "reason": "string.padStart",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloat",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "tests": 0
+            },
+            {
+              "reason": "string.sha1Hex",
+              "tests": 0
+            },
+            {
+              "reason": "string.splitRegex",
+              "tests": 0
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "tests": 0
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "tests": 0
+            },
+            {
+              "reason": "classOf on the object root is not emitted",
+              "tests": 0
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "tests": 0
+            }
+          ],
+          "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Unmeasured shards are not zero.",
+          "measured": true
+        }
+      },
+      "completedReport": true,
+      "executionCountsCertified": true
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 4962,
+      "registered": 0,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 4962
+      },
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 4962,
+        "passed": 0,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 4962,
+        "notPassing": 4962
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "initialization": [],
+      "failures": [],
+      "infrastructureFailure": "NOT_COMPILED in Z_RUNTIME_REGE_8D1CC105868012=>CONSTRUCTOR (z_runtime_rege_8d1cc105868012.clas.abap:825): FIND PCRE",
+      "osgEvidence": {
+        "gap": {
+          "files": 1828,
+          "nonfiniteLiteralSites": 0,
+          "unsupportedCatalogue": [
+            "array.delete",
+            "array.has",
+            "chai.arrayInclude",
+            "chai.box",
+            "chai.deepEqual",
+            "chai.deepInclude",
+            "chai.members",
+            "chai.throwMatch",
+            "classvalue.newArgs",
+            "dynamic.call0",
+            "dynamic.delete",
+            "json.indent",
+            "json.stringifySubset",
+            "json5.parse",
+            "lsp.isCreateFile",
+            "lsp.isDeleteFile",
+            "lsp.isRenameFile",
+            "lsp.isTextDocumentEdit",
+            "number.ceil",
+            "object.checkedClassView",
+            "string.padStart",
+            "string.parseFloat",
+            "string.parseFloatNumber",
+            "string.sha1Hex",
+            "string.splitRegex",
+            "xml.parseWithErrors"
+          ],
+          "runtime": [
+            {
+              "reason": "array.has",
+              "sites": 3,
+              "examples": [
+                "src/rules/contains_tab.ts.ContainsTab.runParsed_instantiated_src/rules/contains_tab.ts.ContainsTab:0:15 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:13 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:41 ()"
+              ]
+            },
+            {
+              "reason": "chai.arrayInclude",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:60220:55 (runtime/chai.ts:62:35)"
+              ]
+            },
+            {
+              "reason": "chai.box",
+              "sites": 10,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:60189:12 (runtime/chai.ts:53:40)",
+                "runtime/chai.ts.Assertion.contain:60191:15 (runtime/chai.ts:53:52)",
+                "runtime/chai.ts.Assertion.contain:60220:56 (runtime/chai.ts:62:35)"
+              ]
+            },
+            {
+              "reason": "chai.deepEqual",
+              "sites": 2,
+              "examples": [
+                "runtime/chai.ts.Assertion.eql:60080:10 (runtime/chai.ts:35:76)",
+                "runtime/chai.ts.Assertion.equal:60033:11 (runtime/chai.ts:27:44)"
+              ]
+            },
+            {
+              "reason": "chai.deepInclude",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.contain:60189:11 (runtime/chai.ts:53:40)"
+              ]
+            },
+            {
+              "reason": "chai.members",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.members:60243:10 (runtime/chai.ts:67:28)"
+              ]
+            },
+            {
+              "reason": "chai.throwMatch",
+              "sites": 1,
+              "examples": [
+                "runtime/chai.ts.Assertion.throw:60173:17 (runtime/chai.ts:49:31)"
+              ]
+            },
+            {
+              "reason": "classvalue.newArgs",
+              "sites": 2,
+              "examples": [
+                "src/artifacts_objects.ts.ArtifactsObjects.buildObjectMap:0:7 ()",
+                "src/artifacts_objects.ts.ArtifactsObjects.newObject:0:160 ()"
+              ]
+            },
+            {
+              "reason": "dynamic.call0",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.outputNodes:183508:39 (src/lsp/help.ts:243:58)",
+                "src/lsp/help.ts.Help.outputNodes:183518:20 (src/lsp/help.ts:243:58)"
+              ]
+            },
+            {
+              "reason": "dynamic.delete",
+              "sites": 1,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:182920:55 (src/lsp/help.ts:46:5)"
+              ]
+            },
+            {
+              "reason": "json.indent",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:182929:67 (src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpInfo:183077:24 (src/lsp/help.ts:103:33)"
+              ]
+            },
+            {
+              "reason": "json.stringifySubset",
+              "sites": 4,
+              "examples": [
+                "src/lsp/_lookup.ts.LSPLookup.referenceHover:180373:207 (src/lsp/_lookup.ts:273:45)",
+                "src/lsp/help.ts.Help.dumpDDLS:182929:68 (src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpDDLS:182965:112 (src/lsp/help.ts:57:35)"
+              ]
+            },
+            {
+              "reason": "json5.parse",
+              "sites": 1,
+              "examples": [
+                "src/config.ts.Config.constructor:173084:4 (src/config.ts:99:31)"
+              ]
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:200219:30 (src/objects/rename/renamer.ts:107:32)"
+              ]
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:200193:16 (src/objects/rename/renamer.ts:104:31)"
+              ]
+            },
+            {
+              "reason": "number.ceil",
+              "sites": 9,
+              "examples": [
+                "src/ddic.ts.DDIC.textToType:175846:472 (src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:175953:418 (src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:176060:364 (src/ddic.ts:386:40)"
+              ]
+            },
+            {
+              "reason": "object.checkedClassView",
+              "sites": 2,
+              "examples": [
+                "src/abap/nodes/statement_node.ts.StatementNode.concatTokensVirtual:156110:11 (src/abap/nodes/statement_node.ts:119:21)",
+                "src/abap/nodes/statement_node.ts.StatementNode.concatTokensVirtual:156124:28 (src/abap/nodes/statement_node.ts:120:21)"
+              ]
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "sites": 3,
+              "examples": [
+                "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:196548:161 (src/objects/number_range.ts:51:44)",
+                "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+                "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+              ]
+            },
+            {
+              "reason": "string.sha1Hex",
+              "sites": 1,
+              "examples": [
+                "src/rules/downport.ts.Downport.uniqueName:235382:46 (src/rules/downport.ts:3174:53)"
+              ]
+            },
+            {
+              "reason": "string.splitRegex",
+              "sites": 2,
+              "examples": [
+                "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+                "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+              ]
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "sites": 3,
+              "examples": [
+                "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:187857:11 (src/objects/_abstract_object.ts:140:101)",
+                "src/objects/function_group.ts.FunctionGroup.getTextSymbols:193666:17 (src/objects/function_group.ts:158:111)",
+                "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:261538:2 (src/rules/remove_descriptions.ts:106:103)"
+              ]
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "sites": 66,
+              "examples": [
+                "node 119536 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 119536 src/abap/5_syntax/basic_types.ts:184:32]",
+                "node 121243 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 121243 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]",
+                "node 121333 (src/abap/5_syntax/basic_types.ts:643:31): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 121333 src/abap/5_syntax/basic_types.ts:643:31]"
+              ]
+            },
+            {
+              "reason": "classOf on the object root is not emitted",
+              "sites": 3,
+              "examples": [
+                "node 177339 (src/ddl/ddl_parser.ts:97:20): classOf on the object root is not emitted [hasKey@src/ddl/ddl_parser.ts:94:3; node 177339 src/ddl/ddl_parser.ts:97:20]",
+                "node 183505 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 183505 src/lsp/help.ts:243:19]",
+                "node 183515 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 183515 src/lsp/help.ts:243:19]"
+              ]
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "sites": 1,
+              "examples": [
+                "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@src/objects/rename/renamer.ts:125:3; node 0 ]"
+              ]
+            }
+          ]
+        },
+        "gate": {
+          "Files": 1828,
+          "Classes": 2367,
+          "Interfaces": 75,
+          "Blocking": 0,
+          "HIRErrors": 0,
+          "CoverageTraps": 0,
+          "Ranked": []
+        },
+        "host": {
+          "pin": "7720f6e29b41a6a12faee17ea65076ac6f046552",
+          "timingMs": {
+            "frontend": 128870,
+            "emit": 10783,
+            "goBuild": 128191,
+            "run": 64
+          },
+          "status": 2,
+          "envelope": {
+            "files": 2606,
+            "maxLineBytes": 255,
+            "overlongLines": 0,
+            "maxObjectNameBytes": 29
+          }
+        },
+        "refusalBodyImpact": {
+          "measured": false,
+          "runtime": [
+            {
+              "reason": "array.delete",
+              "tests": null
+            },
+            {
+              "reason": "array.has",
+              "tests": null
+            },
+            {
+              "reason": "chai.arrayInclude",
+              "tests": null
+            },
+            {
+              "reason": "chai.box",
+              "tests": null
+            },
+            {
+              "reason": "chai.deepEqual",
+              "tests": null
+            },
+            {
+              "reason": "chai.deepInclude",
+              "tests": null
+            },
+            {
+              "reason": "chai.members",
+              "tests": null
+            },
+            {
+              "reason": "chai.throwMatch",
+              "tests": null
+            },
+            {
+              "reason": "classvalue.newArgs",
+              "tests": null
+            },
+            {
+              "reason": "dynamic.call0",
+              "tests": null
+            },
+            {
+              "reason": "dynamic.delete",
+              "tests": null
+            },
+            {
+              "reason": "json.indent",
+              "tests": null
+            },
+            {
+              "reason": "json.stringifySubset",
+              "tests": null
+            },
+            {
+              "reason": "json5.parse",
+              "tests": null
+            },
+            {
+              "reason": "lsp.isCreateFile",
+              "tests": null
+            },
+            {
+              "reason": "lsp.isDeleteFile",
+              "tests": null
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "tests": null
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "tests": null
+            },
+            {
+              "reason": "number.ceil",
+              "tests": null
+            },
+            {
+              "reason": "object.checkedClassView",
+              "tests": null
+            },
+            {
+              "reason": "string.padStart",
+              "tests": null
+            },
+            {
+              "reason": "string.parseFloat",
+              "tests": null
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "tests": null
+            },
+            {
+              "reason": "string.sha1Hex",
+              "tests": null
+            },
+            {
+              "reason": "string.splitRegex",
+              "tests": null
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "tests": null
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "tests": null
+            },
+            {
+              "reason": "classOf on the object root is not emitted",
+              "tests": null
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "tests": null
+            }
+          ],
+          "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+        }
+      },
+      "completedReport": false,
+      "executionCountsCertified": false,
+      "hostAttempts": 2,
+      "hostRefusal": {
+        "abapForm": "FIND PCRE posix IN ' '.",
+        "frontendSource": "tools/gogen/frontend.mjs:3176",
+        "cause": "Pinned frontend rejects bare PCRE, unlike PCRE ... RESULTS. The constructor becomes a native NOT_COMPILED stub whose panic escapes ABAP CATCH; no pattern validity or assertion outcome is measured."
+      }
+    }
+  ],
+  "allTraps": [
+    {
+      "message": "runtime operation chai.box has no ABAP emitter; runtime operation chai.box has no ABAP emitter; runtime operation chai.deepEqual has no ABAP emitter",
+      "count": 100,
+      "shards": {
+        "abap-lexer": 100
+      },
+      "example": "lowering trap: node 30067 (test/abap/lexer/count.ts:97:7 inlined runtime/chai.ts.Assertion.equals): runtime operation chai.box has no ABAP emitter; node 30067 (test/abap/lexer/count.ts:97:7 inlined runtime/chai.ts.Assertion.equals): runtime operation chai.box has no ABAP emitter; node 30067 (test/abap/lexer/count.ts:97:7 inlined runtime/chai.ts.Assertion.equals): runtime operation chai.deepEqual has no ABAP emitter"
+    },
+    {
+      "message": "runtime operation chai.box has no ABAP emitter; runtime operation chai.box has no ABAP emitter; runtime operation chai.deepEqual has no ABAP emitter; runtime operation chai.box has no ABAP emitter; runtime operation chai.box has no ABAP emitter; runtime operation chai.deepEqual has no ABAP emitter",
+      "count": 15,
+      "shards": {
+        "abap-lexer": 15
+      },
+      "example": "lowering trap: node 30370 (test/abap/lexer/lexer.ts:58:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.box has no ABAP emitter; node 30370 (test/abap/lexer/lexer.ts:58:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.box has no ABAP emitter; node 30370 (test/abap/lexer/lexer.ts:58:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.deepEqual has no ABAP emitter; node 30381 (test/abap/lexer/lexer.ts:59:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.box has no ABAP emitter; node 30381 (test/abap/lexer/lexer.ts:59:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.box has no ABAP emitter; node 30381 (test/abap/lexer/lexer.ts:59:5 inlined runtime/chai.ts.Assertion.equal): runtime operation chai.deepEqual has no ABAP emitter"
+    }
+  ],
+  "gates": {
+    "graceCheck": true,
+    "commands": [
+      "ABAPITI_GRACECHECK=1 go test ./... -short -timeout 40m",
+      "ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m",
+      "go vet ./...",
+      "node tools/abaplint-tests-report-test.mjs",
+      "node tools/abaplint-tests-all-test.mjs"
+    ],
+    "status": "passed",
+    "liveOSGFixture": {
+      "passed": 1,
+      "intentionalFailed": 1,
+      "trapped": 2,
+      "exit": 1,
+      "exactAssertionMessage": "intentional failure"
+    },
+    "defaultOutput": {
+      "baseline": "07714f1",
+      "sameAbsoluteOutputPath": true,
+      "diffExit": 0,
+      "diffBytes": 0,
+      "files": 6312,
+      "includesZip": true
+    }
+  },
+  "limitations": [
+    "Whole-suite ABAP coverage is not certified.",
+    "Nonempty Mocha hook chains explicitly trap before executing the body.",
+    "An OSG native panic escaping ABAP CATCH or build rejection is infrastructure failure, never a fabricated test result."
+  ],
+  "provenance": "Resumed interrupted WIP; fresh full-closure static audit, sequential lexer then statements attempt against fresh original Node, gate reruns and raw default-output parity. Statements native PCRE infrastructure refusal was reported immediately and repeated to preserve previously discarded host timing. Retention/summary metadata was finalized after emission; emitted Go/HIR sources are unchanged. All aborted-shard cases remain not-run with no assertion/registration/body-impact certificate. Only compact evidence is retained; no upstream test edits or host checkout changes."
+}
