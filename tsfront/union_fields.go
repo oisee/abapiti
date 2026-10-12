@@ -46,8 +46,18 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 					l.diagf(n, "unsupported-expr", "constructor metadata of callable unions is unsupported")
 					return nil, true
 				}
-				// Method interfaces already carry the original runtime object;
-				// the descriptor operation refuses nonnative implementations.
+				// An explicitly declared constructor method is not the inherited
+				// native descriptor. Otherwise method interfaces carry the original
+				// runtime object; the descriptor operation refuses nonnative values.
+				for _, iface := range l.out.Interfaces {
+					if iface.Name == typ.Name {
+						for _, method := range iface.Methods {
+							if method.Name == name {
+								native = false
+							}
+						}
+					}
+				}
 				continue
 			}
 			// Structural is finalized after bodies are lowered; the existing

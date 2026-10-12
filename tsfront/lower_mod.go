@@ -516,10 +516,50 @@ func relName(name string) string {
 // Object.keys must retain keys and declaration order, including duplicate values.
 func (l *lowerer) enumNamespace(n *ast.Node) (*hir.Expr, bool) {
 	sym := l.resolve(n)
-	if sym == nil || (l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil) {
+	if sym == nil {
 		return nil, false
 	}
 	f := l.fileOfSymbol(sym)
+	if l.unprunedFeatures && f != nil && f.IsDeclarationFile && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindEnumDeclaration {
+		if l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil {
+			l.registerEnum(f, sym.ValueDeclaration)
+		}
+		// Constant string enum declarations describe an ordinary mutable
+		// namespace object, never a function/class descriptor. Initialize one
+		// shared ordered map lazily through the existing module static ABI.
+		if members := l.enumOf(sym); members != nil {
+			mod := l.moduleClassOf(f)
+			field := sym.Name + "_namespace"
+			typ := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.String))
+			exists := false
+			for _, f := range mod.Fields {
+				exists = exists || f.Name == field
+			}
+			if !exists {
+				mod.Fields = append(mod.Fields, hir.Field{Name: field, Static: true, Type: typ})
+				var init *hir.Method
+				for _, m := range mod.Methods {
+					if m.Name == "class_constructor" {
+						init = m
+					}
+				}
+				if init == nil {
+					init = &hir.Method{Name: "class_constructor", Static: true, Result: hir.T(hir.Void), Body: hir.B()}
+					mod.Methods = append(mod.Methods, init)
+				}
+				x := &hir.Expr{Kind: hir.StaticGet, Owner: mod.Name, Name: field, Type: typ}
+				init.Body.List = append(init.Body.List, &hir.Stmt{Kind: hir.Assign, X: x, Y: &hir.Expr{Kind: hir.New, Type: typ}})
+				for _, m := range sym.ValueDeclaration.AsEnumDeclaration().Members.Nodes {
+					if value, ok := members[m.Name().Text()]; ok {
+						init.Body.List = append(init.Body.List, &hir.Stmt{Kind: hir.ExprStmt, X: l.rtOp("map.set", x, typ, hir.L(hir.T(hir.String), m.Name().Text()), hir.L(hir.T(hir.String), value))})
+					}
+				}
+			}
+		}
+	}
+	if l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil {
+		return nil, false
+	}
 	if mod := l.modules[f]; mod != nil {
 		valueType := hir.T(hir.String)
 		if l.numericEnumOf(sym) != nil {

@@ -89,9 +89,13 @@ type Class struct {
 	// the source explicitly checks a required public primitive field's absence.
 	// Writes remain checked, and prototype-dependent layouts still refuse.
 	PrimitiveReads bool `json:",omitempty"`
-	Fields         []Field
-	Methods        []*Method
-	Ctor           *Method
+	// UndefinedDefineFields marks native define-field creation whose required
+	// storage cannot yet retain undefined. JSON must refuse rather than infer
+	// creation order from subsequent assignments or fabricate zero values.
+	UndefinedDefineFields bool `json:",omitempty"`
+	Fields                []Field
+	Methods               []*Method
+	Ctor                  *Method
 }
 type Interface struct {
 	Node

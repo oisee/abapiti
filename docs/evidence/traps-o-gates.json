@@ -1,0 +1,157 @@
+{
+  "baseCommit": "f78b973",
+  "measuredSemanticCommit": "a827974d904edd85070ed9194297d3742d8778f1",
+  "semanticTrees": {
+    "hir": "554162759303f780bcd4104806ce04f5f3091a5d",
+    "tsfront": "5b62e0a5ed17831e1c5b94974ca0cfdf5c18c780",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d",
+    "tools": "329cb7dc715158f0409cd1844d09bb1de2620305"
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "testTimeout": "40m",
+    "nice": 10,
+    "shardWorkers": 2
+  },
+  "gates": {
+    "short": {
+      "command": "nice -n 10 go test ./... -short -timeout 40m",
+      "status": 0
+    },
+    "Grace": {
+      "command": "nice -n 10 go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m",
+      "status": 0
+    },
+    "vet": {
+      "command": "nice -n 10 go vet ./...",
+      "status": 0
+    },
+    "runnerRegressions": {
+      "commands": [
+        "nice -n 10 node tools/abaplint-tests-report-test.mjs",
+        "nice -n 10 node tools/abaplint-tests-all-test.mjs"
+      ],
+      "status": 0
+    },
+    "NodeOracles": {
+      "status": 0,
+      "sources": [
+        "tsfront/traps_o_types_test.go",
+        "tsfront/traps_o_json_test.go",
+        "hir/golang/json_native_order_test.go",
+        "tsfront/json_emit_test.go",
+        "tsfront/json_literal_test.go"
+      ],
+      "coverage": [
+        "structural primitive alias identity/live writes/JSON; explicit null-write refusal",
+        "native and method-interface constructor unions",
+        "local and original pinned imported LSP enum keys/values",
+        "strict JSON native SyntaxError constructor/ancestry/exact diagnostics and successful values",
+        "class initializer/body/later-write order; index-like keys; Unicode; undefined optional creation; static/prototype/#private exclusion; original TS private own keys; single receiver evaluation",
+        "native delete/re-add ordering storage contract with Node; required undefined define-field storage refusal",
+        "retained historical JSON fixture sources now compare exact Node bytes rather than blanket refusal"
+      ]
+    },
+    "golden": {
+      "status": 0,
+      "diffBytes": 0,
+      "SHA256": "054de5e26ce9ec214baa5ad618d1deae312a4f9c0235ab8060b80967c1956618",
+      "justification": "No golden changes: regenerated lexer facts match committed golden byte-for-byte; no new operation or effect catalogue entry."
+    },
+    "defaultOutput": {
+      "baseCommit": "f78b973",
+      "baseBuild": "local git archive; no clone",
+      "sameAbsoluteOutputPath": true,
+      "command": "diff -r archived-base-output candidate-output",
+      "status": 0,
+      "diffBytes": 0,
+      "files": 6312,
+      "justification": "All 6,312 default-output files (including zip) identical. New lowering paths are unpruned/ordinary-JSON gated; default ABAP output unchanged."
+    },
+    "allShards": {
+      "command": "ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=cds,lsp,root,objects,rules ABAPITI_TESTS_COMPILER=<scratch>/abapiti ABAPITI_TESTS_COMPILER_COMMIT=a827974 nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/evidence/traps-o-final.json",
+      "status": 0,
+      "finalRuns": 1,
+      "fullBaseRuns": 0,
+      "shards": 17,
+      "files": 625,
+      "passed": 11037,
+      "activeDenominator": 11060,
+      "failed": 0,
+      "trapped": 20,
+      "trapGroups": 14,
+      "asyncPending": 0,
+      "notRun": 35,
+      "notRunReasons": {"skippedOrFocused": 28, "unregistered": 7, "asyncOrDone": 0},
+      "nodeActive": {
+        "total": 11060,
+        "passed": 11037,
+        "failed": 0,
+        "trapped": 20,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 3,
+        "notPassing": 23
+      },
+      "nodePending": {
+        "total": 32,
+        "skipped": 28,
+        "unregistered": 4
+      },
+      "NodeOracle": {
+        "passed": 11060,
+        "failed": 0,
+        "pending": 32,
+        "total": 11092
+      },
+      "titlesReconciled": true,
+      "excluded": [],
+      "wiringFailures": [],
+      "unmatched": 0,
+      "creditedNewBodyPasses": 5,
+      "attribution": {
+        "rename": 3,
+        "semantic": 1,
+        "AFF": 1,
+        "CDS": 0,
+        "HelpCDS": 0
+      }
+    },
+    "zabapgit": {
+      "status": 0,
+      "kit": "v0.1.1",
+      "kitZIP_SHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+      "NodeOracle": "fresh original pinned upstream, TypeScript 6.0.3, tools/hir-go-check.mjs",
+      "GoBuild": "fresh emitted TS-HG@Go from frozen source",
+      "rawComparisons": "cmp Node-clean Go-HIR-clean; cmp Node-seeded Go-HIR-seeded; tools/go-target-check.py also passes",
+      "workloads": {
+        "clean": {
+          "issues": 0,
+          "NodeSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "GoSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "kitEqual": true
+        },
+        "seeded": {
+          "issues": 5,
+          "NodeSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "GoSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "kitEqual": true
+        }
+      }
+    }
+  },
+  "artifactsDeleted": true,
+  "notes": [
+    "The quoted-class-field genuine mismatch was stopped and reported first, root-caused and Node-regressed before resumed shard work. No mismatch is accepted.",
+    "Early gates expected historical blanket native/row JSON refusals. Original fixtures remain and now assert strict Node bytes, plus explicit unsupported required-undefined storage negatives. No upstream tests, wiring or assertions were edited.",
+    "CDS constructor is independently repaired but the original body now reaches batch N dynamic get/getChildren at 3804. Help CDS retains Dell delete-records refusal; JSON ordering is independently certified, no pass credited.",
+    "Dell nullable primitive writes and required undefined define-field storage remain documented explicit ABI refusals. No dynamic CDS methods, ToPrimitive, registrations, absence/delete/typeof guards, async, panic classification or site overrides are changed.",
+    "Development baseline was launched before edits but asynchronously compiled during edits; counts match train 11 but it is not a frozen-source diagnostic certificate. Final source is a827974.",
+    "Only compact evidence/docs and implementation/regression source retained; no push or transpiler clone."
+  ]
+}

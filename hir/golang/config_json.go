@@ -43,9 +43,18 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 		ruleConfig = ruleConfig || parent.Name == "src/rules/_basic_rule_config.ts.BasicRuleConfig"
 	}
 
+	if e.nativeJSON && !c.Structural {
+		for _, parent := range chain {
+			if parent.UndefinedDefineFields {
+				e.line("panic(newTrap(%q))}", "JSON own-key order requires undefined define-field storage: "+c.Name)
+				return
+			}
+		}
+	}
+
 	// A literal's own-property proof is per instance, independent of field
 	// layout. Read values now so native writes and live-view writes stay visible.
-	if e.extraRuntimeKeys && c.Structural {
+	if e.tracksOwnKeys(c) {
 		e.line("if self!=nil && self.ownKeys!=nil {")
 		for _, parent := range chain {
 			for _, m := range parent.Methods {
@@ -62,10 +71,10 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 					continue
 				}
 				seen[field.Name] = true
-				e.line("case str(%q):value=self.%s", field.Name, e.member(field.Name))
+				e.line("case str(%q):value=self.%s().%s", field.Name, e.getter(parent.Name), e.member(field.Name))
 			}
 		}
-		if len(e.liveClasses) > 0 {
+		if len(e.liveClasses) > 0 && c.Structural {
 			e.line("default:if self.viewExtras!=nil {value=self.viewExtras.get(key).Value}")
 		} else {
 			e.line("default:panic(newTrap(%q))", "structural own key has no lowered storage")

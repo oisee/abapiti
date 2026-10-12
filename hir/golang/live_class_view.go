@@ -123,7 +123,7 @@ func (e *emitter) liveFields(c *hir.Class) {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"
 		}
 		metadata := ""
-		if e.extraRuntimeKeys && c.Structural {
+		if e.tracksOwnKeys(c) {
 			metadata = ";if self.ownKeys!=nil {self.ownKeys.set(str(" + fmt.Sprintf("%q", f.Name) + "),nil)}"
 		}
 		if e.recordDeletion {

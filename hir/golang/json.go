@@ -5,9 +5,23 @@ const jsonRuntimeSource = `
 type jsonParser struct {
 	input  jsString
 	cursor int32
+	onSyntaxError func(jsString)
 }
 
 func jsonFail()             { panic(newTrap("input is outside the supported strict JSON subset")) }
+// Syntax failures are catchable only where their native diagnostic is certified.
+// Conversion/projection failures and unsupported diagnostics remain host traps.
+func (p *jsonParser) unexpected() {
+ if p.onSyntaxError!=nil {
+  if p.peek()<0 {p.onSyntaxError(str("Unexpected end of JSON input"))}
+  if p.input.length()<=20 && p.peek()>=32 && p.peek()<=126 {
+   message:=str("Unexpected token '")+unit(p.peek())+str("', \"")+p.input+str("\" is not valid JSON")
+   if p.input==str("undefined") || p.input==str("NaN") || p.input==str("Infinity") || p.input==str("-Infinity") {message=str("\"")+p.input+str("\" is not valid JSON")}
+   p.onSyntaxError(message)
+  }
+ }
+ jsonFail()
+}
 func unit(c int32) jsString { b := []byte{byte(c), byte(c >> 8)}; return jsString(b) }
 func (p *jsonParser) peek() int32 {
 	if p.cursor >= p.input.length() {
@@ -88,7 +102,8 @@ func (p *jsonParser) text() jsString {
 }
 func (p *jsonParser) literal(s string, d *dynamic) *dynamic {
 	for _, c := range s {
-		p.take(int32(c))
+		if p.peek()!=int32(c) {p.unexpected()}
+		p.cursor++
 	}
 	return d
 }
@@ -154,6 +169,7 @@ func (p *jsonParser) value() *dynamic {
 				p.cursor++
 			}
 		} else {
+			if p.cursor==start {p.unexpected()}
 			jsonFail()
 		}
 		if p.peek() == 46 {
@@ -184,8 +200,9 @@ func (p *jsonParser) value() *dynamic {
 		return box(finite(v))
 	}
 }
-func parseJSON(input jsString) *dynamic {
-	p := &jsonParser{input: input}
+func parseJSON(input jsString) *dynamic {return parseJSONWithErrors(input,nil)}
+func parseJSONWithErrors(input jsString,onSyntaxError func(jsString)) *dynamic {
+	p := &jsonParser{input: input,onSyntaxError:onSyntaxError}
 	d := p.value()
 	p.whitespace()
 	if p.cursor != input.length() {

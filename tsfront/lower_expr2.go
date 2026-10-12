@@ -191,8 +191,12 @@ func (l *lowerer) classValueRef(n *ast.Node) (*hir.Expr, bool) {
 	if sym == nil {
 		return nil, false
 	}
-	if l.unprunedFeatures && sym.Name == "Error" && l.librarySymbol(sym) && l.classOf(sym) == nil {
-		return &hir.Expr{Kind: hir.ClassOf, Node: l.node(n), Owner: l.builtinError(), Type: hir.T(hir.ClassValue)}, true
+	if l.unprunedFeatures && (sym.Name == "Error" || sym.Name == "SyntaxError") && l.librarySymbol(sym) && l.classOf(sym) == nil {
+		owner := l.builtinError()
+		if sym.Name == "SyntaxError" {
+			owner = "builtin.SyntaxError"
+		}
+		return &hir.Expr{Kind: hir.ClassOf, Node: l.node(n), Owner: owner, Type: hir.T(hir.ClassValue)}, true
 	}
 	c := l.classOf(sym)
 	if c == nil {
