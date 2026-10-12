@@ -2,7 +2,7 @@
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
   "codeCommit": "86a196bc6b960e6e24b10445b3dd94adb80e06fe",
   "mainCommit": "0b4cd7662cadd4ab385a8d0144da19eb43855579",
-  "artifacts": "/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/trapsb/all-QPsIZ2",
+  "artifacts": "<scratch>/trapsb/all-QPsIZ2",
   "artifactPrefix": "",
   "shards": [
     {

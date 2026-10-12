@@ -4,6 +4,7 @@ import {readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync, e
 import {join, resolve, relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
+import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {buildUpstream, verifyUpstream, upstreamPin} from './statements-upstream.mjs';
@@ -12,7 +13,7 @@ import {validateWorkload} from './registry-workload.mjs';
 
 const self = fileURLToPath(import.meta.url);
 const repo = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const scratch = '/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad';
+const scratch = process.env.ABAPITI_SCRATCH ?? join(tmpdir(), 'abapiti-fit-gap');
 const sha = data => createHash('sha256').update(data).digest('hex');
 const compare = (a,b) => a < b ? -1 : a > b ? 1 : 0;
 function files(root) {

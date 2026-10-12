@@ -2,7 +2,7 @@
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
   "codeCommit": "421d8e2b200ef354fe8d2ea19c29ac38d23c501f",
   "mainCommit": "0b4cd7662cadd4ab385a8d0144da19eb43855579",
-  "artifacts": "/tmp/claude-1000/-home-alice-dev-abapiti/3f37988e-1ca8-4480-a1b0-02daa31f268f/scratchpad/trapsb/all-yRpLlv",
+  "artifacts": "<scratch>/trapsb/all-yRpLlv",
   "artifactPrefix": "",
   "shards": [
     {
