@@ -87,7 +87,11 @@ export class Probe {
 			t.Fatal(method, err, string(out))
 		}
 		got := runGoHIR(t, prog, `defer func(){if x:=recover();x!=nil {fmt.Print(x)}}();fmt.Print(`+goEntry("input.ts.Probe", method)+`())`)
-		if !strings.Contains(got, "outside certified") {
+		refusal := "outside certified"
+		if method == "ownHook" {
+			refusal = "record string conversion requires the original default Object coercion hooks"
+		}
+		if !strings.Contains(got, refusal) {
 			t.Fatal(method, got)
 		}
 	}
