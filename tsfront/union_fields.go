@@ -35,6 +35,33 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		}
 	}
 	name := n.Name().Text()
+	if name == "constructor" {
+		// Native constructor metadata is inherited, not a common data slot.
+		native := true
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			typ := l.mapCheckerType(n, part)
+			c := l.classByName(typ.Name)
+			if typ.Kind == hir.InterfaceRef {
+				// Method interfaces already carry the original runtime object;
+				// the descriptor operation refuses nonnative implementations.
+				continue
+			}
+			if typ.Kind != hir.ClassRef || c == nil || c.Structural {
+				native = false
+				break
+			}
+			for base := c; base != nil; base = l.classByName(base.Super) {
+				for _, f := range base.Fields {
+					if f.Name == name && !f.Static {
+						native = false
+					}
+				}
+			}
+		}
+		if native {
+			return nil, false
+		}
+	}
 	var fields []hir.Field
 	var classes []*hir.Class
 	structural := 0

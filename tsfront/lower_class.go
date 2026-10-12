@@ -247,6 +247,18 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 	if l.unprunedFeatures {
 		for _, m := range node.Members() {
 			c.ViewUnsafe = c.ViewUnsafe || m.Kind == ast.KindGetAccessor || m.Kind == ast.KindSetAccessor
+			if name := m.Name(); name != nil && name.Kind == ast.KindComputedPropertyName {
+				// The well-known debug description is not a coercion hook.
+				text := strings.TrimSpace(l.file.Text()[name.Pos():name.End()])
+				if text != `[Symbol.for("debug.description")]` && text != `[Symbol.for('debug.description')]` {
+					c.CoercionUnsafe = true
+				}
+			}
+			if m.Kind == ast.KindGetAccessor || m.Kind == ast.KindSetAccessor {
+				if name := m.Name(); name != nil && (name.Text() == "toString" || name.Text() == "valueOf") {
+					c.CoercionUnsafe = true
+				}
+			}
 		}
 	}
 	c.Abstract = node.ModifierFlags()&ast.ModifierFlagsAbstract != 0

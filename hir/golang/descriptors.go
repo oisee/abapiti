@@ -47,10 +47,18 @@ func (e *emitter) descriptor(c *hir.Class) {
 		extraFactory = ",ArgsFactory:" + e.argumentFactory(c, ctor)
 	}
 	e.line("var %s = classDescriptor{Name:str(%q),Parent:%s,Statics:[]jsString{%s},Factory:%s%s}", e.name("descriptor."+c.Name), tsName, parent, strings.Join(names, ","), factory, extraFactory)
+	e.stringCoercion(c)
 	if !c.Structural {
 		e.line("func (self *%s) constructorDescriptor() *classDescriptor {if self==nil {panic(newRangeFault())};return self.descriptor()}", e.obj(c.Name))
 	}
-	if e.liveClasses[c.Name] {
+	if c.Scoped {
+		e.line("func (self *%s) descriptor() *classDescriptor {if self==nil {return nil};return self.lexicalDescriptor}", e.obj(c.Name))
+		argsFactory := ""
+		if e.constructorArgs {
+			argsFactory = "d.ArgsFactory=func(args *array[any]) any {return d.Factory()};"
+		}
+		e.line("func %s() *classDescriptor {d:=&classDescriptor{Name:str(%q)};d.Factory=func() any {v:=%s();v.lexicalDescriptor=d;return v};%s return d}", e.name("fresh.descriptor."+c.Name), tsName, e.name("new."+c.Name), argsFactory)
+	} else if e.liveClasses[c.Name] {
 		e.line("func (self *%s) descriptor() *classDescriptor {if self!=nil && self.viewSource!=nil {return nil};return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))
 	} else {
 		e.line("func (self *%s) descriptor() *classDescriptor {return &%s}", e.obj(c.Name), e.name("descriptor."+c.Name))

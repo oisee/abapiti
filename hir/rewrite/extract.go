@@ -310,6 +310,10 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 		} else if e.Kind == hir.SuperCall {
 			x.add("argument", path, "this", env["this"].id)
 		}
+	case hir.FreshClassOf:
+		// Constructor identity is fresh at each lexical evaluation; do not
+		// classify a descriptor allocation as a nominal instance or pure value.
+		x.add("unknown_effect", x.method)
 	case hir.New:
 		if e.Type.Kind == hir.ClassRef {
 			x.add("new", path, e.Type.Name)

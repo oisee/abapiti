@@ -1319,7 +1319,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 			return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: method.Result, Name: name, X: recv, Args: args}
 		}
-		if recv.Type.Kind == hir.InterfaceRef {
+		if recv.Type.Kind == hir.InterfaceRef || l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
 			if view, m, ok := l.unionViewFor(p.Expression, name); ok {
 				recv = l.callReceiver(n, recv, m.Params)
 				args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
@@ -1328,10 +1328,23 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				l.diagf(n, "note-union-view", "%s is common to the receiver's union classes but not to %s", name, recv.Type.Name)
 				cast := &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: recv}
+				if recv.Type.Kind == hir.Dynamic {
+					cast = l.rtOp("dynamic.classView", recv, view)
+				}
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
 		}
 		x, handled := l.libraryCall(n, name, recv)
+		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
+			for _, c := range l.out.Classes {
+				if c.Structural {
+					continue
+				}
+				if m := l.unionMethods(hir.Ref(c.Name))[name]; m != nil && len(m.Params) == 0 {
+					return l.rtOp("dynamic.call0", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), name))
+				}
+			}
+		}
 		if x == nil && !handled {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
@@ -1913,7 +1926,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 		}
 	}
 	// Construct through descriptor-valued locals as well as computed accesses.
-	if l.classOf(sym) == nil && (sym == nil || sym.Name != "Set" && sym.Name != "Map" && sym.Name != "Array") {
+	if (l.classOf(sym) == nil || l.classOf(sym).Scoped) && (sym == nil || sym.Name != "Set" && sym.Name != "Map" && sym.Name != "Array") {
 		cv := l.expr(n.Expression())
 		if cv != nil && cv.Type.Kind == hir.Dynamic {
 			cv = l.rtOp("dynamic.asClassValue", cv, hir.T(hir.ClassValue))
@@ -2344,7 +2357,7 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
-	if c := l.classOf(l.resolve(b.Right)); c != nil {
+	if c := l.classOf(l.resolve(b.Right)); c != nil && !c.Scoped {
 		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
 			// A box holding a string, number or class value is never an
 			// instance; an object reference is tested as such.
@@ -2368,6 +2381,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Owner: c.Name}
 	}
 	cv := l.expr(b.Right)
+	if cv != nil && cv.Type.Kind == hir.Dynamic && l.unprunedFeatures {
+		cv = l.rtOp("dynamic.asClassValue", cv, hir.T(hir.ClassValue))
+	}
 	if cv != nil && cv.Type.Kind == hir.ClassValue {
 		return &hir.Expr{Kind: hir.InstanceOf, Node: l.node(n), Type: hir.T(hir.Bool), X: x, Y: cv}
 	}
@@ -2860,7 +2876,7 @@ func (l *lowerer) indexValue(x *hir.Expr) *hir.Expr {
 }
 
 // templateExpr uses cooked scanner literals and evaluates substitutions once,
-// left to right. Object/array coercion requires JS ToPrimitive and is rejected.
+// left to right. Reviewed object/array coercion uses the dynamic runtime ABI.
 func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 	t := n.AsTemplateExpression()
 	result := l.expr(t.Head)
@@ -2903,8 +2919,15 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 		if x.Type.Name == "builtin.Error" {
 			return l.errorToString(at, x)
 		}
+		if l.unprunedFeatures {
+			return l.rtOp("dynamic.toString", l.coerce(x, hir.T(hir.Dynamic)), s)
+		}
+	case hir.InterfaceRef, hir.Array:
+		if l.unprunedFeatures {
+			return l.rtOp("dynamic.toString", l.coerce(x, hir.T(hir.Dynamic)), s)
+		}
 	case hir.Optional:
-		if x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
+		if !l.unprunedFeatures && x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic {
 			break
 		}
 		saved := l.pend

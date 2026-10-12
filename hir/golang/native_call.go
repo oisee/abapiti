@@ -1,0 +1,54 @@
+package golang
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/oisee/abapiti/hir"
+)
+
+// The native catalogue is closed at emission. Each case calls the concrete
+// virtual method and boxes its actual result, without a constituent downcast
+// or a shared return-layout requirement. Dynamic property/function storage is
+// deliberately not included in this capability.
+func (b *body) nativeCall0(x *hir.Expr, receiver string) string {
+	e := b.e
+	if len(x.Args) != 1 || x.Args[0].Kind != hir.Lit {
+		e.unsupported(x.Node, "native zero-argument call needs a literal method name")
+		return "nil"
+	}
+	name, ok := x.Args[0].Value.(string)
+	if !ok {
+		e.unsupported(x.Node, "native call method name")
+		return "nil"
+	}
+	var out strings.Builder
+	out.WriteString("func(d *dynamic) *dynamic {if d==nil || d.Tag!=2 {panic(newTrap(\"native method call requires a concrete class\"))};switch v:=d.Value.(type) {")
+	for _, c := range e.p.Classes {
+		if c.Structural || e.fieldOwner(c, name) != nil {
+			continue
+		}
+		unsafe := false
+		for base := c; base != nil; base = e.classBy(base.Super) {
+			unsafe = unsafe || base.CoercionUnsafe
+		}
+		if unsafe {
+			continue
+		}
+		m, _ := e.method(c, name)
+		if m == nil || m.Static || len(m.Params) != 0 {
+			continue
+		}
+		out.WriteString("case *" + e.obj(c.Name) + ":if v==nil {panic(newRangeFault())};")
+		call := "v." + e.member(m.Name) + "()"
+		if m.Result.Kind == hir.Void {
+			out.WriteString(call + ";return nil;")
+		} else if m.Result.Kind == hir.Optional && !m.Result.Args[0].IsRef() {
+			out.WriteString("result:=" + call + ";if !result.Has {return nil};return box(result.Value);")
+		} else {
+			out.WriteString("return box(" + call + ");")
+		}
+	}
+	out.WriteString("};panic(newTrap(" + strconv.Quote("native method "+name+" outside known concrete classes") + "))}(" + receiver + ")")
+	return out.String()
+}

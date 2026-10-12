@@ -77,6 +77,11 @@ type Class struct {
 	// Structural distinguishes frontend data shapes from prototype-bearing classes.
 	Structural bool `json:",omitempty"`
 	ViewUnsafe bool `json:",omitempty"`
+	// CoercionUnsafe retains omitted computed prototype hooks so string
+	// conversion cannot silently substitute Object.prototype.toString.
+	CoercionUnsafe bool `json:",omitempty"`
+	// Scoped classes use a fresh lexical constructor descriptor per evaluation.
+	Scoped bool `json:",omitempty"`
 	// PrimitiveReads permits data views to read primitive backing values when
 	// the source explicitly checks a required public primitive field's absence.
 	// Writes remain checked, and prototype-dependent layouts still refuse.
@@ -146,7 +151,8 @@ const (
 	PromiseAwait          ExprKind = "promise.await"
 	// ClassOf is the class value of a statically known class (a descriptor
 	// reference at run time).
-	ClassOf ExprKind = "classof"
+	ClassOf      ExprKind = "classof"
+	FreshClassOf ExprKind = "freshclassof"
 	// Seq runs X (a Block) for its effect, then yields Y: the front end's
 	// home for statements that must precede an expression (inlined loops).
 	Seq ExprKind = "seq"
