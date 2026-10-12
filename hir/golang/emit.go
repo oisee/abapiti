@@ -41,6 +41,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
+					e.nonfiniteNumbers = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
 					e.usesLiveArrays = true
 				}
@@ -112,6 +115,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.nonfiniteNumbers {
+		runtime = nonfiniteRuntime(runtime)
+	}
 	if e.regexSplit {
 		e.extendedRegex = true
 		runtime += regexSplitRuntimeSource
@@ -138,6 +144,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = sparseRuntime(runtime)
 	}
 	if e.chaiDeep {
+		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", 1)
 		runtime += chaiDeepRuntimeSource
 	}
 	if e.liveStorage() {
@@ -208,6 +215,7 @@ type emitter struct {
 	boxedShapes       map[string]bool
 	usesArrayPresence bool
 	usesArrayDeletion bool
+	nonfiniteNumbers  bool
 	usesTypedCatch    bool
 }
 
@@ -646,6 +654,9 @@ func (b *body) truth(v string, t hir.Type) string {
 	case hir.String:
 		return v + ".length()!=0"
 	case hir.Number:
+		if b.e.nonfiniteNumbers {
+			return "numberTruth(" + v + ")"
+		}
 		return v + "!=0"
 	case hir.I32, hir.I64:
 		return v + "!=0"
@@ -764,6 +775,9 @@ func (b *body) expr(x *hir.Expr) string {
 				a = append(a, b.expr(v))
 			}
 			code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{}"
+			if e.chaiDeep && t.Kind == hir.OrderedMap && x.OwnKeys != nil {
+				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{enumerableRecord:true}"
+			}
 			if t.Kind == hir.RegExp {
 				flags := `str("")`
 				if len(a) > 1 {
@@ -851,7 +865,9 @@ func (b *body) expr(x *hir.Expr) string {
 			if x.Op == "/" && (x.Y.Kind != hir.Lit || numberLiteral(x.Y.Value) == 0) {
 				e.unsupported(x.Node, "Number division requires a non-zero literal divisor")
 			}
-			code = "finite(" + code + ")"
+			if !e.nonfiniteNumbers {
+				code = "finite(" + code + ")"
+			}
 		}
 		if t.Kind == hir.Number && x.Op == "%" {
 			e.unsupported(x.Node, "Number remainder")
@@ -883,7 +899,9 @@ func (b *body) expr(x *hir.Expr) string {
 				code = fmt.Sprintf("%s(integerArithmetic(0,int64(%s),%q,%t,%d))", e.typ(t), a, "-", x.CheckIntegerOverflow, integerBits(t))
 			}
 		} else if t.Kind == hir.Number && x.Op == "-" {
-			code = "finite(" + code + ")"
+			if !e.nonfiniteNumbers {
+				code = "finite(" + code + ")"
+			}
 		}
 	case hir.Conditional:
 		a := b.expr(x.X)

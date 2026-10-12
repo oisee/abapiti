@@ -2465,7 +2465,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	tagged := func(t hir.Type) bool {
 		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
 	}
-	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type))
+	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
@@ -2606,7 +2606,7 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 				if l.acceptsType(mapped, x.Type) {
 					return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
 				}
-				if l.acceptsType(x.Type, mapped) {
+				if l.acceptsType(x.Type, mapped) || l.commonAncestor(x.Type.Name, mapped.Name) != "" {
 					return l.rtOp("object.checkedClassView", x, mapped)
 				}
 			}

@@ -333,10 +333,7 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			l.diagf(n, "unsupported-call", "parseFloat requires a typed string argument")
 			return nil, true
 		}
-		opt := hir.T(hir.Optional, hir.T(hir.Number))
-		parsed := l.tempInit(n, opt, l.rtOp("string.parseFloat", s, opt))
-		l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: parsed}, Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n) + ": parseFloat requires a finite result"})})
-		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Number), X: parsed}, true
+		return l.rtOp("string.parseFloatNumber", s, hir.T(hir.Number)), true
 	case "parseInt":
 		if len(args) != 2 || args[1].Kind != ast.KindNumericLiteral || args[1].Text() != "10" {
 			l.diagf(n, "unsupported-call", "parseInt is lowered only with an explicit radix 10")
@@ -353,6 +350,9 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 		if s.Type.Kind != hir.String {
 			l.diagf(n, "unsupported-call", "parseInt needs a string argument")
 			return nil, true
+		}
+		if l.unprunedFeatures {
+			return l.rtOp("string.parseIntNumber", s, hir.T(hir.Number)), true
 		}
 		// NaN has no binary64 representation in ABAP: the absent result
 		// traps at this location instead of flowing on as a number.
@@ -373,6 +373,9 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 		if x.Type.Kind != hir.Number {
 			l.diagf(n, "unsupported-call", "isNaN on %s is not lowered", x.Type.Kind)
 			return nil, true
+		}
+		if l.unprunedFeatures {
+			return l.rtOp("number.isNaN", x, hir.T(hir.Bool)), true
 		}
 		// A HIR Number is never NaN: every NaN-producing operation traps.
 		// The operand is still evaluated for its effects.

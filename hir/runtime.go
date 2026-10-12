@@ -17,6 +17,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
 	"string.padStart":           {String, 2, false},
+	"string.parseFloatNumber":   {String, 0, false},
+	"string.parseIntNumber":     {String, 0, false},
+	"number.isNaN":              {Number, 0, false},
 	"string.parseFloat":         {String, 0, false},
 	"string.match":              {String, 1, false},
 	"array.matchIndex":          {Array, 0, false},
@@ -146,6 +149,10 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, t.Args[0].Kind == String
 	case "string.match":
 		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
+	case "string.parseFloatNumber", "string.parseIntNumber":
+		return nil, T(Number), true
+	case "number.isNaN":
+		return nil, T(Bool), true
 	case "string.parseFloat":
 		return nil, T(Optional, T(Number)), true
 	case "string.padStart":

@@ -12,8 +12,9 @@ import (
 var supportedOps = map[string]bool{
 	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
-	"string.sha1Hex": true,
-	"string.repeat":  true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
+	"string.sha1Hex":          true,
+	"string.parseFloatNumber": true, "string.parseIntNumber": true, "number.isNaN": true,
+	"string.repeat": true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
@@ -83,6 +84,12 @@ func (b *body) runtime(x *hir.Expr) string {
 	switch x.Op {
 	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "string.parseFloatNumber":
+		code = "parseFloatNumber(" + a + ")"
+	case "string.parseIntNumber":
+		code = "parseIntNumber(" + a + ")"
+	case "number.isNaN":
+		code = "numberIsNaN(" + a + ")"
 	case "string.parseFloat":
 		code = a + ".parseFloat()"
 	case "string.padStart":

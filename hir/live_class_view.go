@@ -45,6 +45,9 @@ func classViewTargets(p *Program) map[string]bool {
 		if x.Kind == RuntimeOp && x.Op == "dynamic.classView" {
 			out[x.Type.Name] = true
 		}
+		if x.Kind == RuntimeOp && x.Op == "dynamic.arrayView" && x.Type.Args[0].Kind == ClassRef {
+			out[x.Type.Args[0].Name] = true
+		}
 		expr(x.X)
 		expr(x.Y)
 		expr(x.Z)
