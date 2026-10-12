@@ -677,7 +677,7 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 			l.diags = l.diags[:before]
 			return nil
 		}
-		if p.Flags&ast.SymbolFlagsOptional != 0 && ft.Kind != hir.Optional {
+		if (p.Flags&ast.SymbolFlagsOptional != 0 || l.literalPropertyAbsent(p)) && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
 		fields = append(fields, hir.Field{Node: l.node(n), Name: p.Name, Type: ft, Readonly: shapePropertyReadonly(p)})

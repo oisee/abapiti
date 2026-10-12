@@ -145,7 +145,7 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 			l.diagf(m, "skipped-interface-member", "data interface %s: member %s has unlowered types", i.Name, name)
 			continue
 		}
-		if m.QuestionToken() != nil && ft.Kind != hir.Optional {
+		if (m.QuestionToken() != nil || l.absentFields[m]) && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
 		c.Fields = append(c.Fields, hir.Field{Node: l.node(m), Name: name, Type: ft})

@@ -174,6 +174,16 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			mod.Fields = append(mod.Fields, hir.Field{Name: "ns", Static: true, Type: hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.ClassValue))})
 		}
 	}
+	if l.unprunedFeatures {
+		l.absentFields = map[*ast.Node]bool{}
+		for _, name := range files {
+			f, _ := p.File(name)
+			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			l.scanLiteralAbsence(f.AsNode())
+			done()
+		}
+	}
 	// Data interfaces before class signatures: anonymous shapes with the
 	// same fields reuse them instead of synthesizing a second class.
 	for _, name := range files {
@@ -406,6 +416,7 @@ type lowerer struct {
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	unprunedFeatures   bool
+	absentFields       map[*ast.Node]bool
 	lspConstructors    bool
 	settledEnabled     bool
 	asyncMethods       map[*hir.Method]bool
