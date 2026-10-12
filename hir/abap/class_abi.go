@@ -85,7 +85,12 @@ func (e *emitter) argumentFactoryABAP() string {
 	for _, c := range e.p.Classes {
 		fmt.Fprintf(&dispatch, "WHEN `%s`.\n", strings.ToUpper(e.name(c.Name)))
 		ctor := e.p.Constructor(c.Name)
-		ok := !c.Abstract
+		owner := c
+		for owner != nil && owner.Ctor == nil {
+			owner = e.classBy(owner.Super)
+		}
+		wide := owner != nil && e.wideShape(owner)
+		ok := !c.Abstract && (ctor == nil || len(ctor.Params) <= 40 || wide)
 		if ctor != nil {
 			for _, p := range ctor.Params {
 				ok = ok && !p.Variadic && constructorArgumentSupported(p.Type)
@@ -106,14 +111,29 @@ func (e *emitter) argumentFactoryABAP() string {
 				b.line(fmt.Sprintf("READ TABLE p1->items INDEX %d INTO %s.", i+1, d))
 				v := b.temp(p.Type)
 				b.constructorArgument(v, d, p.Type)
+				b.locals[p.Name] = v
 				args = append(args, e.param(p.Name)+" = "+v)
 			}
 		}
+		b.initialize(c.Name)
 		call := "CREATE OBJECT result TYPE " + e.name(c.Name)
-		if len(args) > 0 {
+		if len(args) > 0 && !wide {
 			call += " EXPORTING " + strings.Join(args, " ")
 		}
 		b.line(call + ".")
+		if wide {
+			// The normal ABAP NEW path elides a wide field-copy constructor.
+			// Use that same ABI, including the constructor's checked narrowing.
+			v := b.temp(hir.Ref(c.Name))
+			b.line(v + " ?= result.")
+			for _, s := range ctor.Body.List {
+				if s.Y.Kind == hir.Narrow && s.Y.X.Type.Kind == hir.Optional && !s.X.Type.IsRef() {
+					b.line("IF " + b.locals[s.Y.X.Name] + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
+				}
+				value := b.value(s.Y, s.X.Type)
+				b.line(v + "->" + e.member(s.X.Name) + " = " + value + ".")
+			}
+		}
 		if c.Scoped {
 			v := b.temp(hir.Ref(c.Name))
 			b.line("IF p0->lexical = abap_true.\n" + v + " ?= result.\n" + v + "->" + e.name("class.lexicalDescriptor") + " = p0.\nENDIF.")

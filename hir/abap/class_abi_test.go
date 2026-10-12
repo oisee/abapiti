@@ -63,6 +63,13 @@ func TestCheckedClassViewABAP(t *testing.T) {
 	}
 }
 
+func TestBuiltinErrorClassOfABAP(t *testing.T) {
+	cv := hir.T(hir.ClassValue)
+	m := method("type", cv, ret(rt("object.classOf", newObj(hir.Ref("builtin.Error")), cv)))
+	files, names := abiSource(t, &hir.Program{Classes: []*hir.Class{{Name: "builtin.Error"}, {Name: "Caller", Methods: []*hir.Method{m}}}})
+	requireABI(t, files[names.Get("builtin.Error")+".clas.abap"], names.Get("runtime.described")+"~"+names.Get("builtin.nativeConstructor"), "result = me->"+names.Get("builtin.nativeConstructor")+"( ).")
+}
+
 func TestRootClassOfABAP(t *testing.T) {
 	root := hir.Ref(hir.RootObject)
 	cv := hir.T(hir.ClassValue)
@@ -84,18 +91,21 @@ func TestRootClassOfABAP(t *testing.T) {
 func TestClassArgsFactoryABAP(t *testing.T) {
 	cv, dyn := hir.T(hir.ClassValue), hir.T(hir.Dynamic)
 	arr := hir.T(hir.Array, dyn)
-	types := []hir.Type{str, boolean, hir.T(hir.Number), dyn, cv, hir.Ref("Payload"), {Kind: hir.InterfaceRef, Name: "I"}, hir.T(hir.Optional, str), hir.T(hir.Optional, hir.Ref("Payload"))}
+	types := []hir.Type{str, boolean, hir.T(hir.Number), dyn, cv, hir.Ref("Payload"), {Kind: hir.InterfaceRef, Name: "I"}, hir.T(hir.Optional, str), hir.T(hir.Optional, hir.Ref("Payload")), hir.T(hir.Optional, boolean), hir.T(hir.Optional, hir.T(hir.Number)), hir.T(hir.Optional, cv), hir.Ref(hir.RootObject)}
 	ctor := method("constructor", hir.T(hir.Void), hir.B())
 	for i, ty := range types {
-		ctor.Params = append(ctor.Params, hir.Param{Name: []string{"s", "b", "n", "d", "c", "r", "i", "o", "or"}[i], Type: ty})
+		ctor.Params = append(ctor.Params, hir.Param{Name: []string{"s", "b", "n", "d", "c", "r", "i", "o", "or", "ob", "on", "oc", "root"}[i], Type: ty})
 	}
 	m := method("make", hir.Ref(hir.RootObject), ret(rt("classvalue.newArgs", local("ctor", cv), hir.Ref(hir.RootObject), local("args", arr))))
 	m.Params = []hir.Param{{Name: "ctor", Type: cv}, {Name: "args", Type: arr}}
-	p := &hir.Program{Interfaces: []*hir.Interface{{Name: "I"}}, Classes: []*hir.Class{{Name: "Payload", Implements: []string{"I"}}, {Name: "Args", Ctor: ctor}, {Name: "Caller", Methods: []*hir.Method{m}}}}
+	init := method("class_constructor", hir.T(hir.Void), hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.StaticGet, Owner: "ImplicitInit", Name: "count", Type: i32}, Y: binary("+", &hir.Expr{Kind: hir.StaticGet, Owner: "ImplicitInit", Name: "count", Type: i32}, lit(1), i32)}))
+	init.Static = true
+	p := &hir.Program{Interfaces: []*hir.Interface{{Name: "I"}}, Classes: []*hir.Class{{Name: "Payload", Implements: []string{"I"}}, {Name: "Args", Ctor: ctor}, {Name: "InheritedArgs", Super: "Args"}, {Name: "ImplicitInit", Fields: []hir.Field{{Name: "count", Type: i32, Static: true}}, Methods: []*hir.Method{init}}, {Name: "Caller", Methods: []*hir.Method{m}}}}
 	files, names := abiSource(t, p)
 	factory := files[names.Get("runtime.classvalue.factory")+".clas.abap"]
 	requireABI(t, factory, "METHOD new_args.", "->as_string( )", "->as_boolean( )", "->as_number( )", "->as_classvalue( )", "->as_ref( )", "->has = abap_true.", "CREATE OBJECT result TYPE "+names.Get("Args")+" EXPORTING", "WHEN OTHERS.\nRAISE EXCEPTION TYPE "+names.Get("class.refusal"))
-	if strings.Count(factory, "READ TABLE p1->items INDEX ") != len(types) {
+	requireABI(t, factory, "CREATE OBJECT result TYPE "+names.Get("InheritedArgs")+" EXPORTING", names.Get("ImplicitInit")+"=>"+names.Get("builtin.initialize.ImplicitInit")+"( ).")
+	if strings.Count(factory, "READ TABLE p1->items INDEX ") != 2*len(types) {
 		t.Fatal("missing/extra argument reads (excess args must be ignored)")
 	}
 	requireABI(t, files[names.Get("Caller")+".clas.abap"], "=>new_args( p0 =", " p1 =", " ?= ")
@@ -112,7 +122,13 @@ func TestClassArgsFactoryRefusesUnsupportedStorageABAP(t *testing.T) {
 		ctor.Params = []hir.Param{{Name: "value", Type: ty}}
 		p.Classes = append(p.Classes, &hir.Class{Name: "Refused" + string(rune('A'+i)), Ctor: ctor})
 	}
-	p.Classes = append(p.Classes, &hir.Class{Name: "Abstract", Abstract: true})
+	variadic := method("constructor", hir.T(hir.Void), hir.B())
+	variadic.Params = []hir.Param{{Name: "rest", Type: hir.T(hir.Array, dyn), Variadic: true}}
+	large := method("constructor", hir.T(hir.Void), hir.B())
+	for i := 0; i < 41; i++ {
+		large.Params = append(large.Params, hir.Param{Name: "arg" + strings.Repeat("x", i), Type: str})
+	}
+	p.Classes = append(p.Classes, &hir.Class{Name: "Abstract", Abstract: true}, &hir.Class{Name: "Variadic", Ctor: variadic}, &hir.Class{Name: "LargeBehavioral", Ctor: large})
 	files, names := abiSource(t, p)
 	factory := files[names.Get("runtime.classvalue.factory")+".clas.abap"]
 	args := factory[strings.Index(factory, "METHOD new_args."):]
