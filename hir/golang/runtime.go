@@ -205,6 +205,51 @@ func (s jsString) upper() jsString {
  return jsString(out.String())
 }
 
+// Format the existing compact serializer's output without parsing its leaves,
+// changing key order, or re-encoding numbers/UTF-16 strings.
+func indentJSON(s,gap jsString) jsString {
+ if gap.length()>10 {gap=gap[:20]};if gap=="" {return s}
+ var out strings.Builder
+ depth:=0;quoted:=false;escape:=false
+ newline:=func(){out.WriteString(string(str("\n")));out.WriteString(strings.Repeat(string(gap),depth))}
+ for i:=int32(0);i<s.length();i++ {
+  c:=s.charAt(i)
+  if quoted {out.WriteString(string(c));if escape {escape=false} else if c==str("\\") {escape=true} else if c==str("\"") {quoted=false};continue}
+  switch c {
+  case str("\""):quoted=true;out.WriteString(string(c))
+  case str("{"),str("["):
+   out.WriteString(string(c));depth++;if i+1<s.length() && s.charAt(i+1)!=str("}") && s.charAt(i+1)!=str("]") {newline()}
+  case str("}"),str("]"):
+   depth--;if i>0 && s.charAt(i-1)!=str("{") && s.charAt(i-1)!=str("[") {newline()};out.WriteString(string(c))
+  case str(","):out.WriteString(string(c));newline()
+  case str(":"):out.WriteString(string(c+str(" ")))
+  default:out.WriteString(string(c))
+  }
+ }
+ return jsString(out.String())
+}
+
+var floatPrefix = regexp.MustCompile("^[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+func (s jsString) parseFloat() optional[float64] {
+ text:=floatPrefix.FindString(s.trimStart().String())
+ if text=="" {return optional[float64]{}}
+ n,err:=strconv.ParseFloat(text,64)
+ if err!=nil || math.IsNaN(n) || math.IsInf(n,0) {return optional[float64]{}}
+ return present(n)
+}
+
+// Typed padStart: ToLength, UTF-16 fill truncation, and an explicit allocation
+// domain. Empty fill and already-long strings do not allocate or refuse.
+func (s jsString) padStart(n float64, fill jsString) jsString {
+ if math.IsNaN(n) || n <= 0 || math.Trunc(n) <= float64(s.length()) || fill.length()==0 {return s}
+ n=math.Trunc(n)
+ if math.IsInf(n,0) || n>1048576 {panic(newTrap("padStart allocation exceeds the supported UTF-16 length domain"))}
+ needed:=int32(n)-s.length()
+ count:=(int64(needed)+int64(fill.length())-1)/int64(fill.length())
+ padding:=jsString(strings.Repeat(string(fill),int(count)))
+ return padding[:2*needed]+s
+}
+
 type optional[T any] struct {
 	Value T
 	Has   bool

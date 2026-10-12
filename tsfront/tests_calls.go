@@ -205,6 +205,17 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 		}
 	}
 	if sym := l.resolve(callee); sym != nil {
+		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" && sym.Name == "chaiMembers" {
+			args := n.Arguments()
+			if len(args) != 3 {
+				return nil, false
+			}
+			x, y, deep := l.expr(args[0]), l.expr(args[1]), l.expr(args[2])
+			if x == nil || y == nil || deep == nil {
+				return nil, true
+			}
+			return l.rtOp("chai.members", l.rtOp("chai.box", x, hir.T(hir.Dynamic)), hir.T(hir.Bool), l.rtOp("chai.box", y, hir.T(hir.Dynamic)), deep), true
+		}
 		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" && (sym.Name == "chaiDeepEqual" || sym.Name == "chaiDeepInclude" || sym.Name == "chaiArrayInclude") {
 			args := n.Arguments()
 			if len(args) != 2 {
@@ -236,14 +247,17 @@ func (l *lowerer) testRuntimeCall(n *ast.Node) (*hir.Expr, bool) {
 	if sym := l.resolve(callee); sym != nil && sym.Name == "fail" {
 		if f := l.fileOfSymbol(sym); f != nil && l.relFile(f) == "runtime/chai.ts" {
 			if parent := l.resolve(base); parent != nil && parent.Name == "expect" && l.fileOfSymbol(parent) == f {
-				if len(n.Arguments()) != 1 || n.Arguments()[0].Kind == ast.KindSpreadElement {
-					l.diagf(n, "unsupported-call", "chai expect.fail supports only one message argument")
+				if len(n.Arguments()) > 1 || len(n.Arguments()) == 1 && n.Arguments()[0].Kind == ast.KindSpreadElement {
+					l.diagf(n, "unsupported-call", "chai expect.fail supports zero or one message argument")
 					return nil, true
 				}
 				ref, ok := l.funcsBy[f.FileName()+" chaiFail"]
 				if ok {
 					if m := l.methodsBy[ref.owner+"."+ref.method]; m != nil {
-						args, valid := l.callArgs(n, n.Arguments(), m.Params)
+						args, valid := []*hir.Expr{hir.L(hir.T(hir.String), "expect.fail()")}, true
+						if len(n.Arguments()) == 1 {
+							args, valid = l.callArgs(n, n.Arguments(), m.Params)
+						}
 						if !valid {
 							return nil, true
 						}

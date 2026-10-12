@@ -112,6 +112,18 @@ try {
  assert.deepEqual(focused.selectedSuite.shards,['root']);
  assert.equal(focused.codeCommit,'fixture-baseline');
  assert.equal(focused.uniqueTotal.passed,1);
+ // The long tail must survive summarization, including groups below rank 20.
+ const tailRun = {results:[...run.results.slice(0,1), ...Array.from({length:22}, (_, i) =>
+  ({title:'duplicate', status:'trapped', message:`lowering trap: test/root.ts:1:1: boundary-${String(i).padStart(2,'0')}`}))]};
+ writeFileSync(join(dir,'go-root.json'),JSON.stringify(tailRun));
+ execFileSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-report.mjs'),join(dir,'node-root.json'),join(dir,'go-root.json'),join(dir,'report-root.json')]);
+ summarize();
+ const tail = JSON.parse(readFileSync(join(dir,'summary.json')));
+ assert.equal(tail.allTraps.length,22);
+ assert.equal(tail.top20Traps.length,20);
+ assert.deepEqual(tail.top20Traps,tail.allTraps.slice(0,20));
+ assert.equal(tail.allTraps.reduce((n, item) => n + item.count,0),tail.uniqueTotal.trapped);
+ assert.match(tail.allTraps[21].message,/boundary-21/);
  partial.files.push('test/missing.ts');
  writeFileSync(join(dir,'shards.json'),JSON.stringify(partial));
  assert.throws(summarize,/disjoint exhaustive partition/);

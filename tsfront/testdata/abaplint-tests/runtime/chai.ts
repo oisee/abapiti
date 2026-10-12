@@ -3,11 +3,13 @@ export class Assertion {
   public to: Assertion;
   public be: Assertion;
   public have: Assertion;
+  public all: Assertion;
   public constructor(private value: any, private message = "", private negated = false,
                      private deeply = false) {
     this.to = this;
     this.be = this;
     this.have = this;
+    this.all = this;
   }
   public get not(): Assertion { this.negated = true; return new Assertion(this.value, this.message, true, this.deeply); }
   public get deep(): Assertion { this.deeply = true; return new Assertion(this.value, this.message, this.negated, true); }
@@ -61,6 +63,9 @@ export class Assertion {
     }
   }
   public include(expected: any, message = ""): void { this.contain(expected, message); }
+  public members(expected: any[], message = ""): void {
+    this.check(chaiMembers(this.value, expected, this.deeply), "members check", message);
+  }
   public length(expected: number, message = ""): void {
     if (typeof this.value === "string") {
       this.check(this.value.length === expected, "length check", message);
@@ -80,8 +85,9 @@ export function chaiDeepEqual(actual: any, expected: any): boolean { throw new E
 export function chaiDeepInclude(actual: any, expected: any): number { throw new Error("chai deep intrinsic unavailable"); }
 export function chaiThrowMatch(action: any, expected: string): boolean { throw new Error("chai throw intrinsic unavailable"); }
 export function chaiArrayInclude(actual: any, expected: any): boolean { throw new Error("chai array include intrinsic unavailable"); }
-export function chaiFail(message: string): void { throw new Error(message); }
+export function chaiMembers(actual: any, expected: any[], deeply: boolean): boolean { throw new Error("chai members intrinsic unavailable"); }
+export function chaiFail(message: string): never { throw new Error(message); }
 export function expect(value: any, message = ""): Assertion { return new Assertion(value, message); }
 export namespace expect {
-  export function fail(message: string): void { chaiFail(message); }
+  export function fail(message = "expect.fail()"): never { chaiFail(message); }
 }

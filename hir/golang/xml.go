@@ -5,6 +5,7 @@ const xmlRuntimeSource = `
 type xmlParser struct {
 	input  jsString
 	cursor int32
+	onSyntaxError func(jsString)
 }
 
 func xmlFail() { panic(newTrap("input is outside the reviewed abapGit XML subset")) }
@@ -32,9 +33,19 @@ func (p *xmlParser) header() jsString {
 		}
 		p.cursor++
 	}
+	// The external parser throws Error for an unterminated ordinary opening
+	// tag. Other XML languages still refuse; they are not catchable errors.
+	if p.onSyntaxError != nil && start > 0 && (start == p.input.length() || xmlOpeningNameStart(p.input.charCodeAt(start))) {
+		i := start - 1
+		lo, hi := i - 50, i + 50
+		if lo < 0 {lo = 0}; if hi > p.input.length() {hi = p.input.length()}
+		message := str("readTagExp returned undefined at position ") + integerString(int64(i)) + str(". Context: \"") + p.input[2*lo:2*hi] + str("\"")
+		p.onSyntaxError(message)
+	}
 	xmlFail()
 	return ""
 }
+func xmlOpeningNameStart(c int32) bool {return c >= 65 && c <= 90 || c >= 97 && c <= 122 || c == 95}
 func xmlDecode(s jsString) jsString {
 	out := jsString("")
 	for i := int32(0); i < s.length(); i++ {
@@ -91,6 +102,11 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 		if p.cursor == p.input.length() && closing == "" {
 			break
 		}
+		if p.cursor == p.input.length() && p.onSyntaxError != nil {
+			// fast-xml-parser does not commit unfinished EOF text.
+			closed = true
+			break
+		}
 		text += p.input[2*start : 2*p.cursor]
 		if p.cursor == p.input.length() {
 			xmlFail()
@@ -100,7 +116,7 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 			xmlFail()
 		}
 		if h.startsWith(str("/")) {
-			if closing == "" || h[2:] != closing {
+			if closing == "" || p.onSyntaxError == nil && h[2:] != closing {
 				xmlFail()
 			}
 			closed = true
@@ -146,7 +162,7 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 		}
 		xmlAdd(d, name, child)
 	}
-	if closing != "" && !closed {
+	if closing != "" && !closed && p.onSyntaxError == nil {
 		xmlFail()
 	}
 	if closing != "" && len(d.Value.(*orderedMap[jsString, *dynamic]).Entries) == 0 {
@@ -157,8 +173,9 @@ func (p *xmlParser) node(closing jsString) *dynamic {
 	}
 	return d
 }
-func parseXML(input jsString) *dynamic {
+func parseXML(input jsString) *dynamic { return parseXMLWithErrors(input, nil) }
+func parseXMLWithErrors(input jsString, onSyntaxError func(jsString)) *dynamic {
 	input = input.replaceAll(str("\r\n"), str("\n")).replaceAll(str("\r"), str("\n"))
-	return (&xmlParser{input: input}).node("")
+	return (&xmlParser{input: input, onSyntaxError: onSyntaxError}).node("")
 }
 `

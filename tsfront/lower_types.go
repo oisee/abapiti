@@ -54,6 +54,14 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.Ref(hir.RootObject)
 	case ast.KindVoidKeyword:
 		return hir.T(hir.Void)
+	case ast.KindNeverKeyword:
+		// Erase only a function's non-returning result annotation. `never`
+		// is not a storable value/array element, and its checker type must
+		// retain the existing empty-array inference/refusal paths.
+		if n.Parent != nil && ast.IsFunctionLike(n.Parent) && n.Parent.Type() == n {
+			return hir.T(hir.Void)
+		}
+		return l.mapTypeNodeViaChecker(n)
 	case ast.KindUndefinedKeyword:
 		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case ast.KindArrayType:

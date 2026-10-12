@@ -66,5 +66,6 @@ func (l *lowerer) xmlParserCall(n *ast.Node) (*hir.Expr, bool) {
 		l.diagf(n, "unsupported-xml", "XMLParser.parse input coercion is not lowered")
 		return nil, true
 	}
-	return l.rtOp("xml.parseSubset", value, hir.T(hir.Dynamic)), true
+	l.builtinError()
+	return l.rtOp("xml.parseWithErrors", value, hir.T(hir.Dynamic)), true
 }
