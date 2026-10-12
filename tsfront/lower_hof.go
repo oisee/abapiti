@@ -62,8 +62,10 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		if l.pinnedDenseCallback(n) {
 			return l.denseCallbackLoop(n, name, recv, args), true
 		}
-		l.diagf(n, "unsupported-call", "find on primitive arrays needs an absence-preserving callback ABI")
-		return nil, true
+		// Reuse the dense ABI with a checked Get at every visit. Its
+		// Optional result distinguishes a match of ""/0 from no match;
+		// a missing primitive slot refuses before callback invocation.
+		return l.arrayCallbackLoop(n, name, recv, args, true), true
 	}
 	body, params, ok := l.callbackBody(n, args[0], elem)
 	if !ok {

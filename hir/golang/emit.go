@@ -41,7 +41,8 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
-				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
+					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && x.X.Type.Name == hir.RootObject) {
 					e.extraRuntimeKeys = true
 				}
 			})
@@ -140,7 +141,13 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
-	files := map[string]string{"hir.go": e.code.String() + e.extra.String(), "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
+	generated := e.code.String() + e.extra.String()
+	if e.hirMath {
+		// Checked integer field views may emit math.Trunc in this file;
+		// runtime.go's imports are not package-wide Go imports.
+		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"math\"\n", 1)
+	}
+	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
@@ -186,6 +193,7 @@ type emitter struct {
 	err               error
 	extra             strings.Builder
 	lspGuards         bool
+	hirMath           bool
 	extraRuntimeKeys  bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool

@@ -19,6 +19,9 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 		return name
 	}
 	e.propertyLookups[name] = true
+	if t.Name == hir.RootObject {
+		return e.structuralPropertyLookup(name)
+	}
 	c := e.classBy(t.Name)
 	type entry struct {
 		name, value string
@@ -106,6 +109,33 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	line("}")
 	line("return struct{value *dynamic;own,exists bool}{value,p.own,ok}")
 	line("}")
+	e.extra.WriteString(b.String())
+	return name
+}
+
+// The object root has no nominal field table. Reuse original structural own-key
+// metadata (including live views) and the ordinary Object.prototype boundary.
+// Native prototype-bearing objects and records without presence proof refuse.
+func (e *emitter) structuralPropertyLookup(name string) string {
+	var b strings.Builder
+	line := func(f string, args ...any) { fmt.Fprintf(&b, f+"\n", args...) }
+	line("func %s(self any,key jsString,read bool) struct{value *dynamic;own,exists bool} {", name)
+	line("if nilRef(self) {panic(newRangeFault())};d:=box(self)")
+	line("if d==nil {panic(newRangeFault())};if d.Tag!=tagObject {")
+	line("allowed:=false;switch classOf(d.Value) {")
+	for _, c := range e.p.Classes {
+		if c.Structural {
+			line("case &%s:allowed=true", e.name("descriptor."+c.Name))
+		}
+	}
+	line("};if !allowed {panic(newTrap(\"erased property lookup requires original structural storage\"))}}")
+	line("keys:=dynamicKeys(d);own:=false;for _,k:=range keys.Items {if k==key {own=true;break}}")
+	line("inherited:=false;switch key {")
+	for _, k := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+		line("case str(%q):inherited=true", k)
+	}
+	line("};var value *dynamic;if read {if own {value=d.get(key)} else if inherited {panic(newTrap(\"erased prototype function reads are unsupported\"))}}")
+	line("return struct{value *dynamic;own,exists bool}{value,own,own||inherited}}")
 	e.extra.WriteString(b.String())
 	return name
 }
