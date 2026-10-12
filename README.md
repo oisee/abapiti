@@ -18,7 +18,7 @@
 > | tests trapped / not registered on Go | **0 / 0** | 0 |
 > | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 >
-> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. Next: the same suite on the ABAP hosts (OSGO, then A4H), and a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
+> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Next goal: 100 % on the ABAP host, TS-HA@OSGO and then TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -61,7 +61,7 @@ Where it stands (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://git
 | Tests trapped / not registered on Go | **0 / 0** | 0 |
 | Unique blocking diagnostics, all of core lowered without pruning (`abapiti abaplint --full` since it exists) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 
-Next: the same suite on the ABAP hosts (OSGO first; nothing goes to A4H before it passes there), then a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
+**Next goal: 100 % on the ABAP host**, first TS-HA@OSGO, then TS-HA@A4H (nothing goes to A4H before it passes on OSGO). After that, a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
 
 > **`wasm/` and `abap/wasm_compiler/`: experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.**
 
