@@ -52,8 +52,16 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.T(hir.Bool)
 	case ast.KindObjectKeyword:
 		return hir.Ref(hir.RootObject)
-	case ast.KindVoidKeyword, ast.KindNeverKeyword:
+	case ast.KindVoidKeyword:
 		return hir.T(hir.Void)
+	case ast.KindNeverKeyword:
+		// Erase only a function's non-returning result annotation. `never`
+		// is not a storable value/array element, and its checker type must
+		// retain the existing empty-array inference/refusal paths.
+		if n.Parent != nil && ast.IsFunctionLike(n.Parent) && n.Parent.Type() == n {
+			return hir.T(hir.Void)
+		}
+		return l.mapTypeNodeViaChecker(n)
 	case ast.KindUndefinedKeyword:
 		return hir.T(hir.Optional, hir.T(hir.Dynamic))
 	case ast.KindArrayType:
@@ -463,7 +471,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return hir.T(hir.String)
 	case flags&checker.TypeFlagsBooleanLiteral != 0 || flags&checker.TypeFlagsBoolean != 0:
 		return hir.T(hir.Bool)
-	case flags&(checker.TypeFlagsVoid|checker.TypeFlagsNever) != 0:
+	case flags&checker.TypeFlagsVoid != 0:
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsUndefined != 0:
 		// A standalone undefined result still has a value, unlike void.

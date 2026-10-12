@@ -111,7 +111,12 @@ original storage and must distinguish omitted from explicitly assigned undefined
   original Node. `expect.fail()` really throws `expect.fail()`; one-message fail
   and the genuine-failure fixture remain. Its `never` annotation gives the checker
   real terminating-flow information for the original Table guards, not a compiler
-  override. `chai_small_test.go` and `chai_members_test.go` use original Chai.
+  override. Only explicit non-returning **function result annotations** erase to
+  the existing void call ABI; checker `never` values/array elements do not become
+  storable void. The full short gate caught that overly broad prototype mapping
+  via the unchanged `TestGoArrayReceiverContextNodeOracle`; the mapping was
+  narrowed and that Node regression passed before final certification.
+  `chai_small_test.go` and `chai_members_test.go` use original Chai.
 - **LSP predicates:** pinned CreateFile/DeleteFile predicates read original kind,
   uri, option fields and annotationId. Falsy nonboolean values are consumed only
   in conditions (including ternary conditions); value contexts refuse rather than
@@ -146,6 +151,13 @@ collided with the existing validator; an unavailable helper spelling caused a
 Go build error; the predicate's ternary context was not recognized; and tagged
 JSON arrays reached an unsupported property read. These were corrected with
 regressions retained before certification.
+
+The first pre-certificate shard attempt on `51f96c0` was stopped after that
+short-gate refusal, before completing all shards. It is not counted as a final
+suite measurement. The initial default diff had only a synthetic closure identity
+shift (106100 to 106104); an independently archived compiler with the broad
+checker-never change reverted recovered 106100. Corrected-source gates and the
+same-path default comparison are rerun; no unexplained identity diff is accepted.
 
 ## Certification
 
