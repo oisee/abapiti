@@ -360,6 +360,13 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 			return []*hir.Stmt{l.localDeclaration(d, name, typ, value)}
 		}
+		if l.comparisonScalar(d, typ) {
+			typ = hir.T(hir.Optional, typ)
+			if l.erasedScalars == nil {
+				l.erasedScalars = map[*ast.Symbol]bool{}
+			}
+			l.erasedScalars[sym] = true
+		}
 		if typ.Kind != hir.Optional && init != nil {
 			// An initializer that may be undefined makes the local optional.
 			if it := l.ck.GetTypeAtLocation(init); it != nil && it.IsUnion() {

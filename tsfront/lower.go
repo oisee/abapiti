@@ -419,6 +419,7 @@ type lowerer struct {
 	unprunedFeatures   bool
 	absentFields       map[*ast.Node]bool
 	checkedFields      map[*ast.Node]bool
+	erasedScalars      map[*ast.Symbol]bool
 	lspConstructors    bool
 	settledEnabled     bool
 	asyncMethods       map[*hir.Method]bool
