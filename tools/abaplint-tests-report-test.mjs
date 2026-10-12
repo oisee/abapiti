@@ -45,5 +45,18 @@ try {
  assert.equal(s.uniqueTotal.asyncPending,4); assert.equal(s.uniqueTotal.unregistered,4); assert.equal(s.registrationParity,false);
  assert.deepEqual(s.shards.map(row=>row.unregisteredTitles),Array(4).fill(['unregistered']));
  assert.equal(s.asyncInitializationFailures,4); assert.equal(s.top20Traps[0].count,8); assert.equal(s.shards.length,4);
- console.log('report multiset, async, unregistered, unmatched, four-shard summary, trap ranking: ok');
+ const auditedOracle={total:6,titles:['pass','trap','active skip','pending skip','active missing','pending missing'],pendingTitles:['pending skip','pending missing']};
+ const auditedRun={results:[{title:'pass',status:'passed',message:''},{title:'trap',status:'trapped',message:'typed refusal'},{title:'active skip',status:'not-run',message:'skipped/focused'},{title:'pending skip',status:'not-run',message:'skipped/focused'}]};
+ writeFileSync(join(dir,'audit-node.json'),JSON.stringify(auditedOracle));
+ writeFileSync(join(dir,'audit-go.json'),JSON.stringify(auditedRun));
+ const audit=()=>execFileSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-report.mjs'),join(dir,'audit-node.json'),join(dir,'audit-go.json'),join(dir,'audit-report.json')],{stdio:'pipe'});
+ audit();const ar=JSON.parse(readFileSync(join(dir,'audit-report.json')));
+ assert.deepEqual(ar.nodeActive,{total:4,passed:1,failed:0,trapped:1,asyncPending:0,skipped:1,unregistered:1,notPassing:3});
+ assert.deepEqual(ar.nodePending,{total:2,skipped:1,unregistered:1});
+ assert.deepEqual(ar.skippedOrFocusedTests.map(t=>[t.title,t.node]),[['active skip','active'],['pending skip','pending']]);
+ writeFileSync(join(dir,'audit-go.json'),JSON.stringify({results:[{title:'pending skip',status:'passed',message:''}]}));
+ assert.throws(audit,/harness executed Node-pending test/);
+ writeFileSync(join(dir,'audit-node.json'),JSON.stringify({total:2,titles:['collision','collision'],pendingTitles:['collision']}));
+ assert.throws(audit,/ambiguous active\/pending title collision/);
+ console.log('report multiset, async, unregistered, unmatched, Node-active/pending audit, four-shard summary, trap ranking: ok');
 } finally {rmSync(dir,{recursive:true,force:true});}
