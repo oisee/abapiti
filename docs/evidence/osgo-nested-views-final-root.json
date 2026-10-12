@@ -1,0 +1,42 @@
+{
+  "codeCommit": "db9fbd33fcfaa1b279b709d667516f6fca2e071b",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "target": "osg",
+  "nodeActive": {
+    "total": 94,
+    "passed": 8,
+    "failed": 0,
+    "trapped": 86,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 0,
+    "notPassing": 86
+  },
+  "registrationParity": true,
+  "passedTitleComparison": {
+    "baseline": "fa6efed JSON5 integration",
+    "baselinePassed": 8,
+    "finalPassed": 8,
+    "lost": [],
+    "added": []
+  },
+  "trapGroups": [
+    {
+      "message": "An exception was raised.",
+      "count": 65
+    },
+    {
+      "message": "runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 19
+    },
+    {
+      "message": "runtime operation dynamic.delete has no ABAP emitter",
+      "count": 1
+    },
+    {
+      "message": "runtime operation json.indent has no ABAP emitter; runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 1
+    }
+  ],
+  "scope": "Complete root shard only; not a full-suite certification."
+}

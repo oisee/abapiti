@@ -22,7 +22,12 @@ retains 8/94 passes, FAIL 0, and zero unregistered cases. The previous 62
 incompatible-cast traps disappear; there are now 65 generic runtime refusals,
 19 stringifySubset refusals, one delete refusal and one stringify/indent
 refusal. That run preceded the final alignment with Go's explicitly activated
-layouts; it is not a final-commit certification. The exact-commit run follows.
+layouts; it is not a final-commit certification. The
+[exact-commit root run](evidence/osgo-nested-views-final-root.json) at db9fbd3
+also gives 8/94, FAIL 0, 86 traps and zero unregistered or async-pending cases.
+All eight baseline passing titles remain passes. The trap groups are unchanged
+from the first diagnostic run. This certifies only the root-shard measurement,
+not the whole integration or suite.
 
 Parsed arrays are still refused by the ABAP live-field reader. Their storage
 must preserve shared mutation and presence, including the four known sparse
