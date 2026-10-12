@@ -1,5 +1,18 @@
 # abaplint's own tests on TS-HG@Go
 
+## ABAP host: TS-HA@OSGO M0
+
+The harness also accepts `abapiti abaplint-tests CLOSURE --target osg
+--osg-home EXISTING_PINNED_OSG -o OUT`. `--gap-only` measures the complete
+ABAP refusal inventory without invoking OSG. Default target remains `go`.
+For directory shards, set `ABAPITI_TESTS_TARGET=osg` and `ABAPITI_OSG_HOME`;
+Node title reconciliation and the stop-on-genuine-FAIL rule are unchanged.
+OSG-only compact evidence retains static sites, measured refusal-body test
+impact, ABAP envelopes, and frontend/emission/build/run timings before cleanup.
+See [the M0 gap and executed-shard certificate](osgo-suite-gap.md) for numbers,
+limitations, the required environment, and reproduction. The Go-target history
+below is not an ABAP-host coverage claim.
+
 ## Trap batch O — certified on train 11
 
 **11,037/11,060 Node-active tests passed (99.79%), FAIL 0.** Exactly one
