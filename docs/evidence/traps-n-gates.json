@@ -1,0 +1,225 @@
+{
+  "base": "8288338",
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "nice": 10,
+    "timeout": "40m"
+  },
+  "gates": {
+    "go test ./... -short -timeout 40m": 0,
+    "go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m": 0,
+    "go vet ./...": 0,
+    "node tools/abaplint-tests-report-test.mjs": 0,
+    "node tools/abaplint-tests-all-test.mjs": 0,
+    "node tools/abaplint-tests-runtime-test.mjs": 0
+  },
+  "golden": {
+    "catalogueEntries": [
+      133,
+      134
+    ],
+    "readFacts": [
+      201,
+      205
+    ],
+    "conservativeEntries": [
+      21,
+      23
+    ],
+    "callSites": 61,
+    "justification": "One dynamic.call0 operation and conservative global effects for native toString hooks; no lexer/method/call-site changes.",
+    "sha256": "fd4e060599e7618b6248a8e9397d8d7028d324b08419418e6ae5c19ac6112b90",
+    "regeneratedEqualsGolden": true
+  },
+  "defaultOutput": {
+    "baseCompiler": "Built from clean 8288338 before edits",
+    "sameAbsolutePath": "/home/alice/dev/abapiti/.local/worktrees/trapsn/.local/traps-n/default",
+    "command": "nice -n 10 <compiler> abaplint -o <sameAbsolutePath>",
+    "files": 6312,
+    "rawDiffExit": 0,
+    "rawDiffBytes": 0,
+    "justification": "No changes to justify."
+  },
+  "zabapgit": {
+    "freshOriginalNode": true,
+    "kit": "v0.1.1",
+    "kitArchiveSHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+    "Go": {
+      "clean": {
+        "seconds": [
+          8.557727999985218
+        ],
+        "median_seconds": 8.557727999985218,
+        "byte_identical": true,
+        "issues": 0
+      },
+      "seeded": {
+        "seconds": [
+          8.898967812769115
+        ],
+        "median_seconds": 8.898967812769115,
+        "byte_identical": true,
+        "issues": 5
+      }
+    },
+    "Node": {
+      "clean": {
+        "issues": 0,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "byteIdenticalToKit": true
+      },
+      "seeded": {
+        "issues": 5,
+        "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+        "byteIdenticalToKit": true
+      }
+    }
+  },
+  "stoppedContractRegression": {
+    "reproducedOnBase": true,
+    "unexpected": "suite contain: chai array include intrinsic unavailable",
+    "before": {
+      "passed": 4,
+      "failed": 2
+    },
+    "expected": {
+      "passed": 5,
+      "failed": 1
+    },
+    "repair": "Install original pinned Chai in the independent Node VM; all original cases remain and a ninth strict-identity/real-failure oracle is added.",
+    "finalScenarios": 9,
+    "genuineGoNodeValueMismatchAccepted": false
+  },
+  "stoppedConstructorMismatch": {
+    "semanticCommit": "798f986",
+    "Node": "Object",
+    "Go": "A",
+    "root": "Structural class flag is finalized after body lowering; constructor-union proof must use shapeLike registry.",
+    "reportedBeforeRepair": true,
+    "regression": "tsfront/union_constructor_refusal_test.go",
+    "repairCommit": "7d3a8fc",
+    "interruptedRunCompletedShards": [
+      "abap-expressions",
+      "abap-lexer",
+      "abap-nodes",
+      "abap-structures",
+      "abap",
+      "cds",
+      "lsp",
+      "rules"
+    ],
+    "completed17ShardCertificate": false,
+    "accepted": false
+  },
+  "stoppedGetterMismatch": {
+    "Node": "TypeError",
+    "Go": "base",
+    "semanticCommit": "7d3a8fc",
+    "reportedBeforeRepair": true,
+    "interruptedRunCompletedShards": [
+      "abap",
+      "abap/expressions",
+      "abap/lexer",
+      "abap/nodes",
+      "abap/structures",
+      "cds",
+      "lsp",
+      "rules"
+    ],
+    "completed17ShardCertificate": false,
+    "regression": "tsfront/native_method_shadow_test.go",
+    "accepted": false
+  },
+  "stoppedCallableMismatch": {
+    "Node": "()=>\"ok\"",
+    "Go": "[object Object]",
+    "reportedBeforeRepair": true,
+    "beforeAnyFurtherFullRun": true,
+    "regression": "tsfront/function_coercion_refusal_test.go",
+    "accepted": false
+  },
+  "discardedOverbroadSafetyPrototype": {
+    "codeCommit": "2e1845a",
+    "focusedPasses": 674,
+    "focusedFail": 0,
+    "focusedTraps": 11,
+    "finalSafetyFocusedPasses": 678,
+    "finalSafetyFocusedFail": 0,
+    "finalSafetyFocusedTraps": 7,
+    "root": "ViewUnsafe includes unrelated storage constraints; replace with explicit source PrototypeAccessors metadata.",
+    "certified": false
+  },
+  "semanticCommit": "469fd1db95f591dbd22e0c825b7e1d89076a84af",
+  "semanticTrees": {
+    "hir": "4a7745796459f98ced998c3acd3c23032b49c477",
+    "tsfront": "02660c0c7bcb9e8d71b7c473590a52149a4c34cc",
+    "tools": "e80e036c2189ea945b148b4385ef98b41f66add8",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d"
+  },
+  "sourceFreeze": {
+    "completed17ShardRuns": 1,
+    "interrupted8ShardAttempts": 2,
+    "noPostFreezeSemanticEdits": true,
+    "semanticTreesVerifiedAfterRun": true
+  },
+  "independentNodeRefusals": [
+    "structural constructor unions",
+    "getter/setter prototype shadows",
+    "empty native method catalogue",
+    "function string coercion",
+    "shadowed debug-symbol binding",
+    "void ABI with unknown JS return"
+  ],
+  "voidABI": {
+    "valueBridgeRegression": "tsfront/native_void_bridge_test.go",
+    "existingBridgesPreserved": true,
+    "unknownResultRefuses": true,
+    "noConfigOrPropertyAdapterWidened": true
+  },
+  "cleanup": {
+    "generatedArtifactsRemoved": true,
+    "compactEvidenceOnly": true,
+    "noPush": true,
+    "noTranspilerClone": true,
+    "originalTestsWeakenedOrDeleted": false
+  },
+  "fullRun": {
+    "codeCommit": "469fd1db95f591dbd22e0c825b7e1d89076a84af",
+    "shards": 17,
+    "files": 625,
+    "nodeActive": {
+      "total": 11060,
+      "passed": 11027,
+      "failed": 0,
+      "trapped": 31,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 2,
+      "notPassing": 33
+    },
+    "nodePending": {
+      "total": 32,
+      "skipped": 28,
+      "unregistered": 4
+    },
+    "trapGroups": 20,
+    "titlesReconciled": true,
+    "registrationParity": false,
+    "expectedMissingTitles": 6,
+    "initializationActions": 2,
+    "exclusions": [],
+    "wiringFailures": [],
+    "unmatched": 0
+  },
+  "attribution": {
+    "directlyMeasuredTargetGain": 5,
+    "alreadyPresentBaseTargetGainVersusHistoricalM": 22,
+    "fullCountVersusHistoricalM": 78,
+    "other51GainsNotAttributed": true,
+    "noAdditionalFullBaseRun": true
+  }
+}

@@ -12,6 +12,7 @@ import (
 var supportedOps = map[string]bool{
 	"dynamic.typeofValue":    true,
 	"dynamic.recordString":   true,
+	"dynamic.call0":          true,
 	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex":          true,
@@ -270,6 +271,8 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "dynamic.recordString":
 		b.e.recordString = true
 		code = "recordString(" + a + ")"
+	case "dynamic.call0":
+		code = b.nativeCall0(x, a)
 	case "dynamic.toString":
 		code = "dynToString(" + a + ")"
 	case "dynamic.of", "chai.box":

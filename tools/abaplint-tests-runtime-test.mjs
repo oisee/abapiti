@@ -7,16 +7,25 @@ import {resolve} from "node:path";
 import vm from "node:vm";
 import {verifyUpstream} from "./statements-upstream.mjs";
 const upstream = process.argv[2] || resolve(process.env.HOME, "dev/abaplint");
-const ts = createRequire(import.meta.url)(verifyUpstream(upstream));
+const require = createRequire(import.meta.url);
+const ts = require(verifyUpstream(upstream));
+const originalChai = require(resolve(upstream, "packages/core/node_modules/chai"));
+// The transpiled runtime deliberately leaves target-only intrinsic stubs.
+// This independent Node contract must install the real package semantics,
+// not execute that stub or silently return true for array inclusion.
+function nodeArrayInclude(actual, expected) {
+ try { originalChai.assert.include(actual, expected); return true; }
+ catch (error) { if (error instanceof originalChai.AssertionError) return false; throw error; }
+}
 const runtime = resolve(import.meta.dirname, "../tsfront/testdata/abaplint-tests/runtime");
 async function run(source) {
- const context = vm.createContext({exports:{}});
+ const context = vm.createContext({exports:{}, nodeArrayInclude});
  for (const name of ["mocha.ts", "chai.ts"]) {
   const raw = readFileSync(resolve(runtime, name), "utf8");
   const output = ts.transpileModule(raw, {fileName:name,compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText;
   vm.runInContext(output, context, {filename:name});
  }
- vm.runInContext("const expect = exports.expect; " + source, context);
+ vm.runInContext("chaiArrayInclude = nodeArrayInclude; const expect = exports.expect; " + source, context);
  return JSON.parse(JSON.stringify(await vm.runInContext("TestRuntime.run()", context)));
 }
 assert.deepEqual(await run(`
@@ -92,4 +101,9 @@ assert.deepEqual(await run(`
  {title:"teardown failure test",message:"Error: cleanup rejected"},
  {title:"after failure test",message:"Error: after rejected"},
 ]});
-console.log("runtime Node contract: 8 scenarios passed (not TS-HG@Go)");
+assert.deepEqual(await run(`
+ const object = {};
+ it("strict array identity", () => {expect([object]).to.include(object);expect([object]).to.not.include({});expect([1,2]).to.not.include(3);});
+ it("real absent inclusion failure", () => expect([1,2]).to.include(3));
+`), {passed:1,failed:1,failures:[{title:"real absent inclusion failure",message:"Error: assertion failed: contain check"}]});
+console.log("runtime Node contract: 9 scenarios passed against original Chai (not TS-HG@Go)");

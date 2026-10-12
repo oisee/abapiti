@@ -1,0 +1,24 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "method": "Observation-only wrapper delegates original DumpScope.traverseSpaghetti; all three original test/lsp/help bodies run unchanged on fresh original Node.",
+  "passed": 3,
+  "failed": 0,
+  "observations": [
+    {
+      "record": "types",
+      "isArray": false,
+      "ownLength": false,
+      "typeofLength": "undefined",
+      "stringLength": "undefined",
+      "concatLength": "undefined"
+    },
+    {
+      "record": "vars",
+      "isArray": false,
+      "ownLength": false,
+      "typeofLength": "undefined",
+      "stringLength": "undefined",
+      "concatLength": "undefined"
+    }
+  ]
+}

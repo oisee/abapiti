@@ -379,6 +379,9 @@ func (e *emitter) class(c *hir.Class) {
 		e.line("deletedKeys map[jsString]bool")
 		e.line("deletionOrder *orderedMap[jsString,*dynamic]")
 	}
+	if c.Scoped {
+		e.line("lexicalDescriptor *classDescriptor")
+	}
 	if e.extraRuntimeKeys && c.Structural {
 		e.line("ownKeys *orderedMap[jsString,*dynamic]")
 	}
@@ -932,6 +935,8 @@ func (b *body) expr(x *hir.Expr) string {
 		v = b.value(x.Z, t)
 		b.line("%s=%s }", n, v)
 		return n
+	case hir.FreshClassOf:
+		code = e.name("fresh.descriptor."+x.Owner) + "()"
 	case hir.ClassOf:
 		code = "&" + e.name("descriptor."+x.Owner)
 	case hir.InstanceOf:

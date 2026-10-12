@@ -198,6 +198,13 @@ func (l *lowerer) classValueRef(n *ast.Node) (*hir.Expr, bool) {
 	if c == nil {
 		return nil, false
 	}
+	if c.Scoped {
+		if typ, ok := l.lookup(sym.Name); ok && typ.Kind == hir.ClassValue {
+			return hir.V(sym.Name, typ), true
+		}
+		l.diagf(n, "unsupported-class-value", "scoped constructor is outside its lexical environment")
+		return nil, true
+	}
 	l.diagf(n, "note-class-value", "class %s used as a value", c.Name)
 	return &hir.Expr{Kind: hir.ClassOf, Node: l.node(n), Owner: c.Name, Type: hir.T(hir.ClassValue)}, true
 }

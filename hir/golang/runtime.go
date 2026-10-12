@@ -676,6 +676,33 @@ func (a *array[T]) join(sep optional[jsString]) jsString {
 	return out
 }
 func primitiveString(v any) jsString {
+	switch x:=v.(type) {
+	case jsString:return x
+	case bool:return str(strconv.FormatBool(x))
+	case int32:return integerString(int64(x))
+	case int64:return integerString(x)
+	case float64:return numberString(x)
+	}
+	panic(newRangeFault())
+}
+func (a *array[T]) nativeString(depth int) jsString {
+	if a==nil {return str("undefined")}
+	if depth>64 {panic(newTrap("cyclic/deep array ToPrimitive is unsupported"))}
+	out:=jsString("")
+	n:=len(a.Items)
+	if storage,ok:=any(a).(interface{liveLength() int32});ok {n=int(storage.liveLength())}
+	for i:=0;i<n;i++ {
+		if i>0 {out+=str(",")}
+		v:=a.get(int32(i))
+		if !v.Has || nilRef(v.Value) {continue}
+		if d,ok:=any(v.Value).(*dynamic);ok && (d==nil || d.Tag==tagNull) {continue}
+		out+=stringCoercion(v.Value,depth+1)
+	}
+	return out
+}
+func stringCoercion(v any,depth int) jsString {
+	if depth>64 {panic(newTrap("cyclic/deep ToPrimitive is unsupported"))}
+	if nilRef(v) {return str("undefined")}
 	switch x := v.(type) {
 	case jsString:
 		return x
@@ -687,8 +714,12 @@ func primitiveString(v any) jsString {
 		return integerString(x)
 	case float64:
 		return numberString(x)
+	case *dynamic:
+		return dynStringCoercion(x,depth)
+	case interface{nativeString(int) jsString}:
+		return x.nativeString(depth)
 	}
-	panic(newRangeFault())
+	panic(newTrap("object ToPrimitive outside certified string coercion"))
 }
 func (m *orderedMap[K, V]) values() *array[V] {
 	a := &array[V]{}
@@ -1017,7 +1048,9 @@ func dynTypeof(d *dynamic) jsString {
 	}
 	return str("object")
 }
-func dynToString(d *dynamic) jsString {
+func dynToString(d *dynamic) jsString {return dynStringCoercion(d,0)}
+func dynStringCoercion(d *dynamic,depth int) jsString {
+	if depth>64 {panic(newTrap("cyclic/deep ToPrimitive is unsupported"))}
 	if d == nil {
 		return str("undefined")
 	}
@@ -1027,9 +1060,15 @@ func dynToString(d *dynamic) jsString {
 	case 4, 5, 6:
 		return numberString(dynNumber(d))
 	case 1, 3:
-		return primitiveString(d.Value)
+		return stringCoercion(d.Value,depth)
+	case 2, tagArray:
+		return stringCoercion(d.Value,depth+1)
+	case tagObject:
+		m:=d.Value.(*orderedMap[jsString,*dynamic])
+		if m.has(str("toString")) || m.has(str("valueOf")) {panic(newTrap("own ToPrimitive hooks outside certified string coercion"))}
+		return str("[object Object]")
 	default:
-		panic(newRangeFault())
+		panic(newTrap("ToPrimitive shape outside certified string coercion"))
 	}
 }
 func dynTruth(d *dynamic) bool {
@@ -1196,6 +1235,7 @@ func (d *classDescriptor) has(k jsString) bool {
 	return false
 }
 func classOf(v any) *classDescriptor {
+	if d,ok:=v.(*dynamic);ok {if d==nil || d.Tag!=2 {return nil};v=d.Value}
 	if nilRef(v) {
 		return nil
 	}

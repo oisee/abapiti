@@ -17,6 +17,11 @@ func (e *emitter) arrayReference(t hir.Type, value string) string {
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
 	}
+	if base.Kind == hir.Dynamic {
+		// Erased native reference slots contain the original objects, not
+		// necessarily pre-boxed tags. Boxing reads preserves that identity.
+		return "box(" + value + ")"
+	}
 	if base.Kind == hir.ClassRef && e.liveClasses[base.Name] {
 		return "func() " + e.typ(t) + " {v:=" + value + ";if row,ok:=any(v).(" + e.typ(t) + ");ok {return row};return " + e.liveView(base) + "(box(v))}()"
 	}

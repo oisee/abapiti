@@ -1191,6 +1191,8 @@ func (b *body) expr(x *hir.Expr) string {
 		if len(e.liveClasses) > 0 && x.X.Type.Kind == hir.ClassRef && e.liveClasses[x.X.Type.Name] {
 			b.line("IF " + a + " IS BOUND AND " + a + "->" + e.name("view.source") + " IS BOUND.\n" + n + " = abap_false.\nENDIF.")
 		}
+	case hir.FreshClassOf:
+		e.err = fmt.Errorf("node %d: fresh lexical constructor descriptors are unsupported in ABAP", x.ID)
 	case hir.ClassOf:
 		e.descriptors = true
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
