@@ -1,13 +1,13 @@
 {
   "nodeActive": {
     "total": 11060,
-    "passed": 11022,
+    "passed": 11032,
     "failed": 0,
-    "trapped": 35,
+    "trapped": 25,
     "asyncPending": 0,
     "skipped": 0,
     "unregistered": 3,
-    "notPassing": 38
+    "notPassing": 28
   },
   "nodePending": {
     "total": 32,
@@ -15,9 +15,9 @@
     "unregistered": 4
   },
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
-  "codeCommit": "b15a4ba66abc3a9fb6fce81347d983fff7ae0b62",
+  "codeCommit": "8c40fe1e87468442827e884d89b7995ac460b942",
   "mainCommit": "e2ba6ac0f447ff8d989a7b50f2dae7fe5182cbb5",
-  "artifacts": "",
+  "artifacts": "<disposable shard run; exact active tail retained in train-11-remaining.md>",
   "artifactPrefix": "",
   "shards": [
     {
@@ -67,7 +67,7 @@
         {
           "file": "test/abap/structure_errors.ts",
           "action": "test/abap/structure_errors.ts:15:1",
-          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36333 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36326 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
           "status": "trapped"
         }
       ],
@@ -296,9 +296,9 @@
     {
       "name": "abap/syntax",
       "files": 8,
-      "passed": 1362,
+      "passed": 1363,
       "failed": 0,
-      "trapped": 1,
+      "trapped": 0,
       "asyncPending": 0,
       "notRun": 10,
       "registered": 1373,
@@ -317,13 +317,13 @@
       "unmatched": 0,
       "nodeActive": {
         "total": 1363,
-        "passed": 1362,
+        "passed": 1363,
         "failed": 0,
-        "trapped": 1,
+        "trapped": 0,
         "asyncPending": 0,
         "skipped": 0,
         "unregistered": 0,
-        "notPassing": 1
+        "notPassing": 0
       },
       "nodePending": {
         "total": 10,
@@ -439,6 +439,47 @@
       "failures": []
     },
     {
+      "name": "root",
+      "files": 12,
+      "passed": 91,
+      "failed": 0,
+      "trapped": 3,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 94,
+        "passed": 91,
+        "failed": 0,
+        "trapped": 3,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 3
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
       "name": "cds",
       "files": 2,
       "passed": 355,
@@ -529,9 +570,9 @@
     {
       "name": "lsp",
       "files": 16,
-      "passed": 180,
+      "passed": 181,
       "failed": 0,
-      "trapped": 8,
+      "trapped": 7,
       "asyncPending": 0,
       "notRun": 5,
       "registered": 193,
@@ -550,13 +591,13 @@
       "unmatched": 0,
       "nodeActive": {
         "total": 188,
-        "passed": 180,
+        "passed": 181,
         "failed": 0,
-        "trapped": 8,
+        "trapped": 7,
         "asyncPending": 0,
         "skipped": 0,
         "unregistered": 0,
-        "notPassing": 8
+        "notPassing": 7
       },
       "nodePending": {
         "total": 5,
@@ -607,9 +648,9 @@
     {
       "name": "objects",
       "files": 26,
-      "passed": 134,
+      "passed": 138,
       "failed": 0,
-      "trapped": 10,
+      "trapped": 6,
       "asyncPending": 0,
       "notRun": 1,
       "registered": 145,
@@ -628,13 +669,13 @@
       "unmatched": 0,
       "nodeActive": {
         "total": 144,
-        "passed": 134,
+        "passed": 138,
         "failed": 0,
-        "trapped": 10,
+        "trapped": 6,
         "asyncPending": 0,
         "skipped": 0,
         "unregistered": 0,
-        "notPassing": 10
+        "notPassing": 6
       },
       "nodePending": {
         "total": 1,
@@ -654,9 +695,9 @@
     {
       "name": "objects/rename",
       "files": 9,
-      "passed": 29,
+      "passed": 31,
       "failed": 0,
-      "trapped": 2,
+      "trapped": 0,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 31,
@@ -675,13 +716,13 @@
       "unmatched": 0,
       "nodeActive": {
         "total": 31,
-        "passed": 29,
+        "passed": 31,
         "failed": 0,
-        "trapped": 2,
+        "trapped": 0,
         "asyncPending": 0,
         "skipped": 0,
         "unregistered": 0,
-        "notPassing": 2
+        "notPassing": 0
       },
       "nodePending": {
         "total": 0,
@@ -734,52 +775,11 @@
       "failures": []
     },
     {
-      "name": "root",
-      "files": 12,
-      "passed": 91,
-      "failed": 0,
-      "trapped": 3,
-      "asyncPending": 0,
-      "notRun": 0,
-      "registered": 94,
-      "total": 94,
-      "node": {
-        "passed": 94,
-        "failed": 0,
-        "pending": 0
-      },
-      "notRunReasons": {
-        "asyncOrDone": 0,
-        "skippedOrFocused": 0,
-        "unregistered": 0
-      },
-      "unregisteredTitles": [],
-      "unmatched": 0,
-      "nodeActive": {
-        "total": 94,
-        "passed": 91,
-        "failed": 0,
-        "trapped": 3,
-        "asyncPending": 0,
-        "skipped": 0,
-        "unregistered": 0,
-        "notPassing": 3
-      },
-      "nodePending": {
-        "total": 0,
-        "skipped": 0,
-        "unregistered": 0
-      },
-      "skippedOrFocusedTests": [],
-      "initialization": [],
-      "failures": []
-    },
-    {
       "name": "rules",
       "files": 192,
-      "passed": 3141,
+      "passed": 3143,
       "failed": 0,
-      "trapped": 6,
+      "trapped": 4,
       "asyncPending": 0,
       "notRun": 12,
       "registered": 3157,
@@ -801,13 +801,13 @@
       "unmatched": 0,
       "nodeActive": {
         "total": 3149,
-        "passed": 3141,
+        "passed": 3143,
         "failed": 0,
-        "trapped": 6,
+        "trapped": 4,
         "asyncPending": 0,
         "skipped": 0,
         "unregistered": 2,
-        "notPassing": 8
+        "notPassing": 6
       },
       "nodePending": {
         "total": 10,
@@ -919,9 +919,9 @@
     }
   ],
   "uniqueTotal": {
-    "passed": 11022,
+    "passed": 11032,
     "failed": 0,
-    "trapped": 35,
+    "trapped": 25,
     "asyncPending": 0,
     "notRun": 35,
     "registered": 11085,
@@ -952,38 +952,12 @@
   "registrationParity": false,
   "allTraps": [
     {
-      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 3,
-      "shards": {
-        "lsp": 1,
-        "abap-syntax": 1,
-        "rules": 1
-      },
-      "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
       "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
       "count": 3,
       "shards": {
         "lsp": 3
       },
-      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168894 (src/lsp/rename.ts:109:52): assignment type mismatch"
-    },
-    {
-      "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
-      "count": 2,
-      "shards": {
-        "objects": 2
-      },
-      "example": "runtime/chai.ts:26:3: chai object enumerable keys are unsupported"
-    },
-    {
-      "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
-      "count": 2,
-      "shards": {
-        "objects": 2
-      },
-      "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168637 (src/lsp/rename.ts:109:52): assignment type mismatch"
     },
     {
       "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
@@ -1003,14 +977,6 @@
       "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/objects/rename/renamer_helper.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 2,
-      "shards": {
-        "objects-rename": 2
-      },
-      "example": "src/objects/rename/renamer_helper.ts:107:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
       "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
       "count": 2,
       "shards": {
@@ -1027,12 +993,12 @@
       "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 1,
+      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "count": 2,
       "shards": {
-        "lsp": 1
+        "lsp": 2
       },
-      "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
     },
     {
       "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
@@ -1040,7 +1006,7 @@
       "shards": {
         "lsp": 1
       },
-      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169279 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169022 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
     },
     {
       "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
@@ -1051,20 +1017,12 @@
       "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
     },
     {
-      "message": "src/objects/number_range.ts: src/objects/number_range.ts: parseFloat requires a finite result",
-      "count": 1,
-      "shards": {
-        "rules": 1
-      },
-      "example": "src/objects/number_range.ts:36:3: src/objects/number_range.ts:51:33: parseFloat requires a finite result"
-    },
-    {
-      "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+      "message": "src/objects/proxy_object.ts: value outside supported numeric, ordering or conversion domain",
       "count": 1,
       "shards": {
         "objects": 1
       },
-      "example": "src/objects/proxy_object.ts:70:3: lowering trap: src/objects/proxy_object.ts:70:3: HIR verification: node 176593 (src/objects/proxy_object.ts:81:5): assignment type mismatch"
+      "example": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
     },
     {
       "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
@@ -1105,14 +1063,6 @@
         "cds": 1
       },
       "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
-    },
-    {
-      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
-      "count": 1,
-      "shards": {
-        "lsp": 1
-      },
-      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
     },
     {
       "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
@@ -1149,38 +1099,12 @@
   ],
   "top20Traps": [
     {
-      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 3,
-      "shards": {
-        "lsp": 1,
-        "abap-syntax": 1,
-        "rules": 1
-      },
-      "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
       "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
       "count": 3,
       "shards": {
         "lsp": 3
       },
-      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168894 (src/lsp/rename.ts:109:52): assignment type mismatch"
-    },
-    {
-      "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
-      "count": 2,
-      "shards": {
-        "objects": 2
-      },
-      "example": "runtime/chai.ts:26:3: chai object enumerable keys are unsupported"
-    },
-    {
-      "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
-      "count": 2,
-      "shards": {
-        "objects": 2
-      },
-      "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168637 (src/lsp/rename.ts:109:52): assignment type mismatch"
     },
     {
       "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
@@ -1200,14 +1124,6 @@
       "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/objects/rename/renamer_helper.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 2,
-      "shards": {
-        "objects-rename": 2
-      },
-      "example": "src/objects/rename/renamer_helper.ts:107:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
       "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
       "count": 2,
       "shards": {
@@ -1224,12 +1140,12 @@
       "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 1,
+      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "count": 2,
       "shards": {
-        "lsp": 1
+        "lsp": 2
       },
-      "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
     },
     {
       "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
@@ -1237,7 +1153,7 @@
       "shards": {
         "lsp": 1
       },
-      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169279 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169022 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
     },
     {
       "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
@@ -1248,20 +1164,12 @@
       "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
     },
     {
-      "message": "src/objects/number_range.ts: src/objects/number_range.ts: parseFloat requires a finite result",
-      "count": 1,
-      "shards": {
-        "rules": 1
-      },
-      "example": "src/objects/number_range.ts:36:3: src/objects/number_range.ts:51:33: parseFloat requires a finite result"
-    },
-    {
-      "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+      "message": "src/objects/proxy_object.ts: value outside supported numeric, ordering or conversion domain",
       "count": 1,
       "shards": {
         "objects": 1
       },
-      "example": "src/objects/proxy_object.ts:70:3: lowering trap: src/objects/proxy_object.ts:70:3: HIR verification: node 176593 (src/objects/proxy_object.ts:81:5): assignment type mismatch"
+      "example": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
     },
     {
       "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
@@ -1304,12 +1212,36 @@
       "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
     },
     {
-      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
       "count": 1,
       "shards": {
         "lsp": 1
       },
-      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+      "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+    },
+    {
+      "message": "unsupported-expr test/cds/cds_parser.ts: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts: identifier rootAnnos is not a lowered local or module value",
+      "count": 1,
+      "shards": {
+        "cds": 1
+      },
+      "example": "test/cds/cds_parser.ts:3725:73: lowering trap: unsupported-expr test/cds/cds_parser.ts:3745:57: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts:3746:12: identifier rootAnnos is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-expr test/pretty_printer/pretty_printer.ts: delete supports ordinary lowered records only",
+      "count": 1,
+      "shards": {
+        "pretty_printer": 1
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:179:31: lowering trap: unsupported-expr test/pretty_printer/pretty_printer.ts:183:7: delete supports ordinary lowered records only"
+    },
+    {
+      "message": "unsupported-expr test/registry.ts: delete supports ordinary lowered records only",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "test/registry.ts:452:62: lowering trap: unsupported-expr test/registry.ts:460:5: delete supports ordinary lowered records only"
     }
   ]
 }

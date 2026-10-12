@@ -1,0 +1,100 @@
+{
+  "baseCommit": "8b2511b",
+  "measuredSemanticCommit": "b67770b98271251b8d5c823eef67e778fcacef79",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "semanticTrees": {
+    "hir": "3b22adea87b0312daf7d7c6fcbea76b32d5b399d",
+    "tsfront": "fa0b7870513a0b8e315352b028d43c83e9d030cd",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d",
+    "tools": "caf54e88127a0ac79564030071e30fae7a31c887"
+  },
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "testTimeout": "40m",
+    "nice": 10,
+    "shardWorkers": 2
+  },
+  "gates": {
+    "short": {"command": "nice -n 10 go test ./... -short -timeout 40m", "status": 0},
+    "Grace": {"command": "nice -n 10 go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m", "status": 0},
+    "vet": {"command": "nice -n 10 go vet ./...", "status": 0},
+    "runnerRegressions": {
+      "commands": ["nice -n 10 node tools/abaplint-tests-report-test.mjs", "nice -n 10 node tools/abaplint-tests-all-test.mjs"],
+      "status": 0
+    },
+    "constructorNameNodeOracle": {
+      "command": "nice -n 10 go test ./tsfront -run ^TestNativeConstructorNameNodeOracle$ -count=1 -timeout 40m",
+      "status": 0,
+      "source": "tsfront/constructor_name_test.go",
+      "coverage": ["field-free Base/Derived", "field-backed native class", "interface-erased instance", "constructor identity and difference", "original JSON own constructor shadow", "single receiver evaluation", "structural/live rows: Node Object versus explicit Go ABI refusal", "opaque function/prototype property refusal", "descriptor name-write refusal"]
+    },
+    "golden": {
+      "command": "GRACE_FACTS_OUT=<scratch>/final-lexer.facts nice -n 10 go test ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m; cmp <scratch>/final-lexer.facts tsfront/testdata/lexer.facts.golden",
+      "status": 0,
+      "SHA256": "619b2efac72d9f0344c2f6e2114b97334ac06eba9604d0467ccf8ad19b99ee07",
+      "justification": "No golden changes. Existing dynamic.get and nominal descriptor storage are reused; no new runtime operation/effect entry. All lexer facts and 61 Grace call sites remain unchanged."
+    },
+    "defaultOutput": {
+      "baseCommit": "8b2511b",
+      "baseBuild": "local git archive, no clone",
+      "sameAbsoluteOutputPath": true,
+      "command": "diff -r <archived-base-output> <candidate-output>",
+      "status": 0,
+      "diffBytes": 0,
+      "files": 6312,
+      "justification": "No default-output changes; the bounded native descriptor read is confined to the opt-in Go emitter/runtime. Default ABAP/all output is unchanged, including the zip."
+    },
+    "allShards": {
+      "command": "ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=lsp,root,objects,rules ABAPITI_TESTS_COMPILER=<scratch>/final-abapiti ABAPITI_TESTS_COMPILER_COMMIT=b67770b nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint docs/evidence/traps-m-final.json",
+      "status": 0,
+      "finalRuns": 1,
+      "fullBaseRuns": 0,
+      "baselineFocusedShards": ["root", "lsp", "objects", "rules"],
+      "candidateFocusedShards": ["lsp"],
+      "shards": 17,
+      "files": 625,
+      "passed": 10949,
+      "activeDenominator": 11060,
+      "failed": 0,
+      "trapped": 108,
+      "trapGroups": 32,
+      "asyncPending": 0,
+      "notRun": 35,
+      "notRunReasons": {"skippedOrFocused": 28, "unregistered": 7, "asyncOrDone": 0},
+      "nodeActiveNotPassing": {"total": 111, "trapped": 108, "unregistered": 3, "skipped": 0, "failed": 0, "asyncPending": 0},
+      "nodePending": {"total": 32, "skipped": 28, "unregistered": 4},
+      "NodeOracle": {"passed": 11060, "failed": 0, "pending": 32},
+      "titlesReconciled": true,
+      "excluded": [],
+      "wiringFailures": [],
+      "unmatched": 0,
+      "creditedNewBodyPasses": 0,
+      "onlyReachedGroupChange": "Help constructor-read conversion group removed; DumpScope class-ToPrimitive group grows 1 to 2. All other groups and shard counts equal batch L."
+    },
+    "zabapgit": {
+      "status": 0,
+      "kit": "v0.1.1",
+      "kitZIP_SHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+      "NodeOracle": "fresh original pinned upstream, TypeScript 6.0.3, tools/hir-go-check.mjs",
+      "GoBuild": "nice -n 10 <candidate-abapiti> abaplint --target go",
+      "rawComparisons": "cmp Node-clean.txt Go-HIR-clean.txt; cmp Node-seeded.txt Go-HIR-seeded.txt; nice -n 10 python3 tools/go-target-check.py <kit> <go-binary>",
+      "workloads": {
+        "clean": {"issues": 0, "GoSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa", "NodeSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa", "kitEqual": true},
+        "seeded": {"issues": 5, "GoSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50", "NodeSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50", "kitEqual": true}
+      }
+    }
+  },
+  "artifactsDeleted": true,
+  "notes": [
+    "No genuine Go/Node value or assertion mismatch encountered or accepted.",
+    "Exact baseline generated-Go frames and original JS values are in docs/traps-m-roots.md; all nine owned scratch-probe result records preserve their original statuses. The complete owned runs also match exactly.",
+    "Four conversion groups are Dell absence/constructor-argument/native-row/live-config handoffs. In particular Message defaults empty strings in its original constructor, but Go refuses undefined at the caller before that guard.",
+    "The exact Help fault is its first tag-2 native-instance get with no dynamic adapter, not a nil second get or a string conversion. Existing stable nominal metadata suffices for the bounded general repair; structural/live config storage and function property/name writes are not widened.",
+    "One early interrupted scratch setup left a temporary oracle directory; deleted. A wrong mocha install path and unlowered computed/quoted constructor field and angle-assertion test prototypes were corrected before certification. No original test or assertion was modified.",
+    "Generated builds, closures, archives, default outputs, kit, raw records, profiles, facts and logs are deleted. No new site override, transpiler clone or push."
+  ]
+}

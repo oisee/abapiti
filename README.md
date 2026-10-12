@@ -5,19 +5,19 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
-> **11,022 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
+> **11,032 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
 >
-> Progress towards [100 % of abaplint](#goal-100--of-abaplint). Updated 12 Oct 2026 ([train 10 verification](docs/train-10.md): union fields, config shapes, traps K/L, and the namespace rename repair; all 17 shards measured together).
+> Progress towards [100 % of abaplint](#goal-100--of-abaplint). Updated 12 Oct 2026 ([train 11 verification](docs/train-11.md): train 10 plus final ABI and traps M; all 17 shards measured together).
 >
-> 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17) → 10,167 → 10,255 → 10,452 → 10,614 → 10,934 → 11,022
+> 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17) → 10,167 → 10,255 → 10,452 → 10,614 → 10,934 → 11,022 → 11,032
 >
 > | | Now | Target |
 > |---|---:|---:|
-> | abaplint tests passing, all 17 shards | **11,022** of 11,060 (99.7 %) | 11,060 |
+> | abaplint tests passing, all 17 shards | **11,032** of 11,060 (99.7 %) | 11,060 |
 > | wrong answers (tests that run and disagree with Node) | **0** | 0 |
 > | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **37** (644 → 33 in train 3 → 48 → 42 → 37) | 0 |
 >
-> All 625 test files were measured against the original Node suite: 35 tests trapped, 0 async-pending, and 35 not-run (7 not yet registered on Go, 28 skipped or focused). All gates pass.
+> All 625 test files were measured against the original Node suite: 25 tests trapped, 0 async-pending, and 35 not-run (7 not yet registered on Go, 28 skipped or focused). The [remaining Node-active tail](docs/train-11-remaining.md) is 25 traps and 3 unregistered tests. All verification gates pass; five generated output files differ from main as explained in the verification report.
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -52,11 +52,11 @@ A seeded variant with one error per rule equals vanilla on every host too. What 
 
 The next goal is the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files and 11,060 mocha tests; on Node all of them pass. The test files themselves are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run first on TS-HG@Go, the fastest host. The other hosts follow, and nothing goes to A4H before it passes on OSGO/OSGB. Optimisations wait until this is done.
 
-Where it stands (11 Oct 2026):
+Where it stands (12 Oct 2026):
 
 | Measure | Today | Target |
 |---|---|---|
-| abaplint tests passing on the compiled abaplint (TS-HG@Go) | **11,022 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
+| abaplint tests passing on the compiled abaplint (TS-HG@Go) | **11,032 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
 | Functions the suite and all rules need that are still traps ([`tools/fit-gap.mjs`](tools/fit-gap.mjs)) | 529 of 3,366 | 0 |
 | Unique blocking diagnostics when lowering all of core without pruning (`abapiti abaplint --full`) | **37** (644 → 33 in train 3 → 48 → 42 → 37) | 0 |
 

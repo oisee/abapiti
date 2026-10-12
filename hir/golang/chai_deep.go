@@ -84,6 +84,14 @@ func chaiBox(v any) *dynamic {
  if s,ok:=v.(interface{dynamicSource() *dynamic});ok && s.dynamicSource()!=nil {panic(newTrap("chai parsed/native snapshot escape is unsupported"))}
  return box(v)
 }
+// Enumeration reads the original entries on every call. A real Map cannot
+// acquire object properties merely because it uses the same runtime container.
+func (m *orderedMap[K,V]) chaiEntries() []entry[jsString,*dynamic] {
+ if !m.enumerableRecord {panic(newTrap("chai object enumerable keys are unsupported"))}
+ out:=make([]entry[jsString,*dynamic],0,len(m.Entries))
+ for _,e:=range m.Entries {k,ok:=any(e.Key).(jsString);if !ok {panic(newTrap("record keys require string storage"))};out=append(out,entry[jsString,*dynamic]{k,chaiBox(e.Value)})}
+ return out
+}
 type chaiArray interface { chaiLength() int; chaiAt(int) *dynamic; chaiHas(int) bool }
 func (a *array[T]) chaiLength() int {return len(a.Items)}
 func (a *array[T]) chaiAt(i int) *dynamic {v:=a.get(int32(i));if !v.Has {return nil};return chaiBox(v.Value)}

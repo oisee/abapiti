@@ -39,8 +39,7 @@ func TestPadStartAndFiniteParseFloatNodeOracle(t *testing.T) {
 	if got != strings.TrimSpace(string(out)) {
 		t.Fatalf("Go %q Node %q", got, out)
 	}
-	// NaN/Infinity cannot flow as HIR Number. Independently measure Node, then
-	// require a typed finite-result refusal, not a fabricated zero/undefined.
+	// Compare nonfinite Number values with Node through JS string conversion.
 	for _, s := range []string{"", "abc", "Infinity", "-Infinity", "1e400"} {
 		out, err := exec.Command("node", "-e", `console.log(String(parseFloat(process.argv[1])))`, "--", s).CombinedOutput()
 		if err != nil {
@@ -50,8 +49,8 @@ func TestPadStartAndFiniteParseFloatNodeOracle(t *testing.T) {
 		if want != "NaN" && want != "Infinity" && want != "-Infinity" {
 			t.Fatal(s, want)
 		}
-		got := runGoHIR(t, prog, "defer func(){if x:=recover();x!=nil {fmt.Print(x)}}();fmt.Print("+goEntry("input.ts.Probe", "parse")+"(str("+strconv.Quote(s)+")))")
-		if !strings.Contains(got, "parseFloat requires a finite result") {
+		got := runGoHIR(t, prog, "fmt.Print(numberString("+goEntry("input.ts.Probe", "parse")+"(str("+strconv.Quote(s)+"))).String())")
+		if got != want {
 			t.Fatal(s, got)
 		}
 	}

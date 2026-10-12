@@ -972,7 +972,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			eq(t, T(Bool))
 		}
 	case "object.checkedClassView":
-		if a.Kind != ClassRef || t.Kind != ClassRef || !(v.accepts(a, t) || v.accepts(t, a)) {
+		if a.Kind != ClassRef || t.Kind != ClassRef || !(v.accepts(a, t) || v.accepts(t, a) || v.sharedClassBase(a.Name, t.Name)) {
 			v.fail(e.Node, "checked class view needs related nominal class references")
 		}
 		args(nil)
@@ -1010,8 +1010,8 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		}
 		args(nil)
 	case "dynamic.arrayView":
-		if a.Kind != Dynamic || t.Kind != Array || len(t.Args) != 1 || t.Args[0].Kind != String {
-			v.fail(e.Node, "dynamic.arrayView needs Dynamic in and a string array out")
+		if a.Kind != Dynamic || t.Kind != Array || len(t.Args) != 1 || (t.Args[0].Kind != String && t.Args[0].Kind != ClassRef) {
+			v.fail(e.Node, "dynamic.arrayView needs Dynamic in and a string or class-reference array out")
 		}
 		args(nil)
 	case "dynamic.asRef":
@@ -1029,4 +1029,17 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 	default:
 		v.fail(e.Node, "unknown special op "+e.Op)
 	}
+}
+
+// Sibling static views may carry a different runtime class; the backend still
+// checks the actual nominal target before publishing the reference.
+func (v *verifier) sharedClassBase(a, b string) bool {
+	for x := v.classes[a]; x != nil; x = v.classes[x.Super] {
+		for y := v.classes[b]; y != nil; y = v.classes[y.Super] {
+			if x.Name == y.Name {
+				return true
+			}
+		}
+	}
+	return false
 }

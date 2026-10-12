@@ -23,8 +23,14 @@ func (l *lowerer) tempVar(at *ast.Node, t hir.Type) *hir.Expr {
 	l.serial++
 	name := "t" + itoa(l.serial)
 	l.declare(name, t)
-	l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(at), Name: name, Type: t,
-		X: &hir.Expr{Kind: hir.New, Node: l.node(at), Type: t}})
+	allocation := &hir.Expr{Kind: hir.New, Node: l.node(at), Type: t}
+	if l.unprunedFeatures && t.Kind == hir.OrderedMap && at != nil && at.Kind == ast.KindObjectLiteralExpression {
+		// Keep allocation provenance: a record and a JS Map share physical
+		// storage, but only the record's entries are enumerable properties.
+		keys := []string{}
+		allocation.OwnKeys = &keys
+	}
+	l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(at), Name: name, Type: t, X: allocation})
 	return hir.V(name, t)
 }
 

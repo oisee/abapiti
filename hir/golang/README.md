@@ -12,8 +12,11 @@ Generated identifiers are deliberately internal to the chosen package.
 Number is float64, I32 is int32, and I64 is int64. Integer arithmetic uses exact
 intermediates to detect native overflow; CheckIntegerOverflow additionally traps
 outside [-9007199254740991, 9007199254740991]. Integer division truncates toward
-zero. Number literals and arithmetic retain the ABAP backend's finite-number,
-nonzero-literal-divisor and unsupported-general-remainder limits.
+zero. Portable/pruned Number workloads retain finite arithmetic. Full TS
+closures using the nonfinite parser operations carry NaN and Infinity as float64
+values, with JS comparisons, truthiness and arithmetic propagation. Number literals still require finite values, division still needs a nonzero
+literal divisor, and general remainder remains unsupported. See [the final ABI handoffs](../../docs/final-abi-roots.md) for the measured
+Go domains and explicit ABAP refusals.
 
 Strings have a comparable UTF-16LE backing, with sections and indices measured
 in code units. Sections can retain individual surrogates. Conversion to Go text
