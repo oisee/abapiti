@@ -1,0 +1,443 @@
+{
+  "command": "ABAPITI_TESTS_COMPILER=\"$COMPILER\" ABAPITI_TESTS_COMPILER_COMMIT=\"$REVISION\" ABAPITI_TESTS_SHARDS=lsp GOFLAGS=-p=2 node tools/abaplint-tests-all.mjs \"$UPSTREAM\" \"$SCRATCH/bisect-$VARIANT.json\"",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "combinationParents": [
+    "6bb319186faa151596e0b91b5851642a6562a767",
+    "d6c4f4a90c94c44376a2a20ecb85d4e38f710c6c"
+  ],
+  "firstWrongAnswerCombination": "union-traps",
+  "variants": [
+    {
+      "variant": "main",
+      "revision": "e2ba6ac0f447ff8d989a7b50f2dae7fe5182cbb5",
+      "tree": "f3cf051aa71ab864a407201c3d60bf4a496e8cce",
+      "shards": [
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 178,
+          "failed": 0,
+          "trapped": 10,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "shards": {
+            "lsp": 3
+          },
+          "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168873 (src/lsp/rename.ts:109:52): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "test/lsp/_apply_edit.ts:13:3: lowering trap: unsupported-lsp-call test/lsp/_apply_edit.ts:25:18: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts:27:18: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered"
+        },
+        {
+          "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169258 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts:47:26: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        }
+      ]
+    },
+    {
+      "variant": "union",
+      "revision": "6bb319186faa151596e0b91b5851642a6562a767",
+      "tree": "1ed6e6744313aed9458d7254959583b99a5600e1",
+      "shards": [
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 178,
+          "failed": 0,
+          "trapped": 10,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "shards": {
+            "lsp": 3
+          },
+          "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168873 (src/lsp/rename.ts:109:52): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "test/lsp/_apply_edit.ts:13:3: lowering trap: unsupported-lsp-call test/lsp/_apply_edit.ts:25:18: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts:27:18: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered"
+        },
+        {
+          "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169258 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts:47:26: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        }
+      ]
+    },
+    {
+      "variant": "config",
+      "revision": "63120fdf9869bea292fd503553fdd51d63291828",
+      "tree": "3d0b749350cc3d7d27aecc26da5332788dda1bf0",
+      "shards": [
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 178,
+          "failed": 0,
+          "trapped": 10,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "shards": {
+            "lsp": 3
+          },
+          "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168889 (src/lsp/rename.ts:109:52): assignment type mismatch"
+        },
+        {
+          "message": "unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "test/lsp/_apply_edit.ts:13:3: lowering trap: unsupported-lsp-call test/lsp/_apply_edit.ts:25:18: vscode-languageserver-types CreateFile.is with 1 arguments is not lowered; unsupported-lsp-call test/lsp/_apply_edit.ts:27:18: vscode-languageserver-types DeleteFile.is with 1 arguments is not lowered"
+        },
+        {
+          "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169274 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only; unsupported-json src/lsp/help.ts:47:26: JSON.stringify requires exactly one argument; revivers/replacers/space are unsupported"
+        }
+      ]
+    },
+    {
+      "variant": "traps",
+      "revision": "d6c4f4a90c94c44376a2a20ecb85d4e38f710c6c",
+      "tree": "0e741814078043d20985f3509477845b155eb97b",
+      "shards": [
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 178,
+          "failed": 0,
+          "trapped": 10,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "shards": {
+            "lsp": 3
+          },
+          "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168878 (src/lsp/rename.ts:109:52): assignment type mismatch"
+        },
+        {
+          "message": "test/lsp/_apply_edit.ts: HIR verification: unresolved field range",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "test/lsp/_apply_edit.ts:37:3: lowering trap: test/lsp/_apply_edit.ts:37:3: HIR verification: node 260552 (test/lsp/_apply_edit.ts:49:11): unresolved field range"
+        },
+        {
+          "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169263 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+        }
+      ]
+    },
+    {
+      "variant": "union-traps",
+      "revision": "45227fe766c69d37f4fdb7e6bde6a6bae8b2ca89",
+      "tree": "1155bb7401b8c9876eb22f12a53bf6ee1176f34d",
+      "failed": 1,
+      "failures": [
+        {
+          "title": "LSP, actual rename, global class rename global class, add namespace",
+          "passed": false,
+          "message": "assertion failed: expected 0 to equal 1",
+          "status": "failed"
+        }
+      ]
+    },
+    {
+      "variant": "train9",
+      "revision": "a8038ab",
+      "tree": "89fb0545cecac59a62d4a3668fd5d3cd6ba9b778",
+      "failed": 1,
+      "failures": [
+        {
+          "title": "LSP, actual rename, global class rename global class, add namespace",
+          "passed": false,
+          "message": "assertion failed: expected 0 to equal 1",
+          "status": "failed"
+        }
+      ]
+    }
+  ]
+}
