@@ -42,6 +42,10 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 			typ := l.mapCheckerType(n, part)
 			c := l.classByName(typ.Name)
 			if typ.Kind == hir.InterfaceRef {
+				if strings.HasPrefix(typ.Name, "closure.") {
+					l.diagf(n, "unsupported-expr", "constructor metadata of callable unions is unsupported")
+					return nil, true
+				}
 				// Method interfaces already carry the original runtime object;
 				// the descriptor operation refuses nonnative implementations.
 				continue

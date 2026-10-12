@@ -7,6 +7,18 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
+// Callable-storage classes model JS functions, not native class prototypes.
+func (e *emitter) callableClass(c *hir.Class) bool {
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for _, name := range base.Implements {
+			if name == "closure.thunk" || strings.HasPrefix(name, "closure.function.") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // The native catalogue is closed at emission. Each case calls the concrete
 // virtual method and boxes its actual result, without a constituent downcast
 // or a shared return-layout requirement. Dynamic property/function storage is
@@ -26,7 +38,7 @@ func (b *body) nativeCall0(x *hir.Expr, receiver string) string {
 	cases := 0
 	out.WriteString("func(d *dynamic) *dynamic {if d==nil || d.Tag!=2 {panic(newTrap(\"native method call requires a concrete class\"))};switch v:=d.Value.(type) {")
 	for _, c := range e.p.Classes {
-		if c.Structural || e.fieldOwner(c, name) != nil {
+		if c.Structural || e.callableClass(c) || e.fieldOwner(c, name) != nil {
 			continue
 		}
 		unsafe := false
@@ -34,7 +46,7 @@ func (b *body) nativeCall0(x *hir.Expr, receiver string) string {
 			// Accessor slots use synthetic get.* HIR names. They may shadow
 			// an inherited JS method without replacing its virtual HIR slot.
 			// Refuse these prototype-dependent layouts, including setters.
-			unsafe = unsafe || base.CoercionUnsafe || base.ViewUnsafe
+			unsafe = unsafe || base.CoercionUnsafe || base.PrototypeAccessors
 		}
 		if unsafe {
 			continue

@@ -80,6 +80,9 @@ type Class struct {
 	// CoercionUnsafe retains omitted computed prototype hooks so string
 	// conversion cannot silently substitute Object.prototype.toString.
 	CoercionUnsafe bool `json:",omitempty"`
+	// PrototypeAccessors records source getter/setter layouts separately from
+	// data-view unsafety, which also includes unrelated storage constraints.
+	PrototypeAccessors bool `json:",omitempty"`
 	// Scoped classes use a fresh lexical constructor descriptor per evaluation.
 	Scoped bool `json:",omitempty"`
 	// PrimitiveReads permits data views to read primitive backing values when

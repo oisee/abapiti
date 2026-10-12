@@ -11,6 +11,11 @@ func (e *emitter) stringCoercion(c *hir.Class) {
 	if e.liveClasses[c.Name] {
 		e.line("if self.viewSource!=nil {return dynStringCoercion(self.viewSource,depth)}")
 	}
+	if e.callableClass(c) {
+		e.line("panic(newTrap(\"function ToPrimitive outside certified string coercion\"))")
+		e.line("}")
+		return
+	}
 	unsafe := e.fieldOwner(c, "toString") != nil || e.fieldOwner(c, "valueOf") != nil
 	for base := c; base != nil; base = e.classBy(base.Super) {
 		unsafe = unsafe || base.CoercionUnsafe || base.Name == "builtin.Error"
