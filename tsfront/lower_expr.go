@@ -2895,6 +2895,9 @@ func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 	case hir.Bool:
 		return &hir.Expr{Kind: hir.Conditional, Type: s, X: x, Y: hir.L(s, "true"), Z: hir.L(s, "false")}
 	case hir.Dynamic:
+		if l.unprunedFeatures {
+			return l.rtOp("dynamic.recordString", x, s)
+		}
 		return l.rtOp("dynamic.toString", x, s)
 	case hir.ClassRef:
 		if x.Type.Name == "builtin.Error" {

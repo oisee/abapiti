@@ -2155,10 +2155,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		b.boxDynamic(n, a, x.X.Type)
 		return
-	case "dynamic.typeof", "dynamic.toString":
+	case "dynamic.typeof", "dynamic.toString", "dynamic.recordString":
+		if x.Op == "dynamic.recordString" {
+			b.line("IF " + a + " IS BOUND.")
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": ABAP record string conversion requires primitive dynamic storage"})
+			b.line("ENDIF.")
+			b.line("ENDIF.")
+		}
 		b.line("IF " + a + " IS BOUND.")
 		method := "type_of"
-		if x.Op == "dynamic.toString" {
+		if x.Op == "dynamic.toString" || x.Op == "dynamic.recordString" {
 			method = "to_string"
 		}
 		b.line(n + " = " + a + "->" + method + "( ).")

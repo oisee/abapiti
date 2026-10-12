@@ -115,6 +115,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	if e.recordString {
+		runtime += recordStringSource
+	}
 	if e.nonfiniteNumbers {
 		runtime = nonfiniteRuntime(runtime)
 	}
@@ -215,6 +218,7 @@ type emitter struct {
 	boxedShapes       map[string]bool
 	usesArrayPresence bool
 	usesArrayDeletion bool
+	recordString      bool
 	nonfiniteNumbers  bool
 	usesTypedCatch    bool
 }

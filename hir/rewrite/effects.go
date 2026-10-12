@@ -84,6 +84,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"chai.deepEqual":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai data graph; unproven enumerable storage refuses; ABAP refuses."},
 	"chai.deepInclude":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai subset assertion; unsupported property/type domains refuse; ABAP refuses."},
 	"dynamic.strictEquals":      {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"dynamic.recordString":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.toString":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.typeof":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"i32.toString":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},

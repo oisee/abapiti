@@ -327,7 +327,7 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			return nil, true
 		}
 		if s.Type.Kind == hir.Dynamic {
-			s = l.rtOp("dynamic.toString", s, hir.T(hir.String))
+			s = l.primitiveString(args[0], s)
 		}
 		if s.Type.Kind != hir.String {
 			l.diagf(n, "unsupported-call", "parseFloat requires a typed string argument")
@@ -345,7 +345,7 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 		}
 		if s.Type.Kind == hir.Dynamic {
 			// parseInt converts its argument with String() first.
-			s = l.rtOp("dynamic.toString", s, hir.T(hir.String))
+			s = l.primitiveString(args[0], s)
 		}
 		if s.Type.Kind != hir.String {
 			l.diagf(n, "unsupported-call", "parseInt needs a string argument")

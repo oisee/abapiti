@@ -22,7 +22,7 @@ func TestNonfiniteNumberComparisonNodeOracle(t *testing.T) {
 	source := `class Probe {static run():string {
  const nan=parseFloat("");const inf=parseFloat("Infinity!");const neg=parseFloat("-Infinity");
  const erased:any=nan;const values=[nan,inf,neg];
- return isNaN(nan)+":"+(nan===nan)+":"+(nan!==nan)+":"+(nan<0)+":"+(nan>=0)+":"+(inf>1e300)+":"+(neg<0)+":"+(nan ? "yes":"no")+":"+(erased ? "yes":"no")+":"+isNaN(nan+1)+":"+String(-inf)+":"+String(parseInt("",10))+":"+String(parseInt("9".padStart(400,"9"),10))+":"+JSON.stringify(values);
+ return isNaN(nan)+":"+(nan===nan)+":"+(nan!==nan)+":"+(nan<0)+":"+(nan>=0)+":"+(inf>1e300)+":"+(neg<0)+":"+(nan ? "yes":"no")+":"+(erased ? "yes":"no")+":"+isNaN(nan+1)+":"+String(-inf)+":"+String(parseInt("",10))+":"+String(parseInt("9".padStart(400,"9"),10))+":"+JSON.stringify(values)+":"+String(parseInt(JSON.parse("{}"),10))+":"+String(parseFloat(JSON.parse("{}")));
  }} `
 	want := conversionOracle(t, source)
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
@@ -64,5 +64,20 @@ func TestCommonAncestorArgumentAssertionNodeOracle(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
 	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
 		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
+func TestPlainRecordStringNodeOracle(t *testing.T) {
+	source := `class Probe {static count=0;static once(value:any):any {Probe.count=Probe.count+1;return value;}
+ static run():string {const parsed=JSON.parse('{"nested":{"value":1}}');const native:any={};native.value=parsed;return String(Probe.once(parsed))+":"+("value="+native)+":"+String(undefined)+":"+String(null)+":"+Probe.count;}
+ static hooks():string {return String(JSON.parse('{"toString":null}'));}}`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	got := runGoHIR(t, p, fmt.Sprintf(`defer func(){if _,ok:=recover().(trap);!ok {panic("hook boundary escaped")};fmt.Println("refused")}();%s()`, goEntry("probe.ts.Probe", "hooks")))
+	if got != "refused\n" {
+		t.Fatal(got)
 	}
 }
