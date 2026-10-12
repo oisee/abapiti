@@ -1,0 +1,546 @@
+{
+  "schema": "abapiti-osgo-classview-v1",
+  "baseCommit": "07714f1ed674d277f4d6bb17bf4db60aa8cebcf6",
+  "implementationCommit": "526a857",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "manifestSHA256": "8bc69eca3e2735470d1f5aa2b955127eaf378f13cd0b781c750e2493185fa189",
+  "roots": 625,
+  "shards": 17,
+  "inline": "classic",
+  "countingTool": "origin/feat/osgo-suite-m0:tsfront/abaplint_tests_abap.go MeasureABAPTestGap; origin/feat/osgo-suite-m0:hir/abap/emit.go Audit/Refusal collector",
+  "osgoExecuted": false,
+  "before": {
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "Gap": {
+      "files": 2166,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "array.delete",
+        "array.has",
+        "chai.arrayInclude",
+        "chai.box",
+        "chai.deepEqual",
+        "chai.deepInclude",
+        "chai.members",
+        "chai.throwMatch",
+        "classvalue.newArgs",
+        "dynamic.call0",
+        "dynamic.delete",
+        "json.indent",
+        "json.stringifySubset",
+        "json5.parse",
+        "lsp.isCreateFile",
+        "lsp.isDeleteFile",
+        "lsp.isRenameFile",
+        "lsp.isTextDocumentEdit",
+        "number.ceil",
+        "object.checkedClassView",
+        "string.padStart",
+        "string.parseFloat",
+        "string.parseFloatNumber",
+        "string.sha1Hex",
+        "string.splitRegex",
+        "xml.parseWithErrors"
+      ],
+      "runtime": [
+        {
+          "reason": "array.has",
+          "sites": 23,
+          "examples": [
+            "closure.121552.invoke:0:46 ()",
+            "closure.162302.invoke:0:48 ()",
+            "closure.162439.invoke:0:33 ()"
+          ]
+        },
+        {
+          "reason": "chai.arrayInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234574:55 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.box",
+          "sites": 10,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:12 (runtime/chai.ts:53:40)",
+            "runtime/chai.ts.Assertion.contain:234545:15 (runtime/chai.ts:53:52)",
+            "runtime/chai.ts.Assertion.contain:234574:56 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.deepEqual",
+          "sites": 2,
+          "examples": [
+            "runtime/chai.ts.Assertion.eql:234434:10 (runtime/chai.ts:35:76)",
+            "runtime/chai.ts.Assertion.equal:234387:11 (runtime/chai.ts:27:44)"
+          ]
+        },
+        {
+          "reason": "chai.deepInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:11 (runtime/chai.ts:53:40)"
+          ]
+        },
+        {
+          "reason": "chai.members",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.members:234597:10 (runtime/chai.ts:67:28)"
+          ]
+        },
+        {
+          "reason": "chai.throwMatch",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.throw:234527:17 (runtime/chai.ts:49:31)"
+          ]
+        },
+        {
+          "reason": "classvalue.newArgs",
+          "sites": 2,
+          "examples": [
+            "src/artifacts_objects.ts.ArtifactsObjects.buildObjectMap:0:7 ()",
+            "src/artifacts_objects.ts.ArtifactsObjects.newObject:0:160 ()"
+          ]
+        },
+        {
+          "reason": "dynamic.call0",
+          "sites": 6,
+          "examples": [
+            "closure.131654.invoke:131710:61 (test/cds/cds_parser.ts:3852:17)",
+            "closure.131654.invoke:131710:62 (test/cds/cds_parser.ts:3852:17)",
+            "src/lsp/help.ts.Help.outputNodes:357917:39 (src/lsp/help.ts:243:58)"
+          ]
+        },
+        {
+          "reason": "dynamic.delete",
+          "sites": 3,
+          "examples": [
+            "closure.163115.invoke:163142:20 (test/pretty_printer/pretty_printer.ts:183:14)",
+            "closure.165667.invoke:165693:19 (test/registry.ts:460:12)",
+            "src/lsp/help.ts.Help.dumpDDLS:357329:55 (src/lsp/help.ts:46:5)"
+          ]
+        },
+        {
+          "reason": "json.indent",
+          "sites": 3,
+          "examples": [
+            "closure.132424.invoke:132437:23 (test/config.ts:73:39)",
+            "src/lsp/help.ts.Help.dumpDDLS:357338:67 (src/lsp/help.ts:47:41)",
+            "src/lsp/help.ts.Help.dumpInfo:357486:24 (src/lsp/help.ts:103:33)"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset",
+          "sites": 34,
+          "examples": [
+            "closure.132323.invoke:132348:38 (test/config.ts:40:44)",
+            "closure.132363.invoke:132374:7 (test/config.ts:47:44)",
+            "closure.132391.invoke:132409:29 (test/config.ts:62:44)"
+          ]
+        },
+        {
+          "reason": "json5.parse",
+          "sites": 1,
+          "examples": [
+            "src/config.ts.Config.constructor:347437:4 (src/config.ts:99:31)"
+          ]
+        },
+        {
+          "reason": "lsp.isCreateFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451409:33 (test/lsp/_apply_edit.ts:25:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isDeleteFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451433:42 (test/lsp/_apply_edit.ts:27:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isRenameFile",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374587:30 (src/objects/rename/renamer.ts:107:32)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451390:25 (test/lsp/_apply_edit.ts:23:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isTextDocumentEdit",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374561:16 (src/objects/rename/renamer.ts:104:31)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451371:18 (test/lsp/_apply_edit.ts:21:39)"
+          ]
+        },
+        {
+          "reason": "number.ceil",
+          "sites": 9,
+          "examples": [
+            "src/ddic.ts.DDIC.textToType:350199:472 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350306:418 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350413:364 (src/ddic.ts:386:40)"
+          ]
+        },
+        {
+          "reason": "object.checkedClassView",
+          "sites": 77,
+          "examples": [
+            "closure.121425.invoke:121471:40 (test/abap/types/types.ts:33:18)",
+            "closure.150518.invoke:150556:47 (test/objects/class.ts:333:18)",
+            "closure.150585.invoke:150623:47 (test/objects/class.ts:367:18)"
+          ]
+        },
+        {
+          "reason": "string.padStart",
+          "sites": 3,
+          "examples": [
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:32 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:51 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:64 ()"
+          ]
+        },
+        {
+          "reason": "string.parseFloatNumber",
+          "sites": 3,
+          "examples": [
+            "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:370916:161 (src/objects/number_range.ts:51:44)",
+            "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+            "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+          ]
+        },
+        {
+          "reason": "string.sha1Hex",
+          "sites": 1,
+          "examples": [
+            "src/rules/downport.ts.Downport.uniqueName:409750:46 (src/rules/downport.ts:3174:53)"
+          ]
+        },
+        {
+          "reason": "string.splitRegex",
+          "sites": 2,
+          "examples": [
+            "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+            "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+          ]
+        },
+        {
+          "reason": "xml.parseWithErrors",
+          "sites": 3,
+          "examples": [
+            "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:362225:11 (src/objects/_abstract_object.ts:140:101)",
+            "src/objects/function_group.ts.FunctionGroup.getTextSymbols:368034:17 (src/objects/function_group.ts:158:111)",
+            "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:435906:2 (src/rules/remove_descriptions.ts:106:103)"
+          ]
+        }
+      ],
+      "refusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 25264 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 25264 src/objects/_dynpros.ts:27:19]",
+            "node 293890 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 293890 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 295597 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 295597 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "classOf on the object root is not emitted",
+          "sites": 3,
+          "examples": [
+            "node 351748 (src/ddl/ddl_parser.ts:97:20): classOf on the object root is not emitted [hasKey@src/ddl/ddl_parser.ts:94:3; node 351748 src/ddl/ddl_parser.ts:97:20]",
+            "node 357914 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 357914 src/lsp/help.ts:243:19]",
+            "node 357924 (src/lsp/help.ts:243:19): classOf on the object root is not emitted [outputNodes@src/lsp/help.ts:235:3; node 357924 src/lsp/help.ts:243:19]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 121213 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 121236 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 121259 test/abap/types/message.ts:23:12]"
+          ]
+        },
+        {
+          "reason": "erased structural object.has is not emitted on ABAP",
+          "sites": 2,
+          "examples": [
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@src/objects/rename/renamer.ts:125:3; node 0 ]",
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@test/lsp/_apply_edit.ts:37:3; node 0 ]"
+          ]
+        },
+        {
+          "reason": "fresh lexical constructor descriptors are unsupported in ABAP",
+          "sites": 1,
+          "examples": [
+            "node 72913: fresh lexical constructor descriptors are unsupported in ABAP [invoke@test/abap/structures/_combi.ts:276:39; node 72913 test/abap/structures/_combi.ts:277:3]"
+          ]
+        }
+      ]
+    }
+  },
+  "after": {
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "Gap": {
+      "files": 2166,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "array.delete",
+        "array.has",
+        "chai.arrayInclude",
+        "chai.box",
+        "chai.deepEqual",
+        "chai.deepInclude",
+        "chai.members",
+        "chai.throwMatch",
+        "dynamic.call0",
+        "dynamic.delete",
+        "json.indent",
+        "json.stringifySubset",
+        "json5.parse",
+        "lsp.isCreateFile",
+        "lsp.isDeleteFile",
+        "lsp.isRenameFile",
+        "lsp.isTextDocumentEdit",
+        "number.ceil",
+        "string.padStart",
+        "string.parseFloat",
+        "string.parseFloatNumber",
+        "string.sha1Hex",
+        "string.splitRegex",
+        "xml.parseWithErrors"
+      ],
+      "runtime": [
+        {
+          "reason": "array.has",
+          "sites": 23,
+          "examples": [
+            "closure.121552.invoke:0:46 ()",
+            "closure.162302.invoke:0:48 ()",
+            "closure.162439.invoke:0:33 ()"
+          ]
+        },
+        {
+          "reason": "chai.arrayInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234574:55 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.box",
+          "sites": 10,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:12 (runtime/chai.ts:53:40)",
+            "runtime/chai.ts.Assertion.contain:234545:15 (runtime/chai.ts:53:52)",
+            "runtime/chai.ts.Assertion.contain:234574:56 (runtime/chai.ts:62:35)"
+          ]
+        },
+        {
+          "reason": "chai.deepEqual",
+          "sites": 2,
+          "examples": [
+            "runtime/chai.ts.Assertion.eql:234434:10 (runtime/chai.ts:35:76)",
+            "runtime/chai.ts.Assertion.equal:234387:11 (runtime/chai.ts:27:44)"
+          ]
+        },
+        {
+          "reason": "chai.deepInclude",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.contain:234543:11 (runtime/chai.ts:53:40)"
+          ]
+        },
+        {
+          "reason": "chai.members",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.members:234597:10 (runtime/chai.ts:67:28)"
+          ]
+        },
+        {
+          "reason": "chai.throwMatch",
+          "sites": 1,
+          "examples": [
+            "runtime/chai.ts.Assertion.throw:234527:17 (runtime/chai.ts:49:31)"
+          ]
+        },
+        {
+          "reason": "dynamic.call0",
+          "sites": 6,
+          "examples": [
+            "closure.131654.invoke:131710:61 (test/cds/cds_parser.ts:3852:17)",
+            "closure.131654.invoke:131710:62 (test/cds/cds_parser.ts:3852:17)",
+            "src/lsp/help.ts.Help.outputNodes:357917:39 (src/lsp/help.ts:243:58)"
+          ]
+        },
+        {
+          "reason": "dynamic.delete",
+          "sites": 3,
+          "examples": [
+            "closure.163115.invoke:163142:20 (test/pretty_printer/pretty_printer.ts:183:14)",
+            "closure.165667.invoke:165693:19 (test/registry.ts:460:12)",
+            "src/lsp/help.ts.Help.dumpDDLS:357329:55 (src/lsp/help.ts:46:5)"
+          ]
+        },
+        {
+          "reason": "json.indent",
+          "sites": 3,
+          "examples": [
+            "closure.132424.invoke:132437:23 (test/config.ts:73:39)",
+            "src/lsp/help.ts.Help.dumpDDLS:357338:67 (src/lsp/help.ts:47:41)",
+            "src/lsp/help.ts.Help.dumpInfo:357486:24 (src/lsp/help.ts:103:33)"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset",
+          "sites": 34,
+          "examples": [
+            "closure.132323.invoke:132348:38 (test/config.ts:40:44)",
+            "closure.132363.invoke:132374:7 (test/config.ts:47:44)",
+            "closure.132391.invoke:132409:29 (test/config.ts:62:44)"
+          ]
+        },
+        {
+          "reason": "json5.parse",
+          "sites": 1,
+          "examples": [
+            "src/config.ts.Config.constructor:347437:4 (src/config.ts:99:31)"
+          ]
+        },
+        {
+          "reason": "lsp.isCreateFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451409:33 (test/lsp/_apply_edit.ts:25:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isDeleteFile",
+          "sites": 1,
+          "examples": [
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451433:42 (test/lsp/_apply_edit.ts:27:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isRenameFile",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374587:30 (src/objects/rename/renamer.ts:107:32)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451390:25 (test/lsp/_apply_edit.ts:23:40)"
+          ]
+        },
+        {
+          "reason": "lsp.isTextDocumentEdit",
+          "sites": 2,
+          "examples": [
+            "src/objects/rename/renamer.ts.Renamer.apply:374561:16 (src/objects/rename/renamer.ts:104:31)",
+            "test/lsp/_apply_edit.ts.ApplyWorkSpaceEdit.apply:451371:18 (test/lsp/_apply_edit.ts:21:39)"
+          ]
+        },
+        {
+          "reason": "number.ceil",
+          "sites": 9,
+          "examples": [
+            "src/ddic.ts.DDIC.textToType:350199:472 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350306:418 (src/ddic.ts:386:40)",
+            "src/ddic.ts.DDIC.textToType:350413:364 (src/ddic.ts:386:40)"
+          ]
+        },
+        {
+          "reason": "string.padStart",
+          "sites": 3,
+          "examples": [
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:32 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:51 ()",
+            "test/abap/syntax/basic_variables.ts.module.buildDatabaseTable:0:64 ()"
+          ]
+        },
+        {
+          "reason": "string.parseFloatNumber",
+          "sites": 3,
+          "examples": [
+            "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:370916:161 (src/objects/number_range.ts:51:44)",
+            "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+            "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+          ]
+        },
+        {
+          "reason": "string.sha1Hex",
+          "sites": 1,
+          "examples": [
+            "src/rules/downport.ts.Downport.uniqueName:409750:46 (src/rules/downport.ts:3174:53)"
+          ]
+        },
+        {
+          "reason": "string.splitRegex",
+          "sites": 2,
+          "examples": [
+            "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+            "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+          ]
+        },
+        {
+          "reason": "xml.parseWithErrors",
+          "sites": 3,
+          "examples": [
+            "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:362225:11 (src/objects/_abstract_object.ts:140:101)",
+            "src/objects/function_group.ts.FunctionGroup.getTextSymbols:368034:17 (src/objects/function_group.ts:158:111)",
+            "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:435906:2 (src/rules/remove_descriptions.ts:106:103)"
+          ]
+        }
+      ],
+      "refusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 25264 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 25264 src/objects/_dynpros.ts:27:19]",
+            "node 293890 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 293890 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 295597 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 295597 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 121213 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 121236 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 121259 test/abap/types/message.ts:23:12]"
+          ]
+        },
+        {
+          "reason": "erased structural object.has is not emitted on ABAP",
+          "sites": 2,
+          "examples": [
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@src/objects/rename/renamer.ts:125:3; node 0 ]",
+            "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@test/lsp/_apply_edit.ts:37:3; node 0 ]"
+          ]
+        }
+      ]
+    }
+  },
+  "goDefaultDiff": {
+    "exitCode": 0,
+    "bytes": 0,
+    "files": 9
+  },
+  "abapSyntaxFixtures": {
+    "sets": 7,
+    "issues": 0
+  }
+}
