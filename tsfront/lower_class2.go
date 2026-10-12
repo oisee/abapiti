@@ -613,6 +613,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}
 		}
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && dst.Args[0].Kind == hir.ClassRef {
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, dst)
 	}
@@ -636,6 +639,10 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	}
 	if dst.Kind == hir.Optional && x.Type.Equal(dst.Args[0]) {
 		return &hir.Expr{Kind: hir.Conditional, Type: dst, X: hir.L(hir.T(hir.Bool), true), Y: x, Z: &hir.Expr{Kind: hir.Lit, Type: dst}}
+	}
+	if l.unprunedFeatures && dst.Kind == hir.Dynamic && x.Kind == hir.RuntimeOp && x.Op == "dynamic.asString" {
+		// A TS assertion cannot convert erased storage at an erased destination.
+		return x.X
 	}
 	if dst.Kind == hir.Dynamic && x.Type.Kind != hir.Dynamic {
 		return l.rtOp("dynamic.of", x, hir.T(hir.Dynamic))

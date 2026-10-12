@@ -1662,7 +1662,24 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + strconv.FormatInt(k, 10) + ".")
 		return
 	}
+	if x.Op == "string.parseIntNumber" {
+		value, ok := finiteParseIntLiteral(x.X)
+		if !ok {
+			b.e.err = fmt.Errorf("node %d (%s): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported", x.ID, x.Source)
+			return
+		}
+		// The literal has no effects. Prove its Number value before emission;
+		// ABAP never fabricates a finite replacement for NaN or Infinity.
+		b.line(n + " = " + b.expr(hir.L(hir.T(hir.Number), value)) + ".")
+		return
+	}
 	a := b.expr(x.X)
+	if x.Op == "number.isNaN" {
+		// The ABAP Number domain refuses NaN at every producing boundary.
+		// b.expr still evaluates the operand once for its effects.
+		b.line(n + " = abap_false.")
+		return
+	}
 	args := []string{}
 	ps, _, _ := hir.RuntimeSignature(x.Op, x.X.Type)
 	if x.Op == "json.stringifyConfig" {
@@ -2138,10 +2155,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		b.boxDynamic(n, a, x.X.Type)
 		return
-	case "dynamic.typeof", "dynamic.toString":
+	case "dynamic.typeof", "dynamic.toString", "dynamic.recordString":
+		if x.Op == "dynamic.recordString" {
+			b.line("IF " + a + " IS BOUND.")
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": ABAP record string conversion requires primitive dynamic storage"})
+			b.line("ENDIF.")
+			b.line("ENDIF.")
+		}
 		b.line("IF " + a + " IS BOUND.")
 		method := "type_of"
-		if x.Op == "dynamic.toString" {
+		if x.Op == "dynamic.toString" || x.Op == "dynamic.recordString" {
 			method = "to_string"
 		}
 		b.line(n + " = " + a + "->" + method + "( ).")

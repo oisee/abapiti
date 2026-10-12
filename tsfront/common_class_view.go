@@ -30,7 +30,7 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 		}
 		decl := declarations[0]
 		cast := decl.X
-		if cast == nil || cast.X == nil || !decl.Type.Equal(cast.Type) || cast.Type.Kind != hir.ClassRef {
+		if cast == nil || cast.X == nil || !decl.Type.Equal(cast.Type) || (cast.Type.Kind != hir.ClassRef && !(cast.Type.Kind == hir.Optional && cast.Type.Args[0].Kind == hir.ClassRef)) {
 			continue
 		}
 		if !(cast.Kind == hir.RuntimeOp && cast.Op == "object.checkedClassView" || cast.Kind == hir.Cast || cast.Kind == hir.Narrow) {
@@ -45,6 +45,10 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 		}
 		operand := cast.X
 		source, target := operand.Type, cast.Type
+		optional := target.Kind == hir.Optional
+		if optional {
+			target = target.Args[0]
+		}
 		if source.Kind == hir.Optional && source.Args[0].IsRef() {
 			source = source.Args[0]
 			// Reference absence uses nil storage. Retain it until a method
@@ -64,24 +68,70 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 			}
 			source = hir.Ref(ancestor.Super)
 		}
+		names := map[string]bool{name: true}
+		aliasInitializers := map[*hir.Expr]bool{}
+		for changed := true; changed; {
+			changed = false
+			for alias, ds := range decls {
+				if names[alias] || len(ds) != 1 {
+					continue
+				}
+				if x := ds[0].X; x != nil && x.Kind == hir.Local && names[x.Name] {
+					names[alias] = true
+					aliasInitializers[x] = true
+					changed = true
+				}
+			}
+		}
+		parents := map[*hir.Expr]*hir.Expr{}
+		viewWalk(m.Body, nil, func(x, parent *hir.Expr) { parents[x] = parent })
 		safe := true
 		viewWalk(m.Body, func(s *hir.Stmt) {
-			if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.Local && s.X.Name == name {
+			if s.Kind == hir.Assign && s.X != nil && s.X.Kind == hir.Local && names[s.X.Name] {
 				safe = false
 			}
 		}, func(x, parent *hir.Expr) {
-			if x.Kind != hir.Local || x.Name != name {
+			if x.Kind != hir.Local || !names[x.Name] {
 				return
 			}
-			if !x.Type.Equal(target) || parent == nil {
+			if !(x.Type.Equal(target) || x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(target)) {
+				safe = false
+				return
+			}
+			if parent == nil {
+				safe = safe && aliasInitializers[x]
+				return
+			}
+			for parent != nil && parent.Kind == hir.Narrow && parent.X != nil && parent.Type.Equal(target) {
+				parent = parents[parent]
+			}
+			if parent == nil {
 				safe = false
 				return
 			}
 			switch parent.Kind {
 			case hir.VirtualCall, hir.DirectCall:
-				if parent.X != x || l.commonMethodOwner(source.Name, parent.Name) == "" || l.commonMethodOwner(source.Name, parent.Name) != l.commonMethodOwner(target.Name, parent.Name) {
-					safe = false
+				if parent.X == x || parent.X != nil && parent.X.Kind == hir.Narrow && parent.X.X == x {
+					safe = safe && l.commonMethodOwner(source.Name, parent.Name) != "" && l.commonMethodOwner(source.Name, parent.Name) == l.commonMethodOwner(target.Name, parent.Name)
+				} else {
+					owner := parent.Owner
+					if owner == "" && parent.X != nil {
+						owner = parent.X.Type.Name
+					}
+					method := l.commonViewCallee(owner, parent.Name)
+					found := false
+					for i, arg := range parent.Args {
+						if arg == x || arg.Kind == hir.Narrow && arg.X == x {
+							found = true
+							safe = safe && method != nil && i < len(method.Params) && l.acceptsType(method.Params[i].Type, source)
+						}
+					}
+					safe = safe && found
 				}
+			case hir.Cast:
+				// Passing the view through a genuine ancestor layout cannot
+				// observe the asserted subclass. Preserve original dispatch/identity.
+				safe = safe && parent.Type.Kind == hir.ClassRef && l.acceptsType(parent.Type, source)
 			case hir.InstanceOf, hir.IsUndefined, hir.ToBoolean:
 			case hir.Binary:
 				safe = safe && (parent.Op == "==" || parent.Op == "!=") && parent.X != nil && parent.Y != nil && parent.X.Kind == hir.Local && parent.Y.Kind == hir.Local && parent.X.Name == name && parent.Y.Name == name
@@ -92,12 +142,28 @@ func (l *lowerer) commonClassViews(m *hir.Method) {
 		if !safe {
 			continue
 		}
-		decl.X, decl.Type = operand, source
+		storage := source
+		if optional {
+			storage = hir.T(hir.Optional, source)
+		}
+		decl.X, decl.Type = operand, storage
 		if operand.Type.Kind == hir.InterfaceRef {
 			decl.X = l.rtOp("dynamic.classView", l.coerce(operand, hir.T(hir.Dynamic)), source)
 		}
+		for alias := range names {
+			if alias != name {
+				decls[alias][0].Type = storage
+			}
+		}
 		viewWalk(m.Body, nil, func(x, _ *hir.Expr) {
-			if x.Kind == hir.Local && x.Name == name {
+			if x.Kind == hir.Local && names[x.Name] {
+				if x.Type.Kind == hir.Optional {
+					x.Type = storage
+				} else {
+					x.Type = source
+				}
+			}
+			if x.Kind == hir.Narrow && x.X != nil && x.X.Kind == hir.Local && names[x.X.Name] && x.Type.Equal(target) {
 				x.Type = source
 			}
 		})
@@ -149,4 +215,15 @@ func viewWalk(s *hir.Stmt, statement func(*hir.Stmt), expression func(*hir.Expr,
 		}
 	}
 	stmt(s)
+}
+
+func (l *lowerer) commonViewCallee(owner, name string) *hir.Method {
+	for c := l.classByName(owner); c != nil; c = l.classByName(c.Super) {
+		for _, m := range c.Methods {
+			if m.Name == name {
+				return m
+			}
+		}
+	}
+	return nil
 }
