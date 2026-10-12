@@ -91,6 +91,7 @@ func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
 			l.diagf(n, "unsupported-json", "JSON.parse input coercion is unsupported")
 			return nil, true
 		}
+		l.builtinError()
 		return l.rtOp("json.parseSubset", value, hir.T(hir.Dynamic)), true
 	}
 	// The writer preserves tagged-record insertion order, array positions and

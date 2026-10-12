@@ -1,0 +1,78 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "baseCommit": "45949976c890266ada91c1fe892cd2968ae95df9",
+  "roots": [
+    "test/rules/line_length.ts"
+  ],
+  "oracle": {
+    "passed": 4,
+    "failed": 0,
+    "pending": 0,
+    "total": 4
+  },
+  "before": {
+    "counts": {
+      "passed": 2,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 2,
+      "registered": 2,
+      "total": 4,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 0,
+      "unregistered": 2
+    },
+    "initialization": [
+      {
+        "file": "test/rules/line_length.ts",
+        "action": "test/rules/line_length.ts:17:1",
+        "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+        "status": "trapped"
+      }
+    ],
+    "unregisteredTitles": [
+      "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+      "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
+    ],
+    "registrationParity": false
+  },
+  "after": {
+    "counts": {
+      "passed": 4,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4,
+      "total": 4,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 0,
+      "unregistered": 0
+    },
+    "initialization": [],
+    "unregisteredTitles": [],
+    "registrationParity": true
+  },
+  "scope": "Only original line_length tests; no whole-abaplint-suite measurement. After compiler built from this working-tree fix.",
+  "newRuntimeOps": [],
+  "graceGoldenChanged": false,
+  "generalShortTests": {
+    "testAndSubtestResults": {
+      "pass": 1088,
+      "skip": 40
+    },
+    "topLevelResults": {
+      "pass": 569,
+      "skip": 36
+    },
+    "gatePassed": true
+  },
+  "verification": {
+    "vet": "passed",
+    "shortTests": "passed",
+    "lexerFacts": "passed; golden unchanged",
+    "defaultBackendOps": "passed; explicitly executed",
+    "lint": "0 new; 5/5 canaries; golangci-lint 2.13.2"
+  }
+}

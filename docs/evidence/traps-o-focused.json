@@ -1,0 +1,745 @@
+{
+  "base": "f78b973",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "scope": "Focused measurements only; no full baseline run. Development baseline launched before edits but compiled asynchronously while source was being edited: counts match train 11, diagnostics are not a frozen-baseline certificate. Final followup uses a827974. First repair adds rename3/AFF1; followup adds semantic1. CDS now reaches N-owned dynamic get, not a pass.",
+  "measurements": [
+    {
+      "stage": "development",
+      "codeCommit": "f78b973b6848682830779875644f2045f30e9fc0",
+      "nodeActive": {
+        "total": 690,
+        "passed": 674,
+        "failed": 0,
+        "trapped": 16,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 16
+      },
+      "nodePending": {
+        "total": 7,
+        "skipped": 7,
+        "unregistered": 0
+      },
+      "shards": [
+        {
+          "name": "cds",
+          "files": 2,
+          "passed": 355,
+          "failed": 0,
+          "trapped": 3,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 359,
+          "total": 359,
+          "node": {
+            "passed": 358,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 358,
+            "passed": 355,
+            "failed": 0,
+            "trapped": 3,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 3
+          },
+          "nodePending": {
+            "total": 1,
+            "skipped": 1,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "CDS Parser define custom entity with association",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": []
+        },
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 181,
+          "failed": 0,
+          "trapped": 7,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 188,
+            "passed": 181,
+            "failed": 0,
+            "trapped": 7,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 7
+          },
+          "nodePending": {
+            "total": 5,
+            "skipped": 5,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "LSP, hover keyworld should not resolve",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover hover method parameter",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover Hover inline SELECT data voided",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references method references",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references find references for macro definition",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        },
+        {
+          "name": "objects",
+          "files": 26,
+          "passed": 138,
+          "failed": 0,
+          "trapped": 6,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 145,
+          "total": 145,
+          "node": {
+            "passed": 144,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 144,
+            "passed": 138,
+            "failed": 0,
+            "trapped": 6,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 6
+          },
+          "nodePending": {
+            "total": 1,
+            "skipped": 1,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "Proxy Object adhoc",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": []
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+          "count": 3,
+          "shards": {
+            "lsp": 3
+          },
+          "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168637 (src/lsp/rename.ts:109:52): assignment type mismatch"
+        },
+        {
+          "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
+          "count": 2,
+          "shards": {
+            "cds": 2
+          },
+          "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169022 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+        },
+        {
+          "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+        },
+        {
+          "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/objects/proxy_object.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "test/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier tok is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "cds": 1
+          },
+          "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+        }
+      ]
+    },
+    {
+      "stage": "first-repair",
+      "codeCommit": "f78b973b6848682830779875644f2045f30e9fc0",
+      "nodeActive": {
+        "total": 690,
+        "passed": 678,
+        "failed": 0,
+        "trapped": 12,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 12
+      },
+      "nodePending": {
+        "total": 7,
+        "skipped": 7,
+        "unregistered": 0
+      },
+      "shards": [
+        {
+          "name": "cds",
+          "files": 2,
+          "passed": 355,
+          "failed": 0,
+          "trapped": 3,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 359,
+          "total": 359,
+          "node": {
+            "passed": 358,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 358,
+            "passed": 355,
+            "failed": 0,
+            "trapped": 3,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 3
+          },
+          "nodePending": {
+            "total": 1,
+            "skipped": 1,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "CDS Parser define custom entity with association",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": []
+        },
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 184,
+          "failed": 0,
+          "trapped": 4,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 188,
+            "passed": 184,
+            "failed": 0,
+            "trapped": 4,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 4
+          },
+          "nodePending": {
+            "total": 5,
+            "skipped": 5,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "LSP, hover keyworld should not resolve",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover hover method parameter",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover Hover inline SELECT data voided",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references method references",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references find references for macro definition",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        },
+        {
+          "name": "objects",
+          "files": 26,
+          "passed": 139,
+          "failed": 0,
+          "trapped": 5,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 145,
+          "total": 145,
+          "node": {
+            "passed": 144,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 144,
+            "passed": 139,
+            "failed": 0,
+            "trapped": 5,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 5
+          },
+          "nodePending": {
+            "total": 1,
+            "skipped": 1,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "Proxy Object adhoc",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": []
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 2,
+          "shards": {
+            "objects": 2
+          },
+          "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "src/objects/proxy_object.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "test/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+          "count": 1,
+          "shards": {
+            "objects": 1
+          },
+          "example": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain"
+        },
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
+          "count": 1,
+          "shards": {
+            "cds": 1
+          },
+          "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
+        },
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier tok is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "cds": 1
+          },
+          "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+        },
+        {
+          "message": "unsupported-expr test/cds/cds_parser.ts: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts: identifier rootAnnos is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "cds": 1
+          },
+          "example": "test/cds/cds_parser.ts:3725:73: lowering trap: unsupported-expr test/cds/cds_parser.ts:3745:57: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts:3746:12: identifier rootAnnos is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-statement src/lsp/semantic.ts: for-in needs a string-keyed map (classvalue)",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/semantic.ts:42:3: lowering trap: unsupported-statement src/lsp/semantic.ts:50:7: for-in needs a string-keyed map (classvalue)"
+        }
+      ]
+    },
+    {
+      "stage": "final-followup",
+      "codeCommit": "a827974d904edd85070ed9194297d3742d8778f1",
+      "nodeActive": {
+        "total": 546,
+        "passed": 540,
+        "failed": 0,
+        "trapped": 6,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 6
+      },
+      "nodePending": {
+        "total": 6,
+        "skipped": 6,
+        "unregistered": 0
+      },
+      "shards": [
+        {
+          "name": "cds",
+          "files": 2,
+          "passed": 355,
+          "failed": 0,
+          "trapped": 3,
+          "asyncPending": 0,
+          "notRun": 1,
+          "registered": 359,
+          "total": 359,
+          "node": {
+            "passed": 358,
+            "failed": 0,
+            "pending": 1
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 1,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 358,
+            "passed": 355,
+            "failed": 0,
+            "trapped": 3,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 3
+          },
+          "nodePending": {
+            "total": 1,
+            "skipped": 1,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "CDS Parser define custom entity with association",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": []
+        },
+        {
+          "name": "lsp",
+          "files": 16,
+          "passed": 185,
+          "failed": 0,
+          "trapped": 3,
+          "asyncPending": 0,
+          "notRun": 5,
+          "registered": 193,
+          "total": 193,
+          "node": {
+            "passed": 188,
+            "failed": 0,
+            "pending": 5
+          },
+          "notRunReasons": {
+            "asyncOrDone": 0,
+            "skippedOrFocused": 5,
+            "unregistered": 0
+          },
+          "unregisteredTitles": [],
+          "unmatched": 0,
+          "nodeActive": {
+            "total": 188,
+            "passed": 185,
+            "failed": 0,
+            "trapped": 3,
+            "asyncPending": 0,
+            "skipped": 0,
+            "unregistered": 0,
+            "notPassing": 3
+          },
+          "nodePending": {
+            "total": 5,
+            "skipped": 5,
+            "unregistered": 0
+          },
+          "skippedOrFocusedTests": [
+            {
+              "title": "LSP, hover keyworld should not resolve",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover hover method parameter",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, hover Hover inline SELECT data voided",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references method references",
+              "node": "pending",
+              "message": ""
+            },
+            {
+              "title": "LSP, references find references for macro definition",
+              "node": "pending",
+              "message": ""
+            }
+          ],
+          "initialization": [],
+          "failures": [],
+          "borrowed": {
+            "files": [
+              "test/rules/sql_value_conversion.ts"
+            ],
+            "total": 6,
+            "passed": 6,
+            "failed": 0,
+            "pending": 0,
+            "registered": 6,
+            "rawRegistered": 199
+          }
+        }
+      ],
+      "allTraps": [
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
+          "count": 2,
+          "shards": {
+            "cds": 2
+          },
+          "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
+        },
+        {
+          "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+          "count": 2,
+          "shards": {
+            "lsp": 2
+          },
+          "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+        },
+        {
+          "message": "unsupported-call test/cds/cds_parser.ts: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier tok is not a lowered local or module value",
+          "count": 1,
+          "shards": {
+            "cds": 1
+          },
+          "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
+        },
+        {
+          "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+        }
+      ]
+    }
+  ]
+}

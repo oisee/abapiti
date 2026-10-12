@@ -19,8 +19,12 @@ func dynamicKeys(d *dynamic) *array[jsString] {
 
 // Structural records enumerate their per-instance constructor metadata. Retain
 // the existing declaration-order proof for native nominal field layouts.
+func (e *emitter) tracksOwnKeys(c *hir.Class) bool {
+	return c != nil && (e.extraRuntimeKeys && c.Structural || e.nativeJSON && !c.Structural)
+}
+
 func (e *emitter) ownKeyClass(c *hir.Class) {
-	if c.Structural {
+	if c.Structural || e.nativeJSON {
 		e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};if self.ownKeys==nil {panic(newTrap(%q))};return dynamicKeys(&dynamic{Tag:tagObject,Value:self.ownKeys})}", e.obj(c.Name), "structural constructor has no proven own-property order")
 		return
 	}

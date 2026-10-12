@@ -1,5 +1,99 @@
 # abaplint's own tests on TS-HG@Go
 
+## Trap batch O — certified on train 11
+
+**11,037/11,060 Node-active tests passed (99.79%), FAIL 0.** Exactly one
+frozen-source **17-shard / 625-file** run measured semantic commit **a827974**,
+based on **f78b973** (11,032 passes). Fresh original pinned Node reports
+**11,060 passes, zero failures, 32 pending**. Go has **20 traps in 14 normalized
+message groups**, zero async-pending. All owned and whole-suite title multisets
+reconcile, with no exclusions, wiring failures, unmatched or executed pending
+bodies, or borrowed FAILs.
+
+**23 active non-passes = 20 traps + 3 unregistered + 0 skipped + 0 FAIL +
+0 async-pending.** Not-run remains **35 = 28 registered original Node-pending
+skips + 7 unregistered (three active + four pending)**. The [complete remaining
+23 titles and original source sites](traps-o-remaining.md) retain batch N's and
+Dell's handoffs; none is synthesized, excluded or reclassified as a pass.
+
+The **+5 real passes** are three LSP renames, semantic highlighting and AFF's
+malformed-JSON case. Structural primitive views preserve the original row,
+identity and mutation; nullable writes into required numeric backing storage
+still refuse. Imported constant string enums use a shared ordered namespace
+map, not a constructor. The native/method-interface union constructor read is
+independently repaired, but the original CDS body now reaches batch N's existing
+`get`/`getChildren` helper at 3804, so **no CDS body pass is credited**.
+
+AFF's input is **`sdfsdf`**, not a valid JSON feature or JSON5. A certified native
+SyntaxError subclass/payload now reaches the original catch; strict JSON grammar
+and explicit unsupported diagnostics/nonfinite-value refusals remain intact.
+Ordinary JSON.stringify now tracks native own-key creation order across base
+constructors, initializers, later writes and the delete/re-add storage contract,
+with integer-like keys sorted first. The Help CDS body still requires Dell's
+delete-records repair; **no Help CDS pass is credited**. Required undefined
+ES2022 define-field storage remains an explicit Dell ABI handoff, never zero.
+
+The quoted-field Node-oracle mismatch was **stopped and reported first**, then
+root-caused and regressed before resumed shard work. Original upstream tests
+and assertions are untouched. Historical local JSON fixtures remain and now
+assert exact Node values instead of superseded blanket refusal, with explicit
+unsupported-storage negatives retained. No new site override, dynamic CDS
+method bridge, ToPrimitive, registration, absence/delete/typeof guard, async or
+panic-classification repair is included.
+
+See [root audit and mismatch handling](traps-o-roots.md), [compact focused runs](evidence/traps-o-focused.json),
+[all 17 shards and every reached message](evidence/traps-o-final.json), and
+[gate/default/workload certificate](evidence/traps-o-gates.json). The development
+baseline compiled asynchronously during edits and is disclosed as non-frozen;
+it is not a full baseline certificate or a basis for inflating attribution.
+
+### O: all 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 216 | 0 | 0 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 107 | 0 | 0 | 0 | 107 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,962 | 0 | 0 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,363 | 0 | 0 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| `root` | 12 | 91 | 0 | 3 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 185 | 0 | 3 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 139 | 0 | 5 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 31 | 0 | 0 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 30 | 0 | 1 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 3,143 | 0 | 4 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 15 | 0 | 0 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **11,037** | **0** | **20** | **35** | **11,085** | **11,060 + 32** |
+
+### O: gates and parity
+
+Passed with Go 1.26.0, `GOCACHE=$HOME/.cache/go-build`, `-buildvcs=false`,
+`ABAPITI_GRACECHECK=1`, 40-minute test deadlines and nice-10 execution:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+```
+
+**No golden changes:** regenerated lexer facts equal the committed golden; no
+new operation/effect catalogue entry. Default `abaplint` output versus a locally
+archived **f78b973**, at the same absolute output path, has **raw `diff -r`
+exit 0 / zero bytes / 6,312 files**, including the zip. There are no default
+changes to justify. Fresh emitted Go, fresh original pinned Node and the
+SHA256-verified v0.1.1 kit agree byte-for-byte on zabapgit **clean 0 / seeded 5**;
+`go-target-check.py` also passes. No mismatch is accepted. Semantic source trees
+are retained in the certificate; final documentation/evidence commits do not
+alter the measured implementation. Generated builds, archives, closures, kit,
+profiles, facts and logs are deleted. Clean commits, no push or transpiler clone.
+
 ## Trap batch N — certified on 8288338
 
 **11,027/11,060 Node-active tests passed (99.70%), FAIL 0.** The completed

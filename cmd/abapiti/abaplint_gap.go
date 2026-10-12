@@ -12,6 +12,7 @@ import (
 type gapMessage struct {
 	Message string `json:"message"`
 	Count   int    `json:"count"`
+	Example string `json:"example"`
 }
 type gapSummary struct {
 	Blocking        int            `json:"blocking"`
@@ -70,7 +71,7 @@ func gapArea(file string) string {
 // Files counts distinct source files with blocking or HIR diagnostics.
 func summarizeGaps(r *tsfront.RegistryLowering) gapSummary {
 	s := gapSummary{Blocking: len(r.Blocking), HIRErrors: len(r.Verification), ByCategory: map[string]int{}, ByArea: map[string]int{}, ByRootMessage: []gapMessage{}}
-	files, messages := map[string]bool{}, map[string]int{}
+	files, messages, examples := map[string]bool{}, map[string]int{}, map[string]string{}
 	for _, d := range r.Blocking {
 		file := gapSourceFile(d.Loc)
 		files[file] = true
@@ -79,7 +80,11 @@ func summarizeGaps(r *tsfront.RegistryLowering) gapSummary {
 		if d.Cascade {
 			s.CascadeBlocking++
 		} else {
-			messages[normalizeGapMessage(d.Message)]++
+			message := normalizeGapMessage(d.Message)
+			messages[message]++
+			if examples[message] == "" || d.Loc < examples[message] {
+				examples[message] = d.Loc
+			}
 		}
 	}
 	for _, err := range r.Verification {
@@ -90,7 +95,7 @@ func summarizeGaps(r *tsfront.RegistryLowering) gapSummary {
 	s.Files = len(files)
 	s.RootBlocking = s.Blocking - s.CascadeBlocking
 	for message, count := range messages {
-		s.ByRootMessage = append(s.ByRootMessage, gapMessage{message, count})
+		s.ByRootMessage = append(s.ByRootMessage, gapMessage{Message: message, Count: count, Example: examples[message]})
 	}
 	sort.Slice(s.ByRootMessage, func(i, j int) bool {
 		a, b := s.ByRootMessage[i], s.ByRootMessage[j]

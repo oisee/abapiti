@@ -228,10 +228,16 @@ func LowerRegistry(dir string, files []string, registry *overrides.Registry, cov
 // LowerRegistryWithOptions is the same complete closure lowering with an
 // explicit numeric policy, independent of the caller's environment.
 func LowerRegistryWithOptions(dir string, files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*RegistryLowering, error) {
+	return LowerProjectWithOptions(filepath.Join(dir, "tsconfig.json"), files, registry, coverage, options)
+}
+
+// LowerProjectWithOptions measures any tsconfig project using the same lowering
+// and verification policy as the registry build. A nil coverage lowers all bodies.
+func LowerProjectWithOptions(tsconfig string, files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*RegistryLowering, error) {
 	if coverage != nil && coverage.UpstreamPin != RegistryUpstreamPin {
 		return nil, fmt.Errorf("coverage upstream pin mismatch")
 	}
-	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	p, err := Load(tsconfig)
 	if err != nil {
 		return nil, err
 	}

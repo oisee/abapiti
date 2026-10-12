@@ -2,7 +2,9 @@ package tsfront
 
 import "github.com/oisee/abapiti/hir"
 
-// A deliberately invariant, property-only structural compatibility proof.
+// Property-only structural compatibility. Container storage remains invariant;
+// a present primitive may widen to its optional slot through the existing live
+// adapter. Absent writes into required backing storage still explicitly refuse.
 // Native classes/configs and nested row/array covariance are not admitted.
 func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 	if dst.Kind != hir.ClassRef || src.Kind != hir.ClassRef || dst.Equal(src) || !l.shapeLike[dst.Name] || !l.shapeLike[src.Name] {
@@ -18,7 +20,14 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 		}
 		found := false
 		for _, g := range s.Fields {
-			if !g.Static && f.Name == g.Name && f.Type.Equal(g.Type) {
+			compatible := f.Type.Equal(g.Type)
+			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
+				switch g.Type.Kind {
+				case hir.String, hir.Number, hir.I32, hir.I64, hir.Bool:
+					compatible = true
+				}
+			}
+			if !g.Static && f.Name == g.Name && compatible {
 				found = true
 				break
 			}

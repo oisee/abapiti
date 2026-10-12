@@ -3,7 +3,6 @@ package tsfront
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"testing"
 )
 
@@ -31,17 +30,15 @@ func TestJSONStringifyFreshLiteralNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	// The original array-of-native-rows case is retained as a domain negative,
-	// not silently serialized in guessed declaration order. Node supports it;
-	// this lowering has not repaired its row-array storage ABI.
+	// Retain the original row-array fixture and its exact Node value. The
+	// writer now retains each literal's per-instance own-key metadata, not
+	// guessed layout order; this is a strict value assertion, not a no-op.
 	rowWant, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.rows())")`, source).CombinedOutput()
 	if err != nil || string(rowWant) != "{\"rows\":[{\"b\":2,\"a\":1},{\"empty\":\"\"}]}\n" {
 		t.Fatal(err, string(rowWant))
 	}
-	main := fmt.Sprintf(`func(){defer func(){if r,ok:=recover().(trap);ok {fmt.Print(r.Error())} else {panic("native row order must refuse")}}();%s();panic("writer guessed native row order")}()`, goEntry("probe.ts.Probe", "rows"))
-	if got := runGoHIR(t, p, main); !strings.Contains(got, "own-property order") {
-		t.Fatal(got)
+	main := fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "rows"))
+	if got := runGoHIR(t, p, main); got != string(rowWant) {
+		t.Fatalf("Go %q Node %q", got, rowWant)
 	}
-	// The separate existing native-order negative still refuses; fresh literal
-	// context must not change how named instances are serialized.
 }
