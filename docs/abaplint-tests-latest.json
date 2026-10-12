@@ -1,16 +1,16 @@
 {
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
-  "codeCommit": "06cd4cc5947ad7692782b2256dc4ca7bfbc4ec65",
-  "mainCommit": "9480bfae9186abd724e493a8a064b179d7ae5f99",
-  "artifacts": "discarded after successful run; compact evidence retained in this report",
+  "codeCommit": "4b6a465c5663360a5f08cb249ef7cb936dfe36df",
+  "mainCommit": "ab026e7bc5526e5d791d4b15f8fb5c83202d69fa",
+  "artifacts": "Disposable shard artifacts removed by the runner after successful reconciliation.",
   "artifactPrefix": "",
   "shards": [
     {
       "name": "abap",
       "files": 18,
-      "passed": 199,
+      "passed": 216,
       "failed": 0,
-      "trapped": 17,
+      "trapped": 0,
       "asyncPending": 0,
       "notRun": 4,
       "registered": 216,
@@ -36,7 +36,7 @@
         {
           "file": "test/abap/structure_errors.ts",
           "action": "test/abap/structure_errors.ts:15:1",
-          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36340 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36328 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
           "status": "trapped"
         }
       ],
@@ -45,12 +45,12 @@
     {
       "name": "abap/expressions",
       "files": 11,
-      "passed": 44,
+      "passed": 107,
       "failed": 0,
-      "trapped": 6,
+      "trapped": 0,
       "asyncPending": 0,
-      "notRun": 57,
-      "registered": 50,
+      "notRun": 0,
+      "registered": 107,
       "total": 107,
       "node": {
         "passed": 107,
@@ -60,82 +60,11 @@
       "notRunReasons": {
         "asyncOrDone": 0,
         "skippedOrFocused": 0,
-        "unregistered": 57
+        "unregistered": 0
       },
-      "unregisteredTitles": [
-        "Test expression matchers, todo: refactor \"cs_tstcp\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"cs_tstcp-param\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy)\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy-fdpos)\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"cs_tstcp(sy-fdpos)\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"foobar(3)\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"(sy)\" should match FieldLength",
-        "Test expression matchers, todo: refactor \"(42)\" should match FieldLength",
-        "Test expression matchers, todo: refactor \"(sy-fdpos)\" should match FieldLength",
-        "Test expression matchers, todo: refactor \"(123-fdpos)\" should not match FieldLength",
-        "Test expression matchers, todo: refactor \"+sy-fdpos\" should match FieldOffset",
-        "Test expression matchers, todo: refactor \"+123-fdpos\" should not match FieldOffset",
-        "Test expression matchers, todo: refactor \"foobar(3)\" should match Target",
-        "Test expression matchers, todo: refactor \"method( foo )-stream->rema( )\" should match MethodCallChain",
-        "Test expression matchers, todo: refactor \"method( foo )->rema( )\" should match MethodCallChain",
-        "Test expression matchers, todo: refactor \"method( )\" should match MethodCall",
-        "Test expression matchers, todo: refactor \"method #( )\" should not match MethodCall",
-        "Test expression matchers, todo: refactor \"method asdf( )\" should not match MethodCall",
-        "Test expression matchers, todo: refactor \"method a( )\" should not match MethodCall",
-        "Test expression matchers, todo: refactor \"method ( )\" should not match MethodCall",
-        "Test expression matchers, todo: refactor \"foo(2)\" should not match MethodCall",
-        "Test expression matchers, todo: refactor \"TYPE abap_bool DEFAULT abap_true\" should match Type",
-        "Test expression matchers, todo: refactor \"TYPE lcl_perce_repo=>ty_sum_tt\" should match Type",
-        "Test expression matchers, todo: refactor \"TYPE STANDARD TABLE\" should match TypeTable",
-        "Test expression matchers, todo: refactor \"22\" should match Integer",
-        "Test expression matchers, todo: refactor \"22\" should match Constant",
-        "Test expression matchers, todo: refactor \"22\" should not match Field",
-        "Test expression matchers, todo: refactor \"s_bar\" should match Field",
-        "Test expression matchers, todo: refactor \"1250_data\" should match Field",
-        "Test expression matchers, todo: refactor \"foo\" should match Field",
-        "Test expression matchers, todo: refactor \"zquery\" should match Field",
-        "Test expression matchers, todo: refactor \"_foobar\" should match Field",
-        "Test expression matchers, todo: refactor \"%bar\" should match Field",
-        "Test expression matchers, todo: refactor \"%bar%\" should match Field",
-        "Test expression matchers, todo: refactor \"-\" should not match Field",
-        "Test expression matchers, todo: refactor \"+\" should not match Field",
-        "Test expression matchers, todo: refactor \"*\" should not match Field",
-        "Test expression matchers, todo: refactor \"22\" should not match FieldChain",
-        "Test expression matchers, todo: refactor \"foobar\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"22foo\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"foo22\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"text-001\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"foo(2)\" should match FieldChain",
-        "Test expression matchers, todo: refactor \"e070-trkorr\" should match FieldSub",
-        "Test expression matchers, todo: refactor \"foo\" should match FieldSub",
-        "Test expression matchers, todo: refactor \"s_trkorr\" should match FieldSub",
-        "Test expression matchers, todo: refactor \"bar\" should match FieldSub",
-        "Test expression matchers, todo: refactor \"-\" should not match FieldSub",
-        "Test expression matchers, todo: refactor \"foo type string\" should match MethodParam",
-        "Test expression matchers, todo: refactor \"type string\" should match Type",
-        "Test expression matchers, todo: refactor \"type string\" should not match TypeTable",
-        "Test expression matchers, todo: refactor \"type index table\" should not match Type",
-        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
-        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
-        "Test expression matchers, todo: refactor \"type range of string\" should match TypeTable",
-        "Test expression matchers, todo: refactor \"%_C_POINTER\" should match TypeNameOrInfer",
-        "Test expression matchers, todo: refactor \"<Z-BAR>\" should match FieldSymbol"
-      ],
+      "unregisteredTitles": [],
       "unmatched": 0,
-      "initialization": [
-        {
-          "file": "test/abap/expressions/reuse.ts",
-          "action": "test/abap/expressions/reuse.ts:10:1",
-          "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30120 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
-          "status": "trapped"
-        },
-        {
-          "file": "test/abap/expressions/reuse.ts",
-          "action": "test/abap/expressions/reuse.ts:70:1",
-          "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30335 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
-          "status": "trapped"
-        }
-      ],
+      "initialization": [],
       "failures": []
     },
     {
@@ -250,9 +179,9 @@
     {
       "name": "abap/syntax",
       "files": 8,
-      "passed": 1353,
+      "passed": 1354,
       "failed": 0,
-      "trapped": 10,
+      "trapped": 9,
       "asyncPending": 0,
       "notRun": 10,
       "registered": 1373,
@@ -287,9 +216,9 @@
     {
       "name": "abap/types",
       "files": 6,
-      "passed": 23,
+      "passed": 28,
       "failed": 0,
-      "trapped": 6,
+      "trapped": 1,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 29,
@@ -306,22 +235,15 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
-      "initialization": [
-        {
-          "file": "test/abap/types/form_definition.ts",
-          "action": "test/abap/types/form_definition.ts:8:1",
-          "message": "test/abap/types/form_definition.ts:8:1: lowering trap: unsupported-top-level test/abap/types/form_definition.ts:8:1: mutable module variables are not lowered",
-          "status": "trapped"
-        }
-      ],
+      "initialization": [],
       "failures": []
     },
     {
       "name": "root",
       "files": 12,
-      "passed": 71,
+      "passed": 88,
       "failed": 0,
-      "trapped": 23,
+      "trapped": 6,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 94,
@@ -394,9 +316,9 @@
     {
       "name": "lsp",
       "files": 16,
-      "passed": 134,
+      "passed": 178,
       "failed": 0,
-      "trapped": 54,
+      "trapped": 10,
       "asyncPending": 0,
       "notRun": 5,
       "registered": 193,
@@ -430,9 +352,9 @@
     {
       "name": "objects",
       "files": 26,
-      "passed": 115,
+      "passed": 124,
       "failed": 0,
-      "trapped": 29,
+      "trapped": 20,
       "asyncPending": 0,
       "notRun": 1,
       "registered": 145,
@@ -505,9 +427,9 @@
     {
       "name": "rules",
       "files": 192,
-      "passed": 2957,
+      "passed": 3121,
       "failed": 0,
-      "trapped": 190,
+      "trapped": 26,
       "asyncPending": 0,
       "notRun": 12,
       "registered": 3157,
@@ -564,16 +486,16 @@
     }
   ],
   "uniqueTotal": {
-    "passed": 10614,
+    "passed": 10934,
     "failed": 0,
-    "trapped": 386,
+    "trapped": 123,
     "asyncPending": 0,
-    "notRun": 92,
-    "registered": 11028,
+    "notRun": 35,
+    "registered": 11085,
     "total": 11092,
     "asyncOrDone": 0,
     "skippedOrFocused": 28,
-    "unregistered": 64
+    "unregistered": 7
   },
   "nodeTotal": {
     "passed": 11060,
@@ -597,24 +519,12 @@
   "registrationParity": false,
   "top20Traps": [
     {
-      "message": "src/rules/function_module_recommendations.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 195,
+      "message": "src/objects/rename/renamer.ts: HIR verification: unresolved field range",
+      "count": 29,
       "shards": {
-        "abap": 17,
-        "root": 10,
-        "lsp": 23,
-        "objects-rename": 5,
-        "rules": 140
+        "objects-rename": 29
       },
-      "example": "src/rules/function_module_recommendations.ts:125:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "unsupported-expr src/objects/rename/renamer.ts: in requires a record or a literal property on a lowered shape (got classref<builtin.object>)",
-      "count": 23,
-      "shards": {
-        "objects-rename": 23
-      },
-      "example": "src/objects/rename/renamer.ts:125:3: lowering trap: unsupported-expr src/objects/rename/renamer.ts:132:11: in requires a record or a literal property on a lowered shape (got classref<builtin.object>)"
+      "example": "src/objects/rename/renamer.ts:125:3: lowering trap: src/objects/rename/renamer.ts:125:3: HIR verification: node 172359 (src/objects/rename/renamer.ts:135:11): unresolved field range"
     },
     {
       "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
@@ -624,33 +534,6 @@
         "rules": 16
       },
       "example": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "src/rules_runner.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 18,
-      "shards": {
-        "root": 4,
-        "lsp": 2,
-        "objects-rename": 3,
-        "rules": 9
-      },
-      "example": "src/rules_runner.ts:133:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "unsupported-callback src/lsp/references.ts: callback KindPropertyAccessExpression is not an arrow function",
-      "count": 12,
-      "shards": {
-        "lsp": 12
-      },
-      "example": "src/lsp/references.ts:19:3: lowering trap: unsupported-callback src/lsp/references.ts:40:12: callback KindPropertyAccessExpression is not an arrow function"
-    },
-    {
-      "message": "unsupported-call src/rules/identical_conditions.ts: find on primitive arrays needs an absence-preserving callback ABI",
-      "count": 9,
-      "shards": {
-        "rules": 9
-      },
-      "example": "src/rules/identical_conditions.ts:22:3: lowering trap: unsupported-call src/rules/identical_conditions.ts:23:12: find on primitive arrays needs an absence-preserving callback ABI"
     },
     {
       "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered",
@@ -669,64 +552,6 @@
       "example": "test/utils/name_validator.ts:6:80: lowering trap: unsupported-type test/utils/name_validator.ts:7:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:8:12: identifier ruleViolated is not a lowered local or module value"
     },
     {
-      "message": "module binding test/abap/types/form_definition.ts.module.reg was not initialized",
-      "count": 5,
-      "shards": {
-        "abap-types": 5
-      },
-      "example": "test/abap/types/form_definition.ts:10:1: lowering trap: module binding test/abap/types/form_definition.ts.module.reg was not initialized"
-    },
-    {
-      "message": "src/lsp/rename.ts: HIR verification: call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename",
-      "count": 5,
-      "shards": {
-        "lsp": 5
-      },
-      "example": "src/lsp/rename.ts:71:3: lowering trap: src/lsp/rename.ts:71:3: HIR verification: node 168551 (src/lsp/rename.ts:72:21): call argument type mismatch: classref<src/lsp/_interfaces.ts.ITextDocumentPositionParams> <- classref<src/lsp/_interfaces.ts.IRenameParams> in virtual .prepareRename"
-    },
-    {
-      "message": "unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts: empty array literal needs an inferable contextual element type",
-      "count": 5,
-      "shards": {
-        "abap-expressions": 5
-      },
-      "example": "test/abap/expressions/sql_set_op.ts:16:51: lowering trap: unsupported-type test/abap/expressions/sql_set_op.ts:20:9: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts:20:24: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts:21:44: empty array literal needs an inferable contextual element type"
-    },
-    {
-      "message": "runtime/chai.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 4,
-      "shards": {
-        "root": 3,
-        "objects": 1
-      },
-      "example": "runtime/chai.ts:46:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "src/lsp/implementation.ts: HIR verification: call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime .",
-      "count": 4,
-      "shards": {
-        "lsp": 4
-      },
-      "example": "src/lsp/implementation.ts:22:3: lowering trap: src/lsp/implementation.ts:22:3: HIR verification: node 0 (): call argument type mismatch: classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location> <- optional<classref<node_modules/vscode-languageserver-types/lib/umd/main.d.ts.Location>> in runtime ."
-    },
-    {
-      "message": "test/objects/table.ts: HIR verification: assignment type mismatch",
-      "count": 4,
-      "shards": {
-        "objects": 4
-      },
-      "example": "test/objects/table.ts:894:46: lowering trap: test/objects/table.ts:894:46: HIR verification: node 36840 (test/objects/table.ts:950:11): assignment type mismatch"
-    },
-    {
-      "message": "src/abap/5_syntax/spaghetti_scope.ts: HIR verification: call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new .",
-      "count": 3,
-      "shards": {
-        "abap-syntax": 1,
-        "lsp": 2
-      },
-      "example": "src/abap/5_syntax/spaghetti_scope.ts:272:3: lowering trap: src/abap/5_syntax/spaghetti_scope.ts:272:3: HIR verification: node 153031 (src/abap/5_syntax/spaghetti_scope.ts:280:22): call argument type mismatch: classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> <- optional<classref<src/abap/types/_typed_identifier.ts.TypedIdentifier>> in new ."
-    },
-    {
       "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
       "count": 3,
       "shards": {
@@ -737,12 +562,12 @@
       "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "unsupported-expr src/rules/remove_descriptions.ts: identifier XMLParser is not a lowered local or module value; unsupported-new src/rules/remove_descriptions.ts: new XMLParser is not a lowered class",
+      "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
       "count": 3,
       "shards": {
-        "rules": 3
+        "lsp": 3
       },
-      "example": "src/rules/remove_descriptions.ts:103:3: lowering trap: unsupported-expr src/rules/remove_descriptions.ts:106:20: identifier XMLParser is not a lowered local or module value; unsupported-new src/rules/remove_descriptions.ts:106:16: new XMLParser is not a lowered class"
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168846 (src/lsp/rename.ts:109:52): assignment type mismatch"
     },
     {
       "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
@@ -767,6 +592,118 @@
         "rules": 2
       },
       "example": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects": 1,
+        "rules": 1
+      },
+      "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/rename/renamer_helper.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects-rename": 2
+      },
+      "example": "src/objects/rename/renamer_helper.ts:107:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "root": 2
+      },
+      "example": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/abap/syntax/when_type.ts: HIR verification: unresolved method fn_visit",
+      "count": 2,
+      "shards": {
+        "abap-syntax": 2
+      },
+      "example": "test/abap/syntax/when_type.ts:8:1: lowering trap: test/abap/syntax/when_type.ts:8:1: HIR verification: node 74335 (test/abap/syntax/when_type.ts:24:3): unresolved method fn_visit"
+    },
+    {
+      "message": "unsupported-assignment test/config.ts: assignment to property applyUnspecifiedRules is not lowered",
+      "count": 2,
+      "shards": {
+        "root": 2
+      },
+      "example": "test/config.ts:80:86: lowering trap: unsupported-assignment test/config.ts:82:5: assignment to property applyUnspecifiedRules is not lowered"
+    },
+    {
+      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property sequential_blank is not lowered",
+      "count": 2,
+      "shards": {
+        "pretty_printer": 2
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:242:28: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:246:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:247:5: assignment to property sequential_blank is not lowered"
+    },
+    {
+      "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+      "count": 2,
+      "shards": {
+        "objects": 1,
+        "rules": 1
+      },
+      "example": "src/objects/number_range.ts:36:3: lowering trap: unsupported-call src/objects/number_range.ts:51:33: call to KindIdentifier is not lowered"
+    },
+    {
+      "message": "unsupported-call test/abap/syntax/basic_variables.ts: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts: identifier fieldDefinitions is not a lowered local or module value",
+      "count": 2,
+      "shards": {
+        "abap-syntax": 2
+      },
+      "example": "test/abap/syntax/basic_variables.ts:16:1: lowering trap: unsupported-call test/abap/syntax/basic_variables.ts:21:20: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts:47:21: identifier fieldDefinitions is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
+      "count": 2,
+      "shards": {
+        "cds": 2
+      },
+      "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
+    },
+    {
+      "message": "unsupported-expr test/abap/syntax/basic_variables.ts: property all is not lowered",
+      "count": 2,
+      "shards": {
+        "abap-syntax": 2
+      },
+      "example": "test/abap/syntax/basic_variables.ts:1914:69: lowering trap: unsupported-expr test/abap/syntax/basic_variables.ts:1921:5: property all is not lowered"
     }
-  ]
+  ],
+  "verification": {
+    "build": "pass (-p 4)",
+    "vet": "pass (-p 4; rerun after lint canary cleanup)",
+    "shortTests": "pass (-short -p 4)",
+    "defaultBackendOps": "pass",
+    "lexerFacts": "pass; exported once, existing golden identical",
+    "graceFull": "pass; 1927 classes, 64 interfaces unchanged",
+    "lint": "0 new issues; canary 5/5; golangci-lint 2.13.2",
+    "defaultOutput": {
+      "files": 6321,
+      "differences": [
+        "go/runtime.go",
+        "go/zabaplint-go"
+      ],
+      "reason": "Inherited traps-I commit 933e68f: empty regex source and three reviewed regex catalogue entries. All other artifacts byte-identical at the same output path."
+    },
+    "checkKit": {
+      "cleanIssues": 0,
+      "seededIssues": 5,
+      "goAndFreshNodeByteIdentical": true
+    }
+  }
 }
