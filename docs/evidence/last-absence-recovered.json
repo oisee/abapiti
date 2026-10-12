@@ -1,0 +1,105 @@
+{
+  "listedBefore": 12,
+  "listedAfter": 1,
+  "recovered": 11,
+  "totalTrapsBefore": 14,
+  "totalTrapsAfter": 3,
+  "listedTests": [
+    {
+      "shard": "abap/types",
+      "title": "Types, TYPES TYPES structure should sometimes inherit qualified name",
+      "before": "test/abap/types/types.ts:10:1: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "root",
+      "title": "exclude list will exclude issues based on the local exclude patterns",
+      "before": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "root",
+      "title": "severity an issue will have the severity specified in the config",
+      "before": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse main xml parser error",
+      "before": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse main xml parser error, valid xml",
+      "before": "test/objects/domain.ts:138:33: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "malformed object XML ignores malformed inner object metadata",
+      "before": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "trapped",
+      "afterMessage": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "shard": "objects",
+      "title": "malformed object XML ignores structured values where text is expected",
+      "before": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "objects",
+      "title": "View, parse XML database view with 2 append views",
+      "before": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: dynpro_checks Element SDFSDF length longer than 132",
+      "before": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "rules",
+      "title": "Rule: dynpro_checks overlapping dynpro fields",
+      "before": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "rules",
+      "title": "test line_only_punc rule \".\" should have 1 issue(s)",
+      "before": "src/rules/line_only_punc.ts:46:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    },
+    {
+      "shard": "rules",
+      "title": "Message rule no number",
+      "before": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "passed"
+    }
+  ],
+  "remainingTouchedShardTraps": [
+    {
+      "shard": "root",
+      "title": "exclude list will not crash with an undefined global exclude list",
+      "before": "test/registry.ts:452:62: lowering trap: unsupported-expr test/registry.ts:460:5: delete supports ordinary lowered records only",
+      "afterStatus": "trapped",
+      "afterMessage": "test/registry.ts:452:62: lowering trap: unsupported-expr test/registry.ts:460:5: delete supports ordinary lowered records only"
+    },
+    {
+      "shard": "objects",
+      "title": "Domain, parse AFF json parser error",
+      "before": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset",
+      "afterStatus": "trapped",
+      "afterMessage": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+    },
+    {
+      "shard": "objects",
+      "title": "malformed object XML ignores malformed inner object metadata",
+      "before": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain",
+      "afterStatus": "trapped",
+      "afterMessage": "src/objects/proxy_object.ts:86:3: value outside supported numeric, ordering or conversion domain"
+    }
+  ]
+}

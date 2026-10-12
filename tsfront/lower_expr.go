@@ -147,6 +147,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && x.Type.Kind == hir.Optional && l.parameterMayBeAbsent(l.resolve(n)) {
+		return x
+	}
 	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && len(l.erasedScalars) > 0 && l.erasedScalars[l.resolve(n)] {
 		return x
 	}
@@ -2332,8 +2335,33 @@ func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *h
 	if x == nil || y == nil {
 		return nil
 	}
+	if l.unprunedFeatures && !l.integerOptions.AssumeOnlyIntegerCalculations && (optionalNumericType(x.Type) || optionalNumericType(y.Type)) {
+		// Numeric coercion happens after both operands are evaluated, even
+		// when only the right operand may be absent.
+		x, y = l.tempInit(n, x.Type, x), l.tempInit(n, y.Type, y)
+		x, y = l.absentNumericOperand(x), l.absentNumericOperand(y)
+	}
 	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
+}
+
+// ToNumber(undefined) is NaN. Keep the operand's evaluation and use the
+// existing binary64 NaN-producing operation rather than a checked narrowing
+// or an integer zero. Present numeric values retain their original value.
+func (l *lowerer) absentNumericOperand(x *hir.Expr) *hir.Expr {
+	if !optionalNumericType(x.Type) {
+		return x
+	}
+	base := x.Type.Args[0]
+	number := hir.T(hir.Number)
+	return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: number,
+		X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x},
+		Y: l.rtOp("string.parseFloatNumber", hir.L(hir.T(hir.String), "NaN"), number),
+		Z: l.coerce(&hir.Expr{Kind: hir.Narrow, Type: base, X: x}, number)}
+}
+
+func optionalNumericType(t hir.Type) bool {
+	return t.Kind == hir.Optional && (t.Args[0].Kind == hir.Number || t.Args[0].Kind == hir.I32 || t.Args[0].Kind == hir.I64)
 }
 
 // instanceOf lowers `x instanceof C` to the boolean ancestry test; C may be

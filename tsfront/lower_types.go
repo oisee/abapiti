@@ -922,7 +922,7 @@ func (l *lowerer) synthFromAlias(n *ast.Node, sym *ast.Symbol) *hir.Class {
 		} else if ms := m.Symbol(); ms != nil {
 			ft = l.mapCheckerType(m, l.ck.GetTypeOfSymbol(ms))
 		}
-		if m.QuestionToken() != nil && ft.Kind != hir.Optional {
+		if (m.QuestionToken() != nil || l.absentFields[m]) && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
 		f := hir.Field{Node: l.node(m), Name: m.Name().Text(), Type: ft}

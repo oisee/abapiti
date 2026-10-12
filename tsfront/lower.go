@@ -176,12 +176,20 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if l.unprunedFeatures {
 		l.absentFields = map[*ast.Node]bool{}
+		l.absentParams = map[*ast.Node]bool{}
 		l.checkedFields = map[*ast.Node]bool{}
 		for _, name := range files {
 			f, _ := p.File(name)
 			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
 			l.file, l.ck = f, ck
 			l.scanLiteralAbsence(f.AsNode())
+			done()
+		}
+		for _, name := range files {
+			f, _ := p.File(name)
+			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			l.scanAbsenceParameters(f.AsNode())
 			done()
 		}
 	}
@@ -389,6 +397,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.completeCallArguments()
 	if l.unprunedFeatures {
 		l.preserveCommonClassViews()
+		l.preserveSiblingMethodViews()
+		l.stabilizeUnionABI()
+		l.completeCallArguments()
 		for _, c := range l.out.Classes {
 			c.Structural = l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.")
 		}
@@ -418,6 +429,7 @@ type lowerer struct {
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	unprunedFeatures   bool
 	absentFields       map[*ast.Node]bool
+	absentParams       map[*ast.Node]bool
 	checkedFields      map[*ast.Node]bool
 	erasedScalars      map[*ast.Symbol]bool
 	lspConstructors    bool
