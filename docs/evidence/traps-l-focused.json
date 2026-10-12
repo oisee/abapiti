@@ -1,0 +1,188 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "measurement": "Four development shards from the working-tree candidate before frozen semantic source 6410553; not a full base run",
+  "shards": [
+    {
+      "name": "abap",
+      "files": 18,
+      "passed": 216,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 4,
+      "registered": 216,
+      "node": {
+        "passed": 216,
+        "failed": 0,
+        "pending": 4
+      },
+      "nodeActive": {
+        "total": 216,
+        "passed": 216,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 4,
+        "skipped": 0,
+        "unregistered": 4
+      },
+      "unregisteredTitles": [
+        "Structure, test error messages, specific IF foo = bar.",
+        "Structure, test error messages, specific IF foo = bar. moo = boo.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE. ENDIF."
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36333 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "abap/structures",
+      "files": 30,
+      "passed": 138,
+      "failed": 0,
+      "trapped": 0,
+      "notRun": 2,
+      "registered": 139,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "nodeActive": {
+        "total": 139,
+        "passed": 138,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 1,
+        "notPassing": 1
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [
+        "structure combi, complex1 complex1 match"
+      ],
+      "initialization": [
+        {
+          "file": "test/abap/structures/_combi.ts",
+          "action": "test/abap/structures/_combi.ts:276:1",
+          "message": "test/abap/structures/_combi.ts:276:39: lowering trap: unsupported-statement test/abap/structures/_combi.ts:277:3: KindClassDeclaration is not lowered; unsupported-expr test/abap/structures/_combi.ts:282:25: identifier Normal is not a lowered local or module value",
+          "status": "trapped"
+        }
+      ]
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 89,
+      "failed": 0,
+      "trapped": 5,
+      "notRun": 0,
+      "registered": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "nodeActive": {
+        "total": 94,
+        "passed": 89,
+        "failed": 0,
+        "trapped": 5,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 5
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "initialization": []
+    },
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 3121,
+      "failed": 0,
+      "trapped": 26,
+      "notRun": 12,
+      "registered": 3157,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "nodeActive": {
+        "total": 3149,
+        "passed": 3121,
+        "failed": 0,
+        "trapped": 26,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 2,
+        "notPassing": 28
+      },
+      "nodePending": {
+        "total": 10,
+        "skipped": 10,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [
+        "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+        "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "passed": 3564,
+    "failed": 0,
+    "trapped": 31,
+    "asyncPending": 0,
+    "notRun": 18,
+    "registered": 3606,
+    "total": 3613,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 11,
+    "unregistered": 7
+  },
+  "nodeActive": {
+    "total": 3598,
+    "passed": 3564,
+    "failed": 0,
+    "trapped": 31,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 3,
+    "notPassing": 34
+  },
+  "nodePending": {
+    "total": 15,
+    "skipped": 11,
+    "unregistered": 4
+  }
+}

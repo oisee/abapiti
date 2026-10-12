@@ -1,0 +1,101 @@
+{
+  "baseCommit": "d6c4f4a",
+  "measuredSemanticCommit": "6410553505feaa175ac2b2050ac4e7d69057d512",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "semanticTrees": {
+    "hir": "9789046242dfb800a7d7c70cd75336500752653b",
+    "tsfront": "7c1782e5eb6d94a19b13f30b98e267dd23101276",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d",
+    "tools": "caf54e88127a0ac79564030071e30fae7a31c887"
+  },
+  "environment": {
+    "GOCACHE": "$HOME/.cache/go-build",
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "ABAPITI_GRACECHECK": "1",
+    "GOMAXPROCS": "4",
+    "testTimeout": "40m",
+    "shardNice": 10,
+    "workers": 2
+  },
+  "gates": {
+    "short": {"command": "go test ./... -short -timeout 40m", "status": 0},
+    "Grace": {"command": "go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m", "status": 0},
+    "vet": {"command": "go vet ./...", "status": 0},
+    "runnerRegressions": {
+      "commands": ["node tools/abaplint-tests-report-test.mjs", "node tools/abaplint-tests-all-test.mjs"],
+      "status": 0
+    },
+    "JSON5Oracles": {
+      "command": "go test ./hir/golang ./tsfront -run ^TestJSON5 -count=1 -timeout 40m",
+      "status": 0,
+      "package": "installed original node_modules/json5 2.2.3",
+      "coverage": ["finite parsed-output bytes", "SyntaxError diagnostic messages and UTF-16 line-column locations", "signed zero with Object.is", "nonfinite refusal versus actual Node nonfinite outputs", "all 1114112 code points in the original identifier tables", "checked namespace and renamed package calls", "reviver/coercion/stringify refusal", "unswallowable SyntaxError payload ABI refusal", "explicit ABAP refusal"]
+    },
+    "UnicodeRegeneration": {
+      "command": "node tools/json5-unicode-generate.mjs <original-json5-package> <scratch>/unicode-check.go; cmp hir/golang/json5_unicode.go <scratch>/unicode-check.go",
+      "status": 0
+    },
+    "golden": {
+      "command": "GRACE_FACTS_OUT=<scratch>/lexer-certified.facts go test ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m; cmp <scratch>/lexer-certified.facts tsfront/testdata/lexer.facts.golden",
+      "status": 0,
+      "SHA256": "619b2efac72d9f0344c2f6e2114b97334ac06eba9604d0467ccf8ad19b99ee07",
+      "justification": "Exactly one new runtime operation effect record: op_aliases/allocates/may_raise/writes 132 to 133 and reads 200 to 201. Conservative count remains 21. All lexer facts and 61 Grace call sites otherwise unchanged. No other golden changes."
+    },
+    "defaultOutput": {
+      "baseCommit": "d6c4f4a",
+      "baseBuild": "local git archive, no clone",
+      "sameAbsoluteOutputPath": true,
+      "command": "diff -r <base-output> <candidate-output>",
+      "status": 0,
+      "diffBytes": 0,
+      "files": 6312,
+      "justification": "No changes; the strict expression adapter and all reachability-pruned default output remain unchanged."
+    },
+    "allShards": {
+      "command": "ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=root,abap,abap/structures,rules nice -n 10 node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-l-final.json",
+      "status": 0,
+      "finalRuns": 1,
+      "fullBaseRuns": 0,
+      "developmentShards": ["root", "abap", "abap/structures", "rules"],
+      "shards": 17,
+      "files": 625,
+      "passed": 10949,
+      "activeDenominator": 11060,
+      "failed": 0,
+      "trapped": 108,
+      "trapGroups": 33,
+      "asyncPending": 0,
+      "notRun": 35,
+      "notRunReasons": {"skippedOrFocused": 28, "unregistered": 7, "asyncOrDone": 0},
+      "nodeActiveNotPassing": {"total": 111, "trapped": 108, "unregistered": 3, "skipped": 0, "failed": 0, "asyncPending": 0},
+      "nodePending": {"total": 32, "skipped": 28, "unregistered": 4},
+      "skippedSourceAudit": "All 28 are original it.skip calls and independent Node-pending titles. Complete source locations and classifications in docs/traps-l-roots.md; exact full titles in final JSON.",
+      "titlesReconciled": true,
+      "excluded": [],
+      "wiringFailures": [],
+      "unmatched": 0
+    },
+    "zabapgit": {
+      "status": 0,
+      "kit": "v0.1.1",
+      "kitZIP_SHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+      "NodeOracle": "fresh original pinned upstream, TypeScript 6.0.3, tools/hir-go-check.mjs",
+      "GoBuild": "abapiti abaplint --target go",
+      "rawComparisons": "cmp Node-clean.txt Go-HIR-clean.txt; cmp Node-seeded.txt Go-HIR-seeded.txt; python3 tools/go-target-check.py <kit> <go-binary>",
+      "workloads": {
+        "clean": {"issues": 0, "GoSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa", "NodeSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa", "kitEqual": true},
+        "seeded": {"issues": 5, "GoSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50", "NodeSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50", "kitEqual": true}
+      }
+    }
+  },
+  "artifactsDeleted": true,
+  "notes": [
+    "No genuine Go/Node value or assertion mismatch encountered or accepted.",
+    "A prototype runtime compile error used fmt in a file without that import; dependency removed and all real Node oracles rerun. Initial expected catalogue-golden difference was inspected and justified.",
+    "An early scratch comparison was attempted before the candidate binary existed and returned diff status 2; discarded. The certified same-path raw diff returns 0 with zero bytes.",
+    "All seven unregistered titles are preserved: three active and four Node pending, across three reached initialization ABI refusals. No synthesized registrations or passes.",
+    "SyntaxError payload, nonfinite Number, existing union/storage, config-shape, enumerable-key and range-union domains remain Dell handoffs.",
+    "No upstream tests weakened/deleted; no new site override; no transpiler clone; no push."
+  ]
+}
