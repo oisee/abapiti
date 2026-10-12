@@ -21,6 +21,7 @@ func TestLiveConfigRowViewsNodeOracle(t *testing.T) {
  class Rule implements Slot {conf=new Conf();setConfig(conf:Conf):void{this.conf=conf;}}
  class Probe {
  static plain():string {const original={name:"a",replace:"b",extra:"kept"};const input={rows:[original]};const rule=new Rule();const slot:Slot=rule;slot.setConfig(input);const first=rule.conf.rows[0];original.name="A";const seen=first.name;first.replace="B";first.from="new";const raw:any=first;const originalRef:any=original;return (first===originalRef)+":"+seen+":"+original.replace+":"+raw.extra+":"+raw.from;}
+ static nativeRows():string {const native:Row={name:"a",replace:"b"};const input={rows:[native]};const rule=new Rule();const slot:Slot=rule;slot.setConfig(input);const typed=rule.conf.rows;const replacement:Row=JSON.parse('{"name":"p","replace":"q"}');typed[0]=replacement;const seen=input.rows[0].name;input.rows[0].replace="Q";return seen+":"+typed[0].replace+":"+(input.rows[0]===replacement);}
  static run():string {
  const input=JSON.parse('{"rows":[{"name":"a","replace":"b","extra":7},{"name":"c","replace":"d","from":"old"}],"severity":2}');
  const rule=new Rule();const slot:Slot=rule;slot.setConfig(input);
@@ -31,7 +32,7 @@ func TestLiveConfigRowViewsNodeOracle(t *testing.T) {
  rows.push(first);const same=first===again;const caller:any=first;
  const answer=(rows===input.rows)+":"+same+":"+(first===input.rows[0])+":"+absent+":"+keys+":"+seen+":"+input.rows[0].replace+":"+input.rows[0].from+":"+caller.extra+":"+second.name+":"+(second.from===undefined)+":"+(rows[2]===first)+":"+rows.length+":"+rule.conf.severity;
  first.from=undefined;const explicit=Object.keys(first).join(",");
- const partial=JSON.parse('{}');slot.setConfig(partial);return answer+":"+(rule.conf.rows===undefined)+":"+Object.keys(partial).length+":"+explicit+":"+(first.from===undefined)+"|"+Probe.plain();
+ const partial=JSON.parse('{}');slot.setConfig(partial);return answer+":"+(rule.conf.rows===undefined)+":"+Object.keys(partial).length+":"+explicit+":"+(first.from===undefined)+"|"+Probe.plain()+"|"+Probe.nativeRows();
  }}`
 		want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
 		if err != nil {

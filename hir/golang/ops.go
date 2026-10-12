@@ -288,7 +288,7 @@ func (b *body) runtime(x *hir.Expr) string {
 				// the actual element, rather than requiring a pre-existing box.
 				code = "box(" + code + ")"
 			} else {
-				code = "castRef[" + b.e.typ(x.Type) + "](" + code + ")"
+				code = b.e.arrayReference(x.Type, code)
 			}
 		}
 	}

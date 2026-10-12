@@ -714,7 +714,7 @@ func (b *body) expr(x *hir.Expr) string {
 			if e.liveStorage() && t.Kind == hir.Dynamic {
 				code = "box(" + code + ")"
 			} else {
-				code = "castRef[" + e.typ(t) + "](" + code + ")"
+				code = e.arrayReference(t, code)
 			}
 		}
 	case hir.New:
@@ -1127,7 +1127,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			if e.liveStorage() && s.Type.Kind == hir.Dynamic {
 				code = "box(" + code + ")"
 			} else {
-				code = "castRef[" + e.typ(s.Type) + "](" + code + ")"
+				code = e.arrayReference(s.Type, code)
 			}
 		}
 		n := b.temp(s.Type, code)
