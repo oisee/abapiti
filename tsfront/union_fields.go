@@ -27,6 +27,12 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		if part.Flags()&checker.TypeFlagsObject == 0 {
 			return nil, false
 		}
+		// Fresh literal collection rows have a separate proof and physical
+		// slot layout. A common-field read must neither replace that layout
+		// nor make an unproven registration initializer executable.
+		if sym := part.Symbol(); sym != nil && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindObjectLiteralExpression {
+			return nil, false
+		}
 	}
 	name := n.Name().Text()
 	var fields []hir.Field
