@@ -1,0 +1,52 @@
+{
+  "name": "grace-language",
+  "displayName": "Grace",
+  "description": "Syntax highlighting and parenthesis folding for Grace rule files.",
+  "publisher": "oisee",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oisee/abapiti.git",
+    "directory": "editors/vscode-grace"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:grace"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "grace",
+        "aliases": [
+          "Grace",
+          "grace"
+        ],
+        "extensions": [
+          ".grace"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "grace",
+        "scopeName": "source.grace",
+        "path": "./syntaxes/grace.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node test/grammar.test.cjs"
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  }
+}
