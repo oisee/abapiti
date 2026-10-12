@@ -2158,6 +2158,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.e.jsonSubsetRuntime()
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
 		return
+	case "json5.parse":
+		b.e.json5SubsetRuntime()
+		b.line(n + " = " + b.e.name("runtime.json5Subset") + "=>parse( " + a + " ).")
+		return
 	case "xml.validate":
 		b.e.xmlValidationRuntime()
 		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
