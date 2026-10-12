@@ -116,5 +116,6 @@ func upstreamChaiModule(t *testing.T) string {
 			return path
 		}
 	}
-	return filepath.Join(root, "node_modules", "chai")
+	t.Skip("upstream chai is not installed (set ABAPITI_TESTS_UPSTREAM to an abaplint checkout with node_modules)")
+	return ""
 }
