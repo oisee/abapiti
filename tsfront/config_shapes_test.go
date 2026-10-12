@@ -56,13 +56,15 @@ func TestNominalConfigLiteralNodeOracle(t *testing.T) {
 func TestDefaultFillingConfigViewsNodeOracle(t *testing.T) {
 	source := `type Style="upper"|"lower";
  class Conf {style:Style="upper";ignoreExceptions:boolean=true;}
+ class Consumer {value:string;constructor(value:string){this.value=value;}}
  class Rule {conf=new Conf();setConfig(conf:Conf):void {this.conf=conf;if(this.conf===undefined){this.conf=new Conf();}if(this.conf.style===undefined){this.conf=new Conf();}if(this.conf.ignoreExceptions===undefined){this.conf.ignoreExceptions=new Conf().ignoreExceptions;}}}
  class Probe {static style(input:any):string {const style:Style=input ? input["style"] : "upper";return style==="lower" ? "lower" : "upper";}
+ static guarded(input:any):string {const conf:Conf=input;if(conf.style!==undefined && conf.style!==""){return new Consumer(conf.style).value;}return "absent";}
  static accept(input:any):Conf {const rule=new Rule();rule.setConfig(input);return rule.conf;}
  static run():string {
  const partial=JSON.parse('{"style":"lower"}');const viewed=Probe.accept(partial);
  const native=new Conf();const same=Probe.accept(native)===native;
- return Probe.accept(true).style+":"+Probe.accept(undefined).style+":"+Probe.accept(7).style+":"+Probe.accept("x").style+":"+(viewed===partial)+":"+partial.ignoreExceptions+":"+Object.keys(partial).join(",")+":"+same+":"+Probe.style(true)+":"+Probe.style(undefined)+":"+Probe.style(partial);
+ return Probe.accept(true).style+":"+Probe.accept(undefined).style+":"+Probe.accept(7).style+":"+Probe.accept("x").style+":"+(viewed===partial)+":"+partial.ignoreExceptions+":"+Object.keys(partial).join(",")+":"+same+":"+Probe.style(true)+":"+Probe.style(undefined)+":"+Probe.style(partial)+":"+Probe.guarded(partial)+":"+Probe.guarded(true);
  }}`
 	want := conversionOracle(t, source)
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})

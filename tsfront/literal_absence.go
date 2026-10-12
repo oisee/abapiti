@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
@@ -99,4 +100,28 @@ func (l *lowerer) literalPropertyAbsent(p *ast.Symbol) bool {
 
 func (l *lowerer) literalPropertyAbsentSymbol(p *ast.Symbol) bool {
 	return p != nil && l.literalPropertyAbsent(p)
+}
+
+// Call/constructor arguments retain their checked primitive boundary when
+// the checker requires a present value. Optional/dynamic construction contexts
+// still store or box undefined. This does not change any constructor intrinsic.
+func (l *lowerer) requiredFieldUse(n *ast.Node) bool {
+	if l.hint.Kind == hir.Dynamic || l.hint.Kind == hir.Optional {
+		return false
+	}
+	parent := n.Parent
+	for parent != nil && parent.Kind == ast.KindParenthesizedExpression {
+		parent = parent.Parent
+	}
+	if parent == nil {
+		return false
+	}
+	if parent.Kind == ast.KindNewExpression {
+		return true
+	}
+	if parent.Kind == ast.KindCallExpression {
+		context := l.ck.GetContextualType(n, checker.ContextFlagsNone)
+		return primitivePresenceType(context) && !typeMayBeUndefined(context)
+	}
+	return false
 }

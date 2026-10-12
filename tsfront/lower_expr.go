@@ -150,7 +150,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && len(l.erasedScalars) > 0 && l.erasedScalars[l.resolve(n)] {
 		return x
 	}
-	if l.unprunedFeatures && x.Kind == hir.FieldGet && x.Type.Kind == hir.Optional && l.literalPropertyAbsentSymbol(l.resolve(n)) {
+	if l.unprunedFeatures && x.Kind == hir.FieldGet && x.Type.Kind == hir.Optional && l.literalPropertyAbsentSymbol(l.resolve(n)) && !l.requiredFieldUse(n) {
 		// A required contextual declaration did not prove that erased literal
 		// data was present. Consumers can check or convert it when needed.
 		return x
