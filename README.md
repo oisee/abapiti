@@ -5,19 +5,20 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
-> **11,051 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
+> **🎉 11,060 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
 >
-> Progress towards [100 % of abaplint](#goal-100--of-abaplint). Updated 12 Oct 2026 ([train 12 verification](docs/train-12.md): main plus last-absence, delete-records, typeof guards and traps N; all 17 shards measured together).
+> [The goal](#goal-100--of-abaplint) is reached: every Node-active test of abaplint's own suite (625 files, all 17 shards) passes on abaplint compiled from its TypeScript by abapiti and run as Go. Measured 12 Oct 2026 on train 13, twice, on two machines ([train 13](docs/train-13.md)).
 >
-> 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17) → 10,167 → 10,255 → 10,452 → 10,614 → 10,934 → 11,022 → 11,032 → 11,051
+> 0 → 27 → 661 → 6,515 (of 8,461, four test directories) → 9,022 (of 11,060, all 17) → 10,167 → 10,255 → 10,452 → 10,614 → 10,934 → 11,022 → 11,032 → 11,051 → **11,060**
 >
 > | | Now | Target |
 > |---|---:|---:|
-> | abaplint tests passing, all 17 shards | **11,051** of 11,060 (99.9 %) | 11,060 |
+> | abaplint tests passing, all 17 shards | **11,060** of 11,060 (100 %) | 11,060 |
 > | wrong answers (tests that run and disagree with Node) | **0** | 0 |
-> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **37** (644 → 33 in train 3 → 48 → 42 → 37) | 0 |
+> | tests trapped / not registered on Go | **0 / 0** | 0 |
+> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19) | 0 |
 >
-> All 625 test files were measured against the original Node suite: 7 tests trapped, 0 async-pending, and 34 not-run (6 not yet registered on Go, 28 skipped or focused). The [remaining Node-active tail](docs/train-12-remaining.md) is 7 traps and 2 unregistered tests. All verification gates pass; five generated output files differ from main as explained in the verification report.
+> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. Next: the same suite on the ABAP hosts (OSGO, then A4H), and a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -135,6 +136,8 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 <summary><b>Legacy WASM: experimental, deprecated (2026-10-10). Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
+
+**2026-10-12 — 100 % of abaplint's own tests on the compiled abaplint.** All 11,060 Node-active tests pass on abaplint compiled by abapiti (TS-HG@Go), with 0 wrong answers, confirmed by two independent full runs. It took thirteen integration trains in two days (9,022 → 11,060 since the suite was wired up in full). Every new lowering came with a Node oracle. Each genuine mismatch caught on the way was stopped, root-caused and kept as a regression; one reached an integration train (train 9) and was fixed before it was merged, none reached main.
 
 **2026-10-10 — v0.3.0: 4× faster on open-steamgate, a Go target faster than Node, readable names.**
 - **TS-HA@OSGO 61 s → 14–17 s, close to Node (13–14 s).** The biggest steps: `toUpperCase` on ASCII text through `TRANSLATE` (2.1×), numeric literals emitted as numbers instead of text, and open-steamgate's own fixes found on our input ([#701](https://github.com/oisee/open-steamgate/pull/701), [#706](https://github.com/oisee/open-steamgate/pull/706), [#707](https://github.com/oisee/open-steamgate/pull/707)).
