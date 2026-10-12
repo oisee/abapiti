@@ -52,3 +52,20 @@ func TestNominalConfigLiteralNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
+
+func TestDefaultFillingConfigViewsNodeOracle(t *testing.T) {
+	source := `type Style="upper"|"lower";
+ class Conf {style:Style="upper";ignoreExceptions:boolean=true;}
+ class Rule {conf=new Conf();setConfig(conf:Conf):void {this.conf=conf;if(this.conf===undefined){this.conf=new Conf();}if(this.conf.style===undefined){this.conf=new Conf();}if(this.conf.ignoreExceptions===undefined){this.conf.ignoreExceptions=new Conf().ignoreExceptions;}}}
+ class Probe {static accept(input:any):Conf {const rule=new Rule();rule.setConfig(input);return rule.conf;}
+ static run():string {
+ const partial=JSON.parse('{"style":"lower"}');const viewed=Probe.accept(partial);
+ const native=new Conf();const same=Probe.accept(native)===native;
+ return Probe.accept(true).style+":"+Probe.accept(undefined).style+":"+Probe.accept(7).style+":"+Probe.accept("x").style+":"+(viewed===partial)+":"+partial.ignoreExceptions+":"+Object.keys(partial).join(",")+":"+same;
+ }}`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}

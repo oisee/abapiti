@@ -9,6 +9,26 @@ import (
 // initializes it from erased data. Decide the storage layout before signatures
 // and bodies, so every constructor and alias sees the same optional field ABI.
 func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
+	if n.Kind == ast.KindBinaryExpression {
+		b := n.AsBinaryExpression()
+		switch b.OperatorToken.Kind {
+		case ast.KindEqualsEqualsToken, ast.KindEqualsEqualsEqualsToken, ast.KindExclamationEqualsToken, ast.KindExclamationEqualsEqualsToken:
+			var property *ast.Node
+			if l.isUndefinedType(b.Left) {
+				property = b.Right
+			} else if l.isUndefinedType(b.Right) {
+				property = b.Left
+			}
+			if property != nil && property.Kind == ast.KindPropertyAccessExpression && property.Flags&ast.NodeFlagsOptionalChain == 0 && property.AsPropertyAccessExpression().QuestionDotToken == nil {
+				prop := l.resolve(property)
+				if l.markPrimitiveAbsence(prop) {
+					for _, decl := range prop.Declarations {
+						l.checkedFields[decl] = true
+					}
+				}
+			}
+		}
+	}
 	if n.Kind == ast.KindObjectLiteralExpression {
 		context := l.ck.GetContextualType(n, checker.ContextFlagsNone)
 		if context != nil {
@@ -29,17 +49,43 @@ func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
 				if prop == nil {
 					continue
 				}
-				typ := l.ck.GetTypeOfSymbol(prop)
-				if typ == nil || typ.Flags()&(checker.TypeFlagsStringLike|checker.TypeFlagsNumberLike|checker.TypeFlagsBooleanLike) == 0 {
-					continue
-				}
-				for _, decl := range prop.Declarations {
-					l.absentFields[decl] = true
-				}
+				l.markPrimitiveAbsence(prop)
 			}
 		}
 	}
 	n.ForEachChild(func(child *ast.Node) bool { l.scanLiteralAbsence(child); return false })
+}
+
+func primitivePresenceType(t *checker.Type) bool {
+	if t == nil {
+		return false
+	}
+	if t.Flags()&(checker.TypeFlagsStringLike|checker.TypeFlagsNumberLike|checker.TypeFlagsBooleanLike|checker.TypeFlagsUndefined) != 0 {
+		return true
+	}
+	if !t.IsUnion() {
+		return false
+	}
+	for _, part := range t.AsUnionOrIntersectionType().Types() {
+		if !primitivePresenceType(part) {
+			return false
+		}
+	}
+	return true
+}
+
+func (l *lowerer) markPrimitiveAbsence(prop *ast.Symbol) bool {
+	if prop == nil {
+		return false
+	}
+	typ := l.ck.GetTypeOfSymbol(prop)
+	if !primitivePresenceType(typ) || typeMayBeUndefined(typ) {
+		return false
+	}
+	for _, decl := range prop.Declarations {
+		l.absentFields[decl] = true
+	}
+	return true
 }
 
 func (l *lowerer) literalPropertyAbsent(p *ast.Symbol) bool {

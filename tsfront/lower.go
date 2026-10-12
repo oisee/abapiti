@@ -176,6 +176,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	if l.unprunedFeatures {
 		l.absentFields = map[*ast.Node]bool{}
+		l.checkedFields = map[*ast.Node]bool{}
 		for _, name := range files {
 			f, _ := p.File(name)
 			ck, done := p.prog.GetTypeCheckerForFile(context.Background(), f)
@@ -417,6 +418,7 @@ type lowerer struct {
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	unprunedFeatures   bool
 	absentFields       map[*ast.Node]bool
+	checkedFields      map[*ast.Node]bool
 	lspConstructors    bool
 	settledEnabled     bool
 	asyncMethods       map[*hir.Method]bool
