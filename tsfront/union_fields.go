@@ -46,7 +46,9 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 				// the descriptor operation refuses nonnative implementations.
 				continue
 			}
-			if typ.Kind != hir.ClassRef || c == nil || c.Structural {
+			// Structural is finalized after bodies are lowered; the existing
+			// shape registry is authoritative at this earlier phase.
+			if typ.Kind != hir.ClassRef || c == nil || c.Structural || l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.") {
 				native = false
 				break
 			}
