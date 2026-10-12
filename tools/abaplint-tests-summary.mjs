@@ -26,6 +26,7 @@ for (const {id:name, name:label} of specs) {
   passed:report.passed, failed:report.failed, trapped:report.trapped, asyncPending:report.asyncPending ?? 0, notRun:report.notRun,
   registered:report.registered, total:report.total, node:{passed:node.passed, failed:node.failed, pending:node.pending},
   notRunReasons:report.notRunReasons, unregisteredTitles:report.unregisteredTitles ?? [], unmatched:report.unmatched.length,
+  ...(report.nodeActive ? {nodeActive:report.nodeActive, nodePending:report.nodePending, skippedOrFocusedTests:report.skippedOrFocusedTests} : {}),
   initialization:(run.initialization ?? []).map(r => ({...r, action:clean(r.action), message:clean(r.message)})),
   failures:run.results.filter(r => r.status === 'failed').map(r => ({title:r.title, message:clean(r.message).replace(/0x[0-9a-f]+/g,'<address>')}))};
  if (node.borrowed) row.borrowed = {...node.borrowed, registered:run.borrowedRegistered, rawRegistered:run.rawRegistered};
@@ -57,14 +58,21 @@ if (manifest) {
   wiringFailures:shards.filter(s => s.infrastructureFailure).map(s => ({name:s.name, files:specs.find(p => p.name === s.name).roots, reason:s.infrastructureFailure}))};
  }
 }
-const result = {upstreamPin:pin, codeCommit:manifest?.compilerCommit ?? execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
+function sumAudit(field) {
+ if (!shards.every(s => s[field])) return undefined;
+ const total = {};
+ for (const s of shards) for (const [key,n] of Object.entries(s[field])) total[key]=(total[key] ?? 0)+n;
+ return total;
+}
+const result = {nodeActive:sumAudit('nodeActive'), nodePending:sumAudit('nodePending'), upstreamPin:pin, codeCommit:manifest?.compilerCommit ?? execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
  mainCommit:execFileSync('git',['rev-parse','origin/main'],{encoding:'utf8'}).trim(),
  artifacts:directory, artifactPrefix:prefix, shards, uniqueTotal:totals, nodeTotal:nodeTotals,
  ...(wholeSuite ? {wholeSuite} : {}),
  ...(manifest?.partial ? {selectedSuite:{shards:specs.map(s => s.name), files:manifest.files.length, excluded:manifest.excluded, active:nodeTotals.passed + nodeTotals.failed}} : {}),
- countingRule:'Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.',
+ countingRule:'passed/active counts only original Node-active titles (11,060 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.',
  asyncInitializationFailures:shards.flatMap(s => s.initialization).filter(r => r.message.includes('unsupported-async')).length,
  registrationParity:shards.every(s => s.registered === s.total && s.unmatched === 0),
+ allTraps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)),
  top20Traps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)).slice(0,20)};
 if (existsSync(join(directory,'verification.json'))) result.verification = read('verification.json');
 writeFileSync(output,JSON.stringify(result,null,2)+'\n');

@@ -1,8 +1,23 @@
 {
+  "nodeActive": {
+    "total": 11060,
+    "passed": 11022,
+    "failed": 0,
+    "trapped": 35,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 3,
+    "notPassing": 38
+  },
+  "nodePending": {
+    "total": 32,
+    "skipped": 28,
+    "unregistered": 4
+  },
   "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
-  "codeCommit": "4b6a465c5663360a5f08cb249ef7cb936dfe36df",
-  "mainCommit": "ab026e7bc5526e5d791d4b15f8fb5c83202d69fa",
-  "artifacts": "Disposable shard artifacts removed by the runner after successful reconciliation.",
+  "codeCommit": "b15a4ba66abc3a9fb6fce81347d983fff7ae0b62",
+  "mainCommit": "e2ba6ac0f447ff8d989a7b50f2dae7fe5182cbb5",
+  "artifacts": "",
   "artifactPrefix": "",
   "shards": [
     {
@@ -32,11 +47,27 @@
         "Structure, test error messages, specific IF foo = bar. ENDWHILE. ENDIF."
       ],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 216,
+        "passed": 216,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 4,
+        "skipped": 0,
+        "unregistered": 4
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [
         {
           "file": "test/abap/structure_errors.ts",
           "action": "test/abap/structure_errors.ts:15:1",
-          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36328 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36333 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
           "status": "trapped"
         }
       ],
@@ -64,6 +95,22 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 107,
+        "passed": 107,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
@@ -89,6 +136,22 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 200,
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
@@ -114,6 +177,22 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
@@ -139,6 +218,22 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 4962,
+        "passed": 4962,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
@@ -166,6 +261,28 @@
         "structure combi, complex1 complex1 match"
       ],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 139,
+        "passed": 138,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 1,
+        "notPassing": 1
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Structure FORM FORM, many statements",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [
         {
           "file": "test/abap/structures/_combi.ts",
@@ -179,9 +296,9 @@
     {
       "name": "abap/syntax",
       "files": 8,
-      "passed": 1354,
+      "passed": 1362,
       "failed": 0,
-      "trapped": 9,
+      "trapped": 1,
       "asyncPending": 0,
       "notRun": 10,
       "registered": 1373,
@@ -198,6 +315,73 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 1363,
+        "passed": 1362,
+        "failed": 0,
+        "trapped": 1,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 1
+      },
+      "nodePending": {
+        "total": 10,
+        "skipped": 10,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "syntax.ts, Check Variables function module definition not found",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables error cannot define length and decimals for date",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables Error, overlapping names",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables access instance variable from interface in static method, error",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables Error, insert, types incompatible",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables accessing me is not possible in static methods",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables fields inside TYPES cannot be generic",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables return type doesnt match importing",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, PERFORM parameters, STRUCTURE typing gap, FORM parameters typed against program-local names are never checked",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, PERFORM parameters, STRUCTURE typing gap, TABLES accepts sorted and hashed tables",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [],
       "failures": [],
       "borrowed": {
@@ -235,31 +419,22 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
-      "initialization": [],
-      "failures": []
-    },
-    {
-      "name": "root",
-      "files": 12,
-      "passed": 88,
-      "failed": 0,
-      "trapped": 6,
-      "asyncPending": 0,
-      "notRun": 0,
-      "registered": 94,
-      "total": 94,
-      "node": {
-        "passed": 94,
+      "nodeActive": {
+        "total": 29,
+        "passed": 28,
         "failed": 0,
-        "pending": 0
+        "trapped": 1,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 1
       },
-      "notRunReasons": {
-        "asyncOrDone": 0,
-        "skippedOrFocused": 0,
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
         "unregistered": 0
       },
-      "unregisteredTitles": [],
-      "unmatched": 0,
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
@@ -285,6 +460,28 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 358,
+        "passed": 355,
+        "failed": 0,
+        "trapped": 3,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 3
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "CDS Parser define custom entity with association",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [],
       "failures": []
     },
@@ -310,15 +507,31 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 32,
+        "passed": 32,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
     {
       "name": "lsp",
       "files": 16,
-      "passed": 178,
+      "passed": 180,
       "failed": 0,
-      "trapped": 10,
+      "trapped": 8,
       "asyncPending": 0,
       "notRun": 5,
       "registered": 193,
@@ -335,6 +548,48 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 188,
+        "passed": 180,
+        "failed": 0,
+        "trapped": 8,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 8
+      },
+      "nodePending": {
+        "total": 5,
+        "skipped": 5,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "LSP, hover keyworld should not resolve",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, hover hover method parameter",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, hover Hover inline SELECT data voided",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, references method references",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, references find references for macro definition",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [],
       "failures": [],
       "borrowed": {
@@ -352,9 +607,9 @@
     {
       "name": "objects",
       "files": 26,
-      "passed": 124,
+      "passed": 134,
       "failed": 0,
-      "trapped": 20,
+      "trapped": 10,
       "asyncPending": 0,
       "notRun": 1,
       "registered": 145,
@@ -371,15 +626,37 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 144,
+        "passed": 134,
+        "failed": 0,
+        "trapped": 10,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 10
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Proxy Object adhoc",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [],
       "failures": []
     },
     {
       "name": "objects/rename",
       "files": 9,
-      "passed": 0,
+      "passed": 29,
       "failed": 0,
-      "trapped": 31,
+      "trapped": 2,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 31,
@@ -396,15 +673,31 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 31,
+        "passed": 29,
+        "failed": 0,
+        "trapped": 2,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 2
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
     {
       "name": "pretty_printer",
       "files": 1,
-      "passed": 21,
+      "passed": 30,
       "failed": 0,
-      "trapped": 10,
+      "trapped": 1,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 31,
@@ -421,15 +714,72 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 31,
+        "passed": 30,
+        "failed": 0,
+        "trapped": 1,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 1
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 91,
+      "failed": 0,
+      "trapped": 3,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 94,
+        "passed": 91,
+        "failed": 0,
+        "trapped": 3,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 3
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     },
     {
       "name": "rules",
       "files": 192,
-      "passed": 3121,
+      "passed": 3141,
       "failed": 0,
-      "trapped": 26,
+      "trapped": 6,
       "asyncPending": 0,
       "notRun": 12,
       "registered": 3157,
@@ -449,6 +799,73 @@
         "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
       ],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 3149,
+        "passed": 3141,
+        "failed": 0,
+        "trapped": 6,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 2,
+        "notPassing": 8
+      },
+      "nodePending": {
+        "total": 10,
+        "skipped": 10,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Rule: downport REDUCE FOR GROUPS",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport FOR loops, identical variable names, step 1",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport SELECT AS",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport SELECT UNION",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport basic value FOR",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline Dont inline, type P, this will change the type?",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline Types should not change when inlining",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: uncaught_exception no error, super classed, local exceptions",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: uncaught_exception PROG with INCL, expect error",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "unknown_types Rule No class/method implementation but DEFAULT not found",
+          "node": "pending",
+          "message": ""
+        }
+      ],
       "initialization": [
         {
           "file": "test/rules/line_length.ts",
@@ -462,9 +879,9 @@
     {
       "name": "utils",
       "files": 3,
-      "passed": 8,
+      "passed": 15,
       "failed": 0,
-      "trapped": 7,
+      "trapped": 0,
       "asyncPending": 0,
       "notRun": 0,
       "registered": 15,
@@ -481,14 +898,30 @@
       },
       "unregisteredTitles": [],
       "unmatched": 0,
+      "nodeActive": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
       "initialization": [],
       "failures": []
     }
   ],
   "uniqueTotal": {
-    "passed": 10934,
+    "passed": 11022,
     "failed": 0,
-    "trapped": 123,
+    "trapped": 35,
     "asyncPending": 0,
     "notRun": 35,
     "registered": 11085,
@@ -514,49 +947,16 @@
     "excluded": [],
     "wiringFailures": []
   },
-  "countingRule": "Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.",
+  "countingRule": "passed/active counts only original Node-active titles (11,060 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.",
   "asyncInitializationFailures": 0,
   "registrationParity": false,
-  "top20Traps": [
-    {
-      "message": "src/objects/rename/renamer.ts: HIR verification: unresolved field range",
-      "count": 29,
-      "shards": {
-        "objects-rename": 29
-      },
-      "example": "src/objects/rename/renamer.ts:125:3: lowering trap: src/objects/rename/renamer.ts:125:3: HIR verification: node 172359 (src/objects/rename/renamer.ts:135:11): unresolved field range"
-    },
-    {
-      "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
-      "count": 19,
-      "shards": {
-        "objects": 3,
-        "rules": 16
-      },
-      "example": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
-    },
-    {
-      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered",
-      "count": 7,
-      "shards": {
-        "pretty_printer": 7
-      },
-      "example": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered"
-    },
-    {
-      "message": "unsupported-type test/utils/name_validator.ts: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts: identifier ruleViolated is not a lowered local or module value",
-      "count": 7,
-      "shards": {
-        "utils": 7
-      },
-      "example": "test/utils/name_validator.ts:6:80: lowering trap: unsupported-type test/utils/name_validator.ts:7:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:8:12: identifier ruleViolated is not a lowered local or module value"
-    },
+  "allTraps": [
     {
       "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
       "count": 3,
       "shards": {
-        "abap-syntax": 1,
         "lsp": 1,
+        "abap-syntax": 1,
         "rules": 1
       },
       "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
@@ -567,7 +967,15 @@
       "shards": {
         "lsp": 3
       },
-      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168846 (src/lsp/rename.ts:109:52): assignment type mismatch"
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168894 (src/lsp/rename.ts:109:52): assignment type mismatch"
+    },
+    {
+      "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "runtime/chai.ts:26:3: chai object enumerable keys are unsupported"
     },
     {
       "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
@@ -576,14 +984,6 @@
         "objects": 2
       },
       "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
-    },
-    {
-      "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
-      "count": 2,
-      "shards": {
-        "objects": 2
-      },
-      "example": "src/objects/_abstract_object.ts:134:3: input is outside the reviewed abapGit XML subset"
     },
     {
       "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
@@ -611,12 +1011,201 @@
       "example": "src/objects/rename/renamer_helper.ts:107:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "src/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+      "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "root": 2
+      },
+      "example": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
       "count": 2,
       "shards": {
         "objects": 2
       },
-      "example": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+      "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169279 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+    },
+    {
+      "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+    },
+    {
+      "message": "src/objects/number_range.ts: src/objects/number_range.ts: parseFloat requires a finite result",
+      "count": 1,
+      "shards": {
+        "rules": 1
+      },
+      "example": "src/objects/number_range.ts:36:3: src/objects/number_range.ts:51:33: parseFloat requires a finite result"
+    },
+    {
+      "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "src/objects/proxy_object.ts:70:3: lowering trap: src/objects/proxy_object.ts:70:3: HIR verification: node 176593 (src/objects/proxy_object.ts:81:5): assignment type mismatch"
+    },
+    {
+      "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "rules": 1
+      },
+      "example": "src/rules/line_only_punc.ts:46:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/abap/types/types.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "abap-types": 1
+      },
+      "example": "test/abap/types/types.ts:10:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
+      "count": 1,
+      "shards": {
+        "cds": 1
+      },
+      "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
+    },
+    {
+      "message": "unsupported-call test/cds/cds_parser.ts: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier tok is not a lowered local or module value",
+      "count": 1,
+      "shards": {
+        "cds": 1
+      },
+      "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
+    },
+    {
+      "message": "unsupported-expr src/lsp/help.ts: delete supports ordinary lowered records only",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:39:3: lowering trap: unsupported-expr src/lsp/help.ts:46:5: delete supports ordinary lowered records only"
+    },
+    {
+      "message": "unsupported-expr test/cds/cds_parser.ts: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts: identifier rootAnnos is not a lowered local or module value",
+      "count": 1,
+      "shards": {
+        "cds": 1
+      },
+      "example": "test/cds/cds_parser.ts:3725:73: lowering trap: unsupported-expr test/cds/cds_parser.ts:3745:57: union field constructor requires a public data slot in every member; unsupported-expr test/cds/cds_parser.ts:3746:12: identifier rootAnnos is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-expr test/pretty_printer/pretty_printer.ts: delete supports ordinary lowered records only",
+      "count": 1,
+      "shards": {
+        "pretty_printer": 1
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:179:31: lowering trap: unsupported-expr test/pretty_printer/pretty_printer.ts:183:7: delete supports ordinary lowered records only"
+    },
+    {
+      "message": "unsupported-expr test/registry.ts: delete supports ordinary lowered records only",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "test/registry.ts:452:62: lowering trap: unsupported-expr test/registry.ts:460:5: delete supports ordinary lowered records only"
+    }
+  ],
+  "top20Traps": [
+    {
+      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 3,
+      "shards": {
+        "lsp": 1,
+        "abap-syntax": 1,
+        "rules": 1
+      },
+      "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+      "count": 3,
+      "shards": {
+        "lsp": 3
+      },
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168894 (src/lsp/rename.ts:109:52): assignment type mismatch"
+    },
+    {
+      "message": "runtime/chai.ts: chai object enumerable keys are unsupported",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "runtime/chai.ts:26:3: chai object enumerable keys are unsupported"
+    },
+    {
+      "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
+    },
+    {
+      "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "rules": 2
+      },
+      "example": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects": 1,
+        "rules": 1
+      },
+      "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/rename/renamer_helper.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects-rename": 2
+      },
+      "example": "src/objects/rename/renamer_helper.ts:107:3: value outside supported numeric, ordering or conversion domain"
     },
     {
       "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
@@ -627,83 +1216,100 @@
       "example": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "test/abap/syntax/when_type.ts: HIR verification: unresolved method fn_visit",
+      "message": "test/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
       "count": 2,
       "shards": {
-        "abap-syntax": 2
+        "objects": 2
       },
-      "example": "test/abap/syntax/when_type.ts:8:1: lowering trap: test/abap/syntax/when_type.ts:8:1: HIR verification: node 74335 (test/abap/syntax/when_type.ts:24:3): unresolved method fn_visit"
+      "example": "test/objects/domain.ts:129:22: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "unsupported-assignment test/config.ts: assignment to property applyUnspecifiedRules is not lowered",
-      "count": 2,
+      "message": "src/lsp/help.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
       "shards": {
-        "root": 2
+        "lsp": 1
       },
-      "example": "test/config.ts:80:86: lowering trap: unsupported-assignment test/config.ts:82:5: assignment to property applyUnspecifiedRules is not lowered"
+      "example": "src/lsp/help.ts:220:3: value outside supported numeric, ordering or conversion domain"
     },
     {
-      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property sequential_blank is not lowered",
-      "count": 2,
+      "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+      "count": 1,
       "shards": {
-        "pretty_printer": 2
+        "lsp": 1
       },
-      "example": "test/pretty_printer/pretty_printer.ts:242:28: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:246:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:247:5: assignment to property sequential_blank is not lowered"
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169279 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
     },
     {
-      "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
-      "count": 2,
+      "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+      "count": 1,
       "shards": {
-        "objects": 1,
+        "objects": 1
+      },
+      "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+    },
+    {
+      "message": "src/objects/number_range.ts: src/objects/number_range.ts: parseFloat requires a finite result",
+      "count": 1,
+      "shards": {
         "rules": 1
       },
-      "example": "src/objects/number_range.ts:36:3: lowering trap: unsupported-call src/objects/number_range.ts:51:33: call to KindIdentifier is not lowered"
+      "example": "src/objects/number_range.ts:36:3: src/objects/number_range.ts:51:33: parseFloat requires a finite result"
     },
     {
-      "message": "unsupported-call test/abap/syntax/basic_variables.ts: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts: identifier fieldDefinitions is not a lowered local or module value",
-      "count": 2,
+      "message": "src/objects/proxy_object.ts: HIR verification: assignment type mismatch",
+      "count": 1,
       "shards": {
-        "abap-syntax": 2
+        "objects": 1
       },
-      "example": "test/abap/syntax/basic_variables.ts:16:1: lowering trap: unsupported-call test/abap/syntax/basic_variables.ts:21:20: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts:47:21: identifier fieldDefinitions is not a lowered local or module value"
+      "example": "src/objects/proxy_object.ts:70:3: lowering trap: src/objects/proxy_object.ts:70:3: HIR verification: node 176593 (src/objects/proxy_object.ts:81:5): assignment type mismatch"
+    },
+    {
+      "message": "src/rules/line_only_punc.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "rules": 1
+      },
+      "example": "src/rules/line_only_punc.ts:46:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/abap/types/types.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "abap-types": 1
+      },
+      "example": "test/abap/types/types.ts:10:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "test/objects/view.ts:97:43: value outside supported numeric, ordering or conversion domain"
     },
     {
       "message": "unsupported-call test/cds/cds_parser.ts: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts: method getChildren on dynamic is not lowered",
-      "count": 2,
+      "count": 1,
       "shards": {
-        "cds": 2
+        "cds": 1
       },
       "example": "test/cds/cds_parser.ts:3803:3: lowering trap: unsupported-call test/cds/cds_parser.ts:3804:15: method get on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3805:9: identifier k is not a lowered local or module value; unsupported-call test/cds/cds_parser.ts:3806:21: method getChildren on dynamic is not lowered"
     },
     {
-      "message": "unsupported-expr test/abap/syntax/basic_variables.ts: property all is not lowered",
-      "count": 2,
+      "message": "unsupported-call test/cds/cds_parser.ts: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts: identifier tok is not a lowered local or module value",
+      "count": 1,
       "shards": {
-        "abap-syntax": 2
+        "cds": 1
       },
-      "example": "test/abap/syntax/basic_variables.ts:1914:69: lowering trap: unsupported-expr test/abap/syntax/basic_variables.ts:1921:5: property all is not lowered"
-    }
-  ],
-  "verification": {
-    "build": "pass (-p 4)",
-    "vet": "pass (-p 4; rerun after lint canary cleanup)",
-    "shortTests": "pass (-short -p 4)",
-    "defaultBackendOps": "pass",
-    "lexerFacts": "pass; exported once, existing golden identical",
-    "graceFull": "pass; 1927 classes, 64 interfaces unchanged",
-    "lint": "0 new issues; canary 5/5; golangci-lint 2.13.2",
-    "defaultOutput": {
-      "files": 6321,
-      "differences": [
-        "go/runtime.go",
-        "go/zabaplint-go"
-      ],
-      "reason": "Inherited traps-I commit 933e68f: empty regex source and three reviewed regex catalogue entries. All other artifacts byte-identical at the same output path."
+      "example": "test/cds/cds_parser.ts:3842:78: lowering trap: unsupported-call test/cds/cds_parser.ts:3852:17: method getFirstToken on dynamic is not lowered; unsupported-expr test/cds/cds_parser.ts:3853:12: identifier tok is not a lowered local or module value"
     },
-    "checkKit": {
-      "cleanIssues": 0,
-      "seededIssues": 5,
-      "goAndFreshNodeByteIdentical": true
+    {
+      "message": "unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/dump_scope.ts:12:3: lowering trap: unsupported-expr src/lsp/dump_scope.ts:31:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive; unsupported-expr src/lsp/dump_scope.ts:32:14: string coercion of classref<src/abap/types/_typed_identifier.ts.TypedIdentifier> requires JavaScript ToPrimitive"
     }
-  }
+  ]
 }

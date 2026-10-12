@@ -147,6 +147,14 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && len(l.erasedScalars) > 0 && l.erasedScalars[l.resolve(n)] {
+		return x
+	}
+	if l.unprunedFeatures && x.Kind == hir.FieldGet && x.Type.Kind == hir.Optional && l.literalPropertyAbsentSymbol(l.resolve(n)) && !l.requiredFieldUse(n) {
+		// A required contextual declaration did not prove that erased literal
+		// data was present. Consumers can check or convert it when needed.
+		return x
+	}
 	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
 		return x
 	}
@@ -708,6 +716,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	if x, handled := l.unionFieldAccess(n); handled {
+		return x
+	}
 	f, hasField := l.fieldOf(sym)
 	if sym != nil && hasField {
 		if f.Static {
@@ -881,6 +892,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, handled := l.mathCeilCall(n); handled {
+		return x
+	}
+	if x, handled := l.json5Call(n); handled {
 		return x
 	}
 	if x, handled := l.jsonCall(n); handled {
@@ -1368,6 +1382,36 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, true
 			}
 			return l.rtOp("string.repeat", recv, str, l.coerce(count, hir.T(hir.Number))), true
+		case "padStart":
+			if len(args) > 2 {
+				l.diagf(n, "unsupported-call", "string.padStart accepts at most two arguments")
+				return nil, true
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			count := hir.L(hir.T(hir.Number), 0)
+			if len(args) > 0 {
+				count = l.expr(args[0])
+			}
+			if count == nil {
+				return nil, true
+			}
+			if !numberType(count.Type) {
+				l.diagf(n, "unsupported-call", "string.padStart requires a numeric target length")
+				return nil, true
+			}
+			count = l.tempInit(n, hir.T(hir.Number), l.coerce(count, hir.T(hir.Number)))
+			fill := hir.L(str, " ")
+			if len(args) > 1 {
+				fill = l.expr(args[1])
+			}
+			if fill == nil {
+				return nil, true
+			}
+			if fill.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-call", "string.padStart requires a string fill value")
+				return nil, true
+			}
+			return l.rtOp("string.padStart", recv, str, count, fill), true
 		case "includes":
 			if len(args) != 1 {
 				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")
@@ -2685,6 +2729,16 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		}
 		l.diagf(n, "unsupported-type", "object literal needs a named lowered shape")
 		return nil
+	}
+	if l.unprunedFeatures && !l.shapeLike[target.Name] && !strings.HasPrefix(target.Name, "shape.") {
+		// A class annotation does not run a constructor on a JS literal.
+		// Keep its supplied properties in insertion order and attach only the
+		// existing certified data view, including inherited/absent fields.
+		record := l.dynamicRecordLiteral(n)
+		if record == nil {
+			return nil
+		}
+		return l.dynamicReference(record, hir.Ref(target.Name))
 	}
 	ctor := target.Ctor
 	props := n.AsObjectLiteralExpression().Properties.Nodes

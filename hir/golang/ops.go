@@ -3,16 +3,17 @@ package golang
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
 )
 
 var supportedOps = map[string]bool{
-	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true,
-	"chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
+	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
+	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex": true,
-	"string.repeat":  true, "string.match": true, "array.matchIndex": true,
+	"string.repeat":  true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
@@ -24,7 +25,7 @@ var supportedOps = map[string]bool{
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
-	"clock.telemetry": true, "xml.parseSubset": true, "dynamic.materialize": true, "json.parseSubset": true,
+	"clock.telemetry": true, "xml.parseSubset": true, "xml.parseWithErrors": true, "dynamic.materialize": true, "json.parseSubset": true, "json5.parse": true, "json.indent": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
 	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
@@ -82,6 +83,10 @@ func (b *body) runtime(x *hir.Expr) string {
 	switch x.Op {
 	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "string.parseFloat":
+		code = a + ".parseFloat()"
+	case "string.padStart":
+		code = a + ".padStart(" + strings.Join(args, ",") + ")"
 	case "string.repeat", "string.match":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
 	case "array.matchIndex":
@@ -180,17 +185,32 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.e.materializer(x.Type) + "(" + a + ")"
 	case "clock.telemetry":
 		code = "telemetry()"
+	case "chai.members":
+		code = "chaiMembers(" + a + "," + strings.Join(args, ",") + ")"
 	case "xml.validate":
 		b.e.xmlValidation = true
 		code = "validateXML(" + a + ")"
 	case "xml.parseSubset":
 		code = "parseXML(" + a + ")"
+	case "xml.parseWithErrors":
+		c := b.e.classBy("builtin.Error")
+		if c == nil {
+			code = "func() *dynamic {panic(newTrap(\"xml parser Error representation is unsupported\"))}()"
+			break
+		}
+		b.e.usesTypedCatch = true
+		errType := hir.Ref(c.Name)
+		code = "parseXMLWithErrors(" + a + ",func(message jsString){panic(payload[" + b.e.typ(errType) + "]{Type:" + strconv.Quote(errType.String()) + ",Value:" + b.e.name("new."+c.Name) + "(present(message))})})"
 	case "json.stringifySubset":
 		code = "stringifyConfig(" + a + ")"
 	case "json.stringifyConfig":
 		code = "stringifyConfigChecked(" + a + "," + strings.Join(args, ",") + ")"
+	case "json.indent":
+		code = "indentJSON(" + a + "," + args[0] + ")"
 	case "json.parseSubset":
 		code = "parseJSON(" + a + ")"
+	case "json5.parse":
+		code = "parseJSON5(" + a + ",func(message jsString){panic(newTrap(\"JSON5 SyntaxError payload ABI is unsupported: \"+message.String()))})"
 	case "string.sha1Hex":
 		code = "sha1Hex(" + a + ")"
 	case "dynamic.null":
@@ -245,18 +265,24 @@ func (b *body) runtime(x *hir.Expr) string {
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			code = "func() *dynamic {if !" + a + ".Has {return nil};return " + boxer + "(" + a + ".Value)}()"
 		}
-	case "lsp.isTextDocumentEdit", "lsp.isRenameFile":
+	case "lsp.isTextDocumentEdit", "lsp.isRenameFile", "lsp.isCreateFile", "lsp.isDeleteFile":
 		if !b.e.lspGuards {
 			b.e.extra.WriteString(lspGuardsSource)
 			b.e.lspGuards = true
 		}
 		helper := "lspTextDocumentEdit"
-		if x.Op == "lsp.isRenameFile" {
-			helper = "lspRenameFile"
-		}
 		tail := ""
-		if x.Op == "lsp.isRenameFile" {
+		if x.Op != "lsp.isTextDocumentEdit" {
+			helper = "lspRenameFile"
 			tail = "," + args[0]
+			if x.Op == "lsp.isCreateFile" {
+				helper = "lspResourceFile"
+				tail = ",str(\"create\"),str(\"overwrite\"),str(\"ignoreIfExists\")," + args[0]
+			}
+			if x.Op == "lsp.isDeleteFile" {
+				helper = "lspResourceFile"
+				tail = ",str(\"delete\"),str(\"recursive\"),str(\"ignoreIfNotExists\")," + args[0]
+			}
 		}
 		code = helper + "(" + a + tail + ")"
 	case "dynamic.isString":

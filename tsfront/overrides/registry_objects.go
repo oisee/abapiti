@@ -6,7 +6,7 @@ import "github.com/oisee/abapiti/hir"
 // Keep these adaptations pinned to the reviewed consumers rather than changing Date.
 func registryObjectParsers() []Entry {
 	return []Entry{
-		{ID: "abaplint-object-functiongroup-text-xml", Key: Key{"src/objects/function_group.ts", "FunctionGroup.getTextSymbols", "KindMethodDeclaration"}, SHA256: "4815636396a262741c4c95ca5c916c1b1c7398608d50a68f8ed9ddfd7d6997b9", Rationale: "same reviewed XML options as AbstractObject.parseRaw2; keep the source catch and text extraction", Expressions: map[string]func() *hir.Expr{
+		{FullSource: true, ID: "abaplint-object-functiongroup-text-xml", Key: Key{"src/objects/function_group.ts", "FunctionGroup.getTextSymbols", "KindMethodDeclaration"}, SHA256: "4815636396a262741c4c95ca5c916c1b1c7398608d50a68f8ed9ddfd7d6997b9", Rationale: "same reviewed XML options as AbstractObject.parseRaw2; keep the source catch and text extraction", Expressions: map[string]func() *hir.Expr{
 			`new XMLParser({parseTagValue: false, ignoreAttributes: true, trimValues: false}).parse(found.getRaw())`: objectTextXML,
 		}},
 		{ID: "abaplint-object-authorizationcheckfield-parse", Key: Key{"src/objects/authorization_check_field.ts", "AuthorizationCheckField.parse", "KindMethodDeclaration"}, SHA256: "ba1b879963053ff6946002a80ca0004c3debf1a28a68d15291a7e26494f97912", Rationale: "parse duration is telemetry only; AFF uses the strict JSON graph adapter", Expressions: map[string]func() *hir.Expr{"Date.now()": TelemetryClock}},

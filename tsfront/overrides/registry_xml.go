@@ -16,7 +16,7 @@ func XMLRawMethod(owner, name string) *hir.Method {
 	)}
 }
 func registryXML() []Entry {
-	return []Entry{{ID: "abaplint-registry-xml-subset", Key: Key{"src/objects/_abstract_object.ts", "AbstractObject.parseRaw2", "KindMethodDeclaration"}, SHA256: "09a8dbb883510647db87c9419ddadf5f04861e3e387e928c7ae5e9b5a9c4c9d2", Rationale: "fast-xml-parser 5.10.1 abapGit subset with parseTagValue:false, ignoreAttributes:true, trimValues:false; outside domain raises; missing XML remains undefined", Method: func() *hir.Method { return XMLRawMethod("src/objects/_abstract_object.ts.AbstractObject", "parseRaw2") }}}
+	return []Entry{{FullSource: true, ID: "abaplint-registry-xml-subset", Key: Key{"src/objects/_abstract_object.ts", "AbstractObject.parseRaw2", "KindMethodDeclaration"}, SHA256: "09a8dbb883510647db87c9419ddadf5f04861e3e387e928c7ae5e9b5a9c4c9d2", Rationale: "fast-xml-parser 5.10.1 abapGit subset with parseTagValue:false, ignoreAttributes:true, trimValues:false; outside domain raises; missing XML remains undefined", Method: func() *hir.Method { return XMLRawMethod("src/objects/_abstract_object.ts.AbstractObject", "parseRaw2") }}}
 }
 
 // XMLValidationResult is the external validator ABI: true or a tagged error

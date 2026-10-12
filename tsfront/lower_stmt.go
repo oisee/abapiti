@@ -360,6 +360,13 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 			return []*hir.Stmt{l.localDeclaration(d, name, typ, value)}
 		}
+		if l.comparisonScalar(d, typ) {
+			typ = hir.T(hir.Optional, typ)
+			if l.erasedScalars == nil {
+				l.erasedScalars = map[*ast.Symbol]bool{}
+			}
+			l.erasedScalars[sym] = true
+		}
 		if typ.Kind != hir.Optional && init != nil {
 			// An initializer that may be undefined makes the local optional.
 			if it := l.ck.GetTypeAtLocation(init); it != nil && it.IsUnion() {
@@ -619,6 +626,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 			}
 			return nil
 		}
+		if x, handled := l.unionFieldAccess(lhs); handled {
+			return x
+		}
 		sym := l.resolve(lhs)
 		f, hasField := l.fieldOf(sym)
 		if sym != nil && hasField {
@@ -638,7 +648,20 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 			if recv == nil {
 				return nil
 			}
+			if l.unprunedFeatures {
+				if target := l.shapeWriteTarget(lhs, recv, f.Name); target != nil {
+					return target
+				}
+			}
 			return &hir.Expr{Kind: hir.FieldGet, Node: l.node(lhs), Name: f.Name, Type: f.Type, X: recv}
+		}
+		if l.unprunedFeatures {
+			recv := l.expr(p.Expression)
+			if recv != nil {
+				if target := l.shapeWriteTarget(lhs, recv, p.Name().Text()); target != nil {
+					return target
+				}
+			}
 		}
 		l.diagf(lhs, "unsupported-assignment", "assignment to property %s is not lowered", p.Name().Text())
 	default:

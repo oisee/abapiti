@@ -39,7 +39,7 @@ func TestChaiSmallNodeOracle(t *testing.T) {
 	if _, err := os.Stat(chai); err != nil {
 		t.Skip("pinned upstream Chai unavailable")
 	}
-	probe := `class A {} class B extends A {}
+	probe := `class A {} class B extends A {only():string {return "B";}}
  function instance(value:any,type:new()=>any,negated:boolean):boolean {
   try { const assertion=negated?check(value).not:check(value);assertion.instanceOf(type);return true; } catch(error){return false;}
  }
@@ -47,6 +47,9 @@ func TestChaiSmallNodeOracle(t *testing.T) {
   try { const assertion=negated?check(a).not:check(a);assertion.contain(b);return true; } catch(error){return false;}
  }
  function fail():string {try {check.fail("payload");}catch(error){return error.message;}return "did not throw";}
+ function failEmpty():string {try {check.fail();}catch(error){return error.message;}return "did not throw";}
+ function narrowed(x:A):string {if (!(x instanceof B)) {check.fail();}return x.only();}
+ function members(a:any[],b:any[],negated:boolean,deep:boolean):boolean {try {let assertion=check(a);if(negated){assertion=assertion.not;}if(deep){assertion=assertion.deep;}assertion.to.have.all.members(b);return true;}catch(e){return false;}}
  class expect {static fail(s:string):string{return s;}}
  function lookalike():string {return expect.fail("user method");}
  function decisions():string {
@@ -54,6 +57,7 @@ func TestChaiSmallNodeOracle(t *testing.T) {
  return includes([1,2],2,false)+":"+includes([1,2],3,false)+":"+includes([1,2],3,true)+":"+
  includes(list,item,false)+":"+includes(list,{x:1},false)+":"+includes([nested],nested,false)+":"+
  includes([undefined],undefined,false)+":"+includes([null],undefined,false)+":"+includes("abc","b",false)+":"+fail()+":"+lookalike()+":"+
+ failEmpty()+":"+narrowed(new B())+":"+members([1,2],[2,1],false,false)+":"+members([1,1],[1,2],false,false)+":"+members([],[],false,false)+":"+members([1],[2],true,false)+":"+members([item],[item],false,false)+":"+members([{x:1}],[{x:1}],false,false)+":"+members([{x:1}],[{x:1}],false,true)+":"+
  instance(new A(),A,false)+":"+instance(new B(),A,false)+":"+instance(new A(),B,false)+":"+instance(1,A,false)+":"+instance(null,A,true)+":"+instance(undefined,A,false);
 
  }`
@@ -112,5 +116,6 @@ func upstreamChaiModule(t *testing.T) string {
 			return path
 		}
 	}
-	return filepath.Join(root, "node_modules", "chai")
+	t.Skip("upstream chai is not installed (set ABAPITI_TESTS_UPSTREAM to an abaplint checkout with node_modules)")
+	return ""
 }

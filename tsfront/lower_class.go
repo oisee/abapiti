@@ -106,6 +106,7 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 					l.diagf(baseNode, "unsupported-type", "data-interface base is not a shape")
 					continue
 				}
+				c.PrimitiveReads = c.PrimitiveReads || base.PrimitiveReads
 				for _, field := range base.Fields {
 					if l.dataInterfaceDeclares(node, field.Name) {
 						// The derived interface redeclares the member; its own
@@ -145,7 +146,8 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 			l.diagf(m, "skipped-interface-member", "data interface %s: member %s has unlowered types", i.Name, name)
 			continue
 		}
-		if m.QuestionToken() != nil && ft.Kind != hir.Optional {
+		c.PrimitiveReads = c.PrimitiveReads || l.checkedFields[m] && (ft.Kind == hir.String || ft.Kind == hir.Number || ft.Kind == hir.Bool)
+		if (m.QuestionToken() != nil || l.absentFields[m]) && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
 		c.Fields = append(c.Fields, hir.Field{Node: l.node(m), Name: name, Type: ft})
@@ -342,7 +344,9 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 			typ = hir.T(hir.Void)
 		}
 	}
-	if m.QuestionToken() != nil && typ.Kind != hir.Optional {
+	primitiveAbsence := !static && m.ModifierFlags()&ast.ModifierFlagsPrivate == 0 && m.Name().Kind != ast.KindPrivateIdentifier && l.absentFields[m] && (typ.Kind == hir.String || typ.Kind == hir.Number || typ.Kind == hir.Bool)
+	c.PrimitiveReads = c.PrimitiveReads || primitiveAbsence && l.checkedFields[m]
+	if (m.QuestionToken() != nil || primitiveAbsence) && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
 	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 || m.Name().Kind == ast.KindPrivateIdentifier, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}

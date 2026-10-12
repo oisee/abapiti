@@ -175,6 +175,23 @@ func chaiarrayInclude(a,b *dynamic) bool {
  for i:=0;i<x.chaiLength();i++ {if x.chaiHas(i)&&dynEqual(x.chaiAt(i),b) {return true}}
  return false
 }
+// Dense-array unordered members: consume one matching occurrence per item.
+// Strict members preserve reference identity; deep members use deep-eql.
+func chaiMembers(a,b *dynamic,deep bool) bool {
+ if chaiKind(a)!=8 || chaiKind(b)!=8 {panic(newTrap("chai members requires arrays"))}
+ x,xok:=a.Value.(chaiArray);y,yok:=b.Value.(chaiArray)
+ if !xok || !yok {panic(newTrap("chai members array storage is unsupported"))}
+ for i:=0;i<x.chaiLength();i++ {if !x.chaiHas(i) {panic(newTrap("chai members requires dense arrays"))}}
+ for i:=0;i<y.chaiLength();i++ {if !y.chaiHas(i) {panic(newTrap("chai members requires dense arrays"))}}
+ if x.chaiLength()!=y.chaiLength() {return false}
+ used:=make([]bool,x.chaiLength())
+ for i:=0;i<y.chaiLength();i++ {
+  found:=false
+  for j:=0;j<x.chaiLength();j++ {if used[j] {continue};same:=dynEqual(x.chaiAt(j),y.chaiAt(i));if deep {same=chaideepEqual(x.chaiAt(j),y.chaiAt(i))};if same {used[j]=true;found=true;break}}
+  if !found {return false}
+ }
+ return true
+}
 // 2 = no assertion (empty object subset); 1 = included; 0 = not included.
 func chaideepInclude(a,b *dynamic) int32 {
  switch chaiKind(a) {

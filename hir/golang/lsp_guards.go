@@ -15,6 +15,22 @@ func lspTextDocumentEdit(d *dynamic) bool {
  v:=td.get(str("version"));if !(v!=nil && v.Tag==tagNull) && !lspInteger(v) {return false}
  return isArray(d.get(str("edits")))
 }
+func lspResourceFile(d *dynamic,kind,option1,option2 jsString,condition bool) bool {
+ falsy:=d==nil || d.Tag==tagNull || d.Tag==1 && dynString(d)==str("")
+ if d!=nil && d.Tag>=4 && d.Tag<=6 {n:=dynNumber(d);falsy=n==0 || n!=n}
+ if falsy {if condition {return false};panic(newTrap("resource-file is predicate returns a non-boolean falsy value"))}
+ // Tagged JSON arrays have indexed storage only; adding custom properties
+ // to that representation is refused by the existing write adapter.
+ if d.Tag==tagArray {return false}
+ if d.Tag==3 && !dynBoolean(d) {return false}
+ k:=d.get(str("kind"));if !lspString(k) || dynString(k)!=kind {return false}
+ if !lspString(d.get(str("uri"))) {return false}
+ options:=d.get(str("options"));if options!=nil {
+  a:=options.get(option1);if a!=nil && !lspBool(a) {return false}
+  b:=options.get(option2);if b!=nil && !lspBool(b) {return false}
+ }
+ annotation:=d.get(str("annotationId"));return annotation==nil || lspString(annotation)
+}
 func lspRenameFile(d *dynamic, condition bool) bool {
  // The upstream && expression returns its falsy candidate unchanged. A
  // condition consumes only truthiness; value contexts must refuse non-bools.

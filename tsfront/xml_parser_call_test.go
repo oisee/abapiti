@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 func TestXMLParserCallNodeOracle(t *testing.T) {
@@ -21,7 +22,10 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 		}
 	}
 	source := `import {XMLParser as Parser} from "fast-xml-parser";
- export class Probe {static parse(xml: string): string {return JSON.stringify(new Parser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(xml));}}`
+ export class Probe {
+ static parse(xml: string): string {return JSON.stringify(new Parser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(xml));}
+ static caught(xml: string): string {try {return Probe.parse(xml);} catch (e) {return (e instanceof Error ? "Error:" : "other:") + e.message;}}
+ }`
 	for name, text := range map[string]string{"main.ts": source, "tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022","module":"node16","moduleResolution":"node16"},"files":["main.ts"]}`} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
 			t.Fatal(err)
@@ -31,7 +35,19 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, ds, err := p.LowerWithOptions([]string{"main.ts"}, LowerOptions{TrapOnFailure: true})
+	span := `static parse(xml: string): string {return JSON.stringify(new Parser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(xml));}`
+	adapted := false
+	registry, err := overrides.New(overrides.Entry{FullSource: true, ID: "retired-xml-fixture", Key: overrides.Key{File: "main.ts", Symbol: "Probe.parse", Kind: "KindMethodDeclaration"}, SHA256: overrides.Fingerprint(span), Rationale: "retired adapter exercises general source lowering", Method: func() *hir.Method {
+		adapted = true
+		return &hir.Method{Name: "parse", Static: true, Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(hir.T(hir.String), "adapter ran")})}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, ds, err := p.lowerWithOptions([]string{"main.ts"}, registry, nil, LowerOptions{TrapOnFailure: true})
+	if adapted {
+		t.Fatal("full closure invoked the retired adapter")
+	}
 	if err != nil || hasBlocking(ds) {
 		t.Fatal(err, ds)
 	}
@@ -50,7 +66,7 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(parser, "package.json")); err != nil {
 		t.Skip("live pinned fast-xml-parser oracle requires installed upstream npm dependencies")
 	}
-	cases := []string{`<root id="ignored"><item> 001 </item><item>true</item><empty/></root>`, `<?xml version="1.0"?><abapGit><asx:abap><asx:values><DESCRIPTIONS><SEOCOMPOTX><CMPNAME> METH &amp; </CMPNAME></SEOCOMPOTX><SEOCOMPOTX><CMPNAME>OTHER</CMPNAME></SEOCOMPOTX></DESCRIPTIONS></asx:values></asx:abap></abapGit>`, "<root><text>A\r\nB😀</text></root>"}
+	cases := []string{`<root id="ignored"><item> 001 </item><item>true</item><empty/></root>`, `<?xml version="1.0"?><abapGit><asx:abap><asx:values><DESCRIPTIONS><SEOCOMPOTX><CMPNAME> METH &amp; </CMPNAME></SEOCOMPOTX><SEOCOMPOTX><CMPNAME>OTHER</CMPNAME></SEOCOMPOTX></DESCRIPTIONS></asx:values></asx:abap></abapGit>`, "<root><text>A\r\nB😀</text></root>", `<foo></bar>`, `<a><b></a>`, `<root>`, `<root>tail`, `<root><leaf/>`}
 	// Make the package pin and Node execution explicit; never compare to a shim.
 	script := `const p=require(process.argv[1]);const pkg=require(process.argv[1]+"/package.json");if(pkg.version!=="5.10.1")throw Error("wrong parser pin");console.log(JSON.stringify(new p.XMLParser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(process.argv[2])));`
 	for _, xml := range cases {
@@ -62,6 +78,22 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 		got := runGoHIR(t, prog, "fmt.Print("+goEntry("main.ts.Probe", "parse")+"(str("+strconv.Quote(xml)+")).String())")
 		if got != strings.TrimSpace(string(out)) {
 			t.Fatalf("XML %q: Go %q Node %q", xml, got, out)
+		}
+	}
+	for _, xml := range []string{"<", " <", "<root x=\"oops", "<a><", "<abc" + strings.Repeat("x", 100)} {
+		out, err := exec.Command("node", "-e", `const {XMLParser}=require(process.argv[1]);try {new XMLParser({parseTagValue:false,ignoreAttributes:true,trimValues:false}).parse(process.argv[2]);console.log("did not throw")}catch(e){console.log((e instanceof Error ? "Error:" : "other:")+e.message)}`, parser, xml).CombinedOutput()
+		if err != nil {
+			t.Fatal(err, string(out))
+		}
+		got := runGoHIR(t, prog, "fmt.Print("+goEntry("main.ts.Probe", "caught")+"(str("+strconv.Quote(xml)+")).String())")
+		if got != strings.TrimSpace(string(out)) {
+			t.Fatalf("XML error %q: Go %q Node %q", xml, got, out)
+		}
+	}
+	for _, xml := range []string{`<a>&unknown;</a>`, `<a><![CDATA[x]]></a>`, `<!DOCTYPE a><a/>`} {
+		got := runGoHIR(t, prog, "defer func(){if x:=recover();x!=nil {fmt.Print(x)}}();fmt.Print("+goEntry("main.ts.Probe", "caught")+"(str("+strconv.Quote(xml)+")).String())")
+		if !strings.Contains(got, "outside the reviewed abapGit XML subset") {
+			t.Fatalf("catch swallowed subset refusal: %s", got)
 		}
 	}
 	for _, options := range []string{"parseTagValue:true,ignoreAttributes:true,trimValues:false", "parseTagValue:false,ignoreAttributes:false,trimValues:false", "parseTagValue:false,ignoreAttributes:true,trimValues:true", "parseTagValue:false,ignoreAttributes:true,trimValues:false,extra:true"} {

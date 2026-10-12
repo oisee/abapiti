@@ -56,6 +56,8 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.asClassValue":      {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.asNumber":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"lsp.isTextDocumentEdit":    {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "None"},
+	"lsp.isCreateFile":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "None"},
+	"lsp.isDeleteFile":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "None"},
 	"lsp.isRenameFile":          {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: false, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.keys":              {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.classView":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},
@@ -76,6 +78,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.of":                {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"dynamic.put":               {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "Catchable", Aliases: "None"},
 	"chai.throwMatch":           {Reads: OpReads{Receiver: true, Args: true, Global: true}, Writes: "Global", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only invokes certified parameterless callable storage, ignoring synchronous results; callback effects unknown, host faults escape, only string/Error throws match; ABAP refuses."},
+	"chai.members":              {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"chai.arrayInclude":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai strict array inclusion; nonarrays and snapshot escapes refuse; ABAP refuses."},
 	"chai.box":                  {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only boxing; parsed/native snapshot escapes refuse; ABAP refuses."},
 	"chai.deepEqual":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Tests-only Chai data graph; unproven enumerable storage refuses; ABAP refuses."},
@@ -86,7 +89,9 @@ var RuntimeEffects = map[string]OpEffect{
 	"i32.toString":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"i64.remainder2":            {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"i64.toString":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"json.indent":               {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"json.parseSubset":          {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
+	"json5.parse":               {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"map.get":                   {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"map.has":                   {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"map.keys":                  {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
@@ -130,6 +135,8 @@ var RuntimeEffects = map[string]OpEffect{
 	"string.parseInt10":         {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Unbounded decimal accumulation may overflow the target numeric representation."},
 	"string.parseInt10i64":      {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Decimal accumulation or conversion to int8 may overflow."},
 	"string.repeatIndent":       {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
+	"string.parseFloat":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "None", Aliases: "None"},
+	"string.padStart":           {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"string.repeat":             {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"string.replaceAll":         {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "ABAP REPLACE ALL has no empty-needle guard; conservatively allow target replacement errors."},
 	"string.replaceFirst":       {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
@@ -149,6 +156,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"string.trim":               {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"xml.validate":              {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"xml.parseSubset":           {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
+	"xml.parseWithErrors":       {Reads: OpReads{Receiver: true, Args: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 }
 
 func (x *extractor) addEffects() {

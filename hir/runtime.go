@@ -13,13 +13,19 @@ type RuntimeSpec struct {
 
 var RuntimeSpecs = map[string]RuntimeSpec{
 	"lsp.isTextDocumentEdit": {Dynamic, 0, false}, "lsp.isRenameFile": {Dynamic, 1, false},
+	"lsp.isCreateFile": {Dynamic, 1, false}, "lsp.isDeleteFile": {Dynamic, 1, false},
 	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
+	"string.padStart":           {String, 2, false},
+	"string.parseFloat":         {String, 0, false},
 	"string.match":              {String, 1, false},
 	"array.matchIndex":          {Array, 0, false},
 	"xml.validate":              {String, 0, false},
 	"xml.parseSubset":           {String, 0, false},
+	"xml.parseWithErrors":       {String, 0, false},
 	"json.parseSubset":          {String, 0, false},
+	"json5.parse":               {String, 0, false},
+	"json.indent":               {String, 1, false},
 	"string.compareRegistryKey": {String, 1, false},
 	"string.compareObjectName":  {String, 1, false},
 	"dynamic.isNullish":         {Dynamic, 0, false},
@@ -28,6 +34,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.put":               {Dynamic, 2, true},
 	"dynamic.strictEquals":      {Dynamic, 1, false},
 	"chai.arrayInclude":         {Dynamic, 1, false},
+	"chai.members":              {Dynamic, 2, false},
 	"chai.deepEqual":            {Dynamic, 1, false},
 	"chai.deepInclude":          {Dynamic, 1, false},
 	"dynamic.asBoolean":         {Dynamic, 0, false},
@@ -116,7 +123,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	}
 	i, b := T(I32), T(Bool)
 	switch op {
-	case "xml.validate", "xml.parseSubset", "json.parseSubset", "dynamic.null":
+	case "xml.validate", "xml.parseSubset", "xml.parseWithErrors", "json.parseSubset", "json5.parse", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.keys":
 		return nil, T(Array, T(String)), true
@@ -124,6 +131,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, T(Dynamic), true
 	case "dynamic.put":
 		return []Type{T(String), T(Dynamic)}, T(Void), true
+	case "chai.members":
+		return []Type{T(Dynamic), T(Bool)}, T(Bool), true
 	case "chai.deepInclude":
 		return []Type{T(Dynamic)}, i, true
 	case "dynamic.strictEquals", "chai.deepEqual", "chai.arrayInclude":
@@ -138,9 +147,13 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, t.Args[0].Kind == String
 	case "string.match":
 		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
+	case "string.parseFloat":
+		return nil, T(Optional, T(Number)), true
+	case "string.padStart":
+		return []Type{T(Number), T(String)}, T(String), true
 	case "string.repeat", "string.repeatIndent":
 		return []Type{T(Number)}, T(String), true
-	case "string.concat":
+	case "string.concat", "json.indent":
 		return []Type{T(String)}, T(String), true
 	case "string.compareRegistryKey", "string.compareObjectName":
 		return []Type{T(String)}, i, true
@@ -267,7 +280,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{T(String)}, b, true
 	case "regexp.source", "regexp.toString":
 		return nil, T(String), true
-	case "lsp.isRenameFile":
+	case "lsp.isRenameFile", "lsp.isCreateFile", "lsp.isDeleteFile":
 		return []Type{b}, b, true
 	case "lsp.isTextDocumentEdit", "dynamic.isString", "dynamic.isFunction", "dynamic.isArray":
 		return nil, b, true

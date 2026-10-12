@@ -83,6 +83,13 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	line("}")
 	line("func %s(self %s,key jsString,read bool) struct{value *dynamic;own,exists bool} {", name, e.typ(t))
 	line("if nilRef(self) {panic(newRangeFault())}")
+	// A data view's nominal slots are empty: its original record owns the
+	// properties and receives all writes. Use that record for both values and
+	// presence, including keys outside the nominal config layout.
+	if e.liveClasses[c.Name] {
+		lookup := e.propertyLookup(hir.Ref(hir.RootObject))
+		line("if self.%s().viewSource!=nil {return %s(self,key,read)}", e.getter(c.Name), lookup)
+	}
 	// The static receiver can hold any lowered subclass. Its actual class
 	// selects the corresponding table, rather than losing subclass fields.
 	for _, derived := range e.p.Classes {

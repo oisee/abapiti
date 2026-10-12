@@ -1,5 +1,188 @@
 # abaplint's own tests on TS-HG@Go
 
+## Trap batch L — certified on d6c4f4a
+
+**10,949/11,060 Node-active tests passed (99.00%), FAIL 0.** Exactly one
+frozen-source **17-shard / 625-file** run measured semantic commit **6410553**,
+based on **d6c4f4a**. Original pinned Node remains **11,060 passes, zero failures,
+32 pending**. Go has **108 traps in 33 groups**, zero async-pending, and **+1 real
+pass**: the original JSON5 config test. Whole-suite and owned-shard title
+multisets reconcile with no exclusions, wiring failures, unmatched executions
+or borrowed FAILs. Four development shards, not a full base run, preceded this
+single final run.
+
+**Not-run 35 = 28 skipped/focused + 7 unregistered** (zero async/done).
+Every one of the 28 is an original **`it.skip`**, independently pending on Node,
+so **outside the 11,060 denominator**. The seven unregistered titles are
+**three active + four pending** at three initialization ABI boundaries.
+**111 Node-active tests are not passing = 108 traps + 3 unregistered + 0 skipped**;
+FAIL and async-pending are both zero. No Node-pending execution is credited as
+an active pass. The report now preserves separate active/pending multiset
+accounting and every skipped title, refusing ambiguous title collisions and
+execution of pending bodies.
+
+See [all seven roots, the 28-row source audit and complete remaining list](traps-l-roots.md),
+[four focused shards](evidence/traps-l-focused.json),
+[final counts and all 33 reached messages](evidence/traps-l-final.json), and
+[gate/default/workload certificate](evidence/traps-l-gates.json).
+
+The runtime now parses JSON5 rather than preprocessing it into strict JSON:
+comments, trailing commas, unquoted/escaped Unicode keys, single quotes, hex and
+signed decimal numbers, UTF-16 escapes and multiline string continuations.
+Actual installed **json5 2.2.3** supplies differential value/error-diagnostic
+oracles, signed-zero and nonfinite probes, plus an exhaustive Unicode-table
+oracle. Nonfinite results refuse before escaping. Native SyntaxError payload
+representation remains an explicit typed ABI handoff; exact parser diagnostics
+are certified, not fake native exceptions. Checked package calls use ordinary
+full-source lowering; no new site override. Pruned default adapters and strict
+JSON remain unchanged. No storage/union, enumerable-key, config-shape or
+renamer/LSP range ABI is relaxed. All seven missing registrations remain
+explicit handoffs, never synthesized from Node.
+
+### L: all 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 216 | 0 | 0 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 107 | 0 | 0 | 0 | 107 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,962 | 0 | 0 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,362 | 0 | 1 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 89 | 0 | 5 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 178 | 0 | 10 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 130 | 0 | 14 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 21 | 0 | 10 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 3,121 | 0 | 26 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,949** | **0** | **108** | **35** | **11,085** | **11,060 + 32** |
+
+### L: final gates and parity
+
+Passed with Go 1.26.0, `-buildvcs=false`, `GOCACHE=$HOME/.cache/go-build`,
+`ABAPITI_GRACECHECK=1`, 40-minute test deadlines and nice-10 shard execution:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+```
+
+Only the runtime-catalogue golden changes: one `json5.parse` effect record,
+**132→133 entries, read facts 200→201**, conservative count still 21. Lexer facts
+and all 61 Grace call sites are otherwise unchanged; regenerated facts match.
+Default `abaplint` output has **raw `diff -r` exit 0, zero diff bytes, 6,312 files**
+against locally archived **d6c4f4a**, generated at the same absolute output path.
+There are no default-output changes to justify. Fresh emitted Go, fresh original
+pinned Node and the v0.1.1 kit agree byte-for-byte on zabapgit **clean 0 / seeded
+5**. No genuine value/assertion mismatch occurred or was accepted. Only compact
+docs/evidence and implementation/regression source are retained; generated
+builds, closures, archives, kit, profiles, facts and logs are deleted. Clean
+commits, no push or transpiler clone.
+
+## Trap batch K — historical, certified on train 8
+
+**10,948/11,060 active tests passed (98.99%), FAIL 0.** The final frozen-source
+17-shard / 625-file run measured semantic commit **af69914**, based on
+**4b6a465**. Exactly one complete **base** run measured **10,934 passes, FAIL 0,
+123 traps in 45 groups**. Final is **109 traps in 34 groups**, **+14 real passes**:
+syntax +8, objects +6. Independently certified operations that reach subsequent
+ABI traps are not credited as body passes. Original pinned Node remains 11,060
+passes, zero failures, 32 pending; owned/whole-suite title multisets reconcile,
+without exclusions, unmatched executions, wiring failures or borrowed FAILs.
+
+Not-run is **35 = 0 async/done + 28 skipped/focused + 7 unregistered**
+(**three active + four Node pending**). Missing title multisets and all three
+initialization refusals are retained, not reclassified as async or passes.
+See [complete descending root audit and handoffs](traps-k-roots.md),
+[base evidence: all 45 groups](evidence/traps-k-base.json),
+[final counts and all 34 messages](evidence/traps-k-final.json), and
+[gate/default/workload certificate](evidence/traps-k-gates.json).
+The new `allTraps` field preserves the complete long tail alongside historical
+`top20Traps`; a 22-group runner regression guards it.
+
+General repairs cover recursive lifted locals, checked fast-xml-parser calls and
+native Error catches, finite decimal-prefix parseFloat, UTF-16 padStart, real
+Chai members/zero-argument fail, CreateFile/DeleteFile predicates, and literal
+JSON indentation. All seven new runtime operations have Node oracles, effect
+records and explicit ABAP refusals. No new site override: two legacy XML
+adapters are retired in full closures via generic source selection while keeping
+fingerprint validation and the frozen pruned workload path.
+
+Dell-owned common `range`/native union and nullable layouts, Domain conversion,
+config writes/shapes/live reads, native enumerable/deletion storage, constructor
+identity/ToPrimitive, nonfinite Number and package-error/config-view ABIs remain
+explicit handoffs. The NumberRange rule's absent percentage produces NaN on
+Node and remains refused, not replaced by zero. Config's newly reached JSON5
+package boundary and LSP's newly reached common edit-union field remain traps.
+No async or compiler-panic repair, weakened/deleted test or accepted mismatch.
+
+### K: all 17 shards
+
+| Shard | Files | Passed | FAIL | Trapped | Not-run | Registered | Node active + pending |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap` | 18 | 216 | 0 | 0 | 4 | 216 | 216 + 4 |
+| `abap/expressions` | 11 | 107 | 0 | 0 | 0 | 107 | 107 + 0 |
+| `abap/lexer` | 3 | 200 | 0 | 0 | 0 | 200 | 200 + 0 |
+| `abap/nodes` | 1 | 2 | 0 | 0 | 0 | 2 | 2 + 0 |
+| `abap/statements` | 286 | 4,962 | 0 | 0 | 0 | 4,962 | 4,962 + 0 |
+| `abap/structures` | 30 | 138 | 0 | 0 | 2 | 139 | 139 + 1 |
+| `abap/syntax` | 8 | 1,362 | 0 | 1 | 10 | 1,373 | 1,363 + 10 |
+| `abap/types` | 6 | 28 | 0 | 1 | 0 | 29 | 29 + 0 |
+| root | 12 | 88 | 0 | 6 | 0 | 94 | 94 + 0 |
+| `cds` | 2 | 355 | 0 | 3 | 1 | 359 | 358 + 1 |
+| `ddl` | 1 | 32 | 0 | 0 | 0 | 32 | 32 + 0 |
+| `lsp` | 16 | 178 | 0 | 10 | 5 | 193 | 188 + 5 |
+| `objects` | 26 | 130 | 0 | 14 | 1 | 145 | 144 + 1 |
+| `objects/rename` | 9 | 0 | 0 | 31 | 0 | 31 | 31 + 0 |
+| `pretty_printer` | 1 | 21 | 0 | 10 | 0 | 31 | 31 + 0 |
+| `rules` | 192 | 3,121 | 0 | 26 | 12 | 3,157 | 3,149 + 10 |
+| `utils` | 3 | 8 | 0 | 7 | 0 | 15 | 15 + 0 |
+| **Total** | **625** | **10,948** | **0** | **109** | **35** | **11,085** | **11,060 + 32** |
+
+Every remaining message, including compound diagnostics and count/example/shard
+contributions, is retained in `allTraps` in the final JSON and indexed in the
+root audit. Initialization messages are separate. The largest groups remain
+Renamer range (29), Domain conversion (19), keyword_case writes (7), and
+patternKind shapes (7); this is not a top20-only report.
+
+### K: final gates, mismatch handling and raw parity
+
+Passed with the required Go 1.26.0 / `-buildvcs=false` / Grace environment:
+
+```sh
+go test ./... -short -timeout 40m
+go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m
+go vet ./...
+node tools/abaplint-tests-report-test.mjs
+node tools/abaplint-tests-all-test.mjs
+```
+
+The XML EOF-text prototype mismatch was stopped and reported first, then
+root-caused and Node-regressed before changed-source shards. An overbroad
+checker-never mapping caused an unchanged never-array lowering refusal and a
+synthetic default closure-ID diff; both were repaired by recognizing only
+explicit function-result `never` annotations. No unexplained diff is accepted.
+The interrupted candidate is not a final certificate; a development full run
+on 1dc8749 exposed remaining adapter/context issues before the af69914 rerun.
+
+Only the lexer operation catalogue golden changed: 125→132 entries and read
+facts 188→200, conservative count still 21. All 61 Grace call-site records and
+lexer behavior are unchanged; regenerated facts equal the updated golden.
+Default output is **raw `diff -r` exit 0 / zero bytes / 6,312 files** against
+locally archived 4b6a465, generated at the same absolute output path.
+Clean/seeded zabapgit kit v0.1.1 outputs match a fresh original pinned Node build
+and kit expectations byte-for-byte: **0 / 5 issues**, with raw SHA256 values in
+the gate certificate. Semantic subtree hashes make the documentation-only final
+commit checkable. Generated artifacts are deleted; no push or transpiler clone.
+
 ## Trap batch J — certified on train 7 + merged I
 
 **10,668/11,060 active tests passed (96.46%), FAIL 0.** Exactly **one final

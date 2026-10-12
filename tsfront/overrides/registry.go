@@ -33,6 +33,9 @@ type Patterns struct {
 	SourceGuard bool
 }
 type Entry struct {
+	// FullSource retires a legacy workload adapter when general lowering is
+	// available. Full closures still validate its pin but lower original source.
+	FullSource bool
 	// GeneratorSnapshot marks a workload-only eager generator ABI. Full-closure
 	// lowering validates the fingerprint but uses the resumable source body.
 	GeneratorSnapshot bool
@@ -100,6 +103,10 @@ func (r *Registry) WithReachability(pruned bool) *Registry {
 	}
 	selected := &Registry{entries: map[Key]Entry{}}
 	for key, e := range r.entries {
+		if e.FullSource {
+			selected.entries[key] = Entry{ID: e.ID, Key: e.Key, SHA256: e.SHA256, Rationale: e.Rationale, Assume: "source"}
+			continue
+		}
 		if e.UnprunedPatterns != nil {
 			e.Patterns = e.UnprunedPatterns
 		}

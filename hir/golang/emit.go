@@ -45,7 +45,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.usesLiveArrays = true
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
-					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && x.X.Type.Name == hir.RootObject) {
+					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && (x.X.Type.Name == hir.RootObject || len(e.liveClasses) > 0)) {
 					e.extraRuntimeKeys = true
 				}
 			})
@@ -150,7 +150,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		// runtime.go's imports are not package-wide Go imports.
 		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"math\"\n", 1)
 	}
-	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+json5RuntimeSource+json5UnicodeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
