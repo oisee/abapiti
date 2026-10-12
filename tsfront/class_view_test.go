@@ -3,10 +3,7 @@ package tsfront
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestGoCheckedNominalClassViewNodeOracle(t *testing.T) {
@@ -32,7 +29,5 @@ func TestGoCheckedNominalClassViewNodeOracle(t *testing.T) {
 	if got := runGoHIR(t, p, main); got != "refused\n" {
 		t.Fatal(got)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "object.checkedClassView") {
-		t.Fatalf("ABAP must explicitly refuse unproven class views: %v", err)
-	}
+	requireCheckedClassViewABAP(t, p)
 }
