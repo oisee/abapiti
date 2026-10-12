@@ -45,7 +45,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.usesLiveArrays = true
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
-					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && x.X.Type.Name == hir.RootObject) {
+					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && (x.X.Type.Name == hir.RootObject || len(e.liveClasses) > 0)) {
 					e.extraRuntimeKeys = true
 				}
 			})
