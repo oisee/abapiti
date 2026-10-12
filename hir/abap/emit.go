@@ -2048,6 +2048,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
 		return
 	case "object.get", "object.hasOwn", "object.has":
+		if x.X.Type.Name == hir.RootObject {
+			b.e.err = fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op)
+			return
+		}
 		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
 		b.line(n + " = " + b.e.propertyLookup(x.X.Type) + "=>" + method + "( p0 = " + a + " key = " + args[0] + " ).")
 		return

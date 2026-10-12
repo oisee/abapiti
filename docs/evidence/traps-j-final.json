@@ -1,0 +1,767 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "codeCommit": "0694974dc4c989d41124237e515db05806a2cc73",
+  "mainCommit": "ab026e7bc5526e5d791d4b15f8fb5c83202d69fa",
+  "artifacts": "/home/alice/dev/abapiti/.local/worktrees/trapsj/.local/traps-j/shards/all-962qVy",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 2972,
+      "failed": 0,
+      "trapped": 175,
+      "asyncPending": 0,
+      "notRun": 12,
+      "registered": 3157,
+      "total": 3159,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "unregisteredTitles": [
+        "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+        "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
+      ],
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "lsp",
+      "files": 16,
+      "passed": 155,
+      "failed": 0,
+      "trapped": 33,
+      "asyncPending": 0,
+      "notRun": 5,
+      "registered": 193,
+      "total": 193,
+      "node": {
+        "passed": 188,
+        "failed": 0,
+        "pending": 5
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 5,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 199
+      }
+    },
+    {
+      "name": "objects",
+      "files": 26,
+      "passed": 124,
+      "failed": 0,
+      "trapped": 20,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 145,
+      "total": 145,
+      "node": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "objects/rename",
+      "files": 9,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 31,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap",
+      "files": 18,
+      "passed": 199,
+      "failed": 0,
+      "trapped": 17,
+      "asyncPending": 0,
+      "notRun": 4,
+      "registered": 216,
+      "total": 220,
+      "node": {
+        "passed": 216,
+        "failed": 0,
+        "pending": 4
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 4
+      },
+      "unregisteredTitles": [
+        "Structure, test error messages, specific IF foo = bar.",
+        "Structure, test error messages, specific IF foo = bar. moo = boo.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE. ENDIF."
+      ],
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36340 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/expressions",
+      "files": 11,
+      "passed": 44,
+      "failed": 0,
+      "trapped": 6,
+      "asyncPending": 0,
+      "notRun": 57,
+      "registered": 50,
+      "total": 107,
+      "node": {
+        "passed": 107,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 57
+      },
+      "unregisteredTitles": [
+        "Test expression matchers, todo: refactor \"cs_tstcp\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp-param(sy-fdpos)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"cs_tstcp(sy-fdpos)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foobar(3)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"(sy)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(42)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(sy-fdpos)\" should match FieldLength",
+        "Test expression matchers, todo: refactor \"(123-fdpos)\" should not match FieldLength",
+        "Test expression matchers, todo: refactor \"+sy-fdpos\" should match FieldOffset",
+        "Test expression matchers, todo: refactor \"+123-fdpos\" should not match FieldOffset",
+        "Test expression matchers, todo: refactor \"foobar(3)\" should match Target",
+        "Test expression matchers, todo: refactor \"method( foo )-stream->rema( )\" should match MethodCallChain",
+        "Test expression matchers, todo: refactor \"method( foo )->rema( )\" should match MethodCallChain",
+        "Test expression matchers, todo: refactor \"method( )\" should match MethodCall",
+        "Test expression matchers, todo: refactor \"method #( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method asdf( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method a( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"method ( )\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"foo(2)\" should not match MethodCall",
+        "Test expression matchers, todo: refactor \"TYPE abap_bool DEFAULT abap_true\" should match Type",
+        "Test expression matchers, todo: refactor \"TYPE lcl_perce_repo=>ty_sum_tt\" should match Type",
+        "Test expression matchers, todo: refactor \"TYPE STANDARD TABLE\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"22\" should match Integer",
+        "Test expression matchers, todo: refactor \"22\" should match Constant",
+        "Test expression matchers, todo: refactor \"22\" should not match Field",
+        "Test expression matchers, todo: refactor \"s_bar\" should match Field",
+        "Test expression matchers, todo: refactor \"1250_data\" should match Field",
+        "Test expression matchers, todo: refactor \"foo\" should match Field",
+        "Test expression matchers, todo: refactor \"zquery\" should match Field",
+        "Test expression matchers, todo: refactor \"_foobar\" should match Field",
+        "Test expression matchers, todo: refactor \"%bar\" should match Field",
+        "Test expression matchers, todo: refactor \"%bar%\" should match Field",
+        "Test expression matchers, todo: refactor \"-\" should not match Field",
+        "Test expression matchers, todo: refactor \"+\" should not match Field",
+        "Test expression matchers, todo: refactor \"*\" should not match Field",
+        "Test expression matchers, todo: refactor \"22\" should not match FieldChain",
+        "Test expression matchers, todo: refactor \"foobar\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"22foo\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foo22\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"text-001\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"foo(2)\" should match FieldChain",
+        "Test expression matchers, todo: refactor \"e070-trkorr\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"foo\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"s_trkorr\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"bar\" should match FieldSub",
+        "Test expression matchers, todo: refactor \"-\" should not match FieldSub",
+        "Test expression matchers, todo: refactor \"foo type string\" should match MethodParam",
+        "Test expression matchers, todo: refactor \"type string\" should match Type",
+        "Test expression matchers, todo: refactor \"type string\" should not match TypeTable",
+        "Test expression matchers, todo: refactor \"type index table\" should not match Type",
+        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"type index table\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"type range of string\" should match TypeTable",
+        "Test expression matchers, todo: refactor \"%_C_POINTER\" should match TypeNameOrInfer",
+        "Test expression matchers, todo: refactor \"<Z-BAR>\" should match FieldSymbol"
+      ],
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:10:1",
+          "message": "test/abap/expressions/reuse.ts:10:1: lowering trap: test/abap/expressions/reuse.ts:10:1: HIR verification: node 30120 (test/abap/expressions/reuse.ts:17:3): call argument type mismatch: optional<classref<src/abap/2_statements/expressions/field_chain.ts.FieldChain>> <- classref<src/abap/2_statements/expressions/field_length.ts.FieldLength> in new .",
+          "status": "trapped"
+        },
+        {
+          "file": "test/abap/expressions/reuse.ts",
+          "action": "test/abap/expressions/reuse.ts:70:1",
+          "message": "test/abap/expressions/reuse.ts:70:54: lowering trap: test/abap/expressions/reuse.ts:70:54: HIR verification: node 30335 (test/abap/expressions/reuse.ts:71:3): unresolved field test.ready.tests",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/nodes",
+      "files": 1,
+      "passed": 2,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 2,
+      "total": 2,
+      "node": {
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 4962,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/structures",
+      "files": 30,
+      "passed": 138,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 2,
+      "registered": 139,
+      "total": 140,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 1
+      },
+      "unregisteredTitles": [
+        "structure combi, complex1 complex1 match"
+      ],
+      "unmatched": 0,
+      "initialization": [
+        {
+          "file": "test/abap/structures/_combi.ts",
+          "action": "test/abap/structures/_combi.ts:276:1",
+          "message": "test/abap/structures/_combi.ts:276:39: lowering trap: unsupported-statement test/abap/structures/_combi.ts:277:3: KindClassDeclaration is not lowered; unsupported-expr test/abap/structures/_combi.ts:282:25: identifier Normal is not a lowered local or module value",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/syntax",
+      "files": 8,
+      "passed": 1354,
+      "failed": 0,
+      "trapped": 9,
+      "asyncPending": 0,
+      "notRun": 10,
+      "registered": 1373,
+      "total": 1373,
+      "node": {
+        "passed": 1363,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/get_abap.ts",
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 1379
+      }
+    },
+    {
+      "name": "abap/types",
+      "files": 6,
+      "passed": 28,
+      "failed": 0,
+      "trapped": 1,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 29,
+      "total": 29,
+      "node": {
+        "passed": 29,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 74,
+      "failed": 0,
+      "trapped": 20,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "cds",
+      "files": 2,
+      "passed": 355,
+      "failed": 0,
+      "trapped": 3,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 359,
+      "total": 359,
+      "node": {
+        "passed": 358,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "ddl",
+      "files": 1,
+      "passed": 32,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 32,
+      "total": 32,
+      "node": {
+        "passed": 32,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "pretty_printer",
+      "files": 1,
+      "passed": 21,
+      "failed": 0,
+      "trapped": 10,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "utils",
+      "files": 3,
+      "passed": 8,
+      "failed": 0,
+      "trapped": 7,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 15,
+      "total": 15,
+      "node": {
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "initialization": [],
+      "failures": []
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 10668,
+    "failed": 0,
+    "trapped": 332,
+    "asyncPending": 0,
+    "notRun": 92,
+    "registered": 11028,
+    "total": 11092,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 28,
+    "unregistered": 64
+  },
+  "nodeTotal": {
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092
+  },
+  "wholeSuite": {
+    "files": 625,
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092,
+    "active": 11060,
+    "titlesReconciled": true,
+    "excluded": [],
+    "wiringFailures": []
+  },
+  "countingRule": "Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Async-pending and not-run remain separate; no failed record is relabeled by the report.",
+  "asyncInitializationFailures": 0,
+  "registrationParity": false,
+  "top20Traps": [
+    {
+      "message": "src/rules/function_module_recommendations.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 195,
+      "shards": {
+        "rules": 140,
+        "lsp": 23,
+        "objects-rename": 5,
+        "abap": 17,
+        "root": 10
+      },
+      "example": "src/rules/function_module_recommendations.ts:125:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/rename/renamer.ts: HIR verification: unresolved field range",
+      "count": 23,
+      "shards": {
+        "objects-rename": 23
+      },
+      "example": "src/objects/rename/renamer.ts:125:3: lowering trap: src/objects/rename/renamer.ts:125:3: HIR verification: node 172359 (src/objects/rename/renamer.ts:135:11): unresolved field range"
+    },
+    {
+      "message": "src/objects/domain.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 19,
+      "shards": {
+        "rules": 16,
+        "objects": 3
+      },
+      "example": "src/objects/domain.ts:100:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules_runner.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 18,
+      "shards": {
+        "rules": 9,
+        "lsp": 2,
+        "objects-rename": 3,
+        "root": 4
+      },
+      "example": "src/rules_runner.ts:133:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered",
+      "count": 7,
+      "shards": {
+        "pretty_printer": 7
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:157:31: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:161:7: assignment to property keyword_case is not lowered"
+    },
+    {
+      "message": "unsupported-type test/utils/name_validator.ts: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts: identifier ruleViolated is not a lowered local or module value",
+      "count": 7,
+      "shards": {
+        "utils": 7
+      },
+      "example": "test/utils/name_validator.ts:6:80: lowering trap: unsupported-type test/utils/name_validator.ts:7:89: object literal property patternKind is not in shape src/rules/_naming_rule_config.ts.NamingRuleConfig; unsupported-expr test/utils/name_validator.ts:8:12: identifier ruleViolated is not a lowered local or module value"
+    },
+    {
+      "message": "unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts: empty array literal needs an inferable contextual element type",
+      "count": 5,
+      "shards": {
+        "abap-expressions": 5
+      },
+      "example": "test/abap/expressions/sql_set_op.ts:16:51: lowering trap: unsupported-type test/abap/expressions/sql_set_op.ts:20:9: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-type test/abap/expressions/sql_set_op.ts:20:24: checker type ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, ([string, { text: string; }, never[]] | [string, {}, [string, {}, [string, {}, [...][]][]][]])[]])[]] | [...])[] is not a lowered declaration; unsupported-array test/abap/expressions/sql_set_op.ts:21:44: empty array literal needs an inferable contextual element type"
+    },
+    {
+      "message": "src/abap/5_syntax/structures/class_data.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 3,
+      "shards": {
+        "rules": 1,
+        "lsp": 1,
+        "abap-syntax": 1
+      },
+      "example": "src/abap/5_syntax/structures/class_data.ts:12:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+      "count": 3,
+      "shards": {
+        "lsp": 3
+      },
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168846 (src/lsp/rename.ts:109:52): assignment type mismatch"
+    },
+    {
+      "message": "src/objects/_abap_object.ts: src/objects/_abap_object.ts",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/_abap_object.ts:126:3: src/objects/_abap_object.ts:151:82"
+    },
+    {
+      "message": "src/objects/_abstract_object.ts: input is outside the reviewed abapGit XML subset",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/_abstract_object.ts:134:3: input is outside the reviewed abapGit XML subset"
+    },
+    {
+      "message": "src/objects/_dynpros.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "rules": 2
+      },
+      "example": "src/objects/_dynpros.ts:30:1: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/message_class.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "rules": 1,
+        "objects": 1
+      },
+      "example": "src/objects/message_class.ts:65:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/objects/view.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "objects": 2
+      },
+      "example": "src/objects/view.ts:141:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "src/rules/space_before_dot.ts: value outside supported numeric, ordering or conversion domain",
+      "count": 2,
+      "shards": {
+        "root": 2
+      },
+      "example": "src/rules/space_before_dot.ts:50:3: value outside supported numeric, ordering or conversion domain"
+    },
+    {
+      "message": "test/abap/syntax/when_type.ts: HIR verification: unresolved method fn_visit",
+      "count": 2,
+      "shards": {
+        "abap-syntax": 2
+      },
+      "example": "test/abap/syntax/when_type.ts:8:1: lowering trap: test/abap/syntax/when_type.ts:8:1: HIR verification: node 74335 (test/abap/syntax/when_type.ts:24:3): unresolved method fn_visit"
+    },
+    {
+      "message": "unsupported-assignment test/config.ts: assignment to property applyUnspecifiedRules is not lowered",
+      "count": 2,
+      "shards": {
+        "root": 2
+      },
+      "example": "test/config.ts:80:86: lowering trap: unsupported-assignment test/config.ts:82:5: assignment to property applyUnspecifiedRules is not lowered"
+    },
+    {
+      "message": "unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts: assignment to property sequential_blank is not lowered",
+      "count": 2,
+      "shards": {
+        "pretty_printer": 2
+      },
+      "example": "test/pretty_printer/pretty_printer.ts:242:28: lowering trap: unsupported-assignment test/pretty_printer/pretty_printer.ts:246:5: assignment to property keyword_case is not lowered; unsupported-assignment test/pretty_printer/pretty_printer.ts:247:5: assignment to property sequential_blank is not lowered"
+    },
+    {
+      "message": "unsupported-call src/objects/number_range.ts: call to KindIdentifier is not lowered",
+      "count": 2,
+      "shards": {
+        "rules": 1,
+        "objects": 1
+      },
+      "example": "src/objects/number_range.ts:36:3: lowering trap: unsupported-call src/objects/number_range.ts:51:33: call to KindIdentifier is not lowered"
+    },
+    {
+      "message": "unsupported-call test/abap/syntax/basic_variables.ts: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts: identifier fieldDefinitions is not a lowered local or module value",
+      "count": 2,
+      "shards": {
+        "abap-syntax": 2
+      },
+      "example": "test/abap/syntax/basic_variables.ts:16:1: lowering trap: unsupported-call test/abap/syntax/basic_variables.ts:21:20: method padStart on string is not lowered; unsupported-expr test/abap/syntax/basic_variables.ts:47:21: identifier fieldDefinitions is not a lowered local or module value"
+    }
+  ],
+  "artifactsDeleted": true,
+  "artifactNote": "Historical scratch location, removed after certification. Final commit amends documentation/evidence only; semantic subtree hashes in traps-j-gates.json identify the measured source."
+}

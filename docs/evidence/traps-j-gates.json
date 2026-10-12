@@ -1,0 +1,98 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "measuredSemanticCommit": "0694974dc4c989d41124237e515db05806a2cc73",
+  "semanticTrees": {
+    "hir": "a201a419c7f9627b98705b0c13e3cedfe38803da",
+    "tsfront": "8cd0d34da910c3f9a5b8a5326367537169c29576",
+    "cmd": "7310d8a1f19621df821bb918a38272ae6046140d",
+    "tools": "df052944b9b0c00f3a23e2d2c572f0cae2d0e868"
+  },
+  "toolchain": {
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOFLAGS": "-buildvcs=false",
+    "GOCACHE": "$HOME/.cache/go-build",
+    "ABAPITI_GRACECHECK": "1",
+    "testTimeout": "40m",
+    "shardNice": 10,
+    "workers": 2
+  },
+  "gates": {
+    "shortSuite": {
+      "command": "go test ./... -short -timeout 40m",
+      "status": 0
+    },
+    "fullGrace": {
+      "command": "go test ./tsfront/... ./hir/... ./cmd/... -timeout 40m",
+      "status": 0
+    },
+    "vet": {
+      "command": "go vet ./...",
+      "status": 0
+    },
+    "runnerRegressions": {
+      "status": 0,
+      "commands": [
+        "node tools/abaplint-tests-report-test.mjs",
+        "node tools/abaplint-tests-all-test.mjs"
+      ]
+    },
+    "golden": {
+      "command": "GRACE_FACTS_OUT=<scratch>/lexer.facts go test ./tsfront -run ^TestLexerFactsReport$ -count=1 -timeout 40m; cmp <scratch>/lexer.facts tsfront/testdata/lexer.facts.golden",
+      "status": 0,
+      "SHA256": "f9c4a1b741ea77a188bad5b4bd7de4ed7a85fb5ac8e6dfad6cb6834f6bed7478",
+      "updated": false,
+      "reason": "No runtime operation/catalog changes; regenerated facts are byte-identical. No golden update justified."
+    },
+    "defaultOutput": {
+      "baseCommit": "8bff2520bb057d8c06d1fcc3d83f3dc685aa74fe",
+      "baseBuild": "git archive 8bff252, local read-only extracted source; no transpiler clone",
+      "sameAbsoluteOutputPath": true,
+      "command": "diff -r <base-output> <candidate-output>",
+      "status": 0,
+      "diffBytes": 0,
+      "files": 6312
+    },
+    "zabapgit": {
+      "kit": "v0.1.1",
+      "kitZIP_SHA256": "2e3311517885ed72e651c97004d6cba064fa5093873c75f1104955891e965d7a",
+      "NodeOracle": "fresh original pinned upstream, TypeScript 6.0.3; tools/statements-upstream.mjs and tools/hir-go-check.mjs --node-worker",
+      "config": "abaplint.json",
+      "deps": "deps.txt",
+      "rawByteComparisons": true,
+      "workloads": {
+        "clean": {
+          "issues": 0,
+          "GoSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "NodeSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "kitSHA256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+        },
+        "seeded": {
+          "issues": 5,
+          "GoSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "NodeSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+          "kitSHA256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50"
+        }
+      }
+    },
+    "allShards": {
+      "command": "ABAPITI_TESTS_WORKERS=2 ABAPITI_TESTS_FIRST=rules,lsp,objects,objects/rename,abap nice -n 10 node tools/abaplint-tests-all.mjs ~/dev/abaplint docs/evidence/traps-j-final.json",
+      "status": 0,
+      "finalRuns": 1,
+      "shards": 17,
+      "files": 625,
+      "passed": 10668,
+      "failed": 0,
+      "trapped": 332,
+      "asyncPending": 0,
+      "notRun": 92,
+      "activeDenominator": 11060
+    }
+  },
+  "notes": [
+    "Measured semantic source is frozen; final amendment changes documentation/evidence only. Semantic subtree hashes make that assertion checkable.",
+    "Exploratory default temporary diffs and a generated checked-integer-helper missing import were repaired before these final gates. Neither final output/golden comparison is normalized.",
+    "The genuine sparse find prototype mismatch was reported, repaired using existing array.has, and regressed before follow-up shard runs.",
+    "No test is weakened/deleted, no source override added, no transpose clone or push performed."
+  ],
+  "artifactsDeleted": true
+}

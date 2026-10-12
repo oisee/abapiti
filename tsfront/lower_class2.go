@@ -568,6 +568,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
+		// Property-only interfaces are nominal storage layouts in HIR, not
+		// nominal TS types. Reuse the live data-class view: never copy fields
+		// or lose extra keys, identity, or mutations through the original.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	if l.unprunedFeatures && x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional && dst.Kind == hir.Optional {
 		return &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}
 	}

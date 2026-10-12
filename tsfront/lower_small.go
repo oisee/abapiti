@@ -98,6 +98,11 @@ func (l *lowerer) inOperator(n *ast.Node, b *ast.BinaryExpression) *hir.Expr {
 		}
 		return l.rtOp("map.has", obj, hir.T(hir.Bool), key)
 	}
+	if l.unprunedFeatures && obj.Type.Kind == hir.ClassRef && obj.Type.Name == hir.RootObject && key.Type.Kind == hir.String {
+		// The erased object/union keeps its concrete storage. The existing
+		// property operation checks original presence, not declared fields.
+		return l.rtOp("object.has", obj, hir.T(hir.Bool), key)
+	}
 	if obj.Type.Kind == hir.ClassRef {
 		c := l.classesByQualifiedName(obj.Type.Name)
 		if c != nil && b.Left.Kind == ast.KindStringLiteral {

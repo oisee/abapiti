@@ -176,7 +176,20 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 		}
 		ctorArgs = append(ctorArgs, l.coerce(x, p.Type))
 	}
-	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(c.Name), Args: ctorArgs}, true
+	out := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(c.Name), Args: ctorArgs}
+	if name != "RenameFile" {
+		// These factories return fresh records with exactly their required
+		// fields plus Command's supplied argument array. RenameFile's
+		// conditional options need a separate runtime presence proof.
+		keys := []string{}
+		for _, p := range c.Ctor.Params {
+			if p.Type.Kind != hir.Optional || values[p.Name] != nil {
+				keys = append(keys, p.Name)
+			}
+		}
+		out.OwnKeys = &keys
+	}
+	return out, true
 }
 
 func (l *lowerer) scanLSPConstructors(n *ast.Node) {

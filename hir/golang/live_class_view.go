@@ -72,8 +72,10 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 	case hir.Number:
 		return "dynNumber(" + d + ")"
 	case hir.I32:
+		e.hirMath = true
 		return "func() int32 {v:=dynNumber(" + d + ");if v!=math.Trunc(v) || v < -2147483648 || v > 2147483647 {panic(newRangeFault())};return int32(v)}()"
 	case hir.I64:
+		e.hirMath = true
 		return "func() int64 {v:=dynNumber(" + d + ");if v!=math.Trunc(v) || v < -9007199254740991 || v > 9007199254740991 {panic(newRangeFault())};return int64(v)}()"
 	case hir.ClassRef:
 		if t.Name != hir.RootObject && e.liveClasses[t.Name] {
