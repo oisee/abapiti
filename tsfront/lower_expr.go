@@ -1368,6 +1368,36 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, true
 			}
 			return l.rtOp("string.repeat", recv, str, l.coerce(count, hir.T(hir.Number))), true
+		case "padStart":
+			if len(args) > 2 {
+				l.diagf(n, "unsupported-call", "string.padStart accepts at most two arguments")
+				return nil, true
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			count := hir.L(hir.T(hir.Number), 0)
+			if len(args) > 0 {
+				count = l.expr(args[0])
+			}
+			if count == nil {
+				return nil, true
+			}
+			if !numberType(count.Type) {
+				l.diagf(n, "unsupported-call", "string.padStart requires a numeric target length")
+				return nil, true
+			}
+			count = l.tempInit(n, hir.T(hir.Number), l.coerce(count, hir.T(hir.Number)))
+			fill := hir.L(str, " ")
+			if len(args) > 1 {
+				fill = l.expr(args[1])
+			}
+			if fill == nil {
+				return nil, true
+			}
+			if fill.Type.Kind != hir.String {
+				l.diagf(n, "unsupported-call", "string.padStart requires a string fill value")
+				return nil, true
+			}
+			return l.rtOp("string.padStart", recv, str, count, fill), true
 		case "includes":
 			if len(args) != 1 {
 				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")

@@ -51,6 +51,19 @@ func (l *lowerer) lspShape(sym *ast.Symbol) *hir.Class {
 	return nil
 }
 
+// Namespace .is predicates return falsy inputs unchanged. Only a consuming
+// condition (including a ternary condition) can safely use their truthiness.
+func lspConditionOnly(n *ast.Node) bool {
+	if isConditionOnly(n) {
+		return true
+	}
+	child, parent := n, n.Parent
+	for parent != nil && parent.Kind == ast.KindParenthesizedExpression {
+		child, parent = parent, parent.Parent
+	}
+	return parent != nil && parent.Kind == ast.KindConditionalExpression && parent.AsConditionalExpression().Condition == child
+}
+
 func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool) {
 	sym := l.resolve(receiver)
 	if !l.lspSymbol(sym) {
@@ -68,7 +81,7 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 	}
 	name := sym.Name
 	args := n.Arguments()
-	if method == "is" && len(args) == 1 && (name == "TextDocumentEdit" || name == "RenameFile") {
+	if method == "is" && len(args) == 1 && (name == "TextDocumentEdit" || name == "RenameFile" || name == "CreateFile" || name == "DeleteFile") {
 		saved := l.hint
 		l.hint = hir.T(hir.Dynamic)
 		value := l.expr(args[0])
@@ -77,8 +90,8 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 			return nil, true
 		}
 		guard := l.rtOp("lsp.is"+name, l.coerce(value, hir.T(hir.Dynamic)), hir.T(hir.Bool))
-		if name == "RenameFile" {
-			guard.Args = []*hir.Expr{hir.L(hir.T(hir.Bool), isConditionOnly(n))}
+		if name != "TextDocumentEdit" {
+			guard.Args = []*hir.Expr{hir.L(hir.T(hir.Bool), lspConditionOnly(n))}
 		}
 		return guard, true
 	}

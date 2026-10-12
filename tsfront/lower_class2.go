@@ -199,7 +199,16 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	captures := []localCapture{}
 	receiverFree := !touchesThis(fn.Body())
 	seen := map[*ast.Symbol]bool{}
+	var selfSymbol *ast.Symbol
+	if fn.Parent != nil && fn.Parent.Kind == ast.KindVariableDeclaration && fn.Parent.Initializer() == fn {
+		selfSymbol = l.ck.GetSymbolAtLocation(fn.Parent.Name())
+	} else if fn.Name() != nil {
+		selfSymbol = l.ck.GetSymbolAtLocation(fn.Name())
+	}
 	for _, capture := range l.freeLocals(fn) {
+		if l.unprunedFeatures && selfSymbol != nil && capture.symbol == selfSymbol {
+			continue
+		}
 		if capture.symbol == nil {
 			l.diagf(capture.node, "unsupported-call", "capture %s has no checked binding", capture.name)
 			return nil
@@ -323,6 +332,13 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		l.pop()
 		return nil
 	}
+	// Publish the complete signature before lowering the body. Recursive
+	// calls must target this same lexical method, not an absent/stale member.
+	lf := &localFn{method: m, captures: captures, owner: l.class}
+	if l.unprunedFeatures {
+		l.localFns[name] = lf
+		l.class.Methods = append(l.class.Methods, m)
+	}
 	restoreFns := l.withLocalFns(body)
 	defaults := *m
 	defaults.Params = m.Params[len(captures):]
@@ -335,9 +351,10 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	}
 	l.method = savedMethod
 	l.pop()
-	lf := &localFn{method: m, captures: captures, owner: l.class}
-	l.localFns[name] = lf
-	l.class.Methods = append(l.class.Methods, m)
+	if !l.unprunedFeatures {
+		l.localFns[name] = lf
+		l.class.Methods = append(l.class.Methods, m)
+	}
 	return lf
 }
 

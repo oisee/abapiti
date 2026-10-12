@@ -311,6 +311,29 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			return nil, true
 		}
 		return l.primitiveString(args[0], x), true
+	case "parseFloat":
+		if !l.unprunedFeatures {
+			return nil, false
+		}
+		if len(args) != 1 || args[0].Kind == ast.KindSpreadElement {
+			l.diagf(n, "unsupported-call", "parseFloat requires one typed string argument")
+			return nil, true
+		}
+		s := l.expr(args[0])
+		if s == nil {
+			return nil, true
+		}
+		if s.Type.Kind == hir.Dynamic {
+			s = l.rtOp("dynamic.toString", s, hir.T(hir.String))
+		}
+		if s.Type.Kind != hir.String {
+			l.diagf(n, "unsupported-call", "parseFloat requires a typed string argument")
+			return nil, true
+		}
+		opt := hir.T(hir.Optional, hir.T(hir.Number))
+		parsed := l.tempInit(n, opt, l.rtOp("string.parseFloat", s, opt))
+		l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: parsed}, Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.trapLocation(n) + ": parseFloat requires a finite result"})})
+		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: hir.T(hir.Number), X: parsed}, true
 	case "parseInt":
 		if len(args) != 2 || args[1].Kind != ast.KindNumericLiteral || args[1].Text() != "10" {
 			l.diagf(n, "unsupported-call", "parseInt is lowered only with an explicit radix 10")

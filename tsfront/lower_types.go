@@ -52,7 +52,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return hir.T(hir.Bool)
 	case ast.KindObjectKeyword:
 		return hir.Ref(hir.RootObject)
-	case ast.KindVoidKeyword:
+	case ast.KindVoidKeyword, ast.KindNeverKeyword:
 		return hir.T(hir.Void)
 	case ast.KindUndefinedKeyword:
 		return hir.T(hir.Optional, hir.T(hir.Dynamic))
@@ -463,7 +463,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return hir.T(hir.String)
 	case flags&checker.TypeFlagsBooleanLiteral != 0 || flags&checker.TypeFlagsBoolean != 0:
 		return hir.T(hir.Bool)
-	case flags&checker.TypeFlagsVoid != 0:
+	case flags&(checker.TypeFlagsVoid|checker.TypeFlagsNever) != 0:
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsUndefined != 0:
 		// A standalone undefined result still has a value, unlike void.

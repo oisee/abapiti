@@ -1,12 +1,16 @@
 package tsfront
 
 import (
+	"math"
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
 // JSON intrinsics are recognized by their default-library binding, never by
-// spelling alone. Revivers, replacers and indentation remain explicit refusals.
+// spelling alone. Revivers/replacers refuse; literal indentation operates on
+// the existing compact serialization, without changing its storage domain.
 func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
 	if !l.unprunedFeatures {
 		return nil, false
@@ -28,9 +32,46 @@ func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	args := n.Arguments()
-	if len(args) != 1 || args[0].Kind == ast.KindSpreadElement {
-		l.diagf(n, "unsupported-json", "JSON.%s requires exactly one argument; revivers/replacers/space are unsupported", name)
+	valid := len(args) == 1
+	if name == "stringify" {
+		valid = len(args) >= 1 && len(args) <= 3
+	}
+	for _, arg := range args {
+		valid = valid && arg.Kind != ast.KindSpreadElement
+	}
+	if !valid {
+		l.diagf(n, "unsupported-json", "JSON.%s has unsupported argument arity or spread", name)
 		return nil, true
+	}
+	undefined := func(n *ast.Node) bool {
+		sym := l.resolve(n)
+		return isUndefinedKeyword(n) && sym != nil && sym.Name == "undefined" && sym.ValueDeclaration == nil
+	}
+	var gap *hir.Expr
+	if name == "stringify" && len(args) > 1 {
+		if args[1].Kind != ast.KindNullKeyword && !undefined(args[1]) {
+			l.diagf(n, "unsupported-json", "JSON.stringify replacers are unsupported")
+			return nil, true
+		}
+	}
+	if name == "stringify" && len(args) == 3 && !undefined(args[2]) {
+		if args[2].Kind != ast.KindStringLiteral && args[2].Kind != ast.KindNumericLiteral {
+			l.diagf(n, "unsupported-json", "JSON.stringify space requires a string or numeric literal")
+			return nil, true
+		}
+		x := l.expr(args[2])
+		if x == nil {
+			return nil, true
+		}
+		if x.Type.Kind == hir.String {
+			gap = x
+		} else if count, ok := x.Value.(float64); ok {
+			count = math.Min(10, math.Max(0, math.Trunc(count)))
+			gap = hir.L(hir.T(hir.String), strings.Repeat(" ", int(count)))
+		} else {
+			l.diagf(n, "unsupported-json", "JSON.stringify numeric space is not a literal")
+			return nil, true
+		}
 	}
 	// A fresh literal passed directly to stringify has no nominal storage
 	// identity to preserve. Build it in the existing tagged-record domain so
@@ -54,5 +95,9 @@ func (l *lowerer) jsonCall(n *ast.Node) (*hir.Expr, bool) {
 	}
 	// The writer preserves tagged-record insertion order, array positions and
 	// primitive encoding. Native instances without an own-key-order proof trap.
-	return l.rtOp("json.stringifySubset", value, hir.T(hir.String)), true
+	compact := l.rtOp("json.stringifySubset", value, hir.T(hir.String))
+	if gap != nil {
+		return l.rtOp("json.indent", compact, hir.T(hir.String), gap), true
+	}
+	return compact, true
 }
