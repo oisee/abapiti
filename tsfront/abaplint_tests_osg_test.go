@@ -24,7 +24,7 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	if len(gap.UnsupportedCatalogue) != 26 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	if len(gap.UnsupportedCatalogue) != 18 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	if len(gap.Refusals) != 1 || !strings.Contains(gap.Refusals[0].Reason, "non-finite Number") {
@@ -94,8 +94,10 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		t.Fatal(err)
 	}
 	gap := MeasureABAPTestGap(lowering)
-	if len(gap.Runtime) == 0 {
-		t.Fatal("missing chai operation gap")
+	for _, row := range gap.Runtime {
+		if strings.HasPrefix(row.Reason, "chai.") {
+			t.Fatal("Chai must emit rather than refuse its entire owning body", row)
+		}
 	}
 	files, err := EmitAbaplintTestsOSG(dir, lowering)
 	if err != nil {
@@ -135,8 +137,11 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
 			t.Fatal(err)
 		}
-		if summary.Passed != 1 || summary.Failed != 1 || summary.Trapped != 2 {
+		if summary.Passed != 1 || summary.Failed != 2 || summary.Trapped != 1 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
+		}
+		if len(summary.Results) != 4 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
 		}
 		last := summary.Results[len(summary.Results)-1]
 		if last.Title != "intentional fail" || last.Status != "failed" || last.Message != "intentional failure" {

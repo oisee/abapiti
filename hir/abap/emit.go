@@ -15,6 +15,9 @@ import (
 )
 
 type emitter struct {
+	chaiUsed        bool
+	chaiArrays      []hir.Type
+	chaiMaps        []hir.Type
 	liveClasses     map[string]bool
 	constructorArgs bool
 	configJSON      bool
@@ -156,6 +159,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	}
 	e.support()
 	e.markArrays()
+	if e.chaiUsed {
+		e.chaiRuntime()
+	}
 	if castTrace {
 		e.traceCasts()
 	}
@@ -302,6 +308,10 @@ func (e *emitter) scanUsage() {
 		}
 		if x.Kind == hir.InstanceOf && x.Y != nil {
 			need = true
+		}
+		if x.Kind == hir.RuntimeOp && strings.HasPrefix(x.Op, "chai.") {
+			e.chaiUsed = true
+			e.dynamicUsed = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" {
 			e.liveRuntime()
@@ -1032,6 +1042,9 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("CREATE OBJECT " + n + ".")
 			if len(x.Args) == 1 {
 				cnt := b.expr(x.Args[0])
+				if e.chaiUsed {
+					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + ".\nENDIF.")
+				}
 				row := b.temp(arrayStorage(t).Args[0])
 				b.line("CLEAR " + row + ".")
 				b.line("WHILE " + cnt + " > 0.")
@@ -1109,6 +1122,9 @@ func (b *body) expr(x *hir.Expr) string {
 			s += strings.Join(args, " ")
 		}
 		b.line(s + " ).")
+		if e.chaiUsed && t.Kind == hir.OrderedMap && x.OwnKeys != nil {
+			b.line(n + "->chai_enumerable = abap_true.")
+		}
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
@@ -2235,6 +2251,34 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(obj + " = " + b.e.name("runtime.classvalue.factory") + "=>new( p0 = " + a + " ).")
 		b.line(n + " ?= " + obj + ".")
 		return
+	case "chai.box":
+		b.chaiBox(n, a, x.X.Type)
+		if x.X.Type.Kind == hir.Number {
+			zero, negated := x.X, false
+			for zero.Kind == hir.Unary && (zero.Op == "-" || zero.Op == "+") {
+				negated = negated != (zero.Op == "-")
+				zero = zero.X
+			}
+			if value, ok := zero.Value.(float64); zero.Kind == hir.Lit && ok && value == 0 {
+				sign := "1"
+				if math.Signbit(value) != negated {
+					sign = "2"
+				}
+				b.line(n + "->chai_zero_sign = " + sign + ".")
+			}
+		}
+		return
+	case "chai.deepEqual", "chai.deepInclude", "chai.arrayInclude", "chai.members", "chai.throwMatch":
+		params := []string{"p0 = " + a}
+		for i, arg := range args {
+			params = append(params, fmt.Sprintf("p%d = %s", i+1, arg))
+		}
+		if x.Op == "chai.throwMatch" && x.X.Type.Kind != hir.Dynamic {
+			b.chaiThrowTyped(n, a, x.X.Type, args[0])
+			return
+		}
+		b.line(n + " = " + b.e.name("runtime.chai") + "=>" + strings.TrimPrefix(x.Op, "chai.") + "( " + strings.Join(params, " ") + " ).")
+		return
 	case "dynamic.of":
 		if x.X.Kind == hir.StaticGet && strings.HasSuffix(x.X.Name, "_namespace") && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
 			// An enum namespace is immutable: boxing it as a plain object (a
@@ -2471,6 +2515,9 @@ func (b *body) stmt(s *hir.Stmt) {
 			v := b.value(s.Y, s.X.Type)
 			if !constant {
 				b.line(i + " = " + i + " + 1.")
+			}
+			if e.chaiUsed {
+				b.line("IF " + i + " > lines( " + a + "->items ) + 1.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + ".\nENDIF.")
 			}
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
 			b.line("CLEAR " + row + ".")
