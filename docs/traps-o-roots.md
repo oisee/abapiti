@@ -54,6 +54,12 @@ constructor. Structural/own-shadowed unions retain their shared-field proof
 or refusal; no union payload layout is changed. The first focused repair
 revealed the method-interface constituent; the retained oracle now covers it.
 
+The follow-up CDS shard still has 355 passes, FAIL 0: this original body now
+reaches the same `cds_parser.ts:3804` dynamic `get` / `getChildren` helper trap
+owned by batch N. That group grows from one to two bodies; constructor lowering
+is independently certified, but **no CDS body pass is credited** here. No dynamic
+method bridge is added under O.
+
 ## AFF: malformed JSON, not JSON5 or a missing valid JSON feature
 
 The actual input at `test/objects/domain.ts:92` is **`sdfsdf`**. Original Node
@@ -135,5 +141,43 @@ upstream test is edited and no assertion is made weaker or removed.
 
 ## Certification
 
-Pending final focused runs, gates, one frozen-source 17-shard run, default raw
-diff, zabapgit clean/seeded Node comparison and artifact cleanup.
+Frozen semantic source: **a827974** (full hash/tree identities in the gate
+certificate), based on f78b973. Final documentation/evidence changes preserve
+those semantic trees.
+
+- Exactly **one** final **17-shard / 625-file** run: **11,037/11,060 active
+  passes (99.79%), FAIL 0, 20 traps, zero async-pending, 35 not-run**. Original
+  pinned Node: 11,060 passes, zero failures, 32 pending. Complete title multisets
+  reconcile without exclusions, unmatched executions, wiring failures, borrowed
+  FAILs or executed pending bodies. All 14 normalized reached-message groups
+  are retained, not just a top-20 subset.
+- **23 active non-passes = 20 traps + 3 unregistered + 0 active skips + 0 FAIL +
+  0 async-pending.** Not-run 35 = 28 registered original pending skips + seven
+  unregistered (three active + four pending). [All 23 titles/sites](traps-o-remaining.md)
+  remain explicit handoffs.
+- **+5 body passes:** rename three, semantic one, AFF one. Constructor repair
+  reaches batch N's dynamic helper, not a CDS body pass; Help CDS still traps at
+  Dell's delete-records boundary. Their independent oracles are not inflated
+  into original-test passes.
+- [Focused evidence](evidence/traps-o-focused.json) retains three selected
+  development stages. Initial development measurement was launched before
+  edits but compiled asynchronously during edits: its counts match train 11,
+  but its diagnostics are not a frozen baseline certificate. Final followup
+  uses a827974. No full baseline run was performed.
+- All requested short, Grace-enabled tsfront/hir/cmd and vet gates pass, along
+  with runner regressions and the new/retained exact Node oracles. Early local
+  gates still expected obsolete blanket native/row JSON refusals; the original
+  fixtures now assert strict Node bytes, and unsupported-storage negatives are
+  retained. No original upstream fixture or assertion is touched.
+- **No golden changes:** regenerated lexer facts are byte-identical. No new
+  operation/effect catalogue entry. Default output versus an archived f78b973
+  compiler has **raw diff -r exit 0, zero bytes, all 6,312 files**, including zip,
+  at the same absolute path. No output changes require justification.
+- Fresh emitted Go and fresh original pinned Node agree byte-for-byte on
+  zabapgit **clean 0 / seeded 5**, also equal to the checksum-verified v0.1.1 kit;
+  direct cmp and go-target-check.py both pass. [Gate certificate](evidence/traps-o-gates.json)
+  retains output SHA256s, environment and semantic trees.
+
+Generated builds, copied closures, archived sources/output, kit, profiles,
+facts, raw records and logs are deleted. Only implementation/regressions and
+compact evidence/docs remain. Clean commits, no push or transpiler clone.
