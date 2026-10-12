@@ -279,7 +279,7 @@ z_runtime_map__bdc9cedddb3dfe.clas.abap
 CLASS z_runtime_map__bdc9cedddb3dfe DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
     TYPES: BEGIN OF entry, k TYPE string, v TYPE i, END OF entry.
-    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.
+    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
     METHODS size RETURNING VALUE(result) TYPE i.
     METHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
@@ -295,7 +295,7 @@ z_runtime_map__c61ab32dd6a58d.clas.abap
 CLASS z_runtime_map__c61ab32dd6a58d DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
     TYPES: BEGIN OF entry, k TYPE i, v TYPE string, END OF entry.
-    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.
+    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
     METHODS size RETURNING VALUE(result) TYPE i.
     METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
@@ -356,7 +356,7 @@ z_runtime_set__edc1f1305a34c6.clas.abap
 CLASS z_runtime_set__edc1f1305a34c6 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
     TYPES: BEGIN OF entry, k TYPE i, v TYPE abap_bool, END OF entry.
-    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.
+    TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
     METHODS size RETURNING VALUE(result) TYPE i.
     METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.

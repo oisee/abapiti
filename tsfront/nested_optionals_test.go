@@ -53,7 +53,7 @@ func TestOptionalMapValuesNodeOracle(t *testing.T) {
 	}
 	maps, consumers := 0, 0
 	for _, text := range files {
-		if strings.Contains(text, "READ TABLE entries WITH KEY k = p0 INTO DATA(row).") && strings.Contains(text, "result->has = abap_true.") {
+		if strings.Contains(text, "READ TABLE entries WITH KEY by_k COMPONENTS k = p0 INTO DATA(row).") && strings.Contains(text, "result->has = abap_true.") {
 			maps++
 			if !strings.Contains(text, "result->has = abap_true.") || !strings.Contains(text, "result->value = row-v.") {
 				t.Fatal("physical map getter must retain membership", text)

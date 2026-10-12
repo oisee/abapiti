@@ -113,12 +113,21 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		vt := e.typ(value)
 		line("TYPES: BEGIN OF entry, k TYPE " + key + ", v TYPE " + vt + ", END OF entry.")
-		line("TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.")
+		// OSG #698 supports scalar secondary-key components, not references.
+		// Keep reference identity lookups on the existing linear path.
+		lookupKey := "k"
+		secondary := ""
+		switch t.Args[0].Kind {
+		case hir.String, hir.Bool, hir.I32, hir.I64, hir.Number:
+			lookupKey = "by_k COMPONENTS k"
+			secondary = " WITH UNIQUE HASHED KEY by_k COMPONENTS k"
+		}
+		line("TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY" + secondary + ".")
 		line("DATA entries TYPE entries_type.")
 		line("METHODS size RETURNING VALUE(result) TYPE i.")
 		method("size", "result = lines( entries ).\n")
 		line("METHODS has IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
-		method("has", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		method("has", "READ TABLE entries WITH KEY "+lookupKey+" = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
 		op := "add"
 		params := ""
 		val := "abap_true"
@@ -128,11 +137,11 @@ func (e *emitter) runtime(t hir.Type) {
 			val = "p1"
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method(op, "READ TABLE entries WITH KEY k = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
+		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
 		if t.Kind == hir.OrderedMap {
 			opt := e.typ(hir.T(hir.Optional, value))
 			line("METHODS get IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE " + opt + ".")
-			code := "READ TABLE entries WITH KEY k = p0 INTO DATA(row).\nIF sy-subrc = 0.\n"
+			code := "READ TABLE entries WITH KEY " + lookupKey + " = p0 INTO DATA(row).\nIF sy-subrc = 0.\n"
 			if value.IsRef() {
 				code += "result = row-v.\n"
 			} else {
@@ -155,7 +164,11 @@ func (e *emitter) runtime(t hir.Type) {
 			line("METHODS copy IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 			method("copy", "CREATE OBJECT result.\nAPPEND LINES OF p0->entries TO result->entries.\n")
 			line("METHODS delete IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
-			method("delete", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nDELETE entries INDEX sy-tabix.\nresult = abap_true.\nENDIF.\n")
+			if secondary != "" {
+				method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+			} else {
+				method("delete", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nDELETE entries INDEX sy-tabix.\nresult = abap_true.\nENDIF.\n")
+			}
 		}
 		if t.Kind == hir.OrderedMap {
 			line("METHODS values RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, value)) + ".")
