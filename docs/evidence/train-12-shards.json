@@ -1,0 +1,1029 @@
+{
+  "nodeActive": {
+    "total": 11060,
+    "passed": 11051,
+    "failed": 0,
+    "trapped": 7,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 2,
+    "notPassing": 9
+  },
+  "nodePending": {
+    "total": 32,
+    "skipped": 28,
+    "unregistered": 4
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "codeCommit": "f67928920b61ba215d33ed643a8da4ac1042efcd",
+  "mainCommit": "f78b973b6848682830779875644f2045f30e9fc0",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "abap",
+      "files": 18,
+      "passed": 216,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 4,
+      "registered": 216,
+      "total": 220,
+      "node": {
+        "passed": 216,
+        "failed": 0,
+        "pending": 4
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 4
+      },
+      "unregisteredTitles": [
+        "Structure, test error messages, specific IF foo = bar.",
+        "Structure, test error messages, specific IF foo = bar. moo = boo.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE.",
+        "Structure, test error messages, specific IF foo = bar. ENDWHILE. ENDIF."
+      ],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 216,
+        "passed": 216,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 4,
+        "skipped": 0,
+        "unregistered": 4
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [
+        {
+          "file": "test/abap/structure_errors.ts",
+          "action": "test/abap/structure_errors.ts:15:1",
+          "message": "test/abap/structure_errors.ts:15:54: lowering trap: test/abap/structure_errors.ts:15:54: HIR verification: node 36346 (test/abap/structure_errors.ts:17:13): invalid narrowing classref<shape.c4b328c5aa10399a63c13fd4296a6a7727d5bb372e83f88119bf41b22f8b727c> to classref<shape.a075496bed66948e99eac227f642b108931b76f9160ec3ce3d32fd5c1860f414>",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "abap/expressions",
+      "files": 11,
+      "passed": 107,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 107,
+      "total": 107,
+      "node": {
+        "passed": 107,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 107,
+        "passed": 107,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 200,
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/nodes",
+      "files": 1,
+      "passed": 2,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 2,
+      "total": 2,
+      "node": {
+        "passed": 2,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 4962,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 4962,
+        "passed": 4962,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/structures",
+      "files": 30,
+      "passed": 139,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 140,
+      "total": 140,
+      "node": {
+        "passed": 139,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 139,
+        "passed": 139,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Structure FORM FORM, many statements",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "abap/syntax",
+      "files": 8,
+      "passed": 1363,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 10,
+      "registered": 1373,
+      "total": 1373,
+      "node": {
+        "passed": 1363,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 1363,
+        "passed": 1363,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 10,
+        "skipped": 10,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "syntax.ts, Check Variables function module definition not found",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables error cannot define length and decimals for date",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables Error, overlapping names",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables access instance variable from interface in static method, error",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables Error, insert, types incompatible",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables accessing me is not possible in static methods",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables fields inside TYPES cannot be generic",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, Check Variables return type doesnt match importing",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, PERFORM parameters, STRUCTURE typing gap, FORM parameters typed against program-local names are never checked",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "syntax.ts, PERFORM parameters, STRUCTURE typing gap, TABLES accepts sorted and hashed tables",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/get_abap.ts",
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 1379
+      }
+    },
+    {
+      "name": "abap/types",
+      "files": 6,
+      "passed": 29,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 29,
+      "total": 29,
+      "node": {
+        "passed": 29,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 29,
+        "passed": 29,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 94,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 94,
+        "passed": 94,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "cds",
+      "files": 2,
+      "passed": 358,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 359,
+      "total": 359,
+      "node": {
+        "passed": 358,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 358,
+        "passed": 358,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "CDS Parser define custom entity with association",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "ddl",
+      "files": 1,
+      "passed": 32,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 32,
+      "total": 32,
+      "node": {
+        "passed": 32,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 32,
+        "passed": 32,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "lsp",
+      "files": 16,
+      "passed": 182,
+      "failed": 0,
+      "trapped": 6,
+      "asyncPending": 0,
+      "notRun": 5,
+      "registered": 193,
+      "total": 193,
+      "node": {
+        "passed": 188,
+        "failed": 0,
+        "pending": 5
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 5,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 188,
+        "passed": 182,
+        "failed": 0,
+        "trapped": 6,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 6
+      },
+      "nodePending": {
+        "total": 5,
+        "skipped": 5,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "LSP, hover keyworld should not resolve",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, hover hover method parameter",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, hover Hover inline SELECT data voided",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, references method references",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "LSP, references find references for macro definition",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [],
+      "failures": [],
+      "borrowed": {
+        "files": [
+          "test/rules/sql_value_conversion.ts"
+        ],
+        "total": 6,
+        "passed": 6,
+        "failed": 0,
+        "pending": 0,
+        "registered": 6,
+        "rawRegistered": 199
+      }
+    },
+    {
+      "name": "objects",
+      "files": 26,
+      "passed": 143,
+      "failed": 0,
+      "trapped": 1,
+      "asyncPending": 0,
+      "notRun": 1,
+      "registered": 145,
+      "total": 145,
+      "node": {
+        "passed": 144,
+        "failed": 0,
+        "pending": 1
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 1,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 144,
+        "passed": 143,
+        "failed": 0,
+        "trapped": 1,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 1
+      },
+      "nodePending": {
+        "total": 1,
+        "skipped": 1,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Proxy Object adhoc",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "objects/rename",
+      "files": 9,
+      "passed": 31,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 31,
+        "passed": 31,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "pretty_printer",
+      "files": 1,
+      "passed": 31,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 31,
+      "total": 31,
+      "node": {
+        "passed": 31,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 31,
+        "passed": 31,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    },
+    {
+      "name": "rules",
+      "files": 192,
+      "passed": 3147,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 12,
+      "registered": 3157,
+      "total": 3159,
+      "node": {
+        "passed": 3149,
+        "failed": 0,
+        "pending": 10
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 10,
+        "unregistered": 2
+      },
+      "unregisteredTitles": [
+        "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+        "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)"
+      ],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 3149,
+        "passed": 3147,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 2,
+        "notPassing": 2
+      },
+      "nodePending": {
+        "total": 10,
+        "skipped": 10,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [
+        {
+          "title": "Rule: downport REDUCE FOR GROUPS",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport FOR loops, identical variable names, step 1",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport SELECT AS",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport SELECT UNION",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: downport basic value FOR",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline Dont inline, type P, this will change the type?",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: prefer_inline Types should not change when inlining",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: uncaught_exception no error, super classed, local exceptions",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "Rule: uncaught_exception PROG with INCL, expect error",
+          "node": "pending",
+          "message": ""
+        },
+        {
+          "title": "unknown_types Rule No class/method implementation but DEFAULT not found",
+          "node": "pending",
+          "message": ""
+        }
+      ],
+      "initialization": [
+        {
+          "file": "test/rules/line_length.ts",
+          "action": "test/rules/line_length.ts:17:1",
+          "message": "src/rules/line_length.ts:35:3: value outside supported numeric, ordering or conversion domain",
+          "status": "trapped"
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "utils",
+      "files": 3,
+      "passed": 15,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 15,
+      "total": 15,
+      "node": {
+        "passed": 15,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": []
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 11051,
+    "failed": 0,
+    "trapped": 7,
+    "asyncPending": 0,
+    "notRun": 34,
+    "registered": 11086,
+    "total": 11092,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 28,
+    "unregistered": 6
+  },
+  "nodeTotal": {
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092
+  },
+  "wholeSuite": {
+    "files": 625,
+    "passed": 11060,
+    "failed": 0,
+    "pending": 32,
+    "total": 11092,
+    "active": 11060,
+    "titlesReconciled": true,
+    "excluded": [],
+    "wiringFailures": []
+  },
+  "countingRule": "passed/active counts only original Node-active titles (11,060 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.",
+  "asyncInitializationFailures": 0,
+  "registrationParity": false,
+  "allTraps": [
+    {
+      "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+      "count": 3,
+      "shards": {
+        "lsp": 3
+      },
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168691 (src/lsp/rename.ts:109:52): assignment type mismatch"
+    },
+    {
+      "message": "src/lsp/help.ts: config JSON own-property order is unproven for src/abap/1_lexer/tokens/identifier.ts.Identifier",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:39:3: config JSON own-property order is unproven for src/abap/1_lexer/tokens/identifier.ts.Identifier"
+    },
+    {
+      "message": "src/lsp/help.ts: config JSON own-property order is unproven for src/abap/4_file_information/_identifier.ts.Identifier",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:93:3: config JSON own-property order is unproven for src/abap/4_file_information/_identifier.ts.Identifier"
+    },
+    {
+      "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169076 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+    },
+    {
+      "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+    }
+  ],
+  "top20Traps": [
+    {
+      "message": "src/lsp/rename.ts: HIR verification: assignment type mismatch",
+      "count": 3,
+      "shards": {
+        "lsp": 3
+      },
+      "example": "src/lsp/rename.ts:104:3: lowering trap: src/lsp/rename.ts:104:3: HIR verification: node 168691 (src/lsp/rename.ts:109:52): assignment type mismatch"
+    },
+    {
+      "message": "src/lsp/help.ts: config JSON own-property order is unproven for src/abap/1_lexer/tokens/identifier.ts.Identifier",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:39:3: config JSON own-property order is unproven for src/abap/1_lexer/tokens/identifier.ts.Identifier"
+    },
+    {
+      "message": "src/lsp/help.ts: config JSON own-property order is unproven for src/abap/4_file_information/_identifier.ts.Identifier",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/help.ts:93:3: config JSON own-property order is unproven for src/abap/4_file_information/_identifier.ts.Identifier"
+    },
+    {
+      "message": "src/lsp/semantic.ts: HIR verification: invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>",
+      "count": 1,
+      "shards": {
+        "lsp": 1
+      },
+      "example": "src/lsp/semantic.ts:42:3: lowering trap: src/lsp/semantic.ts:42:3: HIR verification: node 169076 (src/lsp/semantic.ts:50:23): invalid narrowing classvalue to classref<shape.c3b70776d029edfc69fd75ab61b91f27fe8deaade7fdd314df00aa7ee5f66866>"
+    },
+    {
+      "message": "src/objects/domain.ts: input is outside the supported strict JSON subset",
+      "count": 1,
+      "shards": {
+        "objects": 1
+      },
+      "example": "src/objects/domain.ts:100:3: input is outside the supported strict JSON subset"
+    }
+  ],
+  "productionCompilerCommit": "4594997",
+  "testOnlyRepairCommit": "f679289"
+}
