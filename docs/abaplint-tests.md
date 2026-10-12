@@ -1,6 +1,65 @@
 # abaplint's own tests on TS-HG@Go
 
-## Trap batch M — certified on 8b2511b
+## Trap batch N — certified on 8288338
+
+**11,027/11,060 Node-active tests passed (99.70%), FAIL 0.** The completed
+frozen-source **17-shard / 625-file** run measures **469fd1d**, based on
+**8288338**. Fresh original pinned Node has **11,060 passes, zero failures,
+32 pending**. Go has **31 traps in 20 groups**, zero async-pending.
+
+**33 active non-passes = 31 traps + 2 unregistered + 0 skipped + 0 FAIL +
+0 async-pending.** Not-run **34 = 28 original pending skips + six unregistered
+(two active + four pending)**. Whole-suite/owned title multisets reconcile with
+these explicit missing occurrences: no exclusions, wiring failures, unmatched
+executions, borrowed FAILs or executed pending bodies. Registration parity is
+not claimed repaired: its remaining six-title delta is exactly the unregistered
+partition. The two active LineLength rows and four pending StructureErrors rows
+remain unchanged storage/shape handoffs.
+
+The directly measured gain against this base is **five target-shard passes**:
+CDS **355→358**, LSP **180→181**, structures **138→139**; rules remain **3,141**.
+M's historical total was 10,949, but 22 target-shard gains already existed on
+8288338. Another 51 full-suite gains lie outside the focused base comparison
+and are **not attributed to N**. No extra full base run is used for attribution.
+
+General checked/concrete native method dispatch, batch M descriptors, bounded
+JS coercion and fresh capture-free lexical classes are certified by Node oracles.
+Unsupported prototype/function/void-result shapes still explicitly refuse.
+See [the exact roots, stopped mismatches, all 17 shard counts and complete
+remaining list](traps-n-roots.md), [focused measurements](evidence/traps-n-focused.json),
+[original-Node coercion observations](evidence/traps-n-coercion-node.json),
+[final counts and all 20 groups](evidence/traps-n-final.json), and
+[gate/default/workload certificate](evidence/traps-n-gates.json).
+
+Three genuine refusal-boundary mismatches were stopped, reported before repair,
+and retained as Node-oracle regressions; none is accepted. Two incomplete
+all-shard attempts (eight completed shards each) were terminated, not certified.
+Only **one completed 17-shard run** is reported, from the corrected frozen source.
+An independent pre-existing Node-contract wiring failure was reproduced on the
+base and repaired without changing its original assertions or scenarios.
+
+### N: gates and parity
+
+Go 1.26.0, `GOCACHE=$HOME/.cache/go-build`, `-buildvcs=false`, Grace checking,
+40-minute test deadlines, GOMAXPROCS=4 and nice-10 execution: **short all-package
+suite, full tsfront/hir/cmd suite and go vet pass**. Report/all-discovery contract
+tests and all **nine original-Chai runtime contract scenarios** also pass.
+
+The lexer golden changes only operation/effects catalogue totals:
+aliases/allocates/may_raise/writes **133→134**, reads **201→205**, conservative
+entries **21→23**. Regenerated facts equal the golden; lexer analysis, method
+facts and all **61 Grace call sites** are unchanged. Default output versus a
+clean 8288338 compiler, regenerated at the same absolute path, has **raw
+`diff -r` exit 0 / zero bytes / 6,312 files**: no output changes to justify.
+
+Fresh emitted Go and original pinned Node match the SHA256-pinned v0.1.1 kit
+byte-for-byte on zabapgit **clean 0 / seeded 5** (final Go **8.558s / 8.899s**).
+Measured semantic source-tree identities are retained. Generated builds,
+closures, interrupted artifacts, kit, archives, facts and logs are removed;
+only compact evidence and implementation/regression source remain. No push,
+transpiler clone, new site override or weakened/deleted original tests.
+
+## Trap batch M — historical, certified on 8b2511b
 
 **10,949/11,060 Node-active tests passed (99.00%), FAIL 0.** Exactly one
 frozen-source **17-shard / 625-file** run measured semantic commit **b67770b**,
