@@ -34,10 +34,9 @@ func TestArrayConcatArgumentsNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	// Sparse presence remains the existing explicit ABAP refusal; concat
-	// itself uses only the already-supported array concat/slice operations.
-	if _, err = abap.Emit(p); err == nil || (!strings.Contains(err.Error(), "array.delete") && !strings.Contains(err.Error(), "array.has")) {
-		t.Fatalf("missing sparse ABAP refusal: %v", err)
+	// Presence is now emitted; serialization retains its separate refusal.
+	if _, err = abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
+		t.Fatalf("missing JSON ABAP refusal: %v", err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
 	if got != string(want) {

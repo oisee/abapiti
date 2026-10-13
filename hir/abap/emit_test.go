@@ -580,7 +580,7 @@ func TestSizedArrayAllocatesBeforeFilling(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := files[names.Get("Sized")+".clas.abap"]
-	at := strings.Index(source, "APPEND ")
+	at := strings.Index(source, "->allocate( ")
 	if at < 0 || !strings.Contains(source[:at], "CREATE OBJECT") {
 		t.Fatal("sized array fills an unallocated container")
 	}
@@ -782,7 +782,7 @@ func TestEmitterShortcuts(t *testing.T) {
 		t.Fatal(err)
 	}
 	src := files[names.Get("Short")+".clas.abap"]
-	for _, want := range []string{"APPEND t", "INDEX 3.", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
+	for _, want := range []string{"APPEND t", "->put( p0 =", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("missing %q:\n%s", want, src)
 		}

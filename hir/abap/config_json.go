@@ -224,6 +224,7 @@ ENDMETHOD.
 			}
 		case hir.Array:
 			line("enter( p0 ).\nDATA item TYPE %s.\nDATA text TYPE string.\nDATA comma TYPE string.\nDATA idx TYPE i.\nresult = `[`.", e.typ(t.Args[0]))
+			line("p0->dense( ).")
 			line("WHILE idx < lines( p0->items ).\nidx = idx + 1.")
 			if t.Args[0].IsRef() || t.Args[0].Kind == hir.Optional {
 				line("DATA itemref TYPE REF TO object.\nREAD TABLE p0->items INDEX idx INTO itemref.\nitem ?= itemref.")

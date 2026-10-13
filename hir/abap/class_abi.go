@@ -80,7 +80,11 @@ func (b *body) constructorArgument(n, d string, t hir.Type) {
 func (e *emitter) argumentFactoryABAP() string {
 	var dispatch strings.Builder
 	trap := e.classRefusal()
-	dispatch.WriteString("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\nCASE class_name.\n")
+	dispatch.WriteString("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n")
+	if e.arrayViews {
+		dispatch.WriteString("IF p1 IS BOUND.\np1->load( ).\nENDIF.\n")
+	}
+	dispatch.WriteString("CASE class_name.\n")
 	serial := 0
 	for _, c := range e.p.Classes {
 		fmt.Fprintf(&dispatch, "WHEN `%s`.\n", strings.ToUpper(e.name(c.Name)))

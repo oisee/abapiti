@@ -145,14 +145,12 @@ func TestLSPGuards(t *testing.T) {
 	if errs := hir.Verify(p); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "runtime operation lsp.is") {
-		t.Fatalf("expected explicit ABAP guard refusal, got %v", err)
-	}
 	got := runGoHIR(t, p, "fmt.Print("+goEntry("main.ts.Probe", "run")+"())")
 	want := "true|true|false|false|true|true|false|false|false|false|false|false|true|1"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
+	storageABAPProbe(t, p, "main.ts.Probe", want, "")
 }
 
 func TestLSPGuardFalsyValueRefusal(t *testing.T) {

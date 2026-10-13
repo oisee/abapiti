@@ -24,8 +24,8 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	// Classview, Chai and JSON5 admit ten of the original 26 catalogue entries.
-	if len(gap.UnsupportedCatalogue) != 16 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	// Numeric and storage support join O2 class views, Chai and JSON5.
+	if len(gap.UnsupportedCatalogue) != 8 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {

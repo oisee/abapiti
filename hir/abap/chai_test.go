@@ -248,9 +248,13 @@ func TestChaiSparseRefusalEmission(t *testing.T) {
 		t.Fatal(err)
 	}
 	src := files[names.Get("SparseChai")+".clas.abap"]
-	gate := strings.Index(src, "RAISE EXCEPTION TYPE "+names.Get("exception.chaiRefusal"))
-	pad := strings.Index(src, "WHILE lines(")
-	if gate < 0 || pad < 0 || gate > pad {
-		t.Fatal("sparse writes must refuse before dense padding")
+	if !strings.Contains(src, "->put( p0 = ") {
+		t.Fatal("sparse writes must use presence-aware storage")
+	}
+	adapter := files[names.Get("runtime.chai")+".clas.abap"]
+	gate := strings.Index(adapter, "->missing IS NOT INITIAL.")
+	read := strings.Index(adapter, "LOOP AT a0->items")
+	if gate < 0 || read < 0 || gate > read {
+		t.Fatal("Chai must refuse sparse arrays before reading dense items")
 	}
 }

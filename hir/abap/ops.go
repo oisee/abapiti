@@ -10,7 +10,10 @@ var supportedOps = map[string]bool{
 	"json5.parse": true,
 	"chai.box":    true, "chai.deepEqual": true, "chai.deepInclude": true,
 	"chai.arrayInclude": true, "chai.members": true, "chai.throwMatch": true,
-	"dynamic.typeofValue":   true,
+	"dynamic.typeofValue":    true,
+	"dynamic.call0":          true,
+	"dynamic.delete":         true,
+	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"dynamic.recordString":  true,
 	"string.parseIntNumber": true, "number.isNaN": true,
 	"json.stringifyConfig": true,
@@ -32,7 +35,7 @@ var supportedOps = map[string]bool{
 	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
 
 	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
-	"array.push": true, "array.get": true, "array.length": true,
+	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
 	"map.delete": true, "string.trimStart": true, "string.trimEnd": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
@@ -42,8 +45,8 @@ var supportedOps = map[string]bool{
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
 }
 
-// Presence-sensitive arrays and native-record deletion require a Go storage ABI.
-var unsupportedOps = map[string]bool{"dynamic.delete": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "string.sha1Hex": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
+// Operations without a reviewed ABAP implementation retain explicit refusals.
+var unsupportedOps = map[string]bool{"xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "json.indent": true, "string.sha1Hex": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

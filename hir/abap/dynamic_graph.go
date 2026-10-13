@@ -13,6 +13,9 @@ TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.
 TYPES items_type TYPE STANDARD TABLE OF REF TO $D WITH DEFAULT KEY.
 DATA entries TYPE entries_type.
 DATA items TYPE items_type.
+TYPES missing_type TYPE SORTED TABLE OF i WITH UNIQUE KEY table_line.
+DATA missing TYPE missing_type.
+METHODS array_index IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE i.
 DATA bval TYPE abap_bool.
 METHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO $D.
 METHODS put IMPORTING p0 TYPE string p1 TYPE REF TO $D.
@@ -37,15 +40,9 @@ CREATE OBJECT result.
 result->tag = tag_number.
 result->nval = lines( items ).
 ELSE.
-IF p0 CN '0123456789' OR p0 IS INITIAL OR ( strlen( p0 ) > 1 AND p0+0(1) = '0' ).
-RAISE EXCEPTION TYPE cx_sy_move_cast_error.
-ENDIF.
 DATA index TYPE i.
-index = p0.
-IF index < 2147483647.
-index = index + 1.
+index = array_index( p0 ) + 1.
 READ TABLE items INDEX index INTO result.
-ENDIF.
 ENDIF.
 ELSEIF tag = tag_string.
 IF p0 = 'length'.
@@ -59,7 +56,32 @@ ELSE.
 RAISE EXCEPTION TYPE cx_sy_move_cast_error.
 ENDIF.
 ENDMETHOD.
+METHOD array_index.
+IF p0 CN '0123456789' OR p0 IS INITIAL OR strlen( p0 ) > 10 OR ( strlen( p0 ) > 1 AND p0+0(1) = '0' ).
+RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
+DATA number TYPE int8.
+number = p0.
+IF number >= 2147483647.
+RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+ENDIF.
+result = number.
+ENDMETHOD.
 METHOD put.
+IF tag = tag_array.
+DATA index TYPE i.
+DATA hole TYPE i.
+DATA empty TYPE REF TO $D.
+index = array_index( p0 ) + 1.
+WHILE lines( items ) < index.
+APPEND empty TO items.
+hole = lines( items ).
+INSERT hole INTO TABLE missing.
+ENDWHILE.
+MODIFY items FROM p1 INDEX index.
+DELETE missing WHERE table_line = index.
+RETURN.
+ENDIF.
 IF tag <> tag_object.
 RAISE EXCEPTION TYPE cx_sy_move_cast_error.
 ENDIF.

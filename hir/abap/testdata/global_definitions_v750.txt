@@ -155,6 +155,14 @@ ENDCLASS.
 z_runtime_arra_59ccfd100c9888.clas.abap
 CLASS z_runtime_arra_59ccfd100c9888 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    TYPES missing_type TYPE SORTED TABLE OF i WITH UNIQUE KEY table_line.
+    DATA missing TYPE missing_type.
+    METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS delete IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS put IMPORTING p0 TYPE i p1 TYPE i.
+    METHODS allocate IMPORTING p0 TYPE i.
+    METHODS dense.
+
     TYPES items_type TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
     DATA items TYPE items_type.
     METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_59ccfd100c9888.
@@ -182,6 +190,14 @@ ENDCLASS.
 z_runtime_arra_8ecd6afe19e0a5.clas.abap
 CLASS z_runtime_arra_8ecd6afe19e0a5 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    TYPES missing_type TYPE SORTED TABLE OF i WITH UNIQUE KEY table_line.
+    DATA missing TYPE missing_type.
+    METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS delete IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS put IMPORTING p0 TYPE i p1 TYPE string.
+    METHODS allocate IMPORTING p0 TYPE i.
+    METHODS dense.
+
     TYPES items_type TYPE STANDARD TABLE OF string WITH DEFAULT KEY.
     DATA items TYPE items_type.
     METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
@@ -209,6 +225,14 @@ ENDCLASS.
 z_runtime_arra_c22708faf2e354.clas.abap
 CLASS z_runtime_arra_c22708faf2e354 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    TYPES missing_type TYPE SORTED TABLE OF i WITH UNIQUE KEY table_line.
+    DATA missing TYPE missing_type.
+    METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS delete IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS put IMPORTING p0 TYPE i p1 TYPE REF TO object.
+    METHODS allocate IMPORTING p0 TYPE i.
+    METHODS dense.
+
     TYPES items_type TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
     DATA items TYPE items_type.
     METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_c22708faf2e354.
@@ -235,6 +259,14 @@ ENDCLASS.
 z_runtime_arra_f39560c658f841.clas.abap
 CLASS z_runtime_arra_f39560c658f841 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    TYPES missing_type TYPE SORTED TABLE OF i WITH UNIQUE KEY table_line.
+    DATA missing TYPE missing_type.
+    METHODS has IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS delete IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE abap_bool.
+    METHODS put IMPORTING p0 TYPE i p1 TYPE int8.
+    METHODS allocate IMPORTING p0 TYPE i.
+    METHODS dense.
+
     TYPES items_type TYPE STANDARD TABLE OF int8 WITH DEFAULT KEY.
     DATA items TYPE items_type.
     METHODS reverse RETURNING VALUE(result) TYPE REF TO z_runtime_arra_f39560c658f841.
