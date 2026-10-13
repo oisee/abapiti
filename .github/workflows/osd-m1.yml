@@ -10,12 +10,15 @@ name: OSD M1
 # kernel behaviour (TYPE i overflow, for one).
 
 # CI calls this workflow for the `osgo` job: compile all emitted fixtures, then
-# hir-unit.sh (HIR on osgo and OSG-JS, Node oracle, hir-lint, lexer-unit). The WASM parts
+# hir-unit.sh (HIR on osgo, Node oracle, hir-lint, lexer-unit; OSG-JS only in the
+# nightly schedule and on workflow_dispatch). The WASM parts
 # (osgo-unit.sh and the osd-m1 shards) belong to the legacy WASM path,
 # deprecated 2026-10-10, and run only on workflow_dispatch.
 on:
   workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
 
 permissions:
   contents: read
@@ -100,7 +103,9 @@ jobs:
       - name: Compile every emitted ABAP fixture on the pinned OSG
         run: nice -n 10 .github/ci/abap-fixture-compile.sh "$RUNNER_TEMP/osgo/open-steamgate" "$RUNNER_TEMP/osgo/fixture-compile"
 
-      - name: Run the HIR corpus on osgo and OSG-JS
+      - name: Run the HIR corpus on osgo (and OSG-JS nightly)
+        env:
+          HIR_RUNTIMES: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'osgo osgjs' || 'osgo' }}
         run: .github/ci/hir-unit.sh "$RUNNER_TEMP/osgo"
 
       - name: Collect artifacts
@@ -109,8 +114,8 @@ jobs:
           set -euo pipefail
           out="$RUNNER_TEMP/osgo-artifacts"
           mkdir -p "$out"
-          for f in osgo.json osgo.err generate.log setup.log hir-osgo-TestFixtures.json hir-osgo-TestFixtures.err hir-osgjs-TestFixtures.json hir-osgjs-TestFixtures.err hir-osgo-Test750Semantics.json hir-osgo-Test750Semantics.err hir-osgjs-Test750Semantics.json hir-osgjs-Test750Semantics.err; do
-            [ -f "$RUNNER_TEMP/osgo/$f" ] && cp "$RUNNER_TEMP/osgo/$f" "$out/"
+          for f in "$RUNNER_TEMP"/osgo/{osgo.json,osgo.err,generate.log,setup.log} "$RUNNER_TEMP"/osgo/hir-*.json "$RUNNER_TEMP"/osgo/hir-*.err; do
+            if [ -f "$f" ]; then cp "$f" "$out/"; fi
           done
           if [ -d "$RUNNER_TEMP/osgo/fixture-compile/compile" ]; then
             cp "$RUNNER_TEMP/osgo/fixture-compile/compile/fixtures.json" "$out/fixture-manifest.json" || true

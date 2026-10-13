@@ -34,7 +34,8 @@ for classes in "$gen"/JSONStructural/json-*; do
 done
 node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
-for runtime in osgo osgjs; do
+# OSGO is the gate on every PR; OSG-JS runs nightly (HIR_RUNTIMES="osgo osgjs").
+for runtime in ${HIR_RUNTIMES:-osgo}; do
   for suite in TestNumericFixtures TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3} TestJSONSubsetFixtures/case{0,1,2,3,4,5} TestJSONSubsetMaterializedFixtures/case{0,1,2,3,4,5} TestJSONSubsetConfigFixture TestLiveClassViewJSONNodeOracle/json-live JSONStructural/json-structural JSONStructural/json-structural-live JSONStructural/json-structural-config JSONStructural/json-structural-wide; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
