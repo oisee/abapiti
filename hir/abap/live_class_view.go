@@ -112,7 +112,16 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line("TRY.\n" + n + " ?= " + v + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDTRY.")
-	case hir.ClassRef, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
+	case hir.ClassRef:
+		// Parsed child records retain the same backing graph as their parent.
+		// Use the same activated-layout boundary as Go. Other nominal fields
+		// still require compatible references; no prototype is fabricated.
+		if e.liveClasses[t.Name] {
+			b.liveView(&hir.Expr{Type: t}, n, d)
+			return
+		}
+		fallthrough
+	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line(n + " ?= " + v + ".")
