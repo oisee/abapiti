@@ -76,8 +76,10 @@ func (e *emitter) regexpLegacyRuntime(name string) {
 	text = strings.Replace(text, "IF p1 CS '$'.\n  RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\n", "", 1)
 	text = strings.Replace(text, "DATA idx TYPE i.\n", "", 1)
 	text = strings.Replace(text, "        idx = lines( result->items ).\n        INSERT idx INTO TABLE result->match_missing.\n        CLEAR part.\n      ELSE.\n        part = p0+group-offset(group-length).\n      ENDIF.", "        RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\n      ENDIF.\n      part = p0+group-offset(group-length).", 1)
-	text = strings.Replace(text, "DATA flags TYPE string.\n", "", 1)
-	text = strings.Replace(text, "me->flags = flags.\n", "", 1)
+	if !e.types["runtime.stringOps"] {
+		text = strings.Replace(text, "DATA flags TYPE string.\n", "", 1)
+		text = strings.Replace(text, "me->flags = flags.\n", "", 1)
+	}
 	e.files[file] = text
 }
 
