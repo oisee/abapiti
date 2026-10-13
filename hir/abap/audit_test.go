@@ -12,8 +12,8 @@ func TestAuditCollectsEveryRefusal(t *testing.T) {
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	number := hir.T(hir.Number)
 	method := &hir.Method{Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(
-		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{ID: 1}, Kind: hir.RuntimeOp, Op: "string.sha1Hex", Type: hir.T(hir.String), X: hir.L(hir.T(hir.String), "a")}},
-		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{ID: 2}, Kind: hir.RuntimeOp, Op: "string.parseFloatNumber", Type: number, X: hir.L(hir.T(hir.String), "1")}},
+		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{ID: 1}, Kind: hir.RuntimeOp, Op: "string.parseFloat", Type: hir.T(hir.Optional, number), X: hir.L(hir.T(hir.String), "a")}},
+		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{ID: 2}, Kind: hir.RuntimeOp, Op: "string.parseIntNumber", Type: number, X: hir.L(hir.T(hir.String), "not a number")}},
 	)}
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{method}}}}
 	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "no emitter") {

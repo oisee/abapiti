@@ -17,7 +17,18 @@ func (e *emitter) runtime(t hir.Type) {
 	name := e.name(id)
 	var def, impl strings.Builder
 	line := func(s string) { def.WriteString(s + "\n") }
-	method := func(n, s string) { impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n") }
+	method := func(n, s string) {
+		if t.Kind == hir.Array {
+			if (n == "indexOf" || n == "includes") && t.Args[0].Kind == hir.Optional && !t.Args[0].Args[0].IsRef() {
+				s = "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\n"
+			}
+			s = sparseArrayMethod(n, s)
+			if e.arrayViews {
+				s = liveArrayMethod(n, s)
+			}
+		}
+		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
+	}
 	switch t.Kind {
 	case hir.Promise:
 		if t.Args[0].Kind != hir.Void {
@@ -29,6 +40,22 @@ func (e *emitter) runtime(t hir.Type) {
 		line("DATA has TYPE abap_bool.")
 	case hir.Array:
 		e.chaiArrays = append(e.chaiArrays, t)
+		line(e.sparseArrayDefinition(t, name))
+		sparse := e.sparseArrayImplementation(t)
+		if e.arrayViews {
+			for _, m := range []string{"has", "delete", "put", "allocate", "dense"} {
+				prefix := "load( ).\n"
+				if m == "delete" || m == "put" || m == "allocate" {
+					start := strings.Index(sparse, "METHOD "+m+".")
+					end := strings.Index(sparse[start:], "ENDMETHOD.") + start
+					body := sparse[start:end]
+					body = strings.ReplaceAll(body, "RETURN.", "save( ).\nRETURN.")
+					sparse = sparse[:start] + body + "save( ).\n" + sparse[end:]
+				}
+				sparse = strings.Replace(sparse, "METHOD "+m+".\n", "METHOD "+m+".\n"+prefix, 1)
+			}
+		}
+		impl.WriteString(sparse)
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
 		if t.Args[0].Kind == hir.Optional {
@@ -155,7 +182,7 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		if t.Kind == hir.OrderedSet {
 			line("METHODS fromArray IMPORTING p0 TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-			code := "DATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
+			code := "p0->dense( ).\nDATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
 			if t.Args[0].IsRef() {
 				code += "DATA native TYPE REF TO object.\nLOOP AT p0->items INTO native.\nrow ?= native.\n"
 			} else {
@@ -186,6 +213,10 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	e.liveRecordMapRuntime(t)
+	if t.Kind == hir.Array && e.arrayViews {
+		e.liveArrayRuntime(t)
+	}
 }
 func (e *emitter) exception(t hir.Type) string {
 	name := e.name("exception." + t.String())
@@ -197,8 +228,28 @@ func (e *emitter) exception(t hir.Type) string {
 	if e.promiseUsed {
 		base = e.promiseExceptionBase()
 	}
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+	payload := "DATA payload TYPE " + e.typ(t) + ".\n"
+	if t.Kind == hir.ClassRef {
+		if c := e.classBy(t.Name); c != nil && c.Super != "" {
+			base = e.exception(hir.Ref(c.Super))
+			payload = ""
+		}
+	}
+	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\n" + payload + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 	return name
+}
+
+// Class payload wrappers share their root slot, so ABAP CATCH of a base
+// payload also takes wrappers of derived payloads without copying the object.
+func (e *emitter) exceptionPayloadType(t hir.Type) hir.Type {
+	for t.Kind == hir.ClassRef {
+		c := e.classBy(t.Name)
+		if c == nil || c.Super == "" {
+			break
+		}
+		t = hir.Ref(c.Super)
+	}
+	return t
 }
 
 // support emits the phase-2 runtime and support classes, gated on use: the
@@ -354,9 +405,8 @@ func (e *emitter) descriptorShards() {
 	// references so runtime closure discovery includes descriptor-only classes.
 	// Constructors with required arguments retain the checked dynamic fallback.
 	factory := e.name("runtime.classvalue.factory")
-	var dispatch strings.Builder
-	dispatch.WriteString("CASE class_name.\n")
-	for _, c := range e.p.Classes {
+	var cases []factoryCase
+	for i, c := range e.p.Classes {
 		if c.Abstract {
 			continue
 		}
@@ -372,18 +422,28 @@ func (e *emitter) descriptorShards() {
 		if !callable {
 			continue
 		}
-		fmt.Fprintf(&dispatch, "WHEN `%s`.\nCREATE OBJECT result TYPE %s.\n", strings.ToUpper(e.name(c.Name)), e.name(c.Name))
+		entry := factoryCase{name: strings.ToUpper(e.name(c.Name)), code: "CREATE OBJECT result TYPE " + e.name(c.Name) + ".\n"}
 		if c.Scoped {
-			fmt.Fprintf(&dispatch, "IF p0->lexical = abap_true.\nDATA scoped%d TYPE REF TO %s.\nscoped%d ?= result.\nscoped%d->%s = p0.\nENDIF.\n", len(dispatch.String()), e.name(c.Name), len(dispatch.String()), len(dispatch.String()), e.name("class.lexicalDescriptor"))
+			scoped := fmt.Sprintf("scoped%d", i)
+			entry.code += "IF p0->lexical = abap_true.\nDATA " + scoped + " TYPE REF TO " + e.name(c.Name) + ".\n" + scoped + " ?= result.\n" + scoped + "->" + e.name("class.lexicalDescriptor") + " = p0.\nENDIF.\n"
 		}
+		cases = append(cases, entry)
 	}
-	dispatch.WriteString("WHEN OTHERS.\nCREATE OBJECT result TYPE (class_name).\nENDCASE.\n")
+	params := "p0 TYPE REF TO " + e.name("runtime.classvalue")
+	privateDefs, helpers, dispatch := e.splitFactory("new_part", params, "p0 = p0", "CREATE OBJECT result TYPE (class_name).\n", cases)
 	extraSignature, extraImpl := "", ""
 	if e.constructorArgs {
 		extraSignature = "CLASS-METHODS new_args IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " p1 TYPE " + e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))) + " RETURNING VALUE(result) TYPE REF TO object.\n"
-		extraImpl = "METHOD new_args.\n" + e.argumentFactoryABAP() + "ENDMETHOD.\n"
+		entries, wideDefs, wideImpl := e.argumentFactoryABAP()
+		defs, impl, call := e.splitFactory("args_part", params+" p1 TYPE "+e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), "p0 = p0 p1 = p1", "RAISE EXCEPTION TYPE "+e.classRefusal()+".\n", entries)
+		privateDefs += wideDefs + defs
+		extraImpl = impl + wideImpl
+		if e.arrayViews {
+			call = "IF p1 IS BOUND.\np1->load( ).\nENDIF.\n" + call
+		}
+		extraImpl = "METHOD new_args.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + call + "ENDMETHOD.\n" + extraImpl
 	}
-	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\n" + extraImpl + "ENDCLASS.\n"
+	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\n" + privateDefs + "ENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch + "ENDMETHOD.\n" + helpers + extraImpl + "ENDCLASS.\n"
 }
 
 // staticsOf lists the raw member names of the static members of a class.
@@ -528,6 +588,10 @@ WHILE i < n.
       WHEN OTHERS.
         CONCATENATE posix '\' c INTO posix RESPECTING BLANKS.
     ENDCASE.
+  ELSEIF in_class = abap_false AND c = '^' AND flags NA 'm'.
+    CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
+  ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
+    CONCATENATE posix '\z' INTO posix RESPECTING BLANKS.
   ELSE.
     IF c = '['.
       in_class = abap_true.

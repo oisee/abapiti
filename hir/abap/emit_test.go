@@ -462,8 +462,14 @@ func Test750Semantics(t *testing.T) {
 		decl("n", i32, lit(0)),
 		&hir.Stmt{Kind: hir.While, X: binary("<", local("n", i32), lit(3), boolean), Body: hir.B(
 			decl("zero", i32, nil), check(eq(local("zero", i32), lit(0))), assign("zero", i32, lit(9)),
-			decl("v", i32, &hir.Expr{Kind: hir.IndexGet, Type: i32, X: local("a", arr), Y: local("n", i32)}),
-			check(eq(local("v", i32), &hir.Expr{Kind: hir.Conditional, Type: i32, X: eq(local("n", i32), lit(0)), Y: lit(7), Z: lit(0)})),
+			// Reads past the end are undefined in JS, not a typed zero: only
+			// index 0 is read as i32; the rest go through array.get.
+			&hir.Stmt{Kind: hir.If, X: eq(local("n", i32), lit(0)), Body: hir.B(
+				decl("v", i32, &hir.Expr{Kind: hir.IndexGet, Type: i32, X: local("a", arr), Y: local("n", i32)}),
+				check(eq(local("v", i32), lit(7))),
+			), Else: hir.B(
+				check(&hir.Expr{Kind: hir.IsUndefined, Type: boolean, X: rt("array.get", local("a", arr), hir.T(hir.Optional, i32), local("n", i32))}),
+			)},
 			assign("n", i32, binary("+", local("n", i32), lit(1), i32)),
 		)}, ret(local("n", i32)),
 	))
@@ -596,7 +602,7 @@ func TestSizedArrayAllocatesBeforeFilling(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := files[names.Get("Sized")+".clas.abap"]
-	at := strings.Index(source, "APPEND ")
+	at := strings.Index(source, "->allocate( ")
 	if at < 0 || !strings.Contains(source[:at], "CREATE OBJECT") {
 		t.Fatal("sized array fills an unallocated container")
 	}
@@ -798,7 +804,7 @@ func TestEmitterShortcuts(t *testing.T) {
 		t.Fatal(err)
 	}
 	src := files[names.Get("Short")+".clas.abap"]
-	for _, want := range []string{"APPEND t", "INDEX 3.", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
+	for _, want := range []string{"APPEND t", "->put( p0 =", "INDEX 2 INTO", "me->" + names.Get("member.n"), "= lines( t", "CONV i( 2147483647 )"} {
 		if !strings.Contains(src, want) {
 			t.Errorf("missing %q:\n%s", want, src)
 		}

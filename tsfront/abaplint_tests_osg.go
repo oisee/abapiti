@@ -58,7 +58,17 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 	}
 	n := names.Get
 	assertionClass := n("exception.testAssertion." + hir.Ref("builtin.Error").String())
-	var initialization strings.Builder
+	var initialization, hostDeclarations, hostMethods strings.Builder
+	initIndex := 0
+	addAction := func(class, file, action string) {
+		initIndex++
+		boundary := fmt.Sprintf("host_init_%d", initIndex)
+		fmt.Fprintf(&hostDeclarations, "CLASS-METHODS %s RETURNING VALUE(result) TYPE string.\n", boundary)
+		fmt.Fprintf(&hostMethods, "METHOD %s.\n%s=>%s( ).\nENDMETHOD.\n", boundary, n(class), action)
+		fmt.Fprintf(&initialization, "IF skip_init NS ',%d,'.\ncheckpoint( `{\"kind\":\"init\",\"index\":%d,\"file\":` && quote( %s ) && `,\"action\":` && quote( %s ) && `}` ).\n", initIndex, initIndex, abapTestLiteral(file), abapTestLiteral(action))
+		fmt.Fprintf(&initialization, "TRY.\nDATA(host_message_%d) = %s( ).\nIF host_message_%d IS NOT INITIAL.\nadd_initialization( file = %s action = %s status = 'trapped' message = host_message_%d ).\nENDIF.\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", initIndex, boundary, initIndex, abapTestLiteral(file), abapTestLiteral(action), initIndex, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+		initialization.WriteString("checkpoint( `{\"kind\":\"init-done\"}` ).\nENDIF.\n")
+	}
 	for _, file := range manifest.Initialization {
 		c := modules[file+".module"]
 		if c == nil {
@@ -76,21 +86,22 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 			}
 		}
 		for _, action := range actions {
-			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_error->get_text( ) ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+			addAction(c.Name, file, action)
 		}
 	}
 	// Force the runtime initializer even when a closure did not otherwise use it.
 	runtime := modules["runtime/mocha.ts.TestRuntime"]
 	for _, m := range runtime.Methods {
 		if m.Static && m.Name == "class_constructor" {
-			fmt.Fprintf(&initialization, "%s=>%s( ).\n", n(runtime.Name), n("builtin.initialize."+runtime.Name))
+			addAction(runtime.Name, "runtime/mocha.ts", n("builtin.initialize."+runtime.Name))
 		}
 	}
 	if _, ok := files[assertionClass+".clas.abap"]; !ok {
 		return nil, fmt.Errorf("test closure has no assertion exception marker")
 	}
 	replacements := strings.NewReplacer(
-		"INITIALIZATION", initialization.String(),
+		"INITIALIZATION", initialization.String(), "INITCOUNT", fmt.Sprint(initIndex),
+		"HOSTDECLARATIONS", hostDeclarations.String(), "HOSTMETHODS", hostMethods.String(),
 		"RUNTIME", n(runtime.Name), "TESTS", n("member.tests"), "FOCUSED", n("member.focused"),
 		"TESTCASE", n("runtime/mocha.ts.TestCase"), "TITLE", n("member.title"), "SKIPPED", n("member.skipped"), "ONLY", n("member.only"),
 		"BODY", n("member.body"), "CALL", n("member.call"),
@@ -104,6 +115,11 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 		return nil, err
 	}
 	files["zcl_abapiti_test_runner.clas.abap"] = formatted
+	sourceMap, err := abap.SourceMap(lowering.Prog, names)
+	if err != nil {
+		return nil, err
+	}
+	files["names.json"] = string(sourceMap)
 	return files, nil
 }
 
@@ -111,13 +127,18 @@ func abapTestLiteral(s string) string { return "`" + strings.ReplaceAll(s, "`", 
 
 const abapTestRunner = `CLASS zcl_abapiti_test_runner DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CLASS-METHODS run RETURNING VALUE(result) TYPE string.
+CLASS-METHODS run IMPORTING start_index TYPE i skip_init TYPE string RETURNING VALUE(result) TYPE string.
+CLASS-METHODS checkpoint IMPORTING value TYPE string.
 PRIVATE SECTION.
+HOSTDECLARATIONS
+CLASS-METHODS host_body IMPORTING test TYPE REF TO TESTCASE EXPORTING settled TYPE REF TO PROMISECLASS message TYPE string.
 CLASS-DATA initialization TYPE string.
 CLASS-METHODS quote IMPORTING value TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS add_initialization IMPORTING file TYPE string action TYPE string status TYPE string message TYPE string.
 ENDCLASS.
 CLASS zcl_abapiti_test_runner IMPLEMENTATION.
+METHOD checkpoint.
+ENDMETHOD.
 METHOD quote.
 result = '"' && escape( val = value format = cl_abap_format=>e_json_string ) && '"'.
 ENDMETHOD.
@@ -125,10 +146,20 @@ METHOD add_initialization.
 IF initialization IS NOT INITIAL.
 initialization = initialization && ','.
 ENDIF.
-initialization = initialization && '{"file":' && quote( file ) && ',"action":' && quote( action ) && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+DATA record TYPE string.
+record = '{"file":' && quote( file ) && ',"action":' && quote( action ) && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+initialization = initialization && record.
+checkpoint( '{"kind":"initialization","record":' && record && '}' ).
+ENDMETHOD.
+HOSTMETHODS
+METHOD host_body.
+settled = test->BODY->CALL( ).
 ENDMETHOD.
 METHOD run.
 DATA init_error TYPE REF TO cx_root.
+DATA test_error TYPE REF TO cx_root.
+DATA error_class TYPE string.
+DATA error_text TYPE string.
 DATA init_assertion TYPE REF TO ASSERTCLASS.
 DATA init_trap TYPE REF TO TRAPCLASS.
 DATA passed TYPE i.
@@ -137,6 +168,9 @@ DATA trapped TYPE i.
 DATA not_run TYPE i.
 DATA async_pending TYPE i.
 DATA records TYPE string.
+DATA record TYPE string.
+DATA titles TYPE string.
+DATA test_index TYPE i.
 DATA status TYPE string.
 DATA message TYPE string.
 DATA passed_json TYPE string.
@@ -144,9 +178,23 @@ DATA test TYPE REF TO TESTCASE.
 DATA suite TYPE REF TO SUITECLASS.
 DATA settled TYPE REF TO PROMISECLASS.
 CLEAR initialization.
+checkpoint( '{"kind":"plan","initializations":INITCOUNT}' ).
 INITIALIZATION
+LOOP AT RUNTIME=>TESTS->items INTO DATA(registration).
+test ?= registration.
+IF titles IS NOT INITIAL.
+titles = titles && ','.
+ENDIF.
+titles = titles && quote( test->TITLE ).
+ENDLOOP.
+checkpoint( '{"kind":"registry","titles":[' && titles && ']}' ).
 LOOP AT RUNTIME=>TESTS->items INTO DATA(item).
+test_index = test_index + 1.
+IF test_index < start_index.
+CONTINUE.
+ENDIF.
 test ?= item.
+checkpoint( '{"kind":"test","index":' && |{ test_index }| && ',"title":' && quote( test->TITLE ) && '}' ).
 status = 'passed'.
 CLEAR message.
 passed_json = 'false'.
@@ -163,7 +211,10 @@ EXIT.
 ENDIF.
 ENDLOOP.
 IF status = 'passed'.
-settled = test->BODY->CALL( ).
+host_body( EXPORTING test = test IMPORTING settled = settled message = message ).
+IF message IS NOT INITIAL.
+status = 'trapped'.
+ELSE.
 IF settled IS NOT BOUND.
 DATA provider_trap TYPE REF TO TRAPCLASS.
 provider_trap = NEW #( ).
@@ -172,6 +223,7 @@ RAISE EXCEPTION provider_trap.
 ENDIF.
 IF settled->rejection IS BOUND.
 RAISE EXCEPTION settled->rejection.
+ENDIF.
 ENDIF.
 ENDIF.
 CATCH ASSERTCLASS INTO DATA(assertion).
@@ -186,9 +238,12 @@ ENDIF.
 IF message CS 'unsupported-test-done'.
 status = 'not-run'.
 ENDIF.
-CATCH cx_root INTO DATA(test_error).
+CATCH cx_root INTO test_error.
 status = 'trapped'.
-message = test_error->get_text( ).
+error_class = cl_abap_classdescr=>get_class_name( test_error ).
+REPLACE FIRST OCCURRENCE OF '\CLASS=' IN error_class WITH ''.
+error_text = test_error->get_text( ).
+message = error_class && |: | && error_text.
 ENDTRY.
 ENDIF.
 CASE status.
@@ -207,7 +262,9 @@ ENDCASE.
 IF records IS NOT INITIAL.
 records = records && ','.
 ENDIF.
-records = records && '{"title":' && quote( test->TITLE ) && ',"passed":' && passed_json && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+record = '{"title":' && quote( test->TITLE ) && ',"passed":' && passed_json && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+records = records && record.
+checkpoint( '{"kind":"result","index":' && |{ test_index }| && ',"record":' && record && '}' ).
 ENDLOOP.
 result = '{"asyncPending":' && |{ async_pending }| && ',"passed":' && |{ passed }| && ',"failed":' && |{ failed }| && ',"trapped":' && |{ trapped }| && ',"notRun":' && |{ not_run }| && ',"results":[' && records && '],"initialization":[' && initialization && ']}'.
 ENDMETHOD.

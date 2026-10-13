@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -18,19 +20,19 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	unsupported := func() *hir.Stmt {
-		return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.sha1Hex", Type: hir.T(hir.String), X: hir.L(hir.T(hir.String), "a")}}
+		return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.parseFloat", Type: hir.T(hir.Optional, hir.T(hir.Number)), X: hir.L(hir.T(hir.String), "a")}}
 	}
 	m := &hir.Method{Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(unsupported(), unsupported(),
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	// Classview, Chai and JSON5 admit nine of the original 26 catalogue entries.
-	if len(gap.UnsupportedCatalogue) != 17 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	// Classview, Chai, JSON5 and the checked string/XML operations are admitted.
+	if len(gap.UnsupportedCatalogue) != 1 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {
-		if op == "object.checkedClassView" || op == "classvalue.newArgs" {
-			t.Fatalf("classview operation still catalogue-refused: %s", op)
+		if op == "json.stringifySubset" || op == "json.indent" || op == "object.checkedClassView" || op == "classvalue.newArgs" || op == "string.sha1Hex" || op == "string.splitRegex" || op == "string.padStart" || op == "string.parseFloatNumber" || op == "xml.parseWithErrors" {
+			t.Fatalf("implemented operation still catalogue-refused: %s", op)
 		}
 	}
 	if len(gap.Refusals) != 1 || !strings.Contains(gap.Refusals[0].Reason, "non-finite Number") {
@@ -41,12 +43,12 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 func TestABAPTestRefusalsSyntheticOwnership(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
-	m := &hir.Method{Node: hir.Node{ID: 1}, Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "number.ceil", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 1.0)}})}
+	m := &hir.Method{Node: hir.Node{ID: 1}, Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.parseFloat", Type: hir.T(hir.Optional, hir.T(hir.Number)), X: hir.L(hir.T(hir.String), "a")}})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	if err := TrapABAPTestRefusals(lowering); err != nil {
 		t.Fatal(err)
 	}
-	if !isFailureBody(m.Body) || !strings.Contains(m.Body.List[0].Name, "number.ceil") {
+	if !isFailureBody(m.Body) || !strings.Contains(m.Body.List[0].Name, "string.parseFloat") {
 		t.Fatalf("did not trap ID-zero owning method: %#v", m.Body)
 	}
 }
@@ -66,9 +68,21 @@ func TestABAPTestRefusalsDoNotCrossSyntheticOwners(t *testing.T) {
 }
 
 func TestAbaplintTestHostOSGEmission(t *testing.T) {
+	t.Setenv("ABAPITI_INLINE", "0")
+	t.Setenv("ABAPITI_SINGLETON", "0")
 	dir := t.TempDir()
-	sources := map[string]string{"test/host.ts": `import {expect} from "../runtime/chai";
-it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));`}
+	// The newline PCRE is deliberately a host NOT_COMPILED, not a catchable
+	// ABAP exception: exercise both initialization and test-body restarts.
+	// Use checked replacement: with the CDS exec fixture present, .test routes
+	// through an absolute-anchor exec search that OSG now accepts on newlines.
+	sources := map[string]string{
+		"test/init_dump.ts": `"a\nb".replace(/x+/g, "");`,
+		"test/host.ts": `import {expect} from "../runtime/chai";
+it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
+it("host dump",()=>{"a\nb".replace(/x+/g, "")});it("after host dump",()=>{});
+it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
+		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
+	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
 		if err != nil {
@@ -76,7 +90,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		sources["runtime/"+name+".ts"] = string(raw)
 	}
-	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/host.ts"}
+	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/init_dump.ts", "test/native-init.ts", "test/host.ts"}
 	rows := []map[string]string{}
 	for _, name := range order {
 		path := filepath.Join(dir, name)
@@ -88,7 +102,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		rows = append(rows, map[string]string{"file": name, "sha256": fmt.Sprintf("%x", sha256.Sum256([]byte(sources[name])))})
 	}
-	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": order, "sources": rows})
+	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/init_dump.ts", "test/native-init.ts", "test/host.ts"}, "initialization": order, "sources": rows})
 	if err := os.WriteFile(filepath.Join(dir, "closure.json"), manifest, 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -110,9 +124,26 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		t.Fatal(err)
 	}
 	runner := files["zcl_abapiti_test_runner.clas.abap"]
-	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value"} {
+	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value", "start_index TYPE i", "skip_init TYPE string", `"kind":"plan"`, `"kind":"registry"`, `"kind":"init"`, `"kind":"init-done"`, `"kind":"test"`, `"kind":"result"`, "test_index < start_index", "METHOD host_body.", "METHOD host_init_1.", "status = 'trapped' message = host_message_1", "IMPORTING settled = settled message = message"} {
 		if !strings.Contains(runner, key) {
 			t.Fatalf("runner missing %s", key)
+		}
+	}
+	// Every boundary, including the forced runtime initializer, must have the
+	// same stable one-based plan, checkpoint and skip index.
+	boundaries := regexp.MustCompile(`METHOD host_init_(\d+)\.`).FindAllStringSubmatch(runner, -1)
+	if len(boundaries) == 0 || !strings.Contains(runner, fmt.Sprintf(`"initializations":%d`, len(boundaries))) {
+		t.Fatal("initialization plan does not count every host boundary")
+	}
+	for i, boundary := range boundaries {
+		index, err := strconv.Atoi(boundary[1])
+		if err != nil || index != i+1 {
+			t.Fatalf("unstable host initialization index: %q", boundary[1])
+		}
+		for _, key := range []string{fmt.Sprintf("IF skip_init NS ',%d,'.", index), fmt.Sprintf(`"kind":"init","index":%d,`, index), fmt.Sprintf("DATA(host_message_%d) = host_init_%d( ).", index, index)} {
+			if !strings.Contains(runner, key) {
+				t.Fatalf("boundary %d missing skip/checkpoint/call: %s", index, key)
+			}
 		}
 	}
 	out := fixtureOutputDir(t)
@@ -136,22 +167,52 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 1 {
 			t.Fatalf("OSG fixture exit: %v\n%s\n%s", err, stdout.String(), stderr.String())
 		}
+		if dumps := strings.Count(stderr.String(), "OSG harness refused:"); dumps != 4 {
+			t.Fatalf("wanted four real host dumps (two init, two body), got %d:\n%s\n%s", dumps, stdout.String(), stderr.String())
+		}
+		t.Log("4 real host dumps; 5 binary invocations; 12 registrations reported")
 		var summary struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
+			Initialization          []struct{ File, Status, Message string }
 		}
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
-			t.Fatal(err)
+			t.Fatalf("OSG fixture returned no valid report: %v\nstdout: %s\nstderr: %s", err, stdout.String(), stderr.String())
 		}
-		if summary.Passed != 1 || summary.Failed != 2 || summary.Trapped != 1 {
+		if summary.Passed != 5 || summary.Failed != 2 || summary.Trapped != 5 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		if len(summary.Results) != 4 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+		if len(summary.Results) != 12 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
 			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
 		}
-		last := summary.Results[len(summary.Results)-1]
-		if last.Title != "intentional fail" || last.Status != "failed" || last.Message != "intentional failure" {
+		intentional := summary.Results[3]
+		if intentional.Title != "intentional fail" || intentional.Status != "failed" || intentional.Message != "intentional failure" {
 			t.Fatalf("settled assertion was lost: %s", stdout.String())
+		}
+		if len(summary.Initialization) != 3 || summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "NOT_COMPILED in FIND PCRE") {
+			t.Fatalf("native initialization refusal was lost: %s", stdout.String())
+		}
+		if summary.Initialization[2].File != "test/native-init.ts" || summary.Initialization[2].Status != "trapped" || !strings.Contains(summary.Initialization[2].Message, "was not initialized") {
+			t.Fatalf("subsequent real action did not retain its binding refusal: %s", stdout.String())
+		}
+		native := summary.Results[6]
+		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") {
+			t.Fatalf("native refusal escaped its body or became a pass: %s", stdout.String())
+		}
+		generic := summary.Results[8]
+		if generic.Title != "native exception identity" || generic.Status != "trapped" || !strings.Contains(generic.Message, "[exception.") {
+			t.Fatalf("native exception identity was lost or relabeled: %s", stdout.String())
+		}
+		holes := summary.Results[len(summary.Results)-1]
+		if holes.Title != "array storage refusal" || holes.Status != "trapped" || !strings.Contains(holes.Message, "array.length: hole-aware storage required") {
+			t.Fatalf("hole-aware storage refusal was lost: %s", stdout.String())
+		}
+		hostDump, last := summary.Results[4], summary.Results[5]
+		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
+			t.Fatalf("host dump did not resume with location: %s", stdout.String())
+		}
+		if len(summary.Initialization) != 3 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED") {
+			t.Fatalf("initialization dump did not survive: %s", stdout.String())
 		}
 	}
 	if out != "" {

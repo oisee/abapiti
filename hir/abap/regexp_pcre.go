@@ -1,7 +1,6 @@
 package abap
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -15,15 +14,20 @@ func pcreRegexPattern(pattern string) string {
 	for i := 0; i < len(pattern); i++ {
 		c := pattern[i]
 		if c == '\\' && i+1 < len(pattern) {
+			if !inClass && (pattern[i+1] == 'A' || pattern[i+1] == 'z') {
+				if pattern[i+1] == 'A' {
+					out.WriteString(`(?<![\s\S])`)
+				} else {
+					out.WriteString(`(?![\s\S])`)
+				}
+				i++
+				continue
+			}
 			if strings.HasPrefix(pattern[i:], `\x{`) {
 				if end := strings.IndexByte(pattern[i+3:], '}'); end >= 0 {
 					end += i + 3
 					if cp, err := strconv.ParseUint(pattern[i+3:end], 16, 32); err == nil {
-						if cp <= 255 {
-							out.WriteString(fmt.Sprintf(`\x%02X`, cp))
-						} else {
-							out.WriteRune(rune(cp))
-						}
+						writePCRECharacter(&out, rune(cp), inClass)
 						i = end
 						continue
 					}
@@ -50,16 +54,37 @@ func pcreRegexPattern(pattern string) string {
 		case !inClass && c == '$':
 			out.WriteString(`(?![\s\S])`)
 		case !inClass && c == ' ':
-			// ABAP PCRE defaults to extended mode, which drops unescaped spaces and
-			// treats # as a comment; hex escapes mean the same in PCRE, JS and RE2.
-			out.WriteString(`\x20`)
+			// Character classes protect literals from PCRE's extended mode and
+			// mean the same in JS/RE2, without the host's refused hex escapes.
+			out.WriteString(`[ ]`)
 		case !inClass && c == '#':
-			out.WriteString(`\x23`)
+			out.WriteString(`[#]`)
 		default:
 			out.WriteByte(c)
 		}
 	}
 	return out.String()
+}
+
+// A reviewed hex escape denotes one character, not regex syntax. Emit that
+// character literally, escaping metacharacters and protecting ASCII whitespace
+// outside classes from PCRE extended mode. The pinned OSGO refuses all \\x
+// escapes; unlike changing anchors, this spelling is also valid JavaScript.
+func writePCRECharacter(out *strings.Builder, r rune, inClass bool) {
+	metacharacters := `\[]^-`
+	if !inClass {
+		metacharacters = `\.*+?()|[]{}^$`
+		if r == ' ' || r == '#' || (r >= '\t' && r <= '\r') {
+			out.WriteByte('[')
+			out.WriteRune(r)
+			out.WriteByte(']')
+			return
+		}
+	}
+	if strings.ContainsRune(metacharacters, r) {
+		out.WriteByte('\\')
+	}
+	out.WriteRune(r)
 }
 
 // FIND REGEX is POSIX longest-match, multiline/dotall, and rejects lazy

@@ -19,6 +19,15 @@ func TestChaiEmission(t *testing.T) {
 			t.Fatal("missing Chai semantic boundary", part)
 		}
 	}
+	for _, part := range []string{"EXPORTING reason = `chai.entries`", "EXPORTING reason = `chai.equal`", "EXPORTING reason = `chai.array_items`"} {
+		if !strings.Contains(runtime, part) {
+			t.Fatal("Chai refusal lost its observation boundary", part)
+		}
+	}
+	refusal := files[names.Get("exception.chaiRefusal")+".clas.abap"]
+	if !strings.Contains(refusal, "METHODS get_text REDEFINITION") || !strings.Contains(refusal, "ABAP Chai observation refused") {
+		t.Fatal("Chai refusals must remain native exceptions with diagnostic text")
+	}
 	// Plain FIND defaults to case-sensitive substring matching on ABAP.
 	if strings.Contains(runtime, " CS ") || strings.Contains(runtime, "IGNORING CASE") {
 		t.Fatal("ABAP CS is not case-sensitive JS substring matching")

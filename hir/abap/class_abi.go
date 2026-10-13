@@ -2,6 +2,7 @@ package abap
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
@@ -77,13 +78,14 @@ func (b *body) constructorArgument(n, d string, t hir.Type) {
 	}
 }
 
-func (e *emitter) argumentFactoryABAP() string {
-	var dispatch strings.Builder
+func (e *emitter) argumentFactoryABAP() ([]factoryCase, string, string) {
+	var cases []factoryCase
+	var defs, impl strings.Builder
 	trap := e.classRefusal()
-	dispatch.WriteString("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\nCASE class_name.\n")
 	serial := 0
-	for _, c := range e.p.Classes {
-		fmt.Fprintf(&dispatch, "WHEN `%s`.\n", strings.ToUpper(e.name(c.Name)))
+
+	for index, c := range e.p.Classes {
+		entry := factoryCase{name: strings.ToUpper(e.name(c.Name))}
 		ctor := e.p.Constructor(c.Name)
 		owner := c
 		for owner != nil && owner.Ctor == nil {
@@ -97,11 +99,19 @@ func (e *emitter) argumentFactoryABAP() string {
 			}
 		}
 		if !ok {
-			dispatch.WriteString("RAISE EXCEPTION TYPE " + trap + ".\n")
+			entry.code = "RAISE EXCEPTION TYPE " + trap + ".\n"
+			cases = append(cases, entry)
 			continue
 		}
-		// Independent body scopes need unique temporary names within the
-		// single ABAP dispatch method (CASE does not introduce local scope).
+		if wide && len(ctor.Params) > 40 {
+			code, declarations, methods := e.wideArgumentFactory(c, ctor, index)
+			entry.code = code
+			defs.WriteString(declarations)
+			impl.WriteString(methods)
+			cases = append(cases, entry)
+			continue
+		}
+		// CASE entries can share a leaf method: retain distinct local names.
 		b := &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, serial: serial}
 		args := []string{}
 		if ctor != nil {
@@ -142,9 +152,108 @@ func (e *emitter) argumentFactoryABAP() string {
 			v := b.temp(hir.Ref(c.Name))
 			b.line("IF p0->lexical = abap_true.\n" + v + " ?= result.\n" + v + "->" + e.name("class.lexicalDescriptor") + " = p0.\nENDIF.")
 		}
-		dispatch.WriteString(b.constantDeclarations() + foldTempInits(b.code.String()))
 		serial = b.serial
+		entry.code = b.constantDeclarations() + foldTempInits(b.code.String())
+		cases = append(cases, entry)
 	}
-	dispatch.WriteString("WHEN OTHERS.\nRAISE EXCEPTION TYPE " + trap + ".\nENDCASE.\n")
-	return dispatch.String()
+	return cases, defs.String(), impl.String()
+}
+
+// factoryCase keeps a constructor body intact: decoding, initialization,
+// allocation and lexical attachment must execute in that order.
+type factoryCase struct{ name, code string }
+
+// splitFactory dispatches through a balanced tree of name comparisons. Leaves
+// contain at most 64 cases / 800 source lines; internal methods have two calls.
+// Unlike a hash bucket, the bound does not depend on the distribution of names.
+func (e *emitter) splitFactory(prefix, params, actuals, fallback string, cases []factoryCase) (string, string, string) {
+	sort.Slice(cases, func(i, j int) bool { return cases[i].name < cases[j].name })
+	var defs, impl strings.Builder
+	serial := 0
+	var build func([]factoryCase) string
+	build = func(entries []factoryCase) string {
+		name := fmt.Sprintf("%s_%d", prefix, serial)
+		serial++
+		fmt.Fprintf(&defs, "CLASS-METHODS %s IMPORTING class_name TYPE string %s RETURNING VALUE(result) TYPE REF TO object.\n", name, params)
+		lines := 0
+		for _, entry := range entries {
+			lines += strings.Count(entry.code, "\n") + 1
+		}
+		var code strings.Builder
+		if len(entries) > 64 || (lines > 800 && len(entries) > 1) {
+			mid := len(entries) / 2
+			left, right := build(entries[:mid]), build(entries[mid:])
+			fmt.Fprintf(&code, "IF class_name <= `%s`.\nresult = %s( class_name = class_name %s ).\nELSE.\nresult = %s( class_name = class_name %s ).\nENDIF.\n", entries[mid-1].name, left, actuals, right, actuals)
+		} else {
+			code.WriteString("CASE class_name.\n")
+			for _, entry := range entries {
+				fmt.Fprintf(&code, "WHEN `%s`.\n%s", entry.name, entry.code)
+			}
+			code.WriteString("WHEN OTHERS.\n" + fallback + "ENDCASE.\n")
+		}
+		fmt.Fprintf(&impl, "METHOD %s.\n%sENDMETHOD.\n", name, code.String())
+		return name
+	}
+	root := build(cases)
+	return defs.String(), impl.String(), "result = " + root + "( class_name = class_name " + actuals + " ).\n"
+}
+
+// Wide field-copy constructors have no parameter-count envelope. Keep decoded
+// values in a call-local structure, and decode every slot before initialization
+// or allocation. Write helpers run only after that allocation, in field order.
+// Nothing is shared through CLASS-DATA, so nested/reentrant factories are safe.
+func (e *emitter) wideArgumentFactory(c *hir.Class, ctor *hir.Method, index int) (string, string, string) {
+	frameType := fmt.Sprintf("args_frame_%d", index)
+	var defs, impl strings.Builder
+	fmt.Fprintf(&defs, "TYPES: BEGIN OF %s,\n", frameType)
+	locals := map[string]string{}
+	for i, p := range ctor.Params {
+		fmt.Fprintf(&defs, "a%d TYPE %s,\n", i, e.typ(p.Type))
+		locals[p.Name] = fmt.Sprintf("frame-a%d", i)
+	}
+	fmt.Fprintf(&defs, "END OF %s.\n", frameType)
+	b := &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, locals: locals}
+	frame := fmt.Sprintf("frame%d", index)
+	b.line("DATA " + frame + " TYPE " + frameType + ".")
+	const chunk = 24
+	for start := 0; start < len(ctor.Params); start += chunk {
+		name := fmt.Sprintf("args_decode_%d_%d", index, start/chunk)
+		fmt.Fprintf(&defs, "CLASS-METHODS %s IMPORTING p1 TYPE %s CHANGING frame TYPE %s.\n", name, e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), frameType)
+		part := &body{e: e, c: c, m: b.m, locals: locals}
+		for i := start; i < len(ctor.Params) && i < start+chunk; i++ {
+			p := ctor.Params[i]
+			d := part.temp(hir.T(hir.Dynamic))
+			part.line("IF p1 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.")
+			raw := part.rawTemp("REF TO object")
+			part.line(fmt.Sprintf("READ TABLE p1->items INDEX %d INTO %s.", i+1, raw))
+			part.line(d + " ?= " + raw + ".")
+			part.constructorArgument(locals[p.Name], d, p.Type)
+		}
+		fmt.Fprintf(&impl, "METHOD %s.\n%sENDMETHOD.\n", name, part.constantDeclarations()+foldTempInits(part.code.String()))
+		b.line(name + "( EXPORTING p1 = p1 CHANGING frame = " + frame + " ).")
+	}
+	b.initialize(c.Name)
+	b.line("CREATE OBJECT result TYPE " + e.name(c.Name) + ".")
+	instance := fmt.Sprintf("instance%d", index)
+	b.line("DATA " + instance + " TYPE REF TO " + e.name(c.Name) + ".")
+	b.line(instance + " ?= result.")
+	for start := 0; start < len(ctor.Body.List); start += chunk {
+		name := fmt.Sprintf("args_write_%d_%d", index, start/chunk)
+		fmt.Fprintf(&defs, "CLASS-METHODS %s IMPORTING instance TYPE REF TO %s frame TYPE %s.\n", name, e.name(c.Name), frameType)
+		part := &body{e: e, c: c, m: b.m, locals: locals}
+		for i := start; i < len(ctor.Body.List) && i < start+chunk; i++ {
+			s := ctor.Body.List[i]
+			if s.Y.Kind == hir.Narrow && s.Y.X.Type.Kind == hir.Optional && !s.X.Type.IsRef() {
+				part.line("IF " + locals[s.Y.X.Name] + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.")
+			}
+			value := part.value(s.Y, s.X.Type)
+			part.line("instance->" + e.member(s.X.Name) + " = " + value + ".")
+		}
+		fmt.Fprintf(&impl, "METHOD %s.\n%sENDMETHOD.\n", name, part.constantDeclarations()+foldTempInits(part.code.String()))
+		b.line(name + "( instance = " + instance + " frame = " + frame + " ).")
+	}
+	if c.Scoped {
+		b.line("IF p0->lexical = abap_true.\n" + instance + "->" + e.name("class.lexicalDescriptor") + " = p0.\nENDIF.")
+	}
+	return b.constantDeclarations() + foldTempInits(b.code.String()), defs.String(), impl.String()
 }

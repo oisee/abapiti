@@ -12,6 +12,7 @@ import {materializeRegistryClosure} from './registry-closure.mjs';
 import {upstreamPin, buildUpstream} from './statements-upstream.mjs';
 import {executeOracle} from './abaplint-tests-oracle.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
+import {waitForResources, heavyCommand} from './osg-harness-resources.mjs';
 
 export function discoverShards(upstream) {
  const root = join(upstream, 'packages/core');
@@ -76,13 +77,17 @@ export function assertNoFailures(name, run) {
 }
 
 // Drain in-flight work before cleanup, and do not schedule past a genuine FAIL.
-export async function runShards(shards, workers, runShard) {
+export async function runShards(shards, workers, runShard, admit = async () => {}) {
  if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
   let next = 0, failure;
   const settled = await Promise.allSettled(Array.from({length:Math.min(workers, shards.length)}, async () => {
    while (!failure && next < shards.length) {
-    const shard = shards[next++];
-    try { await runShard(shard); } catch (error) { failure = error; throw error; }
+    try {
+     await admit();
+     if (failure || next >= shards.length) break;
+     const shard = shards[next++];
+     await runShard(shard);
+    } catch (error) { failure = error; throw error; }
    }
   }));
   for (const result of settled) if (result.status === 'rejected') throw result.reason;
@@ -91,7 +96,8 @@ export async function runShards(shards, workers, runShard) {
 // Preserve host refusals and timings even when no runner JSON was produced.
 export function readOSGEvidence(build) {
  const read = file => existsSync(join(build,file)) ? JSON.parse(readFileSync(join(build,file))) : null;
- return {gap:read('evidence/abap-gap.json'),gate:read('evidence/test-gate.json'),host:read('osg/timing.json')};
+ return {gap:read('evidence/abap-gap.json'),gate:read('evidence/test-gate.json'),host:read('osg/timing.json'),
+  ...(existsSync(join(build,'osg/osg-refusals.json')) ? {refusals:read('osg/osg-refusals.json')} : {})};
 }
 
 async function main() {
@@ -141,7 +147,8 @@ async function main() {
     if (foreign.length) borrowed = executeOracle(oracleBuild, upstream, foreign);
     let execution;
     try {
-     execution = {...await promisify(execFile)(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
+     const step = target === 'osg' ? heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], env) : {command:join(run,'abapiti'), args:['abaplint-tests', closure, '-o', build, ...targetArgs]};
+     execution = {...await promisify(execFile)(step.command, step.args, {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
     } catch (error) {
      execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
     }
@@ -174,7 +181,11 @@ async function main() {
   }
   const workers = Number(process.env.ABAPITI_TESTS_WORKERS ?? 1);
   if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
-  await runShards(plan.shards, workers, runShard);
+  // One heavy OSG shard at a time, even if Go-target workers were requested.
+  // A single generated package can consume many GiB; -p does not bound that.
+  if (target === 'osg' && workers > 1) console.error('OSG: serializing heavy shards (ABAPITI_TESTS_WORKERS applies only to the Go target)');
+  await runShards(plan.shards, target === 'osg' ? 1 : workers, runShard,
+   target === 'osg' ? () => waitForResources() : undefined);
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
@@ -186,8 +197,8 @@ async function main() {
   finished = true;
  } finally {
   oracleBuild?.dispose();
-  if (finished) rmSync(run, {recursive:true, force:true});
-  else console.error(`all-shard evidence retained after incomplete run: ${run}`);
+  if (finished && process.env.ABAPITI_TESTS_KEEP_ARTIFACTS !== '1') rmSync(run, {recursive:true, force:true});
+  else console.error(`all-shard evidence retained: ${run}`);
  }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch(error => { console.error(error); process.exitCode = 1; });

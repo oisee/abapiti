@@ -3,7 +3,6 @@ package tsfront
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"testing"
 )
 
@@ -28,8 +27,8 @@ func TestGoJSONDataGraphNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 	writer := lowerStatementsProbe(t, map[string]string{"writer.ts": `class Probe {static run(): string {return JSON.stringify(42);}}`}, []string{"writer.ts"})
-	if _, err := emitABAP(t, writer); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
-		t.Fatalf("ABAP must refuse JSON writer: %v", err)
+	if _, err := emitABAP(t, writer); err != nil {
+		t.Fatalf("ABAP primitive JSON writer: %v", err)
 	}
 }
 

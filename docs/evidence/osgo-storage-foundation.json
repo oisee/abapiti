@@ -1,0 +1,35 @@
+{
+  "pin": "f557e12f4217addcec7834b0607234aecf9b723a",
+  "fixtures": [
+    {
+      "fixture": "nested",
+      "classes": 1,
+      "compiled": 1,
+      "rows": [
+        {
+          "class": "Z_NESTEDVIEWS_1066630BC37D6D",
+          "testclass": "LTCL_VIEWS",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": "",
+          "alerts": []
+        }
+      ]
+    },
+    {
+      "fixture": "explicit",
+      "classes": 1,
+      "compiled": 1,
+      "rows": [
+        {
+          "class": "Z_NESTEDVIEWS_1066630BC37D6D",
+          "testclass": "LTCL_EXPLICIT",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": "",
+          "alerts": []
+        }
+      ]
+    }
+  ]
+}
