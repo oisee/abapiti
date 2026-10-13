@@ -1034,7 +1034,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
-			b.line(n + " ?= " + row + ".")
+			b.erasedElement(n, row, t)
 		}
 	case hir.New:
 		if t.Kind == hir.Array {
@@ -2459,8 +2459,33 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	}
 	b.line(s + ".")
 	if target != n {
-		b.line(n + " ?= " + target + ".")
+		b.erasedElement(n, target, x.Type)
 	}
+}
+
+// erasedElement narrows an erased reference-array slot. Reference storage
+// holds the original objects; a view as any[] boxes the actual element (as
+// Go's box), rather than requiring a pre-existing tagged value. Other element
+// types keep their checked cast.
+func (b *body) erasedElement(n, row string, t hir.Type) {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	if t.Kind != hir.Dynamic {
+		b.line(n + " ?= " + row + ".")
+		return
+	}
+	// Class tests, not CATCH: both are classes (IS INSTANCE OF is reliable
+	// for classes on every host) and the method keeps its peephole folding.
+	b.line("IF " + row + " IS INSTANCE OF " + b.e.name("runtime.dynamic") + ".\n" + n + " ?= " + row + ".")
+	b.line("ELSEIF " + row + " IS INSTANCE OF " + b.e.name("runtime.classvalue") + ".")
+	cv := b.rawTemp("REF TO " + b.e.name("runtime.classvalue"))
+	b.line(cv + " ?= " + row + ".")
+	b.boxDynamic(n, cv, hir.T(hir.ClassValue))
+	b.line("ELSE.")
+	b.line("CLEAR " + n + ".")
+	b.boxDynamic(n, row, hir.Ref(hir.RootObject))
+	b.line("ENDIF.")
 }
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
@@ -2567,7 +2592,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("LOOP AT " + a + "->items INTO " + row + ".")
 		if row != n {
-			b.line(n + " ?= " + row + ".")
+			b.erasedElement(n, row, s.Type)
 		}
 		b.stmt(s.Body)
 		b.line("ENDLOOP.")
