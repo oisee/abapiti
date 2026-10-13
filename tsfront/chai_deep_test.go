@@ -111,9 +111,22 @@ func TestChaiDeepNodeOracle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The harness-only operations are not silently emitted as ABAP assertions.
-	if _, err := emitABAP(t, l.Prog); err == nil {
-		t.Fatal("ABAP unexpectedly accepted Chai deep operations")
+	// ABAP now emits the same intrinsic boundary. Use a fresh lowering because
+	// backend passes mutate HIR; the unchanged Go oracle must remain independent.
+	abapLowering, err := LowerAbaplintTests(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	abapFiles, err := emitABAP(t, abapLowering.Prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, source := range abapFiles {
+		found = found || strings.Contains(source, "METHOD deepEqual.") && strings.Contains(source, "METHOD deepInclude.") && strings.Contains(source, "READ TABLE seen WITH KEY")
+	}
+	if !found {
+		t.Fatal("missing ABAP Chai equality/include implementation")
 	}
 	files, err := EmitAbaplintTests(dir, l)
 	if err != nil {
