@@ -1,0 +1,374 @@
+package abap
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/oisee/abapiti/hir"
+)
+
+// Native enumeration requires constructor/declaration order to agree.
+// Structural instances require the constructor expression's OwnKeys proof.
+func (e *emitter) ownAdapter(c *hir.Class) bool {
+	if !e.ownKeysUsed || c == nil {
+		return false
+	}
+	if result, ok := e.ownAdapters[c.Name]; ok {
+		return result
+	}
+	result := c.Structural || hir.DataClassView(e.p, c.Name) && (e.liveClasses[c.Name] || c.Ctor != nil && len(c.Ctor.Params) == 0)
+	if e.ownAdapters == nil {
+		e.ownAdapters = map[string]bool{}
+	}
+	e.ownAdapters[c.Name] = result
+	return result
+}
+
+func (e *emitter) inheritsOwnAdapter(c *hir.Class) bool {
+	for parent := e.classBy(c.Super); parent != nil; parent = e.classBy(parent.Super) {
+		if e.ownAdapter(parent) {
+			return true
+		}
+	}
+	return false
+}
+
+// Uninitialized declarations, conditional writes, repeated writes and custom
+// constructor actions do not establish an own-property order. Keep them closed.
+func (e *emitter) nativeOwnKeysProven(c *hir.Class) bool {
+	for ; c != nil; c = e.classBy(c.Super) {
+		var declared, assigned []string
+		for _, f := range c.Fields {
+			if !f.Static {
+				declared = append(declared, f.Name)
+			}
+		}
+		if c.Ctor == nil {
+			if len(declared) != 0 {
+				return false
+			}
+			continue
+		}
+		if len(c.Ctor.Params) != 0 {
+			return false
+		}
+		valid := true
+		superCalls := 0
+		var visit func(*hir.Stmt)
+		visit = func(s *hir.Stmt) {
+			if s == nil {
+				return
+			}
+			switch s.Kind {
+			case hir.Block:
+				for _, child := range s.List {
+					visit(child)
+				}
+			case hir.Assign:
+				if s.X.Kind != hir.FieldGet || s.X.X.Kind != hir.This {
+					valid = false
+					return
+				}
+				// The nascent instance must not escape through initializer
+				// values: a call receiving this could install additional keys.
+				var value func(*hir.Expr)
+				value = func(x *hir.Expr) {
+					if x == nil {
+						return
+					}
+					if x.Kind == hir.This {
+						valid = false
+					}
+					value(x.X)
+					value(x.Y)
+					value(x.Z)
+					for _, arg := range x.Args {
+						value(arg)
+					}
+					e.walkStmt(x.Stmt, value)
+				}
+				value(s.Y)
+				assigned = append(assigned, s.X.Name)
+			case hir.ExprStmt:
+				superCalls++
+				if s.X.Kind != hir.SuperCall || len(s.X.Args) != 0 || superCalls > 1 || len(assigned) > 0 {
+					valid = false
+				}
+			default:
+				valid = false
+			}
+		}
+		visit(c.Ctor.Body)
+		if !valid || strings.Join(declared, "\x00") != strings.Join(assigned, "\x00") {
+			return false
+		}
+	}
+	return true
+}
+
+func (e *emitter) ownKeysRuntime() {
+	if e.types["runtime.ownKeys"] {
+		return
+	}
+	e.types["runtime.ownKeys"] = true
+	e.liveRuntime()
+	d, helper, iface := e.name("runtime.dynamic"), e.name("runtime.ownKeys"), e.name("own.storage")
+	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
+	e.files[iface+".intf.abap"] = fmt.Sprintf("INTERFACE %s PUBLIC.\nMETHODS keys RETURNING VALUE(result) TYPE %s.\nENDINTERFACE.\n", iface, arr)
+	e.files[helper+".clas.abap"] = strings.NewReplacer("$H", helper, "$D", d, "$I", iface, "$A", arr, "$S", e.name("view.storage"), "$T", e.name("view.refusal")).Replace(`CLASS $H DEFINITION PUBLIC CREATE PUBLIC.
+PUBLIC SECTION.
+CLASS-METHODS keys IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE $A.
+PROTECTED SECTION.
+PRIVATE SECTION.
+ENDCLASS.
+CLASS $H IMPLEMENTATION.
+METHOD keys.
+IF p0 IS NOT BOUND.
+RAISE EXCEPTION TYPE $T.
+ENDIF.
+IF p0->tag = $D=>tag_ref.
+DATA storage TYPE REF TO $S.
+DATA source TYPE REF TO $D.
+TRY.
+storage ?= p0->oval.
+CATCH cx_sy_move_cast_error.
+ENDTRY.
+IF storage IS BOUND.
+source = storage->source( ).
+IF source IS BOUND.
+result = keys( source ).
+RETURN.
+ENDIF.
+ENDIF.
+DATA native TYPE REF TO $I.
+TRY.
+native ?= p0->oval.
+CATCH cx_sy_move_cast_error.
+RAISE EXCEPTION TYPE $T.
+ENDTRY.
+result = native->keys( ).
+RETURN.
+ENDIF.
+IF p0->tag <> $D=>tag_object.
+RAISE EXCEPTION TYPE $T.
+ENDIF.
+TYPES: BEGIN OF ordered_key, k TYPE string, category TYPE i, number TYPE int8, position TYPE i, END OF ordered_key.
+DATA ordered TYPE STANDARD TABLE OF ordered_key WITH DEFAULT KEY.
+DATA item TYPE ordered_key.
+DATA row TYPE $D=>entry.
+DATA position TYPE i.
+LOOP AT p0->entries INTO row.
+CLEAR item.
+position = position + 1.
+item-k = row-k.
+item-position = position.
+item-category = 1.
+IF row-k IS NOT INITIAL AND strlen( row-k ) <= 10 AND row-k CO '0123456789'.
+IF strlen( row-k ) = 1 OR row-k+0(1) <> '0'.
+item-number = row-k.
+IF item-number < 4294967295.
+item-category = 0.
+ELSE.
+CLEAR item-number.
+ENDIF.
+ENDIF.
+ENDIF.
+APPEND item TO ordered.
+ENDLOOP.
+SORT ordered BY category number position.
+CREATE OBJECT result.
+LOOP AT ordered INTO item.
+APPEND item-k TO result->items.
+ENDLOOP.
+ENDMETHOD.
+ENDCLASS.
+`)
+}
+
+func (e *emitter) ownClassDeclaration(out *strings.Builder, c *hir.Class) {
+	if !e.ownAdapter(c) {
+		if e.ownKeysUsed && e.inheritsOwnAdapter(c) {
+			fmt.Fprintf(out, "METHODS %s~keys REDEFINITION.\nMETHODS %s~get REDEFINITION.\nMETHODS %s~put REDEFINITION.\n", e.name("own.storage"), e.name("view.storage"), e.name("view.storage"))
+		}
+		return
+	}
+	parent := e.classBy(c.Super)
+	iface, storage := e.name("own.storage"), e.name("view.storage")
+	if e.ownAdapter(parent) {
+		fmt.Fprintf(out, "METHODS %s~keys REDEFINITION.\n", iface)
+	} else {
+		fmt.Fprintf(out, "INTERFACES %s.\n", iface)
+	}
+	if e.ownAdapter(parent) || parent != nil && e.liveClasses[parent.Name] {
+		fmt.Fprintf(out, "METHODS %s~get REDEFINITION.\nMETHODS %s~put REDEFINITION.\n", storage, storage)
+	} else if !e.liveRoot(c) {
+		fmt.Fprintf(out, "INTERFACES %s.\n", storage)
+	}
+	if c.Structural && (parent == nil || !parent.Structural || !e.ownAdapter(parent)) {
+		fmt.Fprintf(out, "DATA %s TYPE REF TO %s.\n", e.name("own.keys"), e.name("runtime.dynamic"))
+	}
+}
+
+func (e *emitter) refuseInheritedOwnAdapter(out *strings.Builder, c *hir.Class) bool {
+	if !e.ownKeysUsed || e.ownAdapter(c) || !e.inheritsOwnAdapter(c) {
+		return false
+	}
+	for _, name := range []string{e.name("own.storage") + "~keys", e.name("view.storage") + "~get", e.name("view.storage") + "~put"} {
+		fmt.Fprintf(out, "METHOD %s.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", name, e.name("view.refusal"))
+	}
+	return true
+}
+
+func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
+	d, storage := e.name("runtime.dynamic"), e.name("view.storage")
+	makeBody := func(name string) *body {
+		return &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, implemented: name, locals: map[string]string{}}
+	}
+	emit := func(name string, b *body) {
+		fmt.Fprintf(out, "METHOD %s.\n%s%sENDMETHOD.\n", name, b.constantDeclarations(), foldTempInits(b.code.String()))
+	}
+	parent := e.classBy(c.Super)
+	if !e.ownAdapter(parent) && !(parent != nil && e.liveClasses[parent.Name]) {
+		structural := ""
+		if c.Structural {
+			structural = "result = abap_true.\n"
+		}
+		source := ""
+		if e.liveClasses[c.Name] {
+			source = "result = me->" + e.name("view.source") + ".\n"
+		}
+		fmt.Fprintf(out, "METHOD %s~structural.\n%sENDMETHOD.\nMETHOD %s~source.\n%sENDMETHOD.\n", storage, structural, storage, source)
+	}
+	var fields []hir.Field
+	seen := map[string]bool{}
+	var visit func(*hir.Class)
+	visit = func(c *hir.Class) {
+		if c == nil {
+			return
+		}
+		visit(e.classBy(c.Super))
+		for _, f := range c.Fields {
+			if !f.Static && !seen[f.Name] {
+				seen[f.Name] = true
+				fields = append(fields, f)
+			}
+		}
+	}
+	visit(c)
+	name := e.name("own.storage") + "~keys"
+	b := makeBody(name)
+	graph := b.temp(hir.T(hir.Dynamic))
+	if e.liveClasses[c.Name] {
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nresult = " + e.name("runtime.ownKeys") + "=>keys( me->" + e.name("view.source") + " ).\nRETURN.\nENDIF.")
+	}
+	if c.Structural {
+		b.line(graph + " = me->" + e.name("own.keys") + ".")
+		b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+	} else if !e.nativeOwnKeysProven(e.classBy(c.Name)) {
+		b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+	} else {
+		b.line(graph + " = NEW #( ).\n" + graph + "->tag = " + d + "=>tag_object.")
+		for _, f := range fields {
+			b.line(graph + "->put( p0 = `" + strings.ReplaceAll(f.Name, "`", "``") + "` p1 = VALUE #( ) ).")
+		}
+	}
+	b.line("result = " + e.name("runtime.ownKeys") + "=>keys( " + graph + " ).")
+	emit(name, b)
+	for _, op := range []string{"get", "put"} {
+		b = makeBody(storage + "~" + op)
+		if op == "get" {
+			var prototypeKeys []string
+			for _, key := range []string{"constructor", "toString", "toLocaleString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "__proto__", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+				if !seen[key] {
+					prototypeKeys = append(prototypeKeys, "p0 = `"+key+"`")
+				}
+			}
+			if len(prototypeKeys) > 0 {
+				b.line("IF " + strings.Join(prototypeKeys, " OR ") + ".")
+				graph := ""
+				if e.liveClasses[c.Name] {
+					source := "me->" + e.name("view.source")
+					b.line("IF " + source + " IS BOUND.")
+					b.line("IF " + source + "->tag = " + d + "=>tag_object.\nREAD TABLE " + source + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nELSEIF " + source + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nELSE.")
+				}
+				if c.Structural {
+					graph = "me->" + e.name("own.keys")
+				}
+				if graph == "" {
+					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+				} else {
+					b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nREAD TABLE " + graph + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+				}
+				if e.liveClasses[c.Name] {
+					b.line("ENDIF.")
+				}
+				b.line("ENDIF.")
+			}
+		}
+		if e.liveClasses[c.Name] {
+			source := "me->" + e.name("view.source")
+			b.line("IF " + source + " IS BOUND.")
+			if op == "get" {
+				b.line("result = " + source + "->get( p0 ).")
+			} else {
+				b.line(source + "->put( p0 = p0 p1 = p1 ).")
+			}
+			b.line("RETURN.\nENDIF.")
+		}
+		if !c.Structural && !e.nativeOwnKeysProven(e.classBy(c.Name)) {
+			// A native default slot cannot stand in for a missing JS property.
+			// Source-backed views above keep their own presence-aware adapter.
+			b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+		}
+		if c.Structural {
+			metadata := "me->" + e.name("own.keys")
+			b.line("IF " + metadata + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+			if op == "get" {
+				b.line("READ TABLE " + metadata + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
+			}
+		}
+		b.line("CASE p0.")
+		for _, f := range fields {
+			if op == "put" && !c.Structural {
+				t := f.Type
+				if t.Kind == hir.Optional {
+					t = t.Args[0]
+				}
+				if t.Kind != hir.String && t.Kind != hir.Bool && t.Kind != hir.Number && t.Kind != hir.Dynamic {
+					continue
+				}
+			}
+			b.line("WHEN `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
+			if op == "get" {
+				base := f.Type
+				if base.Kind == hir.Optional {
+					base = base.Args[0]
+				}
+				if !base.IsRef() && base.Kind != hir.String && base.Kind != hir.Number && base.Kind != hir.I32 && base.Kind != hir.Bool {
+					// Keep unsupported scalar boxing a field-read refusal;
+					// key enumeration itself does not need the field value.
+					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+				} else {
+					b.boxDynamic("result", "me->"+e.member(f.Name), f.Type)
+				}
+			} else {
+				b.liveUnbox("me->"+e.member(f.Name), "p1", f.Type)
+			}
+		}
+		if c.Structural {
+			extras := "me->" + e.name("view.extras")
+			if op == "get" {
+				b.line("WHEN OTHERS.\nIF " + extras + " IS BOUND.\nresult = " + extras + "->get( p0 ).\nENDIF.")
+			} else {
+				b.line("WHEN OTHERS.\nIF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF " + extras + " IS NOT BOUND.\n" + extras + " = NEW #( ).\n" + extras + "->tag = " + d + "=>tag_object.\nENDIF.\n" + extras + "->put( p0 = p0 p1 = p1 ).")
+			}
+		} else if op == "put" {
+			b.line("WHEN OTHERS.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+		}
+		b.line("ENDCASE.")
+		if op == "put" && c.Structural {
+			b.line("IF me->" + e.name("own.keys") + " IS BOUND.\nme->" + e.name("own.keys") + "->put( p0 = p0 p1 = VALUE #( ) ).\nENDIF.")
+		}
+		emit(storage+"~"+op, b)
+	}
+}

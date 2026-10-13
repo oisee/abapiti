@@ -18,6 +18,8 @@ type emitter struct {
 	chaiUsed        bool
 	chaiArrays      []hir.Type
 	chaiMaps        []hir.Type
+	ownKeysUsed     bool
+	ownAdapters     map[string]bool
 	liveClasses     map[string]bool
 	constructorArgs bool
 	configJSON      bool
@@ -132,6 +134,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		e.liveRuntime()
 	}
 	e.scanUsage()
+	if e.ownKeysUsed {
+		e.ownKeysRuntime()
+	}
 	e.findStaticConstants()
 	e.findConstSets()
 	e.promoteValueSlots()
@@ -313,6 +318,9 @@ func (e *emitter) scanUsage() {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+			e.ownKeysUsed = true
+		}
 		scanType(x.Type)
 		if x.Kind == hir.ClassOf {
 			need = true
@@ -1143,13 +1151,36 @@ func (b *body) expr(x *hir.Expr) string {
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
+		values := make([]string, len(x.Args))
+		if c := e.classBy(t.Name); e.ownAdapter(c) && c.Structural && x.OwnKeys != nil {
+			// Object-literal arguments are evaluated in source insertion order,
+			// even when the structural constructor sorts its parameter layout.
+			for _, key := range *x.OwnKeys {
+				for i, param := range ctor.Params {
+					if param.Name == key {
+						values[i] = b.value(x.Args[i], param.Type)
+						break
+					}
+				}
+			}
+		}
 		for i, a := range x.Args {
-			args = append(args, e.param(ctor.Params[i].Name)+" = "+b.value(a, ctor.Params[i].Type))
+			if values[i] == "" {
+				values[i] = b.value(a, ctor.Params[i].Type)
+			}
+			args = append(args, e.param(ctor.Params[i].Name)+" = "+values[i])
 		}
 		if len(args) > 0 {
 			s += strings.Join(args, " ")
 		}
 		b.line(s + " ).")
+		if c := e.classBy(t.Name); e.ownKeysUsed && c != nil && c.Structural && x.OwnKeys != nil {
+			b.line(n + "->" + e.name("own.keys") + " = NEW #( ).")
+			b.line(n + "->" + e.name("own.keys") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.")
+			for _, key := range *x.OwnKeys {
+				b.line(n + "->" + e.name("own.keys") + "->put( p0 = `" + strings.ReplaceAll(key, "`", "``") + "` p1 = VALUE #( ) ).")
+			}
+		}
 		if e.chaiUsed && t.Kind == hir.OrderedMap && x.OwnKeys != nil {
 			b.line(n + "->chai_enumerable = abap_true.")
 		}
@@ -2169,8 +2200,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
 		return
 	case "dynamic.keys":
-		b.e.liveRuntime()
-		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
+		b.e.ownKeysRuntime()
+		b.line(n + " = " + b.e.name("runtime.ownKeys") + "=>keys( " + a + " ).")
 		return
 	case "dynamic.classView":
 		b.liveView(x, n, a)
@@ -2560,6 +2591,12 @@ func (b *body) stmt(s *hir.Stmt) {
 				a := b.receiver(s.X.X)
 				v := b.value(s.Y, s.X.Type)
 				b.line(a + "->" + e.name("view.write."+owner.Name+"."+s.X.Name) + "( p0 = " + v + " ).")
+				return
+			}
+			if c := e.classBy(s.X.X.Type.Name); e.ownAdapter(c) && c.Structural {
+				a := b.receiver(s.X.X)
+				b.line(a + "->" + e.member(s.X.Name) + " = " + b.value(s.Y, s.X.Type) + ".")
+				b.line("IF " + a + "->" + e.name("own.keys") + " IS BOUND.\n" + a + "->" + e.name("own.keys") + "->put( p0 = `" + strings.ReplaceAll(s.X.Name, "`", "``") + "` p1 = VALUE #( ) ).\nENDIF.")
 				return
 			}
 			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
