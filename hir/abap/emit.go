@@ -1702,14 +1702,34 @@ func (b *body) truth(n, a string, t hir.Type) {
 func (b *body) stringLit(n, s string) {
 	// String templates preserve trailing blanks. Chunk before escaping so source
 	// tokens always fit the 255-byte envelope (also bounds UTF-16 source length).
+	// Newline, carriage return and tab are spelled \n, \r, \t inside templates;
+	// other control codes take a uccpi temporary.
 	if s == "" {
 		b.line(n + " = ||.")
 		return
 	}
+	hard := func(c rune) bool {
+		return (c < 32 && c != '\n' && c != '\r' && c != '\t') || c == 127 || c == 0xfeff || c == 0x2028 || c == 0x2029
+	}
+	soft := func(c rune) bool { return c == '\n' || c == '\r' || c == '\t' }
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff || r[0] == 0x2028 || r[0] == 0x2029 {
+		k, size, slash, firstSoft := 0, 0, false, -1
+		for k < len(r) && !hard(r[k]) && size+len(string(r[k]))*2 <= 120 {
+			if soft(r[k]) && firstSoft < 0 {
+				firstSoft = k
+			}
+			slash = slash || r[k] == '\\'
+			size += len(string(r[k])) * 2
+			k++
+		}
+		if slash && firstSoft >= 0 {
+			// A backslash forces the backquoted form, which has no escapes:
+			// stop before the first control code.
+			k = firstSoft
+		}
+		if k == 0 {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -1720,15 +1740,9 @@ func (b *body) stringLit(n, s string) {
 			first = false
 			continue
 		}
-		k := 0
-		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && r[k] != 0x2028 && r[k] != 0x2029 && size+len(string(r[k]))*2 <= 120 {
-			size += len(string(r[k])) * 2
-			k++
-		}
 		chunk := string(r[:k])
 		s = string(r[k:])
-		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
+		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|", "\n", "\\n", "\r", "\\r", "\t", "\\t").Replace(chunk) + "|"
 		if strings.Contains(chunk, "\\") {
 			// abaplint's lexer misreads an escaped backslash before an
 			// escaped template delimiter (open-steamgate inbox 040); a
