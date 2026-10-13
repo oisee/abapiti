@@ -528,6 +528,10 @@ WHILE i < n.
       WHEN OTHERS.
         CONCATENATE posix '\' c INTO posix RESPECTING BLANKS.
     ENDCASE.
+  ELSEIF in_class = abap_false AND c = '^' AND flags NA 'm'.
+    CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
+  ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
+    CONCATENATE posix '\z' INTO posix RESPECTING BLANKS.
   ELSE.
     IF c = '['.
       in_class = abap_true.

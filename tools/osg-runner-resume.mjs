@@ -33,11 +33,11 @@ function dumpMessage(run) {
 // Each abnormal invocation must consume one previously unconsumed test or
 // initialization action. Thus retries are bounded by the emitted plan + registry,
 // not an arbitrary wall-clock limit. No-progress/infrastructure errors fail closed.
-export function resumeRunner(binary, {cwd, env = process.env, spawn = spawnSync, diagnostic = () => {}} = {}) {
+export function resumeRunner(binary, {cwd, args = [], env = process.env, spawn = spawnSync, diagnostic = () => {}} = {}) {
  const results = [], initialization = new Map(), initDumps = new Map(), skipped = new Set();
  let start = 1, titles, initCount;
  for (;;) {
-  const run = spawn(binary, [], {cwd, env:{...env,
+  const run = spawn(binary, args, {cwd, env:{...env,
    ABAPITI_OSG_START_INDEX:String(start), ABAPITI_OSG_SKIP_INIT:',' + [...skipped].join(',') + ','},
    encoding:'utf8', maxBuffer:128*1024*1024});
   let active, registrySeen = false, planSeen = false;
