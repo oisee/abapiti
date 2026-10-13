@@ -12,6 +12,7 @@ import {materializeRegistryClosure} from './registry-closure.mjs';
 import {upstreamPin, buildUpstream} from './statements-upstream.mjs';
 import {executeOracle} from './abaplint-tests-oracle.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
+import {waitForResources} from './osg-harness-resources.mjs';
 
 export function discoverShards(upstream) {
  const root = join(upstream, 'packages/core');
@@ -63,13 +64,17 @@ export function assertNoFailures(name, run) {
 }
 
 // Drain in-flight work before cleanup, and do not schedule past a genuine FAIL.
-export async function runShards(shards, workers, runShard) {
+export async function runShards(shards, workers, runShard, admit = async () => {}) {
  if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
   let next = 0, failure;
   const settled = await Promise.allSettled(Array.from({length:Math.min(workers, shards.length)}, async () => {
    while (!failure && next < shards.length) {
-    const shard = shards[next++];
-    try { await runShard(shard); } catch (error) { failure = error; throw error; }
+    try {
+     await admit();
+     if (failure || next >= shards.length) break;
+     const shard = shards[next++];
+     await runShard(shard);
+    } catch (error) { failure = error; throw error; }
    }
   }));
   for (const result of settled) if (result.status === 'rejected') throw result.reason;
@@ -161,7 +166,11 @@ async function main() {
   }
   const workers = Number(process.env.ABAPITI_TESTS_WORKERS ?? 1);
   if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
-  await runShards(plan.shards, workers, runShard);
+  // One heavy OSG shard at a time, even if Go-target workers were requested.
+  // A single generated package can consume many GiB; -p does not bound that.
+  if (target === 'osg' && workers > 1) console.error('OSG: serializing heavy shards (ABAPITI_TESTS_WORKERS applies only to the Go target)');
+  await runShards(plan.shards, target === 'osg' ? 1 : workers, runShard,
+   target === 'osg' ? () => waitForResources() : undefined);
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');
