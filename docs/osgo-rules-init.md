@@ -1,5 +1,10 @@
 # Rules initialization on TS-HA@OSGO
 
+The current CI host pin is `98fa0675f47104ded037083c453ac0bb33b5ff57`
+(OSG main, #721 PCRE hexadecimal escapes and #723 gogen CI). Host pins and
+measurements below describe the historical feature run; final integration
+measurements are recorded in [train-o3.md](train-o3.md).
+
 **73 Node-active registrations recovered; missing 85 → 12; initializer traps
 9 → 3. Focused registrations 183/268 → 256/268. FAIL 0 on both runs;
 credited passes remain 0.** All 256 registered bodies still trap. The full

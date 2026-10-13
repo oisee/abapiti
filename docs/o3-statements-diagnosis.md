@@ -1,5 +1,10 @@
 # O3 statements: native exceptions and ABI repair
 
+The current CI host pin is `98fa0675f47104ded037083c453ac0bb33b5ff57`
+(OSG main, #721 PCRE hexadecimal escapes and #723 gogen CI). Host pins and
+measurements below describe the historical feature run; final integration
+measurements are recorded in [train-o3.md](train-o3.md).
+
 Base: `integ/o3`, `8275c0b`. Local branch: `fix/o3-statements`.
 Original upstream: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`, TypeScript
 6.0.3. Clean pinned OSG: `368baab28111a072c3f5779a0e07d259305f836f`.

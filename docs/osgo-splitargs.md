@@ -1,5 +1,10 @@
 # OSGO constructor-factory splitting
 
+The current CI host pin is `98fa0675f47104ded037083c453ac0bb33b5ff57`
+(OSG main, #721 PCRE hexadecimal escapes and #723 gogen CI). Host pins and
+measurements below describe the historical feature run; final integration
+measurements are recorded in [train-o3.md](train-o3.md).
+
 The objects shard's constructor factory now has **246 methods, maximum 769
 ABAP lines**, instead of a **29,071-line `new_args`** and a **3,487-line `new`**.
 Line counts include `METHOD` and `ENDMETHOD`; the old `new_args` body alone is
