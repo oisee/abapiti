@@ -15,7 +15,7 @@ import (
 
 func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMethod string) {
 	t.Helper()
-	files, names, err := abap.EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestReferenceKeySetNodeOracle(t *testing.T) {
@@ -25,7 +24,7 @@ func TestReferenceKeySetNodeOracle(t *testing.T) {
 	if !strings.Contains(hir.Dump(p), "set<classref<builtin.object>>") {
 		t.Fatal("missing reference-key proof", hir.Dump(p))
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1]) + "\nconsole.log(Probe.run());")`, source)

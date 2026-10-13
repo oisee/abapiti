@@ -12,7 +12,7 @@ func TestLiveArrayWideWriteRefusesBeforeMutation(t *testing.T) {
 	m := method("activate", holder, ret(rt("dynamic.classView", local("input", dyn), holder)))
 	m.Static = true
 	m.Params = []hir.Param{{Name: "input", Type: dyn}}
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "WideArrayHolder", Structural: true, Fields: []hir.Field{{Name: "a", Type: wide}}}, {Name: "WideArrayBoundary", Methods: []*hir.Method{m}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "WideArrayHolder", Structural: true, Fields: []hir.Field{{Name: "a", Type: wide}}}, {Name: "WideArrayBoundary", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

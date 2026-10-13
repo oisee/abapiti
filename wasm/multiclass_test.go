@@ -268,7 +268,7 @@ func TestSplitRejectsMultiResults(t *testing.T) {
 		{Types: []FuncType{ft}, Functions: []Function{{Type: &FuncType{}, Code: []Instruction{{Op: OpCallIndirect, TypeIndex: 0}}}}},
 		{NumImportedFuncs: 1, Imports: []Import{{Kind: 0, Name: "multi", Type: &ft}}},
 	} {
-		r, err := CompileMultiClass(mod, "zcl_multi", 40)
+		r, err := compileABAPMultiClass(t, mod, "zcl_multi", 40)
 		if r != nil || err == nil || !strings.Contains(err.Error(), "split mode does not support multi-result") {
 			t.Fatalf("got %v, %v", r, err)
 		}

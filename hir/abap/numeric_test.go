@@ -67,7 +67,7 @@ func TestNumericFixtures(t *testing.T) {
 			assign("i", hir.T(hir.I32), binary("+", local("i", hir.T(hir.I32)), lit(1), hir.T(hir.I32))))},
 		ret(hir.V("boxed", dyn)))
 	p.Classes[0].Methods = append(p.Classes[0].Methods, optLoop)
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestNumericFixtures(t *testing.T) {
 	for i, input := range inputs {
 		// Use the emitter for literals too, preserving UTF-16 and the line envelope.
 		lit := &hir.Program{Classes: []*hir.Class{{Name: fmt.Sprintf("Input%d", i), Methods: []*hir.Method{{Name: "text", Static: true, Result: str, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(str, input)})}}}}}
-		fs, ns, e := EmitNamed(lit)
+		fs, ns, e := emitABAPNamed(t, lit)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -156,7 +156,7 @@ func TestNumericNonfiniteLiteralRefusals(t *testing.T) {
 	for _, v := range []float64{math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)} {
 		x := &hir.Expr{Kind: hir.RuntimeOp, Op: "number.ceil", X: hir.L(hir.T(hir.Number), v), Type: hir.T(hir.Number)}
 		p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{{Name: "run", Static: true, Result: x.Type, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: x})}}}}}
-		if _, err := Emit(p); err == nil {
+		if _, err := emitABAP(t, p); err == nil {
 			t.Fatalf("accepted nonrepresentable %v", v)
 		}
 	}

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -46,7 +45,7 @@ func TestEmitRegistryXML(t *testing.T) {
 	if len(inventory) != 188 {
 		t.Fatal("expected all 188 original objects")
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +206,7 @@ func TestEmitRegistryXML(t *testing.T) {
 	driver += "ENDMETHOD.\nENDCLASS.\n"
 
 	files[class+".clas.testclasses.abap"] = driver
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

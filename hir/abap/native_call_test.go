@@ -43,7 +43,7 @@ func TestNativeCall0Fixtures(t *testing.T) {
 		{Name: "NativeUnsafe", Super: "NativeBase", PrototypeAccessors: true},
 		{Name: "NativeCalls", Methods: []*hir.Method{call0("value"), call0("undef"), call0("nothing"), call0("missing"), loop, boxes}},
 	}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

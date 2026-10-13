@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestStructuresShortCircuitValues(t *testing.T) {
@@ -25,7 +24,7 @@ func TestStructuresShortCircuitValues(t *testing.T) {
   }
  }
  `}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}

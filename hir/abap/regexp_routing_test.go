@@ -14,7 +14,7 @@ func regexNew(p *hir.Expr, flags string) *hir.Expr {
 func TestLegacyDynamicRegexDoesNotEnablePCRE(t *testing.T) {
 	m := method("test", hir.T(hir.Bool), ret(rt("regexp.test", regexNew(hir.V("pattern", str), "i"), hir.T(hir.Bool), hir.L(str, "abc"))))
 	m.Params = []hir.Param{{Name: "pattern", Type: str}}
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestMixedRegexRuntimes(t *testing.T) {
 		method("plain", hir.T(hir.Bool), ret(rt("regexp.test", legacy, hir.T(hir.Bool), hir.L(str, "abc")))),
 		method("exec", result, ret(rt("regexp.exec", exec, result, hir.L(str, "zab")))),
 	}}}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestLazyMatchEnablesOnlyJSRegexRuntime(t *testing.T) {
 	pattern := regexNew(hir.L(str, `\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?`), "gi")
 	result := hir.T(hir.Optional, hir.T(hir.Array, str))
 	m := method("match", result, ret(rt("string.match", hir.L(str, "DEFINE behavior for ZBOOK"), result, pattern)))
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestPrunedRegexDoesNotEnablePCRE(t *testing.T) {
 	// An unreachable declaration/body is already replaced with Trap before
 	// emission. RegExp declarations alone must not activate the JS runtime.
 	m := method("unexecuted", hir.T(hir.RegExp), &hir.Stmt{Kind: hir.Trap, Name: "not executed"})
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

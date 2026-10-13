@@ -5,8 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestArrayConcatArgumentsNodeOracle(t *testing.T) {
@@ -35,7 +33,7 @@ func TestArrayConcatArgumentsNodeOracle(t *testing.T) {
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
 	// Presence is now emitted; serialization retains its separate refusal.
-	if _, err = abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
+	if _, err = emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
 		t.Fatalf("missing JSON ABAP refusal: %v", err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))

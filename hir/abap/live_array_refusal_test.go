@@ -15,7 +15,7 @@ func TestLiveArrayRefusalFixtures(t *testing.T) {
 	read.Params = []hir.Param{{Name: "input", Type: str}}
 	poison := method("poison", str, hir.B(decl("graph", dyn, rt("json.parseSubset", hir.L(str, `["valid"]`), dyn)), decl("a", arr, rt("dynamic.arrayView", local("graph", dyn), arr)), run(rt("dynamic.put", local("graph", dyn), hir.T(hir.Void), hir.L(str, "0"), rt("dynamic.of", lit(7), dyn))), ret(&hir.Expr{Kind: hir.IndexGet, Type: str, X: local("a", arr), Y: lit(0)})))
 	poison.Static = true
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "ArrayBoundaries", Methods: []*hir.Method{read, poison}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "ArrayBoundaries", Methods: []*hir.Method{read, poison}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -24,7 +24,7 @@ func TestTranspileLexer(t *testing.T) {
 	t.Logf("AST JSON: %d bytes", len(astJSON))
 
 	// Step 2: Transpile to ABAP
-	result, err := Transpile(astJSON, "zcl_")
+	result, err := transpileABAP(t, astJSON, "zcl_")
 	if err != nil {
 		t.Fatalf("Transpile failed: %v", err)
 	}

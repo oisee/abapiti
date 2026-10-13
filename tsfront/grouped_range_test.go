@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestGoGroupedSwitchLocalRangesNodeOracle(t *testing.T) {
@@ -28,7 +26,7 @@ func TestGoGroupedSwitchLocalRangesNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 	// The guarded ABAP ceil and parsing paths must emit together.
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }

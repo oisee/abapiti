@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func lowerProbe(t *testing.T, dir string) (*hir.Program, []LowerDiagnostic) {
@@ -86,7 +85,7 @@ func TestCriticR1Accepted(t *testing.T) {
 			if errs := hir.Verify(prog); len(errs) > 0 {
 				t.Fatal(errs)
 			}
-			files, names, err := abap.EmitNamed(prog)
+			files, names, err := emitABAPNamed(t, prog)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -196,7 +195,7 @@ ENDCLASS.
 					t.Fatal("number must use binary64")
 				}
 			}
-			if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+			if out := fixtureOutputDir(t); out != "" {
 				dir := filepath.Join(out, "critic-r1", name)
 				if err := os.MkdirAll(dir, 0755); err != nil {
 					t.Fatal(err)

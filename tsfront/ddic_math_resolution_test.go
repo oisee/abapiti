@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Exercise builtin dispatch and symbol-bound locals together: each switch
@@ -36,7 +35,7 @@ func TestDDICComputedPackedLengthBindings(t *testing.T) {
 	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatalf("ABAP guarded ceil emission: %v", err)
 	}
 	_, ds, err := integerProbe(t, source).LowerWithOptions([]string{"probe.ts"}, LowerOptions{AssumeOnlyIntegerCalculations: true})

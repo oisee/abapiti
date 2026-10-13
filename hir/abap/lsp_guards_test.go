@@ -25,7 +25,7 @@ func TestLSPGuardFixtures(t *testing.T) {
 		m.Params = []hir.Param{{Name: "input", Type: str}, {Name: "condition", Type: boolean}}
 		methods = append(methods, m)
 	}
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "LSPGuards", Methods: methods}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "LSPGuards", Methods: methods}}})
 	if err != nil {
 		t.Fatal(err)
 	}

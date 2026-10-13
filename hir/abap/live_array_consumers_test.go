@@ -22,7 +22,7 @@ func TestLiveArrayConsumerFixtures(t *testing.T) {
 	project := method("project", snapshot, ret(rt("dynamic.materialize", local("graph", dyn), snapshot)))
 	project.Static = true
 	project.Params = []hir.Param{{Name: "graph", Type: dyn}}
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "ArgumentHolder", Structural: true, Ctor: ctor, Fields: []hir.Field{{Name: "value", Type: str}}}, {Name: "ArraySnapshot", Structural: true, Ctor: snapshotCtor, Fields: []hir.Field{{Name: "items", Type: items}}}, {Name: "ArrayConsumers", Methods: []*hir.Method{m, project}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "ArgumentHolder", Structural: true, Ctor: ctor, Fields: []hir.Field{{Name: "value", Type: str}}}, {Name: "ArraySnapshot", Structural: true, Ctor: snapshotCtor, Fields: []hir.Field{{Name: "items", Type: items}}}, {Name: "ArrayConsumers", Methods: []*hir.Method{m, project}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

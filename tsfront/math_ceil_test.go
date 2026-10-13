@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"github.com/oisee/abapiti/hir/abap"
 	"os/exec"
 	"testing"
 )
@@ -31,7 +30,7 @@ func ceilEdgeInput(sign int) float64 {if sign==0 {return math.NaN()};return math
 	}); got != "-Inf\nNaN\n+Inf\n-Inf\n" {
 		t.Fatal(got)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatalf("ABAP guarded ceil emission: %v", err)
 	}
 }

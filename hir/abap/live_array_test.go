@@ -74,7 +74,7 @@ func TestLiveArrayStorageFixtures(t *testing.T) {
 	body.List = append(body.List, ret(local("ok", boolean)))
 	m := method("check", boolean, body)
 	m.Static = true
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "ArrayChild", Structural: true, Fields: []hir.Field{{Name: "flag", Type: boolean}}}, {Name: "ArrayParent", Structural: true, Fields: []hir.Field{{Name: "a", Type: arr}}}, {Name: "ArrayViews", Methods: []*hir.Method{m}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "ArrayChild", Structural: true, Fields: []hir.Field{{Name: "flag", Type: boolean}}}, {Name: "ArrayParent", Structural: true, Fields: []hir.Field{{Name: "a", Type: arr}}}, {Name: "ArrayViews", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,6 +4,7 @@ package main
 
 import (
 	"github.com/oisee/abapiti/abapsize"
+	"github.com/oisee/abapiti/internal/abapfixture"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,6 +23,7 @@ func TestWasmSplitCLI(t *testing.T) {
 			cmd := &cobra.Command{}
 			addWasmFlags(cmd)
 			dir := t.TempDir()
+			abapfixture.CollectDir(t, "cmd/abapiti", dir)
 			_ = cmd.Flags().Set("output", dir)
 			_ = cmd.Flags().Set("class", "zcl_cli_test")
 			if tc.force {
@@ -70,6 +72,7 @@ func TestWasmSplitExternalFixture(t *testing.T) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
+	abapfixture.CollectDir(t, "cmd/abapiti", dir)
 	_ = cmd.Flags().Set("output", dir)
 	_ = cmd.Flags().Set("class", "zcl_qjs")
 	_ = cmd.Flags().Set("split", "true")

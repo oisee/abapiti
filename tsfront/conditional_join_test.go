@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +17,7 @@ export class Probe {static pick(n:Node|undefined):string {
  return ""+s.size;
 } static run():string{return Probe.pick(new Node())+":"+Probe.pick(undefined);}}`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
@@ -55,7 +54,7 @@ func TestConditionalJoinOptionalBoxingIsLazy(t *testing.T) {
   return before+":"+Probe.touched+":"+a+":"+b+":"+(missing===undefined)+":"+live;
  }} `
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
@@ -72,7 +71,7 @@ func TestConditionalJoinReferenceAndOptional(t *testing.T) {
   return (Probe.choose(true,a,b)===a)+":"+(Probe.choose(false,a,b)===b)+":"+(Probe.maybe(false,a)===undefined);
  }}`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
@@ -106,7 +105,7 @@ func TestConditionalJoinCollectionIdentity(t *testing.T) {
   return (selectedSet===b)+":"+(selectedMap===m)+":"+a.size+":"+b.size+":"+m.get("key")+":"+n.size+":"+(Probe.chooseSet(false,a,undefined)===undefined);
  }}`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
@@ -127,7 +126,7 @@ func TestConditionalJoinNarrowedUnionClassBase(t *testing.T) {
   return (Probe.choose(b)===b)+":"+(Probe.choose(c)===c)+":"+(Probe.choose(undefined)===undefined);
  }}`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")
@@ -139,7 +138,7 @@ func TestConditionalJoinCheckedDynamicContext(t *testing.T) {
  static run():string{return Probe.text(true,"live")+":"+Probe.text(false,9);}
  }`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	conditionalMatchesNode(t, source, p, "Probe")

@@ -74,7 +74,7 @@ func TestRecordStorageFixtures(t *testing.T) {
 	activate := method("activate", native, ret(rt("dynamic.classView", local("input", dyn), native)))
 	activate.Static = true
 	activate.Params = []hir.Param{{Name: "input", Type: dyn}}
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "RecordShape", Structural: true, Fields: []hir.Field{{Name: "u", Type: hir.T(hir.Optional, str)}, {Name: "flag", Type: boolean}}}, {Name: "NominalRecordChild", Super: "NominalRecord"}, {Name: "NominalRecord", Fields: []hir.Field{{Name: "u", Type: hir.T(hir.Optional, str)}, {Name: "flag", Type: boolean}}}, {Name: "Records", Methods: []*hir.Method{m, required, activate}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "RecordShape", Structural: true, Fields: []hir.Field{{Name: "u", Type: hir.T(hir.Optional, str)}, {Name: "flag", Type: boolean}}}, {Name: "NominalRecordChild", Super: "NominalRecord"}, {Name: "NominalRecord", Fields: []hir.Field{{Name: "u", Type: hir.T(hir.Optional, str)}, {Name: "flag", Type: boolean}}}, {Name: "Records", Methods: []*hir.Method{m, required, activate}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

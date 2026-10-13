@@ -65,7 +65,7 @@ func TestSparseStorageFixtures(t *testing.T) {
 	fill.List = append(fill.List, ret(binary("&&", has(r, 0), binary("&&", has(r, 1), has(r, 2), boolean), boolean)))
 	back := method("backwards", boolean, fill)
 	back.Static = true
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "SparseNode"}, {Name: "SparseStorage", Methods: []*hir.Method{m, back}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "SparseNode"}, {Name: "SparseStorage", Methods: []*hir.Method{m, back}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
