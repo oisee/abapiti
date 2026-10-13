@@ -227,9 +227,10 @@ func TestLiveClassViewJSONNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
-		t.Fatalf("ABAP must explicitly refuse subset JSON: %v", err)
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatalf("ABAP live parsed JSON: %v", err)
 	}
+	exportLiveViewABAP(t, p, "json-live", strings.TrimSpace(string(want)), false)
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)

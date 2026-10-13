@@ -11,6 +11,8 @@ var supportedOps = map[string]bool{
 	"dynamic.recordString":  true,
 	"string.parseIntNumber": true, "number.isNaN": true,
 	"json.stringifyConfig": true,
+	"json.stringifySubset": true,
+	"json.indent":          true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
 	"dynamic.arrayView":    true,
@@ -40,7 +42,7 @@ var supportedOps = map[string]bool{
 }
 
 // Presence-sensitive arrays and native-record deletion require a Go storage ABI.
-var unsupportedOps = map[string]bool{"dynamic.delete": true, "json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
+var unsupportedOps = map[string]bool{"dynamic.delete": true, "json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "number.ceil": true, "array.has": true, "array.delete": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

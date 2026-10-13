@@ -18,6 +18,7 @@ type emitter struct {
 	liveClasses     map[string]bool
 	constructorArgs bool
 	configJSON      bool
+	subsetJSONRoots []hir.Type
 	promiseUsed     bool
 	p               *hir.Program
 	names           *hir.Names
@@ -2096,6 +2097,26 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "json.stringifySubset":
+		if !b.e.jsonSubsetType(x.X.Type) {
+			b.e.refuse(fmt.Errorf("node %d (%s): json.stringifySubset ABAP own-property order/toJSON is unproven for %s", x.ID, x.Source, x.X.Type))
+			return
+		}
+		b.e.configJSON = true
+		b.e.subsetJSONRoots = append(b.e.subsetJSONRoots, x.X.Type)
+		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))
+		b.line("CREATE OBJECT " + w + ".")
+		b.line(n + " = " + w + "->" + b.e.name("json.write.subset."+x.X.Type.String()) + "( " + a + " ).")
+		// JSON.stringify(undefined/function) has no string result. The HIR
+		// string ABI cannot represent it, so refuse rather than return empty.
+		b.line("IF " + n + " IS INITIAL.")
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.RegistryJSONSubsetError") + ".")
+		b.line("ENDIF.")
+		return
+	case "json.indent":
+		b.e.jsonIndentRuntime()
+		b.line(n + " = " + b.e.name("runtime.jsonIndent") + "=>format( p0 = " + a + " p1 = " + args[0] + " ).")
+		return
 	case "json.stringifyConfig":
 		b.e.configJSON = true
 		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))

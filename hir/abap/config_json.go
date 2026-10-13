@@ -186,18 +186,22 @@ ENDMETHOD.
 	}
 	sort.Strings(containerKeys)
 	declared := map[string]bool{}
-	var write func(hir.Type) string
-	write = func(t hir.Type) string {
-		method := e.name("json.write." + t.String())
-		if declared[t.String()] {
+	var write func(hir.Type, bool) string
+	write = func(t hir.Type, subset bool) string {
+		key := t.String()
+		if subset {
+			key = "subset." + key
+		}
+		method := e.name("json.write." + key)
+		if declared[key] {
 			return method
 		}
-		declared[t.String()] = true
+		declared[key] = true
 		fmt.Fprintf(&declarations, "METHODS %s IMPORTING p0 TYPE %s RETURNING VALUE(result) TYPE string.\n", method, e.typ(t))
 		var b strings.Builder
 		line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
 		line("METHOD %s.", method)
-		call := func(t hir.Type, v string) string { return write(t) + "( " + v + " )" }
+		call := func(t hir.Type, v string) string { return write(t, subset) + "( " + v + " )" }
 		fail := func() { line("RAISE EXCEPTION TYPE %s.", exc) }
 		if t.IsRef() || t.Kind == hir.Dynamic || t.Kind == hir.Optional {
 			line("IF p0 IS NOT BOUND.\nRETURN.\nENDIF.")
@@ -239,14 +243,88 @@ ENDMETHOD.
 			}
 			line("IF text IS INITIAL.\ntext = `null`.\nENDIF.\nCONCATENATE result comma text INTO result RESPECTING BLANKS.\ncomma = `,`.\nENDWHILE.\nCONCATENATE result `]` INTO result.\nleave( p0 ).")
 		case hir.OrderedMap:
+			if subset {
+				fail() // HIR map storage alone cannot distinguish a record from ES Map.
+				break
+			}
 			if t.Args[0].Kind != hir.String {
 				fail()
 				break
 			}
 			line("enter( p0 ).\nDATA graph TYPE REF TO %s.\nDATA row TYPE %s=>entry.\nDATA value TYPE REF TO %s.\nDATA text TYPE string.\nCREATE OBJECT graph.\ngraph->tag = %s=>tag_object.", dyn, e.name("runtime."+t.String()), dyn, dyn)
-			line("LOOP AT p0->entries INTO row.\ntext = %s.\nIF text IS NOT INITIAL.\nvalue = %s=>parse( text ).\ngraph->put( p0 = row-k p1 = value ).\nENDIF.\nENDLOOP.\nresult = %s.\nleave( p0 ).", call(t.Args[1], "row-v"), e.name("runtime.jsonSubset"), call(hir.T(hir.Dynamic), "graph"))
+			line("LOOP AT p0->entries INTO row.")
+			line("text = %s.\nIF text IS NOT INITIAL.\nvalue = %s=>parse( text ).\ngraph->put( p0 = row-k p1 = value ).\nENDIF.\nENDLOOP.\nresult = %s.\nleave( p0 ).", call(t.Args[1], "row-v"), e.name("runtime.jsonSubset"), call(hir.T(hir.Dynamic), "graph"))
+		case hir.ClassValue:
+			// Constructor descriptors are functions: omit properties, null array slots.
+			if !subset {
+				fail()
+			}
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
+			if subset {
+				if c == nil {
+					fail()
+					break
+				}
+				hasToJSON := false
+				for parent := c; parent != nil; parent = e.classBy(parent.Super) {
+					for _, m := range parent.Methods {
+						hasToJSON = hasToJSON || m.Name == "toJSON"
+					}
+				}
+				if hasToJSON {
+					fail()
+					break
+				}
+				for parent := c; parent != nil; parent = e.classBy(parent.Super) {
+					for _, field := range parent.Fields {
+						if field.Static || field.Name != "toJSON" {
+							continue
+						}
+						base := field.Type
+						for base.Kind == hir.Optional {
+							base = base.Args[0]
+						}
+						value := "p0->" + e.member(field.Name)
+						if base.Kind == hir.Dynamic || base.Kind == hir.ClassValue {
+							line("IF %s IS BOUND.", value)
+							if base.Kind == hir.Dynamic {
+								line("IF %s->tag = %s=>tag_class.", value, dyn)
+							}
+							fail()
+							if base.Kind == hir.Dynamic {
+								line("ENDIF.")
+							}
+							line("ENDIF.")
+						}
+					}
+				}
+				if e.liveClasses[c.Name] {
+					line("IF p0->%s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", e.name("view.source"), call(hir.T(hir.Dynamic), "p0->"+e.name("view.source")))
+				}
+				if !e.materialized[c.Name] {
+					fail()
+					break
+				}
+				source := "p0->" + e.name("builtin.materializedSource")
+				line("IF %s IS NOT BOUND.", source)
+				fail()
+				line("ENDIF.")
+				line("enter( p0 ).\nDATA graph TYPE REF TO %s.\nDATA child TYPE REF TO %s.\nDATA row TYPE %s=>entry.\nDATA text TYPE string.\nDATA added TYPE i.\nCREATE OBJECT graph.\ngraph->tag = %s=>tag_object.", dyn, dyn, dyn, dyn)
+				line("LOOP AT %s->entries INTO row.\nCASE row-k.", source)
+				for _, field := range c.Fields {
+					line("WHEN `%s`.\ntext = %s.\nCLEAR child.\nIF text IS NOT INITIAL.\nchild = %s=>parse( text ).\nENDIF.", strings.ReplaceAll(field.Name, "`", "``"), call(field.Type, "p0->"+e.member(field.Name)), e.name("runtime.jsonSubset"))
+				}
+				line("WHEN OTHERS.\nchild = row-v.\nENDCASE.\ngraph->put( p0 = row-k p1 = child ).\nENDLOOP.")
+				for _, field := range c.Fields {
+					line("READ TABLE %s->entries WITH KEY k = `%s` TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\ntext = %s.\nIF text IS NOT INITIAL.\nadded = added + 1.\nchild = %s=>parse( text ).\ngraph->put( p0 = `%s` p1 = child ).\nENDIF.\nENDIF.", source, strings.ReplaceAll(field.Name, "`", "``"), call(field.Type, "p0->"+e.member(field.Name)), e.name("runtime.jsonSubset"), strings.ReplaceAll(field.Name, "`", "``"))
+				}
+				line("IF added > 1.")
+				fail()
+				line("ENDIF.")
+				line("result = %s.\nleave( p0 ).", call(hir.T(hir.Dynamic), "graph"))
+				break
+			}
 			if c == nil {
 				fail()
 				break
@@ -306,7 +384,17 @@ ENDMETHOD.
 			line("CASE p0->tag.\nWHEN %s=>tag_string.\nresult = quote( p0->sval ).\nWHEN %s=>tag_number.\nresult = number( p0->nval ).\nWHEN %s=>tag_boolean.", dyn, dyn, dyn)
 			line("IF p0->bval = abap_true.\nresult = `true`.\nELSE.\nresult = `false`.\nENDIF.\nWHEN %s=>tag_null.\nresult = `null`.\nWHEN %s=>tag_array.", dyn, dyn)
 			line("enter( p0 ).\nDATA itemidx TYPE i.\nDATA childref TYPE REF TO object.\nresult = `[`.\nWHILE itemidx < lines( p0->items ).\nitemidx = itemidx + 1.\nREAD TABLE p0->items INDEX itemidx INTO childref.\nchild ?= childref.\ntext = %s.\nIF text IS INITIAL.\ntext = `null`.\nENDIF.\nCONCATENATE result comma text INTO result RESPECTING BLANKS.\ncomma = `,`.\nENDWHILE.\nCONCATENATE result `]` INTO result.\nleave( p0 ).", call(t, "child"))
-			line("WHEN %s=>tag_object.\nenter( p0 ).\nLOOP AT p0->entries INTO row.\nCLEAR canonical.\nIF row-k CO `0123456789` AND row-k IS NOT INITIAL AND strlen( row-k ) <= 10.\nidx = row-k.\ncanonical = |{ idx }|.\nENDIF.\nIF canonical IS NOT INITIAL AND canonical = row-k AND idx < 4294967295.\nindexed_row-idx = idx.\nindexed_row-row = row.\nAPPEND indexed_row TO indexed.\nELSE.\nAPPEND row TO rest.\nENDIF.\nENDLOOP.\nSORT indexed BY idx.\nLOOP AT indexed INTO indexed_row.\nAPPEND indexed_row-row TO ordered.\nENDLOOP.\nAPPEND LINES OF rest TO ordered.\nresult = `{`.", dyn)
+			if subset {
+				// A function-valued own toJSON is invoked before enumeration
+				// by JSON.stringify. This runtime has no certified call ABI.
+				line("WHEN %s=>tag_object.", dyn)
+				line("child = p0->get( `toJSON` ).\nIF child IS BOUND.\nIF child->tag = %s=>tag_class.", dyn)
+				fail()
+				line("ENDIF.\nENDIF.")
+			} else {
+				line("WHEN %s=>tag_object.", dyn)
+			}
+			line("enter( p0 ).\nLOOP AT p0->entries INTO row.\nCLEAR canonical.\nIF row-k CO `0123456789` AND row-k IS NOT INITIAL AND strlen( row-k ) <= 10.\nidx = row-k.\ncanonical = |{ idx }|.\nENDIF.\nIF canonical IS NOT INITIAL AND canonical = row-k AND idx < 4294967295.\nindexed_row-idx = idx.\nindexed_row-row = row.\nAPPEND indexed_row TO indexed.\nELSE.\nAPPEND row TO rest.\nENDIF.\nENDLOOP.\nSORT indexed BY idx.\nLOOP AT indexed INTO indexed_row.\nAPPEND indexed_row-row TO ordered.\nENDLOOP.\nAPPEND LINES OF rest TO ordered.\nresult = `{`.")
 			line("LOOP AT ordered INTO row.\ntext = %s.\nIF text IS INITIAL.\nCONTINUE.\nENDIF.\nkey = quote( row-k ).\nCONCATENATE result comma key `:` text INTO result RESPECTING BLANKS.\ncomma = `,`.\nENDLOOP.\nCONCATENATE result `}` INTO result.\nleave( p0 ).", call(t, "row-v"))
 			line("WHEN %s=>tag_ref.", dyn)
 			// Most-derived matches precede bases; casts work on ABAP 7.02.
@@ -320,7 +408,11 @@ ENDMETHOD.
 			}
 			sort.SliceStable(classes, func(i, j int) bool { return depth(classes[i]) > depth(classes[j]) })
 			for _, c := range classes {
-				if _, ok := configJSONOrder(e, c); !ok {
+				if subset {
+					if !e.jsonSubsetType(hir.Ref(c.Name)) {
+						continue
+					}
+				} else if _, ok := configJSONOrder(e, c); !ok {
 					continue
 				}
 				local := e.name("json.local." + c.Name)
@@ -348,10 +440,13 @@ ENDMETHOD.
 	// Register roots and tagged references; recursively register field types.
 	for _, c := range e.p.Classes {
 		if _, ok := configJSONOrder(e, c); ok {
-			write(hir.Ref(c.Name))
+			write(hir.Ref(c.Name), false)
 		}
 	}
-	write(hir.T(hir.Dynamic))
+	write(hir.T(hir.Dynamic), false)
+	for _, root := range e.subsetJSONRoots {
+		write(root, true)
+	}
 	src := strings.NewReplacer("$W", name, "$E", exc).Replace(configJSONCommon)
 	src = strings.Replace(src, "$METHODS", declarations.String(), 1)
 	src = strings.Replace(src, "$IMPLEMENTATIONS", methods.String(), 1)

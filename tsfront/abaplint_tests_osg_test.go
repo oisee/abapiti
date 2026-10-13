@@ -24,13 +24,13 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	// Classview admits checkedClassView and newArgs; the M0 catalogue had 26.
-	if len(gap.UnsupportedCatalogue) != 24 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	// Classview and JSON admit four operations since the 26-entry M0 catalogue.
+	if len(gap.UnsupportedCatalogue) != 22 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {
-		if op == "object.checkedClassView" || op == "classvalue.newArgs" {
-			t.Fatalf("classview operation still catalogue-refused: %s", op)
+		if op == "object.checkedClassView" || op == "classvalue.newArgs" || op == "json.stringifySubset" || op == "json.indent" {
+			t.Fatalf("implemented operation still catalogue-refused: %s", op)
 		}
 	}
 	if len(gap.Refusals) != 1 || !strings.Contains(gap.Refusals[0].Reason, "non-finite Number") {
