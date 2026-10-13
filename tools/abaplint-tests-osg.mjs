@@ -9,7 +9,8 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import {snapshotKey, readSnapshot, writeSnapshot, externalPath} from './osg-harness-cache.mjs';
 import {waitForResources} from './osg-harness-resources.mjs';
-import {resumeRunner, wireCheckpoints, checkpointPrefix} from './osg-runner-resume.mjs';
+import {resumeRunner, wireCheckpoints} from './osg-runner-resume.mjs';
+import {runnerMain} from './osg-runner-main.mjs';
 import {protectTestBoundaries} from './osgo-test-boundaries.mjs';
 import {adaptTestRegex} from './osgo-test-regex.mjs';
 
@@ -74,6 +75,7 @@ if (cacheRoot) {
   bridge:readFileSync(new URL(import.meta.url),'utf8'),
   cache:readFileSync(new URL('./osg-harness-cache.mjs',import.meta.url),'utf8'),
   resume:readFileSync(new URL('./osg-runner-resume.mjs',import.meta.url),'utf8'),
+  main:readFileSync(new URL('./osg-runner-main.mjs',import.meta.url),'utf8'),
   // Invocation-local IR/Go adaptations change the emitted frontend output.
   boundaries:readFileSync(new URL('./osgo-test-boundaries.mjs',import.meta.url),'utf8'),
   regex:readFileSync(new URL('./osgo-test-regex.mjs',import.meta.url),'utf8'),
@@ -134,41 +136,7 @@ else {
   refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
   started=performance.now();
   writeFileSync(generated['zz_generated.go'],wireCheckpoints(protectTestBoundaries(emitGo(program,'main',null,true),program,{resume:true})));
-  writeFileSync(generated['main.go'],`package main
-import("encoding/json";"fmt";"os";"strconv";"runtime";"strings";"osg/gogen/abap")
-var driverNames map[string]struct{ID string \x60json:"id"\x60}
-func driverExceptionName(class string) string {
- if entry, ok := driverNames[class]; ok { return entry.ID }
- return class
-}
-func abapitiCheckpoint(value string){fmt.Fprintln(os.Stderr,${JSON.stringify(checkpointPrefix)}+value)}
-func abapitiHostLocation() string {
- pcs:=make([]uintptr,256);n:=runtime.Callers(2,pcs)
- frames:=runtime.CallersFrames(pcs[:n]);location:="unknown host location";afterPanic:=false
- for {f,more:=frames.Next()
-  if f.Function=="runtime.gopanic" {afterPanic=true} else if afterPanic && !strings.HasPrefix(f.Function,"runtime.") {
-   location=fmt.Sprintf("%s:%d",f.File,f.Line);afterPanic=false
-  }
-  if !more {break}
- }
- return location
-}
-func main(){
- // Caller-supplied names keep cached binaries independent of fixture paths.
- if len(os.Args)!=2{panic("usage: abaplint-tests-osg NAMES_JSON")}
- names,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)}
- if err=json.Unmarshal(names,&driverNames);err!=nil{panic(err)}
- defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],abapitiHostLocation());os.Exit(2)}}()
- start,err:=strconv.ParseInt(os.Getenv("ABAPITI_OSG_START_INDEX"),10,32)
- if err!=nil || start<1 {panic("invalid OSG start index")}
- text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{},int32(start),os.Getenv("ABAPITI_OSG_SKIP_INIT"))
- var report struct {Failed int \x60json:"failed"\x60; Trapped int \x60json:"trapped"\x60; AsyncPending int \x60json:"asyncPending"\x60; Initialization []struct{Status string \x60json:"status"\x60} \x60json:"initialization"\x60}
- if err:=json.Unmarshal([]byte(text),&report);err!=nil{panic(err)}
- fmt.Println(text)
- refusedInit:=false;for _,r:=range report.Initialization{if r.Status=="failed" || r.Status=="trapped"{refusedInit=true}}
- if report.Failed+report.Trapped+report.AsyncPending>0 || refusedInit{os.Exit(1)}
-}
-`);
+  writeFileSync(generated['main.go'],runnerMain);
   timingMs.emit=Math.round(performance.now()-started);
   if(cacheRoot)writeSnapshot(cacheRoot,frontKey,generated,{refusals,regexAdapter});
   // Release gogen's registry/IR before the memory-heavy Go compiler starts.
