@@ -1187,11 +1187,18 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if t.Kind == hir.RegExp {
 			e.regexpUsed = true
+			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok && regexHasClassComplement(raw) {
+				e.refuse(fmt.Errorf("JavaScript regexp %q: \\S inside a character class is not expressible on the legacy POSIX path", raw))
+			}
 			js := regexNeedsJS(x) || e.execUsed && regexMayHaveState(x)
 			original := b.value(x.Args[0], hir.T(hir.String))
 			pattern, reject := original, ""
 			if raw, ok := x.Args[0].Value.(string); !js && x.Args[0].Kind == hir.Lit && ok {
-				translated, excluded := regexPattern(raw)
+				flags := ""
+				if len(x.Args) > 1 {
+					flags, _ = x.Args[1].Value.(string)
+				}
+				translated, excluded := regexPattern(raw, flags)
 				if translated != raw || excluded != "" {
 					pattern = b.temp(hir.T(hir.String))
 					b.stringLit(pattern, translated)

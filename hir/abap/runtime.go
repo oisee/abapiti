@@ -521,6 +521,10 @@ DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
 DATA escaped TYPE abap_bool.
+DATA whitespace TYPE string.
+DATA dot_class TYPE string.
+whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
+dot_class = ` + regexABAPString(jsDotClass) + `.
 me->flags = flags.
 n = strlen( pattern ).
 WHILE i < n.
@@ -585,9 +589,23 @@ WHILE i < n.
         ELSE.
           CONCATENATE posix '[^0-9]' INTO posix RESPECTING BLANKS.
         ENDIF.
+      WHEN 's'.
+        IF in_class = abap_true.
+          CONCATENATE posix whitespace INTO posix RESPECTING BLANKS.
+        ELSE.
+          CONCATENATE posix '[' whitespace ']' INTO posix RESPECTING BLANKS.
+        ENDIF.
+      WHEN 'S'.
+        IF in_class = abap_true.
+          RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+        ELSE.
+          CONCATENATE posix '[^' whitespace ']' INTO posix RESPECTING BLANKS.
+        ENDIF.
       WHEN OTHERS.
         CONCATENATE posix '\' c INTO posix RESPECTING BLANKS.
     ENDCASE.
+  ELSEIF in_class = abap_false AND c = '.' AND flags NA 's'.
+    CONCATENATE posix dot_class INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '^' AND flags NA 'm'.
     CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
