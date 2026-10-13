@@ -21,23 +21,23 @@ type Node struct {
 	Children   []*Node `json:"children,omitempty"`
 
 	// For specific node types
-	Params     []*Node `json:"params,omitempty"`
-	ReturnType string  `json:"returnType,omitempty"`
-	Body       []*Node `json:"body,omitempty"`
-	Init       *Node   `json:"init,omitempty"`
-	Condition  *Node   `json:"condition,omitempty"`
-	Then       *Node   `json:"then,omitempty"`
-	Else       *Node   `json:"else,omitempty"`
-	Left       *Node   `json:"left,omitempty"`
-	Right      *Node   `json:"right,omitempty"`
-	Operator   string  `json:"operator,omitempty"`
-	Object     *Node   `json:"object,omitempty"`
-	Property   string  `json:"property,omitempty"`
-	Arguments  []*Node `json:"arguments,omitempty"`
-	Expression *Node   `json:"expression,omitempty"`
-	Increment  *Node   `json:"increment,omitempty"`
-	Statements []*Node `json:"statements,omitempty"`
-	ElementType string `json:"elementType,omitempty"`
+	Params      []*Node `json:"params,omitempty"`
+	ReturnType  string  `json:"returnType,omitempty"`
+	Body        []*Node `json:"body,omitempty"`
+	Init        *Node   `json:"init,omitempty"`
+	Condition   *Node   `json:"condition,omitempty"`
+	Then        *Node   `json:"then,omitempty"`
+	Else        *Node   `json:"else,omitempty"`
+	Left        *Node   `json:"left,omitempty"`
+	Right       *Node   `json:"right,omitempty"`
+	Operator    string  `json:"operator,omitempty"`
+	Object      *Node   `json:"object,omitempty"`
+	Property    string  `json:"property,omitempty"`
+	Arguments   []*Node `json:"arguments,omitempty"`
+	Expression  *Node   `json:"expression,omitempty"`
+	Increment   *Node   `json:"increment,omitempty"`
+	Statements  []*Node `json:"statements,omitempty"`
+	ElementType string  `json:"elementType,omitempty"`
 }
 
 // TranspileResult holds the generated ABAP code.
@@ -59,6 +59,15 @@ func Transpile(astJSON []byte, prefix string) (*TranspileResult, error) {
 		typeMap: defaultTypeMap(),
 	}
 
+	t.constructors = make(map[string][]*Node)
+	for _, child := range root.Children {
+		for _, member := range child.Children {
+			if member.Kind == "Constructor" {
+				t.constructors[child.Name] = member.Params
+			}
+		}
+	}
+
 	for _, child := range root.Children {
 		switch child.Kind {
 		case "ClassDeclaration":
@@ -73,33 +82,32 @@ func Transpile(astJSON []byte, prefix string) (*TranspileResult, error) {
 }
 
 type transpiler struct {
-	prefix  string
-	classes map[string]string
-	typeMap map[string]string // TS type → ABAP type
-	sb      strings.Builder
-	indent  int
+	prefix       string
+	classes      map[string]string
+	typeMap      map[string]string // TS type → ABAP type
+	sb           strings.Builder
+	indent       int
+	constructors map[string][]*Node
+	attributes   map[string]string
+	variables    map[string]string
+	declarations map[string]int
 }
 
 func defaultTypeMap() map[string]string {
 	return map[string]string{
-		"number":  "i",
-		"string":  "string",
-		"boolean": "abap_bool",
-		"void":    "",
-		"any":     "REF TO data",
+		"number":    "i",
+		"string":    "string",
+		"boolean":   "abap_bool",
+		"void":      "",
+		"any":       "REF TO data",
 		"undefined": "REF TO data",
 	}
 }
 
 func (t *transpiler) mapType(tsType string) string {
-	// Array types: Token[] → TABLE OF REF TO zcl_token
+	// Method parameters require a named table type.
 	if strings.HasSuffix(tsType, "[]") {
-		elemType := tsType[:len(tsType)-2]
-		abapElem := t.mapType(elemType)
-		if strings.HasPrefix(abapElem, "REF TO") {
-			return "TABLE OF " + abapElem
-		}
-		return "TABLE OF " + abapElem
+		return "tt_" + strings.ToLower(strings.TrimSuffix(tsType, "[]"))
 	}
 
 	// Built-in types
@@ -127,6 +135,7 @@ func (t *transpiler) line(format string, args ...any) {
 func (t *transpiler) transpileClass(node *Node) {
 	className := t.abapClassName(node.Name)
 	t.sb.Reset()
+	t.attributes = make(map[string]string)
 
 	// Collect members by visibility
 	var publicMethods, privateMethods []*Node
@@ -159,6 +168,24 @@ func (t *transpiler) transpileClass(node *Node) {
 	// PUBLIC SECTION
 	t.line("PUBLIC SECTION.")
 	t.indent++
+	arrayTypes := make(map[string]bool)
+	for _, member := range node.Children {
+		for _, typ := range append([]string{member.Type, member.ReturnType}, parameterTypes(member.Params)...) {
+			if strings.HasSuffix(typ, "[]") && !arrayTypes[typ] {
+				t.line("TYPES %s TYPE STANDARD TABLE OF %s WITH DEFAULT KEY.", t.mapType(typ), t.mapType(strings.TrimSuffix(typ, "[]")))
+				arrayTypes[typ] = true
+			}
+		}
+		if member.Kind == "PropertyDeclaration" {
+			name := "mv_" + strings.ToLower(member.Name)
+			if strings.HasSuffix(member.Type, "[]") {
+				name = "mt_" + strings.ToLower(member.Name)
+			} else if strings.HasPrefix(t.mapType(member.Type), "REF TO") {
+				name = "mo_" + strings.ToLower(member.Name)
+			}
+			t.attributes[member.Name] = name
+		}
+	}
 	if constructor != nil {
 		t.emitMethodSignature("constructor", constructor.Params, "")
 	}
@@ -214,7 +241,7 @@ func (t *transpiler) emitMethodSignature(name string, params []*Node, returnType
 		var ps []string
 		for _, p := range params {
 			abapType := t.mapType(p.Type)
-			ps = append(ps, fmt.Sprintf("iv_%s TYPE %s", strings.ToLower(p.Name), abapType))
+			ps = append(ps, fmt.Sprintf("VALUE(iv_%s) TYPE %s", strings.ToLower(p.Name), abapType))
 		}
 		parts = append(parts, "IMPORTING "+strings.Join(ps, " "))
 	}
@@ -231,16 +258,7 @@ func (t *transpiler) emitMethodSignature(name string, params []*Node, returnType
 
 func (t *transpiler) emitAttribute(node *Node) {
 	abapType := t.mapType(node.Type)
-	name := "mv_" + strings.ToLower(node.Name)
-	if strings.HasPrefix(abapType, "TABLE OF") {
-		name = "mt_" + strings.ToLower(node.Name)
-		t.line("DATA %s TYPE %s.", name, abapType)
-	} else if strings.HasPrefix(abapType, "REF TO") {
-		name = "mo_" + strings.ToLower(node.Name)
-		t.line("DATA %s TYPE %s.", name, abapType)
-	} else {
-		t.line("DATA %s TYPE %s.", name, abapType)
-	}
+	t.line("DATA %s TYPE %s.", t.attributes[node.Name], abapType)
 }
 
 // --- Method Body Transpilation ---
@@ -248,6 +266,11 @@ func (t *transpiler) emitAttribute(node *Node) {
 func (t *transpiler) emitMethod(name string, params []*Node, returnType string, body []*Node) {
 	t.line("METHOD %s.", name)
 	t.indent++
+	t.variables = make(map[string]string)
+	t.declarations = make(map[string]int)
+	for _, param := range params {
+		t.variables[param.Name] = "iv_" + strings.ToLower(param.Name)
+	}
 
 	for _, stmt := range body {
 		t.emitStatement(stmt)
@@ -255,6 +278,14 @@ func (t *transpiler) emitMethod(name string, params []*Node, returnType string, 
 
 	t.indent--
 	t.line("ENDMETHOD.")
+}
+
+func parameterTypes(params []*Node) []string {
+	types := make([]string, len(params))
+	for i, param := range params {
+		types[i] = param.Type
+	}
+	return types
 }
 
 func (t *transpiler) emitStatement(node *Node) {
@@ -280,6 +311,9 @@ func (t *transpiler) emitStatement(node *Node) {
 			t.line("RETURN.")
 		}
 	case "IfStatement":
+		saved := t.variables
+		t.variables = copyVariables(saved)
+		defer func() { t.variables = saved }()
 		t.line("IF %s.", t.emitExpr(node.Condition))
 		t.indent++
 		if node.Then != nil {
@@ -288,6 +322,7 @@ func (t *transpiler) emitStatement(node *Node) {
 			}
 		}
 		if node.Else != nil {
+			t.variables = copyVariables(saved)
 			t.indent--
 			t.line("ELSE.")
 			t.indent++
@@ -310,6 +345,9 @@ func (t *transpiler) emitStatement(node *Node) {
 		t.line("ENDIF.")
 
 	case "WhileStatement":
+		saved := t.variables
+		t.variables = copyVariables(saved)
+		defer func() { t.variables = saved }()
 		t.line("WHILE %s.", t.emitExpr(node.Condition))
 		t.indent++
 		for _, s := range node.Body {
@@ -347,6 +385,14 @@ func (t *transpiler) emitStatement(node *Node) {
 	}
 }
 
+func copyVariables(vars map[string]string) map[string]string {
+	result := make(map[string]string, len(vars))
+	for name, value := range vars {
+		result[name] = value
+	}
+	return result
+}
+
 func (t *transpiler) emitVarDecl(node *Node) {
 	name := "lv_" + strings.ToLower(node.Name)
 	abapType := "i" // default
@@ -354,17 +400,25 @@ func (t *transpiler) emitVarDecl(node *Node) {
 		abapType = t.mapType(node.Type)
 	}
 
-	if strings.HasPrefix(abapType, "TABLE OF") {
+	if strings.HasSuffix(node.Type, "[]") {
 		name = "lt_" + strings.ToLower(node.Name)
 	} else if strings.HasPrefix(abapType, "REF TO") {
 		name = "lo_" + strings.ToLower(node.Name)
 	}
 
-	if node.Init != nil {
-		initExpr := t.emitExpr(node.Init)
+	t.declarations[name]++
+	if count := t.declarations[name]; count > 1 {
+		name = fmt.Sprintf("%s_%d", name, count)
+	}
+	initExpr := t.emitExpr(node.Init)
+	t.variables[node.Name] = name
+	if node.Type == "" && node.Init != nil {
 		t.line("DATA(%s) = %s.", name, initExpr)
-	} else {
-		t.line("DATA %s TYPE %s.", name, abapType)
+		return
+	}
+	t.line("DATA %s TYPE %s.", name, abapType)
+	if node.Init != nil {
+		t.line("%s = %s.", name, initExpr)
 	}
 }
 
@@ -380,10 +434,9 @@ func (t *transpiler) emitExpr(node *Node) string {
 		return node.Value
 
 	case "StringLiteral":
-		// TS: "hello" or 'hello' → ABAP: 'hello'
-		val := node.Value
-		val = strings.ReplaceAll(val, "'", "''") // escape single quotes
-		return "'" + val + "'"
+		// String templates preserve whitespace and encode control characters.
+		val := strings.NewReplacer("\\", "\\\\", "|", "\\|", "{", "\\{", "}", "\\}", "\n", "\\n", "\r", "\\r", "\t", "\\t").Replace(node.Value)
+		return "|" + val + "|"
 
 	case "BooleanLiteral":
 		if node.Value == "true" {
@@ -435,7 +488,11 @@ func (t *transpiler) emitExpr(node *Node) string {
 		if len(args) > 0 {
 			var ps []string
 			for i, a := range args {
-				ps = append(ps, fmt.Sprintf("iv_p%d = %s", i+1, a))
+				param := fmt.Sprintf("p%d", i+1)
+				if params := t.constructors[node.Name]; i < len(params) {
+					param = strings.ToLower(params[i].Name)
+				}
+				ps = append(ps, fmt.Sprintf("iv_%s = %s", param, a))
 			}
 			return fmt.Sprintf("NEW %s( %s )", className, strings.Join(ps, " "))
 		}
@@ -473,6 +530,9 @@ func (t *transpiler) mapIdentifier(name string) string {
 	}
 
 	// Check if it's a local variable or parameter
+	if mapped, ok := t.variables[name]; ok {
+		return mapped
+	}
 	return "lv_" + strings.ToLower(name)
 }
 
@@ -500,7 +560,7 @@ func (t *transpiler) mapOperator(op string) string {
 func (t *transpiler) mapPropertyAccess(obj, prop string) string {
 	// this.x → me->mv_x
 	if obj == "me" {
-		return "me->mv_" + strings.ToLower(prop)
+		return "me->" + t.attributes[prop]
 	}
 	// obj.length → strlen( obj ) or lines( obj )
 	if prop == "length" {

@@ -1,0 +1,354 @@
+{
+  "date": "2026-10-13",
+  "compilerCommit": "9f05b8457723c76f74c35b2d489a3978086dfed6",
+  "mainCommit": "08dd0e2e0bcd8be91b79136d8bdd5153b9cc3eda",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "368baab28111a072c3f5779a0e07d259305f836f",
+  "mergeOrder": [
+    {
+      "input": "origin/main",
+      "commit": "08dd0e2",
+      "merge": "10f31eb"
+    },
+    {
+      "input": "origin/osgo-splitargs",
+      "commit": "371ca32",
+      "merge": "5c2220c"
+    },
+    {
+      "input": "origin/perf/abap-template-literals",
+      "commit": "ebd8e34",
+      "merge": "d84d1f3"
+    }
+  ],
+  "gates": {
+    "build": "PASS",
+    "vet": "PASS",
+    "short": {
+      "status": "PASS",
+      "flags": "-short -p 4 -count=1",
+      "tsfrontSeconds": 261.067
+    },
+    "collectingHelperGuard": "PASS",
+    "grace": {
+      "status": "PASS",
+      "goldenRegenerated": false
+    },
+    "runtimeOpsEveryBackend": "PASS",
+    "lint": {
+      "status": "PASS",
+      "newIssues": 0,
+      "canary": "5/5",
+      "version": "2.13.2"
+    },
+    "fixtureCompile": {
+      "status": "PASS",
+      "driver": ".github/ci/abap-fixture-compile.sh",
+      "emissions": 509,
+      "uniquePrograms": 403,
+      "buildLogBytes": 0
+    },
+    "defaultGoDiff": {
+      "status": "PASS",
+      "files": 9,
+      "diffBytes": 0,
+      "includesExecutable": true
+    }
+  },
+  "measurementEnvironment": {
+    "GOTOOLCHAIN": "go1.26.0",
+    "GOMAXPROCS": 4,
+    "GOFLAGS": "-buildvcs=false -gcflags=all=-dwarf=false '-ldflags=-s -w'",
+    "workers": 1,
+    "GOGC": 50,
+    "GOMEMLIMIT": "32GiB",
+    "nodeHeapMiB": 32768,
+    "oracle": "fresh original Node for each shard"
+  },
+  "shards": [
+    {
+      "name": "abap/lexer",
+      "reportReturned": true,
+      "nodeActive": 200,
+      "nodePending": 0,
+      "creditedPass": 200,
+      "failed": 0,
+      "trapped": 0,
+      "registered": 200,
+      "unregisteredOrNoReport": 0,
+      "asyncPending": 0,
+      "accountingExit": 0,
+      "infrastructureFailure": null,
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 146161,
+          "emit": 15023,
+          "goBuild": 170392,
+          "run": 65
+        },
+        "status": 0,
+        "envelope": {
+          "files": 2361,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "staticGate": {
+        "Files": 1545,
+        "Classes": 2109,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0
+      },
+      "nonfiniteLiteralSites": 0,
+      "unsupportedRuntimeSites": [],
+      "emitterRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ],
+      "trapMessages": []
+    },
+    {
+      "name": "abap",
+      "reportReturned": false,
+      "nodeActive": 216,
+      "nodePending": 4,
+      "creditedPass": 0,
+      "failed": null,
+      "trapped": null,
+      "registered": null,
+      "unregisteredOrNoReport": 216,
+      "asyncPending": null,
+      "accountingExit": 1,
+      "infrastructureFailure": "NOT_COMPILED in FIND PCRE: a text with line ends: PCRE's ^ $ and . around them are not measured",
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 152709,
+          "emit": 14354,
+          "goBuild": 179826,
+          "run": 158
+        },
+        "status": 2,
+        "envelope": {
+          "files": 2435,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "staticGate": {
+        "Files": 1559,
+        "Classes": 2183,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0
+      },
+      "nonfiniteLiteralSites": 0,
+      "unsupportedRuntimeSites": [],
+      "emitterRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ],
+      "trapMessages": null
+    },
+    {
+      "name": "abap/expressions",
+      "reportReturned": true,
+      "nodeActive": 107,
+      "nodePending": 0,
+      "creditedPass": 98,
+      "failed": 0,
+      "trapped": 9,
+      "registered": 107,
+      "unregisteredOrNoReport": 0,
+      "asyncPending": 0,
+      "accountingExit": 0,
+      "infrastructureFailure": null,
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 137453,
+          "emit": 12035,
+          "goBuild": 146276,
+          "run": 6377
+        },
+        "status": 1,
+        "envelope": {
+          "files": 2378,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "staticGate": {
+        "Files": 1553,
+        "Classes": 2125,
+        "Interfaces": 76,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0
+      },
+      "nonfiniteLiteralSites": 0,
+      "unsupportedRuntimeSites": [],
+      "emitterRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ],
+      "trapMessages": [
+        {
+          "message": "An exception was raised.",
+          "count": 9,
+          "shards": {
+            "abap-expressions": 9
+          },
+          "example": "An exception was raised."
+        }
+      ]
+    },
+    {
+      "name": "pretty_printer",
+      "reportReturned": true,
+      "nodeActive": 31,
+      "nodePending": 0,
+      "creditedPass": 0,
+      "failed": 0,
+      "trapped": 31,
+      "registered": 31,
+      "unregisteredOrNoReport": 0,
+      "asyncPending": 0,
+      "accountingExit": 0,
+      "infrastructureFailure": null,
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 150264,
+          "emit": 12619,
+          "goBuild": 210679,
+          "run": 1715
+        },
+        "status": 1,
+        "envelope": {
+          "files": 2341,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "staticGate": {
+        "Files": 1542,
+        "Classes": 2089,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0
+      },
+      "nonfiniteLiteralSites": 0,
+      "unsupportedRuntimeSites": [],
+      "emitterRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ],
+      "trapMessages": [
+        {
+          "message": "An exception was raised.",
+          "count": 31,
+          "shards": {
+            "pretty_printer": 31
+          },
+          "example": "An exception was raised."
+        }
+      ]
+    },
+    {
+      "name": "utils",
+      "reportReturned": true,
+      "nodeActive": 15,
+      "nodePending": 0,
+      "creditedPass": 7,
+      "failed": 0,
+      "trapped": 8,
+      "registered": 15,
+      "unregisteredOrNoReport": 0,
+      "asyncPending": 0,
+      "accountingExit": 0,
+      "infrastructureFailure": null,
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 142354,
+          "emit": 12059,
+          "goBuild": 157309,
+          "run": 495
+        },
+        "status": 1,
+        "envelope": {
+          "files": 2332,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "staticGate": {
+        "Files": 1543,
+        "Classes": 2081,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0
+      },
+      "nonfiniteLiteralSites": 0,
+      "unsupportedRuntimeSites": [],
+      "emitterRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ],
+      "trapMessages": [
+        {
+          "message": "An exception was raised.",
+          "count": 8,
+          "shards": {
+            "utils": 8
+          },
+          "example": "An exception was raised."
+        }
+      ]
+    }
+  ],
+  "completedScope": {
+    "nodeActive": 353,
+    "passed": 305,
+    "failed": 0,
+    "trapped": 48,
+    "unregistered": 0
+  },
+  "noReportScope": {
+    "nodeActive": 216,
+    "nodePending": 4,
+    "failed": null,
+    "trapped": null
+  },
+  "historicalUnregisteredTarget": {
+    "before": 288,
+    "afterCertified": false,
+    "reason": "abap returned no runner report after a native multiline-PCRE refusal"
+  },
+  "finalCodeCommit": "a8596191bf92baa92a430f428acf7ba72c7ed18a",
+  "compilerTree": "05c8e8a914dab0a53943c85bf4228cb6f3afc691",
+  "finalCodeTree": "05c8e8a914dab0a53943c85bf4228cb6f3afc691",
+  "commitMessageOnlyAmendment": true
+}

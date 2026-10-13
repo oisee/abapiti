@@ -137,6 +137,10 @@ ENDCLASS.
 		b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, serial: arraySerial}
 		row := b.rawTemp(e.typ(t.Args[0]))
 		val := b.temp(hir.T(hir.Dynamic))
+		if e.arrayViews {
+			b.line(v + "->load( ).")
+		}
+		b.line("IF " + v + "->missing IS NOT INITIAL.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
 		b.line("LOOP AT " + v + "->items INTO " + row + ".")
 		b.chaiBox(val, row, t.Args[0])
 		b.line("APPEND " + val + " TO result.\nENDLOOP.\nRETURN.")
@@ -356,6 +360,9 @@ IF p0 IS NOT BOUND.
 RAISE EXCEPTION TYPE $T.
 ENDIF.
 IF p0->tag = $D=>tag_array.
+IF p0->missing IS NOT INITIAL.
+RAISE EXCEPTION TYPE $T.
+ENDIF.
 result = p0->items.
 RETURN.
 ENDIF.

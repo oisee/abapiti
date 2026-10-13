@@ -1,0 +1,249 @@
+{
+  "schema": "abapiti-train-o3-v1",
+  "target": "TS-HA@OSGO",
+  "compilerCommit": "a8e56e8841b58b2076bbef4fdd19a2044286116a",
+  "mainCommit": "3da6606b2dbc4c93c10e90f580e25760d501b8d9",
+  "mainMeasured": false,
+  "fullStaticGapCensus": "skipped",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "368baab28111a072c3f5779a0e07d259305f836f",
+  "measurementOrder": [
+    "abap/statements",
+    "abap/lexer"
+  ],
+  "settings": {
+    "workers": 1,
+    "GOMAXPROCS": 4,
+    "GOGC": 50,
+    "GOMEMLIMIT": "32GiB",
+    "nodeHeapMiB": 32768,
+    "Go": "go1.26.0"
+  },
+  "gates": {
+    "vet": "PASS",
+    "shortTests": "PASS",
+    "shortTestPackageParallelism": 4,
+    "tsfrontShortSeconds": 191.203,
+    "graceGolden": "PASS unchanged",
+    "backendGuard": "PASS executed",
+    "lint": {
+      "newIssues": 0,
+      "canary": "5/5",
+      "version": "2.13.2",
+      "base": "origin/main"
+    },
+    "emittedFixtureCompile": {
+      "collected": 502,
+      "uniquePrograms": 396,
+      "buildLogBytes": 0
+    },
+    "defaultGoDiff": {
+      "base": "saved origin/main output at 3da6606",
+      "exit": 0,
+      "bytes": 0,
+      "filesIncludingExecutable": 9
+    }
+  },
+  "pcreRepair": {
+    "commit": "a8e56e8",
+    "reviewedPatterns": 138,
+    "JSComparisons": 3174,
+    "nativeGoComparisons": 3174,
+    "failures": 0
+  },
+  "initialStatementsInfrastructureAttempt": {
+    "compilerCommit": "5ce3f44",
+    "reason": "NOT_COMPILED in FIND PCRE: an escape RE2 reads differently or not at all is not in Go's RE2: \\x23",
+    "nodeActiveNotRun": 4962,
+    "successfulMeasurement": false,
+    "lexerStarted": false
+  },
+  "shards": [
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 433,
+      "failed": 0,
+      "trapped": 4529,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "nodeActive": {
+        "total": 4962,
+        "passed": 433,
+        "failed": 0,
+        "trapped": 4529,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 4529
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "initialization": [],
+      "failures": [],
+      "unmatched": 0,
+      "closureGate": {
+        "Files": 1828,
+        "Classes": 2367,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      },
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 161236,
+          "emit": 16000,
+          "goBuild": 257075,
+          "run": 310743
+        },
+        "status": 1,
+        "envelope": {
+          "files": 2619,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "gap": {
+        "files": 1828,
+        "nonfiniteLiteralSites": 0,
+        "unsupportedCatalogue": [
+          "string.parseFloat"
+        ],
+        "runtime": [],
+        "refusals": [
+          {
+            "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+            "sites": 1
+          }
+        ]
+      },
+      "refusalBodyImpact": {
+        "measured": true,
+        "runtime": [
+          {
+            "reason": "string.parseFloat",
+            "tests": 0
+          }
+        ],
+        "refusals": [
+          {
+            "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+            "tests": 0
+          }
+        ],
+        "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+      },
+      "topTraps": [
+        {
+          "message": "An exception was raised.",
+          "count": 4529
+        }
+      ]
+    },
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "nodeActive": {
+        "total": 200,
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "initialization": [],
+      "failures": [],
+      "unmatched": 0,
+      "closureGate": {
+        "Files": 1545,
+        "Classes": 2109,
+        "Interfaces": 75,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      },
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 178608,
+          "emit": 15705,
+          "goBuild": 233919,
+          "run": 70
+        },
+        "status": 0,
+        "envelope": {
+          "files": 2361,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "gap": {
+        "files": 1545,
+        "nonfiniteLiteralSites": 0,
+        "unsupportedCatalogue": [
+          "string.parseFloat"
+        ],
+        "runtime": [],
+        "refusals": [
+          {
+            "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+            "sites": 1
+          }
+        ]
+      },
+      "refusalBodyImpact": {
+        "measured": true,
+        "runtime": [
+          {
+            "reason": "string.parseFloat",
+            "tests": 0
+          }
+        ],
+        "refusals": [
+          {
+            "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+            "tests": 0
+          }
+        ],
+        "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+      },
+      "topTraps": []
+    }
+  ],
+  "countingRule": "Counts use only original Node-active titles; pending titles remain outside the denominator. Only the dedicated assertion marker is failed. Typed lowering/runtime refusals and other native ABAP exceptions are trapped; unsupported async/done and not-run remain separate. Infrastructure failures never manufacture test results. Refusal-body impacts may overlap and are not operation-execution counts."
+}

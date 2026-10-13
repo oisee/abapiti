@@ -1,0 +1,542 @@
+{
+  "base": "428a8d5acbd4e3be6331b01d5d9e0afc71df0dc4",
+  "upstream": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osg": "f557e12f4217addcec7834b0607234aecf9b723a",
+  "policy": "ABAPITI_INLINE=classic; original MeasureABAPTestGap; full unpruned closure",
+  "closure": {
+    "roots": 625,
+    "shards": 17,
+    "Files": 2166,
+    "Classes": 7014,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "CoverageTraps": 0,
+    "Ranked": []
+  },
+  "static": {
+    "before": {
+      "catalogueSize": 24,
+      "runtime": [
+        {
+          "reason": "json.indent",
+          "sites": 3,
+          "examples": [
+            "closure.131679.invoke:131692:23 (test/config.ts:73:39)",
+            "src/lsp/help.ts.Help.dumpDDLS:352594:67 (src/lsp/help.ts:47:41)",
+            "src/lsp/help.ts.Help.dumpInfo:352739:24 (src/lsp/help.ts:103:33)"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset",
+          "sites": 34,
+          "examples": [
+            "closure.131578.invoke:131603:38 (test/config.ts:40:44)",
+            "closure.131618.invoke:131629:7 (test/config.ts:47:44)",
+            "closure.131646.invoke:131664:29 (test/config.ts:62:44)"
+          ]
+        }
+      ],
+      "jsonRefusals": [],
+      "otherRefusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 24519 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 24519 src/objects/_dynpros.ts:27:19]",
+            "node 289998 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 289998 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 291705 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 291705 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 120468 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 120491 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 120514 test/abap/types/message.ts:23:12]"
+          ]
+        }
+      ],
+      "nonfiniteLiteralSites": 0
+    },
+    "writerBeforeOwnKeys": {
+      "catalogueSize": 22,
+      "runtime": [],
+      "jsonRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<shape.e9cac9a1f10a70fded8df3b3345d23b6746461b35e27114d3d0f13026fca6134>",
+          "sites": 1,
+          "examples": [
+            "node 352739 (src/lsp/help.ts:103:33): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<shape.e9cac9a1f10a70fded8df3b3345d23b6746461b35e27114d3d0f13026fca6134> [dumpInfo@src/lsp/help.ts:93:3; node 352739 src/lsp/help.ts:103:33]"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/_config.ts.IConfig>",
+          "sites": 23,
+          "examples": [
+            "node 118532 (test/abap/syntax/syntax_atselection.ts:24:43): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/_config.ts.IConfig> [run@test/abap/syntax/syntax_atselection.ts:11:1; node 118532 test/abap/syntax/syntax_atselection.ts:24:43]",
+            "node 131603 (test/config.ts:40:44): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/_config.ts.IConfig> [invoke@test/config.ts:28:47; node 131603 test/config.ts:40:44]",
+            "node 131629 (test/config.ts:47:44): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/_config.ts.IConfig> [invoke@test/config.ts:44:52; node 131629 test/config.ts:47:44]"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1,
+          "examples": [
+            "node 352630 (src/lsp/help.ts:57:35): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> [dumpDDLS@src/lsp/help.ts:39:3; node 352630 src/lsp/help.ts:57:35]"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/5_syntax/_reference.ts.IReferenceExtras>",
+          "sites": 1,
+          "examples": [
+            "node 350698 (src/lsp/_lookup.ts:273:45): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/5_syntax/_reference.ts.IReferenceExtras> [referenceHover@src/lsp/_lookup.ts:238:3; node 350698 src/lsp/_lookup.ts:273:45]"
+          ]
+        },
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for optional<classref<src/objects/data_definition.ts.ParsedDataDefinition>>",
+          "sites": 1,
+          "examples": [
+            "node 352594 (src/lsp/help.ts:47:41): json.stringifySubset ABAP own-property order/toJSON is unproven for optional<classref<src/objects/data_definition.ts.ParsedDataDefinition>> [dumpDDLS@src/lsp/help.ts:39:3; node 352594 src/lsp/help.ts:47:41]"
+          ]
+        }
+      ],
+      "otherRefusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 24519 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 24519 src/objects/_dynpros.ts:27:19]",
+            "node 289998 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 289998 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 291705 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 291705 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 120468 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 120491 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 120514 test/abap/types/message.ts:23:12]"
+          ]
+        }
+      ],
+      "nonfiniteLiteralSites": 0
+    },
+    "after": {
+      "catalogueSize": 22,
+      "runtime": [],
+      "jsonRefusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1,
+          "examples": [
+            "node 352630 (src/lsp/help.ts:57:35): json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken> [dumpDDLS@src/lsp/help.ts:39:3; node 352630 src/lsp/help.ts:57:35]"
+          ]
+        }
+      ],
+      "otherRefusals": [
+        {
+          "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+          "sites": 66,
+          "examples": [
+            "node 24519 (src/objects/_dynpros.ts:27:19): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseNumber@src/objects/_dynpros.ts:22:1; node 24519 src/objects/_dynpros.ts:27:19]",
+            "node 289998 (src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@src/abap/5_syntax/basic_types.ts:105:3; node 289998 src/abap/5_syntax/basic_types.ts:184:32]",
+            "node 291705 (src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@src/abap/5_syntax/basic_types.ts:503:3; node 291705 src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]"
+          ]
+        },
+        {
+          "reason": "dynamic boxing of i64 is not supported",
+          "sites": 4,
+          "examples": [
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:11:40; node 120468 test/abap/types/message.ts:13:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:16:40; node 120491 test/abap/types/message.ts:18:12]",
+            "dynamic boxing of i64 is not supported [invoke@test/abap/types/message.ts:21:49; node 120514 test/abap/types/message.ts:23:12]"
+          ]
+        }
+      ],
+      "nonfiniteLiteralSites": 0
+    }
+  },
+  "fixtures": [
+    {
+      "fixture": "TestJSONSubsetFixtures/case0",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 8864,
+      "runMs": 16,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetFixtures/case1",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 8762,
+      "runMs": 134,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetFixtures/case2",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5670,
+      "runMs": 15,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetFixtures/case3",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5181,
+      "runMs": 15,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetFixtures/case4",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5479,
+      "runMs": 73,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetFixtures/case5",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5220,
+      "runMs": 69,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case0",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 9793,
+      "runMs": 15,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case1",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 6328,
+      "runMs": 72,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case2",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 8507,
+      "runMs": 23,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case3",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 15085,
+      "runMs": 82,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case4",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 11816,
+      "runMs": 65,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetMaterializedFixtures/case5",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 7092,
+      "runMs": 91,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestJSONSubsetConfigFixture",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 12089,
+      "runMs": 20,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "TestLiveClassViewJSONNodeOracle/json-live",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 20293,
+      "runMs": 21,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "JSONStructural/json-structural",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 4194,
+      "runMs": 16,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "JSONStructural/json-structural-live",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 4108,
+      "runMs": 17,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "JSONStructural/json-structural-config",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5384,
+      "runMs": 15,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    },
+    {
+      "fixture": "JSONStructural/json-structural-wide",
+      "compiled": 1,
+      "totals": {
+        "success": 1,
+        "failure": 0,
+        "not_compiled": 0,
+        "error": 0,
+        "tests": 1
+      },
+      "status": "SUCCESS",
+      "goBuildMs": 5904,
+      "runMs": 15,
+      "provenance": {
+        "@abaplint/runtime": "2.13.96",
+        "@abaplint/transpiler": "2.13.96",
+        "Node": "v26.9.0",
+        "Go": "go1.26.0"
+      }
+    }
+  ],
+  "gates": {
+    "goVet": "passed",
+    "goTestShortP2": "passed (tsfront 531.047s in final broad run)",
+    "lexerFactsGrace": "passed; golden unchanged",
+    "defaultBackendCatalogue": "passed",
+    "lint": "0 new issues; 5/5 canaries; golangci-lint 2.11.4"
+  },
+  "defaultOutput": {
+    "target": "all,go",
+    "files": 6324,
+    "diffBytes": 0,
+    "diffExit": 0
+  },
+  "limitations": [
+    "Full upstream ABAP-host suite and OSG-JS not executed.",
+    "Runtime shape/hook refusals are not static emitter counts.",
+    "Initial concurrent full audit killed by container memory limit; no counts credited. Serial 8GiB Go memory-target / GOGC=30 retries completed."
+  ]
+}

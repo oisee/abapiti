@@ -2,9 +2,7 @@ package abap
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -139,21 +137,7 @@ console.log(ok,JSON.parse('{}').child===undefined,alias===native&&alias.behavior
 	fmt.Fprintf(&unit, "CLEAR refused.\nTRY.\nactual = %s=>%s( ).\nCATCH cx_sy_move_cast_error.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member.nominal"))
 	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
-		out = filepath.Join(out, t.Name())
-		if err := os.MkdirAll(out, 0755); err != nil {
-			t.Fatal(err)
-		}
-		for name, source := range files {
-			source, err = Format(source)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(filepath.Join(out, name), []byte(source), 0644); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
+	storageHostFixture(t, files, owner)
 }
 
 func TestExplicitNestedClassLayoutFixtures(t *testing.T) {
@@ -167,15 +151,10 @@ func TestExplicitNestedClassLayoutFixtures(t *testing.T) {
 	m.Static, m.Params = true, []hir.Param{{Name: "input", Type: dyn}}
 	p.Classes[len(p.Classes)-1].Methods = append(p.Classes[len(p.Classes)-1].Methods, m)
 	files, names, err := emitABAPNamed(t, p)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	owner := names.Get("NestedViews")
 	files[owner+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_explicit DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_explicit IMPLEMENTATION.\nMETHOD check.\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\nENDMETHOD.\nENDCLASS.\n", owner, names.Get("member.aliases"))
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
-		out = filepath.Join(out, t.Name())
-		if err := os.MkdirAll(out, 0755); err != nil { t.Fatal(err) }
-		for name, source := range files {
-			source, err = Format(source); if err != nil { t.Fatal(err) }
-			if err := os.WriteFile(filepath.Join(out, name), []byte(source), 0644); err != nil { t.Fatal(err) }
-		}
-	}
+	storageHostFixture(t, files, owner)
 }

@@ -90,7 +90,7 @@ func TestXMLParserCallNodeOracle(t *testing.T) {
 			t.Fatalf("XML error %q: Go %q Node %q", xml, got, out)
 		}
 	}
-	for _, xml := range []string{`<a>&unknown;</a>`, `<a><![CDATA[x]]></a>`, `<!DOCTYPE a><a/>`} {
+	for _, xml := range []string{`<a>&unknown;</a>`, `<a><![CDATA[x]]></a>`, `<!DOCTYPE a><a/>`, `<?XML version="1.0"?><a/>`} {
 		got := runGoHIR(t, prog, "defer func(){if x:=recover();x!=nil {fmt.Print(x)}}();fmt.Print("+goEntry("main.ts.Probe", "caught")+"(str("+strconv.Quote(xml)+")).String())")
 		if !strings.Contains(got, "outside the reviewed abapGit XML subset") {
 			t.Fatalf("catch swallowed subset refusal: %s", got)
