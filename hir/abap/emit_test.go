@@ -361,7 +361,7 @@ func TestLongLiteral(t *testing.T) {
 func TestLiteralControlEscapes(t *testing.T) {
 	m := method("f", str, ret(hir.L(str, "line1\nline2\r\n\tend")))
 	m.Static = true
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "esc", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "esc", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
