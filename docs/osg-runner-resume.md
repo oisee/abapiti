@@ -1,12 +1,36 @@
 # OSG test runner: host dump / resume
 
-**2 real host dumps → 2 host-trap records → 3 binary invocations → all 6
-fixture registrations reported.** The fixture retains **2 passes, 2 genuine
-FAILs, 1 typed test trap, 1 host test trap**, plus **1 host initialization
-trap**. The test following the dumping test passes. Both host traps retain
-`NOT_COMPILED`; the test trap includes the native `find.go` location.
+**4 real host dumps → 4 host-trap records → 5 binary invocations → all 12
+fixture registrations reported.** The merged fixture retains **5 passes,
+2 genuine FAILs, 3 typed test traps, 2 host test traps**, plus **2 host
+initialization traps and 1 subsequent binding trap**. The test following the
+newline dump passes. All four host traps retain `NOT_COMPILED`; the test traps
+include the native `find.go` location. All CDS/DDL fixture cases from #141 are
+retained alongside the initialization and test-body recovery cases.
 
-## Corpus measurements
+## Merge re-verification after #141
+
+Verified code `4944b08`, merged `origin/main` at `b874d6d`, with clean OSGO
+`368baab28111a072c3f5779a0e07d259305f836f` and original abaplint
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Go 1.26.0, Node 26;
+`ABAPITI_INLINE=0 ABAPITI_SINGLETON=0`.
+
+| Shard | Node active | Registered / reported | Pass | FAIL | Trap | Not-run / unregistered |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 200 | 200 | 200 | 0 | 0 | 0 |
+| `abap/types` | 29 | 29 | 0 | 0 | 29 | 0 |
+| Total | 229 | 229 | 200 | 0 | 29 | 0 |
+
+Both reports have **0 infrastructure failures, unmatched results, async-pending
+results and pending registrations**. Lexer remains **200/200**; types retains
+**29/29 registrations**, not 29 passes. The broader `abap` shard was not rerun
+for this merge; its figures below remain historical. The real fixture separately
+verifies two initialization dumps and two body dumps, with all 12 registrations
+reported. All heavy steps held the shared flock in a 48 GiB systemd scope at
+nice 10, admitted at load <12. Scratch and the OSG gogen Go cache are removed
+after verification; no OSG source files are changed.
+
+## Corpus measurements before #141
 
 OSGO `368baab28111a072c3f5779a0e07d259305f836f`, original abaplint
 `577f875ebec44cfaf64841cfe71c8ab8dc32622e`, Go 1.26.0, Node 26.
@@ -76,8 +100,17 @@ this does not make it catchable by `CATCH cx_root`.
 completed records, attributes an abnormal exit to the active checkpoint,
 records a `trapped` result with `passed:false`, then starts at the next index.
 An initialization dump becomes a separate initialization trap and its action
-is skipped on restart. Replayed initialization diagnostics are deduplicated;
-a previously checkpointed initialization FAIL is retained even if a host
+is skipped on restart. Each `host_init_N` boundary, including the forced runtime
+initializer, is one action: its suffix, plan index, pre-action checkpoint and
+`skip_init` token are the same stable one-based number. `host_body` remains the
+test-call boundary. The bridge uses `protectTestBoundaries` in resume mode:
+boundary ABIs and native exception-name diagnostics are retained, but host
+panics unwind to main rather than being recovered in-process. This lets the
+parent record and skip the dumping action in a fresh session. The default
+in-process boundary adapter remains separately regression-tested.
+
+Replayed initialization diagnostics are deduplicated; a previously
+checkpointed initialization FAIL is retained even if a host
 dump follows it.
 
 The initialization plan and registration vector must remain stable across
@@ -94,22 +127,31 @@ The bridge emits exactly one stdout JSON report with the original keys:
 `initialization`. Counts are recomputed from the merged records. Assertion
 FAILs are not relabeled; `abaplint-tests-all.mjs` keeps its existing fail-stop
 and independent Node ownership checks. Code caches include the resume helper
-bytes; verdicts are still never cached.
+and generated-main bytes; verdicts are still never cached. The generated Go
+executable also exits **1**
+for a caught initialization FAIL or trap, even when every registered test
+passes, matching `reportStatus`. Executable regressions cover initialization-only
+refusals, test refusals and a clean report; the parent still returns **1** when
+only a previous invocation dumped and the final invocation is clean.
 
 ## Tests and limits
 
 - The fixture-collecting `TestAbaplintTestHostOSGEmission` uses an original
-  synthetic TS closure with a lazy regex on newline text, once during file
-  initialization and once inside a test. It exercises real gogen/OSGO dumps,
-  checks their messages, checks the later pass, and preserves both earlier
-  assertion FAILs. It does not patch emitted test bodies to manufacture dumps.
+  synthetic TS closure with checked `/x+/g` replacement on newline text, once
+  during file initialization and once inside a test, plus #141's native-PCRE
+  refusal cases. It exercises four real gogen/OSGO dumps, checks their messages,
+  checks the later pass, and preserves both earlier assertion FAILs. It does
+  not patch emitted test bodies to manufacture dumps. The old lazy `/x+?/`
+  literal now refuses in #141's checked regex catalogue; `.test` with a checked
+  non-lazy literal now uses an absolute-anchor exec search that accepts
+  newlines. Replacement keeps the real unanchored newline-PCRE dump coverage.
 - Node regression tests cover first/middle/last and consecutive dumping tests,
   duplicate and multiline titles, all initialization actions dumping,
   initialization FAIL preservation, stable registration checks, malformed
   protocol/infrastructure failures, and actual subprocess restarts.
 - Gates: `go vet ./...`; `go test -short -p 2 ./tsfront/ ./cmd/...`;
-  `node --test tools/*-test.mjs` (**33/33**); lint gate against `origin/main` with **0 new
-  issues**, canary **5/5**.
+  `node --test tools/*-test.mjs` (**37/37**); lint gate against `origin/main`
+  with **0 new issues**, canary **5/5**, golangci-lint **2.13.2**.
 
 A restart replays initialization, not earlier test bodies or their heap
 mutations. Tests that require previous bodies' state cannot have that state
@@ -133,7 +175,7 @@ mkdir -p "$TMPDIR" "$EVIDENCE"
 flock "$OSG_HEAVY_LOCK" systemd-run --user --scope -p MemoryMax=48G nice -n 10 \
   env GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false \
   ABAPITI_TESTS_TARGET=osg ABAPITI_INLINE=0 ABAPITI_SINGLETON=0 \
-  ABAPITI_TESTS_SHARDS=abap/types,abap,abap/lexer \
+  ABAPITI_TESTS_SHARDS=abap/types,abap/lexer \
   ABAPITI_TESTS_SCRATCH="$TMPDIR/shards" \
   node tools/abaplint-tests-all.mjs "$ABAPLINT_HOME" "$EVIDENCE/report.json"
 ```
