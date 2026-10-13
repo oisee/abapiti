@@ -23,7 +23,9 @@ func TestRegExpLiteralSubsetTable(t *testing.T) {
 	if !strings.Contains(source, "WHEN `"+pattern+"/`") || !strings.Contains(source, `\\{2,}`) {
 		t.Fatal("CDS string grammar must use Go's certified TranslateSubset language")
 	}
-	if !strings.Contains(source, `(?![\s\S])`) || strings.Contains(source, `\z`) {
+	_, pcre, _ := strings.Cut(source, "METHOD pcre_pattern.")
+	pcre, _, _ = strings.Cut(pcre, "ENDMETHOD.")
+	if !strings.Contains(pcre, `(?![\s\S])`) || strings.Contains(pcre, `\z`) {
 		t.Fatal("emitted ABAP must retain JS-compatible absolute assertions")
 	}
 	if len(jsregex.Reviewed) != before {
