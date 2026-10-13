@@ -15,6 +15,8 @@ import (
 )
 
 type emitter struct {
+	classIndex      map[string]*hir.Class
+	descendantIndex map[string][]*hir.Class
 	liveClasses     map[string]bool
 	arrayViews      bool
 	recordDelete    bool
@@ -209,12 +211,28 @@ func (e *emitter) name(s string) string   { return e.names.Get(s) }
 func (e *emitter) member(s string) string { return e.name("member." + s) }
 func (e *emitter) param(s string) string  { return e.name("param." + s) }
 func (e *emitter) classBy(n string) *hir.Class {
-	for _, c := range e.p.Classes {
-		if c.Name == n {
-			return c
+	if n == "" {
+		return nil
+	}
+	if e.classIndex == nil {
+		e.classIndex = make(map[string]*hir.Class, len(e.p.Classes))
+		for _, c := range e.p.Classes {
+			e.classIndex[c.Name] = c
 		}
 	}
-	return nil
+	return e.classIndex[n]
+}
+func (e *emitter) descendants(c *hir.Class) []*hir.Class {
+	if e.descendantIndex == nil {
+		e.descendantIndex = map[string][]*hir.Class{}
+		// Preserve program order, matching the previous per-parent scan.
+		for _, child := range e.p.Classes {
+			for base := e.classBy(child.Super); base != nil; base = e.classBy(base.Super) {
+				e.descendantIndex[base.Name] = append(e.descendantIndex[base.Name], child)
+			}
+		}
+	}
+	return e.descendantIndex[c.Name]
 }
 func (e *emitter) method(c *hir.Class, n string) (*hir.Method, *hir.Class) {
 	for ; c != nil; c = e.classBy(c.Super) {

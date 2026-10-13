@@ -276,12 +276,7 @@ func (b *body) liveBox(n, a string, t hir.Type) {
 // An inherited adapter lacks the child's native slot map. Original graph
 // sources delegate before this guard; source-less unknown slots refuse.
 func (e *emitter) refuseUnknownNativeSubclass(b *body, c *hir.Class) {
-	for _, child := range e.p.Classes {
-		for base := e.classBy(child.Super); base != nil; base = e.classBy(base.Super) {
-			if base.Name == c.Name {
-				b.line("IF me IS INSTANCE OF " + e.name(child.Name) + ".\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
-				break
-			}
-		}
+	for _, child := range e.descendants(c) {
+		b.line("IF me IS INSTANCE OF " + e.name(child.Name) + ".\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
 	}
 }
