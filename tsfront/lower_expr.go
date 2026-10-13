@@ -75,6 +75,7 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	x = l.observedArrayIndex(x)
 	if x.Type.Kind == hir.Bool {
 		return x
 	}
@@ -2485,6 +2486,9 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	x, y := l.expr(b.Left), l.expr(b.Right)
 	if x == nil || y == nil {
 		return nil
+	}
+	if b.OperatorToken.Kind == ast.KindEqualsEqualsEqualsToken || b.OperatorToken.Kind == ast.KindExclamationEqualsEqualsToken {
+		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
 	}
 	// Dynamic uses reference storage but can carry a primitive boolean.
 	// Keep its tag for equality instead of applying the object-only proof.
