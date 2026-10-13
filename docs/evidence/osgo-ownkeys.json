@@ -1,0 +1,478 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "hostPin": "368baab28111a072c3f5779a0e07d259305f836f",
+  "mainCommit": "08dd0e2e0bcd8be91b79136d8bdd5153b9cc3eda",
+  "implementationCommit": "3cfe311",
+  "selection": [
+    "test/rules/line_length.ts",
+    "test/rules/no_dynamic_stuff.ts"
+  ],
+  "before": {
+    "compilerCommit": "5d55216db312ff5165f82d518a440ebc6ce77906",
+    "nodeActive": {
+      "total": 82,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 70,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 12,
+      "notPassing": 82
+    },
+    "nodePending": {
+      "total": 0,
+      "skipped": 0,
+      "unregistered": 0
+    },
+    "registered": 70,
+    "unregisteredTitles": [
+      "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+      "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD lo_obj->(lv_method).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL FUNCTION lv_name.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"SORT tab BY (lv_field).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD lo_obj->(lv_method).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"SORT tab BY (lv_field).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"DELETE tab WHERE (lv_cond).\" should have 1 issue(s)"
+    ],
+    "initialization": [
+      {
+        "file": "test/rules/line_length.ts",
+        "action": "z_member_test__ccf00c576bdfc6",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__0a497c851020f7",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__5641f70838341e",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      }
+    ],
+    "host": {
+      "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+      "timingMs": {
+        "frontend": 181950,
+        "emit": 15986,
+        "goBuild": 177735,
+        "run": 46
+      },
+      "status": 1,
+      "envelope": {
+        "files": 2320,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      }
+    }
+  },
+  "after": {
+    "compilerCommit": "3cfe311c8ecead5875b54622b6b63a6203bde271",
+    "nodeActive": {
+      "total": 82,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 82,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 0,
+      "notPassing": 82
+    },
+    "nodePending": {
+      "total": 0,
+      "skipped": 0,
+      "unregistered": 0
+    },
+    "registered": 82,
+    "unregisteredTitles": [],
+    "initialization": [],
+    "host": {
+      "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+      "timingMs": {
+        "frontend": 197932,
+        "emit": 18893,
+        "goBuild": 228816,
+        "run": 50
+      },
+      "status": 1,
+      "envelope": {
+        "files": 2322,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      }
+    }
+  },
+  "staticBefore": {
+    "files": 2166,
+    "nonfiniteLiteralSites": 0,
+    "unsupportedCatalogue": [
+      "array.delete",
+      "array.has",
+      "dynamic.call0",
+      "dynamic.delete",
+      "json.indent",
+      "json.stringifySubset",
+      "lsp.isCreateFile",
+      "lsp.isDeleteFile",
+      "lsp.isRenameFile",
+      "lsp.isTextDocumentEdit",
+      "number.ceil",
+      "string.padStart",
+      "string.parseFloat",
+      "string.parseFloatNumber",
+      "string.sha1Hex",
+      "string.splitRegex",
+      "xml.parseWithErrors"
+    ],
+    "runtime": [
+      {
+        "reason": "array.has",
+        "sites": 23
+      },
+      {
+        "reason": "dynamic.call0",
+        "sites": 6
+      },
+      {
+        "reason": "dynamic.delete",
+        "sites": 3
+      },
+      {
+        "reason": "json.indent",
+        "sites": 3
+      },
+      {
+        "reason": "json.stringifySubset",
+        "sites": 34
+      },
+      {
+        "reason": "lsp.isCreateFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isDeleteFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isRenameFile",
+        "sites": 2
+      },
+      {
+        "reason": "lsp.isTextDocumentEdit",
+        "sites": 2
+      },
+      {
+        "reason": "number.ceil",
+        "sites": 9
+      },
+      {
+        "reason": "string.padStart",
+        "sites": 3
+      },
+      {
+        "reason": "string.parseFloatNumber",
+        "sites": 3
+      },
+      {
+        "reason": "string.sha1Hex",
+        "sites": 1
+      },
+      {
+        "reason": "string.splitRegex",
+        "sites": 2
+      },
+      {
+        "reason": "xml.parseWithErrors",
+        "sites": 3
+      }
+    ],
+    "refusals": [
+      {
+        "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+        "sites": 66
+      },
+      {
+        "reason": "dynamic boxing of i64 is not supported",
+        "sites": 4
+      },
+      {
+        "reason": "erased structural object.has is not emitted on ABAP",
+        "sites": 2
+      }
+    ]
+  },
+  "staticAfter": {
+    "files": 2166,
+    "nonfiniteLiteralSites": 0,
+    "unsupportedCatalogue": [
+      "array.delete",
+      "array.has",
+      "dynamic.call0",
+      "dynamic.delete",
+      "json.indent",
+      "json.stringifySubset",
+      "lsp.isCreateFile",
+      "lsp.isDeleteFile",
+      "lsp.isRenameFile",
+      "lsp.isTextDocumentEdit",
+      "number.ceil",
+      "string.padStart",
+      "string.parseFloat",
+      "string.parseFloatNumber",
+      "string.sha1Hex",
+      "string.splitRegex",
+      "xml.parseWithErrors"
+    ],
+    "runtime": [
+      {
+        "reason": "array.has",
+        "sites": 23
+      },
+      {
+        "reason": "dynamic.call0",
+        "sites": 6
+      },
+      {
+        "reason": "dynamic.delete",
+        "sites": 3
+      },
+      {
+        "reason": "json.indent",
+        "sites": 3
+      },
+      {
+        "reason": "json.stringifySubset",
+        "sites": 34
+      },
+      {
+        "reason": "lsp.isCreateFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isDeleteFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isRenameFile",
+        "sites": 2
+      },
+      {
+        "reason": "lsp.isTextDocumentEdit",
+        "sites": 2
+      },
+      {
+        "reason": "number.ceil",
+        "sites": 9
+      },
+      {
+        "reason": "string.padStart",
+        "sites": 3
+      },
+      {
+        "reason": "string.parseFloatNumber",
+        "sites": 3
+      },
+      {
+        "reason": "string.sha1Hex",
+        "sites": 1
+      },
+      {
+        "reason": "string.splitRegex",
+        "sites": 2
+      },
+      {
+        "reason": "xml.parseWithErrors",
+        "sites": 3
+      }
+    ],
+    "refusals": [
+      {
+        "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+        "sites": 66
+      },
+      {
+        "reason": "dynamic boxing of i64 is not supported",
+        "sites": 4
+      },
+      {
+        "reason": "erased structural object.has is not emitted on ABAP",
+        "sites": 2
+      }
+    ]
+  },
+  "supportedBefore": {
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Uses": [
+      {
+        "reason": "dynamic.classView/PrimitiveReads",
+        "sites": 17,
+        "examples": [
+          "src/abap/5_syntax/statements/create_object.ts.CreateObject.runSyntax:0:483 ()",
+          "src/abap/5_syntax/structures/data.ts.Data.runSyntax:324743:154 (src/abap/5_syntax/structures/data.ts:62:46)",
+          "src/abap/5_syntax/structures/data.ts.Data.runSyntax:324757:179 (src/abap/5_syntax/structures/data.ts:65:62)"
+        ]
+      },
+      {
+        "reason": "dynamic.get",
+        "sites": 607,
+        "examples": [
+          "closure.166985.invoke:167019:25 (test/rules/_utils.ts:172:10)",
+          "closure.167020.invoke:167040:12 (test/rules/_utils.ts:173:77)",
+          "closure.167020.invoke:167045:17 (test/rules/_utils.ts:174:25)"
+        ]
+      },
+      {
+        "reason": "dynamic.keys",
+        "sites": 2,
+        "examples": [
+          "src/lsp/_lookup.ts.LSPLookup.referenceHover:354773:196 (src/lsp/_lookup.ts:272:48)",
+          "test/rules/no_dynamic_stuff.ts.module.conf:201292:2 (test/rules/no_dynamic_stuff.ts:107:33)"
+        ]
+      },
+      {
+        "reason": "dynamic.put",
+        "sites": 170,
+        "examples": [
+          "closure.132323.invoke:0:13 ()",
+          "closure.132323.invoke:0:20 ()",
+          "closure.132323.invoke:0:25 ()"
+        ]
+      }
+    ]
+  },
+  "supportedAfter": {
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Uses": [
+      {
+        "reason": "dynamic.classView/PrimitiveReads",
+        "sites": 17,
+        "examples": [
+          "src/abap/5_syntax/statements/create_object.ts.CreateObject.runSyntax:0:483 ()",
+          "src/abap/5_syntax/structures/data.ts.Data.runSyntax:324743:154 (src/abap/5_syntax/structures/data.ts:62:46)",
+          "src/abap/5_syntax/structures/data.ts.Data.runSyntax:324757:179 (src/abap/5_syntax/structures/data.ts:65:62)"
+        ]
+      },
+      {
+        "reason": "dynamic.get",
+        "sites": 607,
+        "examples": [
+          "closure.166985.invoke:167019:25 (test/rules/_utils.ts:172:10)",
+          "closure.167020.invoke:167040:12 (test/rules/_utils.ts:173:77)",
+          "closure.167020.invoke:167045:17 (test/rules/_utils.ts:174:25)"
+        ]
+      },
+      {
+        "reason": "dynamic.keys",
+        "sites": 2,
+        "examples": [
+          "src/lsp/_lookup.ts.LSPLookup.referenceHover:354773:196 (src/lsp/_lookup.ts:272:48)",
+          "test/rules/no_dynamic_stuff.ts.module.conf:201292:2 (test/rules/no_dynamic_stuff.ts:107:33)"
+        ]
+      },
+      {
+        "reason": "dynamic.put",
+        "sites": 170,
+        "examples": [
+          "closure.132323.invoke:0:13 ()",
+          "closure.132323.invoke:0:20 ()",
+          "closure.132323.invoke:0:25 ()"
+        ]
+      }
+    ]
+  },
+  "units": {
+    "unit-primitive-final": {
+      "rows": [
+        {
+          "class": "Z_PROBE_3BD51AB9C14F95",
+          "testclass": "LTCL_PRIMITIVE",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    },
+    "unit-keys-certified": {
+      "rows": [
+        {
+          "class": "Z_PROBE_TS_PRO_A4572E9BF33A53",
+          "testclass": "LTCL_TEST",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    },
+    "unit-native-certified": {
+      "rows": [
+        {
+          "class": "Z_PROBE_TS_PRO_A4572E9BF33A53",
+          "testclass": "LTCL_TEST",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    },
+    "unit-order-sealed": {
+      "rows": [
+        {
+          "class": "Z_KEYPROBE_C9DF739743A99A",
+          "testclass": "LTCL_KEYS",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    },
+    "unit-plain-fixed": {
+      "rows": [
+        {
+          "class": "Z_PROBE_TS_PRO_A4572E9BF33A53",
+          "testclass": "LTCL_TEST",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    },
+    "unit-bool": {
+      "rows": [
+        {
+          "class": "Z_PROBE_TS_PRO_A4572E9BF33A53",
+          "testclass": "LTCL_TEST",
+          "method": "CHECK",
+          "status": "SUCCESS",
+          "message": ""
+        }
+      ]
+    }
+  },
+  "gates": {
+    "vet": true,
+    "short": true,
+    "collectingHelpers": true,
+    "lexerFacts": true,
+    "goldenRegenerated": false,
+    "defaultBackendOps": true,
+    "lintNewIssues": 0,
+    "lintCanary": "5/5",
+    "lintVersion": "2.13.2",
+    "defaultGoDiffBytes": 0
+  }
+}

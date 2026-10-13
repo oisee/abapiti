@@ -151,7 +151,7 @@ func TestLiveClassViewOwnKeysNodeOracle(t *testing.T) {
  r.conf.optional="live";
  return keys+"|"+iter+"|"+entries+"|"+Object.keys(r.conf).join(",");
  }
- static run():string {return Probe.keys('{}')+"\n"+Probe.keys('{"extra":false,"10":"ten","2":"two","01":"one","4294967295":"last"}')+"\n"+Probe.keys('{"optional":"yes","extra":true}');}
+ static run():string {return Probe.keys('{}')+"\n"+Probe.keys('{"extra":false,"10":"ten","2":"two","01":"one","4294967295":"last","4294967294":"max","4294967296":"over","0":"zero","00":"double","":"empty","é":"unicode"}')+"\n"+Probe.keys('{"optional":"yes","extra":true}');}
  }`
 	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
 	if err != nil {
@@ -161,7 +161,7 @@ func TestLiveClassViewOwnKeysNodeOracle(t *testing.T) {
 	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
-	exportLiveViewABAP(t, p, "own-keys", strings.TrimSpace(string(want)), true)
+	exportLiveViewABAP(t, p, "own-keys", strings.TrimSpace(string(want)), false)
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
@@ -202,7 +202,7 @@ func exportLiveViewABAP(t *testing.T, p *hir.Program, suffix, want string, refus
 	}
 	cls := names.Get("probe.ts.Probe")
 	method := names.Get("member.run")
-	body := fmt.Sprintf("DATA actual TYPE string.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = `%s` ).\n", cls, method, strings.ReplaceAll(want, "`", "``"))
+	body := "DATA actual TYPE string.\nDATA expected TYPE string.\nDATA ch TYPE c LENGTH 1.\n" + strings.Join(abapStringBuild("expected", "ch", want), "\n") + "\n" + fmt.Sprintf("actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\n", cls, method)
 	if refusal {
 		body = fmt.Sprintf("TRY.\n%s=>%s( ).\ncl_abap_unit_assert=>fail( ).\nCATCH %s.\nENDTRY.\n", cls, method, names.Get("view.refusal"))
 	}
@@ -286,6 +286,64 @@ func TestStructuralOwnKeysEvaluationOrder(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
 	got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())")
 	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
+func TestNativeConfigOwnKeysNodeOracle(t *testing.T) {
+	source := `class Base {exclude:string[]=[];severity="Error";}
+ class Conf extends Base {callMethod=true;callFunction=true;internalTable=true;}
+ class Probe {
+ static configure(config:any,selected:string):string {
+ let order="";for(const key in config){order=order+key+",";if(typeof config[key]==="boolean"){config[key]=false;}}
+ config[selected]=true;
+ return Object.keys(config).join(",")+"|"+order+"|"+config.severity+"|"+"|"+config.callMethod+":"+config.callFunction+":"+config.internalTable;
+ }
+ static run():string {const native=new Conf();const exclude=native.exclude;const first=Probe.configure(native,"callMethod");const alias:any=native;
+ const second=Probe.configure(alias,"internalTable");return first+"\n"+second+"\n"+native.callMethod+":"+native.callFunction+":"+native.internalTable+"|"+(native.exclude===exclude)+":"+native.exclude.length;}
+ }`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	exportLiveViewABAP(t, p, "native-keys", strings.TrimSpace(want), false)
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
+func TestPlainConfigOwnKeysNodeOracle(t *testing.T) {
+	source := `class Conf {a=true;optional?:string;}
+ interface Slot {setConfig(value:any):void;}
+ class Rule implements Slot {conf=new Conf();setConfig(value:Conf):void {this.conf=value;}}
+ class Probe {
+ static trace="";
+ static value(label:string):boolean {Probe.trace=Probe.trace+label;return true;}
+ static run():string {
+ const input={b:Probe.value("b"),a:Probe.value("a")};const alias:any=input;
+ const before=Object.keys(input).join(",");const rule=new Rule();const slot:Slot=rule;slot.setConfig(input);
+ input.a=false;rule.conf.optional="live";alias["2"]=true;
+ let iter="";for(const key in alias){iter=iter+key+",";}
+ return Probe.trace+"|"+before+"|"+Object.keys(rule.conf).join(",")+"|"+iter+"|"+rule.conf.a+"|"+alias.optional+"|"+(alias["2"]===true);
+ }} `
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	exportLiveViewABAP(t, p, "plain-keys", strings.TrimSpace(want), false)
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
+
+func TestTaggedBooleanEqualityNodeOracle(t *testing.T) {
+	source := `class Probe {
+ static reads=0;
+ static value(value:any):any {Probe.reads=Probe.reads+1;return value;}
+ static run():string {
+ const t:any=true,f:any=false,u:any=undefined,o:any={};
+ return (t===true)+":"+(true===t)+":"+(f===false)+":"+(false===f)+":"+(t!==true)+":"+(true!==f)+":"+(u===false)+":"+(o===true)+":"+(Probe.value(t)===true)+":"+(false===Probe.value(f))+":"+Probe.reads;
+ }} `
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	exportLiveViewABAP(t, p, "tagged-bool", strings.TrimSpace(want), false)
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }

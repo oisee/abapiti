@@ -18,6 +18,8 @@ type emitter struct {
 	chaiUsed        bool
 	chaiArrays      []hir.Type
 	chaiMaps        []hir.Type
+	ownKeysUsed     bool
+	ownAdapters     map[string]bool
 	classIndex      map[string]*hir.Class
 	descendantIndex map[string][]*hir.Class
 	liveClasses     map[string]bool
@@ -170,6 +172,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		e.liveRuntime()
 	}
 	e.scanUsage()
+	if e.ownKeysUsed {
+		e.ownKeysRuntime()
+	}
 	e.findStaticConstants()
 	e.findConstSets()
 	e.promoteValueSlots()
@@ -367,6 +372,9 @@ func (e *emitter) scanUsage() {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+			e.ownKeysUsed = true
+		}
 		scanType(x.Type)
 		if x.Kind == hir.ClassOf {
 			need = true
@@ -1195,7 +1203,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		var jsonArgs []string
 		class := e.classBy(t.Name)
-		if e.jsonOwnKeys && class != nil && class.Structural && class.Super == "" && x.OwnKeys != nil {
+		if class != nil && class.Structural && x.OwnKeys != nil && (e.jsonOwnKeys && class.Super == "" || e.ownAdapter(class)) {
 			ctor := e.p.Constructor(t.Name)
 			jsonArgs = make([]string, len(x.Args))
 			evaluate := func(i int) {
@@ -2354,8 +2362,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.nativeCall0(x, n, a)
 		return
 	case "dynamic.keys":
-		b.e.liveRuntime()
-		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
+		b.e.ownKeysRuntime()
+		b.line(n + " = " + b.e.name("runtime.ownKeys") + "=>keys( " + a + " ).")
 		return
 	case "dynamic.classView":
 		b.liveView(x, n, a)
