@@ -2481,7 +2481,12 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if x == nil || y == nil {
 		return nil
 	}
-	if (x.Type.Kind == hir.Bool && y.Type.IsRef()) || (y.Type.Kind == hir.Bool && x.Type.IsRef()) {
+	// Dynamic uses reference storage but can carry a primitive boolean.
+	// Keep its tag for equality instead of applying the object-only proof.
+	tagged := func(t hir.Type) bool {
+		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
+	}
+	if (x.Type.Kind == hir.Bool && y.Type.IsRef() && !tagged(y.Type)) || (y.Type.Kind == hir.Bool && x.Type.IsRef() && !tagged(x.Type)) {
 		// An object is never equal to a boolean (`this.conf === true` under
 		// a ts-ignore): the operands are evaluated, the result is constant.
 		l.diagf(n, "note-equality-unrelated", "equality between a reference and a boolean is the constant %v", negated)
@@ -2538,9 +2543,6 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			}
 			return test
 		}
-	}
-	tagged := func(t hir.Type) bool {
-		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
 	}
 	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {

@@ -44,12 +44,16 @@ func (e *emitter) liveClassDeclaration(b *strings.Builder, c *hir.Class) {
 		return
 	}
 	d := e.name("runtime.dynamic")
+	e.ownClassDeclaration(b, c)
 	if e.liveRoot(c) {
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nINTERFACES %s.\n", e.name("view.source"), d, e.name("view.storage"))
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.ownKeys"), d, e.name("view.extras"), d)
 	}
-	if e.types["runtime.liveView"] && c.Structural && !e.liveClasses[c.Name] {
-		fmt.Fprintf(b, "INTERFACES %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.storage"), e.name("view.extras"), d)
+	if c.Structural && !e.liveClasses[c.Name] {
+		if !e.ownAdapter(c) {
+			fmt.Fprintf(b, "INTERFACES %s.\n", e.name("view.storage"))
+		}
+		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\n", e.name("view.extras"), d)
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\n", e.name("view.ownKeys"), d)
 	}
 	if !e.liveClasses[c.Name] {
@@ -79,6 +83,7 @@ func (e *emitter) liveConstructor(b *body, c *hir.Class) {
 func (b *body) liveUnbox(n, d string, t hir.Type) {
 	e := b.e
 	if t.Kind == hir.Optional {
+		b.line("CLEAR " + n + ".")
 		b.line("IF " + d + " IS BOUND.")
 		if t.Args[0].IsRef() {
 			b.liveUnbox(n, d, t.Args[0])
@@ -97,6 +102,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 	case hir.String:
 		b.line(n + " = " + d + "->as_string( ).")
 	case hir.Number:
+		b.line("IF " + d + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
 		b.line(n + " = " + d + "->as_number( ).")
 	case hir.I32, hir.I64:
 		v := b.temp(hir.T(hir.Number))
@@ -130,6 +136,9 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 }
 func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 	if !e.types["runtime.liveView"] {
+		return
+	}
+	if e.refuseInheritedOwnAdapter(out, c) {
 		return
 	}
 	makeBody := func(name string) *body {
@@ -168,7 +177,7 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		emit(name, b)
 	}
 	storage := e.name("view.storage")
-	if e.liveRoot(c) && !c.Structural {
+	if e.liveRoot(c) && !c.Structural && !e.ownAdapter(c) {
 		fallback := "RAISE EXCEPTION TYPE " + e.name("view.refusal") + "."
 		if e.recordDelete {
 			fallback = "result = " + e.nativeRecordDeleteRuntime() + "=>run( p0 = me key = p0 ).\nRETURN."
@@ -176,6 +185,10 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		fmt.Fprintf(out, "METHOD %s~has.\nIF me->%s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\nresult = me->%s->has( p0 ).\nENDMETHOD.\nMETHOD %s~delete.\nIF me->%s IS NOT BOUND.\n%s\nENDIF.\nresult = me->%s->delete( p0 ).\nENDMETHOD.\n", storage, e.name("view.source"), e.name("view.refusal"), e.name("view.source"), storage, e.name("view.source"), fallback, e.name("view.source"))
 		fmt.Fprintf(out, "METHOD %s~structural.\nENDMETHOD.\n", storage)
 		fmt.Fprintf(out, "METHOD %s~source.\nresult = me->%s.\nENDMETHOD.\nMETHOD %s~get.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\nMETHOD %s~put.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", storage, e.name("view.source"), storage, e.name("view.refusal"), storage, e.name("view.refusal"))
+	}
+	if e.ownAdapter(c) {
+		e.ownClassImplementation(out, c)
+		return
 	}
 	if !e.types["runtime.liveView"] || !c.Structural || e.liveClasses[c.Name] && !e.liveRoot(c) {
 		return
@@ -244,7 +257,16 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 	if !hir.DataClassView(e.p, x.Type.Name) {
 		b.line("RAISE EXCEPTION TYPE " + trap + ".")
 	} else {
-		b.line("IF " + a + "->tag <> " + d + "=>tag_object.")
+		allowed := a + "->tag <> " + d + "=>tag_object"
+		for c := e.classBy(x.Type.Name); c != nil; c = e.classBy(c.Super) {
+			if c.PrimitiveReads {
+				for _, tag := range []string{"tag_string", "tag_number", "tag_boolean"} {
+					allowed += " AND " + a + "->tag <> " + d + "=>" + tag
+				}
+				break
+			}
+		}
+		b.line("IF " + allowed + ".")
 		adapter := b.rawTemp("REF TO " + e.name("view.storage"))
 		b.line("IF " + a + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
 		b.line("TRY.\n" + adapter + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\nENDIF.")
