@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/hir/jsregex"
 )
 
 // Existing dynamic configuration patterns with fixed i/g flags retain their
@@ -24,6 +25,22 @@ func regexNeedsJS(x *hir.Expr) bool {
 		return false
 	}
 	p, _ := x.Args[0].Value.(string)
+	if regexHasEscape(p, "bB", false) {
+		flags := ""
+		if len(x.Args) > 1 {
+			flags, _ = x.Args[1].Value.(string)
+		}
+		// POSIX boundaries are locale-dependent; the checked PCRE/RE2
+		// subset certifies ASCII membership. Do not upgrade patterns that
+		// need assertions refused by the pinned host (anchors or the
+		// global/sticky cursor wrapper). Non-stateful exec searches directly.
+		if translated, ok := jsregex.TranslateSubset(p, flags); ok && !strings.ContainsAny(flags, "gy") {
+			checked := pcreRegexPattern(translated)
+			if !strings.Contains(checked, "(?<") && !strings.Contains(checked, "(?=") && !strings.Contains(checked, "(?!") {
+				return true
+			}
+		}
+	}
 	// Scan what remains after the legacy translator removes its bounded
 	// negative assertions. Shorthand expansion alone is not evidence that
 	// an arbitrary lookahead was translated.

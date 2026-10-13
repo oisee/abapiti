@@ -12,32 +12,7 @@ func (e *emitter) regexpDynamicRuntime(name string) {
 	file := name + ".clas.abap"
 	text := e.files[file]
 	text = strings.Replace(text, "excluded_pattern TYPE string OPTIONAL.", "excluded_pattern TYPE string OPTIONAL checked TYPE abap_bool OPTIONAL.", 1)
-	quote := func(s string) string {
-		if s == "" {
-			return "``"
-		}
-		var parts []string
-		var chunk []rune
-		flush := func() {
-			if len(chunk) > 0 {
-				parts = append(parts, "`"+strings.ReplaceAll(string(chunk), "`", "``")+"`")
-				chunk = nil
-			}
-		}
-		for _, r := range s {
-			if r < 32 || r == 127 || r == 0xfeff || r == 0x2028 || r == 0x2029 {
-				flush()
-				parts = append(parts, fmt.Sprintf("cl_abap_conv_in_ce=>uccpi( %d )", r))
-			} else {
-				chunk = append(chunk, r)
-				if len(chunk) == 80 {
-					flush()
-				}
-			}
-		}
-		flush()
-		return strings.Join(parts, " &&\n")
-	}
+	quote := regexABAPString
 	var code strings.Builder
 	code.WriteString("IF checked = abap_true.\nCASE pattern && `/` && flags.\n")
 	reviewed := e.regexpLiteralTable()
@@ -113,4 +88,32 @@ ENDMETHOD.
 ENDCLASS.
 `
 	e.files[file] = text
+}
+
+// Preserve control characters and Unicode separators in generated ABAP source.
+func regexABAPString(s string) string {
+	if s == "" {
+		return "``"
+	}
+	var parts []string
+	var chunk []rune
+	flush := func() {
+		if len(chunk) > 0 {
+			parts = append(parts, "`"+strings.ReplaceAll(string(chunk), "`", "``")+"`")
+			chunk = nil
+		}
+	}
+	for _, r := range s {
+		if r < 32 || r == 127 || r == 0xfeff || r == 0x2028 || r == 0x2029 {
+			flush()
+			parts = append(parts, fmt.Sprintf("cl_abap_conv_in_ce=>uccpi( %d )", r))
+		} else {
+			chunk = append(chunk, r)
+			if len(chunk) == 80 {
+				flush()
+			}
+		}
+	}
+	flush()
+	return strings.Join(parts, " &&\n")
 }
