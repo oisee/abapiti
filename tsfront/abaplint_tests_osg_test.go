@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -72,10 +74,10 @@ func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	// The newline PCRE is deliberately a host NOT_COMPILED, not a catchable
 	// ABAP exception: exercise both initialization and test-body restarts.
 	sources := map[string]string{
-		"test/init_dump.ts": `/x+?/.test("a\nb");`,
+		"test/init_dump.ts": `/x+/.test("a\nb");`,
 		"test/host.ts": `import {expect} from "../runtime/chai";
 it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
-it("host dump",()=>{/x+?/.test("a\nb")});it("after host dump",()=>{});
+it("host dump",()=>{/x+/.test("a\nb")});it("after host dump",()=>{});
 it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
 		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
 	}
@@ -125,6 +127,23 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 			t.Fatalf("runner missing %s", key)
 		}
 	}
+	// Every boundary, including the forced runtime initializer, must have the
+	// same stable one-based plan, checkpoint and skip index.
+	boundaries := regexp.MustCompile(`METHOD host_init_(\d+)\.`).FindAllStringSubmatch(runner, -1)
+	if len(boundaries) == 0 || !strings.Contains(runner, fmt.Sprintf(`"initializations":%d`, len(boundaries))) {
+		t.Fatal("initialization plan does not count every host boundary")
+	}
+	for i, boundary := range boundaries {
+		index, err := strconv.Atoi(boundary[1])
+		if err != nil || index != i+1 {
+			t.Fatalf("unstable host initialization index: %q", boundary[1])
+		}
+		for _, key := range []string{fmt.Sprintf("IF skip_init NS ',%d,'.", index), fmt.Sprintf(`"kind":"init","index":%d,`, index), fmt.Sprintf("DATA(host_message_%d) = host_init_%d( ).", index, index)} {
+			if !strings.Contains(runner, key) {
+				t.Fatalf("boundary %d missing skip/checkpoint/call: %s", index, key)
+			}
+		}
+	}
 	out := fixtureOutputDir(t)
 	if osg := os.Getenv("ABAPITI_OSG_HOME"); osg != "" {
 		if out == "" {
@@ -146,6 +165,10 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 		if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 1 {
 			t.Fatalf("OSG fixture exit: %v\n%s\n%s", err, stdout.String(), stderr.String())
 		}
+		if dumps := strings.Count(stderr.String(), "OSG harness refused:"); dumps != 4 {
+			t.Fatalf("wanted four real host dumps (two init, two body), got %d: %s", dumps, stderr.String())
+		}
+		t.Log("4 real host dumps; 5 binary invocations; 12 registrations reported")
 		var summary struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }

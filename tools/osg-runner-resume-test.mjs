@@ -134,6 +134,17 @@ test('native adapter changes only the checkpoint hook and refuses ABI drift',()=
  assert.throws(()=>wireCheckpoints(source.replace('value string) {\n}', 'value string) {\n panic("NOT_COMPILED")\n}')),/ABI changed/);
 });
 
+test('caller arguments survive initialization and test-body restarts',()=>{
+ const expected=['names.json'], seen=[];
+ const runs=[run([plan,init(1)]),run([plan,registry(['dump']),begin(1,'dump')]),run([plan,registry(['dump'])],[])];
+ const {status}=resumeRunner('binary',{args:expected,spawn:(_binary,args)=>{
+  seen.push([...args]);return runs.shift();
+ }});
+ assert.equal(status,1);
+ assert.deepEqual(seen,[expected,expected,expected]);
+ assert.equal(runs.length,0);
+});
+
 test('real subprocess restarts and emits exactly one JSON report',()=>{
  const dir=mkdtempSync(join(tmpdir(),'osg-resume-test-'));
  try {
