@@ -136,6 +136,9 @@ func (b *body) arrayView(t hir.Type, n, a string) {
 	b.line("ENDIF.")
 }
 func (b *body) arrayElement(n, row string, t hir.Type) {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
 	if t.Name == hir.RootObject {
 		b.line(n + " = " + row + ".")
 		return
