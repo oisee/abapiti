@@ -110,7 +110,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		t.Fatal(err)
 	}
 	runner := files["zcl_abapiti_test_runner.clas.abap"]
-	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value"} {
+	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value", "start_index TYPE i", "skip_init TYPE string", `"kind":"plan"`, `"kind":"registry"`, `"kind":"init"`, `"kind":"init-done"`, `"kind":"test"`, `"kind":"result"`, "test_index < start_index"} {
 		if !strings.Contains(runner, key) {
 			t.Fatalf("runner missing %s", key)
 		}

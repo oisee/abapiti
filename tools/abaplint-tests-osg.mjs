@@ -9,6 +9,7 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import {snapshotKey, readSnapshot, writeSnapshot, externalPath} from './osg-harness-cache.mjs';
 import {waitForResources} from './osg-harness-resources.mjs';
+import {resumeRunner, wireCheckpoints, checkpointPrefix} from './osg-runner-resume.mjs';
 
 const [inputArg, outArg, osgArg] = process.argv.slice(2);
 if (!inputArg || !outArg || !osgArg) throw new Error('usage: abaplint-tests-osg.mjs ABAP OUT OSG');
@@ -70,6 +71,7 @@ if (cacheRoot) {
   gogenEnv:Object.fromEntries(Object.entries(process.env).filter(([k])=>k.startsWith('GOGEN_')).sort()),
   bridge:readFileSync(new URL(import.meta.url),'utf8'),
   cache:readFileSync(new URL('./osg-harness-cache.mjs',import.meta.url),'utf8'),
+  resume:readFileSync(new URL('./osg-runner-resume.mjs',import.meta.url),'utf8'),
   // The path-dependent exclusion predicate must remain identical too.
   skipped:folders.map(folder=>{
    const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
@@ -122,12 +124,26 @@ else {
   // Tolerant stubs remain named runtime refusals. No results are fabricated.
   refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
   started=performance.now();
-  writeFileSync(generated['zz_generated.go'],emitGo(program,'main',null,true));
+  writeFileSync(generated['zz_generated.go'],wireCheckpoints(emitGo(program,'main',null,true)));
   writeFileSync(generated['main.go'],`package main
-import("encoding/json";"fmt";"os";"osg/gogen/abap")
+import("encoding/json";"fmt";"os";"strconv";"runtime";"strings";"osg/gogen/abap")
+func abapitiCheckpoint(value string){fmt.Fprintln(os.Stderr,${JSON.stringify(checkpointPrefix)}+value)}
+func abapitiHostLocation() string {
+ pcs:=make([]uintptr,256);n:=runtime.Callers(2,pcs)
+ frames:=runtime.CallersFrames(pcs[:n]);location:="unknown host location";afterPanic:=false
+ for {f,more:=frames.Next()
+  if f.Function=="runtime.gopanic" {afterPanic=true} else if afterPanic && !strings.HasPrefix(f.Function,"runtime.") {
+   location=fmt.Sprintf("%s:%d",f.File,f.Line);afterPanic=false
+  }
+  if !more {break}
+ }
+ return location
+}
 func main(){
- defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %v\\n",x);os.Exit(2)}}()
- text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{})
+ defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %v (at %s)\\n",x,abapitiHostLocation());os.Exit(2)}}()
+ start,err:=strconv.ParseInt(os.Getenv("ABAPITI_OSG_START_INDEX"),10,32)
+ if err!=nil || start<1 {panic("invalid OSG start index")}
+ text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{},int32(start),os.Getenv("ABAPITI_OSG_SKIP_INIT"))
  var report struct {Failed int \x60json:"failed"\x60; Trapped int \x60json:"trapped"\x60; AsyncPending int \x60json:"asyncPending"\x60; Initialization []struct{Status string \x60json:"status"\x60} \x60json:"initialization"\x60}
  if err:=json.Unmarshal([]byte(text),&report);err!=nil{panic(err)}
  fmt.Println(text)
@@ -167,11 +183,14 @@ func main(){
 }
 writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
 started=performance.now();
-// Always execute in a fresh process, even on a cache hit. No test result cache,
-// initialization-order merging, shared statics, or cross-shard registrations.
-const run=spawnSync(binary,[],{cwd:out,env:process.env,encoding:'utf8',maxBuffer:128*1024*1024});
+// Cache code only. Each restart replays registration in a fresh session, skips
+// only known dumping initialization actions, and validates stable test indices.
+let status=2;
+try {
+ const run=resumeRunner(binary,{cwd:out,diagnostic:text=>process.stderr.write(text)});
+ process.stdout.write(JSON.stringify(run.report)+'\n');
+ status=run.status;
+} catch (error) { process.stderr.write(String(error)+'\n'); }
 timingMs.run=Math.round(performance.now()-started);
-process.stdout.write(run.stdout??'');process.stderr.write(run.stderr??run.error?.message??'');
-const status=run.status??2;
 writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
 process.exitCode=status;

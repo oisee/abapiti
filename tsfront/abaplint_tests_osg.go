@@ -59,6 +59,13 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 	n := names.Get
 	assertionClass := n("exception.testAssertion." + hir.Ref("builtin.Error").String())
 	var initialization strings.Builder
+	initIndex := 0
+	addAction := func(class, file, action string) {
+		initIndex++
+		fmt.Fprintf(&initialization, "IF skip_init NS ',%d,'.\ncheckpoint( `{\"kind\":\"init\",\"index\":%d,\"file\":` && quote( %s ) && `,\"action\":` && quote( %s ) && `}` ).\n", initIndex, initIndex, abapTestLiteral(file), abapTestLiteral(action))
+		fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", n(class), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+		initialization.WriteString("checkpoint( `{\"kind\":\"init-done\"}` ).\nENDIF.\n")
+	}
 	for _, file := range manifest.Initialization {
 		c := modules[file+".module"]
 		if c == nil {
@@ -76,21 +83,21 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 			}
 		}
 		for _, action := range actions {
-			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+			addAction(c.Name, file, action)
 		}
 	}
 	// Force the runtime initializer even when a closure did not otherwise use it.
 	runtime := modules["runtime/mocha.ts.TestRuntime"]
 	for _, m := range runtime.Methods {
 		if m.Static && m.Name == "class_constructor" {
-			fmt.Fprintf(&initialization, "%s=>%s( ).\n", n(runtime.Name), n("builtin.initialize."+runtime.Name))
+			addAction(runtime.Name, "runtime/mocha.ts", n("builtin.initialize."+runtime.Name))
 		}
 	}
 	if _, ok := files[assertionClass+".clas.abap"]; !ok {
 		return nil, fmt.Errorf("test closure has no assertion exception marker")
 	}
 	replacements := strings.NewReplacer(
-		"INITIALIZATION", initialization.String(),
+		"INITIALIZATION", initialization.String(), "INITCOUNT", fmt.Sprint(initIndex),
 		"RUNTIME", n(runtime.Name), "TESTS", n("member.tests"), "FOCUSED", n("member.focused"),
 		"TESTCASE", n("runtime/mocha.ts.TestCase"), "TITLE", n("member.title"), "SKIPPED", n("member.skipped"), "ONLY", n("member.only"),
 		"BODY", n("member.body"), "CALL", n("member.call"),
@@ -111,13 +118,16 @@ func abapTestLiteral(s string) string { return "`" + strings.ReplaceAll(s, "`", 
 
 const abapTestRunner = `CLASS zcl_abapiti_test_runner DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CLASS-METHODS run RETURNING VALUE(result) TYPE string.
+CLASS-METHODS run IMPORTING start_index TYPE i skip_init TYPE string RETURNING VALUE(result) TYPE string.
+CLASS-METHODS checkpoint IMPORTING value TYPE string.
 PRIVATE SECTION.
 CLASS-DATA initialization TYPE string.
 CLASS-METHODS quote IMPORTING value TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS add_initialization IMPORTING file TYPE string action TYPE string status TYPE string message TYPE string.
 ENDCLASS.
 CLASS zcl_abapiti_test_runner IMPLEMENTATION.
+METHOD checkpoint.
+ENDMETHOD.
 METHOD quote.
 result = '"' && escape( val = value format = cl_abap_format=>e_json_string ) && '"'.
 ENDMETHOD.
@@ -125,7 +135,10 @@ METHOD add_initialization.
 IF initialization IS NOT INITIAL.
 initialization = initialization && ','.
 ENDIF.
-initialization = initialization && '{"file":' && quote( file ) && ',"action":' && quote( action ) && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+DATA record TYPE string.
+record = '{"file":' && quote( file ) && ',"action":' && quote( action ) && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+initialization = initialization && record.
+checkpoint( '{"kind":"initialization","record":' && record && '}' ).
 ENDMETHOD.
 METHOD run.
 DATA init_error TYPE REF TO cx_root.
@@ -140,6 +153,9 @@ DATA trapped TYPE i.
 DATA not_run TYPE i.
 DATA async_pending TYPE i.
 DATA records TYPE string.
+DATA record TYPE string.
+DATA titles TYPE string.
+DATA test_index TYPE i.
 DATA status TYPE string.
 DATA message TYPE string.
 DATA passed_json TYPE string.
@@ -147,9 +163,23 @@ DATA test TYPE REF TO TESTCASE.
 DATA suite TYPE REF TO SUITECLASS.
 DATA settled TYPE REF TO PROMISECLASS.
 CLEAR initialization.
+checkpoint( '{"kind":"plan","initializations":INITCOUNT}' ).
 INITIALIZATION
+LOOP AT RUNTIME=>TESTS->items INTO DATA(registration).
+test ?= registration.
+IF titles IS NOT INITIAL.
+titles = titles && ','.
+ENDIF.
+titles = titles && quote( test->TITLE ).
+ENDLOOP.
+checkpoint( '{"kind":"registry","titles":[' && titles && ']}' ).
 LOOP AT RUNTIME=>TESTS->items INTO DATA(item).
+test_index = test_index + 1.
+IF test_index < start_index.
+CONTINUE.
+ENDIF.
 test ?= item.
+checkpoint( '{"kind":"test","index":' && |{ test_index }| && ',"title":' && quote( test->TITLE ) && '}' ).
 status = 'passed'.
 CLEAR message.
 passed_json = 'false'.
@@ -213,7 +243,9 @@ ENDCASE.
 IF records IS NOT INITIAL.
 records = records && ','.
 ENDIF.
-records = records && '{"title":' && quote( test->TITLE ) && ',"passed":' && passed_json && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+record = '{"title":' && quote( test->TITLE ) && ',"passed":' && passed_json && ',"message":' && quote( message ) && ',"status":' && quote( status ) && '}'.
+records = records && record.
+checkpoint( '{"kind":"result","index":' && |{ test_index }| && ',"record":' && record && '}' ).
 ENDLOOP.
 result = '{"asyncPending":' && |{ async_pending }| && ',"passed":' && |{ passed }| && ',"failed":' && |{ failed }| && ',"trapped":' && |{ trapped }| && ',"notRun":' && |{ not_run }| && ',"results":[' && records && '],"initialization":[' && initialization && ']}'.
 ENDMETHOD.
