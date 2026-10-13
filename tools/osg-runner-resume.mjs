@@ -34,7 +34,7 @@ function dumpMessage(run) {
 // initialization action. Thus retries are bounded by the emitted plan + registry,
 // not an arbitrary wall-clock limit. No-progress/infrastructure errors fail closed.
 export function resumeRunner(binary, {cwd, env = process.env, spawn = spawnSync, diagnostic = () => {}} = {}) {
- const results = [], initialization = new Map(), skipped = new Set();
+ const results = [], initialization = new Map(), initDumps = new Map(), skipped = new Set();
  let start = 1, titles, initCount;
  for (;;) {
   const run = spawn(binary, [], {cwd, env:{...env,
@@ -94,7 +94,8 @@ export function resumeRunner(binary, {cwd, env = process.env, spawn = spawnSync,
      || JSON.stringify(final.results) !== JSON.stringify(invocationResults)
      || JSON.stringify(final.initialization) !== JSON.stringify(invocationInit)) throw new Error('incomplete OSG final report');
    const report = {asyncPending:0, passed:0, failed:0, trapped:0, notRun:0, results,
-    initialization:[...initialization].sort(([a],[b]) => a-b).map(([,r]) => r)};
+    initialization:[...new Set([...initialization.keys(),...initDumps.keys()])].sort((a,b)=>a-b)
+     .flatMap(index=>[initialization.get(index),initDumps.get(index)].filter(Boolean))};
    const keys = {'passed':'passed','failed':'failed','trapped':'trapped','not-run':'notRun','async-pending':'asyncPending'};
    for (const r of results) report[keys[r.status]]++;
    return {report, status:reportStatus(report)};
@@ -108,7 +109,9 @@ export function resumeRunner(binary, {cwd, env = process.env, spawn = spawnSync,
    start = active.index + 1;
   } else {
    if (skipped.has(active.index)) throw new Error('OSG initialization retry made no progress');
-   initialization.set(active.index, {file:active.file, action:active.action, message, status:'trapped'});
+   // A caught assertion may already have been checkpointed before the
+   // host died. Keep that FAIL as well as the distinct host-dump diagnostic.
+   initDumps.set(active.index, {file:active.file, action:active.action, message, status:'trapped'});
    skipped.add(active.index);
   }
  }

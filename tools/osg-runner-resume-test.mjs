@@ -70,6 +70,18 @@ test('initialization dump skips its action and retains initialization evidence',
  assert.deepEqual(report.initialization[1],r);assert.equal(status,1);
 });
 
+test('initialization FAIL checkpoint followed by a dump remains a FAIL',()=>{
+ const failed={file:'test/a.ts',action:'register',status:'failed',message:'assertion failed'};
+ const {report,status}=execute([
+  run([plan,init(1),{kind:'initialization',record:failed}]),
+  run([plan,init(2,'test/b.ts'),finishInit,registry([])],[]),
+ ]);
+ assert.equal(status,1);assert.equal(report.initialization.length,2);
+ assert.deepEqual(report.initialization[0],failed);
+ assert.equal(report.initialization[1].status,'trapped');
+ assert.match(report.initialization[1].message,/NOT_COMPILED/);
+});
+
 test('replayed initialization diagnostics are deduplicated',()=>{
  const r={file:'test/a.ts',action:'register',status:'trapped',message:'CX_ROOT: registration trap'};
  const initEvents=[plan,init(1),{kind:'initialization',record:r},finishInit];
