@@ -63,7 +63,7 @@ func TestErasedArrayElementBoxing(t *testing.T) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		t.Fatal(errors)
 	}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestSlotForwarderUsesBridgeClassView(t *testing.T) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		t.Fatal(errors)
 	}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
