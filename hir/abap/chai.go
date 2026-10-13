@@ -329,6 +329,9 @@ IF p0 IS NOT BOUND.
 RAISE EXCEPTION TYPE $T.
 ENDIF.
 IF p0->tag = $D=>tag_array.
+IF p0->missing IS NOT INITIAL.
+RAISE EXCEPTION TYPE $T.
+ENDIF.
 result = p0->items.
 RETURN.
 ENDIF.

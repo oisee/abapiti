@@ -258,3 +258,36 @@ func TestChaiSparseRefusalEmission(t *testing.T) {
 		t.Fatal("Chai must refuse sparse arrays before reading dense items")
 	}
 }
+
+// Storage distinguishes holes from present undefined; Chai's dense adapters
+// must refuse both typed and parsed sparse storage before comparing values.
+func TestChaiSparseStorageFixtures(t *testing.T) {
+	arr, dyn, boolean := hir.T(hir.Array, str), hir.T(hir.Dynamic), hir.T(hir.Bool)
+	write := func(a *hir.Expr) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.IndexGet, X: a, Y: lit(2), Type: str}, Y: hir.L(str, "x")}
+	}
+	typed := method("typed", boolean, hir.B(
+		decl("a", arr, newObj(arr)), decl("b", arr, newObj(arr)),
+		write(local("a", arr)), write(local("b", arr)),
+		ret(rt("chai.deepEqual", rt("chai.box", local("a", arr), dyn), boolean, rt("chai.box", local("b", arr), dyn)))))
+	graph := method("graph", boolean, hir.B(
+		decl("a", dyn, rt("json.parseSubset", hir.L(str, "[]"), dyn)),
+		decl("b", dyn, rt("json.parseSubset", hir.L(str, "[]"), dyn)),
+		run(rt("dynamic.put", local("a", dyn), hir.T(hir.Void), hir.L(str, "2"), rt("dynamic.of", hir.L(str, "x"), dyn))),
+		run(rt("dynamic.put", local("b", dyn), hir.T(hir.Void), hir.L(str, "2"), rt("dynamic.of", hir.L(str, "x"), dyn))),
+		ret(rt("chai.deepEqual", local("a", dyn), boolean, local("b", dyn)))))
+	typed.Static, graph.Static = true, true
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "SparseChaiStorage", Methods: []*hir.Method{typed, graph}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := names.Get("SparseChaiStorage")
+	var unit strings.Builder
+	unit.WriteString("CLASS ltcl_sparse DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_sparse IMPLEMENTATION.\nMETHOD check.\nDATA answer TYPE abap_bool.\nDATA refused TYPE abap_bool.\n")
+	for _, name := range []string{"typed", "graph"} {
+		fmt.Fprintf(&unit, "CLEAR refused.\nTRY.\nanswer = %s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+name), names.Get("exception.chaiRefusal"))
+	}
+	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
+	files[owner+".clas.testclasses.abap"] = unit.String()
+	storageHostFixture(t, files, owner)
+}
