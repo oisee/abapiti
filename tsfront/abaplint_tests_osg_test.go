@@ -73,11 +73,13 @@ func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	dir := t.TempDir()
 	// The newline PCRE is deliberately a host NOT_COMPILED, not a catchable
 	// ABAP exception: exercise both initialization and test-body restarts.
+	// Use checked replacement: with the CDS exec fixture present, .test routes
+	// through an absolute-anchor exec search that OSG now accepts on newlines.
 	sources := map[string]string{
-		"test/init_dump.ts": `/x+/.test("a\nb");`,
+		"test/init_dump.ts": `"a\nb".replace(/x+/g, "");`,
 		"test/host.ts": `import {expect} from "../runtime/chai";
 it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
-it("host dump",()=>{/x+/.test("a\nb")});it("after host dump",()=>{});
+it("host dump",()=>{"a\nb".replace(/x+/g, "")});it("after host dump",()=>{});
 it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
 		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
 	}
@@ -166,7 +168,7 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 			t.Fatalf("OSG fixture exit: %v\n%s\n%s", err, stdout.String(), stderr.String())
 		}
 		if dumps := strings.Count(stderr.String(), "OSG harness refused:"); dumps != 4 {
-			t.Fatalf("wanted four real host dumps (two init, two body), got %d: %s", dumps, stderr.String())
+			t.Fatalf("wanted four real host dumps (two init, two body), got %d:\n%s\n%s", dumps, stdout.String(), stderr.String())
 		}
 		t.Log("4 real host dumps; 5 binary invocations; 12 registrations reported")
 		var summary struct {
