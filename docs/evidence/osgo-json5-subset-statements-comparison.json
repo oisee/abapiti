@@ -1,0 +1,54 @@
+{
+  "baselineCommit": "5822a07",
+  "compilerCommit": "179a863",
+  "previousPassed": 429,
+  "currentPassed": 429,
+  "lostPassedTitles": {},
+  "report": {
+    "total": 4962,
+    "passed": 429,
+    "failed": 0,
+    "trapped": 4533,
+    "asyncPending": 0,
+    "notRun": 0,
+    "registered": 4962,
+    "notRunReasons": {
+      "asyncOrDone": 0,
+      "skippedOrFocused": 0,
+      "unregistered": 0
+    },
+    "unmatched": [],
+    "topTraps": [
+      {
+        "message": "Casting failed, types not compatible",
+        "count": 4528,
+        "example": "Casting failed, types not compatible"
+      },
+      {
+        "message": "An exception was raised.",
+        "count": 5,
+        "example": "An exception was raised."
+      }
+    ],
+    "initialization": [],
+    "asyncInitializationFailures": 0,
+    "nodeActive": {
+      "total": 4962,
+      "passed": 429,
+      "failed": 0,
+      "trapped": 4533,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 0,
+      "notPassing": 4533
+    },
+    "nodePending": {
+      "total": 0,
+      "skipped": 0,
+      "unregistered": 0
+    },
+    "skippedOrFocusedTests": [],
+    "unregisteredTitles": []
+  },
+  "compilerCommitNote": "Implementation snapshot subsequently recorded as this commit."
+}

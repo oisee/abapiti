@@ -28,6 +28,7 @@ func (e *emitter) runtime(t hir.Type) {
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
 	case hir.Array:
+		e.chaiArrays = append(e.chaiArrays, t)
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
 		if t.Args[0].Kind == hir.Optional {
@@ -106,6 +107,9 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
+		if t.Kind == hir.OrderedMap {
+			e.chaiMaps = append(e.chaiMaps, t)
+		}
 		key := e.typ(t.Args[0])
 		value := hir.T(hir.Bool)
 		if t.Kind == hir.OrderedMap {

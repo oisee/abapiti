@@ -220,7 +220,7 @@ WHEN OTHERS.
 start = cursor.
 WHILE cursor < strlen( input ).
 ch = input+cursor(1).
-IF ch = ',' OR ch = '}' OR ch = ']' OR ch = space OR ch = cl_abap_char_utilities=>newline OR ch = cl_abap_char_utilities=>horizontal_tab OR ch = cl_abap_conv_in_ce=>uccpi( 13 ).
+IF ch = ',' OR ch = '}' OR ch = ']' OR ch = $SPACE OR ch = cl_abap_char_utilities=>newline OR ch = cl_abap_char_utilities=>horizontal_tab OR ch = cl_abap_conv_in_ce=>uccpi( 13 ).
 EXIT.
 ENDIF.
 cursor = cursor + 1.
@@ -249,5 +249,5 @@ ENDCASE.
 ENDMETHOD.
 ENDCLASS.
 `
-	e.files[name+".clas.abap"] = strings.NewReplacer("$P", name, "$D", dynamic, "$E", exception).Replace(code)
+	e.files[name+".clas.abap"] = strings.NewReplacer("$SPACE", "` `", "$P", name, "$D", dynamic, "$E", exception).Replace(code)
 }
