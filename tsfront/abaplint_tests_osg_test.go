@@ -71,20 +71,19 @@ func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	dir := t.TempDir()
-	// OSG 16c024c8 accepts unanchored PCRE on newline text (#726), so /x+/g
-	// no longer dumps. The reviewed DDL exec pattern lowers its leading \b
-	// to (?<![A-Za-z0-9_]); gogen/go/abap/find.go still refuses that negative
-	// lookbehind in compilePCRE (not in Go's RE2). Unlike absolute anchors,
-	// adaptTestRegex does not rewrite this assertion. This host NOT_COMPILED
-	// is not a catchable ABAP exception: exercise init and body restarts.
+	// OSG 16c024c8 accepts newline PCRE and ASCII word boundaries (#726).
+	// An admitted sticky regex with lastIndex=1001 emits a cursor repeat
+	// [\s\S]{1001}, beyond RE2's 1000-repeat limit. compilePCRE in
+	// gogen/go/abap/find.go refuses it with host NOT_COMPILED, not a
+	// catchable ABAP exception: exercise init and body restarts.
 	sources := map[string]string{
-		"test/init_dump.ts": `(/\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi).exec("define behavior for foo");`,
+		"test/init_dump.ts": `const initPattern = /a/y; initPattern.lastIndex = 1001; initPattern.exec("a".repeat(1002));`,
 		"test/host.ts": `import {expect} from "../runtime/chai";
 it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
-it("host dump",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("after host dump",()=>{});
+it("host dump",()=>{const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002))});it("after host dump",()=>{});
 it("JS whitespace on multiline text",()=>{expect("a\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeffb\u0085\u180ec".replace(/\s+/g,"_")).equal("a_b\u0085\u180ec")});it("JS ASCII word and digit",()=>{expect("a\nA_0é١\ufeff".replace(/[\w\d]+/g,"_")).equal("_\n_é١\ufeff")});
-it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage length",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
-		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
+it("native host refusal",()=>{const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002))});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage length",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
+		"test/native-init.ts": `const r = (()=>{const regex = /a/y; regex.lastIndex = 1001; regex.exec("a".repeat(1002)); return regex})(); r.exec("a");`,
 	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
@@ -208,14 +207,14 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 		if intentional.Title != "intentional fail" || intentional.Status != "failed" || intentional.Message != "intentional failure" {
 			t.Fatalf("settled assertion was lost: %s", stdout.String())
 		}
-		if len(summary.Initialization) != 3 || summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "NOT_COMPILED in FIND PCRE") {
+		if len(summary.Initialization) != 3 || summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(summary.Initialization[1].Message, "invalid repeat count: `{1001}`") || !strings.Contains(summary.Initialization[1].Message, "find.go:") {
 			t.Fatalf("native initialization refusal was lost: %s", stdout.String())
 		}
 		if summary.Initialization[2].File != "test/native-init.ts" || summary.Initialization[2].Status != "trapped" || !strings.Contains(summary.Initialization[2].Message, "was not initialized") {
 			t.Fatalf("subsequent real action did not retain its binding refusal: %s", stdout.String())
 		}
 		native := summary.Results[8]
-		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") {
+		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(native.Message, "invalid repeat count: `{1001}`") || !strings.Contains(native.Message, "find.go:") {
 			t.Fatalf("native refusal escaped its body or became a pass: %s", stdout.String())
 		}
 		generic := summary.Results[10]
@@ -227,10 +226,10 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 			t.Fatalf("hole-aware array length was refused: %s", stdout.String())
 		}
 		hostDump, last := summary.Results[4], summary.Results[5]
-		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(hostDump.Message, "negative lookbehind (?<!...) is not in Go's RE2") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
+		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(hostDump.Message, "invalid repeat count: `{1001}`") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
 			t.Fatalf("host dump did not resume with location: %s", stdout.String())
 		}
-		if len(summary.Initialization) != 3 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(summary.Initialization[0].Message, "negative lookbehind (?<!...) is not in Go's RE2") {
+		if len(summary.Initialization) != 3 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(summary.Initialization[0].Message, "invalid repeat count: `{1001}`") {
 			t.Fatalf("initialization dump did not survive: %s", stdout.String())
 		}
 	}

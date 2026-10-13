@@ -14,10 +14,9 @@ const begin = (index,title) => ({kind:'test', index, title});
 const done = (index,record) => ({kind:'result', index, record});
 const init = (index,file='test/a.ts') => ({kind:'init', index, file, action:'register'});
 const finishInit = {kind:'init-done'};
-// Match the real fixture's stable refusal at 16c024c8, not newline PCRE:
-// The reviewed DDL exec pattern's leading word boundary lowers to negative
-// lookbehind (?<![A-Za-z0-9_]), still outside RE2.
-const hostDump = "OSG harness refused: NOT_COMPILED in FIND PCRE: a negative lookbehind (?<!...) is not in Go's RE2 (at find.go:338)";
+// Match the real fixture at 16c024c8: /a/y with lastIndex=1001 emits
+// a cursor repeat beyond RE2's 1000-repeat limit. Native ASCII \b now works.
+const hostDump = "OSG harness refused: NOT_COMPILED in FIND PCRE: RE2 does not read this pattern (error parsing regexp: invalid repeat count: `{1001}`); whether PCRE does is not measured (at osg/gogen/abap/find.go:354)";
 const run = (events, results, options={}) => ({
  status:results ? (results.some(r=>r.status==='failed') ? 1 : 0) : 2,
  stdout:results ? JSON.stringify({results, initialization:[]}) : '',
@@ -34,6 +33,15 @@ function execute(runs) {
  assert.equal(runs.length,0);
  return {...result,environments};
 }
+
+test('real host-dump trigger is valid JavaScript and matches in Node',()=>{
+ const r=/a/y;
+ r.lastIndex=1001;
+ const hit=r.exec('a'.repeat(1002));
+ assert.equal(hit[0],'a');
+ assert.equal(hit.index,1001);
+ assert.equal(r.lastIndex,1002);
+});
 
 test('normal run keeps legacy shape, duplicates and FAIL semantics',()=>{
  const records=[pass('same'),fail('same')];
@@ -113,7 +121,7 @@ test('signals and raw panics are traps, never passes',()=>{
   run([plan,registry(['dump']),begin(1,'dump')],undefined,{status:null,signal:'SIGABRT',stderr:run([plan,registry(['dump']),begin(1,'dump')]).stderr.replace('OSG harness refused:','panic:')}),
   run([plan,registry(['dump'])],[]),
  ]);
- assert.match(report.results[0].message,/^panic: NOT_COMPILED in FIND PCRE:.*negative lookbehind.*find.go:338/);
+ assert.match(report.results[0].message,/^panic: NOT_COMPILED in FIND PCRE:.*invalid repeat count:.*\{1001\}.*find.go:354/);
  assert.equal(report.results[0].passed,false);
 });
 
@@ -166,6 +174,6 @@ console.log(JSON.stringify({results,initialization:[]}));`);
   const {report,status}=resumeRunner(process.execPath,{cwd:dir,spawn:(binary,args,options)=>spawnSync(binary,[script,...args],options)});
   assert.equal(report.passed,2);assert.equal(report.trapped,1);assert.equal(status,1);
   assert.deepEqual(report.results.map(r=>r.title),['first','dump','last']);
-  assert.match(report.results[1].message,/NOT_COMPILED.*find.go:338/);
+  assert.match(report.results[1].message,/NOT_COMPILED.*find.go:354/);
  } finally {rmSync(dir,{recursive:true,force:true})}
 });
