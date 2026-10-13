@@ -28,4 +28,11 @@ assert.throws(()=>protectTestBoundaries(source.replace('(result string)','(answe
 assert.throws(()=>protectTestBoundaries(source+source,program),/missing or ambiguous/);
 assert.throws(()=>protectTestBoundaries('',{classes:[]}),/missing OSG test runner/);
 assert.throws(()=>protectTestBoundaries('',{classes:[{name:'ZCL_ABAPITI_TEST_RUNNER',methods:[]}]}),/missing OSG body boundary/);
+const resumedSource = protectTestBoundaries(source, program, {resume:true});
+assert.equal((resumedSource.match(/defer func/g) ?? []).length,0);
+assert.match(resumedSource,/initialize\(\)/);
+assert.match(resumedSource,/callBody\(\)/);
+assert.match(resumedSource,/driverExceptionName\(init_error.Class\)/);
+assert.ok(resumedSource.endsWith('func PRODUCT(s *abap.Session) { callBody() }\n'));
+assert.throws(()=>protectTestBoundaries(source.replace('message *string','message string'),program,{resume:true}),/ABI changed/);
 console.log('OSGO driver-only native refusal boundaries: ok');
