@@ -41,7 +41,7 @@ func TestABAPNonfiniteParseIntEmissionBoundary(t *testing.T) {
 		parsed := &hir.Expr{Kind: hir.RuntimeOp, Op: "string.parseIntNumber", X: input, Type: number}
 		p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{{Name: "run", Static: true, Params: []hir.Param{{Name: "input", Type: str}}, Result: number, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: parsed})}}}}}
 		_, err := Emit(p)
-		want := input.Kind == hir.Lit && input.Value == "42x"
+		want := input.Kind != hir.Lit || input.Value == "42x"
 		if (err == nil) != want || err != nil && !strings.Contains(err.Error(), "finite safe-integer string literal") {
 			t.Fatalf("%v: %v", input, err)
 		}

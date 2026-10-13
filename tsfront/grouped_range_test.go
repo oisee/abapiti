@@ -27,8 +27,8 @@ func TestGoGroupedSwitchLocalRangesNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	// Math.ceil is still an explicit ABAP refusal.
-	if _, err := abap.Emit(p); err == nil {
-		t.Fatal("expected ABAP ceil refusal")
+	// The guarded ABAP ceil and parsing paths must emit together.
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatal(err)
 	}
 }
