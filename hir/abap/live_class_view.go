@@ -115,6 +115,10 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line(n + " = " + v + ".")
 	case hir.Bool:
 		b.line(n + " = " + d + "->as_boolean( ).")
+	case hir.ClassValue:
+		// Erased reference arrays can carry boxed constructor descriptors.
+		// Preserve the descriptor object; as_classvalue checks the tag.
+		b.line(n + " = " + d + "->as_classvalue( ).")
 	case hir.Array:
 		b.arrayView(t, n, d)
 	case hir.ClassRef:
