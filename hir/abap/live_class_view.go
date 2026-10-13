@@ -227,6 +227,9 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 	b.line("WHEN OTHERS.")
 	e.refuseUnknownNativeSubclass(b, c)
 	b.line("IF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nCREATE OBJECT me->" + e.name("view.extras") + ".\nme->" + e.name("view.extras") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.\nENDIF.\nme->" + e.name("view.extras") + "->put( p0 = p0 p1 = p1 ).\nENDCASE.")
+	if e.jsonOwnKeys && c.Structural && c.Super == "" {
+		b.jsonRecordKey("me", "p0")
+	}
 	emit(storage+"~put", b)
 }
 func (b *body) liveView(x *hir.Expr, n, a string) {

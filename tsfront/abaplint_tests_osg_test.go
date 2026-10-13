@@ -25,12 +25,12 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
 	// Numeric and storage support join O2 class views, Chai and JSON5.
-	if len(gap.UnsupportedCatalogue) != 8 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	if len(gap.UnsupportedCatalogue) != 6 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {
-		if op == "object.checkedClassView" || op == "classvalue.newArgs" {
-			t.Fatalf("classview operation still catalogue-refused: %s", op)
+		if op == "object.checkedClassView" || op == "classvalue.newArgs" || op == "json.stringifySubset" || op == "json.indent" {
+			t.Fatalf("implemented operation still catalogue-refused: %s", op)
 		}
 	}
 	if len(gap.Refusals) != 1 || !strings.Contains(gap.Refusals[0].Reason, "non-finite Number") {

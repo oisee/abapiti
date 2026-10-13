@@ -25,6 +25,8 @@ type emitter struct {
 	recordDelete    bool
 	constructorArgs bool
 	configJSON      bool
+	subsetJSONRoots []hir.Type
+	jsonOwnKeys     bool
 	promiseUsed     bool
 	p               *hir.Program
 	names           *hir.Names
@@ -378,6 +380,9 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
 			e.liveRuntime()
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
+			e.jsonOwnKeys = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
@@ -564,6 +569,9 @@ func (e *emitter) class(c *hir.Class) {
 	e.liveClassDeclaration(&b, c)
 	if e.recordDelete && c.Super == "" {
 		fmt.Fprintf(&b, "DATA %s TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n", e.name("record.deleted"))
+	}
+	if e.jsonOwnKeys && c.Structural && c.Super == "" {
+		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("json.ownKeys"), e.name("runtime.dynamic"))
 	}
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
@@ -1178,12 +1186,44 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			break
 		}
+		var jsonArgs []string
+		class := e.classBy(t.Name)
+		if e.jsonOwnKeys && class != nil && class.Structural && class.Super == "" && x.OwnKeys != nil {
+			ctor := e.p.Constructor(t.Name)
+			jsonArgs = make([]string, len(x.Args))
+			evaluate := func(i int) {
+				v := b.temp(ctor.Params[i].Type)
+				b.line(v + " = " + b.value(x.Args[i], ctor.Params[i].Type) + ".")
+				jsonArgs[i] = v
+			}
+			for _, key := range *x.OwnKeys {
+				for i, param := range ctor.Params {
+					if param.Name == key {
+						evaluate(i)
+						break
+					}
+				}
+			}
+			for i := range x.Args {
+				if jsonArgs[i] == "" {
+					evaluate(i)
+				}
+			}
+		}
 		b.initialize(t.Name)
 		if c := e.classBy(t.Name); c != nil && e.wideShape(c) {
 			// A wide shape has no constructor: its fields are set one by one.
 			values := make([]string, len(x.Args))
 			for i, a := range x.Args {
 				field := c.Ctor.Body.List[i].X.Type
+				if jsonArgs != nil {
+					if !ctorParameterMatchesField(c, i) {
+						e.refuse(fmt.Errorf("node %d (%s): JSON wide shape constructor narrowing is unproven", x.ID, x.Source))
+						return n
+					}
+					values[i] = jsonArgs[i]
+					continue
+				}
 				if a.Type.Kind == hir.Optional && !a.Type.Equal(field) && c.Ctor.Body.List[i].Y.Kind == hir.Narrow {
 					// The constructor narrowed (checked) the optional parameter.
 					values[i] = b.expr(&hir.Expr{Kind: hir.Narrow, Node: a.Node, Type: field, X: a})
@@ -1196,13 +1236,20 @@ func (b *body) expr(x *hir.Expr) string {
 				b.line(n + "->" + e.member(c.Ctor.Params[i].Name) + " = " + values[i] + ".")
 			}
 			b.attachOwnKeys(x, n)
+			b.jsonInitializeKeys(n, x)
 			break
 		}
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
 		for i, a := range x.Args {
-			args = append(args, e.param(ctor.Params[i].Name)+" = "+b.value(a, ctor.Params[i].Type))
+			value := ""
+			if jsonArgs != nil {
+				value = jsonArgs[i]
+			} else {
+				value = b.value(a, ctor.Params[i].Type)
+			}
+			args = append(args, e.param(ctor.Params[i].Name)+" = "+value)
 		}
 		if len(args) > 0 {
 			s += strings.Join(args, " ")
@@ -1212,6 +1259,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line(n + "->chai_enumerable = abap_true.")
 		}
 		b.attachOwnKeys(x, n)
+		b.jsonInitializeKeys(n, x)
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
@@ -2211,6 +2259,26 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
+	case "json.stringifySubset":
+		if !b.e.jsonSubsetType(x.X.Type) {
+			b.e.refuse(fmt.Errorf("node %d (%s): json.stringifySubset ABAP own-property order/toJSON is unproven for %s", x.ID, x.Source, x.X.Type))
+			return
+		}
+		b.e.configJSON = true
+		b.e.subsetJSONRoots = append(b.e.subsetJSONRoots, x.X.Type)
+		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))
+		b.line("CREATE OBJECT " + w + ".")
+		b.line(n + " = " + w + "->" + b.e.name("json.write.subset."+x.X.Type.String()) + "( " + a + " ).")
+		// JSON.stringify(undefined/function) has no string result. The HIR
+		// string ABI cannot represent it, so refuse rather than return empty.
+		b.line("IF " + n + " IS INITIAL.")
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.RegistryJSONSubsetError") + ".")
+		b.line("ENDIF.")
+		return
+	case "json.indent":
+		b.e.jsonIndentRuntime()
+		b.line(n + " = " + b.e.name("runtime.jsonIndent") + "=>format( p0 = " + a + " p1 = " + args[0] + " ).")
+		return
 	case "json.stringifyConfig":
 		b.e.configJSON = true
 		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))
@@ -2645,6 +2713,9 @@ func (b *body) stmt(s *hir.Stmt) {
 			}
 			if c := e.classBy(s.X.X.Type.Name); c != nil && c.Structural && e.types["runtime.liveView"] {
 				b.markOwnKey(a, s.X.Name)
+			}
+			if owner != nil && e.jsonOwnKeys && owner.Structural && owner.Super == "" {
+				b.jsonRecordKey(a, b.expr(hir.L(hir.T(hir.String), s.X.Name)))
 			}
 			return
 		case hir.StaticGet:

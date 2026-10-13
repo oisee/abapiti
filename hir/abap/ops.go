@@ -17,6 +17,8 @@ var supportedOps = map[string]bool{
 	"dynamic.recordString":  true,
 	"string.parseIntNumber": true, "number.isNaN": true,
 	"json.stringifyConfig": true,
+	"json.stringifySubset": true,
+	"json.indent":          true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
 	"dynamic.arrayView":    true,
@@ -46,7 +48,7 @@ var supportedOps = map[string]bool{
 }
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
-var unsupportedOps = map[string]bool{"xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "json.indent": true, "string.sha1Hex": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true}
+var unsupportedOps = map[string]bool{"xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "string.sha1Hex": true, "string.splitRegex": true, "string.parseFloatNumber": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
