@@ -29,7 +29,7 @@ func main(){
  defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],abapitiHostLocation());os.Exit(2)}}()
  start,err:=strconv.ParseInt(os.Getenv("ABAPITI_OSG_START_INDEX"),10,32)
  if err!=nil || start<1 {panic("invalid OSG start index")}
- text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{},int32(start),os.Getenv("ABAPITI_OSG_SKIP_INIT"))
+ text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{},int32(start),os.Getenv("ABAPITI_OSG_SKIP_INIT"),os.Getenv("ABAPITI_OSG_SHARD"))
  var report struct {Failed int \x60json:"failed"\x60; Trapped int \x60json:"trapped"\x60; AsyncPending int \x60json:"asyncPending"\x60; Initialization []struct{Status string \x60json:"status"\x60} \x60json:"initialization"\x60}
  if err:=json.Unmarshal([]byte(text),&report);err!=nil{panic(err)}
  fmt.Println(text)

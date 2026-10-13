@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// One binary per direct test directory. Keep syntax together: helpers import
+// Go: one binary per directory. OSG: one union binary, runtime-selected shards.
+// Keep syntax together: helpers import
 // syntax.ts, which registers tests; splitting its roots would count them twice.
 // No source editing, test extraction, or oracle-synthesized Go registrations.
 import {readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync, existsSync} from 'node:fs';
@@ -13,6 +14,7 @@ import {upstreamPin, buildUpstream} from './statements-upstream.mjs';
 import {executeOracle} from './abaplint-tests-oracle.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
 import {waitForResources, heavyCommand} from './osg-harness-resources.mjs';
+import {materializeShardedClosure, buildGroups} from './abaplint-tests-sharded-closure.mjs';
 
 export function discoverShards(upstream) {
  const root = join(upstream, 'packages/core');
@@ -113,6 +115,8 @@ async function main() {
  if (target === 'osg' && !process.env.ABAPITI_OSG_HOME) throw new Error('ABAPITI_OSG_HOME is required for osg');
  if (target === 'osg') plan.target = target;
  const targetArgs = target === 'osg' ? ['--target','osg','--osg-home',process.env.ABAPITI_OSG_HOME,'--osg-runner',join(tools,'abaplint-tests-osg.mjs')] : [];
+ const oneBuild = target === 'osg' && process.env.ABAPITI_OSG_ONE_BUILD !== '0';
+ const groups = oneBuild ? buildGroups(plan.shards, Number(process.env.ABAPITI_OSG_SHARDS_PER_BUILD ?? plan.shards.length)) : [];
  const env = {...process.env, GOCACHE:process.env.GOCACHE ?? join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
@@ -136,18 +140,54 @@ async function main() {
   if (!plan.partial) oracle('all', plan.files);
   if (compiler) copyFileSync(resolve(compiler), join(run,'abapiti'));
   else command('go', ['build', '-o', join(run,'abapiti'), './cmd/abapiti'], {stdio:'inherit'});
+  let shared;
+  async function sharedBuild(name) {
+   const group = groups.find(group => group.some(shard => shard.name === name));
+   if (shared?.group === group) return shared;
+   if (shared) {
+    rmSync(shared.closure, {recursive:true, force:true});
+    rmSync(shared.build, {recursive:true, force:true});
+   }
+   const index = groups.indexOf(group);
+   shared = {group, closure:join(run, `shared-${index}`), build:join(run, `shared-${index}-out`)};
+   try {
+    const {manifests} = materializeShardedClosure(shared.closure, upstream, group, join(repository,'tsfront/testdata/abaplint-tests/runtime'));
+    shared.manifests = manifests;
+    await waitForResources();
+    const buildEnv = {...env, ABAPITI_OSG_BUILD_ONLY:'1'};
+    const step = heavyCommand(join(run,'abapiti'), ['abaplint-tests', shared.closure, '-o', shared.build, ...targetArgs], buildEnv);
+    await promisify(execFile)(step.command, step.args, {cwd:repository, env:buildEnv, encoding:'utf8', maxBuffer:128*1024*1024});
+   } catch (error) { shared.error = error; }
+   shared.evidence = readOSGEvidence(shared.build);
+   // A measured >40 GiB build (or a compiler OOM) is not a safe union on
+   // this host. Retry smaller contiguous groups, never fabricate test results.
+   const rss = shared.evidence.host?.buildPeakRSSKiB;
+   const oom = shared.error && /signal: killed|out of memory|cannot allocate memory/i.test(shared.error.stderr ?? '');
+   if (group.length > 1 && (rss > 40 * 1048576 || oom)) {
+    console.error(`OSG union build exceeded memory budget (${rss ?? 'unknown'} KiB); splitting ${group.length} shards`);
+    groups.splice(index, 1, ...buildGroups(group, Math.ceil(group.length / 2)));
+    return sharedBuild(name);
+   }
+   return shared;
+  }
   async function runShard({name, id, roots}) {
    console.error(`=== ${name}: ${roots.length} files ===`);
    const closure = join(run, id), build = join(run, `${id}-out`);
    let manifest, borrowed, foreign;
    let node = oracle(id, roots), result;
    try {
-    manifest = materializeRegistryClosure(closure, upstream, {roots, runtime:join(repository,'tsfront/testdata/abaplint-tests/runtime')});
+    if (oneBuild) {
+     const built = await sharedBuild(name);
+     manifest = built.manifests?.get(name);
+     if (built.error) throw built.error;
+    } else manifest = materializeRegistryClosure(closure, upstream, {roots, runtime:join(repository,'tsfront/testdata/abaplint-tests/runtime')});
     foreign = manifest.sources.map(s => s.file).filter(f => f.startsWith('test/') && !roots.includes(f));
     if (foreign.length) borrowed = executeOracle(oracleBuild, upstream, foreign);
     let execution;
     try {
-     const step = target === 'osg' ? heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], env) : {command:join(run,'abapiti'), args:['abaplint-tests', closure, '-o', build, ...targetArgs]};
+     const step = oneBuild
+      ? heavyCommand(process.execPath, [join(tools,'osg-runner-execute.mjs'), join(shared.build,'osg/abaplint-tests-osg'), join(shared.build,'abap/names.json'), join(build,'osg'), name], env)
+      : target === 'osg' ? heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], env) : {command:join(run,'abapiti'), args:['abaplint-tests', closure, '-o', build, ...targetArgs]};
      execution = {...await promisify(execFile)(step.command, step.args, {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
     } catch (error) {
      execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
@@ -164,7 +204,14 @@ async function main() {
     result = {results:[], initialization:[], infrastructureFailure:String(error)};
     console.error(String(error));
    } finally {
-    if (target === 'osg') result.osgEvidence = readOSGEvidence(build);
+    if (target === 'osg') {
+     result.osgEvidence = readOSGEvidence(build);
+     if (oneBuild && shared) {
+      const host = result.osgEvidence.host;
+      result.osgEvidence = {...shared.evidence, host:host ? {...shared.evidence.host, ...host,
+       timingMs:{...shared.evidence.host?.timingMs, ...host.timingMs}} : shared.evidence.host};
+     }
+    }
     rmSync(build, {recursive:true, force:true});
     rmSync(closure, {recursive:true, force:true});
     mkdirSync(closure);
