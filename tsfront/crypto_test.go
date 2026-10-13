@@ -25,8 +25,17 @@ func TestGoFreshSHA1PipelineNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "string.sha1Hex") {
-		t.Fatalf("ABAP must refuse SHA-1: %v", err)
+	// Use a fresh lowering: ABAP-only passes must not mutate the Go oracle.
+	abapProgram := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	files, names, err := abap.EmitNamed(abapProgram)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := files[names.Get("runtime.stringOps")+".clas.abap"]
+	for _, boundary := range []string{"METHOD sha1.", "calculate_hash_for_char", "code_unit( ch )", "RAISE EXCEPTION TYPE " + names.Get("exception.StringOpRefusal")} {
+		if !strings.Contains(runtime, boundary) {
+			t.Fatal("missing ABAP SHA1 boundary", boundary)
+		}
 	}
 }
 

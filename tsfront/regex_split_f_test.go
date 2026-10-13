@@ -25,12 +25,19 @@ func TestGoRegExpSplitFNodeOracle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, string(want))
 	}
-	// Check the original F source, without the newly added Go JSON serializer
-	// masking the split-specific ABAP capability refusal.
+	// Check the original F source without the separately owned JSON serializer.
+	// Checked split grammars emit; other languages refuse at runtime.
 	abapSource := source[:strings.Index(source, " static results()")] + "}"
 	abapProgram := lowerStatementsProbe(t, map[string]string{"probe.ts": abapSource}, []string{"probe.ts"})
-	if _, err = emitABAP(t, abapProgram); err == nil || !strings.Contains(err.Error(), "string.splitRegex") {
-		t.Fatalf("missing ABAP refusal: %v", err)
+	files, names, err := abap.EmitNamed(abapProgram)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := files[names.Get("runtime.stringOps")+".clas.abap"]
+	for _, boundary := range []string{"METHOD split.", "WHEN '\\s+'.", "WHEN '[\\s.,:(]+'.", "RAISE EXCEPTION TYPE " + names.Get("exception.StringOpRefusal")} {
+		if !strings.Contains(runtime, boundary) {
+			t.Fatal("missing ABAP split boundary", boundary)
+		}
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
 	main := fmt.Sprintf("fmt.Println(%s());fmt.Println(%s());", goEntry("probe.ts.Probe", "run"), goEntry("probe.ts.Probe", "results"))

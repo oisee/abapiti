@@ -7,6 +7,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true,
+	"string.sha1Hex": true, "xml.parseWithErrors": true,
 	"json5.parse": true,
 	"chai.box":    true, "chai.deepEqual": true, "chai.deepInclude": true,
 	"chai.arrayInclude": true, "chai.members": true, "chai.throwMatch": true,
@@ -48,7 +50,7 @@ var supportedOps = map[string]bool{
 }
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
-var unsupportedOps = map[string]bool{"xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "string.sha1Hex": true, "string.splitRegex": true, "string.parseFloatNumber": true}
+var unsupportedOps = map[string]bool{"string.parseFloat": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

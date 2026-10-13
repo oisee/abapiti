@@ -2207,6 +2207,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = -1.")
 			b.line("ENDIF.")
 			b.line("ENDIF.")
+		case "string.padStart":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>pad( text = " + a + " target = " + args[0] + " fill = " + args[1] + " ).")
+		case "string.parseFloatNumber":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_prefix( " + a + " ).")
+		case "string.sha1Hex":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>sha1( " + a + " ).")
+		case "string.splitRegex":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>split( text = " + a + " pattern = " + args[0] + " limit = " + args[1] + " ).")
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
@@ -2360,6 +2368,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
 		b.line(n + " = " + b.e.propertyLookup(x.X.Type) + "=>" + method + "( p0 = " + a + " key = " + args[0] + " ).")
+		return
+	case "xml.parseWithErrors":
+		b.line(n + " = " + b.e.xmlWithErrorsRuntime() + "=>parse( " + a + " ).")
 		return
 	case "xml.parseSubset":
 		b.e.xmlSubsetRuntime()

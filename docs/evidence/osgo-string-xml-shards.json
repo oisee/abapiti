@@ -1,0 +1,98 @@
+{
+  "target": "osg",
+  "compilerCommit": "5fc340ba52d11be755b88e466de4b309cddea12d",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+  "completedRunExit": 0,
+  "settings": {"workers": 2, "GOMAXPROCS": 4, "GOGC": 50, "GOMEMLIMIT": "32GiB", "nice": 10},
+  "countingRule": "Only returned executions of original Node-active titles count as passes, FAILs or traps. Interrupted infrastructure attempts below are unmeasured, not traps or FAIL-0 certificates. No whole-suite certification.",
+  "completed": [
+    {
+      "shard": "abap/statements",
+      "nodeActive": 4962,
+      "passed": 429,
+      "FAIL": 0,
+      "traps": 4533,
+      "unregistered": 0,
+      "asyncPending": 0,
+      "nodePending": 0,
+      "baselinePassed": 429,
+      "baselineTraps": 4533,
+      "timingMs": {"frontend": 168856, "emit": 12825, "goBuild": 239066, "run": 295718, "total": 716465},
+      "savedJSON5BaselineTimingMs": {"frontend": 135430, "emit": 11203, "goBuild": 157743, "run": 241238, "total": 545614},
+      "envelope": {"files": 2616, "maxLineBytes": 255, "overlongLines": 0, "maxObjectNameBytes": 29},
+      "topTraps": [{"message": "Casting failed, types not compatible", "count": 4528}, {"message": "An exception was raised.", "count": 5}]
+    },
+    {
+      "shard": "root",
+      "nodeActive": 94,
+      "passed": 8,
+      "FAIL": 0,
+      "traps": 86,
+      "unregistered": 0,
+      "asyncPending": 0,
+      "nodePending": 0,
+      "baselinePassed": 8,
+      "baselineTraps": 86,
+      "timingMs": {"frontend": 152115, "emit": 14342, "goBuild": 226368, "run": 4034, "total": 396859},
+      "savedJSON5BaselineTimingMs": {"frontend": 128414, "emit": 13368, "goBuild": 161085, "run": 3373, "total": 306240},
+      "envelope": {"files": 2440, "maxLineBytes": 255, "overlongLines": 0, "maxObjectNameBytes": 29}
+    },
+    {
+      "shard": "abap/lexer",
+      "nodeActive": 200,
+      "passed": 200,
+      "FAIL": 0,
+      "traps": 0,
+      "unregistered": 0,
+      "asyncPending": 0,
+      "nodePending": 0,
+      "baselinePassed": 200,
+      "baselineTraps": 0,
+      "timingMs": {"frontend": 121985, "emit": 12369, "goBuild": 139477, "run": 41, "total": 273872},
+      "savedJSON5BaselineTimingMs": {"frontend": 120930, "emit": 12104, "goBuild": 110319, "run": 40, "total": 243393},
+      "envelope": {"files": 2358, "maxLineBytes": 255, "overlongLines": 0, "maxObjectNameBytes": 29}
+    }
+  ],
+  "initialToFinalPassTitleComparison": {
+    "baselineCommit": "a368ee4",
+    "finalCommit": "5fc340b",
+    "statements": {"previousPassed": 429, "currentPassed": 429, "lost": {}, "gained": {}},
+    "root": {"previousPassed": 8, "currentPassed": 8, "lost": {}, "gained": {}},
+    "lexer": "All 200 original Node-active titles pass in both completed runs."
+  },
+  "broaderAttempt": {
+    "compilerCommit": "a368ee4",
+    "exit": 1,
+    "wallMs": 4443906,
+    "certified": false,
+    "unmeasured": [
+      {
+        "shard": "objects",
+        "nodeActiveNotRun": 144,
+        "nodePending": 1,
+        "FAIL": null,
+        "traps": null,
+        "reason": "Go compiler killed during severe memory pressure; no runner records returned",
+        "timingMs": {"frontend": 237770, "emit": 34412, "goBuild": 1878195, "run": null},
+        "generatedGoMiBApprox": 198
+      },
+      {
+        "shard": "rules",
+        "nodeActiveNotRun": 3149,
+        "nodePending": 10,
+        "FAIL": null,
+        "traps": null,
+        "reason": "Own frontend suspended, then terminated to relieve machine-wide memory pressure; no runner records returned"
+      },
+      {
+        "shard": "abap/syntax",
+        "nodeActiveNotRun": 1363,
+        "nodePending": 10,
+        "FAIL": null,
+        "traps": null,
+        "reason": "Own frontend terminated after prolonged resource-heavy generation; no runner records returned"
+      }
+    ]
+  }
+}

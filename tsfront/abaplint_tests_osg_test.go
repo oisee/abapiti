@@ -18,18 +18,18 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	unsupported := func() *hir.Stmt {
-		return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.sha1Hex", Type: hir.T(hir.String), X: hir.L(hir.T(hir.String), "a")}}
+		return &hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.parseFloat", Type: hir.T(hir.Optional, hir.T(hir.Number)), X: hir.L(hir.T(hir.String), "a")}}
 	}
 	m := &hir.Method{Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(unsupported(), unsupported(),
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	// Numeric and storage support join O2 class views, Chai and JSON5.
-	if len(gap.UnsupportedCatalogue) != 6 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	// Classview, Chai, JSON5 and the checked string/XML operations are admitted.
+	if len(gap.UnsupportedCatalogue) != 1 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {
-		if op == "object.checkedClassView" || op == "classvalue.newArgs" || op == "json.stringifySubset" || op == "json.indent" {
+		if op == "json.stringifySubset" || op == "json.indent" || op == "object.checkedClassView" || op == "classvalue.newArgs" || op == "string.sha1Hex" || op == "string.splitRegex" || op == "string.padStart" || op == "string.parseFloatNumber" || op == "xml.parseWithErrors" {
 			t.Fatalf("implemented operation still catalogue-refused: %s", op)
 		}
 	}
