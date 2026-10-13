@@ -140,7 +140,7 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 		b.line(n + " = " + row + ".")
 		return
 	}
-	if !b.e.arrayViews {
+	if !b.e.arrayViews && t.Kind != hir.Dynamic {
 		b.line(n + " ?= " + row + ".")
 		return
 	}
@@ -153,7 +153,13 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 	}
 	b.line("ELSE.")
 	if t.Kind == hir.Dynamic {
+		b.line("IF " + row + " IS INSTANCE OF " + b.e.name("runtime.classvalue") + ".")
+		cv := b.rawTemp("REF TO " + b.e.name("runtime.classvalue"))
+		b.line(cv + " ?= " + row + ".")
+		b.boxDynamic(n, cv, hir.T(hir.ClassValue))
+		b.line("ELSE.")
 		b.boxDynamic(n, row, hir.Ref(hir.RootObject))
+		b.line("ENDIF.")
 	} else {
 		b.line(n + " ?= " + row + ".")
 	}

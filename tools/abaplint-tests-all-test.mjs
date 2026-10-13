@@ -4,7 +4,7 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {discoverShards, selectShards, prioritizeShards, assertNoFailures, runShards, readOSGEvidence} from './abaplint-tests-all.mjs';
+import {discoverShards, selectShards, selectFiles, prioritizeShards, assertNoFailures, runShards, readOSGEvidence} from './abaplint-tests-all.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
 // A failing worker must drain its peer without ever launching queued work.
 let releasePeer, rejectFirst;
@@ -61,6 +61,18 @@ try {
  assert.throws(() => selectShards(discovered,'syntax'),/unknown test shard/);
  assert.throws(() => selectShards(discovered,'root,root'),/distinct nonempty/);
  assert.throws(() => selectShards(discovered,','),/distinct nonempty/);
+ const focusedFiles = selectFiles(discovered, 'test/abap/syntax/basic.ts,test/root.ts');
+ assert.equal(focusedFiles.partial,true);
+ assert.deepEqual(focusedFiles.files,['test/abap/syntax/basic.ts','test/root.ts']);
+ assert.deepEqual(focusedFiles.shards.flatMap(s => s.roots).sort(),focusedFiles.files);
+ assert.equal(focusedFiles.excluded.length,5);
+ assert.deepEqual(selectFiles(selected,'test/abap/syntax/basic.ts').excluded,discovered.files.filter(f => f !== 'test/abap/syntax/basic.ts'));
+ assert.equal(selectFiles(discovered,undefined),discovered);
+ assert.equal(selectFiles(discovered,discovered.files.join(',')),discovered);
+ assert.throws(() => selectFiles(discovered,'test/missing.ts'),/unknown test file/);
+ assert.throws(() => selectFiles(selected,'test/objects/object.ts'),/unknown test file/);
+ assert.throws(() => selectFiles(discovered,'test/root.ts,test/root.ts'),/distinct nonempty/);
+ assert.throws(() => selectFiles(discovered,','),/distinct nonempty/);
  const prioritized = prioritizeShards(discovered,'root,abap/syntax');
  assert.deepEqual(prioritized.shards.slice(0,2).map(s=>s.name),['root','abap/syntax']);
  assert.deepEqual(prioritized.files,discovered.files);

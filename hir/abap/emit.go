@@ -2686,6 +2686,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.arrayElement(n, target, x.Type)
 	}
 }
+
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
 		return
