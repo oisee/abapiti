@@ -1,0 +1,179 @@
+{
+  "schema": "abapiti-osgo-asref-v1",
+  "base": "0a61c21",
+  "regressionCommit": "2aa127d",
+  "compatibilityBase": "63b91b734f69bfe5ebf3922d8d406ee2478613ef",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "f557e12f4217addcec7834b0607234aecf9b723a",
+  "manifestSHA256": "8bc69eca3e2735470d1f5aa2b955127eaf378f13cd0b781c750e2493185fa189",
+  "roots": 625,
+  "shards": 17,
+  "inline": "classic",
+  "countingTool": "tsfront.MeasureABAPTestGap via abaplint-tests --target osg --gap-only",
+  "fullClosure": {
+    "Files": 2166,
+    "Classes": 7052,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "CoverageTraps": 0,
+    "Ranked": []
+  },
+  "censusByteIdenticalToStorageBaseline": true,
+  "assignedRefusals": [
+    {
+      "item": "dynamic.asRef",
+      "stage": "catalogue-refused pre-pass HIR occurrences",
+      "before": 0,
+      "after": 0
+    },
+    {
+      "item": "dynamic.classView",
+      "stage": "catalogue-refused pre-pass HIR occurrences",
+      "before": 0,
+      "after": 0
+    },
+    {
+      "item": "nested structural class-field views",
+      "stage": "distinct post-pass emitter refusals",
+      "before": 0,
+      "after": 0
+    }
+  ],
+  "unsupportedCatalogue": [
+    "chai.arrayInclude",
+    "chai.box",
+    "chai.deepEqual",
+    "chai.deepInclude",
+    "chai.members",
+    "chai.throwMatch",
+    "json.indent",
+    "json.stringifySubset",
+    "json5.parse",
+    "number.ceil",
+    "string.padStart",
+    "string.parseFloat",
+    "string.parseFloatNumber",
+    "string.sha1Hex",
+    "string.splitRegex",
+    "xml.parseWithErrors"
+  ],
+  "runtime": [
+    {
+      "operation": "chai.arrayInclude",
+      "sites": 1
+    },
+    {
+      "operation": "chai.box",
+      "sites": 10
+    },
+    {
+      "operation": "chai.deepEqual",
+      "sites": 2
+    },
+    {
+      "operation": "chai.deepInclude",
+      "sites": 1
+    },
+    {
+      "operation": "chai.members",
+      "sites": 1
+    },
+    {
+      "operation": "chai.throwMatch",
+      "sites": 1
+    },
+    {
+      "operation": "json.indent",
+      "sites": 3
+    },
+    {
+      "operation": "json.stringifySubset",
+      "sites": 34
+    },
+    {
+      "operation": "json5.parse",
+      "sites": 1
+    },
+    {
+      "operation": "number.ceil",
+      "sites": 9
+    },
+    {
+      "operation": "string.padStart",
+      "sites": 3
+    },
+    {
+      "operation": "string.parseFloatNumber",
+      "sites": 3
+    },
+    {
+      "operation": "string.sha1Hex",
+      "sites": 1
+    },
+    {
+      "operation": "string.splitRegex",
+      "sites": 2
+    },
+    {
+      "operation": "xml.parseWithErrors",
+      "sites": 3
+    }
+  ],
+  "emitterRefusals": [
+    {
+      "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+      "sites": 66
+    },
+    {
+      "reason": "dynamic boxing of i64 is not supported",
+      "sites": 4
+    }
+  ],
+  "runtimeRefusedSites": 75,
+  "emitterRefusedSites": 70,
+  "nonfiniteLiteralSites": 0,
+  "hostChecks": [
+    {
+      "test": "TestParsedNestedObjectABAPHost",
+      "source": "tsfront/asref_abap_host_test.go",
+      "compiled": 1,
+      "successRows": 1,
+      "nodeAndGoOracle": true,
+      "minimalInput": "{\"child\":{\"flag\":true}}",
+      "minimalResult": true,
+      "oracleResult": "true:true:false:true:true:true:true:true:true:kept:replacement",
+      "invalidChild": "Go rangeFault and ABAP view.refusal"
+    },
+    {
+      "test": "TestNestedClassViewFixtures",
+      "source": "hir/abap/nested_class_view_test.go",
+      "compiled": 1,
+      "successRows": 1
+    },
+    {
+      "test": "TestExplicitNestedClassLayoutFixtures",
+      "source": "hir/abap/nested_class_view_test.go",
+      "compiled": 1,
+      "successRows": 1
+    }
+  ],
+  "defaultGoParity": {
+    "rawDiffExit": 0,
+    "rawDiffBytes": 0,
+    "files": 9,
+    "includesExecutable": true,
+    "identicalGenerationPath": true
+  },
+  "gates": {
+    "vet": "passed",
+    "short_p2": "passed",
+    "uncachedGraceFacts": "passed; golden unchanged",
+    "defaultBackendRuntimeOps": "passed",
+    "lintAgainstO1": "0 new; canary 5/5"
+  },
+  "newCatalogueOperations": [],
+  "remainingRuntimeBoundary": "dynamic.keys explicitly refuses; nominal casts and unproven structural layouts remain guarded",
+  "upstreamStatementsRerun": false,
+  "historical4528RecoveredPasses": null
+}
