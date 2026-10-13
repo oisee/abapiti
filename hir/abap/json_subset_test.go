@@ -24,7 +24,7 @@ func TestJSONSubsetFixtures(t *testing.T) {
 	}
 	out := t.TempDir()
 	if base := fixtureOutputDir(t); base != "" {
-		out = base
+		out = filepath.Join(base, t.Name())
 	}
 	dyn := hir.T(hir.Dynamic)
 	// Unsupported cases have observable Node behavior; accepting them would
@@ -162,7 +162,7 @@ func TestJSONSubsetMaterializedFixtures(t *testing.T) {
 	input := `{"2":2,"unknown":{"z":true},"b":"second","a":"first"}`
 	out := t.TempDir()
 	if base := fixtureOutputDir(t); base != "" {
-		out = base
+		out = filepath.Join(base, t.Name())
 	}
 	for mode := 0; mode < 6; mode++ {
 		// Build a fresh method body: ABAP target passes mutate HIR in place.
@@ -261,7 +261,7 @@ func TestJSONSubsetConfigFixture(t *testing.T) {
 	files[cls+".clas.testclasses.abap"] = b.String()
 	out := t.TempDir()
 	if base := fixtureOutputDir(t); base != "" {
-		out = base
+		out = filepath.Join(base, t.Name())
 	}
 	if err := os.MkdirAll(out, 0755); err != nil {
 		t.Fatal(err)
