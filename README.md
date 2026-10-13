@@ -20,6 +20,26 @@
 >
 > The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Next goal: 100 % on the ABAP host, TS-HA@OSGO and then TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
+> **On the ABAP host — TS-HA@OSGO: 5,329 of 11,060, 0 wrong answers** (abaplint compiled by abapiti to ABAP, running on [open-steamgate](https://github.com/oisee/open-steamgate)'s Go runtime)
+>
+> 521 (first full run) → 677 (train O2) → **5,329** (train O3) · measured 2026-10-13, OSG `98fa0675`; rows marked § are earlier measurements (OSG `368baab2`), not re-run in O3
+>
+> | Shard | Pass / Node-active |
+> |---|---:|
+> | abap/statements | 4,962 / 4,962 |
+> | abap/lexer | 200 / 200 |
+> | abap/expressions | 107 / 107 |
+> | utils | 15 / 15 |
+> | pretty_printer | 23 / 31 |
+> | cds + ddl § | 17 / 390 |
+> | rules § | 5 / 3,149 |
+> | abap, abap/types | registration refused — 0 / 245 (fixes in #144, #146) |
+> | **total measured** | **5,329 / 11,060** |
+>
+> Not yet measured on OSGO: abap/structures, abap/nodes, abap/syntax, objects, objects/rename, lsp, root.
+>
+> Every test that runs agrees with Node; the rest stop at an explicit refusal (a trap), never a wrong answer. Next: the remaining shards, then the same suite on a real SAP kernel (TS-HA@A4H).
+
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
 ```mermaid
