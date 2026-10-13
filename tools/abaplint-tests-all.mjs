@@ -12,7 +12,7 @@ import {materializeRegistryClosure} from './registry-closure.mjs';
 import {upstreamPin, buildUpstream} from './statements-upstream.mjs';
 import {executeOracle} from './abaplint-tests-oracle.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
-import {waitForResources} from './osg-harness-resources.mjs';
+import {waitForResources, heavyCommand} from './osg-harness-resources.mjs';
 
 export function discoverShards(upstream) {
  const root = join(upstream, 'packages/core');
@@ -133,7 +133,8 @@ async function main() {
     if (foreign.length) borrowed = executeOracle(oracleBuild, upstream, foreign);
     let execution;
     try {
-     execution = {...await promisify(execFile)(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
+     const step = target === 'osg' ? heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], env) : {command:join(run,'abapiti'), args:['abaplint-tests', closure, '-o', build, ...targetArgs]};
+     execution = {...await promisify(execFile)(step.command, step.args, {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
     } catch (error) {
      execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
     }

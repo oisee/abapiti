@@ -23,3 +23,13 @@ export async function waitForResources({sample=resourceSample, pause=sleep, time
   await pause(5000);
  }
 }
+// Opt-in hard limits for one heavy OSG step: an exclusive flock shared with
+// other sessions, a cgroup memory ceiling, and lower CPU priority. Do not set
+// ABAPITI_OSG_LOCK when the caller already holds the same lock (deadlock).
+export function heavyCommand(command, args, env = process.env) {
+ let argv = [command, ...args];
+ if (env.ABAPITI_OSG_MEMORY_MAX) argv = ['systemd-run', '--user', '--scope', '-q', '-p', `MemoryMax=${env.ABAPITI_OSG_MEMORY_MAX}`, 'nice', '-n', env.ABAPITI_OSG_NICE ?? '10', ...argv];
+ else if (env.ABAPITI_OSG_NICE) argv = ['nice', '-n', env.ABAPITI_OSG_NICE, ...argv];
+ if (env.ABAPITI_OSG_LOCK) argv = ['flock', env.ABAPITI_OSG_LOCK, ...argv];
+ return {command:argv[0], args:argv.slice(1)};
+}

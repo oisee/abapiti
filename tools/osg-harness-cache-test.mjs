@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,cpSync,chmodSync,symlinkSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {execFileSync} from 'node:child_process';
+import {snapshotKey,readSnapshot,writeSnapshot,externalPath} from './osg-harness-cache.mjs';
+const root=mkdtempSync(join(tmpdir(),'osg-cache-test-'));
+try {
+ const input=join(root,'one'), moved=join(root,'two'), cache=join(root,'cache');
+ mkdirSync(input);writeFileSync(join(input,'class.abap'),'original');
+ assert.throws(()=>externalPath(join(input,'new','out'),input),/outside protected/);
+ assert.throws(()=>externalPath(input,input),/outside protected/);
+ assert.equal(externalPath(join(root,'outside','out'),input),join(root,'outside','out'));
+ const key=snapshotKey([input],{mode:'fast',pin:'pin'});
+ cpSync(input,moved,{recursive:true});
+ assert.equal(snapshotKey([moved],{mode:'fast',pin:'pin'}),key,'scratch path independent');
+ assert.notEqual(snapshotKey([input],{mode:'default',pin:'pin'}),key);
+ assert.notEqual(snapshotKey([input],{mode:'fast',pin:'other'}),key);
+ writeFileSync(join(input,'class.abap'),'modified');assert.notEqual(snapshotKey([input],{mode:'fast',pin:'pin'}),key);
+ writeFileSync(join(input,'class.abap'),'original');writeFileSync(join(input,'dependency.abap'),'new');assert.notEqual(snapshotKey([input],{mode:'fast',pin:'pin'}),key);
+ rmSync(join(input,'dependency.abap'));assert.equal(snapshotKey([input],{mode:'fast',pin:'pin'}),key);
+ const linked=join(root,'linked');symlinkSync(input,linked,'dir');assert.equal(snapshotKey([linked],{mode:'fast',pin:'pin'}),key);
+ assert.throws(()=>externalPath(join(linked,'out'),input),/outside protected/);
+ symlinkSync(input,join(input,'cycle'),'dir');assert.throws(()=>snapshotKey([input],{}),/symlink cycle/);rmSync(join(input,'cycle'));
+ const source=join(root,'program'), binary=join(root,'restored');
+ writeFileSync(source,'#!/bin/sh\nprintf "executed\\n"\n');chmodSync(source,0o755);
+ assert.equal(readSnapshot(cache,key,{binary}),null);
+ const evidence={refusals:{diagnostics:[],missing:['MISSING'],stubs:[{method:'REFUSED'}]}};
+ writeSnapshot(cache,key,{binary:source},evidence);
+ assert.deepEqual(readSnapshot(cache,key,{binary}),evidence);
+ // A hit restores executable code, not the previous execution's stdout.
+ assert.equal(execFileSync(binary,{encoding:'utf8'}),'executed\n');
+ assert.equal(execFileSync(binary,{encoding:'utf8'}),'executed\n');
+ writeSnapshot(cache,key,{binary:source},{different:true});assert.deepEqual(readSnapshot(cache,key,{binary}),evidence,'immutable publication');
+ const manifest=join(cache,key,'complete.json'), original=readFileSync(manifest,'utf8');
+ writeFileSync(manifest,'{');assert.equal(readSnapshot(cache,key,{binary}),null);
+ writeFileSync(manifest,original);writeFileSync(join(cache,key,'binary'),'corrupt');assert.equal(readSnapshot(cache,key,{binary}),null);
+ rmSync(join(cache,key),{recursive:true});writeSnapshot(cache,key,{binary:source},evidence);
+ const meta=JSON.parse(readFileSync(manifest));meta.evidence.refusals.missing=[];writeFileSync(manifest,JSON.stringify(meta));assert.equal(readSnapshot(cache,key,{binary}),null);
+ mkdirSync(join(cache,'partial'));writeFileSync(join(cache,'partial','binary'),'partial');assert.equal(readSnapshot(cache,'partial',{binary}),null);
+ // Multi-file snapshots: the requested file set must match exactly.
+ const go=join(root,'gen.go');writeFileSync(go,'package main\n');
+ writeSnapshot(cache,'front',{'zz_generated.go':go},{refusals:{}});
+ const restored=join(root,'restored-dir','zz_generated.go');
+ assert.deepEqual(readSnapshot(cache,'front',{'zz_generated.go':restored}),{refusals:{}});
+ assert.equal(readFileSync(restored,'utf8'),'package main\n');
+ assert.equal(readSnapshot(cache,'front',{'zz_generated.go':restored,binary}),null,'file set mismatch');
+ assert.throws(()=>writeSnapshot(cache,'bad',{'../x':go},{}),/invalid snapshot file name/);
+ console.log('OSG byte keys, relocation, additions, flags/pin invalidation, atomic publication, corruption and executable replay, multi-file snapshots: ok');
+} finally {rmSync(root,{recursive:true,force:true});}

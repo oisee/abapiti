@@ -26,7 +26,8 @@ func runAbaplintTestsOSG(cmd *cobra.Command, dir, out string, lowering *tsfront.
 	if osg == "" {
 		return fmt.Errorf("--target osg requires --osg-home (clean checkout at .github/ci/osgo.ref)")
 	}
-	run := exec.CommandContext(cmd.Context(), "node", tool, abap, filepath.Join(out, "osg"), osg)
+	// Release gogen's registry/IR before starting the memory-heavy Go compiler.
+	run := exec.CommandContext(cmd.Context(), "node", "--expose-gc", tool, abap, filepath.Join(out, "osg"), osg)
 	run.Stdout, run.Stderr = cmd.OutOrStdout(), cmd.ErrOrStderr()
 	return run.Run()
 }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {resourcesReady, waitForResources} from './osg-harness-resources.mjs';
+import {resourcesReady, waitForResources, heavyCommand} from './osg-harness-resources.mjs';
 import {runShards} from './abaplint-tests-all.mjs';
 const good = {load:11.99,io:29.99,availableGiB:20};
 assert.equal(resourcesReady(good),true);
@@ -21,4 +21,7 @@ const run=runShards(['first','never'],2,async name=>{started.push(name);await fa
 await new Promise(resolve=>setImmediate(resolve));reject(new Error('FAIL'));
 await new Promise(resolve=>setImmediate(resolve));release();
 await assert.rejects(run,/FAIL/);assert.deepEqual(started,['first']);
-console.log('OSG resource thresholds, timeout, admission failure and fail-stop: ok');
+assert.deepEqual(heavyCommand('x',['a'],{}),{command:'x',args:['a']});
+assert.deepEqual(heavyCommand('x',['a'],{ABAPITI_OSG_LOCK:'L',ABAPITI_OSG_MEMORY_MAX:'48G'}),{command:'flock',args:['L','systemd-run','--user','--scope','-q','-p','MemoryMax=48G','nice','-n','10','x','a']});
+assert.deepEqual(heavyCommand('x',[],{ABAPITI_OSG_NICE:'5'}),{command:'nice',args:['-n','5','x']});
+console.log('OSG resource thresholds, timeout, admission failure, fail-stop and heavy-step wrapping: ok');
