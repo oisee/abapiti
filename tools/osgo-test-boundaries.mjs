@@ -2,7 +2,7 @@
 // not an ABAP exception: source TRY/CATCH must never intercept it. Recover it
 // after the real registration action/body has unwound, and let the driver
 // record a trap. Assertions, runtime dumps and unknown panics still propagate.
-export function protectTestBoundaries(go, program) {
+export function protectTestBoundaries(go, program, {resume = false} = {}) {
  const runner = program.classes.find(c => c.name === 'ZCL_ABAPITI_TEST_RUNNER');
  if (!runner) throw new Error('missing OSG test runner');
  const methods = runner.methods.filter(m => /^HOST_(?:BODY|INIT_\d+)$/.test(m.name));
@@ -16,6 +16,10 @@ export function protectTestBoundaries(go, program) {
   const body = method.name === 'HOST_BODY';
   if (body && !header.includes('message *string')) throw new Error('OSG body refusal output ABI changed');
   if (!body && !header.includes('(result string)')) throw new Error('OSG initialization refusal output ABI changed');
+  // The checkpoint/resume driver records host dumps in the parent process.
+  // Keep the same action/body boundaries and ABI checks, but let the host
+  // unwind so its active checkpoint can be recorded and skipped on restart.
+  if (resume) continue;
   go = go.replace(header, header + `
  defer func() {
   if x := recover(); x != nil {
