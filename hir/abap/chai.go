@@ -10,6 +10,14 @@ import (
 
 // Chai has its own observation boundary. Never snapshot native references or
 // infer enumerable JS keys from ABAP implementation slots.
+// HIR ForEach is shared by iterator and callback lowering. Without a
+// hole-skipping callback ABI, Chai-enabled programs must refuse sparse loops.
+func (b *body) chaiDenseIteration(a string) {
+	if b.e.chaiUsed {
+		b.line("IF " + a + "->missing IS NOT INITIAL.\nRAISE EXCEPTION TYPE " + b.e.name("exception.chaiRefusal") + " EXPORTING reason = `array.iteration: sparse callback ABI required`.\nENDIF.")
+	}
+}
+
 func (b *body) chaiBox(n, a string, t hir.Type) {
 	if t.Kind == hir.Optional {
 		base := t.Args[0]

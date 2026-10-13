@@ -1,0 +1,970 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "kind": "diagnostic Node getNodes observation; not a modified certification oracle",
+  "shards": [
+    {
+      "name": "abap",
+      "failures": 0,
+      "affected": [
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser macro in class, no unknown expected",
+          "occurrence": 1,
+          "allocations": 14,
+          "maxLength": 6,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser macro in CASE, no unknown expected",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser double chaining",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser should build structure, even with Unknown statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser Macro inside TYPES",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser parsing, should not crash",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser parsing, dynpro logic",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/abap_parser.ts",
+          "title": "abap_parser macro via top include other",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/ast.ts",
+          "title": "ast count root children, statement \"add 2 to lv_foo.\" should have 5",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 4,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/ast.ts",
+          "title": "ast count root children, statement \"CONCATENATE lv_tmp iv_pack INTO lv_xstring IN BYTE MODE.\" should have 9",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 8,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/ast.ts",
+          "title": "ast count root children, statement \"EXPORT list = it_list TO DATA BUFFER lv_xstring.\" should have 9",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 8,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/ast.ts",
+          "title": "ast count root children, statement \"EXPORT list = it_list moo = boo TO DATA BUFFER lv_xstring.\" should have 12",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 11,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/concat_tokens.ts",
+          "title": "concat_tokens REPORT zfoo.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/concat_tokens.ts",
+          "title": "concat_tokens WRITE 'Hello'.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/concat_tokens.ts",
+          "title": "concat_tokens WRITE foo-bar.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/cross_object_macros.ts",
+          "title": "cross object macros Stupid macros",
+          "occurrence": 1,
+          "allocations": 11,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/find_global_definitions.ts",
+          "title": "FindGlobalDefinitions Count untyped constants from interface",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 4,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/find_global_definitions.ts",
+          "title": "FindGlobalDefinitions parse and count",
+          "occurrence": 1,
+          "allocations": 12,
+          "maxLength": 6,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/find_global_definitions.ts",
+          "title": "FindGlobalDefinitions cyclic class and type pool",
+          "occurrence": 1,
+          "allocations": 12,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros Stupid macro",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros no recursion please",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros simple macro",
+          "occurrence": 1,
+          "allocations": 11,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros expand nested macros",
+          "occurrence": 1,
+          "allocations": 13,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros expand nested macros, parameters",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros mutually recursive macros produce MacroRecursion node",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros.ts",
+          "title": "macros expand nested macros, parameters 2",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros_via_include.ts",
+          "title": "macros via include macro defined in TOP include, used in F01 include",
+          "occurrence": 1,
+          "allocations": 15,
+          "maxLength": 6,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/macros_via_include.ts",
+          "title": "macros via include macro names must not leak between unrelated main programs",
+          "occurrence": 1,
+          "allocations": 18,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining EXEC SQL: one statement, with its colons",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining AMDP: one statement, with its colons",
+          "occurrence": 1,
+          "allocations": 9,
+          "maxLength": 12,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining a colon without a comma keeps its colon too",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining a method NAMED language is not a native block",
+          "occurrence": 1,
+          "allocations": 20,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining a pragma before the period still closes the region",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining and a fragment of a chain does not open one",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/native_sql_colon.ts",
+          "title": "a colon inside native SQL is not chaining and chaining outside the block still chains",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"one\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"two\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"IF\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"FORM\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"CLASS\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"multiple FORM\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"CASE\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"CASE2\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"DO\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"WHILE\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"WHEN\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"ELSE\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"ELSE2\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"IF2\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"PRIVATE SECTION\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"PROTECTED SECTION\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"PUBLIC SECTION\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"Combined SECTIONs\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"DEFINE\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"LOOP\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 4,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"Class Sections\" should be undefined top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"START OF SELECTION\" should be 3 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"START-OF-SELECTION 2\" should be 3 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"INITIALIZATION\" should be 3 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"INITIALIZATION2\" should be 4 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 10,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"INITIALIZATION3\" should be 4 top statements",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"Class with write after\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"TRY\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 5,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"TRY, double CATCH\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 7,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"AT NEW\" should be 1 top statements",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/nesting.ts",
+          "title": "count top nesting \"AT SELECTION-SCREEN\" should be 2 top statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/qualified_name.ts",
+          "title": "qualified name strange",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST FROM entity path: SQLPathSegment wraps AssociationName token",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST FROM entity path: multiple SQLPathSegment hops",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST FIELD column path: SQLPathForColumn with prefix and SQLPathSegment",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST FIELD column path: namespace prefix /foo/t1~",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST FIELD column path: standalone SQLPathForColumn",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST WHERE path: SQLPathForColumn inside SQLCond",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST ASSOCIATION ENTRY in WITH ASSOCIATIONS",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 9,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/sql_path_ast.ts",
+          "title": "SQL path expression AST ASSOCIATIONS LIST contains multiple entries",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 9,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Unknown statements should be lazy, 2 statements",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Unknown statements should be lazy, 3 statements",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Unknown statements should be lazy, multi line",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Chained/Colon statement",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Keep track of pragmas",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Chained, pragma malplaced",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser Cloud test",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser dangling pragma, should be empty statement",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/statement_parser.ts",
+          "title": "statement parser ok string template",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser ENDIF.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 1,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser IF foo = bar.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser IF foo = bar. ENDIF. ENDWHILE.",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser CLASS zfoo DEFINITION. ENDCLASS.",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser IF foo = bar. ENDIF. WRITE asdf.",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser IF foo = bar. IF moo = boo.",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser IF foo = bar. IF moo = boo. ENDIF.",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser CLASS zfoo DEFINITION. PUBLIC SECTION. ENDCLASS.",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser DO 2 TIMES. ENDDO.",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser DO 2 TIMES.\n*comment\nENDDO.",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser DO 2 TIMES.",
+          "occurrence": 1,
+          "allocations": 1,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/structure_errors.ts",
+          "title": "Structure, test error messages, parser CLASS zfoo DEFINITION. PUBLIC SECTION. WRITE asdf. ENDCLASS.",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 3,
+          "returnedHoles": 0
+        }
+      ]
+    },
+    {
+      "name": "abap/types",
+      "failures": 0,
+      "affected": [
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition isFinal, negative",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 6,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition isFinal, positive",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition getImplementing, empty",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition getImplementing, single interface",
+          "occurrence": 1,
+          "allocations": 6,
+          "maxLength": 7,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, event handler",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, FOR LOCK, derived signature, entity found",
+          "occurrence": 1,
+          "allocations": 9,
+          "maxLength": 9,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, FOR LOCK, derived signature, entity voided",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 9,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method alias",
+          "occurrence": 1,
+          "allocations": 9,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, static",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, local defined type",
+          "occurrence": 1,
+          "allocations": 17,
+          "maxLength": 4,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition structured constants values",
+          "occurrence": 1,
+          "allocations": 9,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, exceptions",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 4,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/class_definition.ts",
+          "title": "Types, class_definition method, event",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/form_definition.ts",
+          "title": "Types, FormDefinition one FORM, no parameters",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/form_definition.ts",
+          "title": "Types, FormDefinition two FORMs",
+          "occurrence": 1,
+          "allocations": 4,
+          "maxLength": 2,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/form_definition.ts",
+          "title": "Types, FormDefinition one FORM, one parameter",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/form_definition.ts",
+          "title": "Types, FormDefinition one FORM, one parameter, pass by VALUE",
+          "occurrence": 1,
+          "allocations": 2,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/interface_definition.ts",
+          "title": "Types, interface_definition, getMethodDefinitions test, positive",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/interface_definition.ts",
+          "title": "Types, interface_definition, getMethodDefinitions test, positive",
+          "occurrence": 2,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/interface_definition.ts",
+          "title": "Types, interface_definition, getMethodDefinitions test, returning",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/interface_definition.ts",
+          "title": "Types, interface_definition, getAttributes test, positive",
+          "occurrence": 1,
+          "allocations": 3,
+          "maxLength": 3,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/method_parameters.ts",
+          "title": "Types, method_parameters default importing, with DEFAULT",
+          "occurrence": 1,
+          "allocations": 9,
+          "maxLength": 5,
+          "returnedHoles": 0
+        },
+        {
+          "file": "test/abap/types/types.ts",
+          "title": "Types, TYPES TYPES structure should sometimes inherit qualified name",
+          "occurrence": 1,
+          "allocations": 8,
+          "maxLength": 4,
+          "returnedHoles": 0
+        }
+      ]
+    }
+  ]
+}

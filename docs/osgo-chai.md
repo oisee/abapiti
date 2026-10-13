@@ -1,5 +1,9 @@
 # OSGO Chai: unit and lexer pass; statements still blocked
 
+This is the historical pre-hole-aware measurement. The obsolete sized-array
+refusal described below is now removed; sparse and unproven signed-zero
+observations retain narrower boundaries. See [the current audit and verification](chai-holey-arrays.md).
+
 **43 generated ABAP assertions execute successfully on pinned OSGO;
 lexer 200/200, FAIL 0, traps 0, unregistered 0. Statements 429/4,962,
 FAIL 0, 4,533 traps, unregistered 0. This is a two-shard measurement,

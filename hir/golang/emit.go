@@ -819,7 +819,7 @@ func (b *body) expr(x *hir.Expr) string {
 				code = "newRegExp(" + a[0] + "," + flags + ")"
 			}
 			if t.Kind == hir.Array && len(a) > 0 {
-				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{Items:make([]" + e.typ(arrayStorage(t).Args[0]) + "," + a[0] + ")}"
+				code = "sizedArray[" + e.typ(arrayStorage(t).Args[0]) + "](float64(" + a[0] + "))"
 			}
 		}
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:

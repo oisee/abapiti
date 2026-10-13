@@ -15,6 +15,9 @@ func (e *emitter) collectBoxedShapes() {
 		if x == nil {
 			return
 		}
+		if x.Kind == hir.New && x.Type.Kind == hir.Array && len(x.Args) == 1 {
+			e.usesArrayPresence = true
+		}
 		if x.Kind == hir.IndexGet && x.Type.Kind == hir.Dynamic {
 			dynamicRows = true
 		}

@@ -2,10 +2,10 @@
 
 **4 real host dumps → 4 host-trap records → 5 binary invocations → all 14
 fixture registrations reported.** At OSG **16c024c8**, the merged fixture
-expects **7 passes, 2 genuine FAILs, 3 typed test traps, 2 host test traps**,
-plus **2 host initialization traps and 1 subsequent binding trap**. This
-retains the pin-bump baseline of **6 pass / 2 FAIL / 4 trap** and adds one
-host-body trap and one subsequent pass. Both multiline JS whitespace and
+expects **8 passes, 2 genuine FAILs, 2 typed test traps, 2 host test traps**,
+plus **2 host initialization traps and 1 subsequent binding trap**. Recovery
+retains the earlier genuine FAILs and host-trap identities; hole-aware sized
+allocation now permits the array-length case rather than trapping it. Both multiline JS whitespace and
 ASCII word/digit replacements must pass. Every registration is checked in
 order, once; both earlier assertion FAILs survive recovery.
 
@@ -19,6 +19,14 @@ assertion. Tests require that exact reason and the native `find.go` location.
 OSG #726 accepts unanchored newline PCRE at this pin, so the old
 `"a\nb".replace(/x+/g, "")` is no longer a dump trigger. No OSG sources or
 emitted test bodies are patched.
+
+## Hole-aware sized-array follow-up
+
+The obsolete construction-time Chai refusal is removed. The focused corpus now
+passes **445/445 active tests**, with **0 FAIL, trap or active unregistered**;
+Go retains the same all-pass totals. Four Node-pending cases remain outside the
+active denominator. See [the observation audit and shard comparison](chai-holey-arrays.md).
+The corpus tables below are the historical pre-fix baseline.
 
 ## Merge re-verification at 16c024c8
 
