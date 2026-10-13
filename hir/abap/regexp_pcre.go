@@ -6,7 +6,7 @@ import (
 )
 
 // pcreRegexPattern uses syntax shared by PCRE and the pinned JS ABAP runtime.
-// Absolute anchors also prevent that runtime's implicit m flag from
+// Absolute assertions also prevent that runtime's implicit m flag from
 // changing JavaScript non-m anchors. The reviewed m pattern has no anchors.
 func pcreRegexPattern(pattern string) string {
 	var out strings.Builder
@@ -14,34 +14,27 @@ func pcreRegexPattern(pattern string) string {
 	for i := 0; i < len(pattern); i++ {
 		c := pattern[i]
 		if c == '\\' && i+1 < len(pattern) {
+			if !inClass && (pattern[i+1] == 'A' || pattern[i+1] == 'z') {
+				if pattern[i+1] == 'A' {
+					out.WriteString(`(?<![\s\S])`)
+				} else {
+					out.WriteString(`(?![\s\S])`)
+				}
+				i++
+				continue
+			}
 			if strings.HasPrefix(pattern[i:], `\x{`) {
 				if end := strings.IndexByte(pattern[i+3:], '}'); end >= 0 {
 					end += i + 3
 					if cp, err := strconv.ParseUint(pattern[i+3:end], 16, 32); err == nil {
-						r := rune(cp)
-						// FIND PCRE on the pinned host refuses hexadecimal escapes.
-						// Character classes preserve extended-mode whitespace literally.
-						if !inClass && (r <= ' ' || r == '#' || r == 127) {
-							out.WriteByte('[')
-							out.WriteRune(r)
-							out.WriteByte(']')
-						} else {
-							special := `\.^$|?*+(){}[]`
-							if inClass {
-								special = `\]^-`
-							}
-							if strings.ContainsRune(special, r) {
-								out.WriteByte('\\')
-							}
-							out.WriteRune(r)
-						}
+						writePCRECharacter(&out, rune(cp), inClass)
 						i = end
 						continue
 					}
 				}
 			}
 			if i == 0 && strings.HasPrefix(pattern, `\b[dD][eE][fF][iI][nN][eE]`) {
-				out.WriteString(`\b`)
+				out.WriteString(`(?<![A-Za-z0-9_])`)
 				i++
 				continue
 			}
@@ -57,13 +50,12 @@ func pcreRegexPattern(pattern string) string {
 		}
 		switch {
 		case !inClass && c == '^':
-			out.WriteString(`\A`)
+			out.WriteString(`(?<![\s\S])`)
 		case !inClass && c == '$':
-			out.WriteString(`\z`)
+			out.WriteString(`(?![\s\S])`)
 		case !inClass && c == ' ':
-			// ABAP PCRE defaults to extended mode, which drops unescaped spaces and
-			// treats # as a comment. Single-character classes retain literals and
-			// avoid hex escapes refused by the pinned OSG FIND PCRE runtime.
+			// Character classes protect literals from PCRE's extended mode and
+			// mean the same in JS/RE2, without the host's refused hex escapes.
 			out.WriteString(`[ ]`)
 		case !inClass && c == '#':
 			out.WriteString(`[#]`)
@@ -72,6 +64,27 @@ func pcreRegexPattern(pattern string) string {
 		}
 	}
 	return out.String()
+}
+
+// A reviewed hex escape denotes one character, not regex syntax. Emit that
+// character literally, escaping metacharacters and protecting ASCII whitespace
+// outside classes from PCRE extended mode. The pinned OSGO refuses all \\x
+// escapes; unlike changing anchors, this spelling is also valid JavaScript.
+func writePCRECharacter(out *strings.Builder, r rune, inClass bool) {
+	metacharacters := `\[]^-`
+	if !inClass {
+		metacharacters = `\.*+?()|[]{}^$`
+		if r == ' ' || r == '#' || (r >= '\t' && r <= '\r') {
+			out.WriteByte('[')
+			out.WriteRune(r)
+			out.WriteByte(']')
+			return
+		}
+	}
+	if strings.ContainsRune(metacharacters, r) {
+		out.WriteByte('\\')
+	}
+	out.WriteRune(r)
 }
 
 // FIND REGEX is POSIX longest-match, multiline/dotall, and rejects lazy
@@ -116,9 +129,9 @@ WHILE i < strlen( p0 ).
     in_class = abap_false.
     result = result && c.
   ELSEIF in_class = abap_false AND c = '^'.
-    result = result && '\A'.
+    result = result && '(?<![\s\S])'.
   ELSEIF in_class = abap_false AND c = '$'.
-    result = result && '\z'.
+    result = result && '(?![\s\S])'.
   ELSE.
     result = result && c.
   ENDIF.

@@ -68,7 +68,9 @@ func TestABAPTestRefusalsDoNotCrossSyntheticOwners(t *testing.T) {
 func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	dir := t.TempDir()
 	sources := map[string]string{"test/host.ts": `import {expect} from "../runtime/chai";
-it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));`}
+it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});it("intentional fail",()=>expect.fail("intentional failure"));`,
+		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
+	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
 		if err != nil {
@@ -76,7 +78,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		sources["runtime/"+name+".ts"] = string(raw)
 	}
-	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/host.ts"}
+	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/native-init.ts", "test/host.ts"}
 	rows := []map[string]string{}
 	for _, name := range order {
 		path := filepath.Join(dir, name)
@@ -88,7 +90,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		rows = append(rows, map[string]string{"file": name, "sha256": fmt.Sprintf("%x", sha256.Sum256([]byte(sources[name])))})
 	}
-	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": order, "sources": rows})
+	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/native-init.ts", "test/host.ts"}, "initialization": order, "sources": rows})
 	if err := os.WriteFile(filepath.Join(dir, "closure.json"), manifest, 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +112,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		t.Fatal(err)
 	}
 	runner := files["zcl_abapiti_test_runner.clas.abap"]
-	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value"} {
+	for _, key := range []string{`"asyncPending"`, `"passed"`, `"failed"`, `"trapped"`, `"notRun"`, `"results"`, `"initialization"`, "CATCH z_exception_te", "source_location", "hook execution is not yet emitted", "settled->rejection", "escape( val = value", "METHOD host_body.", "METHOD host_init_1.", "status = 'trapped' message = host_message_1", "IMPORTING settled = settled message = message"} {
 		if !strings.Contains(runner, key) {
 			t.Fatalf("runner missing %s", key)
 		}
@@ -139,15 +141,34 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		var summary struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
+			Initialization          []struct{ File, Status, Message string }
 		}
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
-			t.Fatal(err)
+			t.Fatalf("OSG fixture returned no valid report: %v\nstdout: %s\nstderr: %s", err, stdout.String(), stderr.String())
 		}
-		if summary.Passed != 1 || summary.Failed != 2 || summary.Trapped != 1 {
+		if len(summary.Initialization) != 2 || summary.Initialization[0].File != "test/native-init.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED in FIND PCRE") {
+			t.Fatalf("native initialization refusal was lost: %s", stdout.String())
+		}
+		if summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "was not initialized") {
+			t.Fatalf("subsequent real action did not retain its binding refusal: %s", stdout.String())
+		}
+		if summary.Passed != 4 || summary.Failed != 2 || summary.Trapped != 4 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		if len(summary.Results) != 4 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+		if len(summary.Results) != 10 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
 			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
+		}
+		native := summary.Results[3]
+		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") {
+			t.Fatalf("native refusal escaped its body or became a pass: %s", stdout.String())
+		}
+		generic := summary.Results[5]
+		if generic.Title != "native exception identity" || generic.Status != "trapped" || !strings.Contains(generic.Message, "[exception.") {
+			t.Fatalf("native exception identity was lost or relabeled: %s", stdout.String())
+		}
+		holes := summary.Results[len(summary.Results)-2]
+		if holes.Title != "array storage refusal" || holes.Status != "trapped" || !strings.Contains(holes.Message, "array.length: hole-aware storage required") {
+			t.Fatalf("hole-aware storage refusal was lost: %s", stdout.String())
 		}
 		last := summary.Results[len(summary.Results)-1]
 		if last.Title != "intentional fail" || last.Status != "failed" || last.Message != "intentional failure" {

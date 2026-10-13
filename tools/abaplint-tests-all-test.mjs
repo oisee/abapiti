@@ -159,6 +159,9 @@ try {
  writeFileSync(join(dir,'evidence/test-gate.json'),JSON.stringify(tailRun.osgEvidence.gate));
  writeFileSync(join(dir,'osg/timing.json'),JSON.stringify(tailRun.osgEvidence.host));
  assert.deepEqual(readOSGEvidence(dir),tailRun.osgEvidence);
+ const refusals = {stubs:[{class:'REGEXP',method:'EXEC',reason:'native regex refusal'}]};
+ writeFileSync(join(dir,'osg/osg-refusals.json'),JSON.stringify(refusals));
+ assert.deepEqual(readOSGEvidence(dir),{...tailRun.osgEvidence,refusals});
  assert.deepEqual(readOSGEvidence(join(dir,'absent')),{gap:null,gate:null,host:null});
  tailRun.infrastructureFailure = 'OSG native panic escaped ABAP CATCH';
  writeFileSync(join(dir,'go-root.json'),JSON.stringify(tailRun));

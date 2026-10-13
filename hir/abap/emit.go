@@ -1145,6 +1145,9 @@ func (b *body) expr(x *hir.Expr) string {
 				if x.Args[0].Type.Kind == hir.Number {
 					b.line("IF " + cnt + " <> trunc( " + cnt + " ).\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
 				}
+				if e.chaiUsed {
+					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + " EXPORTING reason = `array.length: hole-aware storage required`.\nENDIF.")
+				}
 				count := b.temp(hir.T(hir.I32))
 				b.line(count + " = " + cnt + ".")
 				b.line(n + "->allocate( " + count + " ).")
@@ -1908,7 +1911,7 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
-	if b.constSetHas(x, n) {
+	if b.constSetHas(x, n) || b.replaceFreshCharacterRegex(x, n) {
 		return
 	}
 	if k, ok := literalIndex(x); ok {

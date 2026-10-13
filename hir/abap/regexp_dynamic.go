@@ -2,7 +2,6 @@ package abap
 
 import (
 	"fmt"
-	"github.com/oisee/abapiti/hir/jsregex"
 	"sort"
 	"strings"
 )
@@ -41,13 +40,14 @@ func (e *emitter) regexpDynamicRuntime(name string) {
 	}
 	var code strings.Builder
 	code.WriteString("IF checked = abap_true.\nCASE pattern && `/` && flags.\n")
-	keys := make([]string, 0, len(jsregex.Reviewed))
-	for k := range jsregex.Reviewed {
+	reviewed := e.regexpLiteralTable()
+	keys := make([]string, 0, len(reviewed))
+	for k := range reviewed {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		spec := jsregex.Reviewed[k]
+		spec := reviewed[k]
 		code.WriteString("WHEN " + quote(k) + ".\nposix = " + quote(pcreRegexPattern(spec[0])) + ".\nexcluded = " + quote(pcreRegexPattern(spec[1])) + ".\nignore_case = abap_false.\n")
 	}
 	code.WriteString(`WHEN OTHERS.
