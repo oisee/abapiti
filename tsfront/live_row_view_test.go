@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestLiveConfigRowViewsNodeOracle(t *testing.T) {
@@ -39,7 +38,7 @@ func TestLiveConfigRowViewsNodeOracle(t *testing.T) {
 			t.Fatal(err, string(want))
 		}
 		p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-		if _, err := abap.Emit(p); err != nil {
+		if _, err := emitABAP(t, p); err != nil {
 			t.Fatal(err)
 		}
 		exportLiveViewABAP(t, p, "config-rows", strings.TrimSpace(string(want)), true)
@@ -74,7 +73,7 @@ func TestErasedLiveStringArrayNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	exportLiveViewABAP(t, p, "erased-strings", strings.TrimSpace(string(want)), true)

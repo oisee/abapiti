@@ -222,7 +222,7 @@ func TestConfigJSONFixtures(t *testing.T) {
 	}
 	inputs := []string{strings.TrimSpace(string(snapshot)), `{"global":{"files":"quote\" slash\\ line\n tab\t nul\u0000 <>&","exclude":["one",null,false,1.25,-0]},"dependencies":[{"url":"https://example.test","folder":"deps","files":"*.abap"}],"syntax":{"version":"v702"},"rules":{"nested":{"10":10,"2":2,"01":1,"arr":[{},[],null]}}}`, `{"global":{"files":"x","exclude":[1e-7,1e-6,1e20,1e21,-1.2345678901234567,5e-324,1.234567890123456,2.2250738585072014e-308,1.7976931348623157e308,-1e-300,1.0000000000000002,1000000000000000128,-8.102659436467237e253,8.788831760549637e-96,7.057884183898141e108,9476877.387300245,-7.940113795973939e-22,-1485038013007472.2,1837942576686376.2,31701645333072.062,-1967415756624292.2,1553908620950297.2]},"syntax":{"version":"v702"},"rules":{}}`, `{"":"empty","4294967295":"ordinary","4294967294":"index","z":"\"\\\b\f\n\r\t\u0000\ud800x\udfff\ud800\u0041\ud83d\ude00<>&\u2028","a":[null,false,true],"10":10,"2":2,"01":1,"global":{"files":"x","unknown":true}}`}
 	out := t.TempDir()
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+	if base := fixtureOutputDir(t); base != "" {
 		out = filepath.Join(base, t.Name())
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
@@ -243,7 +243,7 @@ func TestConfigJSONFixtures(t *testing.T) {
 		} else {
 			p = nativeConfigFixture(t, input)
 		}
-		files, names, err := EmitNamed(p)
+		files, names, err := emitABAPNamed(t, p)
 		if err != nil {
 			t.Fatal(err)
 		}

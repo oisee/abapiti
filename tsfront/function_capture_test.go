@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestFunctionCaptureValues(t *testing.T) {
@@ -52,7 +50,7 @@ func TestFunctionCaptureValues(t *testing.T) {
 					}
 				}
 			}
-			if _, err := abap.Emit(prog); err != nil {
+			if _, err := emitABAP(t, prog); err != nil {
 				t.Fatal(err)
 			}
 			if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.module", "run"))); got != c.want {

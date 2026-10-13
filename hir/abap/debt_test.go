@@ -19,7 +19,7 @@ func TestRuntimeDebtFixtures(t *testing.T) {
 		count int
 	}{{"xml_validation_fixture", debtfixtures.XMLValidation(), 444}, {"property_fixture", properties, count}, {"seq_property_fixture", debtfixtures.PropertiesInSeq(), 1}} {
 		t.Run(tc.name, func(t *testing.T) {
-			files, names, err := EmitNamed(tc.p)
+			files, names, err := emitABAPNamed(t, tc.p)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -40,7 +40,7 @@ func TestRuntimeDebtFixtures(t *testing.T) {
 			files[names.Get(c.Name)+".clas.testclasses.abap"] = "CLASS ltcl_test DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\n" + declarations.String() + "ENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\n" + implementations.String() + "ENDCLASS.\n"
 
 			out := t.TempDir()
-			if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+			if base := fixtureOutputDir(t); base != "" {
 				out = filepath.Join(base, "TestRuntimeDebtFixtures")
 			}
 			if err := os.MkdirAll(out, 0755); err != nil {

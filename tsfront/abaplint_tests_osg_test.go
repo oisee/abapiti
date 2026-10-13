@@ -103,7 +103,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 	if len(gap.Runtime) == 0 {
 		t.Fatal("missing chai operation gap")
 	}
-	files, err := EmitAbaplintTestsOSG(dir, lowering)
+	files, err := emitABAPTestsOSG(t, dir, lowering)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 			t.Fatalf("runner missing %s", key)
 		}
 	}
-	out := os.Getenv("ABAPITI_TEST_OUT")
+	out := fixtureOutputDir(t)
 	if osg := os.Getenv("ABAPITI_OSG_HOME"); osg != "" {
 		if out == "" {
 			out = t.TempDir()

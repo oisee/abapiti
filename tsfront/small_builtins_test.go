@@ -5,8 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Every case is lowered, verified, emitted to ABAP, and executed as Go against
@@ -38,7 +36,7 @@ func TestSmallBuiltinsNodeOracle(t *testing.T) {
 				t.Fatal(err, string(want))
 			}
 			p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-			if _, err := abap.Emit(p); err != nil {
+			if _, err := emitABAP(t, p); err != nil {
 				t.Fatal(err)
 			}
 			got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestOptionalMapValuesNodeOracle(t *testing.T) {
@@ -47,7 +46,7 @@ func TestOptionalMapValuesNodeOracle(t *testing.T) {
 	if strings.Contains(hir.Dump(prog), "optional<optional<") {
 		t.Fatal("nested optional lookup")
 	}
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +96,7 @@ func TestOptionalRecordFieldsNodeOracle(t *testing.T) {
 	if strings.Contains(hir.Dump(p), "optional<optional<") {
 		t.Fatal("nested record optional")
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1]) + "\nconsole.log(Probe.run());")`, source)

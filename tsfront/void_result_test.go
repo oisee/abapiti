@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestVoidLocalFunctionEffects(t *testing.T) {
@@ -30,7 +29,7 @@ func TestVoidLocalFunctionEffects(t *testing.T) {
   static run(): number { return new Probe().collect(); }
  }
  `}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +69,7 @@ func TestVoidResultLocalAndThunk(t *testing.T) {
   static run(): boolean { return new Probe().collect(); }
  }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "true\n" {
@@ -89,7 +88,7 @@ func TestVoidArrowPreludeRunsOnInvocation(t *testing.T) {
   return before === 0 && results.length === 4 && results[0] === 2 && results[3] === 3;
  } }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "true\n" {

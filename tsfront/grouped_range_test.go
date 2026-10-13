@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestGoGroupedSwitchLocalRangesNodeOracle(t *testing.T) {
@@ -28,7 +26,7 @@ func TestGoGroupedSwitchLocalRangesNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 	// Math.ceil is still an explicit ABAP refusal.
-	if _, err := abap.Emit(p); err == nil {
+	if _, err := emitABAP(t, p); err == nil {
 		t.Fatal("expected ABAP ceil refusal")
 	}
 }

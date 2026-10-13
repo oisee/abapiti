@@ -5,8 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // F's original cases on the single G splitter. Node, not F's narrower
@@ -31,7 +29,7 @@ func TestGoRegExpSplitFNodeOracle(t *testing.T) {
 	// masking the split-specific ABAP capability refusal.
 	abapSource := source[:strings.Index(source, " static results()")] + "}"
 	abapProgram := lowerStatementsProbe(t, map[string]string{"probe.ts": abapSource}, []string{"probe.ts"})
-	if _, err = abap.Emit(abapProgram); err == nil || !strings.Contains(err.Error(), "string.splitRegex") {
+	if _, err = emitABAP(t, abapProgram); err == nil || !strings.Contains(err.Error(), "string.splitRegex") {
 		t.Fatalf("missing ABAP refusal: %v", err)
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})

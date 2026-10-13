@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/oisee/abapiti/internal/abapfixture"
 )
 
 // testOutDir returns a directory for generated test output. By default it is
@@ -17,7 +19,7 @@ import (
 // writes to <dir>/<TestName>.
 func testOutDir(t *testing.T) string {
 	t.Helper()
-	base := os.Getenv("ABAPITI_TEST_OUT")
+	base := abapfixture.OutputDir(t, "wasm")
 	if base == "" {
 		return t.TempDir()
 	}
@@ -173,12 +175,13 @@ func mustCompile(t *testing.T, mod *Module, name string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	abapfixture.Track(t, "wasm", map[string]string{name + ".clas.abap": src})
 	return src
 }
 
 func mustCompileWith(t *testing.T, mod *Module, name string, backend BackendKind, size int) *BackendResult {
 	t.Helper()
-	out, err := CompileWith(mod, name, backend, size)
+	out, err := compileABAPWith(t, mod, name, backend, size)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +190,7 @@ func mustCompileWith(t *testing.T, mod *Module, name string, backend BackendKind
 
 func mustCompileMultiClass(t *testing.T, mod *Module, name string, size int) *CompileResult {
 	t.Helper()
-	out, err := CompileMultiClass(mod, name, size)
+	out, err := compileABAPMultiClass(t, mod, name, size)
 	if err != nil {
 		t.Fatal(err)
 	}

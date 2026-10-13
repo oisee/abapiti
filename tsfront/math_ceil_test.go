@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"github.com/oisee/abapiti/hir/abap"
 	"os/exec"
 	"strings"
 	"testing"
@@ -32,7 +31,7 @@ func ceilEdgeInput(sign int) float64 {if sign==0 {return math.NaN()};return math
 	}); got != "-Inf\nNaN\n+Inf\n-Inf\n" {
 		t.Fatal(got)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "number.ceil") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "number.ceil") {
 		t.Fatalf("ABAP must explicitly refuse ceil: %v", err)
 	}
 }

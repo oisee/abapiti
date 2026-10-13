@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestChaiDeepNodeOracle(t *testing.T) {
@@ -114,7 +112,7 @@ func TestChaiDeepNodeOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The harness-only operations are not silently emitted as ABAP assertions.
-	if _, err := abap.Emit(l.Prog); err == nil {
+	if _, err := emitABAP(t, l.Prog); err == nil {
 		t.Fatal("ABAP unexpectedly accepted Chai deep operations")
 	}
 	files, err := EmitAbaplintTests(dir, l)

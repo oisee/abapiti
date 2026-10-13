@@ -2,8 +2,6 @@ package tsfront
 
 import (
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestCallArityUnionOptionalSlot(t *testing.T) {
@@ -18,7 +16,7 @@ func TestCallArityUnionOptionalSlot(t *testing.T) {
  static widenAgain(flag: boolean): string { const o = flag ? new A() : new D(); return o.parseType("ok"); }
  static run(): string { return Probe.read(new A())+Probe.read(new C())+Probe.widen(false)+Probe.widenAgain(false); }
  }`}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	if got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())"); got != "okokokok\n" {
@@ -48,7 +46,7 @@ func TestCallAritySemantics(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := lowerStatementsProbe(t, map[string]string{"probe.ts": tc.source}, []string{"probe.ts"})
-			if _, err := abap.Emit(p); err != nil {
+			if _, err := emitABAP(t, p); err != nil {
 				t.Fatal(err)
 			}
 			if got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())"); got != tc.want {

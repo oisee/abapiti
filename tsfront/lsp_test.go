@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func lspProbe(t *testing.T, source string) (*hir.Program, []LowerDiagnostic) {
@@ -75,7 +74,7 @@ export class Probe {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +91,7 @@ export class Probe {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Both backends consume the same ordinary named data-shape constructors.
-			if _, err := abap.Emit(prog); err != nil {
+			if _, err := emitABAP(t, prog); err != nil {
 				t.Fatal(err)
 			}
 			got := runGoHIR(t, prog, "fmt.Print("+goEntry("main.ts.Probe", tc.name)+"())")
@@ -145,7 +144,7 @@ func TestLSPGuards(t *testing.T) {
 	if errs := hir.Verify(p); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "runtime operation lsp.is") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "runtime operation lsp.is") {
 		t.Fatalf("expected explicit ABAP guard refusal, got %v", err)
 	}
 	got := runGoHIR(t, p, "fmt.Print("+goEntry("main.ts.Probe", "run")+"())")

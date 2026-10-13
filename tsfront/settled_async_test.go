@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,7 +46,7 @@ export class Probe { static async run(): Promise<string> { return await parseAsy
 	if strings.TrimSpace(out) != "avbp:7:original" {
 		t.Fatal(out)
 	}
-	files, _, err := abap.EmitNamed(p)
+	files, _, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +76,7 @@ func TestSettledResolveReject(t *testing.T) {
 	if strings.TrimSpace(out) != "value:reason" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -119,7 +118,7 @@ func TestSettledRejectionTiming(t *testing.T) {
 	if strings.TrimSpace(out) != "returned:payload:undefined" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -139,7 +138,7 @@ func TestSettledProgressTick(t *testing.T) {
 	if strings.TrimSpace(out) != "lexparsedefs" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -167,7 +166,7 @@ func TestSettledVoidExpression(t *testing.T) {
 	if strings.TrimSpace(out) != "effect" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -183,7 +182,7 @@ func TestSettledAdoptionIdentity(t *testing.T) {
 	if strings.TrimSpace(out) != "true" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }

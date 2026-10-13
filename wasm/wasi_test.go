@@ -425,7 +425,7 @@ func TestWASIGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	multi, err := CompileMultiClass(mod, "zcl_wasi", 80)
+	multi, err := compileABAPMultiClass(t, mod, "zcl_wasi", 80)
 	if err != nil {
 		t.Fatal(err)
 	}

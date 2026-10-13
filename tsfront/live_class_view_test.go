@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestLiveClassViewNodeOracle(t *testing.T) {
@@ -38,11 +37,11 @@ func TestLiveClassViewNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dir := os.Getenv("ABAPITI_TEST_OUT"); dir != "" {
+	if dir := fixtureOutputDir(t); dir != "" {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
@@ -80,7 +79,7 @@ func TestLiveClassViewRefusesPrototypeStorage(t *testing.T) {
 				t.Fatal(err, string(want))
 			}
 			p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-			if _, err := abap.Emit(p); err != nil {
+			if _, err := emitABAP(t, p); err != nil {
 				t.Fatal(err)
 			}
 			if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "native"))); got != string(want) {
@@ -114,7 +113,7 @@ func TestLiveTypedArrayNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	exportLiveViewABAP(t, p, "typed-array", strings.TrimSpace(string(want)), true)
@@ -159,7 +158,7 @@ func TestLiveClassViewOwnKeysNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	exportLiveViewABAP(t, p, "own-keys", strings.TrimSpace(string(want)), true)
@@ -192,12 +191,12 @@ func TestLiveTypedArrayElementRefusals(t *testing.T) {
 
 func exportLiveViewABAP(t *testing.T, p *hir.Program, suffix, want string, refusal bool) {
 	t.Helper()
-	root := os.Getenv("ABAPITI_TEST_OUT")
+	root := fixtureOutputDir(t)
 	if root == "" {
 		return
 	}
 	dir := filepath.Join(root, suffix)
-	files, names, err := abap.EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +226,7 @@ func TestLiveClassViewJSONNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
 		t.Fatalf("ABAP must explicitly refuse subset JSON: %v", err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
@@ -266,7 +265,7 @@ func TestStructuralOwnKeysLiveView(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
 		t.Fatalf("expected explicit ABAP JSON refusal, got %v", err)
 	}
 	got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())")

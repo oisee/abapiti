@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/hir/golang"
 )
 
@@ -29,7 +28,7 @@ export class Probe {
   }
  }
 }`}, []string{"probe.ts"})
-				if _, err := abap.Emit(p); err != nil {
+				if _, err := emitABAP(t, p); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := golang.Emit(p); err != nil {
@@ -59,7 +58,7 @@ func TestNumberBindingsGroupedLabelsMatchNode(t *testing.T) {
  }
 }`
 	p := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, p, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")

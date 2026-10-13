@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestCriticR4ErasedVirtualDispatch(t *testing.T) {
@@ -18,7 +17,7 @@ func TestCriticR4ErasedVirtualDispatch(t *testing.T) {
 	}
 	// The historical cross-method super call is invalid on the kernel.
 	rejected := lowerStatementsProbe(t, map[string]string{"probe.ts": string(source)}, []string{"probe.ts"})
-	if _, err := abap.Emit(rejected); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
+	if _, err := emitABAP(t, rejected); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
 		t.Fatalf("expected cross-method super rejection, got %v", err)
 	}
 	source = []byte(strings.Replace(string(source), "return super.get().value();", "return this.get().value();", 1))
@@ -38,7 +37,7 @@ func TestCriticR4ErasedVirtualDispatch(t *testing.T) {
 	if strings.Contains(body, "instantiated") {
 		t.Fatal("ordinary call bypasses virtual slot", body)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +53,7 @@ cl_abap_unit_assert=>assert_equals( act = actual exp = `+"`sub|sub|sub|sub|sub`"
 ENDMETHOD.
 ENDCLASS.
 `, names.Get(probe.Name), names.Get("member.run"))
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		dir := filepath.Join(out, "critic-r4", "dispatch")
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
@@ -74,7 +73,7 @@ func TestCriticR4LiftedDefaults(t *testing.T) {
 	}
 	for i, src := range []string{string(source), `export class Probe { static run(): number { const captured = 3; const first = (n: number = captured): number => n; const second = (): number => first(); return second(); } }`} {
 		prog := lowerStatementsProbe(t, map[string]string{"probe.ts": src}, []string{"probe.ts"})
-		if _, err := abap.Emit(prog); err != nil {
+		if _, err := emitABAP(t, prog); err != nil {
 			t.Fatal(err)
 		}
 		want := []string{"7\n", "3\n"}[i]
