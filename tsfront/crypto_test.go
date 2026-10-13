@@ -27,7 +27,7 @@ func TestGoFreshSHA1PipelineNodeOracle(t *testing.T) {
 	}
 	// Use a fresh lowering: ABAP-only passes must not mutate the Go oracle.
 	abapProgram := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(abapProgram)
+	files, names, err := emitABAPNamed(t, abapProgram)
 	if err != nil {
 		t.Fatal(err)
 	}

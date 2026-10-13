@@ -29,7 +29,7 @@ func TestGoRegExpSplitFNodeOracle(t *testing.T) {
 	// Checked split grammars emit; other languages refuse at runtime.
 	abapSource := source[:strings.Index(source, " static results()")] + "}"
 	abapProgram := lowerStatementsProbe(t, map[string]string{"probe.ts": abapSource}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(abapProgram)
+	files, names, err := emitABAPNamed(t, abapProgram)
 	if err != nil {
 		t.Fatal(err)
 	}
