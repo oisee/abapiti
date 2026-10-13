@@ -4,10 +4,11 @@ import {mkdirSync, writeFileSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {performance} from 'node:perf_hooks';
 import {resumeRunner} from './osg-runner-resume.mjs';
+import {externalPath} from './osg-harness-cache.mjs';
 
 const [binary, names, output, shard] = process.argv.slice(2);
 if (!binary || !names || !output || !shard) throw new Error('usage: osg-runner-execute.mjs BINARY NAMES OUT SHARD');
-const out = resolve(output);
+const out = process.env.ABAPITI_OSG_HOME ? externalPath(output, process.env.ABAPITI_OSG_HOME) : resolve(output);
 mkdirSync(out, {recursive:true});
 const started = performance.now();
 let status = 2;
