@@ -1665,6 +1665,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	case hir.Array:
 		switch name {
+		case "fill":
+			if len(args) != 1 {
+				return nil, false
+			}
+			return l.fillArray(n, recv, args), true
 		case "flat":
 			return l.flatArray(n, recv, args), true
 		case "reverse":

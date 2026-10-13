@@ -92,5 +92,13 @@ func sparseRuntime(source string) string {
 	source = strings.Replace(source, "out:=&array[T]{Items:make([]T,len(a.Items))}", "out:=&array[T]{Items:make([]T,len(a.Items)),holes:copyHoles(a.holes,0,len(a.Items))}", 1)
 	source = strings.Replace(source, "func referenceArray[T any](a *array[T]) *array[any] {\n\tout := &array[any]{}", "func referenceArray[T any](a *array[T]) *array[any] {\n\tif a==nil {return nil};out := &array[any]{holes:copyHoles(a.holes,0,len(a.Items))}", 1)
 	source = strings.Replace(source, "for i,v:=range a.Items {out.Items[i]=unwrap(v)}", "for i,v:=range a.Items {if a.has(int32(i)) {out.Items[i]=unwrap(v)}}", 1)
-	return source
+	return source + `
+// Sized construction creates absent slots, not present zero/undefined values.
+func sizedArray[T any](n float64) *array[T] {
+ if n<0 || n>2147483646 || n!=math.Trunc(n) {panic(newRangeFault())}
+ out:=&array[T]{Items:make([]T,int(n)),holes:map[int]bool{}}
+ for i:=range out.Items {out.holes[i]=true}
+ return out
+}
+`
 }

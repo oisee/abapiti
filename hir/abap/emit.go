@@ -1177,9 +1177,8 @@ func (b *body) expr(x *hir.Expr) string {
 				if x.Args[0].Type.Kind == hir.Number {
 					b.line("IF " + cnt + " <> trunc( " + cnt + " ).\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
 				}
-				if e.chaiUsed {
-					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + " EXPORTING reason = `array.length: hole-aware storage required`.\nENDIF.")
-				}
+				// allocate records holes; observation-specific adapters must
+				// either preserve their semantics or refuse at the read boundary.
 				count := b.temp(hir.T(hir.I32))
 				b.line(count + " = " + cnt + ".")
 				b.line(n + "->allocate( " + count + " ).")
@@ -2813,6 +2812,10 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("ENDDO.")
 	case hir.ForEach:
 		a := b.expr(s.X)
+		if e.chaiUsed && e.arrayViews {
+			b.line(a + "->load( ).")
+		}
+		b.chaiDenseIteration(a)
 		n := b.temp(s.Type)
 		old, ok := b.locals[s.Name]
 		b.locals[s.Name] = n
@@ -2826,6 +2829,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if e.arrayViews {
 			idx := b.temp(hir.T(hir.I32))
 			b.line("DO.\n" + a + "->load( ).\nIF " + idx + " >= lines( " + a + "->items ).\nEXIT.\nENDIF.")
+			b.chaiDenseIteration(a)
 			b.line("CLEAR " + row + ".\nREAD TABLE " + a + "->items INDEX " + idx + " + 1 INTO " + row + ".")
 			if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
 				b.line("IF " + a + "->has( " + idx + " ) = abap_false.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
@@ -2838,6 +2842,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("ENDDO.")
 		} else {
 			b.line("LOOP AT " + a + "->items INTO " + row + ".")
+			b.chaiDenseIteration(a)
 			if row != n {
 				b.arrayElement(n, row, s.Type)
 			}

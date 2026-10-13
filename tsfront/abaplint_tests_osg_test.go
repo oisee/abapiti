@@ -83,7 +83,7 @@ func TestAbaplintTestHostOSGEmission(t *testing.T) {
 it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
 it("host dump",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("after host dump",()=>{});
 it("JS whitespace on multiline text",()=>{expect("a\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeffb\u0085\u180ec".replace(/\s+/g,"_")).equal("a_b\u0085\u180ec")});it("JS ASCII word and digit",()=>{expect("a\nA_0é١\ufeff".replace(/[\w\d]+/g,"_")).equal("_\n_é١\ufeff")});
-it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
+it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage length",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
 		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
 	}
 	for _, name := range []string{"mocha", "chai"} {
@@ -182,12 +182,12 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
 			t.Fatalf("OSG fixture returned no valid report: %v\nstdout: %s\nstderr: %s", err, stdout.String(), stderr.String())
 		}
-		// The 16c024c8 baseline is 6 pass / 2 FAIL / 4 trap. Recovery adds
-		// one deliberate host trap and one subsequent pass, not a regression.
-		if summary.Passed != 7 || summary.Failed != 2 || summary.Trapped != 5 {
+		// Recovery preserves host traps; hole-aware allocation now permits
+		// the sized-array length observation without a blanket Chai refusal.
+		if summary.Passed != 8 || summary.Failed != 2 || summary.Trapped != 4 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		wantTitles := []string{"pass", "assertion", "refusal", "intentional fail", "host dump", "after host dump", "JS whitespace on multiline text", "JS ASCII word and digit", "native host refusal", "CDS normalization", "native exception identity", "checked absolute anchors", "CDS quoted grammar", "array storage refusal"}
+		wantTitles := []string{"pass", "assertion", "refusal", "intentional fail", "host dump", "after host dump", "JS whitespace on multiline text", "JS ASCII word and digit", "native host refusal", "CDS normalization", "native exception identity", "checked absolute anchors", "CDS quoted grammar", "array storage length"}
 		if len(summary.Results) != len(wantTitles) {
 			t.Fatalf("lost or duplicated registrations: %s", stdout.String())
 		}
@@ -223,8 +223,8 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 			t.Fatalf("native exception identity was lost or relabeled: %s", stdout.String())
 		}
 		holes := summary.Results[len(summary.Results)-1]
-		if holes.Title != "array storage refusal" || holes.Status != "trapped" || !strings.Contains(holes.Message, "array.length: hole-aware storage required") {
-			t.Fatalf("hole-aware storage refusal was lost: %s", stdout.String())
+		if holes.Title != "array storage length" || holes.Status != "passed" {
+			t.Fatalf("hole-aware array length was refused: %s", stdout.String())
 		}
 		hostDump, last := summary.Results[4], summary.Results[5]
 		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(hostDump.Message, "negative lookbehind (?<!...) is not in Go's RE2") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
