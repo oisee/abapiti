@@ -190,6 +190,7 @@ func TestStringXMLFixtures(t *testing.T) {
 		}
 		unit.WriteString("cl_abap_unit_assert=>assert_true( act = pattern->global ).\n")
 	}
+	fmt.Fprintf(&unit, "CREATE OBJECT pattern EXPORTING pattern = `\\s+` flags = ''.\npieces = %s.\ncl_abap_unit_assert=>assert_equals( act = lines( pieces->items ) exp = 2 msg = 'plain split flags' ).\nREAD TABLE pieces->items INDEX 1 INTO part.\ncl_abap_unit_assert=>assert_equals( act = part exp = `a` ).\nREAD TABLE pieces->items INDEX 2 INTO part.\ncl_abap_unit_assert=>assert_equals( act = part exp = `b` ).\ncl_abap_unit_assert=>assert_false( act = pattern->global ).\n", invoke("split", param("text", "`a b`"), param("pattern", "pattern"), param("limit", "CONV f( '4294967295' )")))
 	for i, s := range xmls {
 		fmt.Fprintf(&unit, "graph = %s.\n", invoke("xml", param("text", literal(s))))
 		equal("writer->"+names.Get("json.write."+hir.T(hir.Dynamic).String())+"( graph )", answers.Xmls[i], fmt.Sprintf("xml %d", i))

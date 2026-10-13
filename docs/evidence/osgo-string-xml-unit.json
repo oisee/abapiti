@@ -1,0 +1,59 @@
+{
+  "implementationCommit": "5fc340b",
+  "initialImplementationCommit": "a368ee4",
+  "osgCommit": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+  "node": "v26.9.0",
+  "fastXMLParser": "5.10.1",
+  "fixture": "TestStringXMLFixtures",
+  "oracles": {
+    "padStart": 12,
+    "parseFloatNumber": 16,
+    "sha1Hex": 9,
+    "splitRegex": 264,
+    "xmlValues": 11,
+    "xmlErrors": 5
+  },
+  "additionalChecks": [
+    "plain RegExp flags and unmodified global state",
+    "raw UTF-16 surrogate truncation",
+    "lone surrogate SHA1 refusal",
+    "nonfinite and negative-zero parseFloat refusal",
+    "padStart allocation limit",
+    "unchecked split grammars refuse",
+    "unsupported XML languages refuse, including uppercase declaration"
+  ],
+  "abapAssertions": 733,
+  "unit": {
+    "classes": 1,
+    "compiled": 1,
+    "rows": [{
+      "class": "Z_STRINGXMLPRO_434DF3D9466396",
+      "testclass": "LTCL_TEST",
+      "method": "CHECK",
+      "status": "SUCCESS",
+      "message": "",
+      "alerts": ["->* of a data"]
+    }],
+    "timingMs": {"emit": 424, "goBuild": 2519, "run": 17, "total": 11890}
+  },
+  "xmlCaseMutation": {
+    "change": "restore case-insensitive declaration prefix matching in a scratch fixture",
+    "expectedExit": 1,
+    "actualExit": 1,
+    "status": "FAILED",
+    "reason": "uppercase declaration coverage refusal assertion detected the mutation",
+    "countedAsUpstreamFAIL": false
+  },
+  "goCompatibility": {
+    "baselineCommit": "fa6efed",
+    "filesIncludingExecutable": 9,
+    "diffExit": 0,
+    "changedBytes": 0
+  },
+  "gates": {
+    "vet": "pass",
+    "short": "pass",
+    "graceLexerFacts": "pass",
+    "lint": {"newIssues": 0, "canary": "5/5", "version": "2.13.2"}
+  }
+}
