@@ -52,7 +52,7 @@ async function run(runtime, dir, label, pass, tests = 1) {
   if (pass ? result.status !== 0 || t.success !== tests || d.rows.some(r=>r.status!=="SUCCESS") : result.status !== 1 || t.failure !== tests || d.rows.some(r=>r.status!=="FAILURE")) throw new Error(`${runtime} ${label}: unexpected verdict`);
   console.log(`${runtime} ${label}: ${pass ? "PASS" : "expected FAIL"}${label === "baseline" ? " (44/44 cases, 4,663 tokens)" : ""}`);
 }
-for (const runtime of ["osgo","osgjs"]) {
+for (const runtime of (process.env.HIR_RUNTIMES || "osgo").split(/\s+/).filter(Boolean)) {
  const corpus = gen;
  const testfile = readdirSync(corpus).find(n=>n.endsWith(".clas.testclasses.abap"));
  const original=readFileSync(join(corpus,testfile),"utf8");
