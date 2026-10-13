@@ -189,6 +189,7 @@ func (e *emitter) ownClassDeclaration(out *strings.Builder, c *hir.Class) {
 	if !e.ownAdapter(c) {
 		if e.ownKeysUsed && e.inheritsOwnAdapter(c) {
 			fmt.Fprintf(out, "METHODS %s~keys REDEFINITION.\nMETHODS %s~get REDEFINITION.\nMETHODS %s~put REDEFINITION.\n", e.name("own.storage"), e.name("view.storage"), e.name("view.storage"))
+			fmt.Fprintf(out, "METHODS %s~has REDEFINITION.\nMETHODS %s~delete REDEFINITION.\n", e.name("view.storage"), e.name("view.storage"))
 		}
 		return
 	}
@@ -200,7 +201,7 @@ func (e *emitter) ownClassDeclaration(out *strings.Builder, c *hir.Class) {
 		fmt.Fprintf(out, "INTERFACES %s.\n", iface)
 	}
 	if e.ownAdapter(parent) || parent != nil && e.liveClasses[parent.Name] {
-		fmt.Fprintf(out, "METHODS %s~get REDEFINITION.\nMETHODS %s~put REDEFINITION.\n", storage, storage)
+		fmt.Fprintf(out, "METHODS %s~get REDEFINITION.\nMETHODS %s~put REDEFINITION.\nMETHODS %s~has REDEFINITION.\nMETHODS %s~delete REDEFINITION.\n", storage, storage, storage, storage)
 	} else if !e.liveRoot(c) {
 		fmt.Fprintf(out, "INTERFACES %s.\n", storage)
 	}
@@ -211,7 +212,7 @@ func (e *emitter) refuseInheritedOwnAdapter(out *strings.Builder, c *hir.Class) 
 	if !e.ownKeysUsed || e.ownAdapter(c) || !e.inheritsOwnAdapter(c) {
 		return false
 	}
-	for _, name := range []string{e.name("own.storage") + "~keys", e.name("view.storage") + "~get", e.name("view.storage") + "~put"} {
+	for _, name := range []string{e.name("own.storage") + "~keys", e.name("view.storage") + "~get", e.name("view.storage") + "~put", e.name("view.storage") + "~has", e.name("view.storage") + "~delete"} {
 		fmt.Fprintf(out, "METHOD %s.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", name, e.name("view.refusal"))
 	}
 	return true
@@ -272,7 +273,13 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 	} else {
 		b.line(graph + " = NEW #( ).\n" + graph + "->tag = " + d + "=>tag_object.")
 		for _, f := range fields {
+			if e.recordDelete {
+				b.line("READ TABLE me->" + e.name("record.deleted") + " WITH KEY table_line = `" + strings.ReplaceAll(f.Name, "`", "``") + "` TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.")
+			}
 			b.line(graph + "->put( p0 = `" + strings.ReplaceAll(f.Name, "`", "``") + "` p1 = VALUE #( ) ).")
+			if e.recordDelete {
+				b.line("ENDIF.")
+			}
 		}
 	}
 	b.line("result = " + e.name("runtime.ownKeys") + "=>keys( " + graph + " ).")

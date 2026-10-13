@@ -18,6 +18,9 @@ func TestOwnKeysOrderAndRefusals(t *testing.T) {
 	put := method("put", hir.T(hir.Void), run(rt("dynamic.put", local("input", dyn), hir.T(hir.Void), hir.L(str, "extra"), rt("dynamic.of", hir.L(boolean, true), dyn))))
 	put.Static = true
 	put.Params = keys.Params
+	del := method("delete", boolean, ret(rt("dynamic.delete", local("input", dyn), boolean, hir.L(str, "maybe"))))
+	del.Static = true
+	del.Params = keys.Params
 	makeClass := func(name string, order []string) *hir.Class {
 		c := &hir.Class{Name: name}
 		body := hir.B()
@@ -35,7 +38,7 @@ func TestOwnKeysOrderAndRefusals(t *testing.T) {
 	unknown := &hir.Class{Name: "UnknownKeys", Structural: true, Fields: []hir.Field{{Name: "value", Type: boolean}, {Name: "maybe", Type: hir.T(hir.Optional, boolean)}}}
 	unsafe := &hir.Class{Name: "BehaviorKeys", Super: "GoodKeys", Fields: []hir.Field{{Name: "extra", Type: boolean}}}
 	unsafe.Methods = []*hir.Method{method("mutate", boolean, hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, X: &hir.Expr{Kind: hir.This, Type: hir.Ref("BehaviorKeys")}, Name: "extra", Type: boolean}, Y: hir.L(boolean, true)}, ret(hir.L(boolean, true))))}
-	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{good, bad, unknown, unsafe, {Name: "MissingKeys", Fields: []hir.Field{{Name: "flag", Type: boolean}}, Ctor: method("constructor", hir.T(hir.Void), hir.B())}, {Name: "KeyProbe", Methods: []*hir.Method{keys, put}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{good, bad, unknown, unsafe, {Name: "MissingKeys", Fields: []hir.Field{{Name: "flag", Type: boolean}}, Ctor: method("constructor", hir.T(hir.Void), hir.B())}, {Name: "KeyProbe", Methods: []*hir.Method{keys, put, del}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,6 +90,17 @@ cl_abap_unit_assert=>assert_equals( act = actual exp = 'value,maybe,extra' ).
 value = input->get( 'extra' ).
 cl_abap_unit_assert=>assert_true( value->bval ).
 `, names.Get("UnknownKeys"), names.Get("runtime.dynamic"), names.Get("runtime.dynamic"), names.Get("runtime.dynamic"), names.Get("view.ownKeys"), names.Get("runtime.dynamic"), names.Get("KeyProbe"), names.Get("member.keys"), names.Get("runtime.dynamic"), names.Get("KeyProbe"), names.Get("member.put"), names.Get("KeyProbe"), names.Get("member.keys"))
+	fmt.Fprintf(&unit, `DATA deleted TYPE abap_bool.
+deleted = %s=>%s( input ).
+cl_abap_unit_assert=>assert_true( deleted ).
+cl_abap_unit_assert=>assert_false( input->has( 'maybe' ) ).
+actual = %s=>%s( input ).
+cl_abap_unit_assert=>assert_equals( act = actual exp = 'value,extra' ).
+input->put( p0 = 'maybe' p1 = VALUE #( ) ).
+cl_abap_unit_assert=>assert_true( input->has( 'maybe' ) ).
+actual = %s=>%s( input ).
+cl_abap_unit_assert=>assert_equals( act = actual exp = 'value,extra,maybe' ).
+`, names.Get("KeyProbe"), names.Get("member.delete"), names.Get("KeyProbe"), names.Get("member.keys"), names.Get("KeyProbe"), names.Get("member.keys"))
 	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
 	files[names.Get("KeyProbe")+".clas.testclasses.abap"] = unit.String()
 	if out := fixtureOutputDir(t); out != "" {
