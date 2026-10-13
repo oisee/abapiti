@@ -96,7 +96,8 @@ export async function runShards(shards, workers, runShard, admit = async () => {
 // Preserve host refusals and timings even when no runner JSON was produced.
 export function readOSGEvidence(build) {
  const read = file => existsSync(join(build,file)) ? JSON.parse(readFileSync(join(build,file))) : null;
- return {gap:read('evidence/abap-gap.json'),gate:read('evidence/test-gate.json'),host:read('osg/timing.json')};
+ return {gap:read('evidence/abap-gap.json'),gate:read('evidence/test-gate.json'),host:read('osg/timing.json'),
+  ...(existsSync(join(build,'osg/osg-refusals.json')) ? {refusals:read('osg/osg-refusals.json')} : {})};
 }
 
 async function main() {
@@ -196,8 +197,8 @@ async function main() {
   finished = true;
  } finally {
   oracleBuild?.dispose();
-  if (finished) rmSync(run, {recursive:true, force:true});
-  else console.error(`all-shard evidence retained after incomplete run: ${run}`);
+  if (finished && process.env.ABAPITI_TESTS_KEEP_ARTIFACTS !== '1') rmSync(run, {recursive:true, force:true});
+  else console.error(`all-shard evidence retained: ${run}`);
  }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch(error => { console.error(error); process.exitCode = 1; });

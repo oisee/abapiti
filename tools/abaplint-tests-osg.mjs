@@ -9,6 +9,8 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import {snapshotKey, readSnapshot, writeSnapshot, externalPath} from './osg-harness-cache.mjs';
 import {waitForResources} from './osg-harness-resources.mjs';
+import {protectTestBoundaries} from './osgo-test-boundaries.mjs';
+import {adaptTestRegex} from './osgo-test-regex.mjs';
 
 const [inputArg, outArg, osgArg] = process.argv.slice(2);
 if (!inputArg || !outArg || !osgArg) throw new Error('usage: abaplint-tests-osg.mjs ABAP OUT OSG');
@@ -54,7 +56,7 @@ const buildArgs=['build','-p','1','-trimpath',...(debug?[]:['-ldflags=-s -w']),.
 const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8'};
 const go=join(out,'go'), cmd=join(go,'cmd','abapitests'), binary=join(out,'abaplint-tests-osg');
 const generated={'zz_generated.go':join(cmd,'zz_generated.go'),'main.go':join(cmd,'main.go')};
-let frontKey, binaryKey, refusals, buildPeakRSSKiB=null;
+let frontKey, binaryKey, refusals, regexAdapter, buildPeakRSSKiB=null;
 const cache={frontend:cacheRoot?'miss':'disabled',binary:cacheRoot?'miss':'disabled'};
 let started=performance.now();
 if (cacheRoot) {
@@ -70,6 +72,9 @@ if (cacheRoot) {
   gogenEnv:Object.fromEntries(Object.entries(process.env).filter(([k])=>k.startsWith('GOGEN_')).sort()),
   bridge:readFileSync(new URL(import.meta.url),'utf8'),
   cache:readFileSync(new URL('./osg-harness-cache.mjs',import.meta.url),'utf8'),
+  // Invocation-local IR/Go adaptations change the emitted frontend output.
+  boundaries:readFileSync(new URL('./osgo-test-boundaries.mjs',import.meta.url),'utf8'),
+  regex:readFileSync(new URL('./osgo-test-regex.mjs',import.meta.url),'utf8'),
   // The path-dependent exclusion predicate must remain identical too.
   skipped:folders.map(folder=>{
    const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
@@ -79,7 +84,7 @@ if (cacheRoot) {
  binaryKey=snapshotKey([],{kind:'binary',frontKey,buildArgs,goFlags:process.env.GOFLAGS ?? '',
   go:execFileSync('go',['env','GOVERSION','GOOS','GOARCH','GOAMD64','GOARM','GOARM64','GO386','GOMIPS','GOMIPS64','GOPPC64','GORISCV64','GOEXPERIMENT','CGO_ENABLED','CC','CXX','CGO_CFLAGS','CGO_CPPFLAGS','CGO_CXXFLAGS','CGO_LDFLAGS'],{encoding:'utf8'})});
  const hit=readSnapshot(cacheRoot,binaryKey,{binary});
- if (hit) { refusals=hit.refusals; cache.binary='hit'; cache.frontend='skipped'; }
+ if (hit) { ({refusals,regexAdapter}=hit); cache.binary='hit'; cache.frontend='skipped'; }
 }
 timingMs.cache=Math.round(performance.now()-started);
 if (cache.binary==='hit') writeFileSync(join(out,'build.log'),'content-addressed executable cache hit\n');
@@ -87,7 +92,7 @@ else {
  cpSync(join(osg,'tools/gogen/go'),go,{recursive:true,filter:src=>!/(?:^|\/)zz_[^/]+\.go$/.test(src)});
  mkdirSync(cmd,{recursive:true});
  const front=cacheRoot ? readSnapshot(cacheRoot,frontKey,generated) : null;
- if (front) { refusals=front.refusals; cache.frontend='hit'; }
+ if (front) { ({refusals,regexAdapter}=front); cache.frontend='hit'; }
  else {
   const {compileProgram}=await tool('frontend.mjs');
   const {emitGo,referencedClasses}=await tool('emit-go.mjs');
@@ -119,24 +124,38 @@ else {
    if(round===11)throw new Error('OSG dependency closure did not settle');
   }
   timingMs.frontend=Math.round(performance.now()-started);
-  // Tolerant stubs remain named runtime refusals. No results are fabricated.
+  // names.json is part of the fixture folder, hence of frontKey.
+  regexAdapter=adaptTestRegex(program,JSON.parse(readFileSync(join(input,'names.json'),'utf8')));
+  // Tolerant stubs remain named runtime refusals. Driver-only boundaries record
+  // native NOT_COMPILED as a trap after the action/body unwinds; no source catch
+  // can intercept it. Other panics that escape the driver remain infrastructure
+  // failures. No registrations or results are fabricated.
   refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
   started=performance.now();
-  writeFileSync(generated['zz_generated.go'],emitGo(program,'main',null,true));
+  writeFileSync(generated['zz_generated.go'],protectTestBoundaries(emitGo(program,'main',null,true),program));
   writeFileSync(generated['main.go'],`package main
 import("encoding/json";"fmt";"os";"osg/gogen/abap")
+var driverNames map[string]struct{ID string \x60json:"id"\x60}
+func driverExceptionName(class string) string {
+ if entry, ok := driverNames[class]; ok { return entry.ID }
+ return class
+}
 func main(){
+ // names.json comes from argv so cached output never embeds a fixture path.
+ if len(os.Args)!=2{panic("usage: abaplint-tests-osg NAMES_JSON")}
+ names,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)}
+ if err=json.Unmarshal(names,&driverNames);err!=nil{panic(err)}
  defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %v\\n",x);os.Exit(2)}}()
  text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{})
  var report struct {Failed int \x60json:"failed"\x60; Trapped int \x60json:"trapped"\x60; AsyncPending int \x60json:"asyncPending"\x60; Initialization []struct{Status string \x60json:"status"\x60} \x60json:"initialization"\x60}
  if err:=json.Unmarshal([]byte(text),&report);err!=nil{panic(err)}
  fmt.Println(text)
- failedInit:=false;for _,r:=range report.Initialization{if r.Status=="failed"{failedInit=true}}
- if report.Failed+report.Trapped+report.AsyncPending>0 || failedInit{os.Exit(1)}
+ refusedInit:=false;for _,r:=range report.Initialization{if r.Status=="failed" || r.Status=="trapped"{refusedInit=true}}
+ if report.Failed+report.Trapped+report.AsyncPending>0 || refusedInit{os.Exit(1)}
 }
 `);
   timingMs.emit=Math.round(performance.now()-started);
-  if(cacheRoot)writeSnapshot(cacheRoot,frontKey,generated,{refusals});
+  if(cacheRoot)writeSnapshot(cacheRoot,frontKey,generated,{refusals,regexAdapter});
   // Release gogen's registry/IR before the memory-heavy Go compiler starts.
   started=performance.now();
   program=null;registry=null;
@@ -160,18 +179,18 @@ func main(){
  if(build.status!==0){
   process.stderr.write(build.stderr??build.error?.message??'OSG build failed');
   writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
-  writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status:2,envelope,mode,admission,cache,buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
+  writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status:2,envelope,regexAdapter,mode,admission,cache,buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
   process.exit(2);
  }
- if(cacheRoot)writeSnapshot(cacheRoot,binaryKey,{binary},{refusals});
+ if(cacheRoot)writeSnapshot(cacheRoot,binaryKey,{binary},{refusals,regexAdapter});
 }
 writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
 started=performance.now();
 // Always execute in a fresh process, even on a cache hit. No test result cache,
 // initialization-order merging, shared statics, or cross-shard registrations.
-const run=spawnSync(binary,[],{cwd:out,env:process.env,encoding:'utf8',maxBuffer:128*1024*1024});
+const run=spawnSync(binary,[join(input,'names.json')],{cwd:out,env:process.env,encoding:'utf8',maxBuffer:128*1024*1024});
 timingMs.run=Math.round(performance.now()-started);
 process.stdout.write(run.stdout??'');process.stderr.write(run.stderr??run.error?.message??'');
 const status=run.status??2;
-writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
+writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,regexAdapter,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
 process.exitCode=status;
