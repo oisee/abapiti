@@ -146,6 +146,7 @@ initialization = initialization && '{"file":' && quote( file ) && ',"action":' &
 ENDMETHOD.
 METHOD run.
 DATA init_error TYPE REF TO cx_root.
+DATA test_error TYPE REF TO cx_root.
 DATA init_assertion TYPE REF TO ASSERTCLASS.
 DATA init_trap TYPE REF TO TRAPCLASS.
 DATA passed TYPE i.
@@ -203,7 +204,7 @@ ENDIF.
 IF message CS 'unsupported-test-done'.
 status = 'not-run'.
 ENDIF.
-CATCH cx_root INTO DATA(test_error).
+CATCH cx_root INTO test_error.
 status = 'trapped'.
 message = describe( test_error ).
 ENDTRY.
