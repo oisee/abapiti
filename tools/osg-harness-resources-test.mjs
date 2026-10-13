@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {resourcesReady, waitForResources, heavyCommand} from './osg-harness-resources.mjs';
+import {runShards} from './abaplint-tests-all.mjs';
+const good = {load:11.99,io:29.99,availableGiB:20};
+assert.equal(resourcesReady(good),true);
+for (const bad of [{load:12},{io:30},{availableGiB:19.99},{load:NaN},{io:Infinity}]) assert.equal(resourcesReady({...good,...bad}),false);
+let samples=0, pauses=0;
+const admission=await waitForResources({sample:()=>++samples===1?{...good,load:20}:good,pause:async()=>{pauses++},log:()=>{}});
+assert.equal(samples,2);assert.equal(pauses,1);assert.deepEqual(admission.resources,good);
+await assert.rejects(waitForResources({sample:()=>({...good,io:30}),timeoutMs:0,log:()=>{}}),/timed out/);
+let calls=0;
+await assert.rejects(runShards(['queued'],1,async()=>{calls++},async()=>{throw new Error('admission failed')}),/admission failed/);
+assert.equal(calls,0);
+// A peer waiting for admission must not launch after another worker fails.
+let release, reject;
+const waiting=new Promise(resolve=>{release=resolve});
+const failing=new Promise((_,no)=>{reject=no});
+let admissions=0;
+const started=[];
+const run=runShards(['first','never'],2,async name=>{started.push(name);await failing},async()=>{if(++admissions===2)await waiting});
+await new Promise(resolve=>setImmediate(resolve));reject(new Error('FAIL'));
+await new Promise(resolve=>setImmediate(resolve));release();
+await assert.rejects(run,/FAIL/);assert.deepEqual(started,['first']);
+assert.deepEqual(heavyCommand('x',['a'],{}),{command:'x',args:['a']});
+assert.deepEqual(heavyCommand('x',['a'],{ABAPITI_OSG_LOCK:'L',ABAPITI_OSG_MEMORY_MAX:'48G'}),{command:'flock',args:['L','systemd-run','--user','--scope','-q','-p','MemoryMax=48G','nice','-n','10','x','a']});
+assert.deepEqual(heavyCommand('x',[],{ABAPITI_OSG_NICE:'5'}),{command:'nice',args:['-n','5','x']});
+console.log('OSG resource thresholds, timeout, admission failure, fail-stop and heavy-step wrapping: ok');
