@@ -259,6 +259,8 @@ ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oise
 ## How it's verified
 
 Default Go unit tests (`go test ./...`) exclude the deprecated WASM path. Its opt-in tests (`go test -tags wasmlegacy ./wasm`) use wazero as the native reference. The legacy generated classes can be checked as ABAP Unit on osgo and OSD through the manual-only [`osd-m1.yml`](.github/workflows/osd-m1.yml) workflow. The larger-program results above are historical runs on a real kernel (A4H) with throwaway packages.
+
+On every PR, CI's `osgo` job also collects the emitted ABAP fixtures from the default Go tests and the legacy ABAP Unit generator, then compiles them through gogen on the pinned OSG, without executing them. [`ABAPITI_ABAP_FIXTURE_DIR` and the compile gate](docs/abap-fixture-compile.md) describe local reproduction and adding new emitter tests.
 CI (`.github/workflows/ci.yml`, the same checks as vsp's) runs on every pull request and push to main: build, vet, the tests with `-race` and a shuffled order, a clean tree after them, a lint gate on new code, and a leak scan; complexity metrics, a full lint and a "does the new test fail without the fix" check are advisory. One bot comment per pull request (`ci-report.yml`) sums them up, with deltas against main.
 
 The target pipeline, per test case:

@@ -25,7 +25,7 @@ func TestSmallBuiltinEmission(t *testing.T) {
 			if errs := hir.Verify(p); len(errs) > 0 {
 				t.Fatal(errs)
 			}
-			files, err := Emit(p)
+			files, err := emitABAP(t, p)
 			if err != nil {
 				t.Fatal(err)
 			}

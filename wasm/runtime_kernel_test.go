@@ -176,7 +176,7 @@ func TestSingleClassMemoryHelpersOwnBuffer(t *testing.T) {
 		t.Run(m.name, func(t *testing.T) {
 			src := mustCompileWith(t, m.mod, "zcl_owned_memory", BackendClass, 80).Files["zcl_owned_memory.clas.abap"]
 			if m.name == "runtime_helpers" {
-				src = runtimeFixtureClass(m.mod, "zcl_owned_memory")
+				src = runtimeFixtureClass(t, m.mod, "zcl_owned_memory")
 			}
 			// Named actual parameters use '='; ordinary reads and assignments do not.
 			for _, call := range parameterLists.FindAllStringSubmatch(src, -1) {

@@ -42,7 +42,7 @@ func TestConstantSetHas(t *testing.T) {
 		{Name: "Mod", Fields: []hir.Field{{Name: "space", Type: i32, Static: true}, {Name: "splits", Type: setT, Static: true}, {Name: "shared", Type: setT, Static: true}}, Methods: []*hir.Method{init, leak}},
 		{Name: "Lexer", Methods: []*hir.Method{isSplit, isShared}},
 	}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

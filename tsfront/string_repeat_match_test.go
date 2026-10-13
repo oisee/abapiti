@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Emitted to a dedicated directory for hir-unit.sh's osgo/OSG-JS Node gate.
@@ -40,7 +39,7 @@ func TestEmitStringRepeatMatch(t *testing.T) {
 	if got := strings.TrimSuffix(runGoHIR(t, prog, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"().String())"), "\n"); got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +50,7 @@ func TestEmitStringRepeatMatch(t *testing.T) {
 	}
 	driver += fmt.Sprintf("actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nENDMETHOD.\nENDCLASS.\n", class, names.Get("member.run"))
 	files[class+".clas.testclasses.abap"] = driver
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

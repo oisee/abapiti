@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
@@ -68,7 +67,7 @@ func TestNumberRangeDataflow(t *testing.T) {
 	if run.Params[1].Type.Kind != hir.Number || run.Result.Kind != hir.Number {
 		t.Fatal("public ABI narrowed")
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -107,7 +106,7 @@ func TestNumberRangesLexer(t *testing.T) {
 		t.Fatal(errors)
 	}
 	if out := os.Getenv("ABAPITI_RANGE_OUT"); out != "" {
-		files, names, err := abap.EmitNamed(p)
+		files, names, err := emitABAPNamed(t, p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -229,7 +228,7 @@ func TestRangeProofMutationRejected(t *testing.T) {
 }
 func TestRangeBoundConstantsOutsideLoop(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe {run(s:string,n:number):string {let out="";while(n>0){out=s.charAt(n);n--;}return out;}}`}, []string{"probe.ts"})
-	files, err := abap.Emit(p)
+	files, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +317,7 @@ func TestNumberRangeLoopControlFlows(t *testing.T) {
 			}
 		}
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -338,7 +337,7 @@ func TestNumberRangeGuardSamplesFieldBeforeCall(t *testing.T) {
 			t.Fatalf("right-side call invalidated the sampled field: %s", m.Result.Kind)
 		}
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -369,7 +368,7 @@ func TestNumberRangeFieldInitializationDominatesReads(t *testing.T) {
 			}
 		}
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -389,7 +388,7 @@ func TestNumberRangeImmutableLengthHasSingleInitialization(t *testing.T) {
 			t.Fatalf("reassigned length source gave an invalid cap: %s", f.Type.Kind)
 		}
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -430,7 +429,7 @@ export class Probe {
 				if got := rangeLocals(m)["observed"]; got != want {
 					t.Fatalf("stale alias field proof: %s, want %s", got, want)
 				}
-				if _, err := abap.Emit(p); err != nil {
+				if _, err := emitABAP(t, p); err != nil {
 					t.Fatal(err)
 				}
 			})
@@ -463,7 +462,7 @@ export class Probe {
 	if returned == nil || returned.Kind != hir.Local || shadow == nil || returned.Name != shadow.Name || strings.HasPrefix(returned.Name, "range_param_") {
 		t.Fatalf("shadowed return captured checked parameter: %+v", returned)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -486,7 +485,7 @@ run(other:Probe):number {this.n=0; ` + change + ` const observed=this.n;return o
 					t.Fatal("call retained stale field fact")
 				}
 			}
-			if _, err := abap.Emit(p); err != nil {
+			if _, err := emitABAP(t, p); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -504,7 +503,7 @@ run(flag:boolean):number {this.n=0;const alias=this;alias.n=0.5;const observed=f
 	if got := rangeLocals(m)["observed"]; got != hir.Number {
 		t.Fatalf("inherited alias write acquired %v", got)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -527,7 +526,7 @@ run(flag:boolean):number {this.n=0;const alias=this.self();alias.n=0.5;const obs
 	if got := rangeLocals(run)["observed"]; got != hir.Number {
 		t.Fatalf("super-returned this alias write acquired %v", got)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -549,7 +548,7 @@ get():string {return this.raw.charAt(this.start);}
 	if !checked {
 		t.Fatal("shadowed assignment treated as parameter mutation")
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -567,7 +566,7 @@ get():string {return this.raw.charAt(this.start);}
 			t.Fatal("mutated parameter acquired a checked alias")
 		}
 	})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -597,7 +596,7 @@ run(n:number):number {{const n=7;const read=()=>n;return read();}}
 			t.Fatalf("shadowed closure captured outer parameter: %+v", arg)
 		}
 	})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -634,7 +633,7 @@ get():string {return this.raw.charAt(this.start);}
 			t.Fatalf("capture crossed catch binding: got %q, want %q", arg.Name, caught)
 		}
 	})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -685,7 +684,7 @@ export class Overflow {private n=0;run():number {this.n=0;const alias=this;alias
 export class Fraction {private n=0;run():number {this.n=0;const alias=this;alias.n=0.5;return this.n;}}
 export class Shadow {private start=0;private raw="abc";add(offset:number):number {this.start=offset;{const offset=7;return offset;}}get():string {return this.raw.charAt(this.start);}}
 `}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -758,7 +757,7 @@ return "";
 get():string {return this.raw.charAt(this.start);}
 }
 `}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -825,7 +824,7 @@ export class Probe {
 			t.Fatalf("%s: one-sided field fact survived the join: %s", suffix, got)
 		}
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }

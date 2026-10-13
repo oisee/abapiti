@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestMinMaxGeneralAndSpread(t *testing.T) {
@@ -25,7 +24,7 @@ func TestMinMaxGeneralAndSpread(t *testing.T) {
  }
 }`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	proven := 0
@@ -68,7 +67,7 @@ func TestMinMaxAssumedIntegerSpread(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s(3,&array[int64]{Items:[]int64{5,2}}))", goEntry("probe.ts.Probe", "run")))
@@ -88,7 +87,7 @@ func TestTypeofOptional(t *testing.T) {
  }
 }`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	// Primitive and reference optionals have different representations.

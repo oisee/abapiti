@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 )
 
@@ -78,7 +77,7 @@ func TestReturnBridgeErasedOptionalNodeOracle(t *testing.T) {
 	if bridge.Body.List[0].X.Kind != hir.Narrow {
 		t.Fatal("erased return has no checked view")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err, hir.Dump(prog))
 	}
 	if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
@@ -124,7 +123,7 @@ func TestReturnBridgeLateTargetAndFixpoint(t *testing.T) {
 	if stamp != hir.Dump(prog) {
 		t.Fatal("completion is not idempotent")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	names := hir.NewNames()
@@ -150,7 +149,7 @@ func TestReturnBridgeUnionCovarianceNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err, hir.Dump(prog))
 	}
 	if got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {

@@ -45,7 +45,7 @@ func TestParseAndCompileCorpus(t *testing.T) {
 	}
 
 	// Compile to ABAP
-	abap := Compile(mod, "zcl_corpus")
+	abap := compileABAP(t, mod, "zcl_corpus")
 	t.Logf("Generated ABAP: %d bytes", len(abap))
 
 	// Verify structure
@@ -101,7 +101,7 @@ define double @fmul(double %0, double %1) {
 		t.Fatalf("Expected 3 functions, got %d", len(mod.Functions))
 	}
 
-	abap := Compile(mod, "zcl_leaf")
+	abap := compileABAP(t, mod, "zcl_leaf")
 	t.Log(abap)
 
 	// Check typed signatures
@@ -127,7 +127,7 @@ define i32 @sign(i32 %0) {
 }
 `
 	mod, _ := Parse(ir)
-	abap := Compile(mod, "zcl_cf")
+	abap := compileABAP(t, mod, "zcl_cf")
 	t.Log(abap)
 
 	if !strings.Contains(abap, "IF") && !strings.Contains(abap, "select") {

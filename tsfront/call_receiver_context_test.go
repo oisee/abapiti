@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestCallReceiverContextNodeOracle(t *testing.T) {
@@ -33,7 +31,7 @@ func TestCallReceiverContextNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }

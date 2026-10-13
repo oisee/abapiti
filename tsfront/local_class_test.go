@@ -1,7 +1,6 @@
 package tsfront
 
 import (
-	"github.com/oisee/abapiti/hir/abap"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +31,7 @@ export class Probe {
 	source = strings.ReplaceAll(source, `x.constructor`, `(x as any).constructor`)
 	source = strings.ReplaceAll(source, `y.constructor`, `(y as any).constructor`)
 	prog := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
