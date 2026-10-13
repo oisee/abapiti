@@ -1,5 +1,57 @@
 # TS-HA@OSGO harness: speed and memory
 
+## One build: five-shard measurement at `98fa0675`
+
+**34m12s → 7m19s (4.7× faster); five lowerings/frontends/builds → one;
+382/382 registrations unchanged. Build peak RSS: 9.48 → 13.10 GiB.**
+
+| Path | In-lock wall (s) | Frontends / builds | Frontend total (s) | Go build total (s) | Build peak RSS (GiB) | Whole-run peak RSS (GiB) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Old per-shard (`ABAPITI_OSG_ONE_BUILD=0`) | 2052.09 | 5 / 5 | 690.11 | 357.10 | 9.48 | 9.48 |
+| Default union, runtime selection | 439.22 | 1 / 1 | 173.86 | 93.73 | 13.10 | 13.10 |
+
+Measured union implementation: `1537183`; the baseline uses the matching
+single-shard emission and identical build flags. Both paths use clean OSGO
+`98fa0675f47104ded037083c453ac0bb33b5ff57`, original abaplint
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`, Go 1.26.0 and Node 26.
+Build mode is `fast`; harness snapshots and gogen's optional cache are disabled.
+Go's shared `GOCACHE` is enabled on both paths. GNU `/usr/bin/time -v`
+measures each generated-module build and each complete run. RSS is the largest
+single process, not aggregate cgroup memory. Lock waiting is excluded; oracle,
+materialization, lowering, resource admission and reporting are included.
+
+**Timing caveat:** the old run recorded 406.44 s of initial frontend admission
+waits, versus effectively zero for the union. Scheduler/build rechecks can also
+wait. Removing just those recorded waits gives 1645.65 versus 439.22 s (3.7×);
+this is not a controlled estimate of all admission-free work. The phase totals
+still show the independent saving from doing five frontends/builds only once.
+
+| Shard | Pass (both) | FAIL (both) | Trap (both) | Registered (both) | Unregistered (both) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 200 | 0 | 0 | 200 | 0 |
+| `abap/expressions` | 22 | 0 | 85 | 107 | 0 |
+| `utils` | 9 | 0 | 6 | 15 | 0 |
+| `pretty_printer` | 2 | 0 | 29 | 31 | 0 |
+| `abap/types` | 6 | 0 | 23 | 29 | 0 |
+| **Total** | **239** | **0** | **143** | **382** | **0** |
+
+Comparison checks the complete **ordered** `(title, status)` vectors, retaining
+repeated-title multiplicity, plus counts, initialization diagnostics, Node-active
+accounting and unregistered titles. Both runs have zero unmatched results,
+infrastructure failures, async-pending, skipped and Node-pending tests. Generated
+Go line numbers in native host diagnostics are not a message-identity guarantee.
+
+The union contains 24 selected roots, 1,566 original TS closure files and 2,497
+emitted ABAP class/interface files. It fits well below the ~40 GiB build budget;
+**no grouping was needed**. This is not a memory measurement of all 17 shards.
+Rules, objects, syntax and statements were **not run on u7**. For larger unions,
+`ABAPITI_OSG_SHARDS_PER_BUILD=N` explicitly groups contiguous shards. A measured
+build above 40 GiB, or a reported compiler/frontend OOM, automatically halves
+multi-shard groups and retries before executing tests. Other infrastructure
+errors remain errors; an indivisible shard cannot be made smaller this way.
+
+## Historical flag/cache measurements (`368baab28`)
+
 OSG pin `368baab28`, Go 1.26.0, Node 26, 16-core host shared with other
 sessions. Each run held the shared OSG flock inside a
 `systemd-run --user --scope -p MemoryMax=48G` scope at `nice 10`, one heavy
@@ -7,7 +59,7 @@ step at a time. Times are wall-clock inside the lock (lock waiting is
 excluded). Peak RSS is the largest single process in the tree (GNU time),
 which is always either the Go compiler or the gogen frontend.
 
-## Before / after
+### Before / after
 
 | Shard | Run | In-lock wall (s) | Frontend (s) | Emit (s) | Go build (s) | Run (s) | Peak RSS (GiB) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -37,7 +89,7 @@ saving and the run cost cancel; the memory saving remains. For a run-heavy
 shard on a quiet host, `ABAPITI_OSG_BUILD_MODE=default` keeps optimisation and
 still drops DWARF, symbols and line directives (106 s, 15.5 GiB).
 
-## Correctness gate
+### Historical correctness gate
 
 For lexer, root and statements the full multiset of `(title, status)` is
 identical between the original harness and every after run (cold, rerun,
@@ -45,7 +97,7 @@ frontend-cache hit with a rebuilt binary, optimised build), and so are the
 per-title messages. Lexer 200/200 pass; root 8 pass + 86 traps; statements
 429 pass + 4,533 traps; FAIL 0 everywhere.
 
-## What changed
+### Build flags, snapshots and scheduling
 
 - **Go build of the generated module** (`tools/abaplint-tests-osg.mjs`):
   `go build -p 1 -trimpath -ldflags='-s -w'
@@ -72,8 +124,8 @@ per-title messages. Lexer 200/200 pass; root 8 pass + 86 traps; statements
   additionally reuses the compiled package when the generated Go is
   byte-identical (statements repeat: build 2 s).
 - **gogen frontend cache**: when the pinned gogen `compileProgram` accepts
-  `cacheDir` (stoker's per-object cache, not in `368baab28`), the bridge
-  passes `ABAPITI_OSG_CACHE/gogen-frontend`. Feature-detected; older pins are
+  `cacheDir` (available from `af66ed28`, not in the current `98fa0675` pin),
+  the bridge passes `ABAPITI_OSG_CACHE/gogen-frontend`. Feature-detected; older pins are
   unaffected.
 - **Memory release**: the frontend registry and IR are dropped and collected
   (`node --expose-gc`) before the compiler starts, so Node and the compiler
@@ -88,16 +140,51 @@ per-title messages. Lexer 200/200 pass; root 8 pass + 86 traps; statements
   `ABAPITI_OSG_MEMORY_MAX=48G` in a systemd user scope at `nice 10`. Do not
   set `ABAPITI_OSG_LOCK` when the caller already holds the same lock.
 
-## Not done: one shared abaplint core package
+## Runtime-selected union (no OSG changes)
 
-Building the shared core once needs gogen's layered emission (core / app /
-unit packages, as `unit.mjs` does for OSG's own classes). `unit.mjs` turns
-layering off for fixtures, and the core closure differs per shard, so a
-shared package would have to be the union closure of all shards and emitted
-byte-identically for `GOCACHE` to reuse it. That is a gogen change, not a
-harness setting; the parse/type-check floor (~30 s for lexer, single-threaded)
-is the part it would remove. The remaining fixed cost of an unchanged rerun
-is abapiti's lowering (80–100 s), which could be cached separately.
+`tools/abaplint-tests-all.mjs` now defaults to one OSG build for all selected
+shards. `ABAPITI_TESTS_SHARDS`, `ABAPITI_TESTS_FILES` and
+`ABAPITI_TESTS_FIRST` retain their existing selection/ownership/order behavior.
+The Go target remains per-shard. `ABAPITI_OSG_ONE_BUILD=0` selects the old OSG
+path for comparison or troubleshooting.
+
+`tools/abaplint-tests-sharded-closure.mjs` materializes the union of the original,
+unmodified static closures, but stores each shard's original dependency-first
+initialization order separately in `closure.json`. Shared sources are lowered
+once. The ABAP runner's `CASE shard` executes only the selected initialization
+plan, including borrowed test modules and the forced runtime initializer. It
+never registers all tests and then filters titles. No shared-core package,
+gogen layering or OSG source edits are needed.
+
+The bridge's internal `ABAPITI_OSG_BUILD_ONLY=1` phase runs gogen and Go once.
+`tools/osg-runner-execute.mjs` then invokes that same binary in a fresh process
+for each shard, with `ABAPITI_OSG_SHARD` passed by generated main into the ABAP
+runner. Checkpoint/resume state is freshly allocated per shard; restarts retain
+that selector. Local initialization/test indices, stable registration vectors,
+FAIL handling, borrowed-registration ownership and the legacy JSON report keys
+are unchanged. An unknown selector fails closed without a plan or results.
+
+Each report retains `osgEvidence`: its build/front-end timings and refusal data
+refer to the shared union, while `timingMs.run` and exit status refer to that
+shard. `host.sharedBuild` identifies shared evidence; do not sum the repeated
+build timings across those rows. Verdicts are never cached.
+
+`TestAbaplintTestShardsOSGEmission` uses the fixture-collecting emitter helper.
+With `ABAPITI_OSG_HOME` it builds once and alternates a/b/a/b selections, checking
+borrowed registrations, duplicate titles, shard-local initialization and body
+host-dump recovery, an earlier genuine FAIL, a following pass and rejection of
+unknown selectors. Both real OSG fixtures pass at `98fa0675` (6.1 s each).
+On each a invocation the merged report retains 3 passes, 1 genuine FAIL,
+1 host test trap and 1 host initialization trap, with all 5 registrations;
+b retains 2 passes and both registrations without contamination. The alternating
+selection executes 8 subprocesses plus one rejected unknown-selector invocation,
+all using one binary. The original fixture separately retains its 4 real host
+dumps and all 12 registrations.
+
+Final gates: `go vet ./...`; `GOFLAGS=-buildvcs=false go test -short -p 2
+./tsfront/ ./cmd/... -count=1`; all **38 Node tests**; lint against `origin/main`
+with **0 new issues**, canary **5/5**. OSG remains clean; the gogen Go cache and
+caller-owned scratch are removed after verification.
 
 ## Reproduction
 
@@ -107,13 +194,20 @@ export GOCACHE=/mnt/ssd-510/osg/go-build TMPDIR=/mnt/ram/abapiti/tmp
 export TRANSPILER=/mnt/ssd-510/osg/abapiti/transpiler-ee5c2cd1
 export npm_config_cache=/mnt/ssd-510/osg/abapiti/npm-cache
 export GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false
-export ABAPITI_OSG_HOME=/mnt/ssd-510/osg/abapiti/open-steamgate
-export ABAPITI_OSG_CACHE=/mnt/ram/abapiti/osg-cache
-export ABAPITI_OSG_LOCK=/mnt/ram/abapiti/osg-heavy.lock ABAPITI_OSG_MEMORY_MAX=48G
-ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/lexer,root,abap/statements \
-  node tools/abaplint-tests-all.mjs ../abaplint result.json
+export ABAPITI_OSG_HOME="${OSG_HOME:?clean checkout matching .github/ci/osgo.ref}"
+export ABAPITI_TESTS_TARGET=osg
+export ABAPITI_TESTS_SHARDS=abap/lexer,abap/expressions,utils,pretty_printer,abap/types
+# Start only at load <12. Do not also set ABAPITI_OSG_LOCK inside this flock.
+flock /mnt/ram/abapiti/osg-heavy.lock \
+  systemd-run --user --scope -p MemoryMax=48G nice -n 10 \
+  /usr/bin/time -v node tools/abaplint-tests-all.mjs "${ABAPLINT_HOME:?}" result.json
+# Repeat with ABAPITI_OSG_ONE_BUILD=0 for the old per-shard path.
+# Optional snapshots / newer-pin gogen cache:
+# export ABAPITI_OSG_CACHE=/mnt/ram/abapiti/osg-cache
+# Conservative grouping for an unmeasured larger union:
+# export ABAPITI_OSG_SHARDS_PER_BUILD=5
 ```
 
-The before column used the bridge of `3da6606` with a nonce comment appended
-to the generated Go so that `GOCACHE` could not serve the compile. Objects,
+The historical before column used the bridge of `3da6606` with a nonce comment
+appended to the generated Go so that `GOCACHE` could not serve the compile. Objects,
 rules and syntax were not measured on this machine.

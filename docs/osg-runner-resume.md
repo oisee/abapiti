@@ -111,12 +111,34 @@ the registration gap, not counted as a successful three-shard verification.
 
 ## Recovery protocol
 
-`tsfront/abaplint_tests_osg.go` emits a runner with two explicit inputs:
+`tsfront/abaplint_tests_osg.go` emits a runner with three explicit inputs:
 
 - `start_index`: one-based first test to execute; earlier bodies are not rerun.
 - `skip_init`: comma-delimited indices of initialization actions that have
   already dumped. Other actions, including later file registrations, replay
   in the original manifest order.
+- `shard`: the runtime selector passed from `ABAPITI_OSG_SHARD`. Union builds
+  execute only that shard's original dependency-first initialization order;
+  legacy per-shard builds ignore this input. Unknown union selectors fail
+  closed before producing a plan or report.
+
+The all-shard OSG harness now builds the union once and invokes the same binary
+separately for each selected shard. `osg-runner-execute.mjs` creates a fresh
+`resumeRunner` state for every shard and retains its selector on every restart.
+Initialization skip indices and test start indices are local to that shard;
+registration still happens through original module actions, not title filtering.
+The five-shard `98fa0675` comparison reports identical ordered title/status
+vectors: **382 registered, 239 pass, 143 trap, 0 FAIL, 0 unregistered** on both
+paths. See [the wall-time/RSS measurement](osg-harness-speed.md).
+
+The real union fixture also passes at this pin: one build, alternating a/b/a/b
+selections, **5 registrations in a and 2 in b** each time. Each a retains
+**3 passes, 1 genuine FAIL, 1 host test trap and 1 host initialization trap**
+after two real dumps and three subprocess invocations. Each b remains clean
+with **2 passes** in one invocation. The duplicated `duplicate` title occurs
+exactly twice in either selection (one borrowed, one owned); no initialization
+skip or test-start state crosses shard boundaries. A ninth invocation rejects
+an unknown selector without a report.
 
 The ABAP runner calls its deliberately empty `checkpoint(value)` output
 hook before each initialization action and test, and after each completed
@@ -133,7 +155,7 @@ or OSG checkout file is rewritten.
 
 The private stderr protocol is one JSON object per line, prefixed with
 `ABAPITI_OSG_CHECKPOINT `. Generated Go main reads
-`ABAPITI_OSG_START_INDEX` and `ABAPITI_OSG_SKIP_INIT`, passes them into ABAP,
+`ABAPITI_OSG_START_INDEX`, `ABAPITI_OSG_SKIP_INIT` and `ABAPITI_OSG_SHARD`, passes them into ABAP,
 and reports a recovered host panic with its first message line and native
 source location. The stack walk follows re-panics through generated ABAP
 catchers to the original panic site. `NOT_COMPILED` remains a host panic;
@@ -144,8 +166,11 @@ completed records, attributes an abnormal exit to the active checkpoint,
 records a `trapped` result with `passed:false`, then starts at the next index.
 An initialization dump becomes a separate initialization trap and its action
 is skipped on restart. Each `host_init_N` boundary, including the forced runtime
-initializer, is one action: its suffix, plan index, pre-action checkpoint and
-`skip_init` token are the same stable one-based number. `host_body` remains the
+initializer, is one action. In a legacy per-shard build its suffix, plan index,
+pre-action checkpoint and `skip_init` token are the same stable one-based number.
+In a union, host boundary suffixes are unique across the whole module, while
+plan/checkpoint/skip indices restart at one in each shard's branch. Those local
+indices remain stable on every restart; a suffix is not a cross-shard skip token. `host_body` remains the
 test-call boundary. The bridge uses `protectTestBoundaries` in resume mode:
 boundary ABIs and native exception-name diagnostics are retained, but host
 panics unwind to main rather than being recovered in-process. This lets the
@@ -187,6 +212,11 @@ only a previous invocation dumped and the final invocation is clean.
   It does not patch emitted test bodies to manufacture dumps. The Node resume
   tests use a matching simulated lookbehind diagnostic; the resume helper
   itself has no newline-specific assumption.
+- The fixture-collecting `TestAbaplintTestShardsOSGEmission` compiles one union
+  and alternates a/b/a/b selections. It checks duplicate-title multiplicity,
+  borrowed registrations, initialization/body dumps, preservation of an earlier
+  genuine FAIL, a following pass, and no skip/index/state leakage into another
+  shard. An unknown selector must fail without manufacturing a report.
 - Node regression tests cover first/middle/last and consecutive dumping tests,
   duplicate and multiline titles, all initialization actions dumping,
   initialization FAIL preservation, stable registration checks, malformed
