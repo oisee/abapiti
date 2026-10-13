@@ -41,12 +41,12 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 func TestABAPTestRefusalsSyntheticOwnership(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
-	m := &hir.Method{Node: hir.Node{ID: 1}, Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.sha1Hex", Type: hir.T(hir.String), X: hir.L(hir.T(hir.String), "a")}})}
+	m := &hir.Method{Node: hir.Node{ID: 1}, Name: "run", Static: true, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "string.parseFloat", Type: hir.T(hir.Optional, hir.T(hir.Number)), X: hir.L(hir.T(hir.String), "a")}})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	if err := TrapABAPTestRefusals(lowering); err != nil {
 		t.Fatal(err)
 	}
-	if !isFailureBody(m.Body) || !strings.Contains(m.Body.List[0].Name, "string.sha1Hex") {
+	if !isFailureBody(m.Body) || !strings.Contains(m.Body.List[0].Name, "string.parseFloat") {
 		t.Fatalf("did not trap ID-zero owning method: %#v", m.Body)
 	}
 }

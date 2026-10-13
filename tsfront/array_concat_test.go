@@ -3,7 +3,6 @@ package tsfront
 import (
 	"fmt"
 	"os/exec"
-	"strings"
 	"testing"
 )
 
@@ -32,9 +31,9 @@ func TestArrayConcatArgumentsNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	// Presence is now emitted; serialization retains its separate refusal.
-	if _, err = emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
-		t.Fatalf("missing JSON ABAP refusal: %v", err)
+	// Presence and JSON serialization are both supported by the integrated host.
+	if _, err = emitABAP(t, p); err != nil {
+		t.Fatalf("ABAP concat/JSON emission: %v", err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
 	if got != string(want) {
