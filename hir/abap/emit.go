@@ -26,6 +26,7 @@ type emitter struct {
 	arrayViews      bool
 	recordDelete    bool
 	constructorArgs bool
+	constructorGet  bool
 	configJSON      bool
 	subsetJSONRoots []hir.Type
 	jsonOwnKeys     bool
@@ -188,6 +189,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
+	}
+	if e.constructorGet {
+		e.dynamicConstructorRuntime()
 	}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
@@ -379,6 +383,10 @@ func (e *emitter) scanUsage() {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.get" && len(x.Args) == 1 && x.Args[0].Kind == hir.Lit && (x.Args[0].Value == "constructor" || x.Args[0].Value == "name") {
+			need = true
+			e.constructorGet = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
 			e.ownKeysUsed = true
 		}
