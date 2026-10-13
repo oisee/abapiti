@@ -66,9 +66,17 @@ func TestABAPTestRefusalsDoNotCrossSyntheticOwners(t *testing.T) {
 }
 
 func TestAbaplintTestHostOSGEmission(t *testing.T) {
+	t.Setenv("ABAPITI_INLINE", "0")
+	t.Setenv("ABAPITI_SINGLETON", "0")
 	dir := t.TempDir()
-	sources := map[string]string{"test/host.ts": `import {expect} from "../runtime/chai";
-it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));`}
+	// The newline PCRE is deliberately a host NOT_COMPILED, not a catchable
+	// ABAP exception: exercise both initialization and test-body restarts.
+	sources := map[string]string{
+		"test/init_dump.ts": `/x+?/.test("a\nb");`,
+		"test/host.ts": `import {expect} from "../runtime/chai";
+it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
+it("host dump",()=>{/x+?/.test("a\nb")});it("after host dump",()=>{});`,
+	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
 		if err != nil {
@@ -76,7 +84,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		sources["runtime/"+name+".ts"] = string(raw)
 	}
-	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/host.ts"}
+	order := []string{"runtime/mocha.ts", "runtime/chai.ts", "test/init_dump.ts", "test/host.ts"}
 	rows := []map[string]string{}
 	for _, name := range order {
 		path := filepath.Join(dir, name)
@@ -88,7 +96,7 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		}
 		rows = append(rows, map[string]string{"file": name, "sha256": fmt.Sprintf("%x", sha256.Sum256([]byte(sources[name])))})
 	}
-	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/host.ts"}, "initialization": order, "sources": rows})
+	manifest, _ := json.Marshal(map[string]any{"upstreamPin": RegistryUpstreamPin, "roots": []string{"test/init_dump.ts", "test/host.ts"}, "initialization": order, "sources": rows})
 	if err := os.WriteFile(filepath.Join(dir, "closure.json"), manifest, 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -139,19 +147,27 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		var summary struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
+			Initialization          []struct{ File, Status, Message string }
 		}
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
 			t.Fatal(err)
 		}
-		if summary.Passed != 1 || summary.Failed != 2 || summary.Trapped != 1 {
+		if summary.Passed != 2 || summary.Failed != 2 || summary.Trapped != 2 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		if len(summary.Results) != 4 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+		if len(summary.Results) != 6 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
 			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
 		}
-		last := summary.Results[len(summary.Results)-1]
-		if last.Title != "intentional fail" || last.Status != "failed" || last.Message != "intentional failure" {
+		intentional := summary.Results[3]
+		if intentional.Title != "intentional fail" || intentional.Status != "failed" || intentional.Message != "intentional failure" {
 			t.Fatalf("settled assertion was lost: %s", stdout.String())
+		}
+		hostDump, last := summary.Results[4], summary.Results[5]
+		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
+			t.Fatalf("host dump did not resume with location: %s", stdout.String())
+		}
+		if len(summary.Initialization) != 1 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED") {
+			t.Fatalf("initialization dump did not survive: %s", stdout.String())
 		}
 	}
 	if out != "" {
