@@ -1,13 +1,12 @@
 package abap
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
 
 // pcreRegexPattern uses syntax shared by PCRE and the pinned JS ABAP runtime.
-// Absolute assertions also prevent that runtime's implicit m flag from
+// Absolute anchors also prevent that runtime's implicit m flag from
 // changing JavaScript non-m anchors. The reviewed m pattern has no anchors.
 func pcreRegexPattern(pattern string) string {
 	var out strings.Builder
@@ -19,10 +18,22 @@ func pcreRegexPattern(pattern string) string {
 				if end := strings.IndexByte(pattern[i+3:], '}'); end >= 0 {
 					end += i + 3
 					if cp, err := strconv.ParseUint(pattern[i+3:end], 16, 32); err == nil {
-						if cp <= 255 {
-							out.WriteString(fmt.Sprintf(`\x%02X`, cp))
+						r := rune(cp)
+						// FIND PCRE on the pinned host refuses hexadecimal escapes.
+						// Character classes preserve extended-mode whitespace literally.
+						if !inClass && (r <= ' ' || r == '#' || r == 127) {
+							out.WriteByte('[')
+							out.WriteRune(r)
+							out.WriteByte(']')
 						} else {
-							out.WriteRune(rune(cp))
+							special := `\.^$|?*+(){}[]`
+							if inClass {
+								special = `\]^-`
+							}
+							if strings.ContainsRune(special, r) {
+								out.WriteByte('\\')
+							}
+							out.WriteRune(r)
 						}
 						i = end
 						continue
@@ -30,7 +41,7 @@ func pcreRegexPattern(pattern string) string {
 				}
 			}
 			if i == 0 && strings.HasPrefix(pattern, `\b[dD][eE][fF][iI][nN][eE]`) {
-				out.WriteString(`(?<![A-Za-z0-9_])`)
+				out.WriteString(`\b`)
 				i++
 				continue
 			}
@@ -46,15 +57,16 @@ func pcreRegexPattern(pattern string) string {
 		}
 		switch {
 		case !inClass && c == '^':
-			out.WriteString(`(?<![\s\S])`)
+			out.WriteString(`\A`)
 		case !inClass && c == '$':
-			out.WriteString(`(?![\s\S])`)
+			out.WriteString(`\z`)
 		case !inClass && c == ' ':
 			// ABAP PCRE defaults to extended mode, which drops unescaped spaces and
-			// treats # as a comment; hex escapes mean the same in PCRE, JS and RE2.
-			out.WriteString(`\x20`)
+			// treats # as a comment. Single-character classes retain literals and
+			// avoid hex escapes refused by the pinned OSG FIND PCRE runtime.
+			out.WriteString(`[ ]`)
 		case !inClass && c == '#':
-			out.WriteString(`\x23`)
+			out.WriteString(`[#]`)
 		default:
 			out.WriteByte(c)
 		}
@@ -104,9 +116,9 @@ WHILE i < strlen( p0 ).
     in_class = abap_false.
     result = result && c.
   ELSEIF in_class = abap_false AND c = '^'.
-    result = result && '(?<![\s\S])'.
+    result = result && '\A'.
   ELSEIF in_class = abap_false AND c = '$'.
-    result = result && '(?![\s\S])'.
+    result = result && '\z'.
   ELSE.
     result = result && c.
   ENDIF.

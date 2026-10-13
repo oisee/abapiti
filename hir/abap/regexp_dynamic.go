@@ -52,9 +52,9 @@ func (e *emitter) regexpDynamicRuntime(name string) {
 	}
 	code.WriteString(`WHEN OTHERS.
 IF flags = 'g'.
-  FIND PCRE '(?<![\s\S])&[1-9][0-9]*(?![\s\S])' IN pattern.
+  FIND PCRE '\A&[1-9][0-9]*\z' IN pattern.
 ELSEIF flags = '' OR flags = 'i'.
-  FIND PCRE '(?<![\s\S])\^[A-Za-z0-9_|()?]+\$?(?![\s\S])' IN pattern.
+  FIND PCRE '\A\^[A-Za-z0-9_|()?]+\$?\z' IN pattern.
 ELSE.
   sy-subrc = 4.
 ENDIF.
