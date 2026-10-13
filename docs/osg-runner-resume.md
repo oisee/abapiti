@@ -1,14 +1,57 @@
 # OSG test runner: host dump / resume
 
-**4 real host dumps → 4 host-trap records → 5 binary invocations → all 12
-fixture registrations reported.** The merged fixture retains **5 passes,
-2 genuine FAILs, 3 typed test traps, 2 host test traps**, plus **2 host
-initialization traps and 1 subsequent binding trap**. The test following the
-newline dump passes. All four host traps retain `NOT_COMPILED`; the test traps
-include the native `find.go` location. All CDS/DDL fixture cases from #141 are
-retained alongside the initialization and test-body recovery cases.
+**4 real host dumps → 4 host-trap records → 5 binary invocations → all 14
+fixture registrations reported.** At OSG **16c024c8**, the merged fixture
+expects **7 passes, 2 genuine FAILs, 3 typed test traps, 2 host test traps**,
+plus **2 host initialization traps and 1 subsequent binding trap**. This
+retains the pin-bump baseline of **6 pass / 2 FAIL / 4 trap** and adds one
+host-body trap and one subsequent pass. Both multiline JS whitespace and
+ASCII word/digit replacements must pass. Every registration is checked in
+order, once; both earlier assertion FAILs survive recovery.
 
-## Merge re-verification after #141
+The deliberate initialization and body dumps now use the reviewed DDL
+`/\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi`
+exec pattern on `"define behavior for foo"`. Its leading `\b` lowers to
+`(?<![A-Za-z0-9_])`. OSG's `tools/gogen/go/abap/find.go` `compilePCRE` still
+emits `NOT_COMPILED in FIND PCRE` for negative lookbehind, which is not in
+Go's RE2. Unlike absolute anchors, `adaptTestRegex` does not rewrite this
+assertion. Tests require that exact reason and the native `find.go` location.
+OSG #726 accepts unanchored newline PCRE at this pin, so the old
+`"a\nb".replace(/x+/g, "")` is no longer a dump trigger. No OSG sources or
+emitted test bodies are patched.
+
+## Merge re-verification at 16c024c8
+
+Merged `origin/main` at `b160f52` (including #143, #144 and the CI changes),
+retaining OSG pin `16c024c8fc175b5656d643034b0fe8dde484740f`. Verified against
+original abaplint `577f875ebec44cfaf64841cfe71c8ab8dc32622e`, Go 1.26.0,
+Node 26, with `ABAPITI_INLINE=0 ABAPITI_SINGLETON=0`.
+
+| Shard | Node active | Node pending | Registered / reported | Pass | FAIL | Trap | Not-run / unregistered |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 200 | 0 | 200 | 200 | 0 | 0 | 0 |
+| `abap/types` | 29 | 0 | 29 | 6 | 0 | 23 | 0 |
+| `abap` | 216 | 4 | 216 | 120 | 0 | 96 | 4 |
+| Total | 445 | 4 | 445 | 326 | 0 | 119 | 4 |
+
+Lexer remains **200/200**. Because the merge changes the runner, types and
+abap were also rerun; all three shards retain the previous pin-bump counts.
+Every registered test has one result, with **0 infrastructure failures,
+unmatched results, active unregistered tests or async-pending results**.
+The four not-run titles are Node-pending cases absent from the OSG registry,
+not active tests or credited passes. Corpus counts are not proof of host-dump recovery: the
+real emission fixture separately verifies the four dumps described above.
+
+Passed `go vet ./...`;
+`GOFLAGS=-buildvcs=false go test -short -p 2 ./hir/... ./tsfront/ ./cmd/... -count=1`;
+`node --test tools/*-test.mjs` (**37/37**); and
+`TestAbaplintTestHostOSGEmission` with `ABAPITI_OSG_HOME` at the pin.
+The lint gate against `origin/main` reports **0 new issues**, canary **5/5**,
+golangci-lint **2.13.2**. Heavy runs held the shared flock in a 48 GiB systemd
+scope at nice 10, admitted at load <12. Caller scratch and the OSG gogen
+Go-cache artifact are removed after verification; OSG sources are unchanged.
+
+## Historical merge re-verification after #141
 
 Verified code `4944b08`, merged `origin/main` at `b874d6d`, with clean OSGO
 `368baab28111a072c3f5779a0e07d259305f836f` and original abaplint
@@ -137,14 +180,13 @@ only a previous invocation dumped and the final invocation is clean.
 ## Tests and limits
 
 - The fixture-collecting `TestAbaplintTestHostOSGEmission` uses an original
-  synthetic TS closure with checked `/x+/g` replacement on newline text, once
-  during file initialization and once inside a test, plus #141's native-PCRE
-  refusal cases. It exercises four real gogen/OSGO dumps, checks their messages,
-  checks the later pass, and preserves both earlier assertion FAILs. It does
-  not patch emitted test bodies to manufacture dumps. The old lazy `/x+?/`
-  literal now refuses in #141's checked regex catalogue; `.test` with a checked
-  non-lazy literal now uses an absolute-anchor exec search that accepts
-  newlines. Replacement keeps the real unanchored newline-PCRE dump coverage.
+  synthetic TS closure with the reviewed DDL exec pattern, once during file
+  initialization and once inside a test, plus #141's native-PCRE refusal
+  cases. It exercises four real gogen/OSGO dumps, checks their lookbehind
+  reasons, checks the later pass, and preserves both earlier assertion FAILs.
+  It does not patch emitted test bodies to manufacture dumps. The Node resume
+  tests use a matching simulated lookbehind diagnostic; the resume helper
+  itself has no newline-specific assumption.
 - Node regression tests cover first/middle/last and consecutive dumping tests,
   duplicate and multiline titles, all initialization actions dumping,
   initialization FAIL preservation, stable registration checks, malformed

@@ -14,10 +14,14 @@ const begin = (index,title) => ({kind:'test', index, title});
 const done = (index,record) => ({kind:'result', index, record});
 const init = (index,file='test/a.ts') => ({kind:'init', index, file, action:'register'});
 const finishInit = {kind:'init-done'};
+// Match the real fixture's stable refusal at 16c024c8, not newline PCRE:
+// The reviewed DDL exec pattern's leading word boundary lowers to negative
+// lookbehind (?<![A-Za-z0-9_]), still outside RE2.
+const hostDump = "OSG harness refused: NOT_COMPILED in FIND PCRE: a negative lookbehind (?<!...) is not in Go's RE2 (at find.go:338)";
 const run = (events, results, options={}) => ({
  status:results ? (results.some(r=>r.status==='failed') ? 1 : 0) : 2,
  stdout:results ? JSON.stringify({results, initialization:[]}) : '',
- stderr:events.map(e=>prefix+JSON.stringify(e)+'\n').join('') + (results ? '' : 'OSG harness refused: NOT_COMPILED: find.go:338 unanchored PCRE\n'),
+ stderr:events.map(e=>prefix+JSON.stringify(e)+'\n').join('') + (results ? '' : hostDump+'\n'),
  ...options,
 });
 function execute(runs) {
@@ -44,7 +48,7 @@ test('middle dump preserves completed failures and resumes at the next index',()
   run([plan,registry(['first','dump','last']),begin(1,'first'),done(1,first),begin(2,'dump')]),
   run([plan,registry(['first','dump','last']),begin(3,'last'),done(3,last)],[last]),
  ]);
- assert.deepEqual(report.results,[first,{title:'dump',passed:false,message:'OSG harness refused: NOT_COMPILED: find.go:338 unanchored PCRE',status:'trapped'},last]);
+ assert.deepEqual(report.results,[first,{title:'dump',passed:false,message:hostDump,status:'trapped'},last]);
  assert.equal(report.failed,1);assert.equal(report.trapped,1);assert.equal(status,1);
  assert.deepEqual(environments.map(e=>e.ABAPITI_OSG_START_INDEX),['1','3']);
  assert.ok(environments.every(e=>e.sentinel==='preserved'));
@@ -109,7 +113,7 @@ test('signals and raw panics are traps, never passes',()=>{
   run([plan,registry(['dump']),begin(1,'dump')],undefined,{status:null,signal:'SIGABRT',stderr:run([plan,registry(['dump']),begin(1,'dump')]).stderr.replace('OSG harness refused:','panic:')}),
   run([plan,registry(['dump'])],[]),
  ]);
- assert.match(report.results[0].message,/^panic: NOT_COMPILED: find.go:338/);
+ assert.match(report.results[0].message,/^panic: NOT_COMPILED in FIND PCRE:.*negative lookbehind.*find.go:338/);
  assert.equal(report.results[0].passed,false);
 });
 
@@ -155,7 +159,7 @@ checkpoint(${JSON.stringify(plan)});checkpoint(${JSON.stringify(registry(['first
 const start=Number(process.env.ABAPITI_OSG_START_INDEX),results=[];
 for(let i=start;i<=3;i++){
  const title=['first','dump','last'][i-1];checkpoint({kind:'test',index:i,title});
- if(i===2){fs.writeSync(2,'panic: NOT_COMPILED in FIND PCRE (at find.go:338)\\n');process.exit(2)}
+ if(i===2){fs.writeSync(2,${JSON.stringify(hostDump.replace('OSG harness refused:', 'panic:')+'\n')});process.exit(2)}
  const record={title,passed:true,message:'',status:'passed'};results.push(record);checkpoint({kind:'result',index:i,record});
 }
 console.log(JSON.stringify({results,initialization:[]}));`);
