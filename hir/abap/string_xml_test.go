@@ -46,7 +46,7 @@ func stringXMLFixture() *hir.Program {
 }
 
 func TestStringXMLEmission(t *testing.T) {
-	files, names, err := EmitNamed(stringXMLFixture())
+	files, names, err := emitABAPNamed(t, stringXMLFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestStringXMLEmission(t *testing.T) {
 			}
 		}
 	}
-	plain, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "Plain", Methods: []*hir.Method{method("run", i32, ret(lit(1)))}}}})
+	plain, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "Plain", Methods: []*hir.Method{method("run", i32, ret(lit(1)))}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestStringXMLFixtures(t *testing.T) {
 	if err := json.Unmarshal(out, &answers); err != nil {
 		t.Fatal(err, string(out))
 	}
-	files, names, err := EmitNamed(stringXMLFixture())
+	files, names, err := emitABAPNamed(t, stringXMLFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,8 +215,7 @@ func TestStringXMLFixtures(t *testing.T) {
 	}
 	unit.WriteString("ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
-		out = filepath.Join(out, t.Name())
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

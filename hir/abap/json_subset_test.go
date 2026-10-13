@@ -23,8 +23,8 @@ func TestJSONSubsetFixtures(t *testing.T) {
 		{`{"a":[1,{"b":2}]}`, "123456789😀"},
 	}
 	out := t.TempDir()
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
-		out = filepath.Join(base, t.Name())
+	if base := fixtureOutputDir(t); base != "" {
+		out = base
 	}
 	dyn := hir.T(hir.Dynamic)
 	// Unsupported cases have observable Node behavior; accepting them would
@@ -93,7 +93,7 @@ func TestJSONSubsetFixtures(t *testing.T) {
 			fn := &hir.Expr{Kind: hir.ClassOf, Owner: name, Type: hir.T(hir.ClassValue)}
 			p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "refuse_" + name, Static: true, Result: str, Body: hir.B(decl("value", dyn, rt("json.parseSubset", hir.L(str, `{}`), dyn)), run(rt("dynamic.put", local("value", dyn), hir.T(hir.Void), hir.L(str, "fn"), rt("dynamic.of", fn, dyn))), ret(rt("json.stringifySubset", local("value", dyn), str)))})
 		}
-		files, names, err := EmitNamed(p)
+		files, names, err := emitABAPNamed(t, p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +141,7 @@ func TestJSONSubsetFixtures(t *testing.T) {
 func TestJSONSubsetShapeRefusals(t *testing.T) {
 	for _, typ := range []hir.Type{hir.Ref("Unknown"), hir.T(hir.OrderedMap, str, hir.T(hir.Dynamic)), hir.T(hir.OrderedSet, str), hir.T(hir.RegExp), hir.T(hir.Array, hir.Ref("Unknown"))} {
 		p := &hir.Program{Classes: []*hir.Class{{Name: "Unknown"}, {Name: "Probe", Methods: []*hir.Method{{Name: "write", Static: true, Params: []hir.Param{{Name: "value", Type: typ}}, Result: str, Body: hir.B(ret(rt("json.stringifySubset", local("value", typ), str)))}}}}}
-		if _, err := Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset ABAP own-property order/toJSON is unproven") {
+		if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset ABAP own-property order/toJSON is unproven") {
 			t.Fatalf("%s: %v", typ, err)
 		}
 	}
@@ -161,8 +161,8 @@ func TestJSONSubsetMaterializedFixtures(t *testing.T) {
 	}
 	input := `{"2":2,"unknown":{"z":true},"b":"second","a":"first"}`
 	out := t.TempDir()
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
-		out = filepath.Join(base, t.Name())
+	if base := fixtureOutputDir(t); base != "" {
+		out = base
 	}
 	for mode := 0; mode < 6; mode++ {
 		// Build a fresh method body: ABAP target passes mutate HIR in place.
@@ -201,7 +201,7 @@ func TestJSONSubsetMaterializedFixtures(t *testing.T) {
 		}
 		body.List = append(body.List, ret(rt("json.stringifySubset", value, str)))
 		p := &hir.Program{Classes: []*hir.Class{c, {Name: "Callable"}, {Name: "json_fixture", Methods: []*hir.Method{{Name: "run", Static: true, Result: str, Body: body}}}}}
-		files, names, err := EmitNamed(p)
+		files, names, err := emitABAPNamed(t, p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -249,7 +249,7 @@ func TestJSONSubsetConfigFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, string(oracle))
 	}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,8 +260,8 @@ func TestJSONSubsetConfigFixture(t *testing.T) {
 	fmt.Fprintf(&b, "oracle = %s=>parse( expected ).\nexpected = oracle->sval.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nENDMETHOD.\nENDCLASS.\n", names.Get("runtime.jsonSubset"))
 	files[cls+".clas.testclasses.abap"] = b.String()
 	out := t.TempDir()
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
-		out = filepath.Join(base, t.Name())
+	if base := fixtureOutputDir(t); base != "" {
+		out = base
 	}
 	if err := os.MkdirAll(out, 0755); err != nil {
 		t.Fatal(err)
