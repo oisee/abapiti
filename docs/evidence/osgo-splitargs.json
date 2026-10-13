@@ -1,0 +1,247 @@
+{
+  "baseline": "3da6606",
+  "implementation": "1c2b296",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "368baab28111a072c3f5779a0e07d259305f836f",
+  "nativeLibraryMode": "exact libs.lock.json pins",
+  "scope": {
+    "shard": "objects",
+    "roots": 26,
+    "files": 1567,
+    "classes": 2276,
+    "interfaces": 79,
+    "manifestSHA256": "0cd89c2a4568fa6d57081759c51cea8999a421f1dc114b5b9a5cad99663b18df"
+  },
+  "factoryBefore": {
+    "methods": 2,
+    "maxLines": 29071,
+    "longest": [
+      [
+        29071,
+        "new_args"
+      ],
+      [
+        3487,
+        "new"
+      ]
+    ],
+    "maxMethodName": 8,
+    "maxLineBytes": 253,
+    "classes": 2276
+  },
+  "factoryAfter": {
+    "methods": 246,
+    "maxLines": 769,
+    "longest": [
+      [
+        769,
+        "args_part_18"
+      ],
+      [
+        761,
+        "args_part_14"
+      ],
+      [
+        722,
+        "args_part_110"
+      ],
+      [
+        716,
+        "args_part_145"
+      ],
+      [
+        705,
+        "args_part_102"
+      ]
+    ],
+    "maxMethodName": 19,
+    "maxLineBytes": 253,
+    "classes": 2276
+  },
+  "wholeShardMaxLines": {
+    "before": 29071,
+    "after": 23255,
+    "afterOwner": "z_closure_3057_3824465ec85075.clas.abap:invoke"
+  },
+  "benchmark": {
+    "dependencyMode": "signature-only; not executable",
+    "memoryLimitBytes": 25769803776,
+    "GOMEMLIMIT": "8GiB",
+    "GOMAXPROCS": 2,
+    "goBuildJobs": 2,
+    "before": {
+      "gogen": {
+        "wall": "0:35.32",
+        "peakRSSKiB": 864772,
+        "exit": 0
+      },
+      "phases": {
+        "factory": "Z_RUNTIME_CLAS_C216C6067ABDC6",
+        "dependencyMode": "signature-only (not executable)",
+        "classes": 2442,
+        "methods": 2,
+        "frontendMs": 27997.720005,
+        "emitMs": 2447.956954999998
+      },
+      "goBuild": {
+        "wall": "1:38.25",
+        "peakRSSKiB": 5646372,
+        "exit": 0
+      }
+    },
+    "after": {
+      "gogen": {
+        "wall": "0:43.66",
+        "peakRSSKiB": 871404,
+        "exit": 0
+      },
+      "phases": {
+        "factory": "Z_RUNTIME_CLAS_C216C6067ABDC6",
+        "dependencyMode": "signature-only (not executable)",
+        "classes": 2442,
+        "methods": 246,
+        "frontendMs": 19652.303088,
+        "emitMs": 1524.8358200000002
+      },
+      "goBuild": {
+        "wall": "0:43.24",
+        "peakRSSKiB": 2264540,
+        "exit": 0
+      }
+    }
+  },
+  "staticObjects": {
+    "counter": "MeasureABAPTestGap",
+    "inlinePolicy": "classic",
+    "byteIdentical": true,
+    "assignedRefusalsBefore": 0,
+    "assignedRefusalsAfter": 0,
+    "runtime": [
+      {
+        "reason": "array.has",
+        "sites": 3
+      },
+      {
+        "reason": "dynamic.call0",
+        "sites": 2
+      },
+      {
+        "reason": "dynamic.delete",
+        "sites": 1
+      },
+      {
+        "reason": "json.indent",
+        "sites": 2
+      },
+      {
+        "reason": "json.stringifySubset",
+        "sites": 7
+      },
+      {
+        "reason": "lsp.isRenameFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isTextDocumentEdit",
+        "sites": 1
+      },
+      {
+        "reason": "number.ceil",
+        "sites": 9
+      },
+      {
+        "reason": "string.parseFloatNumber",
+        "sites": 3
+      },
+      {
+        "reason": "string.sha1Hex",
+        "sites": 1
+      },
+      {
+        "reason": "string.splitRegex",
+        "sites": 2
+      },
+      {
+        "reason": "xml.parseWithErrors",
+        "sites": 3
+      }
+    ],
+    "refusals": [
+      {
+        "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+        "sites": 66
+      },
+      {
+        "reason": "erased structural object.has is not emitted on ABAP",
+        "sites": 1
+      }
+    ]
+  },
+  "execution": [
+    {
+      "fixture": "split-dispatch",
+      "success": 261,
+      "failure": 0,
+      "notCompiled": 0
+    },
+    {
+      "fixture": "wide-41",
+      "success": 6,
+      "failure": 0,
+      "notCompiled": 0
+    },
+    {
+      "fixture": "wide-317",
+      "success": 6,
+      "failure": 0,
+      "notCompiled": 0
+    }
+  ],
+  "completeABICompilation": [
+    {
+      "fixture": "TestClassArgsFactoryABAP",
+      "classes": 39,
+      "emittedStubs": 0
+    },
+    {
+      "fixture": "TestClassArgsFactoryRefusesUnsupportedStorageABAP",
+      "classes": 44,
+      "emittedStubs": 0
+    },
+    {
+      "fixture": "TestClassArgsHugeFieldConstructorABAP",
+      "classes": 33,
+      "emittedStubs": 0
+    },
+    {
+      "fixture": "TestClassArgsWideFieldConstructorABAP",
+      "classes": 33,
+      "emittedStubs": 0
+    },
+    {
+      "fixture": "TestFreshClassDescriptorABAP",
+      "classes": 26,
+      "emittedStubs": 0
+    }
+  ],
+  "gates": {
+    "vet": true,
+    "short": true,
+    "GraceFacts": true,
+    "GraceGoldenChanged": false,
+    "defaultBackendCatalogue": true,
+    "lintNewIssues": 0,
+    "lintCanary": "5/5",
+    "defaultGoDiffBytes": 0,
+    "defaultGoFiles": 9
+  },
+  "fullShardExecution": false,
+  "supplementaryFullRootAudit": {
+    "roots": 625,
+    "files": 2166,
+    "manifestSHA256": "8bc69eca3e2735470d1f5aa2b955127eaf378f13cd0b781c750e2493185fa189",
+    "status": "stopped without gap reports after sustained memory growth",
+    "beforeRefusalSites": null,
+    "afterRefusalSites": null
+  }
+}

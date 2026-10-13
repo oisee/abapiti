@@ -384,9 +384,8 @@ func (e *emitter) descriptorShards() {
 	// references so runtime closure discovery includes descriptor-only classes.
 	// Constructors with required arguments retain the checked dynamic fallback.
 	factory := e.name("runtime.classvalue.factory")
-	var dispatch strings.Builder
-	dispatch.WriteString("CASE class_name.\n")
-	for _, c := range e.p.Classes {
+	var cases []factoryCase
+	for i, c := range e.p.Classes {
 		if c.Abstract {
 			continue
 		}
@@ -402,18 +401,28 @@ func (e *emitter) descriptorShards() {
 		if !callable {
 			continue
 		}
-		fmt.Fprintf(&dispatch, "WHEN `%s`.\nCREATE OBJECT result TYPE %s.\n", strings.ToUpper(e.name(c.Name)), e.name(c.Name))
+		entry := factoryCase{name: strings.ToUpper(e.name(c.Name)), code: "CREATE OBJECT result TYPE " + e.name(c.Name) + ".\n"}
 		if c.Scoped {
-			fmt.Fprintf(&dispatch, "IF p0->lexical = abap_true.\nDATA scoped%d TYPE REF TO %s.\nscoped%d ?= result.\nscoped%d->%s = p0.\nENDIF.\n", len(dispatch.String()), e.name(c.Name), len(dispatch.String()), len(dispatch.String()), e.name("class.lexicalDescriptor"))
+			scoped := fmt.Sprintf("scoped%d", i)
+			entry.code += "IF p0->lexical = abap_true.\nDATA " + scoped + " TYPE REF TO " + e.name(c.Name) + ".\n" + scoped + " ?= result.\n" + scoped + "->" + e.name("class.lexicalDescriptor") + " = p0.\nENDIF.\n"
 		}
+		cases = append(cases, entry)
 	}
-	dispatch.WriteString("WHEN OTHERS.\nCREATE OBJECT result TYPE (class_name).\nENDCASE.\n")
+	params := "p0 TYPE REF TO " + e.name("runtime.classvalue")
+	privateDefs, helpers, dispatch := e.splitFactory("new_part", params, "p0 = p0", "CREATE OBJECT result TYPE (class_name).\n", cases)
 	extraSignature, extraImpl := "", ""
 	if e.constructorArgs {
 		extraSignature = "CLASS-METHODS new_args IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " p1 TYPE " + e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))) + " RETURNING VALUE(result) TYPE REF TO object.\n"
-		extraImpl = "METHOD new_args.\n" + e.argumentFactoryABAP() + "ENDMETHOD.\n"
+		entries, wideDefs, wideImpl := e.argumentFactoryABAP()
+		defs, impl, call := e.splitFactory("args_part", params+" p1 TYPE "+e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), "p0 = p0 p1 = p1", "RAISE EXCEPTION TYPE "+e.classRefusal()+".\n", entries)
+		privateDefs += wideDefs + defs
+		extraImpl = impl + wideImpl
+		if e.arrayViews {
+			call = "IF p1 IS BOUND.\np1->load( ).\nENDIF.\n" + call
+		}
+		extraImpl = "METHOD new_args.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + call + "ENDMETHOD.\n" + extraImpl
 	}
-	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\n" + extraImpl + "ENDCLASS.\n"
+	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\n" + privateDefs + "ENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch + "ENDMETHOD.\n" + helpers + extraImpl + "ENDCLASS.\n"
 }
 
 // staticsOf lists the raw member names of the static members of a class.
