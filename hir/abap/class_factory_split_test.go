@@ -57,7 +57,7 @@ func TestClassFactorySplitFixtures(t *testing.T) {
 	if methods < 10 {
 		t.Fatal("factory did not split")
 	}
-	again, _, err := EmitNamed(p)
+	again, _, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
