@@ -59,3 +59,54 @@ unknown names. Native calls use the same closed catalogue as Go and reject an
 excluded subclass before a parent case can accept it. The emitter package,
 focused static-gap catalogue test and package vet pass. Full final gates and
 the final closure recount follow the remaining storage extensions.
+
+The shared-array extension binds typed arrays to the original parsed graph.
+Typed tables are read buffers: each read refreshes them, and every admitted
+mutation writes back to the same graph node. Boxing a view recovers that node;
+reference searches compare original identities rather than adapter objects.
+Two views observe each other's writes, child records retain their unknown
+keys and identities, and replacing an array leaves old aliases on the old
+backing. Parsed null, present undefined and holes remain distinct in erased
+reference storage. Publication and later reads both validate typed elements.
+This implementation has O(n) buffer refreshes; suite performance is unmeasured.
+
+Record deletion removes graph entries and uses a separate deletion mask for
+representable optional/dynamic native slots. Reassignment restores presence.
+Erased `object.has`/`hasOwn` use original record keys or explicit HIR `OwnKeys`
+metadata, including a present undefined value; ordinary inherited Object
+properties are recognized by `has`. Native shapes without a presence proof,
+erased nominal objects, and erased prototype-value reads remain refused.
+Deleting required native slots or slots that would reveal an inherited
+prototype value remains refused. Dynamic deletion of arrays remains refused,
+matching Go's separate record-deletion boundary; `array.delete` owns indices.
+
+All four source-pinned LSP guards now run on graph and supported native data.
+They retain vscode-languageserver-types 3.18's fractional integer-range check,
+annotation/options checks, and the condition-versus-value boundary for
+non-boolean falsy resource candidates. Null option/property receivers raise.
+`TestLSPGuards` and `TestLSPErasedInNodeOracle` now execute their actual lowered
+TypeScript on OSG as well as retain their Node/Go oracles. The unknown optional
+factory-presence case still refuses. The concat oracle retains its JSON
+serialization refusal, which is outside this branch's scope.
+
+Executed storage units also cover poisoned aliases after publication,
+non-array inputs, missing scalar reads, backwards preallocation filling,
+scalar alias mutations, child identity and reference searches. Repeated
+native dispatch, undefined boxing after a value, and changing erased receivers
+are tested inside loops; all reusable temporaries are reset. Unsupported live
+int64 writes refuse before changing the original graph, while native int64
+arrays still work. Sparse shift/unshift, partial slice/splice, concat, search
+and join still use explicit dense guards; optional-scalar comparisons and
+live optional-array narrowing retain refusals. Array lengths/indices outside
+the reviewed signed-i32 storage range refuse. Chai integration must reconcile
+its old `e.chaiUsed` positive-preallocation guard with this ABI; the four real
+statements tests are not credited here, and no Chai operation was enabled.
+
+The final consumer audit refreshes live constructor argument arrays before
+factory reads. Sparse `dynamic.materialize` array snapshots retain an explicit
+refusal before they can turn holes into present slots. Their host fixture
+checks both boundaries. Native structural records retain `OwnKeys` even when
+the same layout is activated for live views; nominal live-view property reads
+and presence use the original graph. Unknown slots of an inherited native
+adapter refuse when its slot map is insufficient, rather than return a
+fabricated missing value.

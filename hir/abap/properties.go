@@ -108,9 +108,35 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	for _, m := range []string{"get", "own", "has"} {
 		line("METHOD %s.\nDATA row TYPE entry.", m)
 		line("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\ninitialize( ).")
+		if e.liveClasses[c.Name] {
+			source := "p0->" + e.name("view.source")
+			line("IF %s IS BOUND.", source)
+			if m == "get" {
+				line("IF %s->has( key ) = abap_false.", source)
+				line("CASE key.")
+				for _, key := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+					line("WHEN `%s`.\nRAISE EXCEPTION TYPE %s.", key, e.name("view.refusal"))
+				}
+				line("ENDCASE.\nENDIF.\nresult = %s->get( key ).", source)
+			} else {
+				line("result = %s->has( key ).", source)
+				if m == "has" {
+					line("IF result = abap_false.\nCASE key.")
+					for _, key := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+						line("WHEN `%s`.\nresult = abap_true.", key)
+					}
+					line("ENDCASE.\nENDIF.")
+				}
+			}
+			line("RETURN.\nENDIF.")
+		}
+
 		for i, child := range derived {
 			line("IF p0->%s( ) = %s.\nDATA child%d TYPE REF TO %s.\nchild%d ?= p0.", e.name("builtin.classOf"), e.descriptorOf(child.Name), i, e.name(child.Name), i)
 			line("result = %s=>%s( p0 = child%d key = key ).\nRETURN.\nENDIF.", e.propertyLookup(hir.Ref(child.Name)), m, i)
+		}
+		if e.recordDelete {
+			line("READ TABLE p0->%s WITH TABLE KEY table_line = key TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.", e.name("record.deleted"))
 		}
 		line("READ TABLE entries WITH TABLE KEY key = key INTO row.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
 		if m == "own" {

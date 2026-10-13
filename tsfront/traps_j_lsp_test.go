@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestLSPErasedInNodeOracle(t *testing.T) {
@@ -52,7 +51,5 @@ func TestLSPErasedInNodeOracle(t *testing.T) {
 	if got := runGoHIR(t, p, "defer func(){if _,ok:=recover().(trap);!ok{panic(\"unknown factory presence escaped\")};fmt.Println(\"refused\")}();"+goEntry("main.ts.Probe", "invalid")+"()"); got != "refused\n" {
 		t.Fatal(got)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "erased structural object.has") {
-		t.Fatalf("ABAP must explicitly refuse erased presence: %v", err)
-	}
+	storageABAPProbe(t, p, "main.ts.Probe", strings.TrimSpace(string(out)), "invalid")
 }

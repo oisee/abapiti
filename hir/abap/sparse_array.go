@@ -1,8 +1,9 @@
 package abap
 
 import (
-	"github.com/oisee/abapiti/hir"
 	"strings"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 // Missing is independent of the stored value: an initial optional/reference

@@ -2,10 +2,10 @@ package abap
 
 import (
 	"fmt"
-
-	"github.com/oisee/abapiti/hir"
 	"sort"
 	"strings"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 // Match the Go backend's closed native-call catalogue. A prototype-dependent
@@ -48,6 +48,7 @@ func (b *body) nativeCall0(x *hir.Expr, n, a string) {
 	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
 	b.line("IF " + a + "->tag <> " + e.name("runtime.dynamic") + "=>tag_ref OR " + a + "->oval IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
 	done := b.temp(hir.T(hir.Bool))
+	b.line("CLEAR " + done + ".\nCLEAR " + n + ".")
 	for _, c := range e.classesByDepth() {
 		unsafe := c.Structural || e.callableClass(c) || e.fieldOwner(c, name) != nil
 		for base := c; base != nil; base = e.classBy(base.Super) {

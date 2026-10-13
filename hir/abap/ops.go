@@ -7,8 +7,10 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"dynamic.typeofValue":   true,
-	"dynamic.call0":         true,
+	"dynamic.typeofValue":    true,
+	"dynamic.call0":          true,
+	"dynamic.delete":         true,
+	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"dynamic.recordString":  true,
 	"string.parseIntNumber": true, "number.isNaN": true,
 	"json.stringifyConfig": true,
@@ -41,7 +43,7 @@ var supportedOps = map[string]bool{
 }
 
 // Unimplemented storage and runtime operations retain explicit refusals.
-var unsupportedOps = map[string]bool{"dynamic.delete": true, "json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "number.ceil": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true}
+var unsupportedOps = map[string]bool{"json5.parse": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "chai.members": true, "json.indent": true, "chai.throwMatch": true, "chai.arrayInclude": true, "chai.box": true, "chai.deepEqual": true, "chai.deepInclude": true, "string.sha1Hex": true, "number.ceil": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

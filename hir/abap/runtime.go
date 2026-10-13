@@ -19,7 +19,13 @@ func (e *emitter) runtime(t hir.Type) {
 	line := func(s string) { def.WriteString(s + "\n") }
 	method := func(n, s string) {
 		if t.Kind == hir.Array {
+			if (n == "indexOf" || n == "includes") && t.Args[0].Kind == hir.Optional && !t.Args[0].Args[0].IsRef() {
+				s = "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\n"
+			}
 			s = sparseArrayMethod(n, s)
+			if e.arrayViews {
+				s = liveArrayMethod(n, s)
+			}
 		}
 		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
 	}
@@ -34,7 +40,21 @@ func (e *emitter) runtime(t hir.Type) {
 		line("DATA has TYPE abap_bool.")
 	case hir.Array:
 		line(e.sparseArrayDefinition(t, name))
-		impl.WriteString(e.sparseArrayImplementation(t))
+		sparse := e.sparseArrayImplementation(t)
+		if e.arrayViews {
+			for _, m := range []string{"has", "delete", "put", "allocate", "dense"} {
+				prefix := "load( ).\n"
+				if m == "delete" || m == "put" || m == "allocate" {
+					start := strings.Index(sparse, "METHOD "+m+".")
+					end := strings.Index(sparse[start:], "ENDMETHOD.") + start
+					body := sparse[start:end]
+					body = strings.ReplaceAll(body, "RETURN.", "save( ).\nRETURN.")
+					sparse = sparse[:start] + body + "save( ).\n" + sparse[end:]
+				}
+				sparse = strings.Replace(sparse, "METHOD "+m+".\n", "METHOD "+m+".\n"+prefix, 1)
+			}
+		}
+		impl.WriteString(sparse)
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
 		if t.Args[0].Kind == hir.Optional {
@@ -189,6 +209,9 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	if t.Kind == hir.Array && e.arrayViews {
+		e.liveArrayRuntime(t)
+	}
 }
 func (e *emitter) exception(t hir.Type) string {
 	name := e.name("exception." + t.String())

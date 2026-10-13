@@ -26,7 +26,7 @@ func (e *emitter) liveRuntime() {
 	e.dynamicRuntime()
 	d := e.name("runtime.dynamic")
 	storage := e.name("view.storage")
-	e.files[storage+".intf.abap"] = "INTERFACE " + storage + " PUBLIC.\nMETHODS structural RETURNING VALUE(result) TYPE abap_bool.\nMETHODS source RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nENDINTERFACE.\n"
+	e.files[storage+".intf.abap"] = "INTERFACE " + storage + " PUBLIC.\nMETHODS structural RETURNING VALUE(result) TYPE abap_bool.\nMETHODS source RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nENDINTERFACE.\n"
 	trap := e.name("view.refusal")
 	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
 	// Native structural shapes expose their existing slots through the same graph API.
@@ -34,20 +34,23 @@ func (e *emitter) liveRuntime() {
 	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+".\nENDTRY.\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
 	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+".\nENDTRY.\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
 	e.files[d+".clas.abap"] = text
+	e.recordGraphRuntime()
 }
 func (e *emitter) liveRoot(c *hir.Class) bool {
 	return e.liveClasses[c.Name] && !e.liveClasses[c.Super]
 }
 func (e *emitter) liveClassDeclaration(b *strings.Builder, c *hir.Class) {
-	if len(e.liveClasses) == 0 {
+	if !e.types["runtime.liveView"] {
 		return
 	}
 	d := e.name("runtime.dynamic")
 	if e.liveRoot(c) {
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nINTERFACES %s.\n", e.name("view.source"), d, e.name("view.storage"))
+		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.ownKeys"), d, e.name("view.extras"), d)
 	}
-	if len(e.liveClasses) > 0 && c.Structural && !e.liveClasses[c.Name] {
+	if e.types["runtime.liveView"] && c.Structural && !e.liveClasses[c.Name] {
 		fmt.Fprintf(b, "INTERFACES %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.storage"), e.name("view.extras"), d)
+		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\n", e.name("view.ownKeys"), d)
 	}
 	if !e.liveClasses[c.Name] {
 		return
@@ -107,11 +110,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 	case hir.Bool:
 		b.line(n + " = " + d + "->as_boolean( ).")
 	case hir.Array:
-		// ABAP typed tables cannot alias a parsed dynamic-element table.
-		b.line("IF " + d + " IS NOT BOUND OR " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_ref.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
-		v := b.rawTemp("REF TO object")
-		b.line(v + " = " + d + "->as_ref( ).")
-		b.line("TRY.\n" + n + " ?= " + v + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDTRY.")
+		b.arrayView(t, n, d)
 	case hir.ClassRef:
 		// Parsed child records retain the same backing graph as their parent.
 		// Use the same activated-layout boundary as Go. Other nominal fields
@@ -130,7 +129,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 	}
 }
 func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
-	if len(e.liveClasses) == 0 {
+	if !e.types["runtime.liveView"] {
 		return
 	}
 	makeBody := func(name string) *body {
@@ -158,43 +157,83 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		d = b.temp(hir.T(hir.Dynamic))
 		b.boxDynamic(d, "p0", f.Type)
 		b.line(source + "->put( p0 = `" + strings.ReplaceAll(f.Name, "`", "``") + "` p1 = " + d + " ).")
-		b.line("ELSE.\nme->" + e.member(f.Name) + " = p0.\nENDIF.")
+		b.line("ELSE.\nme->" + e.member(f.Name) + " = p0.")
+		if c.Structural {
+			b.markOwnKey("me", f.Name)
+		}
+		if e.recordDelete {
+			b.line("DELETE me->" + e.name("record.deleted") + " WHERE table_line = `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
+		}
+		b.line("ENDIF.")
 		emit(name, b)
 	}
 	storage := e.name("view.storage")
-	if e.liveRoot(c) {
+	if e.liveRoot(c) && !c.Structural {
+		fallback := "RAISE EXCEPTION TYPE " + e.name("view.refusal") + "."
+		if e.recordDelete {
+			fallback = "result = " + e.nativeRecordDeleteRuntime() + "=>run( p0 = me key = p0 ).\nRETURN."
+		}
+		fmt.Fprintf(out, "METHOD %s~has.\nIF me->%s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\nresult = me->%s->has( p0 ).\nENDMETHOD.\nMETHOD %s~delete.\nIF me->%s IS NOT BOUND.\n%s\nENDIF.\nresult = me->%s->delete( p0 ).\nENDMETHOD.\n", storage, e.name("view.source"), e.name("view.refusal"), e.name("view.source"), storage, e.name("view.source"), fallback, e.name("view.source"))
 		fmt.Fprintf(out, "METHOD %s~structural.\nENDMETHOD.\n", storage)
 		fmt.Fprintf(out, "METHOD %s~source.\nresult = me->%s.\nENDMETHOD.\nMETHOD %s~get.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\nMETHOD %s~put.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", storage, e.name("view.source"), storage, e.name("view.refusal"), storage, e.name("view.refusal"))
 	}
-	if len(e.liveClasses) == 0 || !c.Structural || e.liveClasses[c.Name] {
+	if !e.types["runtime.liveView"] || !c.Structural || e.liveClasses[c.Name] && !e.liveRoot(c) {
 		return
 	}
-	fmt.Fprintf(out, "METHOD %s~structural.\nresult = abap_true.\nENDMETHOD.\nMETHOD %s~source.\nENDMETHOD.\n", storage, storage)
+	fmt.Fprintf(out, "METHOD %s~structural.\nresult = abap_true.\nENDMETHOD.\nMETHOD %s~source.\n", storage, storage)
+	if e.liveRoot(c) {
+		fmt.Fprintf(out, "result = me->%s.\n", e.name("view.source"))
+	}
+	out.WriteString("ENDMETHOD.\n")
+	e.nativeStructuralPresence(out, c)
 	b := makeBody(storage + "~get")
+	if e.liveRoot(c) {
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nresult = me->" + e.name("view.source") + "->get( p0 ).\nRETURN.\nENDIF.")
+	}
+	b.line("IF me->" + e.name("view.ownKeys") + " IS BOUND AND me->" + e.name("view.ownKeys") + "->has( p0 ) = abap_false.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nRETURN.\nENDIF.\nIF me->" + e.name("view.extras") + "->has( p0 ) = abap_false.\nRETURN.\nENDIF.\nENDIF.")
 	b.line("CASE p0.")
 	for _, f := range c.Fields {
 		if !f.Static {
 			b.line("WHEN `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
-			b.boxDynamic("result", "me->"+e.member(f.Name), f.Type)
+			if f.Type.Kind == hir.I64 || f.Type.Kind == hir.Optional && f.Type.Args[0].Kind == hir.I64 {
+				b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+			} else {
+				b.boxDynamic("result", "me->"+e.member(f.Name), f.Type)
+			}
 		}
 	}
-	b.line("WHEN OTHERS.\nIF me->" + e.name("view.extras") + " IS BOUND.\nresult = me->" + e.name("view.extras") + "->get( p0 ).\nENDIF.\nENDCASE.")
+	b.line("WHEN OTHERS.")
+	e.refuseUnknownNativeSubclass(b, c)
+	b.line("IF me->" + e.name("view.extras") + " IS BOUND.\nresult = me->" + e.name("view.extras") + "->get( p0 ).\nENDIF.\nENDCASE.")
 	emit(storage+"~get", b)
 	b = makeBody(storage + "~put")
+	if e.liveRoot(c) {
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nme->" + e.name("view.source") + "->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.")
+	}
 	b.line("CASE p0.")
 	for _, f := range c.Fields {
 		if !f.Static {
 			b.line("WHEN `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
-			b.liveUnbox("me->"+e.member(f.Name), "p1", f.Type)
+			value := b.temp(f.Type)
+			b.line("CLEAR " + value + ".")
+			b.liveUnbox(value, "p1", f.Type)
+			b.line("me->" + e.member(f.Name) + " = " + value + ".")
+			b.markOwnKey("me", f.Name)
+			if e.recordDelete {
+				b.line("DELETE me->" + e.name("record.deleted") + " WHERE table_line = `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
+			}
 		}
 	}
-	b.line("WHEN OTHERS.\nIF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nCREATE OBJECT me->" + e.name("view.extras") + ".\nme->" + e.name("view.extras") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.\nENDIF.\nme->" + e.name("view.extras") + "->put( p0 = p0 p1 = p1 ).\nENDCASE.")
+	b.line("WHEN OTHERS.")
+	e.refuseUnknownNativeSubclass(b, c)
+	b.line("IF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nCREATE OBJECT me->" + e.name("view.extras") + ".\nme->" + e.name("view.extras") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.\nENDIF.\nme->" + e.name("view.extras") + "->put( p0 = p0 p1 = p1 ).\nENDCASE.")
 	emit(storage+"~put", b)
 }
 func (b *body) liveView(x *hir.Expr, n, a string) {
 	e := b.e
 	d := e.name("runtime.dynamic")
 	trap := e.name("view.refusal")
+	b.line("CLEAR " + n + ".")
 	// Native success remains identity-preserving even for behaviour-bearing classes.
 	b.line("IF " + a + " IS BOUND.")
 	b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
@@ -225,7 +264,24 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 func (b *body) liveBox(n, a string, t hir.Type) {
 	e := b.e
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
+	raw := b.rawTemp("REF TO object")
+	b.line("CLEAR " + adapter + ".")
+	b.line(raw + " = " + a + ".")
+	b.line("IF " + raw + " IS INSTANCE OF " + e.name("runtime.dynamic") + ".\n" + n + " ?= " + raw + ".\nELSE.")
 	b.line("TRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
 	b.line("IF " + adapter + " IS BOUND.\n" + n + " = " + adapter + "->source( ).\nENDIF.")
-	b.line("IF " + n + " IS NOT BOUND.\nCREATE OBJECT " + n + ".\n" + n + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + "->oval = " + a + ".\nENDIF.")
+	b.line("IF " + n + " IS NOT BOUND.\nCREATE OBJECT " + n + ".\n" + n + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + "->oval = " + a + ".\nENDIF.\nENDIF.")
+}
+
+// An inherited adapter lacks the child's native slot map. Original graph
+// sources delegate before this guard; source-less unknown slots refuse.
+func (e *emitter) refuseUnknownNativeSubclass(b *body, c *hir.Class) {
+	for _, child := range e.p.Classes {
+		for base := e.classBy(child.Super); base != nil; base = e.classBy(base.Super) {
+			if base.Name == c.Name {
+				b.line("IF me IS INSTANCE OF " + e.name(child.Name) + ".\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+				break
+			}
+		}
+	}
 }

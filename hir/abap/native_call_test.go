@@ -2,11 +2,17 @@ package abap
 
 import (
 	"fmt"
-	"github.com/oisee/abapiti/hir"
+	"os/exec"
 	"testing"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 func TestNativeCall0Fixtures(t *testing.T) {
+	out, err := exec.Command("node", "-e", `class B{value(){return 1}};class C extends B{value(){return 2}};console.log([new B,new C].reduce((n,v)=>n+v.value(),0)===3 && [1,undefined].map(v=>typeof v).join('')==='numberundefined');`).CombinedOutput()
+	if err != nil || string(out) != "true\n" {
+		t.Fatalf("Node: %s %v", out, err)
+	}
 	dyn := hir.T(hir.Dynamic)
 	opt := hir.T(hir.Optional, i32)
 	value := method("value", i32, ret(lit(1)))
@@ -22,11 +28,20 @@ func TestNativeCall0Fixtures(t *testing.T) {
 		m.Params = []hir.Param{{Name: "d", Type: dyn}}
 		return m
 	}
+	number := hir.T(hir.Number)
+	base := hir.Ref("NativeBase")
+	array := hir.T(hir.Array, base)
+	loop := method("loop", boolean, hir.B(decl("a", array, newObj(array)), run(rt("array.push", local("a", array), i32, newObj(base))), run(rt("array.push", local("a", array), i32, newObj(hir.Ref("NativeChild")))), decl("sum", number, hir.L(number, 0.0)), &hir.Stmt{Kind: hir.ForEach, Name: "item", Type: base, X: local("a", array), Body: assign("sum", number, binary("+", local("sum", number), rt("dynamic.asNumber", rt("dynamic.call0", rt("dynamic.of", local("item", base), dyn), dyn, hir.L(str, "value")), number), number))}, ret(binary("==", local("sum", number), hir.L(number, 3.0), boolean))))
+	loop.Static = true
+	optional := hir.T(hir.Optional, i32)
+	options := hir.T(hir.Array, optional)
+	boxes := method("boxes", boolean, hir.B(decl("a", options, newObj(options)), run(rt("array.push", local("a", options), i32, lit(1))), run(rt("array.push", local("a", options), i32, hir.L(optional, nil))), decl("text", str, hir.L(str, "")), &hir.Stmt{Kind: hir.ForEach, Name: "item", Type: optional, X: local("a", options), Body: assign("text", str, rt("string.concat", local("text", str), str, rt("dynamic.typeofValue", rt("dynamic.of", local("item", optional), dyn), str)))}, ret(binary("==", local("text", str), hir.L(str, "numberundefined"), boolean))))
+	boxes.Static = true
 	p := &hir.Program{Classes: []*hir.Class{
 		{Name: "NativeBase", Methods: []*hir.Method{value, undef, void, bridge}},
 		{Name: "NativeChild", Super: "NativeBase", Methods: []*hir.Method{override}},
 		{Name: "NativeUnsafe", Super: "NativeBase", PrototypeAccessors: true},
-		{Name: "NativeCalls", Methods: []*hir.Method{call0("value"), call0("undef"), call0("nothing"), call0("missing")}},
+		{Name: "NativeCalls", Methods: []*hir.Method{call0("value"), call0("undef"), call0("nothing"), call0("missing"), loop, boxes}},
 	}}
 	files, names, err := EmitNamed(p)
 	if err != nil {
@@ -34,6 +49,7 @@ func TestNativeCall0Fixtures(t *testing.T) {
 	}
 	owner, d := names.Get("NativeCalls"), names.Get("runtime.dynamic")
 	unit := fmt.Sprintf("CLASS ltcl_calls DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_calls IMPLEMENTATION.\nMETHOD check.\nDATA d TYPE REF TO %s.\nDATA v TYPE REF TO %s.\nDATA refused TYPE abap_bool.\nCREATE OBJECT d.\nd->tag = %s=>tag_ref.\n", d, d, d)
+	unit += fmt.Sprintf("cl_abap_unit_assert=>assert_true( %s=>%s( ) ).\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\n", owner, names.Get("member.loop"), owner, names.Get("member.boxes"))
 	for _, c := range []string{"NativeBase", "NativeChild"} {
 		want := 1
 		if c == "NativeChild" {

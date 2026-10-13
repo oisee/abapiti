@@ -1,0 +1,163 @@
+package abap
+
+import "strings"
+
+// Source-pinned vscode-languageserver-types 3.18 predicates. Integer.is
+// deliberately checks range only, including fractional numbers. Resource
+// predicates retain the source && result boundary through the condition flag.
+func (e *emitter) lspGuardsRuntime() string {
+	name := e.name("runtime.lspGuards")
+	if e.types[name] {
+		return name
+	}
+	e.types[name] = true
+	e.liveRuntime()
+	code := `CLASS $C DEFINITION PUBLIC CREATE PRIVATE.
+PUBLIC SECTION.
+CLASS-METHODS text_document IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS resource IMPORTING p0 TYPE REF TO $D kind TYPE string option1 TYPE string option2 TYPE string condition TYPE abap_bool RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS rename IMPORTING p0 TYPE REF TO $D condition TYPE abap_bool RETURNING VALUE(result) TYPE abap_bool.
+PROTECTED SECTION.
+PRIVATE SECTION.
+CLASS-METHODS string_value IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS boolean_value IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS integer_value IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS candidate IMPORTING p0 TYPE REF TO $D condition TYPE abap_bool RETURNING VALUE(result) TYPE abap_bool.
+CLASS-METHODS tail IMPORTING p0 TYPE REF TO $D option1 TYPE string option2 TYPE string RETURNING VALUE(result) TYPE abap_bool.
+ENDCLASS.
+CLASS $C IMPLEMENTATION.
+METHOD string_value.
+IF p0 IS BOUND.
+result = xsdbool( p0->tag = $D=>tag_string ).
+ENDIF.
+ENDMETHOD.
+METHOD boolean_value.
+IF p0 IS BOUND.
+result = xsdbool( p0->tag = $D=>tag_boolean ).
+ENDIF.
+ENDMETHOD.
+METHOD integer_value.
+IF p0 IS BOUND AND p0->tag = $D=>tag_number.
+result = xsdbool( p0->nval >= '-2147483648' AND p0->nval <= '2147483647' ).
+ENDIF.
+ENDMETHOD.
+METHOD text_document.
+DATA td TYPE REF TO $D.
+DATA v TYPE REF TO $D.
+IF p0 IS NOT BOUND.
+RETURN.
+ENDIF.
+td = p0->get( 'textDocument' ).
+IF td IS NOT BOUND.
+RETURN.
+ENDIF.
+v = td->get( 'uri' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+v = td->get( 'version' ).
+IF v IS NOT BOUND.
+RETURN.
+ENDIF.
+IF v->tag <> $D=>tag_null AND integer_value( v ) = abap_false.
+RETURN.
+ENDIF.
+v = p0->get( 'edits' ).
+IF v IS BOUND.
+result = xsdbool( v->tag = $D=>tag_array ).
+IF v->tag = $D=>tag_ref.
+DATA marker TYPE REF TO $A.
+TRY.
+marker ?= v->oval.
+result = abap_true.
+CATCH cx_sy_move_cast_error.
+ENDTRY.
+ENDIF.
+ENDIF.
+ENDMETHOD.
+METHOD candidate.
+DATA falsy TYPE abap_bool.
+falsy = abap_true.
+IF p0 IS BOUND.
+falsy = xsdbool( p0->tag = $D=>tag_null OR p0->tag = $D=>tag_string AND p0->sval IS INITIAL OR p0->tag = $D=>tag_number AND p0->nval = 0 ).
+ENDIF.
+IF falsy = abap_true.
+IF condition = abap_false.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+RETURN.
+ENDIF.
+IF p0->tag = $D=>tag_boolean AND p0->bval = abap_false.
+RETURN.
+ENDIF.
+result = abap_true.
+ENDMETHOD.
+METHOD tail.
+DATA v TYPE REF TO $D.
+DATA options TYPE REF TO $D.
+options = p0->get( 'options' ).
+IF options IS BOUND.
+v = options->get( option1 ).
+IF v IS BOUND AND boolean_value( v ) = abap_false.
+RETURN.
+ENDIF.
+v = options->get( option2 ).
+IF v IS BOUND AND boolean_value( v ) = abap_false.
+RETURN.
+ENDIF.
+ENDIF.
+v = p0->get( 'annotationId' ).
+result = xsdbool( v IS NOT BOUND OR string_value( v ) = abap_true ).
+ENDMETHOD.
+METHOD resource.
+DATA v TYPE REF TO $D.
+IF candidate( p0 = p0 condition = condition ) = abap_false.
+RETURN.
+ENDIF.
+IF p0->tag = $D=>tag_array.
+RETURN.
+ENDIF.
+v = p0->get( 'kind' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+IF v->sval <> kind.
+RETURN.
+ENDIF.
+v = p0->get( 'uri' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+result = tail( p0 = p0 option1 = option1 option2 = option2 ).
+ENDMETHOD.
+METHOD rename.
+DATA v TYPE REF TO $D.
+IF candidate( p0 = p0 condition = condition ) = abap_false.
+RETURN.
+ENDIF.
+IF p0->tag = $D=>tag_array.
+RETURN.
+ENDIF.
+v = p0->get( 'kind' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+IF v->sval <> 'rename'.
+RETURN.
+ENDIF.
+v = p0->get( 'oldUri' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+v = p0->get( 'newUri' ).
+IF string_value( v ) = abap_false.
+RETURN.
+ENDIF.
+result = tail( p0 = p0 option1 = 'overwrite' option2 = 'ignoreIfExists' ).
+ENDMETHOD.
+ENDCLASS.
+`
+	e.isArrayUsed = true
+	e.files[name+".clas.abap"] = strings.NewReplacer("$C", name, "$D", e.name("runtime.dynamic"), "$E", e.name("view.refusal"), "$A", e.name("runtime.arraymark")).Replace(code)
+	return name
+}

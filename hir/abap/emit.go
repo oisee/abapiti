@@ -16,6 +16,8 @@ import (
 
 type emitter struct {
 	liveClasses     map[string]bool
+	arrayViews      bool
+	recordDelete    bool
 	constructorArgs bool
 	configJSON      bool
 	promiseUsed     bool
@@ -125,7 +127,35 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
-	if len(e.liveClasses) > 0 {
+	e.arrayViews = len(e.liveClasses) > 0
+	var findStorage func(*hir.Expr)
+	findStorage = func(x *hir.Expr) {
+		if x == nil {
+			return
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
+			e.recordDelete = true
+		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+			e.arrayViews = true
+		}
+		findStorage(x.X)
+		findStorage(x.Y)
+		findStorage(x.Z)
+		for _, a := range x.Args {
+			findStorage(a)
+		}
+		e.walkStmt(x.Stmt, findStorage)
+	}
+	for _, c := range p.Classes {
+		if c.Ctor != nil {
+			e.walkStmt(c.Ctor.Body, findStorage)
+		}
+		for _, m := range c.Methods {
+			e.walkStmt(m.Body, findStorage)
+		}
+	}
+	if e.arrayViews {
 		e.liveRuntime()
 	}
 	e.scanUsage()
@@ -303,7 +333,7 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.InstanceOf && x.Y != nil {
 			need = true
 		}
-		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
 			e.liveRuntime()
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
@@ -480,6 +510,9 @@ func (e *emitter) class(c *hir.Class) {
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
 	e.liveClassDeclaration(&b, c)
+	if e.recordDelete && c.Super == "" {
+		fmt.Fprintf(&b, "DATA %s TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n", e.name("record.deleted"))
+	}
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
 	}
@@ -1026,9 +1059,13 @@ func (b *body) expr(x *hir.Expr) string {
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
 		}
+		if e.arrayViews {
+			b.line(a + "->load( ).")
+		}
+		b.line("CLEAR " + row + ".")
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
-			b.line(n + " ?= " + row + ".")
+			b.arrayElement(n, row, t)
 		}
 	case hir.New:
 		if t.Kind == hir.Array {
@@ -1102,6 +1139,7 @@ func (b *body) expr(x *hir.Expr) string {
 			for i := range values {
 				b.line(n + "->" + e.member(c.Ctor.Params[i].Name) + " = " + values[i] + ".")
 			}
+			b.attachOwnKeys(x, n)
 			break
 		}
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
@@ -1114,6 +1152,7 @@ func (b *body) expr(x *hir.Expr) string {
 			s += strings.Join(args, " ")
 		}
 		b.line(s + " ).")
+		b.attachOwnKeys(x, n)
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
@@ -1131,7 +1170,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 
 		z := b.expr(x.Y)
-		if len(e.liveClasses) > 0 && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
+		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
 			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
 			b.boxDynamic(left, a, x.X.Type)
 			b.boxDynamic(right, z, x.Y.Type)
@@ -1310,6 +1349,9 @@ func (b *body) expr(x *hir.Expr) string {
 			// distinct array class, so the elements are copied unwrapped.
 			b.serial++
 			row := fmt.Sprintf("t%d", b.serial)
+			if e.arrayViews {
+				b.line("IF " + a + "->source IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+			}
 			b.line("CREATE OBJECT " + n + ".")
 			b.line("LOOP AT " + a + "->items INTO DATA(" + row + ").")
 			b.line("IF " + row + " IS NOT BOUND OR " + row + "->has = abap_false.")
@@ -2129,6 +2171,20 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("CREATE OBJECT " + w + ".")
 		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
 		return
+	case "lsp.isTextDocumentEdit", "lsp.isRenameFile", "lsp.isCreateFile", "lsp.isDeleteFile":
+		guard := b.e.lspGuardsRuntime()
+		if x.Op == "lsp.isTextDocumentEdit" {
+			b.line(n + " = " + guard + "=>text_document( " + a + " ).")
+		} else if x.Op == "lsp.isRenameFile" {
+			b.line(n + " = " + guard + "=>rename( p0 = " + a + " condition = " + args[0] + " ).")
+		} else {
+			kind, option1, option2 := "create", "overwrite", "ignoreIfExists"
+			if x.Op == "lsp.isDeleteFile" {
+				kind, option1, option2 = "delete", "recursive", "ignoreIfNotExists"
+			}
+			b.line(n + " = " + guard + "=>resource( p0 = " + a + " kind = `" + kind + "` option1 = `" + option1 + "` option2 = `" + option2 + "` condition = " + args[0] + " ).")
+		}
+		return
 	case "dynamic.call0":
 		b.nativeCall0(x, n, a)
 		return
@@ -2140,8 +2196,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		b.e.liveRuntime()
-		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
+		b.arrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
@@ -2156,6 +2211,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "object.get", "object.hasOwn", "object.has":
 		if x.X.Type.Name == hir.RootObject {
+			if x.Op != "object.get" {
+				b.erasedPropertyHas(x, n, a, args[0])
+				return
+			}
 			b.e.refuse(fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op))
 			return
 		}
@@ -2177,7 +2236,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("CREATE OBJECT " + n + ".")
 		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null.")
 		return
-	case "dynamic.get", "dynamic.put", "dynamic.strictEquals", "dynamic.asBoolean":
+	case "dynamic.get", "dynamic.put", "dynamic.delete", "dynamic.strictEquals", "dynamic.asBoolean":
 		if x.Op == "dynamic.strictEquals" {
 			b.line("IF " + a + " IS NOT BOUND.")
 			b.line(n + " = xsdbool( " + args[0] + " IS NOT BOUND ).")
@@ -2186,7 +2245,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 			return
 		}
-		method := map[string]string{"dynamic.get": "get", "dynamic.put": "put", "dynamic.asBoolean": "as_boolean"}[x.Op]
+		method := map[string]string{"dynamic.get": "get", "dynamic.put": "put", "dynamic.delete": "delete", "dynamic.asBoolean": "as_boolean"}[x.Op]
 		params := []string{}
 		for i, arg := range args {
 			params = append(params, fmt.Sprintf("p%d = %s", i, arg))
@@ -2384,13 +2443,22 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	}
 	switch x.Op {
 	case "array.length":
+		if b.e.arrayViews {
+			b.line(a + "->load( ).")
+		}
 		// The items table is public: lines( ) saves a method call per access.
 		b.line(n + " = lines( " + a + "->items ).")
 		return
 	case "array.push":
+		if b.e.arrayViews {
+			b.line(a + "->load( ).")
+		}
 		b.line("APPEND " + args[0] + " TO " + a + "->items.")
 		if n != "" {
 			b.line(n + " = lines( " + a + "->items ).")
+		}
+		if b.e.arrayViews {
+			b.line(a + "->save( ).")
 		}
 		return
 	}
@@ -2419,7 +2487,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	}
 	b.line(s + ".")
 	if target != n {
-		b.line(n + " ?= " + target + ".")
+		b.arrayElement(n, target, x.Type)
 	}
 }
 func (b *body) stmt(s *hir.Stmt) {
@@ -2466,7 +2534,16 @@ func (b *body) stmt(s *hir.Stmt) {
 				b.line(a + "->" + e.name("view.write."+owner.Name+"."+s.X.Name) + "( p0 = " + v + " ).")
 				return
 			}
-			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)
+			a := b.receiver(s.X.X)
+			v := b.value(s.Y, s.X.Type)
+			b.line(a + "->" + e.member(s.X.Name) + " = " + v + ".")
+			if e.recordDelete {
+				b.line("DELETE " + a + "->" + e.name("record.deleted") + " WHERE table_line = `" + strings.ReplaceAll(s.X.Name, "`", "``") + "`.")
+			}
+			if c := e.classBy(s.X.X.Type.Name); c != nil && c.Structural && e.types["runtime.liveView"] {
+				b.markOwnKey(a, s.X.Name)
+			}
+			return
 		case hir.StaticGet:
 			b.initialize(s.X.Owner)
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
@@ -2514,12 +2591,27 @@ func (b *body) stmt(s *hir.Stmt) {
 		if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
 			b.line(a + "->dense( ).")
 		}
-		b.line("LOOP AT " + a + "->items INTO " + row + ".")
-		if row != n {
-			b.line(n + " ?= " + row + ".")
+		if e.arrayViews {
+			idx := b.temp(hir.T(hir.I32))
+			b.line("DO.\n" + a + "->load( ).\nIF " + idx + " >= lines( " + a + "->items ).\nEXIT.\nENDIF.")
+			b.line("CLEAR " + row + ".\nREAD TABLE " + a + "->items INDEX " + idx + " + 1 INTO " + row + ".")
+			if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
+				b.line("IF " + a + "->has( " + idx + " ) = abap_false.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+			}
+			b.line(idx + " = " + idx + " + 1.")
+			if row != n {
+				b.arrayElement(n, row, s.Type)
+			}
+			b.stmt(s.Body)
+			b.line("ENDDO.")
+		} else {
+			b.line("LOOP AT " + a + "->items INTO " + row + ".")
+			if row != n {
+				b.arrayElement(n, row, s.Type)
+			}
+			b.stmt(s.Body)
+			b.line("ENDLOOP.")
 		}
-		b.stmt(s.Body)
-		b.line("ENDLOOP.")
 		if ok {
 			b.locals[s.Name] = old
 		} else {
@@ -2648,6 +2740,7 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 		b.line(n + " = " + a + ".")
 		return
 	}
+	b.line("CLEAR " + n + ".")
 	if t.Kind == hir.Optional {
 		test := a + " IS BOUND"
 		base := t.Args[0]
@@ -2682,7 +2775,7 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 			return
 		}
 	}
-	if field == "oval" && len(b.e.liveClasses) > 0 {
+	if field == "oval" && b.e.types["runtime.liveView"] {
 		b.liveBox(n, a, t)
 		if t.IsRef() {
 			b.line("ENDIF.")
