@@ -956,6 +956,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("ENDIF.")
 		}
 		if x.Y == nil {
+			b.line(a + "->dense( ).")
 			// An empty input yields Infinity, which neither ABAP f nor an
 			// integer can hold: trap instead of returning a wrong value.
 			b.line("IF lines( " + a + "->items ) = 0.")
@@ -1018,6 +1019,9 @@ func (b *body) expr(x *hir.Expr) string {
 			i = b.expr(x.Y)
 			b.line(i + " = " + i + " + 1.")
 		}
+		if !t.IsRef() && t.Kind != hir.Optional {
+			b.line("IF " + a + "->has( " + i + " - 1 ) = abap_false.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+		}
 		row := n
 		if t.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
@@ -1028,16 +1032,17 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 	case hir.New:
 		if t.Kind == hir.Array {
-			// new Array<T>(n): n still-undefined slots.
 			b.line("CREATE OBJECT " + n + ".")
 			if len(x.Args) == 1 {
 				cnt := b.expr(x.Args[0])
-				row := b.temp(arrayStorage(t).Args[0])
-				b.line("CLEAR " + row + ".")
-				b.line("WHILE " + cnt + " > 0.")
-				b.line("APPEND " + row + " TO " + n + "->items.")
-				b.line(cnt + " = " + cnt + " - 1.")
-				b.line("ENDWHILE.")
+				b.line("IF " + cnt + " < 0 OR " + cnt + " > 2147483646.")
+				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+				if x.Args[0].Type.Kind == hir.Number {
+					b.line("IF " + cnt + " <> trunc( " + cnt + " ).\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+				}
+				count := b.temp(hir.T(hir.I32))
+				b.line(count + " = " + cnt + ".")
+				b.line(n + "->allocate( " + count + " ).")
 			}
 			break
 		}
@@ -2124,6 +2129,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("CREATE OBJECT " + w + ".")
 		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
 		return
+	case "dynamic.call0":
+		b.nativeCall0(x, n, a)
+		return
 	case "dynamic.keys":
 		b.e.liveRuntime()
 		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
@@ -2464,20 +2472,9 @@ func (b *body) stmt(s *hir.Stmt) {
 			target = e.name(s.X.Owner) + "=>" + e.member(s.X.Name)
 		case hir.IndexGet:
 			a := b.expr(s.X.X)
-			i, constant := tableIndex(s.X.Y)
-			if !constant {
-				i = b.expr(s.X.Y)
-			}
+			i := b.expr(s.X.Y)
 			v := b.value(s.Y, s.X.Type)
-			if !constant {
-				b.line(i + " = " + i + " + 1.")
-			}
-			row := b.temp(arrayStorage(s.X.X.Type).Args[0])
-			b.line("CLEAR " + row + ".")
-			b.line("WHILE lines( " + a + "->items ) < " + i + ".")
-			b.line("APPEND " + row + " TO " + a + "->items.")
-			b.line("ENDWHILE.")
-			b.line("MODIFY " + a + "->items FROM " + v + " INDEX " + i + ".")
+			b.line(a + "->put( p0 = " + i + " p1 = " + v + " ).")
 			return
 		}
 		b.line(target + " = " + b.value(s.Y, s.X.Type) + ".")
@@ -2513,6 +2510,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		row := n
 		if s.Type.IsRef() {
 			row = b.temp(hir.Ref(hir.RootObject))
+		}
+		if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
+			b.line(a + "->dense( ).")
 		}
 		b.line("LOOP AT " + a + "->items INTO " + row + ".")
 		if row != n {

@@ -41,3 +41,21 @@ backend catalogue gate, uncached Grace lexer facts, and lint against O1 pass
 no assertion failure was reported before timeout. It is being rerun with
 `GOFLAGS=-p=2` inherited by subprocesses and a 30-minute timeout. This timeout
 is not recorded as a successful gate.
+
+Sparse/native-call step: arrays now retain a separate missing-index set, so
+preallocation creates holes and indexed writes mark only their target present.
+Deletion clears the value without shrinking length; present undefined remains
+present. Reverse, pop and whole-array slice preserve presence. Other sparse
+mutation/search forms explicitly refuse before touching storage until their
+variants are proven. Scalar direct reads/iteration and serialization refuse
+holes rather than consuming padding as zero/false/empty strings. Reference
+arrays retain the O1 shared object-table ABI and checked element casts.
+
+`TestSparseStorageFixtures` and `TestNativeCall0Fixtures` compile and execute
+on the pinned OSG host, each with one SUCCESS row. The former includes the
+`Result.getNodes` backwards-fill shape; the latter checks virtual override
+results, undefined and void value bridges, excluded accessor subclasses and
+unknown names. Native calls use the same closed catalogue as Go and reject an
+excluded subclass before a parent case can accept it. The emitter package,
+focused static-gap catalogue test and package vet pass. Full final gates and
+the final closure recount follow the remaining storage extensions.

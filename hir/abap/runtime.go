@@ -17,7 +17,12 @@ func (e *emitter) runtime(t hir.Type) {
 	name := e.name(id)
 	var def, impl strings.Builder
 	line := func(s string) { def.WriteString(s + "\n") }
-	method := func(n, s string) { impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n") }
+	method := func(n, s string) {
+		if t.Kind == hir.Array {
+			s = sparseArrayMethod(n, s)
+		}
+		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
+	}
 	switch t.Kind {
 	case hir.Promise:
 		if t.Args[0].Kind != hir.Void {
@@ -28,6 +33,8 @@ func (e *emitter) runtime(t hir.Type) {
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
 	case hir.Array:
+		line(e.sparseArrayDefinition(t, name))
+		impl.WriteString(e.sparseArrayImplementation(t))
 		elem := e.typ(t.Args[0])
 		opt := hir.T(hir.Optional, t.Args[0])
 		if t.Args[0].Kind == hir.Optional {
@@ -151,7 +158,7 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		if t.Kind == hir.OrderedSet {
 			line("METHODS fromArray IMPORTING p0 TYPE " + e.typ(hir.T(hir.Array, t.Args[0])) + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-			code := "DATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
+			code := "p0->dense( ).\nDATA row TYPE " + key + ".\nDATA ignored TYPE REF TO " + name + ".\n"
 			if t.Args[0].IsRef() {
 				code += "DATA native TYPE REF TO object.\nLOOP AT p0->items INTO native.\nrow ?= native.\n"
 			} else {

@@ -25,7 +25,7 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
 	// Classview admits checkedClassView and newArgs; the M0 catalogue had 26.
-	if len(gap.UnsupportedCatalogue) != 24 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	if len(gap.UnsupportedCatalogue) != 21 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {
