@@ -135,10 +135,14 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	e.arrayViews = len(e.liveClasses) > 0
+	mapViews := false
 	var findStorage func(*hir.Expr)
 	findStorage = func(x *hir.Expr) {
 		if x == nil {
 			return
+		}
+		if x.Type.Kind == hir.Dynamic && x.X != nil && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
+			mapViews = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
@@ -162,7 +166,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 			e.walkStmt(m.Body, findStorage)
 		}
 	}
-	if e.arrayViews {
+	if e.arrayViews || mapViews {
 		e.liveRuntime()
 	}
 	e.scanUsage()
@@ -2883,7 +2887,11 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.stmt(s.Body)
 		b.line("CATCH " + name + " INTO " + n + ".")
 		v := b.temp(s.Type)
-		b.line(v + " = " + n + "->" + value + ".")
+		payload := n + "->" + value
+		if value == "payload" {
+			payload = b.convert(payload, e.exceptionPayloadType(s.Type), s.Type)
+		}
+		b.line(v + " = " + payload + ".")
 		old, ok := b.locals[s.Name]
 		b.locals[s.Name] = v
 		b.stmt(s.Else)

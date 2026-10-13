@@ -46,7 +46,7 @@ func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMeth
 	}
 	if osg := os.Getenv("ABAPITI_OSG_HOME"); osg != "" {
 		cmd := exec.Command("node", filepath.Join(osg, "tools/gogen/unit.mjs"), "--input", dir, "--class", owner, "--jobs", "1", "--no-cache", "--out", t.TempDir())
-		cmd.Env = append(os.Environ(), "OSG_HOME="+osg, "GOFLAGS=-p=2")
+		cmd.Env = append(os.Environ(), "OSG_HOME="+osg, "GOFLAGS="+os.Getenv("GOFLAGS")+" -p=2")
 		out, err := cmd.Output()
 		if err != nil {
 			if exit, ok := err.(*exec.ExitError); ok {

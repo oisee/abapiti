@@ -213,6 +213,7 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	e.liveRecordMapRuntime(t)
 	if t.Kind == hir.Array && e.arrayViews {
 		e.liveArrayRuntime(t)
 	}
@@ -227,8 +228,28 @@ func (e *emitter) exception(t hir.Type) string {
 	if e.promiseUsed {
 		base = e.promiseExceptionBase()
 	}
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\nDATA payload TYPE " + e.typ(t) + ".\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+	payload := "DATA payload TYPE " + e.typ(t) + ".\n"
+	if t.Kind == hir.ClassRef {
+		if c := e.classBy(t.Name); c != nil && c.Super != "" {
+			base = e.exception(hir.Ref(c.Super))
+			payload = ""
+		}
+	}
+	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\n" + payload + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 	return name
+}
+
+// Class payload wrappers share their root slot, so ABAP CATCH of a base
+// payload also takes wrappers of derived payloads without copying the object.
+func (e *emitter) exceptionPayloadType(t hir.Type) hir.Type {
+	for t.Kind == hir.ClassRef {
+		c := e.classBy(t.Name)
+		if c == nil || c.Super == "" {
+			break
+		}
+		t = hir.Ref(c.Super)
+	}
+	return t
 }
 
 // support emits the phase-2 runtime and support classes, gated on use: the
