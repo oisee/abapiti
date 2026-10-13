@@ -6,6 +6,7 @@ import {join, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
+import {protectTestBoundaries} from './osgo-test-boundaries.mjs';
 
 const [inputArg, outArg, osgArg] = process.argv.slice(2);
 if (!inputArg || !outArg || !osgArg) throw new Error('usage: abaplint-tests-osg.mjs ABAP OUT OSG');
@@ -55,23 +56,31 @@ timingMs.frontend=Math.round(performance.now()-started);
 const refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
 writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
 // Tolerant frontend stubs are retained as named runtime refusals, never empty
-// methods. A refusal that escapes ABAP CATCH is an infrastructure failure;
-// no test registrations or results are fabricated in this host bridge.
+// methods. Driver-only boundaries record native NOT_COMPILED as a trap after
+// the action/body unwinds; no source catch can intercept it. Other panics that
+// escape the driver remain infrastructure failures. No registrations are made up.
 started=performance.now();
 const go=join(out,'go');
 cpSync(join(osg,'tools/gogen/go'),go,{recursive:true,filter:src=>!/(?:^|\/)zz_[^/]+\.go$/.test(src)});
 const cmd=join(go,'cmd','abapitests');mkdirSync(cmd,{recursive:true});
-writeFileSync(join(cmd,'zz_generated.go'),emitGo(program,'main',null,true));
+writeFileSync(join(cmd,'zz_generated.go'),protectTestBoundaries(emitGo(program,'main',null,true),program));
 writeFileSync(join(cmd,'main.go'),`package main
 import("encoding/json";"fmt";"os";"osg/gogen/abap")
+var driverNames map[string]struct{ID string \x60json:"id"\x60}
+func driverExceptionName(class string) string {
+ if entry, ok := driverNames[class]; ok { return entry.ID }
+ return class
+}
 func main(){
+ names,err:=os.ReadFile(${JSON.stringify(join(input,'names.json'))});if err!=nil{panic(err)}
+ if err=json.Unmarshal(names,&driverNames);err!=nil{panic(err)}
  defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"OSG harness refused: %v\\n",x);os.Exit(2)}}()
  text:=ZCL_ABAPITI_TEST_RUNNER_RUN(&abap.Session{})
  var report struct {Failed int \x60json:"failed"\x60; Trapped int \x60json:"trapped"\x60; AsyncPending int \x60json:"asyncPending"\x60; Initialization []struct{Status string \x60json:"status"\x60} \x60json:"initialization"\x60}
  if err:=json.Unmarshal([]byte(text),&report);err!=nil{panic(err)}
  fmt.Println(text)
- failedInit:=false;for _,r:=range report.Initialization{if r.Status=="failed"{failedInit=true}}
- if report.Failed+report.Trapped+report.AsyncPending>0 || failedInit{os.Exit(1)}
+ refusedInit:=false;for _,r:=range report.Initialization{if r.Status=="failed" || r.Status=="trapped"{refusedInit=true}}
+ if report.Failed+report.Trapped+report.AsyncPending>0 || refusedInit{os.Exit(1)}
 }
 `);
 timingMs.emit=Math.round(performance.now()-started);

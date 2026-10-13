@@ -1780,7 +1780,7 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
-	if b.constSetHas(x, n) {
+	if b.constSetHas(x, n) || b.replaceFreshCharacterRegex(x, n) {
 		return
 	}
 	if k, ok := literalIndex(x); ok {
