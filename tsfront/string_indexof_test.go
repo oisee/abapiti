@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestStringIndexOfFromGoMatchesNode(t *testing.T) {
@@ -34,7 +32,7 @@ func TestStringIndexOfFromGoMatchesNode(t *testing.T) {
  }
 }`
 	prog := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")

@@ -16,7 +16,7 @@ func TestAuditCollectsEveryRefusal(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: &hir.Expr{Node: hir.Node{ID: 2}, Kind: hir.RuntimeOp, Op: "string.parseFloatNumber", Type: number, X: hir.L(hir.T(hir.String), "1")}},
 	)}
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{method}}}}
-	if _, err := Emit(p); err == nil || !strings.Contains(err.Error(), "no emitter") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "no emitter") {
 		t.Fatalf("normal emitter must refuse: %v", err)
 	}
 	errors := Audit(p)

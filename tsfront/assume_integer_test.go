@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -40,7 +39,7 @@ func TestAssumeIntegerContract(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	// Explicit false overrides the test environment and reproduces the default.
@@ -90,7 +89,7 @@ func TestAssumeIntegerException(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +178,7 @@ func TestAssumeIntegerRuntime(t *testing.T) {
 	if err != nil || hasBlocking(ds) {
 		t.Fatal(err, ds)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +298,7 @@ func TestAssumeIntegerCollectionsAndBuiltins(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -335,7 +334,7 @@ func TestAssumeIntegerLiteralExceptions(t *testing.T) {
 			if !found {
 				t.Fatal("literal lost its exact floating boundary")
 			}
-			if _, err := abap.Emit(prog); err != nil {
+			if _, err := emitABAP(t, prog); err != nil {
 				t.Fatal(err)
 			}
 		})

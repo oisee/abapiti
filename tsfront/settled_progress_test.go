@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestClosedProgressOptionalDrain(t *testing.T) {
@@ -38,7 +37,7 @@ export class Probe { static async run():Promise<string> {
 	if strings.TrimSpace(out) != "parsedparsedtickparsed:2:rejected" {
 		t.Fatal(out)
 	}
-	files, _, err := abap.EmitNamed(p)
+	files, _, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

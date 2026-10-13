@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // A small native differential isolates the already lowered input file model
@@ -48,7 +47,7 @@ func TestEmitMemoryFileDifferential(t *testing.T) {
 			t.Fatal("MemoryFile mutant target missing")
 		}
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +143,7 @@ func TestEmitMemoryFileDifferential(t *testing.T) {
 	line("ENDMETHOD.")
 	line("ENDCLASS.")
 	files[class+".clas.testclasses.abap"] = b.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

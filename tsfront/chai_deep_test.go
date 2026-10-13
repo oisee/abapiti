@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestChaiDeepNodeOracle(t *testing.T) {
@@ -119,7 +117,7 @@ func TestChaiDeepNodeOracle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	abapFiles, err := abap.Emit(abapLowering.Prog)
+	abapFiles, err := emitABAP(t, abapLowering.Prog)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestUnionFieldViewNodeOracle(t *testing.T) {
@@ -31,7 +30,7 @@ func TestUnionFieldViewNodeOracle(t *testing.T) {
 	if !strings.Contains(hir.Dump(p), "union.fields.") {
 		t.Fatal("missing shared field view")
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
@@ -50,7 +49,7 @@ func TestUnionFieldCompatibleNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
@@ -68,7 +67,7 @@ func TestUnionFieldNativeNodeOracle(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))

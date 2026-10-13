@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // The CI generator runs the refusal regression as well as emitting the accepted
@@ -77,7 +76,7 @@ func TestEmitSwitchGroupedLabels(t *testing.T) {
 		if !found {
 			t.Fatal("nonempty fallthrough did not produce a whole-body trap")
 		}
-		if _, err := abap.Emit(trapped); err != nil {
+		if _, err := emitABAP(t, trapped); err != nil {
 			t.Fatal(err)
 		}
 		main := `func(){defer func(){if recover()==nil{panic("missing switch trap")};fmt.Print("trapped")}();` + goEntry("refused.ts.RefusedSwitch", "run") + `(str(" "))}()`
@@ -85,7 +84,7 @@ func TestEmitSwitchGroupedLabels(t *testing.T) {
 			t.Fatal(got)
 		}
 	})
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +103,7 @@ ENDMETHOD.
 ENDCLASS.
 `, class, names.Get("member.run"), oracle.Expected)
 	files[class+".clas.testclasses.abap"] = b.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}
