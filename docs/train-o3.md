@@ -1,5 +1,7 @@
 # Train O3 and O4
 
+Latest results: [Final O3+O4 integration](#final-o3o4-integration-2026-10-13).
+
 ## O3+O4 resumed assembly (2026-10-13)
 
 The resumed checkout already contained the three `--no-ff` merges below and
@@ -303,3 +305,149 @@ ABAPITI_TESTS_SHARDS=abap/lexer node tools/abaplint-tests-all.mjs \
 
 All commits retain the existing `Co-Authored-By` and `Claude-Session` trailers.
 No push is performed.
+
+## Final O3+O4 integration (2026-10-13)
+
+This section supersedes the earlier integration measurements above. The final
+executable tree is `cd5b643`; subsequent final documentation changes no code.
+Both requested inputs were merged with `--no-ff`, in order:
+
+| Input | Input commit | Merge |
+| --- | --- | --- |
+| Requested `origin/main`, including #138 rules initialization | `037a0ee` | `ce865ea` |
+| `origin/fix/o3-statements`, boxed record storage and exception ancestry | `8638c51` | `48cbdf5` |
+
+Main advanced during fetch to `451603f` (#139). The requested main merge remains
+exactly `037a0ee`; lint and the default output comparison use fetched
+`origin/main` at `451603f`. No main test shard was measured.
+
+The #138 conflict is resolved in one `arrayElement` helper: storage's live
+refresh and sparse checks are retained, together with erased-object and
+class-value boxing. `cd5b643` restores optional-element unwrapping after the
+initial short gate exposed the missing `array.get` case. The original regression
+assertions and every merged test are retained. Operation maps remain the union;
+ABAP emitter tests use `emitABAP` / `emitABAPNamed`, including the new boxed-map
+and exception probes. There is one implementation of each merged feature.
+
+The current `.github/ci/osgo.ref` is
+`98fa0675f47104ded037083c453ac0bb33b5ff57` (`be23430`), OSG main containing
+#721 hexadecimal PCRE escapes on Go/JS and #723 gogen CI. Every host gate and
+shard uses the clean checkout at that exact commit. Historical pins in earlier
+evidence remain the provenance of those earlier runs; relevant feature documents
+now identify the current pin and link here.
+
+### Gates on the final executable tree
+
+| Gate | Result |
+| --- | --- |
+| `go build ./...` | PASS |
+| `go vet ./...` | PASS |
+| `go test -short -p 4 -count=1 ./...` | PASS; `tsfront` 246.220 s |
+| `TestABAPEmitterTestsUseCollectingHelpers`, uncached | PASS; also executed in short and fresh fixture collection |
+| Grace `TestLexerFactsReport`, `ABAPITI_GRACECHECK=1`, uncached | PASS; golden unchanged, no regeneration |
+| `TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend`, uncached | PASS |
+| `.github/ci/lint.sh gate origin/main` | PASS; 0 new issues, canary 5/5, golangci-lint 2.13.2 |
+| Exact `.github/ci/abap-fixture-compile.sh` wrapper at the new pin | PASS; 513 emissions / 407 unique programs; empty Go build log |
+| Default zabapgit Go output vs `origin/main` | PASS; complete directory diff exit 0, 0 bytes, including executable and `sites.json` |
+
+Lint ran after the short suite, so its temporary canary could not interfere
+with vet. The fixture wrapper collected fresh emissions and included legacy
+ABAP Unit classes. Default outputs were generated at the same destination.
+Harness ownership/discovery and report checks passed; its independent Node
+runtime contract passed all nine scenarios against original Chai.
+
+### Seven serial TS-HA@OSGO shard attempts
+
+The requested order below was followed with one worker and one shard at a time.
+Each invocation builds a fresh original Node oracle at upstream
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`. Available Go, module, Node and upstream
+caches are reused. Environment: Go 1.26.0, `GOMAXPROCS=4`, `GOGC=50`,
+`GOMEMLIMIT=32GiB`,
+`GOFLAGS="-buildvcs=false -gcflags=all=-dwarf=false '-ldflags=-s -w'"`, and
+`GOGEN_NOLINE=1`, which this pin honours. No assertion, registration, ownership
+reconciliation, refusal admission or status classifier was changed.
+
+| Shard | Node-active | Pass | FAIL | Trap | Unregistered / no-report | Registered | Infra |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | --- |
+| `abap/statements` | 4,962 | 4,962 | 0 | 0 | 0 | 4,962 | none |
+| `abap/lexer` | 200 | 200 | 0 | 0 | 0 | 200 | none |
+| `abap/types` | 29 | — | — | — | 29 no-report | — | multiline PCRE abort |
+| `abap/expressions` | 107 | 107 | 0 | 0 | 0 | 107 | none |
+| `utils` | 15 | 15 | 0 | 0 | 0 | 15 | none |
+| `pretty_printer` | 31 | 23 | 0 | 8 | 0 | 31 | none |
+| `abap` | 216 | — | — | — | 216 no-report | — | multiline PCRE abort |
+
+**Statements is 4,962/4,962 and lexer is 200/200, FAIL 0.** The five complete
+reports total **5,307 passes, 8 traps, 0 FAIL and 0 unregistered** across 5,315
+active titles. Pretty-printer's eight remaining records report
+`An exception was raised.` and remain traps. Expressions' nine, utils' eight,
+and pretty-printer's 23 previously trapped titles now pass.
+
+Both infrastructure aborts escape the ABAP runner and produce no trustworthy
+test report. The accounting harness's empty-record zero outcome/registration
+counters are not measured execution results. All 245 active titles in those
+shards remain no-report; four additional Node-pending `abap` titles are outside
+the active denominator. Aggregate zero FAIL and full registration across all
+seven shards are therefore **not certified**.
+
+| Shard | Gogen frontend (s) | Go emission (s) | Go build (s) | Native run/abort (s) |
+| --- | ---: | ---: | ---: | ---: |
+| `abap/statements` | 171.196 | 17.376 | 192.509 | 268.189 |
+| `abap/lexer` | 138.337 | 11.167 | 137.910 | 0.081 |
+| `abap/types` | 131.092 | 11.206 | 138.079 | 0.557 |
+| `abap/expressions` | 128.659 | 10.969 | 135.244 | 5.948 |
+| `utils` | 134.940 | 10.972 | 154.226 | 0.614 |
+| `pretty_printer` | 134.549 | 11.195 | 156.732 | 3.011 |
+| `abap` | 143.781 | 12.618 | 162.129 | 0.205 |
+
+These host phases exclude abapiti lowering/emission and Node setup. All seven
+closures report zero blocking diagnostics, HIR errors, lowering coverage traps,
+occurring unsupported runtime-operation sites and nonfinite literals. Every
+emission has maximum line length 255 bytes, no overlong lines, and maximum
+object-name length 29 bytes. The static unproved `AbstractToken` JSON
+own-property-order/toJSON refusal remains separate from the runtime results.
+
+### Abap verdict and handoff
+
+**The new host pin still aborts `abap`. Owner: OSG kernel PCRE (stoker).**
+The exact raw and extended patterns are both `&1`; the input is
+`"WHEN &1.\n"`. The affected owned title is
+`abap_parser macro in CASE, no unknown expected`.
+`ExpandMacros.expandContents` constructs `new RegExp(search, "g")` and replaces
+macro arguments in text explicitly terminated with a newline. The emitted
+PCRE constructor preserves the `&1` pattern and `g` flag. Its replacement calls
+`FIND ALL OCCURRENCES OF PCRE posix IN text RESULTS matches`.
+
+At this pin, `tools/gogen/go/abap/find.go:338–339` in `compilePCRE` refuses any
+newline-containing input with neither `\A` nor `\z`, even when the pattern has
+no `^`, `$` or `.`. The diagnostic call chain is
+`ExpandMacros.expandContents → regexp.replace → abap.FindResults → compilePCRE`.
+Node returns `"WHEN 'a'.\n"` for the same replacement. This case involves no
+hexadecimal escape, so #721 does not address this boundary.
+
+The [PCRE handoff](osgo-pcre-multiline-handoff.md) gives the exact reproducer,
+source sites, owner and requested host follow-up. Diagnostic replays add logging
+only to generated runtime copies and preserve the refusal. The pinned OSG
+checkout remains clean and unchanged; no OSG fix is made. Types reaches the same guard with a literal U+00A0 pattern while
+`CDSLexer.run` normalizes a multiline CDS source. A direct unmodified-kernel
+probe reproduces both cases without an abapiti emitter or normalizer.
+Both belong to the stoker handoff.
+
+Path-free final evidence is in
+[evidence/train-o3-final.json](evidence/train-o3-final.json). Raw summaries,
+logs, snapshots and diagnostic replays remain local under `.tmp/o3/final/`.
+With `. .tmp/o3/env.sh` loaded, reproduce each shard separately in table order:
+
+```sh
+ABAPITI_TESTS_SHARDS=abap/statements node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/statements.json
+ABAPITI_TESTS_SHARDS=abap/lexer node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/lexer.json
+ABAPITI_TESTS_SHARDS=abap/types node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/types.json
+ABAPITI_TESTS_SHARDS=abap/expressions node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/expressions.json
+ABAPITI_TESTS_SHARDS=utils node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/utils.json
+ABAPITI_TESTS_SHARDS=pretty_printer node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/pretty_printer.json
+ABAPITI_TESTS_SHARDS=abap node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/final/abap.json
+```
+
+Types and abap accounting commands exit 1 because of the recorded infrastructure
+aborts; the other accounting commands exit 0. Local commits use
+`Alice V. <ooisee@gmail.com>` and both requested trailers. No push is performed.
