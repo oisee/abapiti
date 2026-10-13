@@ -57,7 +57,7 @@ func TestStringXMLEmission(t *testing.T) {
 		}
 	}
 	xml := files[names.Get("runtime.xmlWithErrors")+".clas.abap"]
-	for _, want := range []string{"readTagExp returned undefined", "fault->payload = native", "closed = abap_true"} {
+	for _, want := range []string{"readTagExp returned undefined", "fault->payload = native", "closed = abap_true", "part <> `?xml `"} {
 		if !strings.Contains(xml, want) {
 			t.Fatal("missing XML boundary", want)
 		}
@@ -200,7 +200,7 @@ func TestStringXMLFixtures(t *testing.T) {
 	for _, s := range []string{"", "NaN", "Infinity", "-Infinity", "1e9999", "-0", "-1e-9999", "."} {
 		fmt.Fprintf(&unit, "CLEAR refused.\nTRY.\nnumeric = %s.\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( act = refused ).\n", invoke("float", param("text", literal(s))), names.Get("exception.StringOpRefusal"))
 	}
-	for _, s := range []string{`<a>&unknown;</a>`, `<a><![CDATA[x]]></a>`, `<!DOCTYPE a><a/>`, `<__proto__/>`} {
+	for _, s := range []string{`<a>&unknown;</a>`, `<a><![CDATA[x]]></a>`, `<!DOCTYPE a><a/>`, `<__proto__/>`, `<?XML version="1.0"?><a/>`} {
 		fmt.Fprintf(&unit, "CLEAR refused.\nTRY.\ngraph = %s.\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( act = refused ).\n", invoke("xml", param("text", literal(s))), names.Get("exception.RegistryXMLSubsetError"))
 	}
 	// Preserve lone surrogates in the input, too. Go's JSON string decoding

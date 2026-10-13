@@ -65,6 +65,9 @@ fault->payload = native.
 	}
 	syntax += "RAISE EXCEPTION fault.\nENDIF.\nENDIF.\n"
 	code = strings.Replace(code, "ENDWHILE.\nRAISE EXCEPTION TYPE "+refusal+".\nENDMETHOD.\nMETHOD decode.", "ENDWHILE.\n"+syntax+"RAISE EXCEPTION TYPE "+refusal+".\nENDMETHOD.\nMETHOD decode.", 1)
+	// ABAP CP/NP is case-insensitive. Go's reviewed declaration prefix is
+	// case-sensitive; do not silently admit a larger XML language here.
+	code = strings.Replace(code, "IF closing IS NOT INITIAL OR tag_header NP '?xml *?'.\nRAISE EXCEPTION TYPE "+refusal+".\nENDIF.", "IF closing IS NOT INITIAL OR strlen( tag_header ) < 6.\nRAISE EXCEPTION TYPE "+refusal+".\nENDIF.\npart = tag_header+0(5).\nlast = strlen( tag_header ) - 1.\nIF part <> `?xml ` OR tag_header+last(1) <> '?'.\nRAISE EXCEPTION TYPE "+refusal+".\nENDIF.", 1)
 	// The external parser accepts mismatched closing names and unfinished nodes;
 	// EOF text is not committed. These quirks are also in the unchanged Go oracle.
 	code = strings.Replace(code, "count = cursor - start.\npart = input+start(count).", "IF cursor = strlen( input ).\nclosed = abap_true.\nEXIT.\nENDIF.\ncount = cursor - start.\npart = input+start(count).", 1)
