@@ -132,6 +132,13 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		e.liveRuntime()
 	}
 	e.scanUsage()
+	for _, c := range p.Classes {
+		if callableClass(c) {
+			n := e.name("runtime.callable")
+			e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nENDINTERFACE.\n"
+			break
+		}
+	}
 	e.findStaticConstants()
 	e.findConstSets()
 	e.promoteValueSlots()
@@ -495,6 +502,20 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
+// callableClass matches the Go backend's compiled-function predicate. Merely
+// having a call method does not prove a source value is a JavaScript function.
+func callableClass(c *hir.Class) bool {
+	if !strings.HasPrefix(c.Name, "closure.") {
+		return false
+	}
+	for _, i := range c.Implements {
+		if i == "closure.thunk" || strings.HasPrefix(i, "closure.function.") {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *emitter) class(c *hir.Class) {
 	if e.liveClasses[c.Name] && c.Ctor == nil {
 		// Even a data class with no initializers needs a source-binding constructor.
@@ -516,6 +537,9 @@ func (e *emitter) class(c *hir.Class) {
 	e.liveClassDeclaration(&b, c)
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
+	}
+	if callableClass(c) {
+		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name("runtime.callable"))
 	}
 	for _, i := range c.Implements {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
@@ -2361,20 +2385,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		b.line(n + " = " + a + "->" + method + "( ).")
 		if x.Op == "dynamic.typeofValue" {
-			// Lifted function objects retain their ordinary reference representation;
-			// their real compiled class, rather than the reference tag, is callable.
-			for _, c := range b.e.p.Classes {
-				if !strings.HasPrefix(c.Name, "closure.") {
-					continue
-				}
-				for _, i := range c.Implements {
-					if i == "closure.thunk" || strings.HasPrefix(i, "closure.function.") {
-						b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + b.e.name(c.Name) + ".")
-						b.line(n + " = `function`.")
-						b.line("ENDIF.")
-						break
-					}
-				}
+			// Keep the ordinary box representation and the Go callable predicate,
+			// but test one shared marker instead of enumerating every closure here.
+			marker := b.e.name("runtime.callable")
+			if _, ok := b.e.files[marker+".intf.abap"]; ok {
+				b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + marker + ".")
+				b.line(n + " = `function`.")
+				b.line("ENDIF.")
 			}
 		}
 		b.line("ELSE.")
