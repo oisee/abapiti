@@ -42,7 +42,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	}
 	b.line("ELSE.")
 	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: load: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nENDIF.\nAPPEND " + v + " TO items.\nENDLOOP.")
 	code.WriteString("METHOD load.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
@@ -50,27 +50,27 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	b.line("IF source IS NOT BOUND.\nRETURN.\nENDIF.")
 	wideInteger := t.Args[0].Kind == hir.I64 || t.Args[0].Kind == hir.Optional && t.Args[0].Args[0].Kind == hir.I64
 	if wideInteger {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: save: i64 graph publication unavailable`.")
 	}
 	b.line("CLEAR source->items.\nsource->missing = missing.")
 	v = b.temp(t.Args[0])
 	node = b.temp(hir.T(hir.Dynamic))
 	b.line("LOOP AT items INTO " + v + ".\nCLEAR " + node + ".")
 	if t.Args[0].Kind == hir.I64 || t.Args[0].Kind == hir.Optional && t.Args[0].Args[0].Kind == hir.I64 {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: save: i64 element boxing unavailable`.")
 	} else {
 		b.boxDynamic(node, v, t.Args[0])
 	}
 	b.line("APPEND " + node + " TO source->items.\nENDLOOP.")
 	code.WriteString("METHOD save.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
-	code.WriteString("METHOD " + storage + "~source.\nresult = source.\nENDMETHOD.\nMETHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~has.\nRAISE EXCEPTION TYPE " + trap + ".\nENDMETHOD.\nMETHOD " + storage + "~delete.\nRAISE EXCEPTION TYPE " + trap + ".\nENDMETHOD.\n")
+	code.WriteString("METHOD " + storage + "~source.\nresult = source.\nENDMETHOD.\nMETHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~has.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: has: live-array key presence unavailable`.\nENDMETHOD.\nMETHOD " + storage + "~delete.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: delete: live-array key deletion unavailable`.\nENDMETHOD.\n")
 	b = makeBody()
 	idx = b.temp(hir.T(hir.I32))
 	node = b.temp(hir.T(hir.Dynamic))
 	v = b.temp(t.Args[0])
 	b.line("load( ).\nIF p0 = `length`.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_number.\nresult->nval = lines( items ).\nRETURN.\nENDIF.\nCREATE OBJECT " + node + ".\n" + idx + " = " + node + "->array_index( p0 ).\nIF has( " + idx + " ) = abap_false.\nRETURN.\nENDIF.\nREAD TABLE items INDEX " + idx + " + 1 INTO " + v + ".")
 	if wideInteger {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: get: i64 element boxing unavailable`.")
 	} else {
 		b.boxDynamic("result", v, t.Args[0])
 	}
@@ -89,7 +89,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	}
 	b.line("ELSE.")
 	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: put: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nput( p0 = " + idx + " p1 = " + v + " ).")
 	code.WriteString("METHOD " + storage + "~put.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
@@ -124,7 +124,7 @@ func (b *body) arrayView(t hir.Type, n, a string) {
 	e.liveRuntime()
 	trap, d := e.name("view.refusal"), e.name("runtime.dynamic")
 	b.line("CLEAR " + n + ".")
-	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\n" + n + "->load( ).")
+	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: incompatible native array reference`.\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
 	// Validate every present element at publication and again on subsequent reads.
 	if t.Args[0].IsRef() && t.Args[0].Name != hir.RootObject {
 		row := b.temp(hir.Ref(hir.RootObject))
