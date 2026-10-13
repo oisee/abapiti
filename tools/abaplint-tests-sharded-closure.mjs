@@ -21,7 +21,9 @@ export function materializeShardedClosure(out, upstream, shards, runtime, materi
  return {manifest, manifests};
 }
 
-export function buildGroups(shards, size = shards.length) {
+// Three contiguous shards keep the four largest test closures in separate
+// groups in the pinned full-suite plan. Explicit sizes can still request 1..17.
+export function buildGroups(shards, size = 3) {
  if (!Number.isInteger(size) || size < 1 || size > 17) throw new Error('ABAPITI_OSG_SHARDS_PER_BUILD must be an integer from 1 to 17');
  return Array.from({length:Math.ceil(shards.length / size)}, (_, i) => shards.slice(i * size, (i + 1) * size));
 }

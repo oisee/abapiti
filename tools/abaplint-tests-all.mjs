@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Go: one binary per directory. OSG: one union binary, runtime-selected shards.
+// Go: one binary per directory. OSG: one binary per union group, runtime-selected shards.
 // Keep syntax together: helpers import
 // syntax.ts, which registers tests; splitting its roots would count them twice.
 // No source editing, test extraction, or oracle-synthesized Go registrations.
@@ -102,6 +102,37 @@ export function readOSGEvidence(build) {
   ...(existsSync(join(build,'osg/osg-refusals.json')) ? {refusals:read('osg/osg-refusals.json')} : {})};
 }
 
+// Build-only failures are retryable regardless of their diagnostic or exit
+// mechanism. Runtime execution is deliberately outside this boundary.
+export function createSharedBuilder(groups, build, dispose, log = console.error) {
+ let shared;
+ async function get(name) {
+  const group = groups.find(group => group.some(shard => shard.name === name));
+  if (!group) throw new Error(`unknown build shard: ${name}`);
+  if (shared?.group === group) return shared;
+  if (shared) dispose(shared);
+  const index = groups.indexOf(group);
+  shared = {group, index, evidence:{gap:null, gate:null, host:null}};
+  try { await build(shared); }
+  catch (error) { shared.error = error; }
+  const rss = shared.evidence?.host?.buildPeakRSSKiB;
+  if (group.length > 1 && (shared.error || rss > 40 * 1048576)) {
+   // execFile's message starts with the command; prefer the first stderr line
+   // when present, retaining messages/signals for failures without stderr.
+   const error = shared.error;
+   const reason = error
+    ? (String(error.stderr ?? '').trim() || error.message || String(error)).split(/\r?\n/)[0]
+    : `build exceeded memory budget (${rss} KiB > 40 GiB)`;
+   const halves = buildGroups(group, Math.ceil(group.length / 2));
+   log(`OSG union build: splitting [${group.map(s => s.name).join(', ')}] into ${halves.map(g => g.length).join('+')}: ${reason}`);
+   groups.splice(index, 1, ...halves);
+   return get(name);
+  }
+  return shared;
+ }
+ return get;
+}
+
 async function main() {
  const [upstreamArg = join(homedir(), 'dev/abaplint'), outputArg = 'docs/abaplint-tests-latest.json'] = process.argv.slice(2);
  const upstream = resolve(upstreamArg), output = resolve(outputArg);
@@ -116,7 +147,7 @@ async function main() {
  if (target === 'osg') plan.target = target;
  const targetArgs = target === 'osg' ? ['--target','osg','--osg-home',process.env.ABAPITI_OSG_HOME,'--osg-runner',join(tools,'abaplint-tests-osg.mjs')] : [];
  const oneBuild = target === 'osg' && process.env.ABAPITI_OSG_ONE_BUILD !== '0';
- const groups = oneBuild ? buildGroups(plan.shards, Number(process.env.ABAPITI_OSG_SHARDS_PER_BUILD ?? plan.shards.length)) : [];
+ const groups = oneBuild ? buildGroups(plan.shards, process.env.ABAPITI_OSG_SHARDS_PER_BUILD === undefined ? undefined : Number(process.env.ABAPITI_OSG_SHARDS_PER_BUILD)) : [];
  const env = {...process.env, GOCACHE:process.env.GOCACHE ?? join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
@@ -141,35 +172,23 @@ async function main() {
   if (compiler) copyFileSync(resolve(compiler), join(run,'abapiti'));
   else command('go', ['build', '-o', join(run,'abapiti'), './cmd/abapiti'], {stdio:'inherit'});
   let shared;
-  async function sharedBuild(name) {
-   const group = groups.find(group => group.some(shard => shard.name === name));
-   if (shared?.group === group) return shared;
-   if (shared) {
-    rmSync(shared.closure, {recursive:true, force:true});
-    rmSync(shared.build, {recursive:true, force:true});
-   }
-   const index = groups.indexOf(group);
-   shared = {group, closure:join(run, `shared-${index}`), build:join(run, `shared-${index}-out`)};
+  const sharedBuild = createSharedBuilder(groups, async built => {
+   const {group, index} = built;
+   built.closure = join(run, `shared-${index}`);
+   built.build = join(run, `shared-${index}-out`);
    try {
-    const {manifests} = materializeShardedClosure(shared.closure, upstream, group, join(repository,'tsfront/testdata/abaplint-tests/runtime'));
-    shared.manifests = manifests;
+    const {manifests} = materializeShardedClosure(built.closure, upstream, group, join(repository,'tsfront/testdata/abaplint-tests/runtime'));
+    built.manifests = manifests;
     await waitForResources();
     const buildEnv = {...env, ABAPITI_OSG_BUILD_ONLY:'1'};
-    const step = heavyCommand(join(run,'abapiti'), ['abaplint-tests', shared.closure, '-o', shared.build, ...targetArgs], buildEnv);
+    const step = heavyCommand(join(run,'abapiti'), ['abaplint-tests', built.closure, '-o', built.build, ...targetArgs], buildEnv);
     await promisify(execFile)(step.command, step.args, {cwd:repository, env:buildEnv, encoding:'utf8', maxBuffer:128*1024*1024});
-   } catch (error) { shared.error = error; }
-   shared.evidence = readOSGEvidence(shared.build);
-   // A measured >40 GiB build (or a compiler OOM) is not a safe union on
-   // this host. Retry smaller contiguous groups, never fabricate test results.
-   const rss = shared.evidence.host?.buildPeakRSSKiB;
-   const oom = shared.error && /signal: killed|out of memory|cannot allocate memory/i.test(shared.error.stderr ?? '');
-   if (group.length > 1 && (rss > 40 * 1048576 || oom)) {
-    console.error(`OSG union build exceeded memory budget (${rss ?? 'unknown'} KiB); splitting ${group.length} shards`);
-    groups.splice(index, 1, ...buildGroups(group, Math.ceil(group.length / 2)));
-    return sharedBuild(name);
-   }
-   return shared;
-  }
+   } catch (error) { built.error = error; }
+   built.evidence = readOSGEvidence(built.build);
+  }, built => {
+   rmSync(built.closure, {recursive:true, force:true});
+   rmSync(built.build, {recursive:true, force:true});
+  });
   async function runShard({name, id, roots}) {
    console.error(`=== ${name}: ${roots.length} files ===`);
    const closure = join(run, id), build = join(run, `${id}-out`);
@@ -177,7 +196,7 @@ async function main() {
    let node = oracle(id, roots), result;
    try {
     if (oneBuild) {
-     const built = await sharedBuild(name);
+     const built = shared = await sharedBuild(name);
      manifest = built.manifests?.get(name);
      if (built.error) throw built.error;
     } else manifest = materializeRegistryClosure(closure, upstream, {roots, runtime:join(repository,'tsfront/testdata/abaplint-tests/runtime')});

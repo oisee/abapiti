@@ -44,11 +44,9 @@ Go line numbers in native host diagnostics are not a message-identity guarantee.
 The union contains 24 selected roots, 1,566 original TS closure files and 2,497
 emitted ABAP class/interface files. It fits well below the ~40 GiB build budget;
 **no grouping was needed**. This is not a memory measurement of all 17 shards.
-Rules, objects, syntax and statements were **not run on u7**. For larger unions,
-`ABAPITI_OSG_SHARDS_PER_BUILD=N` explicitly groups contiguous shards. A measured
-build above 40 GiB, or a reported compiler/frontend OOM, automatically halves
-multi-shard groups and retries before executing tests. Other infrastructure
-errors remain errors; an indivisible shard cannot be made smaller this way.
+Rules, objects, syntax and statements were **not run on u7**. This historical
+five-shard union can be requested with `ABAPITI_OSG_SHARDS_PER_BUILD=5`;
+the current default and broader build-failure fallback are described below.
 
 ## Historical flag/cache measurements (`368baab28`)
 
@@ -142,11 +140,72 @@ per-title messages. Lexer 200/200 pass; root 8 pass + 86 traps; statements
 
 ## Runtime-selected union (no OSG changes)
 
-`tools/abaplint-tests-all.mjs` now defaults to one OSG build for all selected
-shards. `ABAPITI_TESTS_SHARDS`, `ABAPITI_TESTS_FILES` and
-`ABAPITI_TESTS_FIRST` retain their existing selection/ownership/order behavior.
+`tools/abaplint-tests-all.mjs` defaults to one OSG build per group of up to
+**three contiguous selected shards** (`ABAPITI_OSG_SHARDS_PER_BUILD`, integer
+1–17; set 17 to attempt the entire pinned suite in one union).
+`ABAPITI_TESTS_SHARDS`, `ABAPITI_TESTS_FILES` and `ABAPITI_TESTS_FIRST` retain their existing selection/ownership/order behavior.
 The Go target remains per-shard. `ABAPITI_OSG_ONE_BUILD=0` selects the old OSG
 path for comparison or troubleshooting.
+
+### Default grouping and automatic build-crash fallback
+
+The pinned closure plan (`577f875e`) has 17 shards. Inspecting the manifests
+produced by `materializeRegistryClosure` gives the following sizes. Test bytes
+include borrowed test sources, but exclude the largely shared core/runtime.
+
+| Large shard | Roots | TS closure files | Test closure files | Test source bytes |
+| --- | ---: | ---: | ---: | ---: |
+| `abap/statements` | 286 | 1,828 | 288 | 576,481 |
+| `abap/syntax` | 8 | 1,550 | 10 | 569,633 |
+| `objects` | 26 | 1,567 | 27 | 178,332 |
+| `rules` | 192 | 1,732 | 192 | 967,294 |
+
+The default of **3**, rather than all 17, makes six builds in the canonical
+plan order:
+
+1. `abap`, `abap/expressions`, `abap/lexer`
+2. `abap/nodes`, `abap/statements`, `abap/structures`
+3. `abap/syntax`, `abap/types`, `root`
+4. `cds`, `ddl`, `lsp`
+5. `objects`, `objects/rename`, `pretty_printer`
+6. `rules`, `utils`
+
+Thus the four large shards never share a default full-suite build, while the
+smaller shards still amortize the common ~1,540-file core closure. Syntax's
+size illustrates why root count alone is not a useful size estimate. This is
+a conservative planning default, **not a measured memory guarantee**. Selection
+and `ABAPITI_TESTS_FIRST` preserve their requested order and can change group
+composition; the explicit size override always chunks that order unchanged.
+
+**Any failure in the union build-only phase**—abapiti lowering, gogen
+frontend/emission, or Go build—now halves the group into contiguous halves
+(ceil/floor), then retries recursively before running any tests. Non-zero
+exits, signals, stack overflow/`RangeError`, OOM, and errors without an OOM
+signature all take this path. A successful build measured above 40 GiB still
+splits too. Each split logs the shard names, child sizes, and first error line
+(prefer stderr when available; otherwise the exception message). This handles
+the observed all-17 gogen `lines.push(...stmt())` stack overflow without
+modifying OSG or masking the upstream bug.
+
+A singleton build failure is not retried: it reaches the existing per-shard
+infrastructure-failure path, with no registrations and every oracle case
+not-run. Other shards continue. There are no fabricated passes, omitted
+shards, or verdict caches. Runtime failures never trigger splitting, and a
+genuine FAIL still stops scheduling after draining in-flight work. Failed
+parent build artifacts are disposed before smaller builds are materialized.
+
+`tools/abaplint-tests-autosplit-test.mjs` stubs only the builder (no OSG):
+4 → 2+2 → 1+1 checks exact per-shard verdict equality, lowering/frontend/Go
+errors, signals, OOM, first-line split logs, odd-sized halving, the 40 GiB
+fallback, persistent singleton failure through the real report/summary tools,
+default groups, and runtime FAIL isolation.
+
+Autosplit verification: `go vet ./...`; `GOFLAGS=-buildvcs=false go test -short
+-p 2 ./tsfront/ ./cmd/... -count=1`; all 15 `tools/*-test.mjs` files run
+individually with `GOTOOLCHAIN=go1.26.0` (including the 9 new autosplit tests);
+lint against `origin/main`: **0 new issues**, canary **5/5**, golangci-lint
+**2.13.2**. No OSG run was performed for this change, and no OSG files were
+modified.
 
 `tools/abaplint-tests-sharded-closure.mjs` materializes the union of the original,
 unmodified static closures, but stores each shard's original dependency-first
@@ -204,8 +263,10 @@ flock /mnt/ram/abapiti/osg-heavy.lock \
 # Repeat with ABAPITI_OSG_ONE_BUILD=0 for the old per-shard path.
 # Optional snapshots / newer-pin gogen cache:
 # export ABAPITI_OSG_CACHE=/mnt/ram/abapiti/osg-cache
-# Conservative grouping for an unmeasured larger union:
+# Default grouping is 3; reproduce the historical five-shard union explicitly:
 # export ABAPITI_OSG_SHARDS_PER_BUILD=5
+# To attempt all 17 at once (build crashes still split automatically):
+# export ABAPITI_OSG_SHARDS_PER_BUILD=17
 ```
 
 The historical before column used the bridge of `3da6606` with a nonce comment
