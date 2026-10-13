@@ -1071,7 +1071,7 @@ func (b *body) expr(x *hir.Expr) string {
 			if len(x.Args) == 1 {
 				cnt := b.expr(x.Args[0])
 				if e.chaiUsed {
-					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + ".\nENDIF.")
+					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + " EXPORTING reason = `array.length: hole-aware storage required`.\nENDIF.")
 				}
 				row := b.temp(arrayStorage(t).Args[0])
 				b.line("CLEAR " + row + ".")

@@ -14,6 +14,8 @@ import (
 func TestPCREReviewedPatternSyntax(t *testing.T) {
 	cases := map[string]string{
 		`^a$`:                                 `(?<![\s\S])a(?![\s\S])`,
+		`\Aa\z`:                               `(?<![\s\S])a(?![\s\S])`,
+		`\\z`:                                 `\\z`,
 		`[^^$]\^\$`:                           `[^^$]\^\$`,
 		`[\x{0009}-\x{000D}\x{00A0}\x{2028}]`: "[\t-\r\u00a0\u2028]",
 		`\b[dD][eE][fF][iI][nN][eE]`:          `(?<![A-Za-z0-9_])[dD][eE][fF][iI][nN][eE]`,
