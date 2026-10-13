@@ -40,10 +40,18 @@ if(envelope.overlongLines || envelope.maxObjectNameBytes>30)throw new Error('ABA
 const timingMs={cache:0,frontend:0,emit:0,release:0,goBuild:0,run:0};
 // Build flags change compile time and memory only; the identity gate in
 // docs/osg-harness-speed.md compares full title/status multisets per shard.
+// ABAPITI_OSG_DEBUG=1 keeps DWARF, symbols and the .abap //line directives
+// (otherwise panics point into generated Go, not .abap).
+const debug=process.env.ABAPITI_OSG_DEBUG==='1';
+// gogen reads GOGEN_NOLINE when emit-go.mjs is imported; set it first.
+if (!debug && process.env.GOGEN_NOLINE===undefined) process.env.GOGEN_NOLINE='1';
 const mode=process.env.ABAPITI_OSG_BUILD_MODE ?? 'fast';
 if (!['default','fast'].includes(mode)) throw new Error('ABAPITI_OSG_BUILD_MODE must be default or fast');
-const buildArgs=['build','-p','1','-trimpath','-ldflags=-w',...(mode==='fast'?['-gcflags=osg/gogen/cmd/abapitests=-N -l']:[])];
-const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8',GOGC:process.env.GOGC ?? '50',GOMEMLIMIT:process.env.GOMEMLIMIT ?? '12GiB'};
+const gcflags=[...(mode==='fast'?['-N','-l']:[]),...(debug?[]:['-dwarf=false'])];
+const buildArgs=['build','-p','1','-trimpath',...(debug?[]:['-ldflags=-s -w']),...(gcflags.length?['-gcflags=osg/gogen/cmd/abapitests='+gcflags.join(' ')]:[])];
+// GOGC/GOMEMLIMIT stay at Go defaults: a 12 GiB soft limit made the objects
+// compile thrash (1,336 s vs 496 s) and GOGC=50 cost 38 % time there.
+const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8'};
 const go=join(out,'go'), cmd=join(go,'cmd','abapitests'), binary=join(out,'abaplint-tests-osg');
 const generated={'zz_generated.go':join(cmd,'zz_generated.go'),'main.go':join(cmd,'main.go')};
 let frontKey, binaryKey, refusals, buildPeakRSSKiB=null;
