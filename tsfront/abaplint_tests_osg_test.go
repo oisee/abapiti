@@ -68,8 +68,8 @@ func TestABAPTestRefusalsDoNotCrossSyntheticOwners(t *testing.T) {
 func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	dir := t.TempDir()
 	sources := map[string]string{"test/host.ts": `import {expect} from "../runtime/chai";
-it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("native host refusal",()=>{const r = /^!/g; r.exec("!")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("intentional fail",()=>expect.fail("intentional failure"));`,
-		"test/native-init.ts": `const r = /^!/g; r.exec("!");`,
+it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("intentional fail",()=>expect.fail("intentional failure"));`,
+		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
 	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
@@ -152,10 +152,10 @@ it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new
 		if summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "was not initialized") {
 			t.Fatalf("subsequent real action did not retain its binding refusal: %s", stdout.String())
 		}
-		if summary.Passed != 2 || summary.Failed != 2 || summary.Trapped != 3 {
+		if summary.Passed != 3 || summary.Failed != 2 || summary.Trapped != 3 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		if len(summary.Results) != 7 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+		if len(summary.Results) != 8 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
 			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
 		}
 		native := summary.Results[3]

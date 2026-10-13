@@ -30,7 +30,7 @@ func (b *body) chaiBox(n, a string, t hir.Type) {
 		return
 	}
 	if !t.IsRef() && t.Kind != hir.String && t.Kind != hir.Number && t.Kind != hir.I32 && t.Kind != hir.Bool {
-		b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.chaiRefusal") + ".")
+		b.line("RAISE EXCEPTION TYPE " + b.e.name("exception.chaiRefusal") + " EXPORTING reason = " + "`chai.box: " + strings.ReplaceAll(t.String(), "`", "``") + "`" + ".")
 		return
 	}
 	b.boxDynamic(n, a, t)
@@ -104,7 +104,26 @@ func (e *emitter) chaiRuntime() {
 	if src, ok := e.files[jsonFile]; ok {
 		e.files[jsonFile] = strings.Replace(src, "result->nval = token.", "result->nval = token.\nIF result->nval = 0.\nresult->chai_zero_sign = 1.\nIF token+0(1) = '-'.\nresult->chai_zero_sign = 2.\nENDIF.\nENDIF.", 1)
 	}
-	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
+	e.files[trap+".clas.abap"] = "CLASS " + trap + ` DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.
+PUBLIC SECTION.
+METHODS constructor IMPORTING reason TYPE string OPTIONAL.
+METHODS get_text REDEFINITION.
+PRIVATE SECTION.
+DATA reason TYPE string.
+ENDCLASS.
+CLASS ` + trap + ` IMPLEMENTATION.
+METHOD constructor.
+super->constructor( ).
+me->reason = reason.
+ENDMETHOD.
+METHOD get_text.
+result = 'ABAP Chai observation refused'.
+IF reason IS NOT INITIAL.
+result = result && ': ' && reason.
+ENDIF.
+ENDMETHOD.
+ENDCLASS.
+`
 	// Adapter methods are emitted after the program and ordinary runtime types.
 	// Reading the original arrays on each invocation preserves aliases/mutations.
 	var arrays, kind, entries, box, action strings.Builder
@@ -253,7 +272,19 @@ func (e *emitter) chaiRuntime() {
 	}
 	source := strings.NewReplacer("$ARRAYS", arrays.String(), "$KIND", kind.String(), "$ENTRIES", entries.String(), "$BOX", box.String(), "$ACTION", action.String(), "$CATCH_TYPES", e.chaiCatchTypes(), "$CATCH", catches.String(), "$MESSAGE", errorMessage).Replace(chaiRuntimeSource)
 	source = strings.NewReplacer("$D", d, "$N", name, "$T", trap).Replace(source)
-	e.files[name+".clas.abap"] = source
+	// Refusals keep their class and control flow. Name only the observation
+	// boundary for handoffs; never turn a refusal into false or an assertion.
+	method := ""
+	lines := strings.Split(source, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "METHOD ") {
+			method = strings.TrimSuffix(strings.TrimPrefix(line, "METHOD "), ".")
+		}
+		if method != "" {
+			lines[i] = strings.ReplaceAll(line, "RAISE EXCEPTION TYPE "+trap+".", "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `chai."+method+"`.")
+		}
+	}
+	e.files[name+".clas.abap"] = strings.Join(lines, "\n")
 }
 
 // Only integral boxes, source literals and parsed JSON certify zero's sign.

@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import {protectTestBoundaries} from './osgo-test-boundaries.mjs';
+import {adaptTestRegex} from './osgo-test-regex.mjs';
 
 const [inputArg, outArg, osgArg] = process.argv.slice(2);
 if (!inputArg || !outArg || !osgArg) throw new Error('usage: abaplint-tests-osg.mjs ABAP OUT OSG');
@@ -53,6 +54,7 @@ for(let round=0;round<12;round++){
  if(round===11)throw new Error('OSG dependency closure did not settle');
 }
 timingMs.frontend=Math.round(performance.now()-started);
+const regexAdapter=adaptTestRegex(program,JSON.parse(readFileSync(join(input,'names.json'),'utf8')));
 const refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
 writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
 // Tolerant frontend stubs are retained as named runtime refusals, never empty
@@ -96,5 +98,5 @@ if(build.status===0){
  timingMs.run=Math.round(performance.now()-started);
  process.stdout.write(run.stdout??'');process.stderr.write(run.stderr??'');status=run.status??2;
 }else process.stderr.write(build.stderr??build.error?.message??'OSG build failed');
-writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope},null,2)+'\n');
+writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,regexAdapter},null,2)+'\n');
 process.exitCode=status;
