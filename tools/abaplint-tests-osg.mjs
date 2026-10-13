@@ -91,6 +91,10 @@ else {
  else {
   const {compileProgram}=await tool('frontend.mjs');
   const {emitGo,referencedClasses}=await tool('emit-go.mjs');
+  // Newer gogen pins accept a warm per-object frontend cache (byte-identical
+  // output). Feature-detect it; older pins never see the extra argument.
+  const frontendCache=cacheRoot && /\bcacheDir\b/.test(compileProgram.toString()) ? {cacheDir:join(cacheRoot,'gogen-frontend')} : {};
+  cache.gogenFrontend=frontendCache.cacheDir ? 'enabled' : 'unsupported';
   started=performance.now();
   const objects=abapFiles.map(f=>f.split('.')[0].toUpperCase());
   // Match unit.mjs's dependency closure, including native exception bases.
@@ -106,7 +110,7 @@ else {
   let program,registry;
   const session={};
   for(let round=0;round<12;round++){
-   program=compileProgram({folders,objects:[...wanted],tolerant:true,skip,registry,session});registry=program.reg;
+   program=compileProgram({folders,objects:[...wanted],tolerant:true,skip,registry,session,...frontendCache});registry=program.reg;
    const refs=new Set([...referencedClasses(program),...program.missing]);
    for(const name of wanted){const sup=registry.getObject('CLAS',name)?.getDefinition()?.getSuperClass();if(sup)refs.add(sup.toUpperCase())}
    const more=[...refs].filter(name=>sources.has(name)&&!wanted.has(name));
