@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Scan ABAP tokens rather than lines: wrapping must not hide a SUPER call.
@@ -119,7 +117,7 @@ func TestOptionalPrimitiveSuperOverrideRejected(t *testing.T) {
  export class Base { f(x?: %s): Base { return this; } }
  export class Child extends Base { f(x: %s): Child { super.f(x); return this; } }
  `, primitive, primitive)}, []string{"probe.ts"})
-			files, _, err := abap.EmitNamed(prog)
+			files, _, err := emitABAPNamed(t, prog)
 			if err == nil || !strings.Contains(err.Error(), "narrowing an inherited optional primitive cannot preserve undefined") || len(files) != 0 {
 				t.Fatalf("expected blocking optional primitive diagnostic with no output, got %v (%d files)", err, len(files))
 			}
@@ -151,7 +149,7 @@ func TestCovariantSuperOverride(t *testing.T) {
   return g instanceof Child && b.set(x) === g && g.set(x) === g && v.set(x) === v && omitted && zero && supplied && explicit;
  } }
  `}, []string{"probe.ts"})
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +164,7 @@ func TestCovariantSuperOverride(t *testing.T) {
 			t.Fatal(source)
 		}
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		files[names.Get("probe.ts.Probe")+".clas.testclasses.abap"] = fmt.Sprintf(`CLASS ltcl_covariant DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.
 PRIVATE SECTION.
 METHODS covariant FOR TESTING.
@@ -197,7 +195,7 @@ func TestCrossMethodSuperRejected(t *testing.T) {
  export class Base { x(): number { return 1; } }
  export class Child extends Base { m(): number { return super.x(); } }
  `}, []string{"probe.ts"})
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +215,7 @@ func TestCrossMethodSuperRejected(t *testing.T) {
  export class Child extends Base { m(): number { return super.x(); } }
  export class Grand extends Child { x(): number { return 3; } }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
+	if _, err := emitABAP(t, prog); err == nil || !strings.Contains(err.Error(), "previous implementation of the same method") {
 		t.Fatalf("expected blocking super diagnostic, got %v", err)
 	}
 }

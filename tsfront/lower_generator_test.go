@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -66,7 +65,7 @@ func TestGeneratorSuspensionAndConsumers(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	if _, _, err := abap.EmitNamed(prog); err != nil {
+	if _, _, err := emitABAPNamed(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	actual := runGoHIR(t, prog, fmt.Sprintf("fmt.Print(%s())", goEntry("probe.ts.Probe", "run")))
@@ -122,7 +121,7 @@ func TestGeneratorRegistrySource(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	if _, _, err := abap.EmitNamed(prog); err != nil {
+	if _, _, err := emitABAPNamed(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	actual := runGoHIR(t, prog, fmt.Sprintf("fmt.Print(%s())", goEntry("probe.ts.IteratorProbe", "run")))
@@ -163,7 +162,7 @@ func TestGeneratorExceptionsDelegationAndOptionalConsumers(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs, hir.Dump(prog))
 	}
-	if _, _, err := abap.EmitNamed(prog); err != nil {
+	if _, _, err := emitABAPNamed(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	actual := runGoHIR(t, prog, fmt.Sprintf("fmt.Print(%s())", goEntry("probe.ts.Probe", "run")))

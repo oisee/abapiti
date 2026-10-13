@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -121,7 +120,7 @@ func TestRulesDenseFindGoMatchesNode(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")
@@ -180,7 +179,7 @@ export class Probe {
 	if errs := hir.Verify(prog); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")

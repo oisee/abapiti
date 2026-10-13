@@ -21,7 +21,7 @@ func TestMinMaxNumberAndEmptyTraps(t *testing.T) {
 		pair.Params = []hir.Param{{Name: "a", Type: number}, {Name: "b", Type: number}}
 		c.Methods = append(c.Methods, pair)
 	}
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{c}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{c}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -131,7 +131,7 @@ func TestChaiFixtures(t *testing.T) {
 	if err = json.Unmarshal(oracle, &wants); err != nil {
 		t.Fatal(err, string(oracle))
 	}
-	files, names, err := EmitNamed(chaiFixture())
+	files, names, err := emitABAPNamed(t, chaiFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestChaiSparseRefusalEmission(t *testing.T) {
 	a := local("a", arr)
 	m := method("run", d, hir.B(decl("a", arr, newObj(arr)), &hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.IndexGet, X: a, Y: lit(2), Type: str}, Y: hir.L(str, "x")}, ret(rt("chai.box", a, d))))
 	m.Static = true
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{{Name: "SparseChai", Methods: []*hir.Method{m}}}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{{Name: "SparseChai", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

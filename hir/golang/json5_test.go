@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func json5PackagePath(t *testing.T) string {
@@ -77,7 +76,7 @@ func TestJSON5NonfiniteAndABIRefusals(t *testing.T) {
 	}
 	p := configJSONFixture()
 	p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "parse5", Static: true, Params: []hir.Param{{Name: "s", Type: hir.T(hir.String)}}, Result: hir.T(hir.Dynamic), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.RuntimeOp, Op: "json5.parse", Type: hir.T(hir.Dynamic), X: hir.V("s", hir.T(hir.String))}})})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal("ABAP must emit checked JSON5 subset", err)
 	}
 	main := `for _,s:=range []string{"NaN","+NaN","-NaN","Infinity","+Infinity","-Infinity","1e9999","{x:NaN}","[Infinity]"} {func(){defer func(){x:=recover();if _,ok:=x.(trap);!ok {panic("nonfinite must be a typed refusal")};fmt.Println(x)}();parseJSON5(str(s),func(message jsString){panic(message)});panic("escaped nonfinite")}()};`

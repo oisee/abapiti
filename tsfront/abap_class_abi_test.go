@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // These source-to-HIR regressions retain their Node/Go oracles and also inspect
@@ -13,7 +12,7 @@ import (
 // or silently catch a mismatched native reference.
 func requireCheckedClassViewABAP(t *testing.T, p *hir.Program) {
 	t.Helper()
-	files, err := abap.Emit(p)
+	files, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

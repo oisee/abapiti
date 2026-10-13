@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +35,7 @@ func TestEmitRegExpExec(t *testing.T) {
 	if got != want {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +46,7 @@ func TestEmitRegExpExec(t *testing.T) {
 	}
 	driver += fmt.Sprintf("actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nENDMETHOD.\nENDCLASS.\n", class, names.Get("member.run"))
 	files[class+".clas.testclasses.abap"] = driver
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

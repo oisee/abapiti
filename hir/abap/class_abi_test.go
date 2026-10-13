@@ -11,7 +11,7 @@ import (
 
 func abiSource(t *testing.T, p *hir.Program) (map[string]string, *hir.Names) {
 	t.Helper()
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func abiSource(t *testing.T, p *hir.Program) (map[string]string, *hir.Names) {
 				t.Fatalf("%s: overlong ABAP line", name)
 			}
 		}
-		if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+		if out := fixtureOutputDir(t); out != "" {
 			dir := filepath.Join(out, t.Name())
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				t.Fatal(err)
@@ -158,7 +158,7 @@ func TestFreshClassDescriptorRefusesUnprovenABAP(t *testing.T) {
 	for _, c := range []*hir.Class{{Name: "Local"}, {Name: "Local", Scoped: true, Abstract: true}, {Name: "Local", Scoped: true, Super: "Base"}, {Name: "Local", Scoped: true, Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Params: []hir.Param{{Name: "x", Type: str}}, Body: hir.B()}}} {
 		m := method("fresh", hir.T(hir.ClassValue), ret(&hir.Expr{Kind: hir.FreshClassOf, Owner: "Local", Type: hir.T(hir.ClassValue)}))
 		p := &hir.Program{Classes: []*hir.Class{{Name: "Base"}, c, {Name: "Caller", Methods: []*hir.Method{m}}}}
-		_, err := Emit(p)
+		_, err := emitABAP(t, p)
 		if err == nil || !(strings.Contains(err.Error(), "fresh lexical constructor descriptor requires") || strings.Contains(err.Error(), "freshclassof requires a scoped class")) {
 			t.Fatalf("unproven lexical class accepted: %v", err)
 		}

@@ -122,7 +122,7 @@ console.log(ok,JSON.parse('{}').child===undefined,alias===native&&alias.behavior
 	if errors := hir.Verify(p); len(errors) > 0 {
 		t.Fatal(errors)
 	}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestExplicitNestedClassLayoutFixtures(t *testing.T) {
 	m := method("activate", child, ret(rt("dynamic.classView", local("input", dyn), child)))
 	m.Static, m.Params = true, []hir.Param{{Name: "input", Type: dyn}}
 	p.Classes[len(p.Classes)-1].Methods = append(p.Classes[len(p.Classes)-1].Methods, m)
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil { t.Fatal(err) }
 	owner := names.Get("NestedViews")
 	files[owner+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_explicit DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_explicit IMPLEMENTATION.\nMETHOD check.\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\nENDMETHOD.\nENDCLASS.\n", owner, names.Get("member.aliases"))

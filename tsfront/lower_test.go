@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // closureFiles are the vendored lexer closure plus abapiti's driver, in a
@@ -106,13 +105,13 @@ func TestLowerLexerClosure(t *testing.T) {
 		t.Errorf("expected 59 lowered classes, got %d: %v", classes, names)
 	}
 	t.Logf("%d classes, %d interfaces, %d diagnostics", classes, len(prog.Interfaces), len(diags))
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0o755); err != nil {
 			t.Fatal(err)
 		}
 		os.WriteFile(filepath.Join(out, "lexer.hir.txt"), []byte(hir.Dump(prog)), 0o644)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatalf("emit: %v", err)
 	}
@@ -164,7 +163,7 @@ func TestLowerLexerClosure(t *testing.T) {
 	}
 	files[params.Class+".clas.testclasses.abap"] = test
 	t.Logf("differential driver: %d cases, %d lines", len(cases), strings.Count(test, "\n"))
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		for name, src := range files {
 			os.WriteFile(filepath.Join(out, name), []byte(src), 0o644)
 		}
