@@ -9,7 +9,7 @@ import (
 
 // Unlike the optional upstream differential, emission always runs in CI.
 func TestChaiEmission(t *testing.T) {
-	files, names, err := EmitNamed(chaiFixture())
+	files, names, err := emitABAPNamed(t, chaiFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestChaiEmission(t *testing.T) {
 		}
 	}
 	// Chai machinery must not alter the output of ordinary programs.
-	ordinary, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "Plain", Methods: []*hir.Method{method("run", i32, ret(lit(1)))}}}})
+	ordinary, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "Plain", Methods: []*hir.Method{method("run", i32, ret(lit(1)))}}}})
 	if err != nil {
 		t.Fatal(err)
 	}

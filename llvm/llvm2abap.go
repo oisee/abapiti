@@ -94,8 +94,8 @@ type Instruction struct {
 	// For icmp
 	Predicate string // eq, ne, slt, sgt, sle, sge, ult, ugt
 	// For br
-	Cond      string
-	TrueLabel string
+	Cond       string
+	TrueLabel  string
 	FalseLabel string
 	// For phi
 	PhiPairs []PhiPair
@@ -106,15 +106,15 @@ type Instruction struct {
 	SelectTrue  string
 	SelectFalse string
 	// For getelementptr
-	GEPBase     string   // base pointer (also: indirect call function pointer)
-	GEPType     string   // struct type name
-	GEPIndices  []string // index values
+	GEPBase    string   // base pointer (also: indirect call function pointer)
+	GEPType    string   // struct type name
+	GEPIndices []string // index values
 	// For indirect call type matching
 	CallParamTypes []Type
 	// For load/store
-	LoadAddr    string
-	StoreVal    string
-	StoreAddr   string
+	LoadAddr  string
+	StoreVal  string
+	StoreAddr string
 }
 
 type PhiPair struct {
@@ -410,7 +410,7 @@ func parseInstruction(line string) *Instruction {
 		caseRe := regexp.MustCompile(`i\d+\s+(-?\d+)\s*,\s*label\s+%(\w+)`)
 		cases := caseRe.FindAllStringSubmatch(line, -1)
 		for _, c := range cases {
-			inst.Args = append(inst.Args, c[1])       // value
+			inst.Args = append(inst.Args, c[1])                                      // value
 			inst.PhiPairs = append(inst.PhiPairs, PhiPair{Value: c[1], Label: c[2]}) // reuse PhiPair for case→label
 		}
 		return inst
@@ -727,7 +727,7 @@ type MultiClassFile struct {
 	FileName  string // e.g., "zcl_qjs_p01"
 	ClassName string // e.g., "ZCL_QJS_P01"
 	Source    string // ABAP source
-	IsClass  bool   // true=.clas.abap, false=.prog.abap
+	IsClass   bool   // true=.clas.abap, false=.prog.abap
 }
 
 // CompileMultiClass splits a large module into multiple classes,
@@ -796,7 +796,7 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
 			FileName:  partName,
 			ClassName: strings.ToUpper(partName),
 			Source:    source,
-			IsClass:  true,
+			IsClass:   true,
 		})
 	}
 
@@ -829,8 +829,12 @@ func CompileMultiClass(mod *Module, baseName string, maxFuncsPerClass int) []Mul
 					!seenMissing[inst.CallTarget] {
 					seenMissing[inst.CallTarget] = true
 					name := sanitizeName(inst.CallTarget)
-					if name == "abort" { name = "c_abort" }
-					if name == "exit" { name = "c_exit" }
+					if name == "abort" {
+						name = "c_abort"
+					}
+					if name == "exit" {
+						name = "c_exit"
+					}
 					nArgs := len(inst.Args)
 					hasRet := inst.Type.Kind != VoidType
 					var params []string
@@ -949,7 +953,7 @@ ENDCLASS.
 		FileName:  baseName + "_mem",
 		ClassName: strings.ToUpper(baseName + "_MEM"),
 		Source:    memClass,
-		IsClass:  true,
+		IsClass:   true,
 	})
 
 	return files
@@ -986,7 +990,7 @@ func (c *abapCompiler) memPrefix() string {
 		}
 		return base + "_mem=>"
 	}
-	return "" // single-class mode — use PERFORM (handled in emit())
+	return "" // single-class mode — call the class's memory helper methods
 }
 
 func (c *abapCompiler) shouldEmitFunc(fn *Function) bool {
@@ -1041,12 +1045,18 @@ func (c *abapCompiler) emit() string {
 	c.line("REPORT %s.", c.className)
 	c.line("")
 	c.line("TYPES x4 TYPE x LENGTH 4.")
-	c.line("DATA gv_mem TYPE xstring.")
 	c.line("")
 	c.line("CLASS %s DEFINITION FINAL CREATE PUBLIC.", c.className)
 	c.indent++
 	c.line("PUBLIC SECTION.")
 	c.indent++
+
+	c.line("CLASS-DATA gv_mem TYPE xstring.")
+	c.line("CLASS-METHODS mem_ld_i32 IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.line("CLASS-METHODS mem_st_i32 IMPORTING iv_addr TYPE i iv_val TYPE i.")
+	c.line("CLASS-METHODS mem_ld_i32_8u IMPORTING iv_addr TYPE i RETURNING VALUE(rv) TYPE i.")
+	c.line("CLASS-METHODS mem_st_i32_8 IMPORTING iv_addr TYPE i iv_val TYPE i.")
+	c.line("CLASS-METHODS mem_st_i32_16 IMPORTING iv_addr TYPE i iv_val TYPE i.")
 
 	// Emit typed method signatures for each non-external function
 	for _, fn := range c.mod.Functions {
@@ -1071,46 +1081,46 @@ func (c *abapCompiler) emit() string {
 		c.emitMethod(fn)
 	}
 
-	c.indent--
-	c.line("ENDCLASS.")
-	c.line("")
-
-	// Memory runtime + C library stubs (after class, as FORMs)
+	// Loads/stores use functional method calls, so their helpers belong to
+	// the class, not report-level FORMs with a different calling convention.
 	c.line("\" Memory runtime")
-	c.line("FORM mem_ld_i32 USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("METHOD mem_ld_i32.")
 	c.line("  DATA lv_b TYPE x LENGTH 4. DATA lv_r TYPE xstring.")
 	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
 	c.line("    lv_b = gv_mem+iv_addr(4).")
 	c.line("    CONCATENATE lv_b+3(1) lv_b+2(1) lv_b+1(1) lv_b+0(1) INTO lv_r IN BYTE MODE. rv = lv_r.")
 	c.line("  ELSE. rv = 0. ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_st_i32 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("ENDMETHOD.")
+	c.line("METHOD mem_st_i32.")
 	c.line("  DATA lv_x TYPE x LENGTH 4. DATA lv_r TYPE xstring. lv_x = iv_val.")
 	c.line("  IF iv_addr >= 0 AND iv_addr + 4 <= xstrlen( gv_mem ).")
 	c.line("    CONCATENATE lv_x+3(1) lv_x+2(1) lv_x+1(1) lv_x+0(1) INTO lv_r IN BYTE MODE.")
 	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 4 OF gv_mem WITH lv_r IN BYTE MODE.")
 	c.line("  ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_ld_i32_8u USING iv_addr TYPE i CHANGING rv TYPE i.")
+	c.line("ENDMETHOD.")
+	c.line("METHOD mem_ld_i32_8u.")
 	c.line("  DATA lv_b TYPE x LENGTH 1.")
 	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
 	c.line("    lv_b = gv_mem+iv_addr(1). rv = lv_b.")
 	c.line("  ELSE. rv = 0. ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_st_i32_8 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("ENDMETHOD.")
+	c.line("METHOD mem_st_i32_8.")
 	c.line("  DATA lv_x TYPE x LENGTH 1. DATA lv_bx TYPE xstring. lv_x = iv_val.")
 	c.line("  IF iv_addr >= 0 AND iv_addr + 1 <= xstrlen( gv_mem ).")
 	c.line("    lv_bx = lv_x.")
 	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 1 OF gv_mem WITH lv_bx IN BYTE MODE.")
 	c.line("  ENDIF.")
-	c.line("ENDFORM.")
-	c.line("FORM mem_st_i32_16 USING iv_addr TYPE i iv_val TYPE i.")
+	c.line("ENDMETHOD.")
+	c.line("METHOD mem_st_i32_16.")
 	c.line("  DATA lv_x TYPE x LENGTH 2. DATA lv_r16 TYPE xstring. lv_x = iv_val.")
 	c.line("  IF iv_addr >= 0 AND iv_addr + 2 <= xstrlen( gv_mem ).")
 	c.line("    CONCATENATE lv_x+1(1) lv_x+0(1) INTO lv_r16 IN BYTE MODE.")
 	c.line("    REPLACE SECTION OFFSET iv_addr LENGTH 2 OF gv_mem WITH lv_r16 IN BYTE MODE.")
 	c.line("  ENDIF.")
-	c.line("ENDFORM.")
+	c.line("ENDMETHOD.")
+	c.indent--
+	c.line("ENDCLASS.")
+	c.line("")
 	c.line("\" C library stubs")
 	c.line("FORM strlen USING iv_ptr TYPE i CHANGING rv TYPE int8. rv = 0. ENDFORM.")
 	c.line("FORM memset USING iv_dst TYPE i iv_val TYPE i iv_n TYPE int8. ENDFORM.")
@@ -1238,7 +1248,9 @@ func (c *abapCompiler) collectVars(fn *Function) []varDecl {
 				break
 			}
 		}
-		if hasBitwise { break }
+		if hasBitwise {
+			break
+		}
 	}
 	if hasBitwise {
 		result = append(result, varDecl{name: "lv_xa", typ: "x4"})
@@ -1515,8 +1527,12 @@ func (c *abapCompiler) emitInst(inst *Instruction, fn *Function) {
 					for pi := 0; pi < nArgs && pi < len(cfn.Params) && pi < len(inst.CallParamTypes); pi++ {
 						callT := inst.CallParamTypes[pi].ABAPType()
 						paramT := cfn.Params[pi].Type.ABAPType()
-						if callT == "" { callT = "i" }
-						if paramT == "" { paramT = "i" }
+						if callT == "" {
+							callT = "i"
+						}
+						if paramT == "" {
+							paramT = "i"
+						}
 						if callT != paramT {
 							typeMatch = false
 							break

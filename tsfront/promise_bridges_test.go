@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestAsyncCovariantInterfaceBridge(t *testing.T) {
@@ -41,7 +40,7 @@ export class Probe { static async run():Promise<string> {
 	if strings.TrimSpace(out) != "same:2" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -64,7 +63,7 @@ export class Probe { static async run():Promise<string> {
 	if strings.TrimSpace(out) != "child" {
 		t.Fatal(out)
 	}
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 }

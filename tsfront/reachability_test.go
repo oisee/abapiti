@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
@@ -53,7 +52,7 @@ func TestCoverageTrapAndStaleSpan(t *testing.T) {
 	if !strings.Contains(hir.Dump(prog), "trap probe.ts:1") {
 		t.Fatal(hir.Dump(prog))
 	}
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}

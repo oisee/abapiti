@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestSwitchGroupedLabelsMatchNode(t *testing.T) {
@@ -85,7 +84,7 @@ func TestSwitchGroupedLabelsMatchNode(t *testing.T) {
 }`
 	prog := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
 	// Both backends consume the corrected structured HIR (no Go-only workaround).
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	got := runGoHIR(t, prog, "fmt.Print("+goEntry("input.ts.Probe", "run")+"().String())")
@@ -143,7 +142,7 @@ func TestSwitchRefusesUnmodeledControlFlow(t *testing.T) {
 		if !trapped {
 			t.Fatal("unsupported switch produced a partial answer instead of a whole-body trap")
 		}
-		if _, err := abap.Emit(prog); err != nil {
+		if _, err := emitABAP(t, prog); err != nil {
 			t.Fatal(err)
 		}
 		main := `func(){defer func(){if recover()==nil{panic("missing switch trap")};fmt.Print("trapped")}();` + goEntry("probe.ts.Probe", "run") + `(str("a"))}()`

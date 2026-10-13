@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -60,7 +59,7 @@ func TestEmitRegistryIterators(t *testing.T) {
 		gracecheck.Check(t, prog)
 	}
 	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "iterators", "IteratorProbe") })
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +92,7 @@ func TestEmitRegistryIterators(t *testing.T) {
 	driver = strings.Replace(driver, "METHODS run FOR TESTING.", "METHODS run FOR TESTING.\nMETHODS trap FOR TESTING.", 1)
 	driver = strings.TrimSuffix(driver, "ENDCLASS.\n") + fmt.Sprintf("METHOD trap.\nDATA caught TYPE abap_bool.\nDATA exception TYPE REF TO %s.\nDATA(registry) = NEW %s( ).\nTRY.\nDATA(values) = registry->%s( ).\nCATCH %s INTO exception.\ncaught = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\ncl_abap_unit_assert=>assert_equals( act = exception->source_location exp = `iterators.ts:24` ).\nENDMETHOD.\nENDCLASS.\n", names.Get("exception.unexecuted"), names.Get("iterators.ts.SnapshotRegistry"), names.Get("member.getFiles"), names.Get("exception.unexecuted"))
 	files[class+".clas.testclasses.abap"] = driver
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

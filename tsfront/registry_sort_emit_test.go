@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -69,7 +68,7 @@ func TestEmitRegistrySorts(t *testing.T) {
 		gracecheck.Check(t, prog)
 	}
 	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "sorts", "SortProbe") })
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +123,7 @@ func TestEmitRegistrySorts(t *testing.T) {
 	line("cl_abap_unit_assert=>assert_true( xsdbool( strlen( message ) > 0 ) ).\nENDTRY.")
 	line("cl_abap_unit_assert=>assert_true( act = caught ).\nENDMETHOD.\nENDCLASS.")
 	files[class+".clas.testclasses.abap"] = b.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err = os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

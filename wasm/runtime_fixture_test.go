@@ -9,6 +9,8 @@ import (
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/oisee/abapiti/internal/abapfixture"
 )
 
 // Each export has no arguments and returns an observable i32 result. i64
@@ -205,7 +207,7 @@ func TestRuntimeFixtureCoversEveryHelper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src := runtimeFixtureClass(mod, "zcl_abapiti_runtime_helpers")
+	src := runtimeFixtureClass(t, mod, "zcl_abapiti_runtime_helpers")
 	declarations, _ := runtimeTemplates()
 	for name := range declarations {
 		if !strings.Contains(src, "METHOD "+name+".") || !strings.Contains(src, name+"(") {
@@ -225,7 +227,8 @@ func TestRuntimeFixtureCoversEveryHelper(t *testing.T) {
 
 // Allocation and active data initialization are normally emitted inline. Run
 // their shared runtime counterparts too, with exactly the module's memory image.
-func runtimeFixtureClass(mod *Module, class string) string {
+func runtimeFixtureClass(t *testing.T, mod *Module, class string) string {
+	t.Helper()
 	src, err := Compile(mod, class)
 	if err != nil {
 		panic(err)
@@ -248,7 +251,9 @@ func runtimeFixtureClass(mod *Module, class string) string {
 	start := strings.Index(src, "METHOD constructor.")
 	end := start + strings.Index(src[start:], "ENDMETHOD.")
 	src = src[:end] + init + src[end:]
-	return wrapLongLines(src)
+	src = wrapLongLines(src)
+	abapfixture.Track(t, "wasm", map[string]string{class + ".clas.abap": src})
+	return src
 }
 
 // ABAP has no portable 7.02/JS sign-bit access for TYPE f zero. Keep the
@@ -303,7 +308,7 @@ func TestRuntimeFixtureIndependentCalls(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := moduleFunctionNames(mod)
-	src := runtimeFixtureClass(mod, "zcl_abapiti_runtime_helpers")
+	src := runtimeFixtureClass(t, mod, "zcl_abapiti_runtime_helpers")
 	checkNamedMethods(t, src, names, true)
 	tests := osdTestClassReplay("zcl_abapiti_runtime_helpers", cases, runtimeFixtureResults(t, bin, cases), false)
 	if calls := strings.Count(tests, "lv_act = lo->"); calls != len(cases) {

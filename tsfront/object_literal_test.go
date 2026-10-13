@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	gohir "github.com/oisee/abapiti/hir/golang"
 )
 
@@ -60,7 +59,7 @@ func TestAnonymousObjectLiterals(t *testing.T) {
 	if pairs != 1 {
 		t.Fatalf("got %d copies of the a/b shape, want one", pairs)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := gohir.Emit(prog); err != nil {

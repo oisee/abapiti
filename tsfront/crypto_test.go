@@ -5,8 +5,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestGoFreshSHA1PipelineNodeOracle(t *testing.T) {
@@ -27,7 +25,7 @@ func TestGoFreshSHA1PipelineNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "string.sha1Hex") {
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "string.sha1Hex") {
 		t.Fatalf("ABAP must refuse SHA-1: %v", err)
 	}
 }

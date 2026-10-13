@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestEmitStatementsClosure(t *testing.T) {
@@ -19,7 +17,7 @@ func TestEmitStatementsClosure(t *testing.T) {
 			t.Fatal(d)
 		}
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +45,7 @@ func TestEmitStatementsClosure(t *testing.T) {
 		}
 	}
 	t.Logf("emitted %d ABAP files, %d lines, %d bytes; %d differential cases", len(files), lines, bytes, len(cases))
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

@@ -294,13 +294,27 @@ func (e *emitter) signature(m *hir.Method, ctor bool) string {
 // present in every class whenever descriptors could be needed.
 func (e *emitter) scanUsage() {
 	need := false
+	var scanType func(hir.Type)
+	scanType = func(ty hir.Type) {
+		need = need || ty.Kind == hir.ClassValue
+		for _, arg := range ty.Args {
+			scanType(arg)
+		}
+	}
+	scanMethod := func(m *hir.Method) {
+		scanType(m.Result)
+		for _, p := range m.Params {
+			scanType(p.Type)
+		}
+	}
 	var walk func(x *hir.Expr)
 	walk = func(x *hir.Expr) {
 		if x == nil {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
-		if x.Kind == hir.ClassOf || x.Type.Kind == hir.ClassValue {
+		scanType(x.Type)
+		if x.Kind == hir.ClassOf {
 			need = true
 		}
 		if x.Kind == hir.RuntimeOp && (strings.HasPrefix(x.Op, "object.") || x.Op == "classvalue.new" || x.Op == "classvalue.name" || x.Op == "classvalue.has") {
@@ -349,11 +363,21 @@ func (e *emitter) scanUsage() {
 			walk(a)
 		}
 	}
+	for _, i := range e.p.Interfaces {
+		for _, m := range i.Methods {
+			scanMethod(m)
+		}
+	}
 	for _, c := range e.p.Classes {
-		if c.Ctor != nil && c.Ctor.Body != nil {
+		for _, f := range c.Fields {
+			scanType(f.Type)
+		}
+		if c.Ctor != nil {
+			scanMethod(c.Ctor)
 			e.walkStmt(c.Ctor.Body, walk)
 		}
 		for _, m := range c.Methods {
+			scanMethod(m)
 			if m.Body != nil {
 				e.walkStmt(m.Body, walk)
 			}
@@ -560,7 +584,11 @@ func (e *emitter) class(c *hir.Class) {
 			name = e.name("builtin.initialize." + c.Name)
 		}
 		if impl := e.overrideBody(c, m); impl != nil {
-			if e.forwardsToImplementation(impl, m) {
+			if m.Body != nil && m.Body.Kind == hir.Async && e.forwardsToImplementation(impl, m) {
+				// The lowered async bridge adopts a fresh promise, including
+				// rejection. A plain forwarder cannot cast invariant storage.
+				b.WriteString(e.body(c, m, name))
+			} else if e.forwardsToImplementation(impl, m) {
 				b.WriteString(e.slotForwarder(c, m, impl))
 			} else {
 				b.WriteString(e.overrideImplementation(c, impl, m))
@@ -2220,21 +2248,24 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "object.classOf":
 		b.e.descriptors = true
-		if x.X.Type.Kind == hir.Optional {
+		optional := x.X.Type.Kind == hir.Optional
+		operand := x.X.Type
+		if optional {
+			operand = operand.Args[0]
 			b.line("IF " + a + " IS BOUND.")
-			b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
-			b.line("ENDIF.")
-			return
 		}
-		if x.X.Type.Kind == hir.ClassRef && x.X.Type.Name == hir.RootObject {
+		if operand.Kind == hir.ClassRef && operand.Name == hir.RootObject {
 			ref := b.rawTemp("REF TO " + b.e.name("runtime.described"))
 			trap := b.e.classRefusal()
 			b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
 			b.line("TRY.\n" + ref + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.")
 			b.line(n + " = " + ref + "->" + b.e.name("builtin.nativeConstructor") + "( ).")
-			return
+		} else {
+			b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
 		}
-		b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
+		if optional {
+			b.line("ENDIF.")
+		}
 		return
 	case "classvalue.name":
 		b.line(n + " = " + a + "->name.")

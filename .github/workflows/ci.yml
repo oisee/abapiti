@@ -35,6 +35,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Keep OSG setup/pins and the HIR/fixture gates together. The existing osgo
+  # job lives in the reusable OSD workflow; legacy OSD shards remain dispatch-only.
+  osgo:
+    uses: ./.github/workflows/osd-m1.yml
+
   build:
     name: build
     runs-on: ubuntu-latest
