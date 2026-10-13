@@ -2564,7 +2564,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
 		if x.Op == "dynamic.recordString" {
 			b.line("IF " + a + " IS BOUND.")
-			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
 			b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": ABAP record string conversion requires primitive dynamic storage"})
 			b.line("ENDIF.")
 			b.line("ENDIF.")
@@ -2574,7 +2574,21 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if x.Op == "dynamic.toString" || x.Op == "dynamic.recordString" {
 			method = "to_string"
 		}
+		if x.Op == "dynamic.recordString" {
+			// Ordinary tagged records have Object.prototype's default coercion.
+			// Presence, including an own undefined hook, leaves that domain.
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object.")
+			for _, key := range []string{"toString", "valueOf", "__proto__"} {
+				b.line("READ TABLE " + a + "->entries WITH KEY k = `" + key + "` TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.")
+				b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": record string conversion requires the original default Object coercion hooks"})
+				b.line("ENDIF.")
+			}
+			b.line(n + " = `[object Object]`.\nELSE.")
+		}
 		b.line(n + " = " + a + "->" + method + "( ).")
+		if x.Op == "dynamic.recordString" {
+			b.line("ENDIF.")
+		}
 		if x.Op == "dynamic.typeofValue" {
 			// Keep the ordinary box representation and the Go callable predicate,
 			// but test one shared marker instead of enumerating every closure here.
