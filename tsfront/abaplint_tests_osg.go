@@ -76,7 +76,7 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 			}
 		}
 		for _, action := range actions {
-			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_error->get_text( ) ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nadd_initialization( file = %s action = %s status = 'trapped' message = describe( init_error ) ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
 		}
 	}
 	// Force the runtime initializer even when a closure did not otherwise use it.
@@ -116,10 +116,27 @@ PRIVATE SECTION.
 CLASS-DATA initialization TYPE string.
 CLASS-METHODS quote IMPORTING value TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS add_initialization IMPORTING file TYPE string action TYPE string status TYPE string message TYPE string.
+CLASS-METHODS describe IMPORTING error TYPE REF TO cx_root RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 CLASS zcl_abapiti_test_runner IMPLEMENTATION.
 METHOD quote.
 result = '"' && escape( val = value format = cl_abap_format=>e_json_string ) && '"'.
+ENDMETHOD.
+METHOD describe.
+DATA current TYPE REF TO cx_root.
+DATA name TYPE string.
+DATA depth TYPE i.
+current = error.
+WHILE current IS BOUND AND depth < 4.
+name = cl_abap_classdescr=>get_class_name( current ).
+REPLACE FIRST OCCURRENCE OF '\CLASS=' IN name WITH ''.
+IF depth > 0.
+result = result && | <- |.
+ENDIF.
+result = result && name && |: | && current->get_text( ).
+current = current->previous.
+depth = depth + 1.
+ENDWHILE.
 ENDMETHOD.
 METHOD add_initialization.
 IF initialization IS NOT INITIAL.
@@ -188,7 +205,7 @@ status = 'not-run'.
 ENDIF.
 CATCH cx_root INTO DATA(test_error).
 status = 'trapped'.
-message = test_error->get_text( ).
+message = describe( test_error ).
 ENDTRY.
 ENDIF.
 CASE status.
