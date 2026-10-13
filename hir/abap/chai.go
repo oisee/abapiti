@@ -96,6 +96,13 @@ func (e *emitter) chaiCatchTypes() string {
 	return strings.Join(types, " ")
 }
 
+// sparseRefusalClass emits the refusal raised before dense padding could
+// fabricate array slots (shared by Chai and presence-checked programs).
+func (e *emitter) sparseRefusalClass() {
+	trap := e.name("exception.chaiRefusal")
+	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
+}
+
 func (e *emitter) chaiRuntime() {
 	d, name, trap := e.name("runtime.dynamic"), e.name("runtime.chai"), e.name("exception.chaiRefusal")
 	file := d + ".clas.abap"
@@ -104,7 +111,7 @@ func (e *emitter) chaiRuntime() {
 	if src, ok := e.files[jsonFile]; ok {
 		e.files[jsonFile] = strings.Replace(src, "result->nval = token.", "result->nval = token.\nIF result->nval = 0.\nresult->chai_zero_sign = 1.\nIF token+0(1) = '-'.\nresult->chai_zero_sign = 2.\nENDIF.\nENDIF.", 1)
 	}
-	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
+	e.sparseRefusalClass()
 	// Adapter methods are emitted after the program and ordinary runtime types.
 	// Reading the original arrays on each invocation preserves aliases/mutations.
 	var arrays, kind, entries, box, action strings.Builder
