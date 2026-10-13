@@ -76,6 +76,15 @@ func (e *emitter) slotForwarder(c *hir.Class, slot, impl *hir.Method) string {
 			e.refuse(fmt.Errorf("class %s method %s parameter %s: narrowing an inherited optional primitive cannot preserve undefined", c.Name, slot.Name, p.Name))
 			return ""
 		}
+		if x := bridgeArgument(slot, impl, j); inherited.Type.Kind == hir.Dynamic && x != nil && x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" && x.Type.Equal(p.Type) && x.X != nil && x.X.Kind == hir.Local && x.X.Name == inherited.Name {
+			// The HIR bridge selected the live structural view (as Go does):
+			// native instances keep identity, structural records are viewed.
+			e.liveRuntime()
+			n := b.temp(p.Type)
+			b.liveView(x, n, e.param(inherited.Name))
+			args = append(args, e.param(p.Name)+" = "+n)
+			continue
+		}
 		args = append(args, e.param(p.Name)+" = "+b.convert(e.param(inherited.Name), inherited.Type, p.Type))
 	}
 	call := "me->" + e.member(impl.Name) + "( " + strings.Join(args, " ") + " )"
@@ -92,6 +101,31 @@ func (e *emitter) slotForwarder(c *hir.Class, slot, impl *hir.Method) string {
 	}
 	b.line("RETURN.")
 	return "METHOD " + b.implemented + ".\n" + b.code.String() + "ENDMETHOD.\n"
+}
+
+// bridgeArgument returns the frontend bridge's converted argument j for the
+// call into impl, when the slot body is that single forwarding call.
+func bridgeArgument(slot, impl *hir.Method, j int) *hir.Expr {
+	var found *hir.Expr
+	var visit func(*hir.Stmt)
+	visit = func(s *hir.Stmt) {
+		if s == nil || found != nil {
+			return
+		}
+		for _, x := range []*hir.Expr{s.X, s.Y} {
+			if x != nil && x.Kind == hir.VirtualCall && x.Name == impl.Name && x.X != nil && x.X.Kind == hir.This && j < len(x.Args) {
+				found = x.Args[j]
+				return
+			}
+		}
+		visit(s.Body)
+		visit(s.Else)
+		for _, v := range s.List {
+			visit(v)
+		}
+	}
+	visit(slot.Body)
+	return found
 }
 
 // upcast reports whether a reference of type src is assignable to dst without

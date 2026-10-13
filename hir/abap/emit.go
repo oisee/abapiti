@@ -1062,7 +1062,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
-			b.line(n + " ?= " + row + ".")
+			b.erasedElement(n, row, t)
 		}
 	case hir.New:
 		if t.Kind == hir.Array {
@@ -1592,14 +1592,34 @@ func (b *body) truth(n, a string, t hir.Type) {
 func (b *body) stringLit(n, s string) {
 	// String templates preserve trailing blanks. Chunk before escaping so source
 	// tokens always fit the 255-byte envelope (also bounds UTF-16 source length).
+	// Newline, carriage return and tab are spelled \n, \r, \t inside templates;
+	// other control codes take a uccpi temporary.
 	if s == "" {
 		b.line(n + " = ||.")
 		return
 	}
+	hard := func(c rune) bool {
+		return (c < 32 && c != '\n' && c != '\r' && c != '\t') || c == 127 || c == 0xfeff || c == 0x2028 || c == 0x2029
+	}
+	soft := func(c rune) bool { return c == '\n' || c == '\r' || c == '\t' }
 	first := true
 	for s != "" {
 		r := []rune(s)
-		if r[0] < 32 || r[0] == 127 || r[0] == 0xfeff || r[0] == 0x2028 || r[0] == 0x2029 {
+		k, size, slash, firstSoft := 0, 0, false, -1
+		for k < len(r) && !hard(r[k]) && size+len(string(r[k]))*2 <= 120 {
+			if soft(r[k]) && firstSoft < 0 {
+				firstSoft = k
+			}
+			slash = slash || r[k] == '\\'
+			size += len(string(r[k])) * 2
+			k++
+		}
+		if slash && firstSoft >= 0 {
+			// A backslash forces the backquoted form, which has no escapes:
+			// stop before the first control code.
+			k = firstSoft
+		}
+		if k == 0 {
 			if first {
 				b.line(n + " = ||.")
 			}
@@ -1610,15 +1630,9 @@ func (b *body) stringLit(n, s string) {
 			first = false
 			continue
 		}
-		k := 0
-		size := 0
-		for k < len(r) && r[k] >= 32 && r[k] != 127 && r[k] != 0xfeff && r[k] != 0x2028 && r[k] != 0x2029 && size+len(string(r[k]))*2 <= 120 {
-			size += len(string(r[k])) * 2
-			k++
-		}
 		chunk := string(r[:k])
 		s = string(r[k:])
-		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|").Replace(chunk) + "|"
+		literal := "|" + strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}", "|", "\\|", "\n", "\\n", "\r", "\\r", "\t", "\\t").Replace(chunk) + "|"
 		if strings.Contains(chunk, "\\") {
 			// abaplint's lexer misreads an escaped backslash before an
 			// escaped template delimiter (open-steamgate inbox 040); a
@@ -2490,8 +2504,33 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	}
 	b.line(s + ".")
 	if target != n {
-		b.line(n + " ?= " + target + ".")
+		b.erasedElement(n, target, x.Type)
 	}
+}
+
+// erasedElement narrows an erased reference-array slot. Reference storage
+// holds the original objects; a view as any[] boxes the actual element (as
+// Go's box), rather than requiring a pre-existing tagged value. Other element
+// types keep their checked cast.
+func (b *body) erasedElement(n, row string, t hir.Type) {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	if t.Kind != hir.Dynamic {
+		b.line(n + " ?= " + row + ".")
+		return
+	}
+	// Class tests, not CATCH: both are classes (IS INSTANCE OF is reliable
+	// for classes on every host) and the method keeps its peephole folding.
+	b.line("IF " + row + " IS INSTANCE OF " + b.e.name("runtime.dynamic") + ".\n" + n + " ?= " + row + ".")
+	b.line("ELSEIF " + row + " IS INSTANCE OF " + b.e.name("runtime.classvalue") + ".")
+	cv := b.rawTemp("REF TO " + b.e.name("runtime.classvalue"))
+	b.line(cv + " ?= " + row + ".")
+	b.boxDynamic(n, cv, hir.T(hir.ClassValue))
+	b.line("ELSE.")
+	b.line("CLEAR " + n + ".")
+	b.boxDynamic(n, row, hir.Ref(hir.RootObject))
+	b.line("ENDIF.")
 }
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
@@ -2598,7 +2637,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("LOOP AT " + a + "->items INTO " + row + ".")
 		if row != n {
-			b.line(n + " ?= " + row + ".")
+			b.erasedElement(n, row, s.Type)
 		}
 		b.stmt(s.Body)
 		b.line("ENDLOOP.")

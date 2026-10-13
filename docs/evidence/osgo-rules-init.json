@@ -1,0 +1,1239 @@
+{
+  "schema": "osgo-rules-init/v1",
+  "registrationsRecovered": 73,
+  "before": {
+    "compilerCommit": "3da6606b2dbc4c93c10e90f580e25760d501b8d9",
+    "nodeActive": {
+      "total": 268,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 183,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 85,
+      "notPassing": 268
+    },
+    "registered": 183,
+    "initialization": [
+      {
+        "file": "test/rules/check_comments.ts",
+        "action": "z_member_test__5641f70838341e",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/fully_type_constants.ts",
+        "action": "z_member_test__5641f70838341e",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/keyword_case.ts",
+        "action": "z_member_test__3607df2fd950eb",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/keyword_case.ts",
+        "action": "z_member_test__84533fc8724cf1",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/line_length.ts",
+        "action": "z_member_test__ccf00c576bdfc6",
+        "message": "Casting failed, types not compatible",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/method_length.ts",
+        "action": "z_member_test__56cb87476a9398",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/newline_between_methods.ts",
+        "action": "z_member_test__bba63f7978dcab",
+        "message": "CX_SY_MOVE_CAST_ERROR in ?=",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__0a497c851020f7",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__5641f70838341e",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      }
+    ],
+    "unregisteredTitles": [
+      "keywordCase: lower \"\n      CLASS zcl_my definition FINAL public.\n        public section.\n          methods x.\n      ENDCLASS.\n      CLASS zcl_my IMPLEMENTATION.\n        method x. endmethod.\n      ENDCLASS.\n      \" should have 4 issue(s)",
+      "keywordCase: lower \"\n      INTERFACE zif_my PUBLIC.\n        methods x.\n      ENDINTERFACE.\n      \" should have 2 issue(s)",
+      "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          METHODS x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+      "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        METHOD x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+      "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 0 issue(s)",
+      "keywordCase: lower + ignore boundaries \"\n      CLASS zcl_my definition FINAL public.\n        public section.\n          methods x.\n      ENDCLASS.\n      CLASS zcl_my IMPLEMENTATION.\n        method x. endmethod.\n      ENDCLASS.\n      \" should have 0 issue(s)",
+      "keywordCase: lower + ignore boundaries \"\n      INTERFACE zif_my PUBLIC.\n        methods x.\n      ENDINTERFACE.\n      \" should have 0 issue(s)",
+      "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          METHODS x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+      "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        METHOD x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+      "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 0 issue(s)",
+      "test check_comments rule end of line allowed, abapdoc",
+      "test check_comments rule end of line allowed, asterisk comment",
+      "test check_comments rule end of line allowed, inline after expr",
+      "test check_comments rule end of line allowed, normal comment + end of line",
+      "test check_comments rule end of line allowed, pseudo comment",
+      "test check_comments rule end of line allowed, pseudo pragma comment",
+      "test check_comments rule end of line allowed, select, multiple comments",
+      "test check_comments rule end of line allowed, with end of line",
+      "test check_comments rule end of line allowed, writes with strings",
+      "test check_comments rule no end of line, abapdoc",
+      "test check_comments rule no end of line, asterisk comment",
+      "test check_comments rule no end of line, inline after expr",
+      "test check_comments rule no end of line, normal comment + end of line",
+      "test check_comments rule no end of line, select, multiple comments",
+      "test check_comments rule no end of line, with end of line",
+      "test check_comments rule no end of line, writes with strings",
+      "test files for method length class, check, over length",
+      "test files for method length class, check, valid length",
+      "test files for method length class, ignore, over length",
+      "test files for method length form, check, over length",
+      "test files for method length form, check, valid length",
+      "test files for method length form, off, over length",
+      "test files for method length form, off, valid length",
+      "test files for method length function module, check, over length",
+      "test files for method length function module, check, valid length",
+      "test files for method length function module, off, over length",
+      "test files for method length function module, off, valid length",
+      "test files for method length global testclass",
+      "test files for method length testclass, check, over length",
+      "test files for method length testclass, check, valid length",
+      "test files for method length testclass, ignore, over length",
+      "test files for method length testclass, ignore, valid length",
+      "test fully_type_constants rule both, const number no type",
+      "test fully_type_constants rule both, const string no type",
+      "test fully_type_constants rule both, const struc, one not typed",
+      "test fully_type_constants rule both, const with type",
+      "test fully_type_constants rule both, data number no type",
+      "test fully_type_constants rule both, data string no type",
+      "test fully_type_constants rule both, data struc, one not typed",
+      "test fully_type_constants rule both, data with various types",
+      "test fully_type_constants rule only const, const number no type ",
+      "test fully_type_constants rule only const, const string no type ",
+      "test fully_type_constants rule only const, const struc, one not typed",
+      "test fully_type_constants rule only const, const with type",
+      "test fully_type_constants rule only const, data number no type ",
+      "test fully_type_constants rule only const, data string no type ",
+      "test fully_type_constants rule only const, data struc, one not typed",
+      "test fully_type_constants rule only const, data with various types",
+      "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)",
+      "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+      "test newline_between_methods rule exact, exact amount",
+      "test newline_between_methods rule exact, exact amount",
+      "test newline_between_methods rule exact, exact amount, no newline before endclass",
+      "test newline_between_methods rule exact, less amount",
+      "test newline_between_methods rule exact, no newlines, no newline before endclass",
+      "test newline_between_methods rule invalid, exact amount",
+      "test newline_between_methods rule invalid, exact amount ",
+      "test newline_between_methods rule invalid, less amount",
+      "test newline_between_methods rule invalid, no new lines ",
+      "test newline_between_methods rule invalid, variable amount",
+      "test newline_between_methods rule less, exact amount",
+      "test newline_between_methods rule less, exact amount, no newline before endclass",
+      "test newline_between_methods rule less, less amount",
+      "test newline_between_methods rule less, no newlines, no newline before endclass",
+      "test newline_between_methods rule less, variable amount",
+      "test no_dynamic_stuff rule, only callMethod \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL FUNCTION lv_name.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD lo_obj->(lv_method).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"SORT tab BY (lv_field).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD lo_obj->(lv_method).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"DELETE tab WHERE (lv_cond).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"SORT tab BY (lv_field).\" should have 1 issue(s)"
+    ],
+    "host": {
+      "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+      "timingMs": {
+        "frontend": 127415,
+        "emit": 14832,
+        "goBuild": 140922,
+        "run": 443
+      },
+      "status": 1,
+      "envelope": {
+        "files": 2333,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      }
+    },
+    "loweringGate": {
+      "Files": 1548,
+      "Classes": 2089,
+      "Interfaces": 75,
+      "Blocking": 0,
+      "HIRErrors": 0,
+      "CoverageTraps": 0,
+      "Ranked": []
+    },
+    "bodyTrapGroups": [
+      {
+        "message": "runtime operation array.has has no ABAP emitter",
+        "count": 178
+      },
+      {
+        "message": "An exception was raised.",
+        "count": 5
+      }
+    ]
+  },
+  "after": {
+    "compilerCommit": "45a97906b452c902b0f3e630321c328f23a23136",
+    "nodeActive": {
+      "total": 268,
+      "passed": 0,
+      "failed": 0,
+      "trapped": 256,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 12,
+      "notPassing": 268
+    },
+    "registered": 256,
+    "initialization": [
+      {
+        "file": "test/rules/line_length.ts",
+        "action": "z_member_test__ccf00c576bdfc6",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__0a497c851020f7",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      },
+      {
+        "file": "test/rules/no_dynamic_stuff.ts",
+        "action": "z_member_test__5641f70838341e",
+        "message": "An exception was raised.",
+        "status": "trapped"
+      }
+    ],
+    "unregisteredTitles": [
+      "test line_length rule \"WRITE: / 'abc'.\" should have 0 issue(s)",
+      "test line_length rule \"hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello hello\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL FUNCTION lv_name.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"CALL METHOD lo_obj->(lv_method).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only callMethod \"SORT tab BY (lv_field).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"ASSIGN (lv_name) TO <fs>.\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD go_calendar->('RESET_DAY_INFO').\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"CALL METHOD lo_obj->(lv_method).\" should have 0 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"DELETE tab WHERE (lv_cond).\" should have 1 issue(s)",
+      "test no_dynamic_stuff rule, only internalTable \"SORT tab BY (lv_field).\" should have 1 issue(s)"
+    ],
+    "host": {
+      "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+      "timingMs": {
+        "frontend": 110098,
+        "emit": 10129,
+        "goBuild": 104312,
+        "run": 3506
+      },
+      "status": 1,
+      "envelope": {
+        "files": 2333,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      }
+    },
+    "loweringGate": {
+      "Files": 1548,
+      "Classes": 2089,
+      "Interfaces": 75,
+      "Blocking": 0,
+      "HIRErrors": 0,
+      "CoverageTraps": 0,
+      "Ranked": []
+    },
+    "bodyTrapGroups": [
+      {
+        "message": "runtime operation array.has has no ABAP emitter",
+        "count": 188
+      },
+      {
+        "message": "An exception was raised.",
+        "count": 68
+      }
+    ]
+  },
+  "files": [
+    {
+      "file": "test/rules/check_comments.ts",
+      "nodeActive": 16,
+      "baselineRegistered": 0,
+      "currentRegistered": 16
+    },
+    {
+      "file": "test/rules/fully_type_constants.ts",
+      "nodeActive": 16,
+      "baselineRegistered": 0,
+      "currentRegistered": 16
+    },
+    {
+      "file": "test/rules/keyword_case.ts",
+      "nodeActive": 114,
+      "baselineRegistered": 104,
+      "currentRegistered": 114
+    },
+    {
+      "file": "test/rules/line_length.ts",
+      "nodeActive": 4,
+      "baselineRegistered": 2,
+      "currentRegistered": 2
+    },
+    {
+      "file": "test/rules/method_length.ts",
+      "nodeActive": 25,
+      "baselineRegistered": 9,
+      "currentRegistered": 25
+    },
+    {
+      "file": "test/rules/newline_between_methods.ts",
+      "nodeActive": 15,
+      "baselineRegistered": 0,
+      "currentRegistered": 15
+    },
+    {
+      "file": "test/rules/no_dynamic_stuff.ts",
+      "nodeActive": 78,
+      "baselineRegistered": 68,
+      "currentRegistered": 68
+    }
+  ],
+  "recoveredTitles": [
+    "keywordCase: lower \"\n      CLASS zcl_my definition FINAL public.\n        public section.\n          methods x.\n      ENDCLASS.\n      CLASS zcl_my IMPLEMENTATION.\n        method x. endmethod.\n      ENDCLASS.\n      \" should have 4 issue(s)",
+    "keywordCase: lower \"\n      INTERFACE zif_my PUBLIC.\n        methods x.\n      ENDINTERFACE.\n      \" should have 2 issue(s)",
+    "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          METHODS x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+    "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        METHOD x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+    "keywordCase: lower \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 0 issue(s)",
+    "keywordCase: lower + ignore boundaries \"\n      CLASS zcl_my definition FINAL public.\n        public section.\n          methods x.\n      ENDCLASS.\n      CLASS zcl_my IMPLEMENTATION.\n        method x. endmethod.\n      ENDCLASS.\n      \" should have 0 issue(s)",
+    "keywordCase: lower + ignore boundaries \"\n      INTERFACE zif_my PUBLIC.\n        methods x.\n      ENDINTERFACE.\n      \" should have 0 issue(s)",
+    "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          METHODS x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+    "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        METHOD x. endmethod.\n      endclass.\n      \" should have 1 issue(s)",
+    "keywordCase: lower + ignore boundaries \"\n      class zcl_my definition final public.\n        public section.\n          methods x.\n      endclass.\n      class zcl_my implementation.\n        method x. endmethod.\n      endclass.\n      \" should have 0 issue(s)",
+    "test check_comments rule end of line allowed, abapdoc",
+    "test check_comments rule end of line allowed, asterisk comment",
+    "test check_comments rule end of line allowed, inline after expr",
+    "test check_comments rule end of line allowed, normal comment + end of line",
+    "test check_comments rule end of line allowed, pseudo comment",
+    "test check_comments rule end of line allowed, pseudo pragma comment",
+    "test check_comments rule end of line allowed, select, multiple comments",
+    "test check_comments rule end of line allowed, with end of line",
+    "test check_comments rule end of line allowed, writes with strings",
+    "test check_comments rule no end of line, abapdoc",
+    "test check_comments rule no end of line, asterisk comment",
+    "test check_comments rule no end of line, inline after expr",
+    "test check_comments rule no end of line, normal comment + end of line",
+    "test check_comments rule no end of line, select, multiple comments",
+    "test check_comments rule no end of line, with end of line",
+    "test check_comments rule no end of line, writes with strings",
+    "test files for method length class, check, over length",
+    "test files for method length class, check, valid length",
+    "test files for method length class, ignore, over length",
+    "test files for method length form, check, over length",
+    "test files for method length form, check, valid length",
+    "test files for method length form, off, over length",
+    "test files for method length form, off, valid length",
+    "test files for method length function module, check, over length",
+    "test files for method length function module, check, valid length",
+    "test files for method length function module, off, over length",
+    "test files for method length function module, off, valid length",
+    "test files for method length global testclass",
+    "test files for method length testclass, check, over length",
+    "test files for method length testclass, check, valid length",
+    "test files for method length testclass, ignore, over length",
+    "test files for method length testclass, ignore, valid length",
+    "test fully_type_constants rule both, const number no type",
+    "test fully_type_constants rule both, const string no type",
+    "test fully_type_constants rule both, const struc, one not typed",
+    "test fully_type_constants rule both, const with type",
+    "test fully_type_constants rule both, data number no type",
+    "test fully_type_constants rule both, data string no type",
+    "test fully_type_constants rule both, data struc, one not typed",
+    "test fully_type_constants rule both, data with various types",
+    "test fully_type_constants rule only const, const number no type ",
+    "test fully_type_constants rule only const, const string no type ",
+    "test fully_type_constants rule only const, const struc, one not typed",
+    "test fully_type_constants rule only const, const with type",
+    "test fully_type_constants rule only const, data number no type ",
+    "test fully_type_constants rule only const, data string no type ",
+    "test fully_type_constants rule only const, data struc, one not typed",
+    "test fully_type_constants rule only const, data with various types",
+    "test newline_between_methods rule exact, exact amount",
+    "test newline_between_methods rule exact, exact amount",
+    "test newline_between_methods rule exact, exact amount, no newline before endclass",
+    "test newline_between_methods rule exact, less amount",
+    "test newline_between_methods rule exact, no newlines, no newline before endclass",
+    "test newline_between_methods rule invalid, exact amount",
+    "test newline_between_methods rule invalid, exact amount ",
+    "test newline_between_methods rule invalid, less amount",
+    "test newline_between_methods rule invalid, no new lines ",
+    "test newline_between_methods rule invalid, variable amount",
+    "test newline_between_methods rule less, exact amount",
+    "test newline_between_methods rule less, exact amount, no newline before endclass",
+    "test newline_between_methods rule less, less amount",
+    "test newline_between_methods rule less, no newlines, no newline before endclass",
+    "test newline_between_methods rule less, variable amount"
+  ],
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "368baab28111a072c3f5779a0e07d259305f836f",
+  "transpilerPin": "ee5c2cd1a45aaac6be503a46fc903ce95a946877",
+  "fullRulesShardRun": false,
+  "focusedRoots": [
+    "test/rules/check_comments.ts",
+    "test/rules/fully_type_constants.ts",
+    "test/rules/keyword_case.ts",
+    "test/rules/line_length.ts",
+    "test/rules/method_length.ts",
+    "test/rules/newline_between_methods.ts",
+    "test/rules/no_dynamic_stuff.ts"
+  ],
+  "focusedClosureFiles": 1548,
+  "nodeBoundaryOracles": {
+    "erasedRows": 2,
+    "spreadConfigIdentity": true,
+    "primitiveConfig": {
+      "value": 400,
+      "missingProperties": [
+        "length",
+        "maxIssuesPerFile",
+        "severity"
+      ]
+    },
+    "nativeKeys": [
+      "exclude",
+      "severity",
+      "callMethod",
+      "callFunction",
+      "callDatabaseProcedure",
+      "callTransformation",
+      "callTransaction",
+      "perform",
+      "submit",
+      "createObject",
+      "createData",
+      "getBadi",
+      "assign",
+      "internalTable",
+      "exportImport"
+    ],
+    "booleanFlags": [
+      "callMethod",
+      "callFunction",
+      "callDatabaseProcedure",
+      "callTransformation",
+      "callTransaction",
+      "perform",
+      "submit",
+      "createObject",
+      "createData",
+      "getBadi",
+      "assign",
+      "internalTable",
+      "exportImport"
+    ],
+    "enabledCases": [
+      "callMethod",
+      "internalTable"
+    ]
+  },
+  "defaultGoParity": {
+    "baselineCommit": "3da6606b2dbc4c93c10e90f580e25760d501b8d9",
+    "files": 9,
+    "changedPaths": 0,
+    "inventory": {
+      "go/go.mod": "1e0591999faff09d57e9f1743365dcde5bfb8ca9633e871ce0263614b061e905",
+      "go/hir.go": "7b99672e53cfcea486c88d348193778961a877970a7391101e8f5ad2bcec971a",
+      "go/hir_profile.go": "93398295e39a4a4b4299eb67ef16f326408f3c1c7a36f507f40f52c2b56dac4b",
+      "go/main.go": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+      "go/runtime.go": "91023c4a81b604601636c25577f8e08fa93ab8069dc92182f08f2e5ac72acb64",
+      "go/site_profile.go": "5c1f3b715f2bbad37f13a174d0db81bc2d43184973bde44a5aff9b1c3abb0803",
+      "go/site_profile_off.go": "4f07dc8fd8b26ff04fb5ee339e0a081aa7d5aa728025ca2e86bea99fbedff2fc",
+      "go/zabaplint-go": "e4e705d6b0a4dcdd52d15643907a8bca4520a8d9a88da25c4cdc73bad4fe7c77",
+      "sites.json": "f18f1d4cb57e365694e721643a6d39bdebda9f6a4d263967779cce031ff5d061"
+    }
+  },
+  "gates": {
+    "go vet ./...": 0,
+    "go test -short -p 2 ./...": 0,
+    "ABAPITI_GRACECHECK=1 go test -count=1 -run TestLexerFactsReport ./tsfront/": 0,
+    "./.github/ci/lint.sh gate origin/main": {
+      "exit": 0,
+      "newIssues": 0,
+      "canary": "5/5"
+    },
+    "node tools/abaplint-tests-all-test.mjs": 0,
+    "node tools/abaplint-rules-init-oracle.mjs UPSTREAM": 0
+  },
+  "lexer": {
+    "compilerCommit": "2e7960bfcdf473bffe65f5db24113c70cc25b38e",
+    "nodeActive": {
+      "total": 200,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "skipped": 0,
+      "unregistered": 0,
+      "notPassing": 0
+    },
+    "registered": 200,
+    "registrationParity": true,
+    "host": {
+      "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+      "timingMs": {
+        "frontend": 137756,
+        "emit": 11427,
+        "goBuild": 137612,
+        "run": 42
+      },
+      "status": 0,
+      "envelope": {
+        "files": 2353,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      }
+    }
+  },
+  "erasedRowsUnit": {
+    "classes": 1,
+    "compiled": 1,
+    "rows": [
+      {
+        "class": "Z_ERASEDROWS_99573B6CFAB538",
+        "testclass": "LTCL_ERASED",
+        "method": "CHECK",
+        "status": "SUCCESS",
+        "message": "",
+        "alerts": [
+          "->* of a data"
+        ]
+      }
+    ],
+    "timingMs": {
+      "emit": 178,
+      "goBuild": 3375,
+      "run": 12,
+      "total": 11844
+    }
+  },
+  "diagnosticReplay": {
+    "baseline": {
+      "reportParity": true,
+      "countingRule": "Observational events include caught cast probes; they are not additional traps or suite pass credits. Original report is unchanged.",
+      "host": {
+        "pin": "368baab28111a072c3f5779a0e07d259305f836f",
+        "timingMs": {
+          "frontend": 116685,
+          "emit": 9920,
+          "goBuild": 108708,
+          "run": 14661
+        },
+        "status": 1,
+        "envelope": {
+          "files": 2333,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        }
+      },
+      "initFaultWitnesses": [
+        {
+          "fault": "CAST <nil> <- *main.Z_RUNTIME_ARRA_C22708FAF2E354",
+          "action": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E.func2",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E.func2(<address>?, <address>, <address>?)",
+              "source": "z_test_rules_c_bd3797bbf4bfd0.clas.abap:989"
+            },
+            {
+              "function": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E(<address>)",
+              "source": "z_test_rules_c_bd3797bbf4bfd0.clas.abap:989"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func81.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func81(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_RUNTIME_DYNA_A429568D5BE89E <- *main.Z_SHAPE_F25A46_90194F025D0955",
+          "action": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E.func5",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_INVOK_C030B011ADE02A(<address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:71"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1.3(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?, <address>, <address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:104"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11.3(<address>?, <address>?)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11(<address>, <address>?, <address>?, <address>?, <address>?, <address>?, <address>?, {<address>?, <address>}, <address>, ...)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D(<address>, {<address>, <address>}, {<address>, <address>}, <address>, <address>)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:187"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE.func1(<address>?, {<address>?, <address>?}, {<address>?, <address>?}, <address>?, <address>?)",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE(<address>?, {<address>?, <address>?}, {<address>?, <address>?})",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629.func4(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629(<address>, <address>, <address>?, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E.func5(<address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_c_bd3797bbf4bfd0.clas.abap:1004"
+            },
+            {
+              "function": "main.Z_TEST_RULES_C_BD3797BBF4BFD0_Z_MEMBER_TEST__5641F70838341E(<address>)",
+              "source": "z_test_rules_c_bd3797bbf4bfd0.clas.abap:1004"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func81.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func81(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:757"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST <nil> <- *main.Z_RUNTIME_ARRA_C22708FAF2E354",
+          "action": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E.func2",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E.func2(<address>?, <address>, <address>?)",
+              "source": "z_test_rules_f_6d7aa5c2f093e8.clas.abap:941"
+            },
+            {
+              "function": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E(<address>)",
+              "source": "z_test_rules_f_6d7aa5c2f093e8.clas.abap:941"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func88.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func88(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_RUNTIME_DYNA_A429568D5BE89E <- *main.Z_SHAPE_3CA826_D7BBE0C3000FA3",
+          "action": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E.func5",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_INVOK_C030B011ADE02A(<address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:71"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1.3(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?, <address>, <address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:104"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11.3(<address>?, <address>?)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11(<address>, <address>?, <address>?, <address>?, <address>?, <address>?, <address>?, {<address>?, <address>}, <address>, ...)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D(<address>, {<address>, <address>}, {<address>, <address>}, <address>, <address>)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:187"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE.func1(<address>?, {<address>?, <address>?}, {<address>?, <address>?}, <address>?, <address>?)",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE(<address>?, {<address>?, <address>?}, {<address>?, <address>?})",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629.func4(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629(<address>, <address>, <address>?, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E.func5(<address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_f_6d7aa5c2f093e8.clas.abap:956"
+            },
+            {
+              "function": "main.Z_TEST_RULES_F_6D7AA5C2F093E8_Z_MEMBER_TEST__5641F70838341E(<address>)",
+              "source": "z_test_rules_f_6d7aa5c2f093e8.clas.abap:956"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func88.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func88(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:820"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_SRC_RULES_KE_C16601BA1D4B87 <- *main.Z_SHAPE_1BCD73_E7645ABA0B7555",
+          "action": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__3607DF2FD950EB.func6",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_SRC_RULES_KE_2FC2AEFAA44841).Z_MEMBER_SETCO_573CA8D60A84A3(<address>, <address>, <address>?)",
+              "source": "z_src_rules_ke_2fc2aefaa44841.clas.abap:2535"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3.func1(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D.func3(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D(<address>, <address>, <address>?, <address>, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__3607DF2FD950EB.func6(<address>?, <address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_k_c89d5894d989d9.clas.abap:2408"
+            },
+            {
+              "function": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__3607DF2FD950EB(<address>)",
+              "source": "z_test_rules_k_c89d5894d989d9.clas.abap:2408"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func113.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1045"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func113(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1045"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1045"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_SRC_RULES_KE_C16601BA1D4B87 <- *main.Z_SHAPE_75FEFC_BBA3CD097E45CC",
+          "action": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__84533FC8724CF1.func6",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_SRC_RULES_KE_2FC2AEFAA44841).Z_MEMBER_SETCO_573CA8D60A84A3(<address>, <address>, <address>?)",
+              "source": "z_src_rules_ke_2fc2aefaa44841.clas.abap:2535"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3.func1(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D.func3(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D(<address>, <address>, <address>?, <address>, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__84533FC8724CF1.func6(<address>?, <address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_k_c89d5894d989d9.clas.abap:2612"
+            },
+            {
+              "function": "main.Z_TEST_RULES_K_C89D5894D989D9_Z_MEMBER_TEST__84533FC8724CF1(<address>)",
+              "source": "z_test_rules_k_c89d5894d989d9.clas.abap:2612"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func116.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1072"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func116(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1072"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1072"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "RAISE CX_SY_MOVE_CAST_ERROR",
+          "action": "main.Z_TEST_RULES_L_16F58CFE9BFE0E_Z_MEMBER_TEST__CCF00C576BDFC6.func4",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_RUNTIME_DYNA_A429568D5BE89E).AS_REF(<address>?, <address>?)",
+              "source": "z_runtime_dyna_a429568d5be89e.clas.abap:110"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES_LI_CF25AC0A655766).Z_MEMBER_SETCO_573CA8D60A84A3.func1(<address>?, <address>?)",
+              "source": "z_src_rules_li_cf25ac0a655766.clas.abap:605"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES_LI_CF25AC0A655766).Z_MEMBER_SETCO_573CA8D60A84A3(<address>, <address>, <address>?)",
+              "source": "z_src_rules_li_cf25ac0a655766.clas.abap:605"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3.func1(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.(*Z_SRC_RULES__A_C2433EF9B41050).Z_SRC_RULES__I_53F2EBEAA620C2__Z_MEMBER_SETCO_573CA8D60A84A3(<address>?, <address>?, <address>?)",
+              "source": "z_src_rules__a_c2433ef9b41050.clas.abap:129"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D.func3(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_A2F595E438492D(<address>, <address>, <address>?, <address>, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:162"
+            },
+            {
+              "function": "main.Z_TEST_RULES_L_16F58CFE9BFE0E_Z_MEMBER_TEST__CCF00C576BDFC6.func4(<address>?, <address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_l_16f58cfe9bfe0e.clas.abap:147"
+            },
+            {
+              "function": "main.Z_TEST_RULES_L_16F58CFE9BFE0E_Z_MEMBER_TEST__CCF00C576BDFC6(<address>)",
+              "source": "z_test_rules_l_16f58cfe9bfe0e.clas.abap:147"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func121.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1117"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func121(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1117"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1117"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST <nil> <- *main.Z_RUNTIME_ARRA_C22708FAF2E354",
+          "action": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398.func2",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398.func2(<address>?, <address>, <address>?)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:1441"
+            },
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398(<address>)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:1441"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func144.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func144(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_RUNTIME_DYNA_A429568D5BE89E <- *main.Z_SHAPE_0549BA_B49975AF3B57FA",
+          "action": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398.func4",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_MEMBER_INVOK_C030B011ADE02A(<address>?, <address>)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:57"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_MEMBER_CALL_7BD18229E448AF.func1.3(<address>?, <address>?)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:84"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?, <address>, <address>?, <address>)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:84"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:89"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:113"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_3146_748D47EFA23833).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_3146_748d47efa23833.clas.abap:113"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11.3(<address>?, <address>?)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11(<address>, <address>?, <address>?, <address>?, <address>?, <address>?, <address>?, {<address>?, <address>}, <address>, ...)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D(<address>, {<address>, <address>}, {<address>, <address>}, <address>, <address>)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:187"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE.func1(<address>?, {<address>?, <address>?}, {<address>?, <address>?}, <address>?, <address>?)",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE(<address>?, {<address>?, <address>?}, {<address>?, <address>?})",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TESTR_5536F5CB718B31.func1(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:80"
+            },
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TESTR_5536F5CB718B31(<address>, <address>)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:80"
+            },
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398.func4(<address>?, <address>?)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:1453"
+            },
+            {
+              "function": "main.Z_TEST_RULES_M_A6D055FF085602_Z_MEMBER_TEST__56CB87476A9398(<address>)",
+              "source": "z_test_rules_m_a6d055ff085602.clas.abap:1453"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func144.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func144(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1324"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST <nil> <- *main.Z_RUNTIME_ARRA_C22708FAF2E354",
+          "action": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB.func2",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB.func2(<address>?, <address>, <address>?)",
+              "source": "z_test_rules_n_a388e66b9985f7.clas.abap:1297"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB(<address>)",
+              "source": "z_test_rules_n_a388e66b9985f7.clas.abap:1297"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func162.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func162(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "CAST *main.Z_RUNTIME_DYNA_A429568D5BE89E <- *main.Z_SHAPE_BC04AF_193F560FC18733",
+          "action": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB.func5",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_INVOK_C030B011ADE02A(<address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:71"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1.3(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?, <address>, <address>?, <address>)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:99"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:104"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF.func1(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.(*Z_CLOSURE_2993_2986CC0D288930).Z_CLOSURE_THUN_D810F2D372EB94__Z_MEMBER_CALL_7BD18229E448AF(<address>?, <address>?)",
+              "source": "z_closure_2993_2986cc0d288930.clas.abap:128"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11.3(<address>?, <address>?)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D.func11(<address>, <address>?, <address>?, <address>?, <address>?, <address>?, <address>?, {<address>?, <address>}, <address>, ...)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:176"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_B30F3BEE29CFA6_Z_MEMBER_SCOPE_F636E95B15909D(<address>, {<address>, <address>}, {<address>, <address>}, <address>, <address>)",
+              "source": "z_runtime_moch_b30f3bee29cfa6.clas.abap:187"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE.func1(<address>?, {<address>?, <address>?}, {<address>?, <address>?}, <address>?, <address>?)",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_RUNTIME_MOCH_70C15240D8F7CF_Z_MEMBER_DESCR_1D5D93F5096EFE(<address>?, {<address>?, <address>?}, {<address>?, <address>?})",
+              "source": "z_runtime_moch_70c15240d8f7cf.clas.abap:28"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629.func4(<address>?, {<address>?, <address>?}, <address>?)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES___01F05B93AE24FA_Z_MEMBER_TESTR_78FB33C3245629(<address>, <address>, <address>?, <address>)",
+              "source": "z_test_rules___01f05b93ae24fa.clas.abap:4632"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB.func5(<address>?, <address>?, <address>?, <address>?)",
+              "source": "z_test_rules_n_a388e66b9985f7.clas.abap:1312"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_A388E66B9985F7_Z_MEMBER_TEST__BBA63F7978DCAB(<address>)",
+              "source": "z_test_rules_n_a388e66b9985f7.clas.abap:1312"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func162.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func162(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1486"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "RAISE Z_VIEW_REFUSAL_6FCECBE45FBFF9",
+          "action": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__0A497C851020F7.func3",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_CONF_34F8C1BDE4F9D5(<address>, {<address>?, <address>?})",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:53"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__0A497C851020F7.func3(<address>?, {<address>?, <address>?})",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:973"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__0A497C851020F7(<address>)",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:973"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func167.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1531"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func167(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1531"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1531"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        },
+        {
+          "fault": "RAISE Z_VIEW_REFUSAL_6FCECBE45FBFF9",
+          "action": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__5641F70838341E.func3",
+          "events": 1,
+          "frames": [
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_CONF_34F8C1BDE4F9D5(<address>, {<address>?, <address>?})",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:53"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__5641F70838341E.func3(<address>?, {<address>?, <address>?})",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:1099"
+            },
+            {
+              "function": "main.Z_TEST_RULES_N_FFD1487D6CC4AC_Z_MEMBER_TEST__5641F70838341E(<address>)",
+              "source": "z_test_rules_n_ffd1487d6cc4ac.clas.abap:1099"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func169.3(<address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1549"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN.func169(<address>?, <address>?, <address>?, <address>?)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1549"
+            },
+            {
+              "function": "main.ZCL_ABAPITI_TEST_RUNNER_RUN(<address>)",
+              "source": "zcl_abapiti_test_runner.clas.abap:1549"
+            },
+            {
+              "function": "main.main()"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
