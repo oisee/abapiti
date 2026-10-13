@@ -1763,7 +1763,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "string.parseIntNumber" {
 		value, ok := finiteParseIntLiteral(x.X)
 		if !ok {
-			b.e.refuse(fmt.Errorf("node %d (%s): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported", x.ID, x.Source))
+			if x.X.Kind == hir.Lit {
+				b.e.refuse(fmt.Errorf("node %d (%s): ABAP parseInt Number requires a finite safe-integer string literal; nonfinite/unsafe/negative-zero literals are unsupported", x.ID, x.Source))
+				return
+			}
+			a := b.expr(x.X)
+			b.parseIntNumber(n, a)
 			return
 		}
 		// The literal has no effects. Prove its Number value before emission;
@@ -1772,6 +1777,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	a := b.expr(x.X)
+	if x.Op == "number.ceil" {
+		b.numberCeil(x, n, a)
+		return
+	}
 	if x.Op == "number.isNaN" {
 		// The ABAP Number domain refuses NaN at every producing boundary.
 		// b.expr still evaluates the operand once for its effects.
@@ -2702,6 +2711,14 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	if t.Kind == hir.Optional {
 		test := a + " IS BOUND"
 		base := t.Args[0]
+		leaf := base
+		for leaf.Kind == hir.Optional {
+			leaf = leaf.Args[0]
+		}
+		if leaf.Kind == hir.I64 {
+			// The newly admitted integer box may revisit an absent value in a loop.
+			b.line("CLEAR " + n + ".")
+		}
 		if !base.IsRef() {
 			test += " AND " + a + "->has = abap_true"
 		}
@@ -2721,6 +2738,13 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	switch t.Kind {
 	case hir.String:
 		tag, field = "tag_string", "sval"
+	case hir.I64:
+		// Preserve the proven integer domain before the binary64 graph ABI.
+		limit := b.constant("box_safe_integer", "int8", "9007199254740991")
+		b.line("IF " + a + " > " + limit + " OR " + a + " < 0 - " + limit + ".")
+		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
+		b.line("ENDIF.")
+		tag, field = "tag_number", "nval"
 	case hir.Number, hir.I32:
 		tag, field = "tag_number", "nval"
 	case hir.Bool:

@@ -38,12 +38,12 @@ var supportedOps = map[string]bool{
 	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
 	"string.length": true, "string.concat": true, "string.substring": true, "string.charCodeAt": true,
 	"i32.toString": true, "i64.toString": true, "i64.remainder2": true,
-	"number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
+	"number.ceil": true, "number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
 }
 
 // Presence-sensitive arrays and native-record deletion require a Go storage ABI.
-var unsupportedOps = map[string]bool{"dynamic.delete": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "string.sha1Hex": true, "number.ceil": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
+var unsupportedOps = map[string]bool{"dynamic.delete": true, "xml.parseWithErrors": true, "string.padStart": true, "string.parseFloat": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true, "json.indent": true, "lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "string.sha1Hex": true, "array.has": true, "array.delete": true, "json.stringifySubset": true, "string.splitRegex": true, "string.parseFloatNumber": true, "dynamic.call0": true}
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }

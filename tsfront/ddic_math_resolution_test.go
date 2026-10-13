@@ -36,8 +36,8 @@ func TestDDICComputedPackedLengthBindings(t *testing.T) {
 	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "number.ceil") {
-		t.Fatalf("ABAP must refuse unsupported binary64 ceil: %v", err)
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatalf("ABAP guarded ceil emission: %v", err)
 	}
 	_, ds, err := integerProbe(t, source).LowerWithOptions([]string{"probe.ts"}, LowerOptions{AssumeOnlyIntegerCalculations: true})
 	if err != nil {
