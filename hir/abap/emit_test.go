@@ -350,8 +350,24 @@ func TestLongLiteral(t *testing.T) {
 				t.Fatal("long literal source line")
 			}
 		}
-		if !strings.Contains(src, "uccpi( 10 )") {
+		if !strings.Contains(src, "uccpi( 10 )") && !strings.Contains(src, `\n\t|`) {
 			t.Fatal("newline not encoded")
+		}
+	}
+}
+
+// Newline, CR and tab inside a template literal are template escapes, so a
+// multi-line source string is one token per chunk, not a temporary per line.
+func TestLiteralControlEscapes(t *testing.T) {
+	m := method("f", str, ret(hir.L(str, "line1\nline2\r\n\tend")))
+	m.Static = true
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "esc", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range files {
+		if strings.Contains(src, "uccpi") || !strings.Contains(src, `|line1\nline2\r\n\tend|`) {
+			t.Fatal(src)
 		}
 	}
 }
