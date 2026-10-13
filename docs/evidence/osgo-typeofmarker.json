@@ -1,0 +1,307 @@
+{
+  "before": {
+    "maxima": {
+      "all": {
+        "lines": 29295,
+        "file": "z_runtime_clas_c216c6067abdc6.clas.abap",
+        "method": "METHOD new_args."
+      },
+      "source": {
+        "lines": 27646,
+        "file": "z_closure_3057_3824465ec85075.clas.abap",
+        "method": "METHOD z_member_invok_c030b011ade02a."
+      },
+      "closures": {
+        "lines": 27646,
+        "file": "z_closure_3057_3824465ec85075.clas.abap",
+        "method": "METHOD z_member_invok_c030b011ade02a."
+      }
+    },
+    "closure_instance_checks": 384542,
+    "marker_instance_checks": 0,
+    "marked_classes": 0,
+    "abap_files": 2571,
+    "total_lines": 2406792
+  },
+  "after": {
+    "maxima": {
+      "all": {
+        "lines": 29295,
+        "file": "z_runtime_clas_c216c6067abdc6.clas.abap",
+        "method": "METHOD new_args."
+      },
+      "source": {
+        "lines": 7497,
+        "file": "z_src_abap_5_s_2b749a7761b4fb.clas.abap",
+        "method": "METHOD z_builtin_init_97ac0787fc726b."
+      },
+      "closures": {
+        "lines": 3226,
+        "file": "z_closure_3057_3824465ec85075.clas.abap",
+        "method": "METHOD z_member_invok_c030b011ade02a."
+      }
+    },
+    "closure_instance_checks": 223,
+    "marker_instance_checks": 1739,
+    "marked_classes": 221,
+    "abap_files": 2572,
+    "total_lines": 1259275
+  },
+  "baseline": "451603f69cc69301aa5c1f0a366efb99b51574f5",
+  "upstream": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osg": "368baab28111a072c3f5779a0e07d259305f836f",
+  "objects_manifest_sha256": "fd201bfe706a96e8bbe1322371608a9c0d2542d37c0cd5d8051548d78d7f73a0",
+  "objects_roots": 35,
+  "abap_unit": {
+    "method": "observations",
+    "status": "SUCCESS",
+    "oracle": "Node and unchanged Go backend",
+    "kinds": 14
+  },
+  "objects_go_build": {
+    "wall_seconds": 420.59,
+    "peak_rss_kib": 15125720,
+    "exit_status": 0,
+    "flags": [
+      "-p",
+      "2",
+      "-gcflags=all=-dwarf=false",
+      "-ldflags=-s -w"
+    ],
+    "gomaxprocs": 2,
+    "gomemlimit": "18GiB",
+    "concurrent_load": true,
+    "baseline_timed": false
+  },
+  "static_after": {
+    "files": 2166,
+    "nonfinite_literal_sites": 0,
+    "unsupported_catalogue": [
+      "array.delete",
+      "array.has",
+      "dynamic.call0",
+      "dynamic.delete",
+      "json.indent",
+      "json.stringifySubset",
+      "lsp.isCreateFile",
+      "lsp.isDeleteFile",
+      "lsp.isRenameFile",
+      "lsp.isTextDocumentEdit",
+      "number.ceil",
+      "string.padStart",
+      "string.parseFloat",
+      "string.parseFloatNumber",
+      "string.sha1Hex",
+      "string.splitRegex",
+      "xml.parseWithErrors"
+    ],
+    "runtime": [
+      {
+        "reason": "array.has",
+        "sites": 23
+      },
+      {
+        "reason": "dynamic.call0",
+        "sites": 6
+      },
+      {
+        "reason": "dynamic.delete",
+        "sites": 3
+      },
+      {
+        "reason": "json.indent",
+        "sites": 3
+      },
+      {
+        "reason": "json.stringifySubset",
+        "sites": 34
+      },
+      {
+        "reason": "lsp.isCreateFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isDeleteFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isRenameFile",
+        "sites": 2
+      },
+      {
+        "reason": "lsp.isTextDocumentEdit",
+        "sites": 2
+      },
+      {
+        "reason": "number.ceil",
+        "sites": 9
+      },
+      {
+        "reason": "string.padStart",
+        "sites": 3
+      },
+      {
+        "reason": "string.parseFloatNumber",
+        "sites": 3
+      },
+      {
+        "reason": "string.sha1Hex",
+        "sites": 1
+      },
+      {
+        "reason": "string.splitRegex",
+        "sites": 2
+      },
+      {
+        "reason": "xml.parseWithErrors",
+        "sites": 3
+      }
+    ],
+    "refusals": [
+      {
+        "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+        "sites": 66
+      },
+      {
+        "reason": "dynamic boxing of i64 is not supported",
+        "sites": 4
+      },
+      {
+        "reason": "erased structural object.has is not emitted on ABAP",
+        "sites": 2
+      }
+    ],
+    "typeof_refusal_sites": 0,
+    "gate": {
+      "Files": 2166,
+      "Classes": 7052,
+      "Interfaces": 85,
+      "Blocking": 0,
+      "HIRErrors": 0,
+      "CoverageTraps": 0,
+      "Ranked": []
+    }
+  },
+  "static_before": {
+    "files": 2166,
+    "nonfinite_literal_sites": 0,
+    "unsupported_catalogue": [
+      "array.delete",
+      "array.has",
+      "dynamic.call0",
+      "dynamic.delete",
+      "json.indent",
+      "json.stringifySubset",
+      "lsp.isCreateFile",
+      "lsp.isDeleteFile",
+      "lsp.isRenameFile",
+      "lsp.isTextDocumentEdit",
+      "number.ceil",
+      "string.padStart",
+      "string.parseFloat",
+      "string.parseFloatNumber",
+      "string.sha1Hex",
+      "string.splitRegex",
+      "xml.parseWithErrors"
+    ],
+    "runtime": [
+      {
+        "reason": "array.has",
+        "sites": 23
+      },
+      {
+        "reason": "dynamic.call0",
+        "sites": 6
+      },
+      {
+        "reason": "dynamic.delete",
+        "sites": 3
+      },
+      {
+        "reason": "json.indent",
+        "sites": 3
+      },
+      {
+        "reason": "json.stringifySubset",
+        "sites": 34
+      },
+      {
+        "reason": "lsp.isCreateFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isDeleteFile",
+        "sites": 1
+      },
+      {
+        "reason": "lsp.isRenameFile",
+        "sites": 2
+      },
+      {
+        "reason": "lsp.isTextDocumentEdit",
+        "sites": 2
+      },
+      {
+        "reason": "number.ceil",
+        "sites": 9
+      },
+      {
+        "reason": "string.padStart",
+        "sites": 3
+      },
+      {
+        "reason": "string.parseFloatNumber",
+        "sites": 3
+      },
+      {
+        "reason": "string.sha1Hex",
+        "sites": 1
+      },
+      {
+        "reason": "string.splitRegex",
+        "sites": 2
+      },
+      {
+        "reason": "xml.parseWithErrors",
+        "sites": 3
+      }
+    ],
+    "refusals": [
+      {
+        "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+        "sites": 66
+      },
+      {
+        "reason": "dynamic boxing of i64 is not supported",
+        "sites": 4
+      },
+      {
+        "reason": "erased structural object.has is not emitted on ABAP",
+        "sites": 2
+      }
+    ],
+    "typeof_refusal_sites": 0,
+    "gate": {
+      "Files": 2166,
+      "Classes": 7052,
+      "Interfaces": 85,
+      "Blocking": 0,
+      "HIRErrors": 0,
+      "CoverageTraps": 0,
+      "Ranked": []
+    }
+  },
+  "full_static_inventories_identical": true,
+  "full_manifest_sha256": "8bc69eca3e2735470d1f5aa2b955127eaf378f13cd0b781c750e2493185fa189",
+  "full_roots": 625,
+  "inline_mode": "grace (default)",
+  "gates": {
+    "vet": "PASS",
+    "short": "PASS (-timeout 30m)",
+    "grace_lexer_facts": "PASS; golden unchanged",
+    "default_runtime_ops": "PASS",
+    "lint_new_issues": 0,
+    "lint_canary": "5/5",
+    "default_go_diff_bytes": 0
+  }
+}
