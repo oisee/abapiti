@@ -32,7 +32,9 @@ func (e *emitter) lspTokenJSONOrder(c *hir.Class) ([]string, bool) {
 	seen := map[string]bool{}
 	for i := len(chain) - 1; i >= 0; i-- {
 		p := chain[i]
-		if p.Structural || p.ViewUnsafe || p.CoercionUnsafe || p.UndefinedDefineFields || !jsonKeyNamesSafe(p) {
+		// ViewUnsafe can be sealed by a structural assertion elsewhere in
+		// the closure. Nominal constructor fields do not use that adapter.
+		if p.Structural || p.PrototypeAccessors || p.Scoped || p.CoercionUnsafe || p.UndefinedDefineFields || !jsonKeyNamesSafe(p) {
 			return nil, false
 		}
 		for _, m := range p.Methods {
@@ -43,6 +45,9 @@ func (e *emitter) lspTokenJSONOrder(c *hir.Class) ([]string, bool) {
 		var declared, assigned []string
 		for _, f := range p.Fields {
 			if !f.Static {
+				if strings.HasPrefix(f.Name, "#") || f.Name == "__proto__" {
+					return nil, false
+				}
 				if seen[f.Name] {
 					return nil, false
 				}

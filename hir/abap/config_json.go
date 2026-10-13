@@ -279,7 +279,8 @@ ENDMETHOD.
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
 			if subset {
-				if c == nil || c.CoercionUnsafe || c.ViewUnsafe || !jsonKeyNamesSafe(c) {
+				_, nominalProven := e.lspTokenJSONOrder(c)
+				if c == nil || c.CoercionUnsafe || c.ViewUnsafe && !nominalProven || !jsonKeyNamesSafe(c) {
 					fail()
 					break
 				}
