@@ -255,21 +255,37 @@ ENDMETHOD.
 			line("LOOP AT p0->entries INTO row.")
 			line("text = %s.\nIF text IS NOT INITIAL.\nvalue = %s=>parse( text ).\ngraph->put( p0 = row-k p1 = value ).\nENDIF.\nENDLOOP.\nresult = %s.\nleave( p0 ).", call(t.Args[1], "row-v"), e.name("runtime.jsonSubset"), call(hir.T(hir.Dynamic), "graph"))
 		case hir.ClassValue:
-			// Constructor descriptors are functions: omit properties, null array slots.
 			if !subset {
 				fail()
+				break
 			}
+			// JSON calls a function's static/inherited toJSON before omitting
+			// that function. Only descriptors proving its absence can skip.
+			line("DATA descriptor TYPE REF TO %s.\ndescriptor = p0.\nWHILE descriptor IS BOUND.", e.name("runtime.classvalue"))
+			line("IF descriptor->lexical = abap_true OR descriptor->emitted IS INITIAL OR descriptor->static_names IS NOT BOUND.")
+			fail()
+			line("ENDIF.")
+			for _, class := range e.p.Classes {
+				if class.CoercionUnsafe || class.ViewUnsafe {
+					line("IF descriptor->emitted = `%s`.", e.name(class.Name))
+					fail()
+					line("ENDIF.")
+				}
+			}
+			line("IF descriptor->has( `toJSON` ) = abap_true OR descriptor->has( `get.toJSON` ) = abap_true.")
+			fail()
+			line("ENDIF.\ndescriptor = descriptor->parent.\nENDWHILE.\nCLEAR result.")
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
 			if subset {
-				if c == nil {
+				if c == nil || c.CoercionUnsafe || c.ViewUnsafe || !jsonKeyNamesSafe(c) {
 					fail()
 					break
 				}
 				hasToJSON := false
 				for parent := c; parent != nil; parent = e.classBy(parent.Super) {
 					for _, m := range parent.Methods {
-						hasToJSON = hasToJSON || m.Name == "toJSON"
+						hasToJSON = hasToJSON || m.Name == "toJSON" || m.Name == "get.toJSON"
 					}
 				}
 				if hasToJSON {
@@ -301,6 +317,32 @@ ENDMETHOD.
 				}
 				if e.liveClasses[c.Name] {
 					line("IF p0->%s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", e.name("view.source"), call(hir.T(hir.Dynamic), "p0->"+e.name("view.source")))
+				}
+				if e.jsonOwnKeys && c.Structural && c.Super == "" {
+					keys := "p0->" + e.name("json.ownKeys")
+					line("IF %s IS BOUND.\nenter( p0 ).", keys)
+					line("DATA own_graph TYPE REF TO %s.\nDATA own_child TYPE REF TO %s.\nDATA own_row TYPE %s=>entry.\nDATA own_text TYPE string.\nCREATE OBJECT own_graph.\nown_graph->tag = %s=>tag_object.", dyn, dyn, dyn, dyn)
+					line("LOOP AT %s->entries INTO own_row.\nCLEAR own_child.\nCASE own_row-k.", keys)
+					for _, field := range c.Fields {
+						if field.Static {
+							continue
+						}
+						line("WHEN `%s`.\nown_text = %s.\nIF own_text IS NOT INITIAL.\nown_child = %s=>parse( own_text ).\nENDIF.", strings.ReplaceAll(field.Name, "`", "``"), call(field.Type, "p0->"+e.member(field.Name)), e.name("runtime.jsonSubset"))
+					}
+					line("WHEN OTHERS.")
+					if len(e.liveClasses) > 0 && !e.liveClasses[c.Name] {
+						extras := "p0->" + e.name("view.extras")
+						line("IF %s IS NOT BOUND.", extras)
+						fail()
+						line("ENDIF.")
+						line("READ TABLE %s->entries WITH KEY k = own_row-k TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.", extras)
+						fail()
+						line("ENDIF.")
+						line("own_child = %s->get( own_row-k ).", extras)
+					} else {
+						fail()
+					}
+					line("ENDCASE.\nown_graph->put( p0 = own_row-k p1 = own_child ).\nENDLOOP.\nresult = %s.\nleave( p0 ).\nRETURN.\nENDIF.", call(hir.T(hir.Dynamic), "own_graph"))
 				}
 				if !e.materialized[c.Name] {
 					fail()
@@ -388,6 +430,12 @@ ENDMETHOD.
 				// A function-valued own toJSON is invoked before enumeration
 				// by JSON.stringify. This runtime has no certified call ABI.
 				line("WHEN %s=>tag_object.", dyn)
+				// Fresh literal/assignment __proto__ can change prototypes,
+				// whereas JSON.parse creates an own data key. Storage does
+				// not retain that distinction, so neither shape is guessed.
+				line("READ TABLE p0->entries WITH KEY k = `__proto__` TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.")
+				fail()
+				line("ENDIF.")
 				line("child = p0->get( `toJSON` ).\nIF child IS BOUND.\nIF child->tag = %s=>tag_class.", dyn)
 				fail()
 				line("ENDIF.\nENDIF.")
@@ -427,7 +475,16 @@ ENDMETHOD.
 				line("DATA %s TYPE %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", local, e.typ(t), local, local, local, call(t, local))
 			}
 			fail()
-			line("WHEN %s=>tag_class.\nRETURN.\nWHEN OTHERS.", dyn)
+			line("WHEN %s=>tag_class.", dyn)
+			if subset {
+				line("IF p0->cval IS NOT BOUND.")
+				fail()
+				line("ENDIF.")
+				line("result = %s.", call(hir.T(hir.ClassValue), "p0->cval"))
+			} else {
+				line("RETURN.")
+			}
+			line("WHEN OTHERS.")
 			fail()
 			line("ENDCASE.")
 		default:

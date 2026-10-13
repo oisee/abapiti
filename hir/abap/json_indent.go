@@ -16,7 +16,8 @@ func (e *emitter) jsonSubsetType(t hir.Type) bool {
 	case hir.Optional, hir.Array:
 		return e.jsonSubsetType(t.Args[0])
 	case hir.ClassRef:
-		return e.materialized[t.Name] || e.liveClasses[t.Name]
+		c := e.classBy(t.Name)
+		return e.materialized[t.Name] || e.liveClasses[t.Name] || e.jsonOwnKeys && c != nil && c.Structural && c.Super == "" && jsonKeyNamesSafe(c)
 	}
 	return false
 }

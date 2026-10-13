@@ -33,6 +33,10 @@ func TestJSONSubsetFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, string(negativeOracle))
 	}
+	hookOracle, err := exec.Command("node", "-e", `class Hook{static toJSON(){return "hook"}}class Child extends Hook{}if(JSON.stringify({__proto__:{toJSON(){return "proto"}}})!=='"proto"')process.exit(2);class Getter{static get toJSON(){return ()=>"getter"}}if(JSON.stringify({fn:Getter})!=='{"fn":"getter"}'||JSON.stringify({fn:Child})!=='{"fn":"hook"}'||JSON.stringify([Child])!=='["hook"]')process.exit(1)`).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(hookOracle))
+	}
 	for i, c := range inputs {
 		script := `const o=JSON.parse(process.argv[1]);o.gone=undefined;o.fn=class F{};o.undefArray=[undefined,class F{}];process.stdout.write(JSON.stringify(JSON.stringify(o,null,process.argv[2])))`
 		oracle, err := exec.Command("node", "-e", script, c.input, c.gap).CombinedOutput()
@@ -41,7 +45,7 @@ func TestJSONSubsetFixtures(t *testing.T) {
 		}
 		graph := local("graph", dyn)
 		arrayType := hir.T(hir.Array, dyn)
-		p := &hir.Program{Classes: []*hir.Class{{Name: "json_fixture", Methods: []*hir.Method{{Name: "run", Static: true, Result: str}}}, {Name: "Function"}, {Name: "Unproven", Methods: []*hir.Method{{Name: "toJSON", Result: str, Body: hir.B(ret(hir.L(str, "called")))}}}}}
+		p := &hir.Program{Classes: []*hir.Class{{Name: "json_fixture", Methods: []*hir.Method{{Name: "run", Static: true, Result: str}}}, {Name: "Function"}, {Name: "Hook", Methods: []*hir.Method{{Name: "toJSON", Static: true, Result: str, Body: hir.B(ret(hir.L(str, "hook")))}}}, {Name: "InheritedHook", Super: "Hook"}, {Name: "GetterHook", PrototypeAccessors: true, ViewUnsafe: true, Methods: []*hir.Method{{Name: "get.toJSON", Static: true, Result: str, Body: hir.B(ret(hir.L(str, "getter")))}}}, {Name: "Opaque", CoercionUnsafe: true}, {Name: "Unproven", Methods: []*hir.Method{{Name: "toJSON", Result: str, Body: hir.B(ret(hir.L(str, "called")))}}}}}
 		body := hir.B(decl("undefined", dyn, nil), decl("graph", dyn, rt("json.parseSubset", hir.L(str, c.input), dyn)),
 			run(rt("dynamic.put", graph, hir.T(hir.Void), hir.L(str, "gone"), local("undefined", dyn))),
 			decl("fn", dyn, rt("dynamic.of", &hir.Expr{Kind: hir.ClassOf, Owner: "Function", Type: hir.T(hir.ClassValue)}, dyn)),
@@ -81,6 +85,14 @@ func TestJSONSubsetFixtures(t *testing.T) {
 		} {
 			p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: entry.name, Static: true, Result: str, Body: hir.B(ret(rt("json.stringifySubset", entry.value, str)))})
 		}
+		hook := &hir.Expr{Kind: hir.ClassOf, Owner: "InheritedHook", Type: hir.T(hir.ClassValue)}
+		p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "hook_property", Static: true, Result: str, Body: hir.B(decl("value", dyn, rt("json.parseSubset", hir.L(str, `{}`), dyn)), run(rt("dynamic.put", local("value", dyn), hir.T(hir.Void), hir.L(str, "fn"), rt("dynamic.of", hook, dyn))), ret(rt("json.stringifySubset", local("value", dyn), str)))})
+		functionArray := hir.T(hir.Array, hir.T(hir.ClassValue))
+		p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "hook_array", Static: true, Result: str, Body: hir.B(decl("value", functionArray, newObj(functionArray)), run(rt("array.push", local("value", functionArray), i32, hook)), ret(rt("json.stringifySubset", local("value", functionArray), str)))})
+		for _, name := range []string{"GetterHook", "Opaque"} {
+			fn := &hir.Expr{Kind: hir.ClassOf, Owner: name, Type: hir.T(hir.ClassValue)}
+			p.Classes[0].Methods = append(p.Classes[0].Methods, &hir.Method{Name: "refuse_" + name, Static: true, Result: str, Body: hir.B(decl("value", dyn, rt("json.parseSubset", hir.L(str, `{}`), dyn)), run(rt("dynamic.put", local("value", dyn), hir.T(hir.Void), hir.L(str, "fn"), rt("dynamic.of", fn, dyn))), ret(rt("json.stringifySubset", local("value", dyn), str)))})
+		}
 		files, names, err := EmitNamed(p)
 		if err != nil {
 			t.Fatal(err)
@@ -106,10 +118,10 @@ func TestJSONSubsetFixtures(t *testing.T) {
 		// dynamic tags, and cycles. A refusal cannot produce a default string.
 		fmt.Fprintf(&b, "DATA graph TYPE REF TO %s.\nDATA native TYPE REF TO %s.\nDATA child TYPE REF TO %s.\nDATA caught TYPE abap_bool.\n", names.Get("runtime.dynamic"), names.Get("Unproven"), names.Get("runtime.dynamic"))
 		writer := names.Get("member.write")
-		for _, setup := range []string{"CLEAR graph.", fmt.Sprintf("CREATE OBJECT graph.\ngraph->tag = %s=>tag_ref.\nCREATE OBJECT native.\ngraph->oval = native.", names.Get("runtime.dynamic")), "CREATE OBJECT graph.\ngraph->tag = 999.", fmt.Sprintf("CREATE OBJECT graph.\ngraph->tag = %s=>tag_class.", names.Get("runtime.dynamic")), fmt.Sprintf("graph = %s=>parse( `{}` ).\ngraph->put( p0 = `self` p1 = graph ).", names.Get("runtime.jsonSubset")), fmt.Sprintf("graph = %s=>parse( `{}` ).\nCREATE OBJECT child.\nchild->tag = %s=>tag_class.\ngraph->put( p0 = `toJSON` p1 = child ).", names.Get("runtime.jsonSubset"), names.Get("runtime.dynamic"))} {
+		for _, setup := range []string{"CLEAR graph.", fmt.Sprintf("CREATE OBJECT graph.\ngraph->tag = %s=>tag_ref.\nCREATE OBJECT native.\ngraph->oval = native.", names.Get("runtime.dynamic")), "CREATE OBJECT graph.\ngraph->tag = 999.", fmt.Sprintf("CREATE OBJECT graph.\ngraph->tag = %s=>tag_class.", names.Get("runtime.dynamic")), fmt.Sprintf("graph = %s=>parse( `{}` ).\ngraph->put( p0 = `self` p1 = graph ).", names.Get("runtime.jsonSubset")), fmt.Sprintf("graph = %s=>parse( `{}` ).\nCREATE OBJECT child.\nchild->tag = %s=>tag_class.\ngraph->put( p0 = `toJSON` p1 = child ).", names.Get("runtime.jsonSubset"), names.Get("runtime.dynamic")), fmt.Sprintf("graph = %s=>parse( `{}` ).\nCREATE OBJECT child.\nchild->tag = %s=>tag_class.\ngraph->put( p0 = `fn` p1 = child ).", names.Get("runtime.jsonSubset"), names.Get("runtime.dynamic")), fmt.Sprintf("graph = %s=>parse( `{\"__proto__\":null}` ).", names.Get("runtime.jsonSubset"))} {
 			fmt.Fprintf(&b, "%s\nCLEAR caught.\nTRY.\nactual = %s=>%s( graph ).\nCATCH %s.\ncaught = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", setup, cls, writer, names.Get("exception.RegistryJSONSubsetError"))
 		}
-		for _, method := range []string{"function", "absent", "unsafe"} {
+		for _, method := range []string{"function", "absent", "unsafe", "hook_property", "hook_array", "refuse_GetterHook", "refuse_Opaque"} {
 			fmt.Fprintf(&b, "CLEAR caught.\nTRY.\nactual = %s=>%s( ).\nCATCH %s.\ncaught = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( caught ).\n", cls, names.Get("member."+method), names.Get("exception.RegistryJSONSubsetError"))
 		}
 		b.WriteString("ENDMETHOD.\nENDCLASS.\n")
@@ -138,7 +150,7 @@ func TestJSONSubsetShapeRefusals(t *testing.T) {
 func TestJSONSubsetMaterializedFixtures(t *testing.T) {
 	dyn, opt := hir.T(hir.Dynamic), hir.T(hir.Optional, str)
 	shape := hir.Ref("Parsed")
-	c := &hir.Class{Name: shape.Name, Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}}
+	c := &hir.Class{Name: shape.Name, Structural: true, Ctor: &hir.Method{Name: "constructor", Result: hir.T(hir.Void), Body: hir.B()}}
 	field := func(x *hir.Expr, key string) *hir.Expr {
 		return &hir.Expr{Kind: hir.FieldGet, Type: opt, Name: key, X: x}
 	}

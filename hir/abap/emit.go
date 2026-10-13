@@ -19,6 +19,7 @@ type emitter struct {
 	constructorArgs bool
 	configJSON      bool
 	subsetJSONRoots []hir.Type
+	jsonOwnKeys     bool
 	promiseUsed     bool
 	p               *hir.Program
 	names           *hir.Names
@@ -307,6 +308,9 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" {
 			e.liveRuntime()
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
+			e.jsonOwnKeys = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
 		}
@@ -481,6 +485,9 @@ func (e *emitter) class(c *hir.Class) {
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
 	e.liveClassDeclaration(&b, c)
+	if e.jsonOwnKeys && c.Structural && c.Super == "" {
+		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("json.ownKeys"), e.name("runtime.dynamic"))
+	}
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
 	}
@@ -1081,12 +1088,44 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 			break
 		}
+		var jsonArgs []string
+		class := e.classBy(t.Name)
+		if e.jsonOwnKeys && class != nil && class.Structural && class.Super == "" && x.OwnKeys != nil {
+			ctor := e.p.Constructor(t.Name)
+			jsonArgs = make([]string, len(x.Args))
+			evaluate := func(i int) {
+				v := b.temp(ctor.Params[i].Type)
+				b.line(v + " = " + b.value(x.Args[i], ctor.Params[i].Type) + ".")
+				jsonArgs[i] = v
+			}
+			for _, key := range *x.OwnKeys {
+				for i, param := range ctor.Params {
+					if param.Name == key {
+						evaluate(i)
+						break
+					}
+				}
+			}
+			for i := range x.Args {
+				if jsonArgs[i] == "" {
+					evaluate(i)
+				}
+			}
+		}
 		b.initialize(t.Name)
 		if c := e.classBy(t.Name); c != nil && e.wideShape(c) {
 			// A wide shape has no constructor: its fields are set one by one.
 			values := make([]string, len(x.Args))
 			for i, a := range x.Args {
 				field := c.Ctor.Body.List[i].X.Type
+				if jsonArgs != nil {
+					if !ctorParameterMatchesField(c, i) {
+						e.refuse(fmt.Errorf("node %d (%s): JSON wide shape constructor narrowing is unproven", x.ID, x.Source))
+						return n
+					}
+					values[i] = jsonArgs[i]
+					continue
+				}
 				if a.Type.Kind == hir.Optional && !a.Type.Equal(field) && c.Ctor.Body.List[i].Y.Kind == hir.Narrow {
 					// The constructor narrowed (checked) the optional parameter.
 					values[i] = b.expr(&hir.Expr{Kind: hir.Narrow, Node: a.Node, Type: field, X: a})
@@ -1098,18 +1137,26 @@ func (b *body) expr(x *hir.Expr) string {
 			for i := range values {
 				b.line(n + "->" + e.member(c.Ctor.Params[i].Name) + " = " + values[i] + ".")
 			}
+			b.jsonInitializeKeys(n, x)
 			break
 		}
 		s := n + " = NEW " + strings.TrimPrefix(e.typ(t), "REF TO ") + "( "
 		args := []string{}
 		ctor := e.p.Constructor(t.Name)
 		for i, a := range x.Args {
-			args = append(args, e.param(ctor.Params[i].Name)+" = "+b.value(a, ctor.Params[i].Type))
+			value := ""
+			if jsonArgs != nil {
+				value = jsonArgs[i]
+			} else {
+				value = b.value(a, ctor.Params[i].Type)
+			}
+			args = append(args, e.param(ctor.Params[i].Name)+" = "+value)
 		}
 		if len(args) > 0 {
 			s += strings.Join(args, " ")
 		}
 		b.line(s + " ).")
+		b.jsonInitializeKeys(n, x)
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
@@ -2477,6 +2524,14 @@ func (b *body) stmt(s *hir.Stmt) {
 				a := b.receiver(s.X.X)
 				v := b.value(s.Y, s.X.Type)
 				b.line(a + "->" + e.name("view.write."+owner.Name+"."+s.X.Name) + "( p0 = " + v + " ).")
+				return
+			}
+			if owner != nil && e.jsonOwnKeys && owner.Structural && owner.Super == "" {
+				receiver := b.temp(s.X.X.Type)
+				b.line(receiver + " = " + b.receiver(s.X.X) + ".")
+				value := b.value(s.Y, s.X.Type)
+				b.line(receiver + "->" + e.member(s.X.Name) + " = " + value + ".")
+				b.jsonRecordKey(receiver, b.expr(hir.L(hir.T(hir.String), s.X.Name)))
 				return
 			}
 			target = b.receiver(s.X.X) + "->" + e.member(s.X.Name)

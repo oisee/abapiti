@@ -267,8 +267,8 @@ func TestStructuralOwnKeysLiveView(t *testing.T) {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err == nil || !strings.Contains(err.Error(), "json.stringifySubset") {
-		t.Fatalf("expected explicit ABAP JSON refusal, got %v", err)
+	if _, err := abap.Emit(p); err != nil {
+		t.Fatalf("ABAP structural JSON: %v", err)
 	}
 	got := runGoHIR(t, p, "fmt.Println("+goEntry("probe.ts.Probe", "run")+"())")
 	if got != string(want) {
