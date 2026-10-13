@@ -5,7 +5,3 @@
 # (a wrong value, an error, an unknown NOT_COMPILED). Remove a line as soon as
 # open-steamgate compiles it (the job prints which lines matched nothing).
 # The runtime behaviour itself is pinned on A4H; see the inbox/issue noted.
-# HIR match runtime (String.match): LOOP over a DDIC submatch_result_tab — inbox 047
-LOOP form: LOOP AT groups INTO group.
-# RegExp.exec feature suite: FIND PCRE (ABAP 7.55+) — inbox 046, fixed in open-steamgate #714; remove with the pin bump
-FIND PCRE

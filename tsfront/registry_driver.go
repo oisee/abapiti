@@ -152,16 +152,15 @@ func RegistryRunClass(class string, files []RegistryFile, config, wantSHA string
 	return b.String()
 }
 
-// RegistryRunTest always fails with the driver's report line (verdict,
-// timings, hash), the same convention as the structures benchmark: the
-// runner's message carries the measurement; ok=X is the acceptance.
+// RegistryRunTest prints the driver's report (verdict, timings, hash) even
+// on success, then asserts parity. A measurement must never require a failure.
 func RegistryRunTest(class, trap string) (source string) {
 	defer formatABAP(&source)
 	trapCatch := ""
 	if trap != "" {
-		trapCatch = "CATCH " + trap + " INTO DATA(trapped).\nreport = |TRAP { trapped->source_location }|.\n"
+		trapCatch = "CATCH " + trap + " INTO DATA(trapped).\nCLEAR ok.\nreport = |TRAP { trapped->source_location }|.\n"
 	}
-	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nok = " + class + "=>run( IMPORTING report = report ).\n" + trapCatch + "CATCH cx_root INTO error.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\ncl_abap_unit_assert=>fail( msg = report ).\nENDMETHOD.\nENDCLASS.\n"
+	return "CLASS ltcl_registry DEFINITION FOR TESTING DURATION LONG RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_registry IMPLEMENTATION.\nMETHOD run.\nDATA report TYPE string.\nDATA ok TYPE abap_bool.\nDATA error TYPE REF TO cx_root.\nTRY.\nok = " + class + "=>run( IMPORTING report = report ).\n" + trapCatch + "CATCH cx_root INTO error.\nCLEAR ok.\nreport = |RAISED { cl_abap_classdescr=>get_class_name( error ) } { error->get_text( ) }|.\nENDTRY.\nWRITE / report.\ncl_abap_unit_assert=>assert_equals( act = ok exp = abap_true msg = report ).\nENDMETHOD.\nENDCLASS.\n"
 }
 
 // RegistryRunCorpusClass is the A4H variant: inputs come from the permanent

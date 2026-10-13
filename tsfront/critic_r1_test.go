@@ -50,7 +50,7 @@ func TestCriticR1Diagnostics(t *testing.T) {
 }
 
 // The original unproven assertion now has a checked Go runtime domain,
-// rather than a whole-body refusal. It is not admitted as an ABAP ?= cast.
+// rather than a whole-body refusal. ABAP retains the same checked ?= boundary.
 func TestCriticR1UnprovenClassView(t *testing.T) {
 	prog, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", "unproven_as"))
 	for _, d := range diags {
@@ -61,9 +61,7 @@ func TestCriticR1UnprovenClassView(t *testing.T) {
 	if errs := hir.Verify(prog); len(errs) != 0 {
 		t.Fatal(errs)
 	}
-	if _, err := abap.Emit(prog); err == nil || !strings.Contains(err.Error(), "object.checkedClassView") {
-		t.Fatalf("ABAP must refuse unproven nominal views: %v", err)
-	}
+	requireCheckedClassViewABAP(t, prog)
 	names := hir.NewNames()
 	entry := goEntry("input.ts.Probe", "run")
 	probe, sub, base := names.Get("new.input.ts.Probe"), names.Get("new.input.ts.Sub"), names.Get("new.input.ts.Base")

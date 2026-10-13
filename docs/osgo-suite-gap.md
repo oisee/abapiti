@@ -1,4 +1,104 @@
-# TS-HA@OSGO M0: suite gap and first shard
+# TS-HA@OSGO: new-pin lexer and statements measurements
+
+## Resumed verification: f557e12f4, anchors unchanged
+
+OSG **`f557e12f4217addcec7834b0607234aecf9b723a`** is pinned, with green
+kernel-conformance CI (`38221901138`). Verified fix ancestry: #714
+(`70b2c0193`), inbox 047 (`6f743d2b7`), #698 (`d858ca022`), #700
+(`f4f872892`), #701 (`221cc4981`), and inbox 041 (`e7dd62ce2`).
+Compact evidence: [osgo-pin-bump.json](evidence/osgo-pin-bump.json).
+The resumed run uses the runtime after anchor withdrawal (`03537a6`), with
+successful registry report output added in `46365a2` / `39c5f3f`.
+
+| New-pin shard | Pass / Node active | FAIL | Traps | Registered | Frontend (s) | Emit (s) | Go build (s) | Run (s) | Phase total (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 85 / 200 | 0 | 115 | 200 | 137.302 | 13.374 | 115.785 | 0.056 | 266.517 |
+| `abap/statements` | 433 / 4,962 | 0 | 4,529 | 4,962 | 174.029 | 17.460 | 152.118 | 5.074 | 348.681 |
+
+Both original Node shards pass their entire active denominators. OSGO has
+**518/5,162 credited passes, FAIL 0, 4,644 traps**, exact title/registration
+parity, and zero missing, pending, unmatched or initialization-failure titles.
+Statements now returns a trustworthy report: the old bare-PCRE infrastructure
+blocker is gone. **4,528 statements traps** are owning-body `chai.box` /
+`chai.deepEqual` refusals; **one** is the native message `An exception was
+raised.` (not yet attributed). None is credited as a pass. Lexer retains its
+100 single-assertion and 15 double-assertion refusal-body reports.
+The harness binary exits 1 for explicit traps; the reconciled two-shard
+measurement exits 0 with no genuine FAIL. This is not a whole-suite certificate.
+Both ABAP envelopes remain at 255 bytes maximum per line, zero overlong lines,
+and 29 bytes maximum per object name. Timings include concurrent local gates;
+TypeScript/HIR lowering and ABAP emission are outside the OSG phase totals.
+
+### Registry parity, final CI and gates
+
+- Fresh vanilla Node on the existing zabapgit kit: **clean 0**, SHA-256
+  `5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9`
+  (**16.226 s**); **seeded 5**, SHA-256
+  `7b9efbf9bf52830aa9868b079f473473f7c4f03d90d3339aed6e94b0081595b7`
+  (**18.045 s**). Exact kit output bytes match, without normalizing whitespace.
+- Seeded OSGO `ZCL_ABAPITI_REGISTRY_RUN`: **SUCCESS**, expected five-issue hash
+  unchanged, **119.013 s execution**, **314.005 s total**, zero retries.
+  Emit **17.834 s**, Go build **70.626 s**. Execution includes embedded-input
+  decoding/loading, checking and the assertion. The coordinator's independent
+  clean run at `40e673d` passed in **78–80 s**, emit **12.6 s**, cold Go build
+  **41.8 s**, comparable to old-pin **75 s** (load 60 s + check 14 s).
+  The resumed seeded timing was measured under concurrent load, not a serial
+  performance comparison. Use `GOGEN_UNIT_TIMEOUT_MS=900000`.
+- The unit driver asserts hash parity, clears `ok` on caught exceptions and
+  now issues `WRITE / report` even on success; regression-tested. OSGO currently
+  ignores ordinary ABAP `WRITE`, so `tools/osgo-registry-report.mjs` surfaces
+  the returned report from a supplemental invocation of the same compiled
+  driver, only after an unchanged successful unit result. It writes solely
+  into the caller's build/scratch directories, never OSG. Live printed result:
+  **ok=X, load_us=94885099, run_us=18581313**, seeded SHA above; helper wall
+  **116.10 s** including its small Go build. It also rejects unsuccessful units.
+  The legacy `want_issues=0` field is CLI diagnostic metadata, not the measured
+  issue count; acceptance is the unchanged SHA of Node's five-issue dump.
+- `.github/ci/osgo-unit.sh` / `.github/ci/hir-unit.sh` run unchanged as wired in
+  **`osd-m1.yml`** (they no longer live in `ci.yml`). OSG unit **4,077/4,077**,
+  FAIL 0; HIR checks both hosts, lexer 44/44 oracles and critic/number probes.
+  The original narrow OSGO negative-lookbehind exec exemption is unchanged;
+  that one native refusal is not a pass. Intentional verifier mutations must
+  still produce their expected failures; no workload mismatch is exempted.
+- Passed final `go test ./... -short`,
+  `ABAPITI_GRACECHECK=1 go test ./tsfront/... ./hir/... ./cmd/...`, and
+  `go vet ./...` (all exit 0). No assertion or oracle was weakened.
+
+### Retained reverts and default output
+
+Removed the broad `FIND PCRE` and submatch `LOOP` gaps. Retained FIRST/APPEND
+and groups-copy forms; optional simplifications were unnecessary. Scalar
+Map/Set keys regain the hashed secondary key; reference keys retain linear
+identity lookup because #698 rejects reference key components. Scalar Set
+removal uses `DELETE TABLE … WITH TABLE KEY by_k COMPONENTS k`, never the zero
+`sy-tabix` of a hashed read. Optional `DELETE … WHERE` was skipped. #701's
+move-then-clear optimization is already present; no `<dir>` workaround remains.
+
+Fresh default output versus `git archive c921e37`, generated at the same path:
+**6,312 files, 151 changed files, 50 class identities (48 Maps / 2 Sets)** in
+`classes`, `osg`, `native/lib`, plus **50 matching zip members**. Every byte
+change matches only: (1) scalar `WITH UNIQUE HASHED KEY by_k COMPONENTS k`;
+(2) scalar reads `WITH KEY by_k COMPONENTS k`; (3) scalar Set
+`DELETE TABLE … WITH TABLE KEY by_k COMPONENTS k`. Reference-key collections,
+default regex runtime, names, interfaces, non-runtime classes, drivers and
+READMEs are identical. Successful report output affects embedded drivers only,
+not the default output. Generated outputs, raw reports and invocation scratch
+are removed; OSG remains clean at the new pin, with `.out/go-cache` removed.
+No new clone or push.
+
+### Anchor incident and follow-up (migration remains withdrawn)
+
+The earlier mandatory `TestEmitRegExpExec` OSG-JS differential returned a
+wrong answer after changing absolute lookarounds to `\A` / `\z`. Work stopped
+immediately; no exemption was added. Pinned transpiler/runtime **`ee5c2cd1`**
+does not translate these escapes before JavaScript `RegExp`, which reads them
+as literal `A` and `z`. OSGO support alone cannot certify both hosts. The unsafe
+migration was withdrawn in `03537a6`, and the unchanged OSG-JS fixture now
+passes. **Follow-up:** fix and bump the upstream transpiler/runtime pin on the
+OSG-JS side, then reapply anchors and rerun both hosts and both shards. Do not
+reapply the migration merely because OSGO supports it.
+
+## Historical M0 at 7720f6e29 (unchanged evidence)
 
 **85/200 lexer tests passed; FAIL 0; 115 trapped; 200 registered; no missing,
 pending, unmatched, or initialization-failure titles.** Fresh original Node:
@@ -151,15 +251,19 @@ not included in 85/200. No upstream assertion mismatch was accepted.
 
 **Remaining runner limit:** nonempty mocha hook chains explicitly trap before
 the body; their lifecycle is not yet emitted. No hooks are silently skipped.
-Lexer and statements have no affected hooks. Statements was attempted but
-blocked by the host's native PCRE refusal; the remaining 15 shards were not run.
-Next work is the pinned-host regex refusal boundary, Chai boxing/equality
-emission, hook execution, remaining runtime ABIs, and complete per-shard impact
+Lexer and statements have no affected hooks. Historical M0 statements was
+blocked by the host's native PCRE refusal; the new-pin result above replaces
+that infrastructure refusal with measured passes and traps. The remaining 15
+shards were not run. Next work is Chai boxing/equality emission, the remaining
+native exception, hook execution, runtime ABIs, and complete per-shard impact
 measurements—not weakening assertions.
 
 ## Reproduction
 
-Use the existing clean checkout at `7720f6e29b41a6a12faee17ea65076ac6f046552`:
+The current checkout is `f557e12f4217addcec7834b0607234aecf9b723a`
+(OSG main CI green). The following invocation reproduces the resumed
+measurement with the absolute-anchor migration still withdrawn. Historical
+M0 measurements remain bound to their original pin:
 
 ```sh
 export GOCACHE=/mnt/ssd-510/osg/go-build TMPDIR=/mnt/ram/abapiti/tmp
@@ -169,7 +273,7 @@ export GOTOOLCHAIN=go1.26.0 GOFLAGS=-buildvcs=false GOMAXPROCS=4
 # Full unpruned ABAP closure exceeds Node's default heap during Go emission.
 export NODE_OPTIONS=--max-old-space-size=32768
 export ABAPITI_OSG_HOME=/mnt/ssd-510/osg/abapiti/open-steamgate
-ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/lexer \
+ABAPITI_TESTS_TARGET=osg ABAPITI_TESTS_SHARDS=abap/lexer,abap/statements \
   nice -n 10 node tools/abaplint-tests-all.mjs /home/alice/dev/abaplint result.json
 ```
 
@@ -186,9 +290,20 @@ accepts `ABAPITI_TESTS_TARGET=osg` and respects the caller's `GOCACHE`; its
 historical transient `go-*.json` filenames remain target-agnostic. OSG-only
 static/gate/envelope/phase evidence survives cleanup even on infrastructure
 failures. No-report impact is marked unmeasured, never inferred as zero.
-Set `ABAPITI_TESTS_SHARDS=abap/lexer,abap/statements` for the two-shard attempt.
+The two-shard result is measured above, not extrapolated to the other shards.
 
-## Gates and parity
+For a successful embedded registry unit, retain its JSON and build directory
+until the timing report is printed (this supplemental run repeats the driver):
+
+```sh
+OSG_HOME="$ABAPITI_OSG_HOME" nice -n 10 node \
+  "$ABAPITI_OSG_HOME/tools/gogen/unit.mjs" \
+  --input OUT/osg --class ZCL_ABAPITI_REGISTRY_RUN --jobs 1 \
+  --no-cache --out UNIT_OUT > unit.json
+nice -n 10 node tools/osgo-registry-report.mjs unit.json "$ABAPITI_OSG_HOME"
+```
+
+## Historical M0 gates and parity
 
 Passed: `ABAPITI_GRACECHECK=1 go test ./... -short`, full Grace-enabled
 `go test ./tsfront/... ./hir/... ./cmd/...`, `go vet ./...`, report/discovery

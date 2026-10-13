@@ -32,8 +32,16 @@ export class Probe {
 	source = strings.ReplaceAll(source, `x.constructor`, `(x as any).constructor`)
 	source = strings.ReplaceAll(source, `y.constructor`, `(y as any).constructor`)
 	prog := lowerStatementsProbe(t, map[string]string{"input.ts": source}, []string{"input.ts"})
-	if _, err := abap.Emit(prog); err == nil {
-		t.Fatal("ABAP accepted lexical descriptors")
+	files, names, err := abap.EmitNamed(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var emitted strings.Builder
+	for _, src := range files {
+		emitted.WriteString(src)
+	}
+	if strings.Count(emitted.String(), "->lexical = abap_true.") < 2 || !strings.Contains(emitted.String(), "->"+names.Get("class.lexicalDescriptor")+" = p0.") {
+		t.Fatal("ABAP must allocate fresh descriptors and attach the exact constructor identity to instances")
 	}
 	path := filepath.Join(t.TempDir(), "oracle.ts")
 	for _, method := range []string{"run", "direct"} {

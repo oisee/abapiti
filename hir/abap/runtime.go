@@ -113,12 +113,21 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		vt := e.typ(value)
 		line("TYPES: BEGIN OF entry, k TYPE " + key + ", v TYPE " + vt + ", END OF entry.")
-		line("TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.")
+		// OSG #698 supports scalar secondary-key components, not references.
+		// Keep reference identity lookups on the existing linear path.
+		lookupKey := "k"
+		secondary := ""
+		switch t.Args[0].Kind {
+		case hir.String, hir.Bool, hir.I32, hir.I64, hir.Number:
+			lookupKey = "by_k COMPONENTS k"
+			secondary = " WITH UNIQUE HASHED KEY by_k COMPONENTS k"
+		}
+		line("TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY" + secondary + ".")
 		line("DATA entries TYPE entries_type.")
 		line("METHODS size RETURNING VALUE(result) TYPE i.")
 		method("size", "result = lines( entries ).\n")
 		line("METHODS has IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
-		method("has", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+		method("has", "READ TABLE entries WITH KEY "+lookupKey+" = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
 		op := "add"
 		params := ""
 		val := "abap_true"
@@ -128,11 +137,11 @@ func (e *emitter) runtime(t hir.Type) {
 			val = "p1"
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method(op, "READ TABLE entries WITH KEY k = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
+		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
 		if t.Kind == hir.OrderedMap {
 			opt := e.typ(hir.T(hir.Optional, value))
 			line("METHODS get IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE " + opt + ".")
-			code := "READ TABLE entries WITH KEY k = p0 INTO DATA(row).\nIF sy-subrc = 0.\n"
+			code := "READ TABLE entries WITH KEY " + lookupKey + " = p0 INTO DATA(row).\nIF sy-subrc = 0.\n"
 			if value.IsRef() {
 				code += "result = row-v.\n"
 			} else {
@@ -155,7 +164,11 @@ func (e *emitter) runtime(t hir.Type) {
 			line("METHODS copy IMPORTING p0 TYPE REF TO " + name + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 			method("copy", "CREATE OBJECT result.\nAPPEND LINES OF p0->entries TO result->entries.\n")
 			line("METHODS delete IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
-			method("delete", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nDELETE entries INDEX sy-tabix.\nresult = abap_true.\nENDIF.\n")
+			if secondary != "" {
+				method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
+			} else {
+				method("delete", "READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nDELETE entries INDEX sy-tabix.\nresult = abap_true.\nENDIF.\n")
+			}
 		}
 		if t.Kind == hir.OrderedMap {
 			line("METHODS values RETURNING VALUE(result) TYPE " + e.typ(hir.T(hir.Array, value)) + ".")
@@ -201,8 +214,9 @@ func (e *emitter) support() {
 		opt := e.typ(hir.T(hir.Optional, hir.T(hir.String)))
 		hidden, impl := "", ""
 		if e.descriptors {
-			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
+			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
 			impl = "METHOD " + e.name("builtin.classOf") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.classOf") + ".\nresult = me->" + e.name("builtin.classOf") + "( ).\nENDMETHOD.\n"
+			impl += "METHOD " + e.name("builtin.nativeConstructor") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.nativeConstructor") + ".\nresult = me->" + e.name("builtin.nativeConstructor") + "( ).\nENDMETHOD.\n"
 		}
 		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + hidden + "DATA " + e.member("message") + " TYPE string.\nMETHODS constructor IMPORTING " + e.param("message") + " TYPE " + opt + " OPTIONAL.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nIF " + e.param("message") + " IS BOUND.\n" + e.member("message") + " = " + e.param("message") + "->value.\nENDIF.\nENDMETHOD.\n" + impl + "ENDCLASS.\n"
 	}
@@ -237,7 +251,7 @@ func (e *emitter) classvalueRuntime() {
 	e.types[id] = true
 	name := e.name(id)
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
-	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nDATA name TYPE string.\nDATA emitted TYPE string.\nDATA parent TYPE REF TO " + name + ".\nDATA static_names TYPE " + arr + ".\nMETHODS constructor IMPORTING name TYPE string emitted TYPE string parent TYPE REF TO " + name + " static_names TYPE " + arr + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nme->name = name.\nme->emitted = emitted.\nme->parent = parent.\nme->static_names = static_names.\nENDMETHOD.\nMETHOD has.\nDATA s TYPE string.\nIF static_names IS NOT BOUND.\nRETURN.\nENDIF.\nLOOP AT static_names->items INTO s.\nIF s = p0.\nresult = abap_true.\nRETURN.\nENDIF.\nENDLOOP.\nENDMETHOD.\nENDCLASS.\n"
+	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nDATA name TYPE string.\nDATA emitted TYPE string.\nDATA lexical TYPE abap_bool.\nDATA parent TYPE REF TO " + name + ".\nDATA static_names TYPE " + arr + ".\nMETHODS constructor IMPORTING name TYPE string emitted TYPE string parent TYPE REF TO " + name + " static_names TYPE " + arr + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nme->name = name.\nme->emitted = emitted.\nme->parent = parent.\nme->static_names = static_names.\nENDMETHOD.\nMETHOD has.\nDATA s TYPE string.\nIF static_names IS NOT BOUND.\nRETURN.\nENDIF.\nLOOP AT static_names->items INTO s.\nIF s = p0.\nresult = abap_true.\nRETURN.\nENDIF.\nENDLOOP.\nENDMETHOD.\nENDCLASS.\n"
 }
 
 // descriptorOf returns the static descriptor reference expression for a class.
@@ -355,9 +369,17 @@ func (e *emitter) descriptorShards() {
 			continue
 		}
 		fmt.Fprintf(&dispatch, "WHEN `%s`.\nCREATE OBJECT result TYPE %s.\n", strings.ToUpper(e.name(c.Name)), e.name(c.Name))
+		if c.Scoped {
+			fmt.Fprintf(&dispatch, "IF p0->lexical = abap_true.\nDATA scoped%d TYPE REF TO %s.\nscoped%d ?= result.\nscoped%d->%s = p0.\nENDIF.\n", len(dispatch.String()), e.name(c.Name), len(dispatch.String()), len(dispatch.String()), e.name("class.lexicalDescriptor"))
+		}
 	}
 	dispatch.WriteString("WHEN OTHERS.\nCREATE OBJECT result TYPE (class_name).\nENDCASE.\n")
-	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\nENDCLASS.\n"
+	extraSignature, extraImpl := "", ""
+	if e.constructorArgs {
+		extraSignature = "CLASS-METHODS new_args IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " p1 TYPE " + e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))) + " RETURNING VALUE(result) TYPE REF TO object.\n"
+		extraImpl = "METHOD new_args.\n" + e.argumentFactoryABAP() + "ENDMETHOD.\n"
+	}
+	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch.String() + "ENDMETHOD.\n" + extraImpl + "ENDCLASS.\n"
 }
 
 // staticsOf lists the raw member names of the static members of a class.
