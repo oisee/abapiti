@@ -15,10 +15,7 @@ import (
 )
 
 type emitter struct {
-	chaiUsed bool
-	// denseArrays: array.has is emitted as a bounds check, so every
-	// hole-creating write must refuse (as under Chai) before padding.
-	denseArrays     bool
+	chaiUsed        bool
 	chaiArrays      []hir.Type
 	chaiMaps        []hir.Type
 	liveClasses     map[string]bool
@@ -164,8 +161,6 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	e.markArrays()
 	if e.chaiUsed {
 		e.chaiRuntime()
-	} else if e.denseArrays {
-		e.sparseRefusalClass()
 	}
 	if castTrace {
 		e.traceCasts()
@@ -317,9 +312,6 @@ func (e *emitter) scanUsage() {
 		if x.Kind == hir.RuntimeOp && strings.HasPrefix(x.Op, "chai.") {
 			e.chaiUsed = true
 			e.dynamicUsed = true
-		}
-		if x.Kind == hir.RuntimeOp && x.Op == "array.has" {
-			e.denseArrays = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.classView" {
 			e.liveRuntime()
@@ -1050,7 +1042,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("CREATE OBJECT " + n + ".")
 			if len(x.Args) == 1 {
 				cnt := b.expr(x.Args[0])
-				if e.chaiUsed || e.denseArrays {
+				if e.chaiUsed {
 					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + ".\nENDIF.")
 				}
 				row := b.temp(arrayStorage(t).Args[0])
@@ -2431,12 +2423,6 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	switch x.Op {
-	case "array.has":
-		// Under denseArrays no ABAP array has holes: sparse writes and nonempty
-		// new Array(n) refuse, array.delete has no emitter, and regexp missing
-		// captures are present undefined values (as in Go's has).
-		b.line(n + " = xsdbool( " + args[0] + " >= 0 AND " + args[0] + " < lines( " + a + "->items ) ).")
-		return
 	case "array.length":
 		// The items table is public: lines( ) saves a method call per access.
 		b.line(n + " = lines( " + a + "->items ).")
@@ -2534,7 +2520,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			if !constant {
 				b.line(i + " = " + i + " + 1.")
 			}
-			if e.chaiUsed || e.denseArrays {
+			if e.chaiUsed {
 				b.line("IF " + i + " > lines( " + a + "->items ) + 1.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + ".\nENDIF.")
 			}
 			row := b.temp(arrayStorage(s.X.X.Type).Args[0])

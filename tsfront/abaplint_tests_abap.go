@@ -132,8 +132,8 @@ func MeasureABAPTestGap(lowering *RegistryLowering) ABAPTestGap {
 func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 	hir.AssignSiteIDs(lowering.Prog)
 	// The catalogue gate is stricter than individual emitter switch arms.
-	// In particular ID-zero number.ceil sites must not escape merely because
-	// an old switch arm happens to print some ABAP for them.
+	// In particular ID-zero array.has and number.ceil sites must not escape
+	// merely because an old switch arm happens to print some ABAP for them.
 	testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
 		messages := []string{}
 		visitTestBody(m.Body, func(x *hir.Expr) {
