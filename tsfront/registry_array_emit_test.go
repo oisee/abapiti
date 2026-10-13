@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -61,7 +60,7 @@ func TestEmitRegistryArrays(t *testing.T) {
 		gracecheck.Check(t, prog)
 	}
 	t.Run("Go", func(t *testing.T) { goRegistryOracle(t, prog, "arrays", "ArrayProbe") })
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +91,7 @@ func TestEmitRegistryArrays(t *testing.T) {
 	}
 	driver += "ENDCLASS.\n"
 	files[class+".clas.testclasses.abap"] = driver
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

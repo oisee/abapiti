@@ -58,7 +58,7 @@ func TestLowerStatementsClosureExploratory(t *testing.T) {
 	for _, k := range keys {
 		t.Logf("%4d %s  e.g. %s", byCategory[k], k, examples[k])
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		os.MkdirAll(out, 0o755)
 		os.WriteFile(filepath.Join(out, "stmts.hir.txt"), []byte(hir.Dump(prog)), 0o644)
 		var list []string
@@ -101,7 +101,7 @@ func TestLowerStatementsClosureExploratory(t *testing.T) {
 			t.Errorf("verify: %v", err)
 		}
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		os.WriteFile(filepath.Join(out, "verify-groups.txt"), []byte(strings.Join(groups, "\n")), 0o644)
 		var lines []string
 		for _, err := range errors {

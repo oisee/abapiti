@@ -3,8 +3,6 @@ package tsfront
 import (
 	"fmt"
 	"testing"
-
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Index signatures describe the present value, whereas map.get also carries
@@ -28,7 +26,7 @@ func TestForOfRecordArray(t *testing.T) {
  }
  }`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatal(err)
 	}
 	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "ab:5:1\n" {

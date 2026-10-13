@@ -76,7 +76,7 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 			}
 		}
 		for _, action := range actions {
-			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_error->get_text( ) ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+			fmt.Fprintf(&initialization, "TRY.\n%s=>%s( ).\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", n(c.Name), action, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
 		}
 	}
 	// Force the runtime initializer even when a closure did not otherwise use it.
@@ -129,6 +129,9 @@ initialization = initialization && '{"file":' && quote( file ) && ',"action":' &
 ENDMETHOD.
 METHOD run.
 DATA init_error TYPE REF TO cx_root.
+DATA test_error TYPE REF TO cx_root.
+DATA error_class TYPE string.
+DATA error_text TYPE string.
 DATA init_assertion TYPE REF TO ASSERTCLASS.
 DATA init_trap TYPE REF TO TRAPCLASS.
 DATA passed TYPE i.
@@ -186,9 +189,12 @@ ENDIF.
 IF message CS 'unsupported-test-done'.
 status = 'not-run'.
 ENDIF.
-CATCH cx_root INTO DATA(test_error).
+CATCH cx_root INTO test_error.
 status = 'trapped'.
-message = test_error->get_text( ).
+error_class = cl_abap_classdescr=>get_class_name( test_error ).
+REPLACE FIRST OCCURRENCE OF '\CLASS=' IN error_class WITH ''.
+error_text = test_error->get_text( ).
+message = error_class && |: | && error_text.
 ENDTRY.
 ENDIF.
 CASE status.

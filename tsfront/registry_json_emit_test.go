@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -24,7 +23,7 @@ func TestEmitRegistryJSON(t *testing.T) {
 	if config == "" {
 		t.Skip("set REGISTRY_JSON_CONFIG and REGISTRY_JSON_RESOLVED to original JSON inputs")
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +150,7 @@ func TestEmitRegistryJSON(t *testing.T) {
 	}
 	fmt.Fprintf(&b, "DATA(probe) = NEW %s( ).\ncl_abap_unit_assert=>assert_true( xsdbool( probe IS INSTANCE OF %s ) ).\nENDMETHOD.\nENDCLASS.\n", class, class)
 	files[class+".clas.testclasses.abap"] = b.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

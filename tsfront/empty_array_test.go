@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestEmptyArrayExpressionContexts(t *testing.T) {
@@ -40,7 +39,7 @@ export function probe(): string {
 	if t.Failed() {
 		return
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	node := exec.Command("node", "--input-type=module-typescript")

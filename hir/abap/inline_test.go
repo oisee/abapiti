@@ -256,7 +256,7 @@ func TestInlineDisabled(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	p := inlineFixture().p
 	before := hir.Dump(p)
-	off, err := Emit(p)
+	off, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestInlineDisabled(t *testing.T) {
 		t.Fatal("ABAPITI_INLINE=0 changed the program")
 	}
 	t.Setenv("ABAPITI_INLINE", "")
-	on, err := Emit(inlineFixture().p)
+	on, err := emitABAP(t, inlineFixture().p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,12 +278,12 @@ func TestInlineDisabled(t *testing.T) {
 			continue
 		}
 		t.Setenv("ABAPITI_INLINE", "0")
-		off, err := Emit(f.p)
+		off, err := emitABAP(t, f.p)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Setenv("ABAPITI_INLINE", "")
-		on, err := Emit(fixtures()[i].p)
+		on, err := emitABAP(t, fixtures()[i].p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -304,7 +304,7 @@ func TestInlineGraceMatchesClassic(t *testing.T) {
 	emit := func(mode string) (string, map[string]string) {
 		t.Setenv("ABAPITI_INLINE", mode)
 		p := inlineFixture().p
-		files, err := Emit(p)
+		files, err := emitABAP(t, p)
 		if err != nil {
 			t.Fatal(mode, err)
 		}
@@ -326,7 +326,7 @@ func TestInlineGraceMatchesClassic(t *testing.T) {
 		}
 	}
 	t.Setenv("ABAPITI_INLINE", "yes")
-	if _, err := Emit(inlineFixture().p); err == nil || !strings.Contains(err.Error(), "classic") {
+	if _, err := emitABAP(t, inlineFixture().p); err == nil || !strings.Contains(err.Error(), "classic") {
 		t.Fatalf("unknown ABAPITI_INLINE value accepted: %v", err)
 	}
 }

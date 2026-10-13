@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func lowerStatementsProbe(t *testing.T, sources map[string]string, files []string) *hir.Program {
@@ -51,7 +50,7 @@ func TestStatementsOrdinaryConstructionIsNotRegExp(t *testing.T) {
 	if strings.Contains(dump, "regexp") {
 		t.Fatal("ordinary class construction became RegExp")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -71,7 +70,7 @@ func TestStatementsForwardFunctionAndRest(t *testing.T) {
  export function first(): number { return later("a", "b"); }
  function later(...args: string[]): number { return args.length; }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	// Removing the temporary declaration must make the verifier reject the call.
@@ -134,7 +133,7 @@ func TestStatementsNamespaceRegistry(t *testing.T) {
 			}
 		}
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -151,7 +150,7 @@ func TestStatementsErrorAndDescriptorConstruction(t *testing.T) {
 	if !strings.Contains(hir.Dump(prog), "classvalue.new") {
 		t.Fatal("lost dynamic construction")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -165,7 +164,7 @@ func TestStatementsSpliceAndReverse(t *testing.T) {
 			t.Fatal("missing", op)
 		}
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -175,7 +174,7 @@ func TestStatementsNamespaceAliasConstruction(t *testing.T) {
 		"items.ts": `export class Item {}`,
 		"probe.ts": `import * as Items from "./items"; export class Probe { run(): number { const list: any = Items; let n=0; for (const key in Items) { if (typeof list[key] === "function") { const value = new list[key](); n += 1; } } return n; } }`,
 	}, []string{"items.ts", "probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -190,7 +189,7 @@ func TestStatementsForwardDataInterface(t *testing.T) {
 			t.Fatal("data interface kept method-interface identity")
 		}
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -202,7 +201,7 @@ func TestStatementsSatisfiesTupleRegistry(t *testing.T) {
  const values: {[name:string]:Value} = Object.fromEntries(rows.map(([name, row]) => [name, {name,ordinal:row.ordinal}]));
  export class Probe {run(): string {return values["b"].name;} }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -222,7 +221,7 @@ func TestStatementsShapeFieldTypeIdentity(t *testing.T) {
 	if len(fields) != 2 || fields[0].Equal(fields[1]) {
 		t.Fatal("shapes with different field types share an identity")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -234,7 +233,7 @@ func TestStatementsTupleSpreadAndRestCopy(t *testing.T) {
  export function copy(...rest: string[]): number {rest.push("y"); return rest.length;}
  export function spread(a: string[]): number {return copy(...a);}
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range prog.Classes {
@@ -259,7 +258,7 @@ func TestStatementsArrayRestDestructuring(t *testing.T) {
 	if !strings.Contains(hir.Dump(prog), "array.slice1") {
 		t.Fatal("rest binding must copy a slice")
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -270,7 +269,7 @@ func TestStatementsDescriptorSet(t *testing.T) {
 		"b.ts":     `export class Item {}`,
 		"probe.ts": `import {Item as A} from "./a"; import {Item as B} from "./b"; export class Probe {static run(): number {const set=new Set<typeof A>();set.add(A);set.add(A);set.add(B);return set.size;} }`,
 	}, []string{"a.ts", "b.ts", "probe.ts"})
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +310,7 @@ func TestStatementsOptionalArgumentsAndStaticThis(t *testing.T) {
  take(opts: Options = {}): string {return opts.mode ?? "default";}
  run(): string {return this.take({mode:"x"});}
  }`}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -320,7 +319,7 @@ func TestStatementsReduceAccumulatorBinding(t *testing.T) {
 	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": `
 export class Probe {static run(): string[] {const values=["x","y"];return values.reduce((a,c)=>a.concat([c]), [] as string[]);}}
 `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -341,7 +340,7 @@ func TestStatementsGenericErasedBridges(t *testing.T) {
    run(): string { return this.getChildren()[0].value(); }
  }
  `}, []string{"probe.ts"})
-	files, err := abap.Emit(prog)
+	files, err := emitABAP(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +372,7 @@ func TestStatementsUnionReceiverInterface(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("union not deduplicated: %d", count)
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -418,7 +417,7 @@ func TestStatementsCapturedLiftedCallee(t *testing.T) {
 			}
 		}
 	}
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -432,7 +431,7 @@ func TestStatementsOptionalAccessAndTupleRest(t *testing.T) {
   count(): number { const parts = ["a", Item] as const; return join(...parts); }
  }
  `}, []string{"probe.ts"})
-	if _, err := abap.Emit(prog); err != nil {
+	if _, err := emitABAP(t, prog); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -471,7 +470,7 @@ func TestStatementsConstructorDefaults(t *testing.T) {
 	if !found {
 		t.Fatal("missing constructor")
 	}
-	files, err := abap.Emit(p)
+	files, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

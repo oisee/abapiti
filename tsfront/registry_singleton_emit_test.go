@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -62,7 +61,7 @@ func TestEmitRegistrySingletons(t *testing.T) {
 	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
 		gracecheck.Check(t, prog)
 	}
-	emitted, abapNames, err := abap.EmitNamed(prog)
+	emitted, abapNames, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +96,7 @@ func TestEmitRegistrySingletons(t *testing.T) {
 		body := fmt.Sprintf("CLASS ltcl_singleton DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS identity FOR TESTING.\nENDCLASS.\nCLASS ltcl_singleton IMPLEMENTATION.\nMETHOD identity.\nDATA(first) = %s=>%s( ).\nDATA(second) = %s=>%s( ).\ncl_abap_unit_assert=>assert_true( xsdbool( first = second ) ).\ncl_abap_unit_assert=>assert_true( xsdbool( first IS INSTANCE OF %s ) ).\ncl_abap_unit_assert=>assert_equals( act = first->%s( 0 ) exp = '%s' ).\ncl_abap_unit_assert=>assert_true( first->%s( ) ).\nENDMETHOD.\nENDCLASS.\n", native, get, native, get, native, abapNames.Get("member.toText"), texts[i], abapNames.Get("member.isGeneric"))
 		emitted[native+".clas.testclasses.abap"] = body
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err = os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

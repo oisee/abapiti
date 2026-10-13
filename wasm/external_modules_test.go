@@ -51,7 +51,7 @@ func TestExternalModules(t *testing.T) {
 			class := "zcl_abapiti_t_" + fixture.module
 			var files map[string]string
 			if fixture.split {
-				result, err := CompileMultiClass(mod, class, DefaultClassLines)
+				result, err := compileABAPMultiClass(t, mod, class, DefaultClassLines)
 				if err != nil {
 					t.Fatal(err)
 				}

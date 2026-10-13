@@ -46,6 +46,19 @@ export function selectShards(plan, selection) {
  return {...plan, shards, files, excluded:plan.files.filter(file => !selected.has(file)), partial:true};
 }
 
+// File-focused runs keep dependency closure materialization and the independent
+// Node oracle unchanged. In particular, do not extract or synthesize test bodies.
+export function selectFiles(plan, selection) {
+ if (!selection) return plan;
+ const files = selection.split(',').map(file => file.trim());
+ if (files.some(file => !file) || new Set(files).size !== files.length) throw new Error('file selection must contain distinct nonempty paths');
+ for (const file of files) if (!plan.files.includes(file)) throw new Error(`unknown test file: ${file}`);
+ if (files.length === plan.files.length) return plan;
+ const selected = new Set(files);
+ const shards = plan.shards.map(shard => ({...shard, roots:shard.roots.filter(file => selected.has(file))})).filter(shard => shard.roots.length);
+ return {...plan, shards, files:files.sort(), excluded:[...plan.excluded, ...plan.files.filter(file => !selected.has(file))].sort(), partial:true};
+}
+
 // Execute selected high-risk shards first without excluding roots or changing
 // whole-suite accounting. Useful when owned repairs must fail fast before gates.
 export function prioritizeShards(plan, selection) {
@@ -93,7 +106,7 @@ async function main() {
  const scratch = process.env.ABAPITI_TESTS_SCRATCH ?? join(tmpdir(), 'abapiti-test-shards');
  mkdirSync(scratch, {recursive:true});
  const run = mkdtempSync(join(scratch, 'all-'));
- const plan = prioritizeShards(selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS), process.env.ABAPITI_TESTS_FIRST);
+ const plan = prioritizeShards(selectFiles(selectShards(discoverShards(upstream), process.env.ABAPITI_TESTS_SHARDS), process.env.ABAPITI_TESTS_FILES), process.env.ABAPITI_TESTS_FIRST);
  const target = process.env.ABAPITI_TESTS_TARGET ?? 'go';
  if (!['go','osg'].includes(target)) throw new Error('ABAPITI_TESTS_TARGET must be go or osg');
  if (target === 'osg' && !process.env.ABAPITI_OSG_HOME) throw new Error('ABAPITI_OSG_HOME is required for osg');

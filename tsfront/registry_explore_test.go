@@ -59,7 +59,7 @@ func TestRegistryClosureGate(t *testing.T) {
 	for _, e := range lowering.TrappedBases {
 		t.Error(e)
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -84,7 +84,7 @@ func TestRegistryClosureGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		for name, contents := range emitted {
 			if err := os.WriteFile(filepath.Join(out, name), []byte(contents), 0644); err != nil {
 				t.Fatal(err)
@@ -92,7 +92,7 @@ func TestRegistryClosureGate(t *testing.T) {
 		}
 	}
 	if want := os.Getenv("REGISTRY_RUN_SHA"); want != "" {
-		out := os.Getenv("ABAPITI_TEST_OUT")
+		out := fixtureOutputDir(t)
 		inputs, err := ReadRegistryInputs(envOr("REGISTRY_RUN_INPUT", "REGISTRY_INPUT"), envOr("REGISTRY_RUN_DEPENDENCIES", "REGISTRY_DEPENDENCIES"))
 		if err != nil {
 			t.Fatal(err)
@@ -137,7 +137,7 @@ func TestRegistryClosureGate(t *testing.T) {
 			}
 		}
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" && os.Getenv("REGISTRY_CLI") != "" {
+	if out := fixtureOutputDir(t); out != "" && os.Getenv("REGISTRY_CLI") != "" {
 		if err := os.WriteFile(filepath.Join(out, "zabaplint.prog.abap"), []byte(RegistryCLIReport("zabaplint", names)), 0644); err != nil {
 			t.Fatal(err)
 		}

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func loadStructuresCorpus(dir string) ([]StructureCase, error) {
@@ -117,7 +116,7 @@ func TestEmitStructuresClosure(t *testing.T) {
 	if os.Getenv("STRUCTURES_MUTATE") != "" {
 		skipStructureSequenceEnd(t, prog)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +155,7 @@ func TestEmitStructuresClosure(t *testing.T) {
 				t.Fatalf("%s oversized line %d", name, len(s))
 			}
 		}
-		if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+		if out := fixtureOutputDir(t); out != "" {
 			if err := os.MkdirAll(out, 0755); err != nil {
 				t.Fatal(err)
 			}

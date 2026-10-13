@@ -7,7 +7,7 @@ import (
 
 func TestInstanceOfInitialReference(t *testing.T) {
 	p := fixtures()[2].p
-	defaultFiles, err := Emit(p)
+	defaultFiles, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -24,7 +24,7 @@ func json5SubsetFixture() *hir.Program {
 }
 
 func TestJSON5SubsetEmission(t *testing.T) {
-	files, names, err := EmitNamed(json5SubsetFixture())
+	files, names, err := emitABAPNamed(t, json5SubsetFixture())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestJSON5SubsetFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err, string(check))
 	}
-	files, names, err := EmitNamed(json5SubsetFixture())
+	files, names, err := emitABAPNamed(t, json5SubsetFixture())
 	if err != nil {
 		t.Fatal(err)
 	}

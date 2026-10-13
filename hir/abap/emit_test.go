@@ -169,7 +169,7 @@ func fixtures() []fixture {
 func TestGlobalClassDefinitions(t *testing.T) {
 	definitions := map[string]string{}
 	for _, f := range fixtures() {
-		files, err := Emit(f.p)
+		files, err := emitABAP(t, f.p)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -219,7 +219,7 @@ func TestGlobalClassDefinitions(t *testing.T) {
 
 func TestFixtures(t *testing.T) {
 	out := t.TempDir()
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+	if base := fixtureOutputDir(t); base != "" {
 		out = filepath.Join(base, t.Name())
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
@@ -227,7 +227,7 @@ func TestFixtures(t *testing.T) {
 	}
 	for _, f := range fixtures() {
 		t.Run(f.name, func(t *testing.T) {
-			files, err := Emit(f.p)
+			files, err := emitABAP(t, f.p)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -305,7 +305,7 @@ func int8Oracle(t *testing.T) (map[string]string, string) {
 		}
 		assertions.WriteString("cl_abap_unit_assert=>assert_equals( act = adjacent exp = value ).\n")
 	}
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{c}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{c}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func int8Oracle(t *testing.T) (map[string]string, string) {
 }
 func TestRejectUnverified(t *testing.T) {
 	p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", i32, ret(local("unknown", i32)))}}}}
-	if files, err := Emit(p); files != nil || err == nil {
+	if files, err := emitABAP(t, p); files != nil || err == nil {
 		t.Fatal("emitted invalid HIR")
 	}
 }
@@ -331,7 +331,7 @@ func TestTargetDiagnostics(t *testing.T) {
 		m.Params = []hir.Param{{Name: "divisor", Type: number}}
 		m.Static = true
 		p := &hir.Program{Classes: []*hir.Class{{Name: "target", Methods: []*hir.Method{m}}}}
-		files, err := Emit(p)
+		files, err := emitABAP(t, p)
 		if files != nil || err == nil || !strings.Contains(err.Error(), "node 17 (input.ts:4)") {
 			t.Fatalf("missing target diagnostic: %v", err)
 		}
@@ -340,7 +340,7 @@ func TestTargetDiagnostics(t *testing.T) {
 func TestLongLiteral(t *testing.T) {
 	m := method("f", str, ret(hir.L(str, strings.Repeat("€` {|}\\ ", 300)+"\n\t")))
 	m.Static = true
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "long", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "long", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,8 +350,24 @@ func TestLongLiteral(t *testing.T) {
 				t.Fatal("long literal source line")
 			}
 		}
-		if !strings.Contains(src, "uccpi( 10 )") {
+		if !strings.Contains(src, "uccpi( 10 )") && !strings.Contains(src, `\n\t|`) {
 			t.Fatal("newline not encoded")
+		}
+	}
+}
+
+// Newline, CR and tab inside a template literal are template escapes, so a
+// multi-line source string is one token per chunk, not a temporary per line.
+func TestLiteralControlEscapes(t *testing.T) {
+	m := method("f", str, ret(hir.L(str, "line1\nline2\r\n\tend")))
+	m.Static = true
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "esc", Methods: []*hir.Method{m}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range files {
+		if strings.Contains(src, "uccpi") || !strings.Contains(src, `|line1\nline2\r\n\tend|`) {
+			t.Fatal(src)
 		}
 	}
 }
@@ -376,7 +392,7 @@ func TestStringUnitAccess(t *testing.T) {
 			m := method("access", result, ret(rt(op, local("source", str), result, args...)))
 			m.Static = true
 			m.Params = []hir.Param{{Name: "source", Type: str}, {Name: "index", Type: i32}}
-			files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "access", Methods: []*hir.Method{m}}}})
+			files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "access", Methods: []*hir.Method{m}}}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -407,7 +423,7 @@ func TestMalformedLiterals(t *testing.T) {
 		x := hir.L(typ, struct{}{})
 		x.Node = hir.Node{ID: 42, Source: "bad.ts:7"}
 		p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", typ, ret(x))}}}}
-		if files, err := Emit(p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
+		if files, err := emitABAP(t, p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
 			t.Fatalf("%s: missing diagnostic: %v", typ, err)
 		}
 	}
@@ -420,7 +436,7 @@ func TestMalformedLiterals(t *testing.T) {
 			expr.Args = expr.Args[:1]
 		}
 		p := &hir.Program{Classes: []*hir.Class{{Name: "bad", Methods: []*hir.Method{method("f", expr.Type, ret(expr))}}}}
-		if files, err := Emit(p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
+		if files, err := emitABAP(t, p); files != nil || err == nil || !strings.Contains(err.Error(), "node 42 (bad.ts:7)") {
 			t.Fatalf("%s: missing diagnostic: %v", op, err)
 		}
 	}
@@ -490,7 +506,7 @@ func Test750Semantics(t *testing.T) {
 	methods = append(methods, concat)
 	literals = append(literals, struct{ name, value string }{"concat", " {|}\\`€ \"' \n\tend  "})
 	p := &hir.Program{Classes: []*hir.Class{{Name: root.Name}, {Name: "SyntaxLeaf", Super: root.Name}, {Name: "Syntax750", Methods: methods}}}
-	files, err := Emit(p)
+	files, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -518,7 +534,7 @@ func Test750Semantics(t *testing.T) {
 			}
 		}
 	}
-	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
+	if base := fixtureOutputDir(t); base != "" {
 		out := filepath.Join(base, t.Name())
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
@@ -533,7 +549,7 @@ func Test750Semantics(t *testing.T) {
 
 func Test750Syntax(t *testing.T) {
 	p := fixtures()[2].p
-	modern, err := Emit(p)
+	modern, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +565,7 @@ func Test750Syntax(t *testing.T) {
 func TestSequenceYieldScope(t *testing.T) {
 	seq := &hir.Expr{Kind: hir.Seq, Type: i32, Stmt: hir.B(decl("captured", i32, lit(7))), Y: local("captured", i32)}
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Sequence", Methods: []*hir.Method{method("run", i32, hir.B(ret(seq)))}}}}
-	files, err := Emit(p)
+	files, err := emitABAP(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -575,7 +591,7 @@ func TestSizedArrayAllocatesBeforeFilling(t *testing.T) {
 	value := newObj(array)
 	value.Args = []*hir.Expr{lit(3)}
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Sized", Methods: []*hir.Method{method("run", i32, hir.B(ret(rt("array.length", value, i32))))}}}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -594,7 +610,7 @@ func TestStaticInitializationWaitsForUse(t *testing.T) {
 	run := method("run", i32, hir.B(ret(&hir.Expr{Kind: hir.StaticGet, Owner: "Registry", Name: "value", Type: i32})))
 	run.Static = true
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Registry", Fields: []hir.Field{{Name: "value", Type: i32, Static: true}}, Methods: []*hir.Method{init, run}}}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,7 +640,7 @@ func TestStaticLiteralBecomesConstant(t *testing.T) {
 		{Name: "Mod", Fields: []hir.Field{{Name: "nl", Type: i32, Static: true}, {Name: "count", Type: i32, Static: true}}, Methods: []*hir.Method{init, bump}},
 		{Name: "User", Methods: []*hir.Method{readNL}},
 	}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -644,7 +660,7 @@ func TestStaticLiteralBecomesConstant(t *testing.T) {
 func TestDynamicStringBoxReachesBoxEmitter(t *testing.T) {
 	boxed := rt("dynamic.of", hir.L(str, "word"), hir.T(hir.Dynamic))
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Box", Methods: []*hir.Method{method("run", hir.T(hir.Dynamic), hir.B(ret(boxed)))}}}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -658,7 +674,7 @@ func TestClassValueFactoryExposesZeroArgumentClasses(t *testing.T) {
 	ctor := method("constructor", hir.T(hir.Void), hir.B())
 	ctor.Params = []hir.Param{{Name: "required", Type: i32}}
 	p := &hir.Program{Classes: []*hir.Class{{Name: "Available", Methods: []*hir.Method{method("type", hir.T(hir.ClassValue), hir.B(ret(&hir.Expr{Kind: hir.ClassOf, Owner: "Available", Type: hir.T(hir.ClassValue)})))}}, {Name: "Requires", Ctor: ctor}}}
-	files, names, err := EmitNamed(p)
+	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -675,7 +691,7 @@ func TestRootObjectTemporary(t *testing.T) {
 	root := hir.Ref(hir.RootObject)
 	m := method("run", root, hir.B(ret(hir.V("input", root))))
 	m.Params = []hir.Param{{Name: "input", Type: root}}
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "RootView", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "RootView", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -695,7 +711,7 @@ func TestVoidSequenceStatement(t *testing.T) {
 	f := method("f", hir.T(hir.Void), &hir.Stmt{Kind: hir.ExprStmt, X: seq})
 	g := method("g", hir.T(hir.Void), hir.B())
 	f.Static, g.Static = true, true
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{{Name: "voidseq", Methods: []*hir.Method{f, g}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "voidseq", Methods: []*hir.Method{f, g}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +739,7 @@ func TestWideShapeHasNoConstructor(t *testing.T) {
 	}
 	m := method("f", hir.Ref("shape.wide"), ret(&hir.Expr{Kind: hir.New, Type: hir.Ref("shape.wide"), Args: args}))
 	m.Static = true
-	files, err := Emit(&hir.Program{Classes: []*hir.Class{c, {Name: "user", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{c, {Name: "user", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -747,7 +763,7 @@ func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
 	m := method("f", hir.T(hir.Bool), ret(&hir.Expr{Kind: hir.InstanceOf, Type: hir.T(hir.Bool), Owner: "marker", X: hir.V("o", obj)}))
 	m.Static = true
 	m.Params = []hir.Param{{Name: "o", Type: obj}}
-	files, err := Emit(&hir.Program{Interfaces: []*hir.Interface{iface}, Classes: []*hir.Class{{Name: "probe", Methods: []*hir.Method{m}}}})
+	files, err := emitABAP(t, &hir.Program{Interfaces: []*hir.Interface{iface}, Classes: []*hir.Class{{Name: "probe", Methods: []*hir.Method{m}}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -777,7 +793,7 @@ func TestEmitterShortcuts(t *testing.T) {
 		decl("big", i32, index(2147483647)),
 		ret(binary("+", field, rt("array.length", al, i32), i32))))
 	c := &hir.Class{Name: "Short", Fields: []hir.Field{{Name: "n", Type: i32}}, Methods: []*hir.Method{m}}
-	files, names, err := EmitNamed(&hir.Program{Classes: []*hir.Class{c}})
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{c}})
 	if err != nil {
 		t.Fatal(err)
 	}

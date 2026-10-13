@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/internal/gracecheck"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -62,7 +61,7 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	if os.Getenv("ABAPITI_GRACECHECK") == "1" {
 		gracecheck.Check(t, prog)
 	}
-	files, names, err := abap.EmitNamed(prog)
+	files, names, err := emitABAPNamed(t, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +180,7 @@ func TestEmitRegistryFeatures(t *testing.T) {
 	line("ENDMETHOD.")
 	line("ENDCLASS.")
 	files[class+".clas.testclasses.abap"] = b.String()
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		if err := os.MkdirAll(out, 0755); err != nil {
 			t.Fatal(err)
 		}

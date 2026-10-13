@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 func TestAbaplintTestRuntimePrimitivesGo(t *testing.T) {
@@ -51,7 +50,7 @@ func TestAbaplintTestRuntimePrimitivesGo(t *testing.T) {
 func TestAbaplintRepeatABAPSupported(t *testing.T) {
 	t.Setenv("ABAPITI_ASSUME_INT", "")
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `export class Probe { run(): string { return "x".repeat(2); } }`}, []string{"probe.ts"})
-	if _, err := abap.Emit(p); err != nil {
+	if _, err := emitABAP(t, p); err != nil {
 		t.Fatalf("ABAP repeat support from #93: %v", err)
 	}
 }
@@ -206,7 +205,7 @@ func TestAbaplintOwnTestsGo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out := os.Getenv("ABAPITI_TEST_OUT"); out != "" {
+	if out := fixtureOutputDir(t); out != "" {
 		evidence, err := lowering.Evidence(false)
 		if err != nil {
 			t.Fatal(err)

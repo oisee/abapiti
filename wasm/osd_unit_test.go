@@ -361,7 +361,7 @@ func TestOSD_EmitUnitClasses(t *testing.T) {
 		src := mustCompile(t, mod, m.class)
 		if m.file == "runtime_helpers" {
 			want = runtimeFixtureResults(t, bin, m.cases)
-			src = runtimeFixtureClass(mod, m.class)
+			src = runtimeFixtureClass(t, mod, m.class)
 		}
 		names := make(map[string]string)
 		allocated := moduleFunctionNames(mod)
