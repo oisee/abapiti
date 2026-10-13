@@ -6,7 +6,7 @@ osg="$work/open-steamgate"
 gen="$work/hir"
 trap 'rm -rf "$gen"' EXIT
 rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestNumericFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestConfigJSONFixtures" "$gen/TestJSONSubsetFixtures" "$gen/TestJSONSubsetMaterializedFixtures" "$gen/TestJSONSubsetConfigFixture" "$gen/TestLiveClassViewJSONNodeOracle" "$gen/JSONStructural" "$gen/TestEmitSwitchGroupedLabels"
-(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestNumericFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures|TestJSONSubsetFixtures|TestJSONSubsetMaterializedFixtures|TestJSONSubsetConfigFixture)$' -count=1)
+(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|TestNumericFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures|TestJSONSubsetFixtures|TestJSONSubsetMaterializedFixtures|TestJSONSubsetConfigFixture)$' -count=1)
 for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels; do
   (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test -p 2 ./tsfront -run "^$suite$" -count=1)
 done
