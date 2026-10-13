@@ -1,4 +1,138 @@
-# Train O3
+# Train O3 and O4
+
+## O3+O4 resumed assembly (2026-10-13)
+
+The resumed checkout already contained the three `--no-ff` merges below and
+helper repair `0082223`. They were preserved; no completed merge was repeated.
+After fetching, `origin/main` remained at `08dd0e2` (#136). PR #137 was not
+included in that main ref, so its separate merge is required and retained.
+The measured compiler is `9f05b84`. Its commit message was subsequently amended
+to group both requested trailers, producing `a859619` with the identical
+source tree. The documentation commit changes no executable code. Upstream
+and OSG pins remain unchanged.
+
+| Input | Input commit | Merge |
+| --- | --- | --- |
+| `origin/main` (#136 collecting-helper guard and fixture gate) | `08dd0e2` | `10f31eb` |
+| `origin/osgo-splitargs` (bounded constructor factories) | `371ca32` | `5c2220c` |
+| `origin/perf/abap-template-literals` (#137 control-character escapes) | `ebd8e34` | `d84d1f3` |
+
+The factory merge retains storage's `p1->load( )` refresh before dispatching
+constructor arguments, while using the bounded routing tree and wide-copy
+helpers. There is one factory implementation. The template-literal merge is
+clean. The train's proved operation-map union and all tests are retained.
+`0082223` changes the split-factory determinism check from direct `EmitNamed`
+to `emitABAPNamed`, preserving its assertions. The template-literal regression
+already uses its collecting helper. The collecting-helper guard passes.
+
+The exact CI fixture wrapper initially exposed a pre-existing invalid legacy
+`ts/TestTranspileLexer` emission once the TypeScript toolchain was available.
+Commit `a859619` (measured as `9f05b84`) repairs named table return types, parameter and field bindings,
+constructor argument names, distinct locals for sibling TS blocks, and escaped
+control characters in string templates. The test and collector remain intact;
+no fixture is excluded. Its focused pinned-gogen compile passed, followed by
+a successful rerun of the complete CI wrapper.
+
+### Final gates
+
+| Gate | Result |
+| --- | --- |
+| `go build ./...` | PASS |
+| `go vet ./...` | PASS |
+| `go test -short -p 4 -count=1 ./...` | PASS; `tsfront` 261.067 s |
+| `TestABAPEmitterTestsUseCollectingHelpers`, uncached | PASS; also executed in the short and full collection gates |
+| Grace `TestLexerFactsReport`, `ABAPITI_GRACECHECK=1`, uncached | PASS; golden unchanged, no regeneration |
+| `TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend` | PASS; explicit run and final short/full gates |
+| `.github/ci/lint.sh gate origin/main` | PASS; 0 new issues, canary 5/5, golangci-lint 2.13.2 |
+| Exact `.github/ci/abap-fixture-compile.sh` CI wrapper | PASS; 509 collected emissions / 403 unique programs on pinned gogen, empty Go build log |
+| Default zabapgit Go output vs `origin/main` | PASS; entire output directory `diff -r` exit 0, 0 bytes, 9 files including executable and `sites.json` |
+
+An initial concurrent lint run exposed its intentionally invalid temporary
+canary to vet. Vet and the uncached short gate were rerun after canary cleanup;
+the final gate results above are from the clean repaired tree. Lint is sequenced
+before those reruns. The default output comparison generates both versions at
+the same destination and includes the built executable. No main shard is run.
+
+### TS-HA@OSGO: lexer and added shards
+
+All five shards use `9f05b84`, the unchanged pinned host, one worker, a fresh
+original Node oracle per invocation, Go 1.26.0, `GOMAXPROCS=4`, `GOGC=50`, and
+`GOMEMLIMIT=32GiB`. They run separately in the order shown. Go builds use
+`-gcflags=all=-dwarf=false` and `-ldflags='-s -w'`. No assertion, registration,
+ownership reconciliation, status classifier or host pin is changed.
+
+| Shard | Node-active | Credited pass | FAIL | Trap | Unregistered / no-report | Registered |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 200 | 200 | 0 | 0 | 0 | 200 |
+| `abap` | 216 | 0 | unmeasured | unmeasured | 216 (no report) | unmeasured |
+| `abap/expressions` | 107 | 98 | 0 | 9 | 0 | 107 |
+| `pretty_printer` | 31 | 0 | 0 | 31 | 0 | 31 |
+| `utils` | 15 | 7 | 0 | 8 | 0 | 15 |
+
+**Lexer remains 200/200, FAIL 0.** The other three completed shards register
+all 153 active titles: 105 passes, 48 traps, FAIL 0, unregistered 0. Their traps
+all report `An exception was raised.`; their exception classes are not
+attributed by this runner. They remain traps. These completed measurements,
+including lexer, total 305 passes and 48 traps across 353 active titles, with
+zero FAILs, unmatched titles, initialization records or async-pending cases.
+
+**The expected aggregate unregistered 288 → 0 is not certified.** The `abap`
+shard compiles, then aborts without a trustworthy runner report:
+
+```text
+NOT_COMPILED in FIND PCRE: a text with line ends: PCRE's ^ $ and . around them are not measured
+```
+
+This is the pinned native kernel's explicit multiline-PCRE domain refusal
+(`tools/gogen/go/abap/find.go:335`), escaping ABAP `CATCH`. The bridge exits 2;
+the accounting command exits 1. All 216 Node-active cases remain not-run/no-report,
+and another four Node-pending titles remain outside the active denominator.
+The harness's empty-record zero FAIL/trap counters are not an execution
+certificate. Actual registrations, assertion outcomes and traps are unmeasured;
+no results are invented and no host refusal is converted into a pass.
+The static closure has zero unsupported runtime-operation sites, including
+zero `array.has` refusals. Storage has removed that earlier catalogue blocker,
+but the multiline-PCRE infrastructure blocker prevents this shard's final
+registration measurement. Follow-up must address that host/runtime boundary
+and rerun `abap`; this train does not claim the addition's aggregate target met.
+
+| Shard | Frontend (s) | Go emission (s) | Go build (s) | Native run/abort (s) |
+| --- | ---: | ---: | ---: | ---: |
+| `abap/lexer` | 146.161 | 15.023 | 170.392 | 0.065 |
+| `abap` | 152.709 | 14.354 | 179.826 | 0.158 |
+| `abap/expressions` | 137.453 | 12.035 | 146.276 | 6.377 |
+| `pretty_printer` | 150.264 | 12.619 | 210.679 | 1.715 |
+| `utils` | 142.354 | 12.059 | 157.309 | 0.495 |
+
+These host phases exclude abapiti lowering/ABAP emission and Node setup.
+All five emitted closures have maximum line length 255 bytes, zero overlong
+lines, and maximum object-name length 29 bytes. Each has zero blocking
+lowering diagnostics, HIR errors, lowering coverage traps, unsupported runtime
+sites and nonfinite literals. Their one static emitter refusal remains the
+unproved `AbstractToken` own-property order/toJSON in `lsp/help.ts`; it is
+separate from the native multiline-PCRE abort and measured runtime traps.
+
+Compact path-free evidence is retained in
+[evidence/train-o3-o4.json](evidence/train-o3-o4.json).
+Local logs, raw summaries and prepared checkouts are under `.tmp/o3/`.
+The local environment file records the actual pinned setup and compiler.
+With that environment loaded, reproduce serially:
+
+```sh
+. .tmp/o3/env.sh
+ABAPITI_TESTS_SHARDS=abap/lexer node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/lexer.json
+ABAPITI_TESTS_SHARDS=abap node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/abap.json
+ABAPITI_TESTS_SHARDS=abap/expressions node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/expressions.json
+ABAPITI_TESTS_SHARDS=pretty_printer node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/pretty_printer.json
+ABAPITI_TESTS_SHARDS=utils node tools/abaplint-tests-all.mjs .tmp/o3/abaplint .tmp/o3/utils.json
+```
+
+The `abap` invocation is expected to return the documented infrastructure
+failure on this pin; the other accounting commands exit 0. Git identity is
+configured as `Alice V.` / `ooisee@gmail.com`. Commits retain the requested
+co-author and session trailers. No push is performed.
+
+## Historical O3 assembly
 
 Base: `origin/main` at `3da6606` (O2). Local integration branch: `integ/o3`.
 Upstream abaplint: `577f875ebec44cfaf64841cfe71c8ab8dc32622e`.
