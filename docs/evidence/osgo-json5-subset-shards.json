@@ -1,0 +1,1349 @@
+{
+  "target": "osg",
+  "nodeActive": {
+    "total": 5256,
+    "passed": 637,
+    "failed": 0,
+    "trapped": 4619,
+    "asyncPending": 0,
+    "skipped": 0,
+    "unregistered": 0,
+    "notPassing": 4619
+  },
+  "nodePending": {
+    "total": 0,
+    "skipped": 0,
+    "unregistered": 0
+  },
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "codeCommit": "179a863983d72f50ff08c485a8d0ec1b8fb823a1",
+  "mainCommit": "a15e063be697ba4709d68c93377c7ca9fa6bcd01",
+  "artifacts": "/tmp/abapiti-json5-cert/shards/all-gvufle",
+  "artifactPrefix": "",
+  "shards": [
+    {
+      "name": "abap/lexer",
+      "files": 3,
+      "passed": 200,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 200,
+      "total": 200,
+      "node": {
+        "passed": 200,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 200,
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": [],
+      "osgEvidence": {
+        "gap": {
+          "files": 1545,
+          "nonfiniteLiteralSites": 0,
+          "unsupportedCatalogue": [
+            "array.delete",
+            "array.has",
+            "dynamic.call0",
+            "dynamic.delete",
+            "json.indent",
+            "json.stringifySubset",
+            "lsp.isCreateFile",
+            "lsp.isDeleteFile",
+            "lsp.isRenameFile",
+            "lsp.isTextDocumentEdit",
+            "number.ceil",
+            "string.padStart",
+            "string.parseFloat",
+            "string.parseFloatNumber",
+            "string.sha1Hex",
+            "string.splitRegex",
+            "xml.parseWithErrors"
+          ],
+          "runtime": [
+            {
+              "reason": "array.has",
+              "sites": 3,
+              "examples": [
+                "src/rules/contains_tab.ts.ContainsTab.runParsed_instantiated_src/rules/contains_tab.ts.ContainsTab:0:15 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:13 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:41 ()"
+              ]
+            },
+            {
+              "reason": "dynamic.call0",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.outputNodes:154633:39 (<run>/abap-lexer/src/lsp/help.ts:243:58)",
+                "src/lsp/help.ts.Help.outputNodes:154643:20 (<run>/abap-lexer/src/lsp/help.ts:243:58)"
+              ]
+            },
+            {
+              "reason": "dynamic.delete",
+              "sites": 1,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:154045:55 (<run>/abap-lexer/src/lsp/help.ts:46:5)"
+              ]
+            },
+            {
+              "reason": "json.indent",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:154054:67 (<run>/abap-lexer/src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpInfo:154202:24 (<run>/abap-lexer/src/lsp/help.ts:103:33)"
+              ]
+            },
+            {
+              "reason": "json.stringifySubset",
+              "sites": 4,
+              "examples": [
+                "src/lsp/_lookup.ts.LSPLookup.referenceHover:151498:207 (<run>/abap-lexer/src/lsp/_lookup.ts:273:45)",
+                "src/lsp/help.ts.Help.dumpDDLS:154054:68 (<run>/abap-lexer/src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpDDLS:154090:112 (<run>/abap-lexer/src/lsp/help.ts:57:35)"
+              ]
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:171344:30 (<run>/abap-lexer/src/objects/rename/renamer.ts:107:32)"
+              ]
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:171318:16 (<run>/abap-lexer/src/objects/rename/renamer.ts:104:31)"
+              ]
+            },
+            {
+              "reason": "number.ceil",
+              "sites": 9,
+              "examples": [
+                "src/ddic.ts.DDIC.textToType:146971:472 (<run>/abap-lexer/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:147078:418 (<run>/abap-lexer/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:147185:364 (<run>/abap-lexer/src/ddic.ts:386:40)"
+              ]
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "sites": 3,
+              "examples": [
+                "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:167673:161 (<run>/abap-lexer/src/objects/number_range.ts:51:44)",
+                "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+                "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+              ]
+            },
+            {
+              "reason": "string.sha1Hex",
+              "sites": 1,
+              "examples": [
+                "src/rules/downport.ts.Downport.uniqueName:206507:46 (<run>/abap-lexer/src/rules/downport.ts:3174:53)"
+              ]
+            },
+            {
+              "reason": "string.splitRegex",
+              "sites": 2,
+              "examples": [
+                "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+                "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+              ]
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "sites": 3,
+              "examples": [
+                "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:158982:11 (<run>/abap-lexer/src/objects/_abstract_object.ts:140:101)",
+                "src/objects/function_group.ts.FunctionGroup.getTextSymbols:164791:17 (<run>/abap-lexer/src/objects/function_group.ts:158:111)",
+                "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:232663:2 (<run>/abap-lexer/src/rules/remove_descriptions.ts:106:103)"
+              ]
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "sites": 66,
+              "examples": [
+                "node 146073 (<run>/abap-lexer/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/abap-lexer/src/ddic.ts:353:3; node 146073 <run>/abap-lexer/src/ddic.ts:433:53]",
+                "node 146140 (<run>/abap-lexer/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/abap-lexer/src/ddic.ts:353:3; node 146140 <run>/abap-lexer/src/ddic.ts:433:53]",
+                "node 146207 (<run>/abap-lexer/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/abap-lexer/src/ddic.ts:353:3; node 146207 <run>/abap-lexer/src/ddic.ts:433:53]"
+              ]
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "sites": 1,
+              "examples": [
+                "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@<run>/abap-lexer/src/objects/rename/renamer.ts:125:3; node 0 ]"
+              ]
+            }
+          ]
+        },
+        "gate": {
+          "Files": 1545,
+          "Classes": 2109,
+          "Interfaces": 75,
+          "Blocking": 0,
+          "HIRErrors": 0,
+          "CoverageTraps": 0,
+          "Ranked": []
+        },
+        "host": {
+          "pin": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+          "timingMs": {
+            "frontend": 120930,
+            "emit": 12104,
+            "goBuild": 110319,
+            "run": 40
+          },
+          "status": 0,
+          "envelope": {
+            "files": 2353,
+            "maxLineBytes": 255,
+            "overlongLines": 0,
+            "maxObjectNameBytes": 29
+          }
+        },
+        "refusalBodyImpact": {
+          "measured": true,
+          "runtime": [
+            {
+              "reason": "array.delete",
+              "tests": 0
+            },
+            {
+              "reason": "array.has",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.call0",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.delete",
+              "tests": 0
+            },
+            {
+              "reason": "json.indent",
+              "tests": 0
+            },
+            {
+              "reason": "json.stringifySubset",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isCreateFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isDeleteFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "tests": 0
+            },
+            {
+              "reason": "number.ceil",
+              "tests": 0
+            },
+            {
+              "reason": "string.padStart",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloat",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "tests": 0
+            },
+            {
+              "reason": "string.sha1Hex",
+              "tests": 0
+            },
+            {
+              "reason": "string.splitRegex",
+              "tests": 0
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "tests": 0
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "tests": 0
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "tests": 0
+            }
+          ],
+          "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+        }
+      }
+    },
+    {
+      "name": "abap/statements",
+      "files": 286,
+      "passed": 429,
+      "failed": 0,
+      "trapped": 4533,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 4962,
+      "total": 4962,
+      "node": {
+        "passed": 4962,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 4962,
+        "passed": 429,
+        "failed": 0,
+        "trapped": 4533,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 4533
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": [],
+      "osgEvidence": {
+        "gap": {
+          "files": 1828,
+          "nonfiniteLiteralSites": 0,
+          "unsupportedCatalogue": [
+            "array.delete",
+            "array.has",
+            "dynamic.call0",
+            "dynamic.delete",
+            "json.indent",
+            "json.stringifySubset",
+            "lsp.isCreateFile",
+            "lsp.isDeleteFile",
+            "lsp.isRenameFile",
+            "lsp.isTextDocumentEdit",
+            "number.ceil",
+            "string.padStart",
+            "string.parseFloat",
+            "string.parseFloatNumber",
+            "string.sha1Hex",
+            "string.splitRegex",
+            "xml.parseWithErrors"
+          ],
+          "runtime": [
+            {
+              "reason": "array.has",
+              "sites": 3,
+              "examples": [
+                "src/rules/contains_tab.ts.ContainsTab.runParsed_instantiated_src/rules/contains_tab.ts.ContainsTab:0:15 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:13 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:41 ()"
+              ]
+            },
+            {
+              "reason": "dynamic.call0",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.outputNodes:183508:39 (<run>/abap-statements/src/lsp/help.ts:243:58)",
+                "src/lsp/help.ts.Help.outputNodes:183518:20 (<run>/abap-statements/src/lsp/help.ts:243:58)"
+              ]
+            },
+            {
+              "reason": "dynamic.delete",
+              "sites": 1,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:182920:55 (<run>/abap-statements/src/lsp/help.ts:46:5)"
+              ]
+            },
+            {
+              "reason": "json.indent",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.dumpDDLS:182929:67 (<run>/abap-statements/src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpInfo:183077:24 (<run>/abap-statements/src/lsp/help.ts:103:33)"
+              ]
+            },
+            {
+              "reason": "json.stringifySubset",
+              "sites": 4,
+              "examples": [
+                "src/lsp/_lookup.ts.LSPLookup.referenceHover:180373:207 (<run>/abap-statements/src/lsp/_lookup.ts:273:45)",
+                "src/lsp/help.ts.Help.dumpDDLS:182929:68 (<run>/abap-statements/src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpDDLS:182965:112 (<run>/abap-statements/src/lsp/help.ts:57:35)"
+              ]
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:200219:30 (<run>/abap-statements/src/objects/rename/renamer.ts:107:32)"
+              ]
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:200193:16 (<run>/abap-statements/src/objects/rename/renamer.ts:104:31)"
+              ]
+            },
+            {
+              "reason": "number.ceil",
+              "sites": 9,
+              "examples": [
+                "src/ddic.ts.DDIC.textToType:175846:472 (<run>/abap-statements/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:175953:418 (<run>/abap-statements/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:176060:364 (<run>/abap-statements/src/ddic.ts:386:40)"
+              ]
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "sites": 3,
+              "examples": [
+                "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:196548:161 (<run>/abap-statements/src/objects/number_range.ts:51:44)",
+                "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+                "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+              ]
+            },
+            {
+              "reason": "string.sha1Hex",
+              "sites": 1,
+              "examples": [
+                "src/rules/downport.ts.Downport.uniqueName:235382:46 (<run>/abap-statements/src/rules/downport.ts:3174:53)"
+              ]
+            },
+            {
+              "reason": "string.splitRegex",
+              "sites": 2,
+              "examples": [
+                "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+                "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+              ]
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "sites": 3,
+              "examples": [
+                "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:187857:11 (<run>/abap-statements/src/objects/_abstract_object.ts:140:101)",
+                "src/objects/function_group.ts.FunctionGroup.getTextSymbols:193666:17 (<run>/abap-statements/src/objects/function_group.ts:158:111)",
+                "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:261538:2 (<run>/abap-statements/src/rules/remove_descriptions.ts:106:103)"
+              ]
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "sites": 66,
+              "examples": [
+                "node 119536 (<run>/abap-statements/src/abap/5_syntax/basic_types.ts:184:32): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [resolveLikeName@<run>/abap-statements/src/abap/5_syntax/basic_types.ts:105:3; node 119536 <run>/abap-statements/src/abap/5_syntax/basic_types.ts:184:32]",
+                "node 121243 (<run>/abap-statements/src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@<run>/abap-statements/src/abap/5_syntax/basic_types.ts:503:3; node 121243 <run>/abap-statements/src/abap/5_syntax/basic_types.ts:621:69 inlined src/abap/5_syntax/basic_types.ts.BasicTypes.findDecimals]",
+                "node 121333 (<run>/abap-statements/src/abap/5_syntax/basic_types.ts:643:31): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [parseType@<run>/abap-statements/src/abap/5_syntax/basic_types.ts:503:3; node 121333 <run>/abap-statements/src/abap/5_syntax/basic_types.ts:643:31]"
+              ]
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "sites": 1,
+              "examples": [
+                "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@<run>/abap-statements/src/objects/rename/renamer.ts:125:3; node 0 ]"
+              ]
+            }
+          ]
+        },
+        "gate": {
+          "Files": 1828,
+          "Classes": 2367,
+          "Interfaces": 75,
+          "Blocking": 0,
+          "HIRErrors": 0,
+          "CoverageTraps": 0,
+          "Ranked": []
+        },
+        "host": {
+          "pin": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+          "timingMs": {
+            "frontend": 135430,
+            "emit": 11203,
+            "goBuild": 157743,
+            "run": 241238
+          },
+          "status": 1,
+          "envelope": {
+            "files": 2611,
+            "maxLineBytes": 255,
+            "overlongLines": 0,
+            "maxObjectNameBytes": 29
+          }
+        },
+        "refusalBodyImpact": {
+          "measured": true,
+          "runtime": [
+            {
+              "reason": "array.delete",
+              "tests": 0
+            },
+            {
+              "reason": "array.has",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.call0",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.delete",
+              "tests": 0
+            },
+            {
+              "reason": "json.indent",
+              "tests": 0
+            },
+            {
+              "reason": "json.stringifySubset",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isCreateFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isDeleteFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "tests": 0
+            },
+            {
+              "reason": "number.ceil",
+              "tests": 0
+            },
+            {
+              "reason": "string.padStart",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloat",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "tests": 0
+            },
+            {
+              "reason": "string.sha1Hex",
+              "tests": 0
+            },
+            {
+              "reason": "string.splitRegex",
+              "tests": 0
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "tests": 0
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "tests": 0
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "tests": 0
+            }
+          ],
+          "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+        }
+      }
+    },
+    {
+      "name": "root",
+      "files": 12,
+      "passed": 8,
+      "failed": 0,
+      "trapped": 86,
+      "asyncPending": 0,
+      "notRun": 0,
+      "registered": 94,
+      "total": 94,
+      "node": {
+        "passed": 94,
+        "failed": 0,
+        "pending": 0
+      },
+      "notRunReasons": {
+        "asyncOrDone": 0,
+        "skippedOrFocused": 0,
+        "unregistered": 0
+      },
+      "unregisteredTitles": [],
+      "unmatched": 0,
+      "nodeActive": {
+        "total": 94,
+        "passed": 8,
+        "failed": 0,
+        "trapped": 86,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 86
+      },
+      "nodePending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "skippedOrFocusedTests": [],
+      "initialization": [],
+      "failures": [],
+      "osgEvidence": {
+        "gap": {
+          "files": 1552,
+          "nonfiniteLiteralSites": 0,
+          "unsupportedCatalogue": [
+            "array.delete",
+            "array.has",
+            "dynamic.call0",
+            "dynamic.delete",
+            "json.indent",
+            "json.stringifySubset",
+            "lsp.isCreateFile",
+            "lsp.isDeleteFile",
+            "lsp.isRenameFile",
+            "lsp.isTextDocumentEdit",
+            "number.ceil",
+            "string.padStart",
+            "string.parseFloat",
+            "string.parseFloatNumber",
+            "string.sha1Hex",
+            "string.splitRegex",
+            "xml.parseWithErrors"
+          ],
+          "runtime": [
+            {
+              "reason": "array.has",
+              "sites": 3,
+              "examples": [
+                "src/rules/contains_tab.ts.ContainsTab.runParsed_instantiated_src/rules/contains_tab.ts.ContainsTab:0:15 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:13 ()",
+                "src/rules/identical_conditions.ts.Conditions.findFirstDuplicate:0:41 ()"
+              ]
+            },
+            {
+              "reason": "dynamic.call0",
+              "sites": 2,
+              "examples": [
+                "src/lsp/help.ts.Help.outputNodes:157110:39 (<run>/root/src/lsp/help.ts:243:58)",
+                "src/lsp/help.ts.Help.outputNodes:157120:20 (<run>/root/src/lsp/help.ts:243:58)"
+              ]
+            },
+            {
+              "reason": "dynamic.delete",
+              "sites": 2,
+              "examples": [
+                "closure.32117.invoke:32143:19 (<run>/root/test/registry.ts:460:12)",
+                "src/lsp/help.ts.Help.dumpDDLS:156522:55 (<run>/root/src/lsp/help.ts:46:5)"
+              ]
+            },
+            {
+              "reason": "json.indent",
+              "sites": 3,
+              "examples": [
+                "closure.29031.invoke:29044:23 (<run>/root/test/config.ts:73:39)",
+                "src/lsp/help.ts.Help.dumpDDLS:156531:67 (<run>/root/src/lsp/help.ts:47:41)",
+                "src/lsp/help.ts.Help.dumpInfo:156679:24 (<run>/root/src/lsp/help.ts:103:33)"
+              ]
+            },
+            {
+              "reason": "json.stringifySubset",
+              "sites": 19,
+              "examples": [
+                "closure.28930.invoke:28955:38 (<run>/root/test/config.ts:40:44)",
+                "closure.28970.invoke:28981:7 (<run>/root/test/config.ts:47:44)",
+                "closure.28998.invoke:29016:29 (<run>/root/test/config.ts:62:44)"
+              ]
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:173821:30 (<run>/root/src/objects/rename/renamer.ts:107:32)"
+              ]
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "sites": 1,
+              "examples": [
+                "src/objects/rename/renamer.ts.Renamer.apply:173795:16 (<run>/root/src/objects/rename/renamer.ts:104:31)"
+              ]
+            },
+            {
+              "reason": "number.ceil",
+              "sites": 9,
+              "examples": [
+                "src/ddic.ts.DDIC.textToType:149448:472 (<run>/root/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:149555:418 (<run>/root/src/ddic.ts:386:40)",
+                "src/ddic.ts.DDIC.textToType:149662:364 (<run>/root/src/ddic.ts:386:40)"
+              ]
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "sites": 3,
+              "examples": [
+                "src/objects/number_range.ts.NumberRange.parse_instantiated_src/objects/number_range.ts.NumberRange:170150:161 (<run>/root/src/objects/number_range.ts:51:44)",
+                "src/rules/line_only_punc.ts.LineOnlyPunc.runParsed_instantiated_src/rules/line_only_punc.ts.LineOnlyPunc:0:133 ()",
+                "src/rules_runner.ts.RulesRunner.runRules:0:267 ()"
+              ]
+            },
+            {
+              "reason": "string.sha1Hex",
+              "sites": 1,
+              "examples": [
+                "src/rules/downport.ts.Downport.uniqueName:208984:46 (<run>/root/src/rules/downport.ts:3174:53)"
+              ]
+            },
+            {
+              "reason": "string.splitRegex",
+              "sites": 2,
+              "examples": [
+                "src/rules/catch_and_raise.ts.CatchAndRaise.runParsed_instantiated_src/rules/catch_and_raise.ts.CatchAndRaise:0:74 ()",
+                "src/rules/cds_field_order.ts.CDSFieldOrder.isAssociationElement:0:11 ()"
+              ]
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "sites": 3,
+              "examples": [
+                "src/objects/_abstract_object.ts.AbstractObject.parseRaw2:161459:11 (<run>/root/src/objects/_abstract_object.ts:140:101)",
+                "src/objects/function_group.ts.FunctionGroup.getTextSymbols:167268:17 (<run>/root/src/objects/function_group.ts:158:111)",
+                "src/rules/remove_descriptions.ts.RemoveDescriptions.checkXML:235140:2 (<run>/root/src/rules/remove_descriptions.ts:106:103)"
+              ]
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "sites": 66,
+              "examples": [
+                "node 148550 (<run>/root/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/root/src/ddic.ts:353:3; node 148550 <run>/root/src/ddic.ts:433:53]",
+                "node 148617 (<run>/root/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/root/src/ddic.ts:353:3; node 148617 <run>/root/src/ddic.ts:433:53]",
+                "node 148684 (<run>/root/src/ddic.ts:433:53): ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported [textToType@<run>/root/src/ddic.ts:353:3; node 148684 <run>/root/src/ddic.ts:433:53]"
+              ]
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "sites": 1,
+              "examples": [
+                "node 0 (): erased structural object.has is not emitted on ABAP [applyEdit@<run>/root/src/objects/rename/renamer.ts:125:3; node 0 ]"
+              ]
+            }
+          ]
+        },
+        "gate": {
+          "Files": 1552,
+          "Classes": 2191,
+          "Interfaces": 77,
+          "Blocking": 0,
+          "HIRErrors": 0,
+          "CoverageTraps": 0,
+          "Ranked": []
+        },
+        "host": {
+          "pin": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+          "timingMs": {
+            "frontend": 128414,
+            "emit": 13368,
+            "goBuild": 161085,
+            "run": 3373
+          },
+          "status": 1,
+          "envelope": {
+            "files": 2435,
+            "maxLineBytes": 255,
+            "overlongLines": 0,
+            "maxObjectNameBytes": 29
+          }
+        },
+        "refusalBodyImpact": {
+          "measured": true,
+          "runtime": [
+            {
+              "reason": "array.delete",
+              "tests": 0
+            },
+            {
+              "reason": "array.has",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.call0",
+              "tests": 0
+            },
+            {
+              "reason": "dynamic.delete",
+              "tests": 1
+            },
+            {
+              "reason": "json.indent",
+              "tests": 1
+            },
+            {
+              "reason": "json.stringifySubset",
+              "tests": 20
+            },
+            {
+              "reason": "lsp.isCreateFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isDeleteFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isRenameFile",
+              "tests": 0
+            },
+            {
+              "reason": "lsp.isTextDocumentEdit",
+              "tests": 0
+            },
+            {
+              "reason": "number.ceil",
+              "tests": 0
+            },
+            {
+              "reason": "string.padStart",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloat",
+              "tests": 0
+            },
+            {
+              "reason": "string.parseFloatNumber",
+              "tests": 0
+            },
+            {
+              "reason": "string.sha1Hex",
+              "tests": 0
+            },
+            {
+              "reason": "string.splitRegex",
+              "tests": 0
+            },
+            {
+              "reason": "xml.parseWithErrors",
+              "tests": 0
+            }
+          ],
+          "refusals": [
+            {
+              "reason": "ABAP parseInt Number requires a finite safe-integer string literal; dynamic/nonfinite inputs are unsupported",
+              "tests": 0
+            },
+            {
+              "reason": "erased structural object.has is not emitted on ABAP",
+              "tests": 0
+            }
+          ],
+          "countingRule": "Tests reaching a refused owning body, not necessarily executing its operation; groups overlap. Null means unmeasured due to infrastructure failure. Unmeasured shards are not zero."
+        }
+      }
+    }
+  ],
+  "uniqueTotal": {
+    "passed": 637,
+    "failed": 0,
+    "trapped": 4619,
+    "asyncPending": 0,
+    "notRun": 0,
+    "registered": 5256,
+    "total": 5256,
+    "asyncOrDone": 0,
+    "skippedOrFocused": 0,
+    "unregistered": 0
+  },
+  "nodeTotal": {
+    "passed": 5256,
+    "failed": 0,
+    "pending": 0,
+    "total": 5256
+  },
+  "selectedSuite": {
+    "shards": [
+      "abap/lexer",
+      "abap/statements",
+      "root"
+    ],
+    "files": 301,
+    "excluded": [
+      "test/abap/_utils.ts",
+      "test/abap/abap_parser.ts",
+      "test/abap/ast.ts",
+      "test/abap/builtin.ts",
+      "test/abap/combi.ts",
+      "test/abap/combi_size.ts",
+      "test/abap/concat_tokens.ts",
+      "test/abap/cross_object_macros.ts",
+      "test/abap/expressions/_ast_utils.ts",
+      "test/abap/expressions/field_sub.ts",
+      "test/abap/expressions/reuse.ts",
+      "test/abap/expressions/select.ts",
+      "test/abap/expressions/source.ts",
+      "test/abap/expressions/sql_compare.ts",
+      "test/abap/expressions/sql_from.ts",
+      "test/abap/expressions/sql_in.ts",
+      "test/abap/expressions/sql_into.ts",
+      "test/abap/expressions/sql_set_op.ts",
+      "test/abap/expressions/string_template.ts",
+      "test/abap/find_global_definitions.ts",
+      "test/abap/macros.ts",
+      "test/abap/macros_via_include.ts",
+      "test/abap/native_sql_colon.ts",
+      "test/abap/nesting.ts",
+      "test/abap/nodes/structure_node.ts",
+      "test/abap/qualified_name.ts",
+      "test/abap/sql_path_ast.ts",
+      "test/abap/statement_parser.ts",
+      "test/abap/structure_errors.ts",
+      "test/abap/structures/_combi.ts",
+      "test/abap/structures/any.ts",
+      "test/abap/structures/case.ts",
+      "test/abap/structures/catch_system_exceptions.ts",
+      "test/abap/structures/chain.ts",
+      "test/abap/structures/class_data.ts",
+      "test/abap/structures/class_definition.ts",
+      "test/abap/structures/class_global.ts",
+      "test/abap/structures/class_implementation.ts",
+      "test/abap/structures/constants.ts",
+      "test/abap/structures/data.ts",
+      "test/abap/structures/define.ts",
+      "test/abap/structures/do.ts",
+      "test/abap/structures/dynpro_logic.ts",
+      "test/abap/structures/exec_sql.ts",
+      "test/abap/structures/form.ts",
+      "test/abap/structures/if.ts",
+      "test/abap/structures/interface.ts",
+      "test/abap/structures/interface_global.ts",
+      "test/abap/structures/loop.ts",
+      "test/abap/structures/loop_at_screen.ts",
+      "test/abap/structures/method.ts",
+      "test/abap/structures/on_change.ts",
+      "test/abap/structures/select.ts",
+      "test/abap/structures/try.ts",
+      "test/abap/structures/type_enum.ts",
+      "test/abap/structures/types.ts",
+      "test/abap/structures/when_type.ts",
+      "test/abap/structures/while.ts",
+      "test/abap/structures/with.ts",
+      "test/abap/syntax/basic_types.ts",
+      "test/abap/syntax/basic_variables.ts",
+      "test/abap/syntax/fugr_import_export.ts",
+      "test/abap/syntax/modify.ts",
+      "test/abap/syntax/spaghetti_scope.ts",
+      "test/abap/syntax/syntax.ts",
+      "test/abap/syntax/syntax_atselection.ts",
+      "test/abap/syntax/when_type.ts",
+      "test/abap/types/class_definition.ts",
+      "test/abap/types/form_definition.ts",
+      "test/abap/types/interface_definition.ts",
+      "test/abap/types/message.ts",
+      "test/abap/types/method_parameters.ts",
+      "test/abap/types/types.ts",
+      "test/abap/unknown.ts",
+      "test/cds/cds_lexer.ts",
+      "test/cds/cds_parser.ts",
+      "test/ddl/tabl.ts",
+      "test/lsp/_apply_edit.ts",
+      "test/lsp/code_lens.ts",
+      "test/lsp/definition.ts",
+      "test/lsp/diagnostics.ts",
+      "test/lsp/formatting.ts",
+      "test/lsp/help.ts",
+      "test/lsp/highlight.ts",
+      "test/lsp/hover.ts",
+      "test/lsp/implementation.ts",
+      "test/lsp/inlay_hints.ts",
+      "test/lsp/references.ts",
+      "test/lsp/rename_global_class.ts",
+      "test/lsp/rename_method.ts",
+      "test/lsp/rename_variable.ts",
+      "test/lsp/semantic.ts",
+      "test/lsp/symbols.ts",
+      "test/objects/authorization_check_field.ts",
+      "test/objects/class.ts",
+      "test/objects/data_definition.ts",
+      "test/objects/data_element.ts",
+      "test/objects/domain.ts",
+      "test/objects/enhancement_implementation.ts",
+      "test/objects/enhancement_spot.ts",
+      "test/objects/extension_index.ts",
+      "test/objects/function_group.ts",
+      "test/objects/icf_service.ts",
+      "test/objects/interface.ts",
+      "test/objects/lock_object.ts",
+      "test/objects/maintenance_and_transport_object.ts",
+      "test/objects/malformed_xml.ts",
+      "test/objects/message_class.ts",
+      "test/objects/mime_object.ts",
+      "test/objects/number_range.ts",
+      "test/objects/oauth2_profile.ts",
+      "test/objects/program.ts",
+      "test/objects/proxy_object.ts",
+      "test/objects/rename/rename_data_element.ts",
+      "test/objects/rename/rename_domain.ts",
+      "test/objects/rename/rename_global_class.ts",
+      "test/objects/rename/rename_global_interface.ts",
+      "test/objects/rename/rename_icf_service.ts",
+      "test/objects/rename/rename_message_class.ts",
+      "test/objects/rename/rename_program.ts",
+      "test/objects/rename/rename_table.ts",
+      "test/objects/rename/rename_table_type.ts",
+      "test/objects/table.ts",
+      "test/objects/table_type.ts",
+      "test/objects/transaction.ts",
+      "test/objects/type_pool.ts",
+      "test/objects/view.ts",
+      "test/objects/web_mime.ts",
+      "test/pretty_printer/pretty_printer.ts",
+      "test/rules/7bit_ascii.ts",
+      "test/rules/_utils.ts",
+      "test/rules/abapdoc.ts",
+      "test/rules/add_test_attributes.ts",
+      "test/rules/aff_and_xml.ts",
+      "test/rules/align_parameters.ts",
+      "test/rules/align_pseudo_comments.ts",
+      "test/rules/align_type_expressions.ts",
+      "test/rules/allowed_object_naming.ts",
+      "test/rules/ambiguous_statement.ts",
+      "test/rules/avoid_use.ts",
+      "test/rules/begin_end_names.ts",
+      "test/rules/begin_single_include.ts",
+      "test/rules/call_transaction_authority_check.ts",
+      "test/rules/catch_and_raise.ts",
+      "test/rules/cds_association_name.ts",
+      "test/rules/cds_check_syntax.ts",
+      "test/rules/cds_comment_style.ts",
+      "test/rules/cds_field_order.ts",
+      "test/rules/cds_legacy_view.ts",
+      "test/rules/cds_naming.ts",
+      "test/rules/cds_parser_error.ts",
+      "test/rules/chain_mainly_declarations.ts",
+      "test/rules/change_if_to_case.ts",
+      "test/rules/check_abstract.ts",
+      "test/rules/check_comments.ts",
+      "test/rules/check_ddic.ts",
+      "test/rules/check_include.ts",
+      "test/rules/check_subrc.ts",
+      "test/rules/check_syntax.ts",
+      "test/rules/check_text_elements.ts",
+      "test/rules/check_transformation_exists.ts",
+      "test/rules/class_attribute_names.ts",
+      "test/rules/classic_exceptions_overlap.ts",
+      "test/rules/clear_exporting_parameters.ts",
+      "test/rules/cloud_types.ts",
+      "test/rules/colon_missing_space.ts",
+      "test/rules/commented_code.ts",
+      "test/rules/constant_classes.ts",
+      "test/rules/constructor_visibility_public.ts",
+      "test/rules/contains_tab.ts",
+      "test/rules/cyclic_oo.ts",
+      "test/rules/cyclomatic_complexity.ts",
+      "test/rules/dangerous_statement.ts",
+      "test/rules/db_operation_in_loop.ts",
+      "test/rules/definitions_top.ts",
+      "test/rules/description_empty.ts",
+      "test/rules/double_space.ts",
+      "test/rules/downport.ts",
+      "test/rules/dynpro_checks.ts",
+      "test/rules/easy_to_find_messages.ts",
+      "test/rules/empty_event.ts",
+      "test/rules/empty_line_in_statement.ts",
+      "test/rules/empty_statement.ts",
+      "test/rules/empty_structure.ts",
+      "test/rules/exit_or_check.ts",
+      "test/rules/expand_macros.ts",
+      "test/rules/exporting.ts",
+      "test/rules/forbidden_identifier.ts",
+      "test/rules/forbidden_pseudo_and_pragma.ts",
+      "test/rules/forbidden_void_type.ts",
+      "test/rules/form_tables_obsolete.ts",
+      "test/rules/fully_type_constants.ts",
+      "test/rules/fully_type_itabs.ts",
+      "test/rules/function_module_recommendations.ts",
+      "test/rules/functional_writing.ts",
+      "test/rules/global_class.ts",
+      "test/rules/identical_conditions.ts",
+      "test/rules/identical_contents.ts",
+      "test/rules/identical_descriptions.ts",
+      "test/rules/identical_form_names.ts",
+      "test/rules/identical_move.ts",
+      "test/rules/if_in_if.ts",
+      "test/rules/implement_methods.ts",
+      "test/rules/implicit_start_of_selection.ts",
+      "test/rules/in_statement_indentation.ts",
+      "test/rules/indentation.ts",
+      "test/rules/index_completely_contained.ts",
+      "test/rules/inline_data_old_versions.ts",
+      "test/rules/intf_referencing_clas.ts",
+      "test/rules/invalid_table_index.ts",
+      "test/rules/keep_single_parameter_on_one_line.ts",
+      "test/rules/keyword_case.ts",
+      "test/rules/line_break_multiple_parameters.ts",
+      "test/rules/line_break_style.ts",
+      "test/rules/line_length.ts",
+      "test/rules/line_only_punc.ts",
+      "test/rules/local_class_naming.ts",
+      "test/rules/local_testclass_consistency.ts",
+      "test/rules/local_variable_names.ts",
+      "test/rules/macro_naming.ts",
+      "test/rules/main_file_contents.ts",
+      "test/rules/many_parentheses.ts",
+      "test/rules/max_one_method_parameter_per_line.ts",
+      "test/rules/max_one_statement.ts",
+      "test/rules/message_exists.ts",
+      "test/rules/method_implemented_twice.ts",
+      "test/rules/method_length.ts",
+      "test/rules/method_overwrites_builtin.ts",
+      "test/rules/method_parameter_names.ts",
+      "test/rules/mix_returning.ts",
+      "test/rules/modify_only_own_db_tables.ts",
+      "test/rules/msag_consistency.ts",
+      "test/rules/names_no_dash.ts",
+      "test/rules/nesting.ts",
+      "test/rules/newline_between_methods.ts",
+      "test/rules/no_aliases.ts",
+      "test/rules/no_chained_assignment.ts",
+      "test/rules/no_comments_between_methods.ts",
+      "test/rules/no_dynamic_stuff.ts",
+      "test/rules/no_exclamation_escape.ts",
+      "test/rules/no_external_form_calls.ts",
+      "test/rules/no_inline_in_optional_branches.ts",
+      "test/rules/no_macros.ts",
+      "test/rules/no_mandt_in_database_operations.ts",
+      "test/rules/no_prefixes.ts",
+      "test/rules/no_public_attributes.ts",
+      "test/rules/no_yoda_conditions.ts",
+      "test/rules/object_naming.ts",
+      "test/rules/obsolete_statement.ts",
+      "test/rules/omit_parameter_name.ts",
+      "test/rules/omit_preceding_zeros.ts",
+      "test/rules/omit_receiving.ts",
+      "test/rules/parser_702_chaining.ts",
+      "test/rules/parser_bad_exceptions.ts",
+      "test/rules/parser_error.ts",
+      "test/rules/parser_missing_space.ts",
+      "test/rules/pragma_style.ts",
+      "test/rules/prefer_abap_bool.ts",
+      "test/rules/prefer_corresponding.ts",
+      "test/rules/prefer_inline.ts",
+      "test/rules/prefer_insert_into_table.ts",
+      "test/rules/prefer_is_not.ts",
+      "test/rules/prefer_pragmas.ts",
+      "test/rules/prefer_raise_exception_new.ts",
+      "test/rules/prefer_returning_to_exporting.ts",
+      "test/rules/prefer_xsdbool.ts",
+      "test/rules/preferred_compare_operator.ts",
+      "test/rules/prefix_is_current_class.ts",
+      "test/rules/reduce_procedural_code.ts",
+      "test/rules/reduce_string_templates.ts",
+      "test/rules/redundant_conversion.ts",
+      "test/rules/release_idoc.ts",
+      "test/rules/remove_descriptions.ts",
+      "test/rules/rfc_error_handling.ts",
+      "test/rules/select_add_order_by.ts",
+      "test/rules/select_performance.ts",
+      "test/rules/select_single_full_key.ts",
+      "test/rules/selection_screen_naming.ts",
+      "test/rules/selection_screen_texts_missing.ts",
+      "test/rules/sequential_blank.ts",
+      "test/rules/short_case.ts",
+      "test/rules/sicf_consistency.ts",
+      "test/rules/slow_parameter_passing.ts",
+      "test/rules/smim_consistency.ts",
+      "test/rules/space_before_colon.ts",
+      "test/rules/space_before_dot.ts",
+      "test/rules/sql_escape_host_variables.ts",
+      "test/rules/sql_value_conversion.ts",
+      "test/rules/start_at_tab.ts",
+      "test/rules/static_call_via_instance.ts",
+      "test/rules/strict_sql.ts",
+      "test/rules/superclass_final.ts",
+      "test/rules/superfluous_value.ts",
+      "test/rules/sy_modification.ts",
+      "test/rules/sy_read_restriction.ts",
+      "test/rules/tables_declared_locally.ts",
+      "test/rules/try_without_catch.ts",
+      "test/rules/type_begin_single_include.ts",
+      "test/rules/type_form_parameters.ts",
+      "test/rules/types_naming.ts",
+      "test/rules/uncaught_exception.ts",
+      "test/rules/unknown_types.ts",
+      "test/rules/unnecessary_chaining.ts",
+      "test/rules/unnecessary_pragma.ts",
+      "test/rules/unnecessary_return.ts",
+      "test/rules/unreachable_code.ts",
+      "test/rules/unsecure_fae.ts",
+      "test/rules/unused_ddic.ts",
+      "test/rules/unused_macros.ts",
+      "test/rules/unused_methods.ts",
+      "test/rules/unused_types.ts",
+      "test/rules/unused_variables.ts",
+      "test/rules/use_bool_expression.ts",
+      "test/rules/use_class_based_exceptions.ts",
+      "test/rules/use_line_exists.ts",
+      "test/rules/use_new.ts",
+      "test/rules/when_others_last.ts",
+      "test/rules/whitespace_end.ts",
+      "test/rules/wrong_abapdoc_position.ts",
+      "test/rules/xml_bom.ts",
+      "test/rules/xml_consistency.ts",
+      "test/utils/cyclomatic_complexity_stats.ts",
+      "test/utils/method_length_stats.ts",
+      "test/utils/name_validator.ts"
+    ],
+    "active": 5256
+  },
+  "countingRule": "Counts use only original Node-active titles; pending titles remain outside the denominator. Only the dedicated assertion marker is failed. Typed lowering/runtime refusals and other native ABAP exceptions are trapped; unsupported async/done and not-run remain separate. Infrastructure failures never manufacture test results. Refusal-body impacts may overlap and are not operation-execution counts.",
+  "asyncInitializationFailures": 0,
+  "registrationParity": true,
+  "allTraps": [
+    {
+      "message": "Casting failed, types not compatible",
+      "count": 4590,
+      "shards": {
+        "abap-statements": 4528,
+        "root": 62
+      },
+      "example": "Casting failed, types not compatible"
+    },
+    {
+      "message": "runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 19,
+      "shards": {
+        "root": 19
+      },
+      "example": "lowering trap: node 28955 (test/config.ts:40:44): runtime operation json.stringifySubset has no ABAP emitter"
+    },
+    {
+      "message": "An exception was raised.",
+      "count": 8,
+      "shards": {
+        "abap-statements": 5,
+        "root": 3
+      },
+      "example": "An exception was raised."
+    },
+    {
+      "message": "runtime operation dynamic.delete has no ABAP emitter",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "lowering trap: node 32143 (test/registry.ts:460:12): runtime operation dynamic.delete has no ABAP emitter"
+    },
+    {
+      "message": "runtime operation json.indent has no ABAP emitter; runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "lowering trap: node 29044 (test/config.ts:73:39): runtime operation json.indent has no ABAP emitter; node 29044 (test/config.ts:73:39): runtime operation json.stringifySubset has no ABAP emitter"
+    }
+  ],
+  "top20Traps": [
+    {
+      "message": "Casting failed, types not compatible",
+      "count": 4590,
+      "shards": {
+        "abap-statements": 4528,
+        "root": 62
+      },
+      "example": "Casting failed, types not compatible"
+    },
+    {
+      "message": "runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 19,
+      "shards": {
+        "root": 19
+      },
+      "example": "lowering trap: node 28955 (test/config.ts:40:44): runtime operation json.stringifySubset has no ABAP emitter"
+    },
+    {
+      "message": "An exception was raised.",
+      "count": 8,
+      "shards": {
+        "abap-statements": 5,
+        "root": 3
+      },
+      "example": "An exception was raised."
+    },
+    {
+      "message": "runtime operation dynamic.delete has no ABAP emitter",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "lowering trap: node 32143 (test/registry.ts:460:12): runtime operation dynamic.delete has no ABAP emitter"
+    },
+    {
+      "message": "runtime operation json.indent has no ABAP emitter; runtime operation json.stringifySubset has no ABAP emitter",
+      "count": 1,
+      "shards": {
+        "root": 1
+      },
+      "example": "lowering trap: node 29044 (test/config.ts:73:39): runtime operation json.indent has no ABAP emitter; node 29044 (test/config.ts:73:39): runtime operation json.stringifySubset has no ABAP emitter"
+    }
+  ],
+  "sourceSnapshotRecordedIn": "179a863",
+  "sourceSnapshotNote": "Compiler was built from the uncommitted implementation later committed as 179a863. Implementation source did not change during this measurement."
+}

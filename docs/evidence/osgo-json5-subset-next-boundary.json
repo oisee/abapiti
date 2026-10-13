@@ -1,0 +1,26 @@
+{
+  "originalJSON5Test": [
+    {
+      "title": "Config should support JSON5 (comments, trailing comma)",
+      "passed": false,
+      "message": "lowering trap: node 29044 (<run>/root/test/config.ts:73:39): runtime operation json.indent has no ABAP emitter; node 29044 (<run>/root/test/config.ts:73:39): runtime operation json.stringifySubset has no ABAP emitter",
+      "status": "trapped"
+    }
+  ],
+  "diagnosticProbe": {
+    "input": "{\"child\":{\"flag\":true}}",
+    "nodeResult": true,
+    "note": "Native exception occurs before the assertion; the suite classifier reports this boundary as a trap, not a wrong answer.",
+    "rows": [
+      {
+        "class": "Z_NESTEDPROBE_C9155A05FDD568",
+        "testclass": "LTCL_PROBE",
+        "method": "CHECK",
+        "status": "FAILED",
+        "message": "UNCAUGHT_EXCEPTION CX_SY_MOVE_CAST_ERROR",
+        "alerts": [],
+        "where": "z_runtime_dyna_a429568d5be89e.clas.abap:109"
+      }
+    ]
+  }
+}

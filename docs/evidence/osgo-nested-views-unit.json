@@ -1,0 +1,38 @@
+{
+  "base": "fa6efed",
+  "osgPin": "fd07c7928cb7bdfe7910d3479575a25b520f7ce1",
+  "oracle": "Node JSON.parse and ordinary object aliases; expected true true true",
+  "nestedRows": [
+    {
+      "class": "Z_NESTEDVIEWS_1066630BC37D6D",
+      "testclass": "LTCL_VIEWS",
+      "method": "CHECK",
+      "status": "SUCCESS",
+      "message": "",
+      "alerts": []
+    }
+  ],
+  "explicitLayoutRows": [
+    {
+      "class": "Z_NESTEDVIEWS_1066630BC37D6D",
+      "testclass": "LTCL_EXPLICIT",
+      "method": "CHECK",
+      "status": "SUCCESS",
+      "message": "",
+      "alerts": []
+    }
+  ],
+  "checkedInvariants": [
+    "shared source identity",
+    "typed writes visible in original graph",
+    "raw graph writes visible in typed alias",
+    "replacement updates later reads without changing old aliases",
+    "unknown keys preserved",
+    "view constructor never executes",
+    "missing optional child stays absent",
+    "compatible native child retains identity and behavior",
+    "nominal child cannot be fabricated from a parsed record",
+    "null and primitive child sources explicitly refused",
+    "explicitly activated data-only non-synthetic layout matches Go"
+  ]
+}
