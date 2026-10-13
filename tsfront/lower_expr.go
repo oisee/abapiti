@@ -248,9 +248,12 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 			}
 		}
 		if a != nil && b != nil && len(a.Fields) == len(b.Fields) {
+			// The checker's shape is the same row or a structural widening of
+			// it (a field of class If viewed as interface IStructure): field
+			// reads already widen, so keep the local's storage and identity.
 			same := true
 			for i, f := range a.Fields {
-				same = same && f.Name == b.Fields[i].Name && f.Type.Equal(b.Fields[i].Type)
+				same = same && f.Name == b.Fields[i].Name && (f.Type.Equal(b.Fields[i].Type) || l.acceptsType(b.Fields[i].Type, f.Type))
 			}
 			if same {
 				return x
