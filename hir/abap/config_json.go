@@ -279,7 +279,8 @@ ENDMETHOD.
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
 			if subset {
-				if c == nil || c.CoercionUnsafe || c.ViewUnsafe || !jsonKeyNamesSafe(c) {
+				_, nominalProven := e.lspTokenJSONOrder(c)
+				if c == nil || c.CoercionUnsafe || c.ViewUnsafe && !nominalProven || !jsonKeyNamesSafe(c) {
 					fail()
 					break
 				}
@@ -344,6 +345,38 @@ ENDMETHOD.
 						fail()
 					}
 					line("ENDCASE.\nown_graph->put( p0 = own_row-k p1 = own_child ).\nENDLOOP.\nresult = %s.\nleave( p0 ).\nRETURN.\nENDIF.", call(hir.T(hir.Dynamic), "own_graph"))
+				}
+				if order, proven := e.lspTokenJSONOrder(c); proven {
+					// Known subclasses serialize their own complete layout. A
+					// subclass without a certificate must never fall through.
+					for _, child := range e.descendants(c) {
+						line("IF p0 IS INSTANCE OF %s.", e.name(child.Name))
+						if _, ok := e.lspTokenJSONOrder(child); ok {
+							local := e.name("json.native." + child.Name)
+							line("DATA %s TYPE REF TO %s.\n%s ?= p0.\nresult = %s.\nRETURN.", local, e.name(child.Name), local, call(hir.Ref(child.Name), local))
+						} else {
+							fail()
+						}
+						line("ENDIF.")
+					}
+					line("enter( p0 ).\nDATA native_graph TYPE REF TO %s.\nDATA native_child TYPE REF TO %s.\nDATA native_text TYPE string.\nCREATE OBJECT native_graph.\nnative_graph->tag = %s=>tag_object.", dyn, dyn, dyn)
+					for _, key := range order {
+						owner := e.fieldOwner(c, key)
+						for _, field := range owner.Fields {
+							if field.Static || field.Name != key {
+								continue
+							}
+							if e.recordDelete {
+								line("READ TABLE p0->%s WITH KEY table_line = `%s` TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.", e.name("record.deleted"), strings.ReplaceAll(key, "`", "``"))
+							}
+							line("native_text = %s.\nIF native_text IS NOT INITIAL.\nnative_child = %s=>parse( native_text ).\nnative_graph->put( p0 = `%s` p1 = native_child ).\nENDIF.", call(field.Type, "p0->"+e.member(key)), e.name("runtime.jsonSubset"), strings.ReplaceAll(key, "`", "``"))
+							if e.recordDelete {
+								line("ENDIF.")
+							}
+						}
+					}
+					line("result = %s.\nleave( p0 ).", call(hir.T(hir.Dynamic), "native_graph"))
+					break
 				}
 				if !e.materialized[c.Name] {
 					fail()

@@ -26,6 +26,7 @@ type emitter struct {
 	arrayViews      bool
 	recordDelete    bool
 	constructorArgs bool
+	constructorGet  bool
 	configJSON      bool
 	subsetJSONRoots []hir.Type
 	jsonOwnKeys     bool
@@ -188,6 +189,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
+	}
+	if e.constructorGet {
+		e.dynamicConstructorRuntime()
 	}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
@@ -379,6 +383,10 @@ func (e *emitter) scanUsage() {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.get" && len(x.Args) == 1 && x.Args[0].Kind == hir.Lit && (x.Args[0].Value == "constructor" || x.Args[0].Value == "name") {
+			need = true
+			e.constructorGet = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
 			e.ownKeysUsed = true
 		}
@@ -1949,6 +1957,16 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	// Immediate boxing does not change a native string array's ToPrimitive.
+	// Keep evaluation once and use the existing checked, dense comma join;
+	// erased refs, other element types and hooks stay outside this proof.
+	if x.Op == "dynamic.toString" && x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" && x.X.X != nil && x.X.X.Type.Kind == hir.Array && len(x.X.X.Type.Args) == 1 && x.X.X.Type.Args[0].Kind == hir.String {
+		a := b.expr(x.X.X)
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->join( VALUE #( ) ).")
+		b.line("ELSE.\n" + n + " = `undefined`.\nENDIF.")
+		return
+	}
 	if b.constSetHas(x, n) || b.replaceFreshCharacterRegex(x, n) {
 		return
 	}
@@ -2564,7 +2582,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
 		if x.Op == "dynamic.recordString" {
 			b.line("IF " + a + " IS BOUND.")
-			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
 			b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": ABAP record string conversion requires primitive dynamic storage"})
 			b.line("ENDIF.")
 			b.line("ENDIF.")
@@ -2574,7 +2592,21 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if x.Op == "dynamic.toString" || x.Op == "dynamic.recordString" {
 			method = "to_string"
 		}
+		if x.Op == "dynamic.recordString" {
+			// Ordinary tagged records have Object.prototype's default coercion.
+			// Presence, including an own undefined hook, leaves that domain.
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object.")
+			for _, key := range []string{"toString", "valueOf", "__proto__"} {
+				b.line("READ TABLE " + a + "->entries WITH KEY k = `" + key + "` TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.")
+				b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": record string conversion requires the original default Object coercion hooks"})
+				b.line("ENDIF.")
+			}
+			b.line(n + " = `[object Object]`.\nELSE.")
+		}
 		b.line(n + " = " + a + "->" + method + "( ).")
+		if x.Op == "dynamic.recordString" {
+			b.line("ENDIF.")
+		}
 		if x.Op == "dynamic.typeofValue" {
 			// Keep the ordinary box representation and the Go callable predicate,
 			// but test one shared marker instead of enumerating every closure here.
