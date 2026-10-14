@@ -338,3 +338,123 @@ python3 .cache/osg-cache-measure/control.py \
   > .cache/osg-cache-measure/control-progress.log 2>&1
 python3 .cache/osg-cache-measure/control-analyze.py
 ```
+
+## stoker fingerprint fix ebc1fb98
+
+Measured 2026-10-14, starting **16:40:50 UTC**: one cold
+`abap/statements` invocation, TS-HA@OSGO, at OSG
+`ebc1fb980769f18f3ce1cd4016aa098f4e3181b4` (branch
+`perf/gogen-record-fingerprint`, parent/main `8feecd5d`). The candidate
+reuses fingerprint encodings until the next recorded change and validates
+reads once per object at the end of recording. A fresh detached worktree
+at `.cache/osg-ebc1fb98` was prepared with `npm ci` and
+`node tools/osd-libs.mjs --sync`; it remained clean. The local
+`.github/ci/osgo.ref` points to that SHA. No push.
+
+Reused the original instrumented CLI, local `bridge.mjs`, materialized
+statements closure, `time.py`, and `.cache/train-o5/env.sh` environment.
+`ABAPITI_OSG_ONE_BUILD=0` disabled whole-program snapshot reads/writes;
+`ABAPITI_OSG_CACHE` pointed to the fresh, initially empty
+`.cache/osg-cache-measure/fingerprint-ebc1fb98-cache`. Prepared Go
+build/module and filesystem caches remained enabled. No competing workload
+was visible in process checks before or during the run. No second sample,
+warm run, or additional benchmark was run.
+
+All times in seconds; peak RSS is GiB, using the original `wait4` definition.
+
+| Shard | Condition | TS lowering | ABAP emission | gogen frontend | gogen emission | Go build | Execution | Harness total | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | fingerprint fix, cold cache, CPU profile | 58.4 | 23.3 | 495.9 | 52.7 | 2.5 | 287.8 | 937.8 | 24.8 |
+
+The frontend took **495.933 s**, versus the earlier cold-with-cache
+**488.0 s**: **7.9 s longer (+1.6%)**. Against the no-cache controls
+**179.2 / 184.1 s**, it took **2.77x / 2.69x** as long (about **2.73x**
+their mean). This profiled sample shows no observed frontend speedup over
+the earlier cold-cache sample. The earlier samples were unprofiled and
+used OSG `c681c9f7`; the candidate also includes intervening main changes.
+One sample with profiling cannot isolate the fix's effect or quantify
+profiling overhead. The short Go build reflects its independent prepared
+build cache, not gogen frontend reuse.
+
+The benchmark exited **0** with **4,962 pass, 0 fail, 0 trap, 0 not-run**.
+The complete `(title, status, message)` multiset and generated
+`zz_generated.go` bytes match the original statements cold run exactly,
+including both SHA-256 digests listed above. Round 0 H/M is **0 / 2,730**;
+round 1 is **1,168 / 1,564** (within-run reuse). Cache footprint is
+**386.4 MiB**. Only `gogen-frontend` exists under the cache
+root; no whole-program snapshots were written. The bridge initializes
+its whole-program `frontend`/`binary` labels to `miss` when a cache root is
+set, even when `ABAPITI_OSG_ONE_BUILD=0` bypasses those paths; its
+`gogenFrontend` label is `enabled`.
+
+The local adapter initially retained the no-cache control's post-run
+assertion that those labels were `disabled`. That reporting assertion
+failed after the successful benchmark had saved its raw results and
+timings. The assertion was corrected for this cache-enabled condition;
+independent analysis verified results, cache contents and profile without
+rerunning the benchmark.
+
+### CPU profile: top 25 by sampled self time
+
+A local `node` wrapper appended
+`--cpu-prof --cpu-prof-dir=/work/.cache/osg-cache-measure/fingerprint-ebc1fb98-profile`
+to the inherited `NODE_OPTIONS` only when launching the existing gogen
+bridge. Other Node invocations retained the original options. The one
+profile is `.cache/osg-cache-measure/fingerprint-ebc1fb98-profile/CPU.20261014.164224.485.0.001.cpuprofile`.
+
+Self ms sums each sample's `timeDeltas` (microseconds, divided by 1,000)
+at its leaf call-frame, aggregated by function and source location, with
+no child/inclusive time. Percentages use all **841,219.483 ms**
+of sampled time (792,542 samples; default 1 ms sampling).
+Lines are one-based; `OSG/` means `.cache/osg-ebc1fb98/`.
+
+This profile covers the full bridge process, which performs frontend,
+Go emission and synchronous child execution. Thus `spawnSync` primarily
+represents waiting for Go build/test execution, not Node CPU work; its
+290.3 s must not be attributed to frontend computation. V8 garbage
+collection is included as a runtime pseudo-function. The table is the
+unfiltered profile top 25, not a frontend-only time window.
+
+| Function | File:line | Self ms | % |
+| --- | --- | ---: | ---: |
+| `spawnSync` | `node:internal/child_process:1129` | 290,280.830 | 34.51 |
+| `(garbage collector)` | `(V8/runtime)` | 113,695.448 | 13.52 |
+| `registry.getObject` | `OSG/tools/gogen/frontend-object-cache.mjs:186` | 54,494.147 | 6.48 |
+| `compactLowering` | `OSG/tools/gogen/frontend-object-cache.mjs:82` | 44,864.959 | 5.33 |
+| `fingerprint` | `OSG/tools/gogen/frontend-replay.mjs:5` | 41,394.601 | 4.92 |
+| `isSubclass` | `OSG/tools/gogen/frontend.mjs:1996` | 23,899.376 | 2.84 |
+| `clasDef` | `OSG/tools/gogen/frontend.mjs:565` | 22,630.410 | 2.69 |
+| `(anonymous)` | `OSG/tools/gogen/frontend-replay.mjs:72` | 14,762.519 | 1.75 |
+| `getObject` | `OSG/node_modules/@abaplint/core/build/src/registry.js:140` | 13,195.549 | 1.57 |
+| `read` | `OSG/tools/gogen/frontend-replay.mjs:41` | 9,439.558 | 1.12 |
+| `processChunkSync` | `node:zlib:429` | 7,788.998 | 0.93 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:517` | 7,617.800 | 0.91 |
+| `toTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:306` | 7,496.746 | 0.89 |
+| `get` | `OSG/tools/gogen/frontend-replay.mjs:60` | 7,125.745 | 0.85 |
+| `portableWithin` | `OSG/tools/gogen/frontend-object-cache.mjs:49` | 7,094.555 | 0.84 |
+| `serialize` | `node:v8:512` | 5,822.598 | 0.69 |
+| `(anonymous)` | `OSG/tools/gogen/frontend.mjs:2019` | 5,464.917 | 0.65 |
+| `write` | `OSG/tools/gogen/frontend-object-cache.mjs:194` | 4,492.679 | 0.53 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:808` | 4,057.873 | 0.48 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:594` | 3,715.097 | 0.44 |
+| `clone` | `OSG/tools/gogen/frontend-replay.mjs:8` | 3,046.081 | 0.36 |
+| `statement` | `OSG/tools/gogen/frontend.mjs:2380` | 2,842.398 | 0.34 |
+| `isStmt` | `OSG/tools/gogen/frontend.mjs:64` | 2,696.540 | 0.32 |
+| `walkMove` | `OSG/tools/gogen/emit-table-move.mjs:92` | 2,361.876 | 0.28 |
+| `upper` | `OSG/tools/gogen/frontend.mjs:68` | 2,196.544 | 0.26 |
+
+Among the remaining entries, garbage collection contributes 113.7 s,
+`registry.getObject` 54.5 s, `compactLowering` 44.9 s, and `fingerprint`
+41.4 s of sampled self time. These are profile observations rather than
+separate measurements of the fix's causal impact.
+
+Raw evidence remains local under `.cache/osg-cache-measure/`:
+`abap-statements-fingerprint-ebc1fb98-cold` and its `.stdout.json`,
+`.stderr.log`, `.rss`, plus `fingerprint-records.json`,
+`fingerprint-analysis.json`, `fingerprint-progress.log`, `fingerprint.py`,
+`fingerprint-analyze.py`, `fingerprint-node-bin/node`, and the profile
+directory. Reproduction requires fresh output/cache/profile paths because
+the adapter asserts freshness. After preparing the pinned worktree and
+local pin as above, source `.cache/train-o5/env.sh` and invoke
+`python3 .cache/osg-cache-measure/fingerprint.py`; analyze with
+`python3 .cache/osg-cache-measure/fingerprint-analyze.py`.
