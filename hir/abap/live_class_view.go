@@ -292,7 +292,12 @@ func (b *body) liveBox(n, a string, t hir.Type) {
 	raw := b.rawTemp("REF TO object")
 	b.line("CLEAR " + adapter + ".")
 	b.line(raw + " = " + a + ".")
-	b.line("IF " + raw + " IS INSTANCE OF " + e.name("runtime.dynamic") + ".\n" + n + " ?= " + raw + ".\nELSE.")
+	// This helper is also emitted into config JSON's array dependencies.
+	// A checked cast preserves the type test without a post-v702 IF syntax
+	// that would prevent the dependency's class definition from being parsed.
+	dynamic := b.temp(hir.T(hir.Dynamic))
+	b.line("CLEAR " + dynamic + ".\nTRY.\n" + dynamic + " ?= " + raw + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
+	b.line("IF " + dynamic + " IS BOUND.\n" + n + " = " + dynamic + ".\nELSE.")
 	b.line("TRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
 	b.line("IF " + adapter + " IS BOUND.\n" + n + " = " + adapter + "->source( ).\nENDIF.")
 	b.line("IF " + n + " IS NOT BOUND.\nCREATE OBJECT " + n + ".\n" + n + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + "->oval = " + a + ".\nENDIF.\nENDIF.")

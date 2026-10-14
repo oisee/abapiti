@@ -401,6 +401,10 @@ func (e *emitter) scanUsage() {
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
 			e.jsonOwnKeys = true
+			// The subset writer synthesizes a ClassValue handler for dynamic
+			// function values. Discover its descriptor ABI before emitting any
+			// interfaces/classes, not later in configJSONRuntime.
+			need = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
