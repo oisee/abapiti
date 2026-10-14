@@ -1,4 +1,4 @@
-# ABAP constructor compatibility
+# ABAP constructor and empty-CASE compatibility
 
 Baseline: `origin/main` at `91e301d`. The unpruned embedded abaplint core
 contains **195** live-view subclass constructors that called their superclass
@@ -51,6 +51,45 @@ constructors and 853 superclass calls**, with no constructor violations.
 No runtime catalogue entry is enabled by this change. `string.parseFloat`
 remains unsupported and has zero sites in the measured core.
 
+## Native deletion and empty CASE
+
+The native deletion dispatcher formerly emitted **688** empty `CASE key`
+blocks in the unpruned core. It now opens a CASE only when emitting its first
+WHEN and closes it only if opened. Empty layouts, including inherited layouts
+with only static fields, still return true for deletion of an absent property.
+Nonempty dispatch and required/prototype-field refusals retain their behavior.
+The statement guard also rejects a CASE without a WHEN, including nested cases.
+
+`TestNativeDeleteEmptyClassFixtures` and the existing
+`TestRecordStorageFixtures` both compile and execute on pinned gogen/OSGO.
+The empty-class result matches Node. The existing fixture exercises inherited
+optional deletion, absence, restoration and explicit refusal of required fields.
+Both dedicated emission fixtures pass the CI ABAP lint tool.
+
+## Full static closure
+
+The unchanged production counting tool measures **625 roots / 17 shards /
+2,166 files / 7,052 classes / 85 interfaces**, with zero blocking diagnostics,
+HIR errors or frontend coverage traps. Before and after inventories both have
+**zero unsupported runtime-operation sites and zero emitter-refusal sites**.
+The final generated-source guard passes across **7,326 files, 5,766
+constructors and 940 superclass calls**, with no constructor-control or
+empty-CASE violations. There are 226 live-view classes; the same 195 view
+subclasses forward their source. The full closure's **5,353** empty native-delete
+CASE blocks become **0** (the before-CASE snapshot already contains the separate
+constructor fix).
+
+This includes zero refusal sites attributable to either fix. The only remaining
+catalogued unsupported operation, `string.parseFloat`, has zero closure sites.
+These measurements concern static emission; they are not a new 11,060-test
+execution certificate or an A4H kernel run.
+
+[Compact evidence](evidence/osgo-superctor.json) retains both original census
+objects and the core source-shape counts. Runtime refusal boundaries remain:
+unsafe structural views, unproven constructor control flow/signatures, deletion
+of required or prototype slots, and native layouts outside the emitted program.
+They raise explicitly rather than supplying a default result.
+
 ## Verification
 
 `TestLiveConstructorFixtures` compiles through gogen and executes on OSGO at
@@ -64,6 +103,7 @@ lint tool, including global class section checks.
 The CI `hir-unit.sh` lint suite passes with `HIR_RUNTIMES=" "` and the pinned
 transpiler. `go vet -p 2 ./...`, the Grace lexer facts report and the default
 runtime-operation coverage gate pass. The lexer golden is unchanged.
+`go test -short -p 2 ./...` passes (the local run uses a longer package timeout).
 `lint.sh gate origin/main` reports **0 new issues**, with **5/5** canaries.
 Default zabapgit Go output, including its executable, is byte-for-byte equal
 to the baseline at the same output path: raw `diff -r` exits 0.

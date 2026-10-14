@@ -1,0 +1,83 @@
+{
+  "base": "91e301d31fa0c93dbc6b0499a7d0798c08866b50",
+  "osgPin": "f83dc5c3e05bfaea71268fd6ad0e9ff88532cce6",
+  "core": {
+    "files": 1539,
+    "conditionalViewConstructors": {
+      "before": 195,
+      "after": 0
+    },
+    "liveViewClasses": 223,
+    "emptyNativeDeleteCases": {
+      "before": 688,
+      "after": 0
+    },
+    "guard": {
+      "files": 2283,
+      "constructors": 1370,
+      "superCalls": 936
+    },
+    "gapBefore": {
+      "files": 1539,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": []
+    },
+    "gapAfter": {
+      "files": 1539,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": []
+    }
+  },
+  "suite": {
+    "roots": 625,
+    "shards": 17,
+    "gate": {
+      "Files": 2166,
+      "Classes": 7052,
+      "Interfaces": 85,
+      "Blocking": 0,
+      "HIRErrors": 0,
+      "CoverageTraps": 0,
+      "Ranked": []
+    },
+    "gapBefore": {
+      "files": 2166,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": []
+    },
+    "gapAfter": {
+      "files": 2166,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": []
+    },
+    "guard": {
+      "files": 7326,
+      "constructors": 5766,
+      "superCalls": 940,
+      "constructorViolations": 0,
+      "emptyCaseViolations": 0
+    },
+    "liveViewClasses": 226,
+    "forwardingViewConstructors": 195,
+    "emptyNativeDeleteCases": {
+      "beforeEmptyCaseFix": 5353,
+      "after": 0
+    }
+  }
+}
