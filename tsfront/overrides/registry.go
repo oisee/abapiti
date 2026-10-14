@@ -29,6 +29,10 @@ type Patterns struct {
 	// downcasts the source has already proven (an enclosing instanceof of the
 	// same pure expression); they lower to ABAP's checked ?=.
 	CheckedCasts map[string]bool
+	// AssertionTypes corrects the target type of these exact `x as T`
+	// assertions where the source states the wrong class (erased in JS, so
+	// the object keeps its real class); the value is the type it really has.
+	AssertionTypes map[string]hir.Type
 	// SourceGuard pins a dependency used in an adapter safety proof.
 	SourceGuard bool
 }
@@ -131,7 +135,7 @@ func (r *Registry) Inventory() []Entry {
 
 func builderCount(e Entry) int {
 	n := 0
-	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.CheckedCasts) > 0 || len(e.Patterns.MatchTests) > 0 || len(e.Patterns.StaticInitializers) > 0 || e.Patterns.SourceGuard) {
+	if e.Patterns != nil && (len(e.Patterns.Expressions) > 0 || len(e.Patterns.Statements) > 0 || len(e.Patterns.Annotations) > 0 || len(e.Patterns.DenseCallbacks) > 0 || len(e.Patterns.CheckedCasts) > 0 || len(e.Patterns.MatchTests) > 0 || len(e.Patterns.StaticInitializers) > 0 || len(e.Patterns.AssertionTypes) > 0 || e.Patterns.SourceGuard) {
 		n++
 	}
 	if e.Result != nil {

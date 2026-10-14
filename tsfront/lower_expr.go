@@ -301,6 +301,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if l.acceptsType(typ, x.Type) {
 		return x
 	}
+	if unrelated, ok := l.unrelatedClassNarrowing(n, x, typ); ok {
+		return unrelated
+	}
 	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && typ.Kind != hir.Optional {
 		x = &hir.Expr{Kind: hir.Narrow, Type: hir.T(hir.Dynamic), X: x}
 	}
@@ -2681,6 +2684,9 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	if hasBlocking(l.diags[before:]) {
 		l.diags = l.diags[:before]
 		return x
+	}
+	if fixed, ok := l.assertionOverride(n); ok {
+		return l.assertedView(n, x, fixed)
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && mapped.Kind == hir.Optional &&
 		mapped.Args[0].Kind == hir.ClassRef && l.acceptsType(x.Type, mapped.Args[0]) {

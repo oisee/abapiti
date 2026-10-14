@@ -327,6 +327,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			typ = l.mapTypeNode(d.Type())
 		case init != nil:
 			typ = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))
+			if fixed, ok := l.declaredAssertionOverride(init); ok {
+				typ = fixed
+			}
 		case sym != nil:
 			typ = l.mapCheckerType(d, l.ck.GetTypeOfSymbol(sym))
 		default:
