@@ -458,3 +458,139 @@ the adapter asserts freshness. After preparing the pinned worktree and
 local pin as above, source `.cache/train-o5/env.sh` and invoke
 `python3 .cache/osg-cache-measure/fingerprint.py`; analyze with
 `python3 .cache/osg-cache-measure/fingerprint-analyze.py`.
+
+## stoker fingerprint fix 08e9907e
+
+Measured 2026-10-14: one cold `abap/statements` run starting **17:01:50 UTC**,
+followed immediately by one warm run starting **17:17:13 UTC**, TS-HA@OSGO.
+OSG was pinned locally in `.github/ci/osgo.ref` to
+`08e9907e529480732017026d838f350ce4e584c2` on
+`perf/gogen-record-fingerprint`. The clean detached worktree
+`.cache/osg-08e9907e` was prepared with `npm ci` and
+`node tools/osd-libs.mjs --sync`, and remained clean after both runs.
+The requested SHA's actual ancestry is `8feecd5d` → `ebc1fb98` →
+`08e9907e`: two commits above that main SHA. The last commit encodes
+class/interface definitions by `(kind, name, file, line, col)` rather than
+their whole graph, retaining the preceding read-recording change.
+
+Reused the original instrumented CLI, local `bridge.mjs`, materialized
+statements closure, `time.py`, and `.cache/train-o5/env.sh` environment.
+`ABAPITI_OSG_ONE_BUILD=0` disabled whole-program snapshot reads/writes.
+Cold began with a fresh empty
+`.cache/osg-cache-measure/fingerprint-08e9907e-cache` as `ABAPITI_OSG_CACHE`;
+warm reused that same directory in a fresh process. Prepared Go build/module
+and filesystem caches remained enabled. Process checks before and during
+both runs showed no competing substantial CPU workload. Only these two
+benchmark invocations ran; there was no additional sample. Cold was CPU
+profiled; warm was unprofiled. All artifacts and the commit remain local;
+no push.
+
+All times in seconds; peak RSS is GiB, using the original `wait4` definition.
+
+| Shard | Condition | TS lowering | ABAP emission | gogen frontend | gogen emission | Go build | Execution | Harness total | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | fingerprint fix, cold cache, CPU profile | 57.9 | 23.5 | 479.1 | 53.7 | 2.5 | 288.9 | 923.1 | 24.8 |
+| `abap/statements` | fingerprint fix, warm cache | 58.8 | 23.6 | 113.8 | 48.4 | 2.4 | 287.3 | 549.4 | 8.2 |
+
+Cold frontend took **479.051 s**, versus the earlier cold-with-cache
+**488.0 s**: **8.9 s less (1.8%)**. Against the no-cache controls
+**179.2 / 184.1 s**, it took **2.67x / 2.60x** as long (**2.64x** their
+mean). This sample still shows substantial overhead with cache recording.
+The earlier baseline/control samples were unprofiled and used OSG
+`c681c9f7`; the candidate includes intervening main changes and both
+fingerprint commits. One sample cannot isolate the last fix's causal
+impact or quantify profiling overhead. Warm frontend took **113.847 s**,
+**365.2 s less (76.2%, 4.21x)** than this profiled cold sample. The prepared
+Go build cache independently explains the short builds.
+
+| Condition | Round 0 H/M | Round 1 H/M | Reused classes | Cache MiB on disk |
+| --- | ---: | ---: | ---: | ---: |
+| cold, CPU profile | 0 / 2,730 | 1,168 / 1,564 | 1,168 | 385.0 |
+| warm | 2,724 / 6 | 2,728 / 4 | 2,728 | 385.0 |
+
+“Reused classes” is the distinct union across closure rounds. Warm round 0
+has **2,724 disk hits**; round 1 also permits within-run reuse. Cold's
+1,168 reused classes are within-run reuse. Allocated cache size was
+**403,738,112 bytes (385.035 MiB)** after each run, with no growth on warm.
+Only `gogen-frontend` exists under the cache root; no whole-program
+snapshots were written. The instrument's snapshot labels remain `miss`
+when a cache root is set despite those paths being bypassed;
+`gogenFrontend` is `enabled`.
+
+Both runs exited **0**, with **4,962 pass, 0 fail, 0 trap, 0 not-run**.
+Their complete `(title, status, message)` multisets and generated
+`zz_generated.go` bytes match the original statements cold baseline
+exactly, retaining title/status SHA-256
+`8f575909715661385438b0299cc9e96be087768913a0e427d2b423aaee9a6f14`
+and generated-Go SHA-256
+`8ba2a5afd939c9177dc5f66d9c5efd1ec6447ebc1f41dda6a90c5f9ca7fb1ed6`.
+
+### CPU profile: top 25 by sampled self time
+
+The local `fingerprint-08e9907e-node-bin/node` wrapper appended
+`--cpu-prof --cpu-prof-dir=/work/.cache/osg-cache-measure/fingerprint-08e9907e-profile`
+to inherited `NODE_OPTIONS` only for the cold gogen bridge process.
+Other Node processes and the warm invocation retained the prepared options.
+The profile is
+`.cache/osg-cache-measure/fingerprint-08e9907e-profile/CPU.20261014.170324.456.0.001.cpuprofile`.
+
+Self ms sums each sample's `timeDeltas` (microseconds / 1,000) at its leaf
+call frame, aggregated by function and source location (line/column),
+without child/inclusive time. Percentages use all **826,538.974 ms** of
+sampled time (**778,347 samples**, default 1 ms sampling). Lines are
+one-based; `OSG/` means `.cache/osg-08e9907e/`.
+
+This is the unfiltered full bridge profile, including frontend, Go emission
+and synchronous child waits. `spawnSync` primarily measures waiting for
+Go build/test execution; its 291.5 s is not frontend computation. Garbage
+collection is a V8 runtime pseudo-function. The table does not isolate a
+frontend-only time window.
+
+| Function | File:line | Self ms | % |
+| --- | --- | ---: | ---: |
+| `spawnSync` | `node:internal/child_process:1129` | 291,536.266 | 35.27 |
+| `(garbage collector)` | `(V8/runtime)` | 115,488.225 | 13.97 |
+| `registry.getObject` | `OSG/tools/gogen/frontend-object-cache.mjs:186` | 48,785.616 | 5.90 |
+| `compactLowering` | `OSG/tools/gogen/frontend-object-cache.mjs:82` | 43,592.527 | 5.27 |
+| `fingerprint` | `OSG/tools/gogen/frontend-replay.mjs:12` | 41,181.573 | 4.98 |
+| `clasDef` | `OSG/tools/gogen/frontend.mjs:565` | 22,791.333 | 2.76 |
+| `(anonymous)` | `OSG/tools/gogen/frontend-replay.mjs:94` | 15,917.587 | 1.93 |
+| `isSubclass` | `OSG/tools/gogen/frontend.mjs:1996` | 15,585.135 | 1.89 |
+| `getObject` | `OSG/node_modules/@abaplint/core/build/src/registry.js:140` | 10,623.152 | 1.29 |
+| `read` | `OSG/tools/gogen/frontend-replay.mjs:69` | 9,082.617 | 1.10 |
+| `processChunkSync` | `node:zlib:429` | 7,759.884 | 0.94 |
+| `toTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:306` | 7,322.875 | 0.89 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:517` | 7,279.712 | 0.88 |
+| `get` | `OSG/tools/gogen/frontend-replay.mjs:82` | 6,942.259 | 0.84 |
+| `portableWithin` | `OSG/tools/gogen/frontend-object-cache.mjs:49` | 6,815.416 | 0.82 |
+| `(anonymous)` | `OSG/tools/gogen/frontend.mjs:2019` | 5,890.803 | 0.71 |
+| `serialize` | `node:v8:512` | 5,231.747 | 0.63 |
+| `write` | `OSG/tools/gogen/frontend-object-cache.mjs:194` | 4,053.588 | 0.49 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:808` | 3,915.351 | 0.47 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:594` | 3,710.052 | 0.45 |
+| `statement` | `OSG/tools/gogen/frontend.mjs:2380` | 2,655.481 | 0.32 |
+| `clone` | `OSG/tools/gogen/frontend-replay.mjs:27` | 2,651.115 | 0.32 |
+| `isStmt` | `OSG/tools/gogen/frontend.mjs:64` | 2,589.280 | 0.31 |
+| `primitiveItems` | `OSG/tools/gogen/frontend-replay.mjs:20` | 2,339.084 | 0.28 |
+| `walkMove` | `OSG/tools/gogen/emit-table-move.mjs:92` | 2,314.655 | 0.28 |
+
+The largest remaining sampled self times are garbage collection **115.5 s**,
+`registry.getObject` **48.8 s**, `compactLowering` **43.6 s**, and
+`fingerprint` **41.2 s**. These are observations from the full process
+profile, not independent measurements of the fix's causal impact.
+
+Raw evidence remains local under `.cache/osg-cache-measure/`:
+`abap-statements-fingerprint-08e9907e-{cold,warm}` output directories and
+matching `.stdout.json`, `.stderr.log`, `.rss` files;
+`fingerprint-08e9907e-{records,analysis}.json`,
+`fingerprint-08e9907e-progress.log`, the profile directory, and the local
+runner/analyzer/wrapper. The runner asserts fresh cache/output paths,
+profiles cold only, and starts warm immediately after cold exits and its
+record is saved. Reproduction requires fresh paths:
+
+```sh
+. .cache/train-o5/env.sh
+python3 .cache/osg-cache-measure/fingerprint-08e9907e.py \
+  > .cache/osg-cache-measure/fingerprint-08e9907e-progress.log 2>&1
+python3 .cache/osg-cache-measure/fingerprint-08e9907e-analyze.py
+```
