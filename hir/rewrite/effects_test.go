@@ -2,6 +2,7 @@ package rewrite
 
 import (
 	"github.com/oisee/abapiti/hir"
+	"strings"
 	"testing"
 )
 
@@ -46,16 +47,33 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 		}
 	}
 	db := Extract(&hir.Program{})
+	str, ref := hir.T(hir.String), hir.Ref("Payload")
+	p := &hir.Program{Classes: []*hir.Class{{Name: ref.Name, Structural: true, Fields: []hir.Field{{Name: "k", Type: str}}, Ctor: &hir.Method{Name: "constructor", Params: []hir.Param{{Name: "k", Type: str}}, Result: hir.T(hir.Void), Body: hir.B(&hir.Stmt{Kind: hir.Assign, X: &hir.Expr{Kind: hir.FieldGet, Name: "k", Type: str, X: &hir.Expr{Kind: hir.This, Type: ref}}, Y: hir.V("k", str)})}}}, Unions: []*hir.UnionDecl{{Name: "Family", Discriminant: "k", Complete: true, Alternatives: []hir.UnionAlternative{{ID: "payload", Tags: []string{"payload"}, Payload: ref}}}}}
+	if errors := hir.Verify(p); len(errors) != 0 {
+		t.Fatal(errors)
+	}
+	unionDB := Extract(p)
 	for op := range RuntimeEffects {
+		opDB := db
+		if strings.HasPrefix(op, "union.") {
+			opDB = unionDB
+		}
 		for _, p := range []string{"op_reads", "op_writes", "op_allocates", "op_may_raise", "op_aliases"} {
 			found := false
-			for _, r := range db.Facts(p) {
+			for _, r := range opDB.Facts(p) {
 				if r[0] == op {
 					found = true
 				}
 			}
 			if !found {
 				t.Errorf("%s missing base fact for %s", p, op)
+			}
+		}
+	}
+	for _, pred := range []string{"op_reads", "op_writes", "op_allocates", "op_may_raise", "op_aliases"} {
+		for _, row := range db.Facts(pred) {
+			if strings.HasPrefix(row[0], "union.") {
+				t.Fatal("union facts changed a program without families")
 			}
 		}
 	}

@@ -61,6 +61,7 @@ func Verify(p *Program) []error {
 		}
 		v.interfaces[i.Name] = i
 	}
+	v.unionDeclarations()
 	for _, c := range p.Classes {
 		if c == nil {
 			continue
@@ -195,6 +196,10 @@ var RootObject = "builtin.object"
 func (v *verifier) typ(n Node, t Type) {
 	arity := 0
 	switch t.Kind {
+	case UnionRef:
+		if u := v.p.Union(t.Name); u == nil || !u.Complete {
+			v.fail(n, "unresolved or incomplete union "+t.Name)
+		}
 	case Bool, Number, I32, I64, String, Void:
 	case ClassRef:
 		if t.Name != RootObject && v.classes[t.Name] == nil {
@@ -878,6 +883,13 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		// An unchecked view (TypeScript `as`): the front end records no proof;
 		// a wrong view raises at run time instead of aliasing the wrong type.
 		a := check(e.X)
+		base := a
+		if base.Kind == Optional && len(base.Args) == 1 {
+			base = base.Args[0]
+		}
+		if base.Kind == UnionRef {
+			v.fail(e.Node, "union payload views require a verified projection")
+		}
 		if (t.Kind != ClassRef && t.Kind != InterfaceRef) || !(a.IsRef() || (a.Kind == Optional && a.Args[0].IsRef())) {
 			v.fail(e.Node, "invalid cast "+a.String()+" to "+t.String())
 		}
@@ -948,6 +960,8 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "union.admit", "union.widen", "union.project", "union.tag", "union.read":
+		v.unionOp(e, a)
 	case "chai.throwMatch":
 		if a.Kind != Dynamic && !(a.Kind == InterfaceRef && a.Name == "closure.thunk") {
 			v.fail(e.Node, "chai throw needs a thunk or boxed callable")

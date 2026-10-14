@@ -7,6 +7,12 @@ import "github.com/oisee/abapiti/hir"
 func (e *emitter) collectBoxedShapes() {
 	e.boxedShapes = map[string]bool{}
 	e.boxedFields = map[string]bool{}
+	for _, u := range e.p.Unions {
+		for _, a := range u.Alternatives {
+			e.boxedShapes[a.Payload.Name] = true
+			e.boxedFields[a.Payload.Name] = true
+		}
+	}
 	dynamicRows := false
 	guardRows := false
 	var expr func(*hir.Expr)

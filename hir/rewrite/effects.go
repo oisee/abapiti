@@ -1,6 +1,9 @@
 package rewrite
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 // RuntimeEffects are adapter facts, independent of RuntimeSpec.Mutates (which
 // describes the emitter's calling convention). Reads describe input dependencies;
@@ -24,6 +27,11 @@ type OpEffect struct {
 
 // Explicit records: adding a HIR catalogue operation requires a reviewed entry.
 var RuntimeEffects = map[string]OpEffect{
+	"union.admit":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
+	"union.widen":               {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "Receiver"},
+	"union.project":             {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
+	"union.tag":                 {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "None"},
+	"union.read":                {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
 	"string.sha1Hex":            {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Fresh UTF-8 SHA-1 hex pipeline; Go is pure, ABAP explicitly refuses."},
 	"array.has":                 {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"array.delete":              {Reads: OpReads{Receiver: true, Args: true}, Writes: "Receiver", Allocates: true, MayRaise: "None", Aliases: "None"},
@@ -166,8 +174,13 @@ var RuntimeEffects = map[string]OpEffect{
 	"xml.parseWithErrors":       {Reads: OpReads{Receiver: true, Args: false}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 }
 
-func (x *extractor) addEffects() {
+func (x *extractor) addEffects(includeUnions bool) {
 	for op, e := range RuntimeEffects {
+		// Keep unrelated source-pinned facts stable. A verified union operation
+		// always has a family declaration in the same program.
+		if strings.HasPrefix(op, "union.") && !includeUnions {
+			continue
+		}
 		any := false
 		for _, r := range []struct {
 			name string

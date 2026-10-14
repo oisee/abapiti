@@ -38,6 +38,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.characterSets()
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
+	if len(p.Unions) > 0 {
+		e.extraRuntimeKeys = true
+	}
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
@@ -311,7 +314,7 @@ func (e *emitter) typ(t hir.Type) string {
 		return "*classDescriptor"
 	case hir.RegExp:
 		return "*jsRegExp"
-	case hir.Dynamic:
+	case hir.Dynamic, hir.UnionRef:
 		return "*dynamic"
 	case hir.ClassRef:
 		if t.Name == hir.RootObject {

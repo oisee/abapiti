@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,7 +28,8 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
 	// Classview, Chai, JSON5 and the checked string/XML operations are admitted.
-	if len(gap.UnsupportedCatalogue) != 1 || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
+	wantCatalogue := []string{"string.parseFloat", "union.admit", "union.project", "union.read", "union.tag", "union.widen"}
+	if !slices.Equal(gap.UnsupportedCatalogue, wantCatalogue) || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}
 	for _, op := range gap.UnsupportedCatalogue {

@@ -4,13 +4,15 @@ Alice, 2026-10-14. Goal B, self-hosting step 2: compile OSG's generator through
 TypeScript → HIR → Go (TS-HG), then use that generator to emit Go. The union ABI
 is a prerequisite; supporting it alone will not make the generator executable.
 
-**Decision: plan only.** The largest inferred pilot blocker group is recursive
+**Reconnaissance decision (before Slice 1): plan only.** The largest inferred pilot blocker group is recursive
 aliases (31 findings). The smallest useful implementation must register recursive
 types, retain metadata and payload fields, verify their uses, emit Go, and execute
 a recursive Node differential. Estimated scope is 2–4 engineering days, including
 review and the requested gates. This exceeds the approximately one-day limit.
 A placeholder alias or a trap-only Go build would not establish the ABI.
-No compiler, runtime, fixture, golden, or OSG source changes accompany this plan.
+The reconnaissance commit changed no compiler, runtime, fixture, golden, or OSG
+source. Slice 1 implementation and measured acceptance are recorded in PROGRESS
+below; the remaining slices are still separate work.
 
 ## Inputs and current typing
 
@@ -332,7 +334,7 @@ newly retained signatures may reveal additional body blockers.
 
 | Slice | Scope and expected leverage | Required proof |
 | --- | --- | --- |
-| 1. Recursive family registration and minimal executable Go ABI | Highest inferred group: 31 recursive findings. Named graph registration, metadata intersections, recursive record/container fields, completed HIR definitions, construction/widening and unique-tag payload access. Estimate 2–4 days; deferred in this task. | Mutually recursive tree/Expr/Stmt oracle, metadata retained, nested arrays and map values, cross-module aliases, no dropped required fields, stable dumps under source-order permutations. Zero blockers and HIR errors on the accepted fixtures, real recursive execution equals Node, no traps. |
+| 1. Recursive family registration and minimal executable Go ABI | Highest inferred group: 31 recursive findings. Named graph registration, metadata intersections, recursive record/container fields, completed HIR definitions, construction/widening and unique-tag payload access. Implementation on `feat/union-abi-s1`; see PROGRESS for acceptance and remeasured counts. | Mutually recursive tree/Expr/Stmt oracle, metadata retained, nested arrays and map values, cross-module aliases, no dropped required fields, stable dumps under source-order permutations. Zero blockers and HIR errors on the accepted fixtures, real recursive execution equals Node, no traps. |
 | 2. Subsets, shared tags, utility normalization | Six explicit Extract/indexed findings plus tag-dependent bodies hidden today. Extend existing nonrecursive common-field views; preserve tag domains and arbitrary checker-selected subsets. | Shared-tag variants with different payload types, multi-literal alternatives, secondary and negative guards, switch fallthrough, Extract selecting one/many/none, indexed fields, TypedExpr intersections. Both valid oracle cases and invalid-payload refusal cases. |
 | 3. Honest typed runtime boundaries | 22 pilot callable/import findings and 11 declaration-boundary records, after type dependencies settle. Retain existing callable lowering; implement specific missing Node/abaplint/import contracts. Typing the main emitter/frontend in OSG is a separate prerequisite. | Imported functions and circular module initialization, multi-argument captured callbacks, real emitter signatures and exceptions. Actual adapter executions equal Node. Declarations or `as unknown as` assertions do not count as implementations. |
 | 4. Typed nullability and presence operations | One explicit nullable-truthiness finding, overlapping recursive fields, and all 11 phase-2 contracts. Preserve useful typed payloads and value-returning short circuits. | Null, omitted, own-undefined, present values; optional nullable scalars/references; keys, JSON, equality, `??`, chains and short circuits, with single evaluation and side effects compared against Node. |
@@ -425,3 +427,211 @@ main baseline: 19 blockers (10 root / 9 cascade), 54 HIR errors. The 11,060 resu
 is the existing main certification, not a suite rerun here. Conditional code-change
 gates above remain acceptance requirements for implementation; this task changes
 only the plan and normalized evidence.
+
+## PROGRESS — Slice 1 (Alice, 2026-10-14)
+
+Started on `feat/union-abi-s1` from `origin/feat/union-abi`. OSG remains clean
+at the frozen current revision `0abbef3f13941bf98b29531982092012110ce3ce`.
+Read the plan and reconnaissance inventory. Initial measured baseline remains
+76 scoped pilot blockers (70 root / 6 cascade), 23 scoped HIR errors;
+87 whole-report blockers, 26 whole-report HIR errors at both frozen revisions.
+Full closure previously panicked untrapped, with 6,377 / 6,692 supplemental
+repair-note refusals. These are baseline observations, not Slice 1 passes.
+
+Implementation is in progress: explicit completed HIR family declarations and
+verified operations first, followed by atomic recursive frontend registration,
+Go execution oracles and the regression gates. No acceptance claim yet.
+
+### Checkpoint 1 — HIR family contract and Go storage operations
+
+Added named `UnionRef` edges, completed family declarations retaining tag domains
+and payload layouts, explicit verified admission/widening/tag/common-read/unique
+projection operations, dump/serialization retention, runtime discovery and
+conservative rewrite effects. Go uses the existing Dynamic and live-view storage;
+checks re-read actual tags and require own fields. ABAP's runtime guard refuses
+the new operations and declaration boundary. Existing HIR, rewrite and Go emitter
+short suites passed. Negative HIR tests cover incomplete/missing layouts, optional
+discriminants, wrong tags, wrong payloads and missing constructor arguments.
+Frontend registration and recursive execution are still pending. This is a WIP
+checkpoint, not an accepted compiler slice; full regression gates remain pending.
+Baseline blocker counts above have not yet been remeasured.
+
+### Checkpoint 2 — Atomic registration and recursive execution
+
+The frontend now stages named family/layout identities and all resolved members
+privately, distributing checker-resolved metadata intersections. It publishes
+only complete reachable graphs. Unsupported required members invalidate the graph;
+retrying its aliases cannot retrieve a partial layout. Recursive edges stay named
+through nested arrays and map values. Existing nonrecursive union paths and the
+coverage-pruned deployment boundary remain in place.
+
+Both recursive Node differentials passed with zero lowering blockers/HIR errors:
+a binary tree and mutually recursive Tree/Expr/Stmt with metadata, nested arrays,
+map values, imported aliases, own-key order, single evaluation and backing identity.
+Declaration/input/alternative/metadata-property order permutations produce equal
+HIR dumps and equal execution. Negative tests confirm atomic callback-member
+refusal and wrong-tag runtime refusal. ABAP explicitly refuses the recursive ABI.
+
+Regression work is ongoing. Vet passed. An initial short-suite/pilot run exposed
+a nongeneric checker reference-target precondition; the targeted closure-inventory
+rerun passed after correcting it. Initial post-change pilot registration still
+refused unsupported readonly/mixed fields (78 scoped blockers, 23 HIR errors on
+the frozen baseline); that intermediate count is not acceptance evidence. Existing
+readonly-array and Dynamic mixed-field paths have since been retained; final
+frozen measurements, full short suite, Grace, backend/lint/hir-unit gates, default
+Go diff and before/after shards remain pending. No traps or source rewrites are
+credited as passes.
+
+### Checkpoint 3 — Preservation and regression checks
+
+Added family/alternative/tag rewrite facts while preserving unrelated Grace facts;
+the unchanged lexer golden passes. Serialization/inlining retain the named graph
+and recursive execution. Distinct anonymous layouts and distinct resolved generic
+arguments now have independent identities, with passing Node differentials.
+Fixed the anonymous-checker-symbol collision rather than treating `__type` as a
+named declaration. The ABAP catalogue test now explicitly expects the five
+Go-only union operations to remain unsupported.
+
+Passed: vet, backend guard, unchanged Grace golden, lint gate against fetched
+`origin/main` (0 new issues, canary 5/5), and the complete hir-unit generation/lint/
+lexer/pin suite with `HIR_RUNTIMES=" "` (0 lint issues). Initial hir-unit attempts
+failed on missing locked libraries and package-relative output paths; neither is
+credited as a pass. The full short suite found the stale ABAP catalogue assertion;
+its focused rerun passes and the final complete rerun remains pending.
+
+The frozen zabapgit Go source/module diff is empty, excluding only the executable.
+Fetched `origin/main` is now `18cc014` (v0.5.0): its unqualified CLI default changed
+to full core. The same legacy workload is selected with `--scope zabapgit` on that
+revision and the feature branch's original default, with the same frozen inputs.
+No upstream CLI/ABAP changes were merged into this Go ABI slice.
+
+Before-change syntax/rules/statements shards: 9,474/9,474 Node-active passes,
+9,494 registered, 20 Node-pending, 0 failures/traps/unregistered. Per-title
+comparison with the slice is still running. Both frozen public pilots measure
+61 scoped blockers (55 root / 6 cascade), 27 scoped HIR errors at this checkpoint;
+complete raw/supplemental closure evidence is being finalized. These real pilot
+errors are refusals, not accepted fixtures or executable-generator passes.
+
+### Checkpoint 4 — Live tag-proof lifetime
+
+A final audit found a retained-view hazard: a local holding a projected payload
+could outlive a discriminant change through `any`. Payload getters now validate
+the actual tag on every access, including stored views. A separate native slot
+reader prevents validation from recursively calling its own guarded getter.
+Unknown and known-but-wrong tags are refused both immediately and after caching
+a view. Payload writes remain explicit refusals until alias invalidation is
+proven; construction still initializes the same backing object. Atomic layout
+mapping also rejects accessor/private/protected members rather than fabricating
+public data slots. ABAP test emission now refuses family declarations before it
+can replace operations with body traps. Its refusal catalogue is explicit.
+
+All recursive positive/negative tests pass, including retained views. The prior
+seven-shard before/after comparison is unchanged: 9,837 Node-active passes,
+0 failures/traps/unregistered, 26 Node-pending. Final guard-era gates and compiler
+remeasurement are pending. Earlier complete short runs caught two catalogue/fact
+expectations and the fixture-export-helper policy; the corresponding focused
+checks now pass. No earlier failed complete run is credited as a gate pass.
+Frozen pilot counts remain measured at 61 / 27 scoped and 72 / 30 whole report;
+full closure still panics raw, with 6,362 / 6,677 repair refusals and one repaired
+HIR error at the last measured checkpoint.
+
+### Slice 1 frozen remeasurement — final compiler `fcc15e0`
+
+The recorded public command was rerun on the four frozen typed roots and all
+resolved TS/JS closure files, without pruning, overrides, failure traps or OSG
+source edits. Checker errors remain zero. Supplemental repair streams are
+refusal inventories only; their build results are never execution passes.
+
+| Measurement | PR #718 baseline after Slice 1 | Frozen OSG main after Slice 1 |
+| --- | ---: | ---: |
+| Scoped pilot blockers | 61 | 61 |
+| Scoped compiler root / cascade | 55 / 6 | 55 / 6 |
+| Scoped untrapped HIR errors | 27 | 27 |
+| Whole pilot report blockers | 72 | 72 |
+| Whole pilot report root / cascade | 66 / 6 | 66 / 6 |
+| Whole pilot report HIR errors | 30 | 30 |
+| Actual TS/JS closure files | 43 | 51 |
+| Public full-closure raw command | panic, exit 2 | panic, exit 2 |
+| Full-closure repair refusal records | 6,362 | 6,677 |
+| Repair `note-dropped-declaration` / `note-trap-failure` | 152 / 6,210 | 163 / 6,514 |
+| Full-closure repaired HIR errors | 1 | 1 |
+
+Compared with reconnaissance, pilot blockers decrease by 15, while retained
+signatures expose four additional scoped HIR errors. Full-closure refusal records
+also decrease by 15. The raw panic remains in `numberPass.rewriteExpr` at
+`tsfront/number_ranges.go:1265`; a complete raw closure inventory is unavailable.
+The remaining repaired error is still the missing interface implementation call
+at `tools/osd-dialog-step.mjs:336:36`. Full generator execution is not established.
+This is compatible with the remaining utility, runtime-boundary, nullability and
+implementation-closure slices; no count reduction is credited as an execution
+proof. Final per-title artifact comparison and the lint gate are still pending
+at this safety checkpoint; all other final gates have completed successfully.
+
+### Slice 1 acceptance — complete, Go backend only
+
+Final compiler `fcc15e0712bb7478cfb6203a4031e9402dc1b48a` satisfies the Slice 1
+row. The binary-tree and mutually recursive Tree/Expr/Stmt oracles retain all
+required metadata/payload fields, nested arrays, map values and imported aliases.
+Accepted fixtures have zero blocking diagnostics, zero HIR errors and zero traps;
+their actual recursive Go execution equals original Node. Declaration, file,
+alternative and metadata-property permutations produce identical HIR dumps.
+Serialization and inlining preserve the executable graph. Separate anonymous
+records and resolved generic arguments retain distinct layout identities.
+
+Negative proofs refuse incomplete graphs, unsupported required members, wrong
+admission tags/types, missing required fields and payload writes. Atomic graph
+publication exposes no partial layout. Every projected payload access revalidates
+its live tag, including views retained across `any` alias mutation. ABAP ordinary
+and test emission explicitly refuse this ABI before body traps. Subset/shared-tag
+projection, typed nullability, payload mutation and remaining runtime boundaries
+remain subsequent-slice work; they are not silently accepted here.
+
+All final requested gates passed on that compiler:
+
+| Gate | Final result |
+| --- | --- |
+| `go vet ./...` | Pass |
+| `go test -short -p 2 -timeout 40m ./...` | Pass, complete suite |
+| Grace lexer facts golden | Pass, tracked golden unchanged |
+| Default/selected-target backend guard | Pass |
+| Lint gate versus fetched `origin/main` (`18cc014`) | 0 new issues; canary 5/5, golangci-lint 2.13.2 |
+| Complete hir-unit suite, `HIR_RUNTIMES=" "` | Pass, 0 lint issues, exact dependency pins |
+| Frozen default zabapgit Go source/module comparison | Empty recursive diff, executable excluded |
+| Original Node versus Go clean/seeded zabapgit kit | Identical 0 / 5 issue results |
+
+The default comparison uses `origin/main --scope zabapgit` and this branch's
+original default, because upstream changed its CLI default to full core. Both
+use the same frozen sources and toolchain. Hir-unit uses a separate writable OSG
+copy at its CI pin; the source `.osg` remains clean and read only.
+
+All seven targeted abaplint shards at
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e` have unchanged per-title
+registration/pass/trap results against the before-change compiler:
+
+| Shard | Node-active passes before / after | Registered | Node-pending |
+| --- | ---: | ---: | ---: |
+| `abap/nodes` | 2 / 2 | 2 | 0 |
+| `abap/statements` | 4,962 / 4,962 | 4,962 | 0 |
+| `abap/syntax` | 1,363 / 1,363 | 1,373 | 10 |
+| `abap/types` | 29 / 29 | 29 | 0 |
+| `lsp` | 188 / 188 | 193 | 5 |
+| `objects` | 144 / 144 | 145 | 1 |
+| `rules` | 3,149 / 3,149 | 3,159 | 10 |
+| **Total** | **9,837 / 9,837** | **9,863** | **26** |
+
+Failures, traps, async-pending and unregistered active tests are all zero.
+Retained result streams were compared as title/status multisets, including the
+final rules rerun with artifacts retained. This focused run does not certify
+all 17 shards or the historical 11,060 total; that remains an integration gate.
+
+[union-abi-s1.json](evidence/union-abi-s1.json) records the compiler/source pins,
+source hashes, normalized measurements, shard comparison hashes and acceptance
+results. Final frozen counts are the table immediately above: 61 scoped blockers
+and 27 scoped HIR errors at both revisions; 72 blockers and 30 HIR errors in the
+whole pilot report. Raw full closure still panics, so its raw counts are unknown;
+6,362 / 6,677 supplemental repair refusals and one repaired HIR error remain.
+The full generator is not executable yet. These remaining failures belong to
+the later slices and are not counted as Slice 1 passes. No OSG source rewrites,
+body traps or partial layouts were used to establish acceptance. Work is
+committed on `feat/union-abi-s1` with Alice's identity and the requested trailers;
+no push was performed.

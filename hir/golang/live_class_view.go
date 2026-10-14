@@ -22,6 +22,9 @@ func (e *emitter) arrayReference(t hir.Type, value string) string {
 		// necessarily pre-boxed tags. Boxing reads preserves that identity.
 		return "box(" + value + ")"
 	}
+	if base.Kind == hir.UnionRef {
+		return e.unionValidator(base.Name, "") + "(box(" + value + "))"
+	}
 	if base.Kind == hir.ClassRef && e.liveClasses[base.Name] {
 		return "func() " + e.typ(t) + " {v:=" + value + ";if row,ok:=any(v).(" + e.typ(t) + ");ok {return row};return " + e.liveView(base) + "(box(v))}()"
 	}
@@ -81,6 +84,8 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 	switch t.Kind {
 	case hir.Dynamic:
 		return d
+	case hir.UnionRef:
+		return e.unionValidator(t.Name, "") + "(" + d + ")"
 	case hir.String:
 		return "dynString(" + d + ")"
 	case hir.Bool:
@@ -117,7 +122,7 @@ func (e *emitter) liveFields(c *hir.Class) {
 		}
 		read := e.name("view.read." + c.Name + "." + f.Name)
 		write := e.name("view.write." + c.Name + "." + f.Name)
-		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};if self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), f.Name, e.viewValue(f.Type, "d"), e.member(f.Name))
+		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};%sif self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), e.unionPayloadGuard(c.Name), f.Name, e.viewValue(f.Type, "d"), e.member(f.Name))
 		value := "box(value)"
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"
