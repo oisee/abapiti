@@ -57,6 +57,9 @@ func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
 	}
 	if n.Kind == ast.KindObjectLiteralExpression {
 		context := l.ck.GetContextualType(n, checker.ContextFlagsNone)
+		if context == nil {
+			context = l.ck.GetTypeAtLocation(n)
+		}
 		if context != nil {
 			for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
 				var value *ast.Node
@@ -68,7 +71,7 @@ func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
 					continue
 				}
 				name := p.Name()
-				if name == nil || (name.Kind != ast.KindIdentifier && name.Kind != ast.KindStringLiteral) || !l.checkerMayBeUndefined(value) {
+				if name == nil || (name.Kind != ast.KindIdentifier && name.Kind != ast.KindStringLiteral) || (!l.checkerMayBeUndefined(value) && !l.numericParseStorage(value)) {
 					continue
 				}
 				prop := l.ck.GetPropertyOfType(context, name.Text())
@@ -80,6 +83,16 @@ func (l *lowerer) scanLiteralAbsence(n *ast.Node) {
 		}
 	}
 	n.ForEachChild(func(child *ast.Node) bool { l.scanLiteralAbsence(child); return false })
+}
+
+// A numeric parser can produce NaN even with a required number annotation.
+// Optional numeric storage carries that tagged value separately from absence.
+func (l *lowerer) numericParseStorage(n *ast.Node) bool {
+	if n == nil || n.Kind != ast.KindCallExpression {
+		return false
+	}
+	sym := l.resolve(n.Expression())
+	return sym != nil && l.librarySymbol(sym) && (sym.Name == "parseInt" || sym.Name == "parseFloat")
 }
 
 func truthinessUse(n *ast.Node) bool {
@@ -106,6 +119,21 @@ func truthinessUse(n *ast.Node) bool {
 // guard unchanged. This scan follows the already certified field storage; it
 // does not supply the constructor's default at the call site.
 func (l *lowerer) scanAbsenceParameters(n *ast.Node) {
+	// RegExp input conversion observes undefined as the string "undefined".
+	// Preserve it across typed helper parameters rather than checking it at
+	// the call boundary. Other, present-only uses still narrow explicitly.
+	if n.Kind == ast.KindCallExpression && l.regexInputCoercion(n) && len(n.Arguments()) == 1 {
+		arg := n.Arguments()[0]
+		if arg.Kind == ast.KindIdentifier {
+			if sym := l.resolve(arg); sym != nil {
+				for _, decl := range sym.Declarations {
+					if decl.Kind == ast.KindParameter && primitivePresenceType(l.ck.GetTypeOfSymbol(sym)) {
+						l.absentParams[decl] = true
+					}
+				}
+			}
+		}
+	}
 	if n.Kind == ast.KindBinaryExpression {
 		b := n.AsBinaryExpression()
 		if b.OperatorToken.Kind == ast.KindEqualsToken && b.Left.Kind == ast.KindPropertyAccessExpression && b.Right.Kind == ast.KindIdentifier && l.literalPropertyAbsentSymbol(l.resolve(b.Left)) {
@@ -119,6 +147,19 @@ func (l *lowerer) scanAbsenceParameters(n *ast.Node) {
 		}
 	}
 	n.ForEachChild(func(child *ast.Node) bool { l.scanAbsenceParameters(child); return false })
+}
+
+func (l *lowerer) regexInputCoercion(n *ast.Node) bool {
+	sym := l.resolve(n.Expression())
+	if sym == nil || !l.librarySymbol(sym) || (sym.Name != "test" && sym.Name != "exec") {
+		return false
+	}
+	for _, decl := range sym.Declarations {
+		if decl.Parent != nil && decl.Parent.Kind == ast.KindInterfaceDeclaration && decl.Parent.Name().Text() == "RegExp" {
+			return true
+		}
+	}
+	return false
 }
 
 func (l *lowerer) parameterMayBeAbsent(sym *ast.Symbol) bool {

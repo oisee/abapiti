@@ -5,9 +5,9 @@ root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
 trap 'rm -rf "$gen"' EXIT
-rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestNumericFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestConfigJSONFixtures" "$gen/TestJSONSubsetFixtures" "$gen/TestJSONSubsetMaterializedFixtures" "$gen/TestJSONSubsetConfigFixture" "$gen/TestLiveClassViewJSONNodeOracle" "$gen/JSONStructural" "$gen/TestEmitSwitchGroupedLabels"
+rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestNumericFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestEmitPOSIXRegexJSClasses" "$gen/TestConfigJSONFixtures" "$gen/TestJSONSubsetFixtures" "$gen/TestJSONSubsetMaterializedFixtures" "$gen/TestJSONSubsetConfigFixture" "$gen/TestLiveClassViewJSONNodeOracle" "$gen/JSONStructural" "$gen/TestEmitSwitchGroupedLabels"
 (cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|TestNumericFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures|TestJSONSubsetFixtures|TestJSONSubsetMaterializedFixtures|TestJSONSubsetConfigFixture)$' -count=1)
-for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels; do
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels; do
   (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test -p 2 ./tsfront -run "^$suite$" -count=1)
 done
 (cd "$root" && ABAPITI_TEST_OUT="$gen/TestLiveClassViewJSONNodeOracle" go test -p 2 ./tsfront -run '^TestLiveClassViewJSONNodeOracle$' -count=1)
@@ -17,7 +17,7 @@ node "$root/.github/ci/hir-lint.mjs" "$gen/TestFixtures" "$osg"
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestRuntimeDebtFixtures" "$osg" --fixture
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestNumericFixtures" "$osg" --fixture
 node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
-for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels; do
+for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels; do
   node "$root/.github/ci/hir-lint.mjs" "$gen/$suite" "$osg" --fixture
 done
 for classes in "$gen"/TestConfigJSONFixtures/case*; do
@@ -36,10 +36,11 @@ node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 # OSGO is the gate on every PR; OSG-JS runs nightly (HIR_RUNTIMES="osgo osgjs").
 for runtime in ${HIR_RUNTIMES:-osgo}; do
-  for suite in TestNumericFixtures TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3} TestJSONSubsetFixtures/case{0,1,2,3,4,5} TestJSONSubsetMaterializedFixtures/case{0,1,2,3,4,5} TestJSONSubsetConfigFixture TestLiveClassViewJSONNodeOracle/json-live JSONStructural/json-structural JSONStructural/json-structural-live JSONStructural/json-structural-config JSONStructural/json-structural-wide; do
+  for suite in TestNumericFixtures TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3} TestJSONSubsetFixtures/case{0,1,2,3,4,5} TestJSONSubsetMaterializedFixtures/case{0,1,2,3,4,5} TestJSONSubsetConfigFixture TestLiveClassViewJSONNodeOracle/json-live JSONStructural/json-structural JSONStructural/json-structural-live JSONStructural/json-structural-config JSONStructural/json-structural-wide; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
     if [[ "$suite" == TestRuntimeDebtFixtures ]]; then expected=475; fi
+    if [[ "$suite" == TestEmitPOSIXRegexJSClasses ]]; then expected=2; fi
     if [[ "$suite" == TestNumericFixtures ]]; then expected=68; fi
     classes="$gen/$suite"
     status=0

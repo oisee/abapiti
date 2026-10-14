@@ -1,0 +1,269 @@
+{
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "16c024c8fc175b5656d643034b0fe8dde484740f",
+  "baseCommit": "1458e21086a35ed47c30faded6abbd093119cbe3",
+  "codeCommit": "853feeb3968ead2e06a44a2c04bd1fc54ec87bb0",
+  "shards": [
+    {
+      "name": "abap",
+      "before": {
+        "passed": 120,
+        "failed": 0,
+        "trapped": 96,
+        "unregistered": 0
+      },
+      "tsHA": {
+        "passed": 216,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 220,
+        "nodeActive": 216,
+        "nodePending": {
+          "total": 4,
+          "skipped": 4,
+          "unregistered": 0
+        }
+      },
+      "tsHG": {
+        "passed": 216,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 220,
+        "nodeActive": 216,
+        "nodePending": {
+          "total": 4,
+          "skipped": 4,
+          "unregistered": 0
+        }
+      },
+      "osgHost": {
+        "pin": "16c024c8fc175b5656d643034b0fe8dde484740f",
+        "timingMs": {
+          "cache": 0,
+          "frontend": 150033,
+          "emit": 20010,
+          "release": 1083,
+          "goBuild": 72039,
+          "run": 3724
+        },
+        "status": 0,
+        "envelope": {
+          "files": 2438,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        },
+        "regexAdapter": {
+          "literalSites": 143
+        },
+        "mode": "fast",
+        "admission": {
+          "waitMs": 0,
+          "resources": {
+            "load": 1.54,
+            "io": 0,
+            "availableGiB": 103.67906951904297
+          }
+        },
+        "cache": {
+          "frontend": "disabled",
+          "binary": "disabled",
+          "gogenFrontend": "unsupported"
+        },
+        "buildPeakRSSKiB": 10270988,
+        "nodePeakRSSKiB": 7526932
+      }
+    },
+    {
+      "name": "abap/types",
+      "before": {
+        "passed": 6,
+        "failed": 0,
+        "trapped": 23,
+        "unregistered": 0
+      },
+      "tsHA": {
+        "passed": 29,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 29,
+        "nodeActive": 29,
+        "nodePending": {
+          "total": 0,
+          "skipped": 0,
+          "unregistered": 0
+        }
+      },
+      "tsHG": {
+        "passed": 29,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 29,
+        "nodeActive": 29,
+        "nodePending": {
+          "total": 0,
+          "skipped": 0,
+          "unregistered": 0
+        }
+      },
+      "osgHost": {
+        "pin": "16c024c8fc175b5656d643034b0fe8dde484740f",
+        "timingMs": {
+          "cache": 0,
+          "frontend": 134541,
+          "emit": 18598,
+          "release": 2128,
+          "goBuild": 69082,
+          "run": 1786
+        },
+        "status": 0,
+        "envelope": {
+          "files": 2361,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        },
+        "regexAdapter": {
+          "literalSites": 141
+        },
+        "mode": "fast",
+        "admission": {
+          "waitMs": 0,
+          "resources": {
+            "load": 1.72,
+            "io": 0.08,
+            "availableGiB": 103.8022575378418
+          }
+        },
+        "cache": {
+          "frontend": "disabled",
+          "binary": "disabled",
+          "gogenFrontend": "unsupported"
+        },
+        "buildPeakRSSKiB": 9877068,
+        "nodePeakRSSKiB": 7808700
+      }
+    },
+    {
+      "name": "abap/lexer",
+      "before": {
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "unregistered": 0
+      },
+      "tsHA": {
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 200,
+        "nodeActive": 200,
+        "nodePending": {
+          "total": 0,
+          "skipped": 0,
+          "unregistered": 0
+        }
+      },
+      "tsHG": {
+        "passed": 200,
+        "failed": 0,
+        "trapped": 0,
+        "activeUnregistered": 0,
+        "asyncPending": 0,
+        "registered": 200,
+        "nodeActive": 200,
+        "nodePending": {
+          "total": 0,
+          "skipped": 0,
+          "unregistered": 0
+        }
+      },
+      "osgHost": {
+        "pin": "16c024c8fc175b5656d643034b0fe8dde484740f",
+        "timingMs": {
+          "cache": 0,
+          "frontend": 150865,
+          "emit": 18848,
+          "release": 1057,
+          "goBuild": 68708,
+          "run": 75
+        },
+        "status": 0,
+        "envelope": {
+          "files": 2364,
+          "maxLineBytes": 255,
+          "overlongLines": 0,
+          "maxObjectNameBytes": 29
+        },
+        "regexAdapter": {
+          "literalSites": 141
+        },
+        "mode": "fast",
+        "admission": {
+          "waitMs": 1,
+          "resources": {
+            "load": 1.62,
+            "io": 0,
+            "availableGiB": 103.82800674438477
+          }
+        },
+        "cache": {
+          "frontend": "disabled",
+          "binary": "disabled",
+          "gogenFrontend": "unsupported"
+        },
+        "buildPeakRSSKiB": 9895216,
+        "nodePeakRSSKiB": 8216984
+      }
+    }
+  ],
+  "gates": {
+    "vet": "PASS",
+    "short": "PASS",
+    "shortCommand": "GOFLAGS=-buildvcs=false go test -short -p 2 ./hir/... ./tsfront/ ./cmd/... -count=1",
+    "lint": {
+      "status": "PASS",
+      "base": "origin/main",
+      "newIssues": 0,
+      "canary": "5/5",
+      "version": "2.13.2"
+    }
+  },
+  "osgFixtures": {
+    "TestChaiSizedArrayFixtures": "1 SUCCESS row",
+    "TestChaiSparseStorageFixtures": "1 SUCCESS row",
+    "TestSizedArrayFillABAPNodeOracle": "1 SUCCESS row",
+    "TestAbaplintTestHostOSGEmission": {
+      "status": "PASS",
+      "passed": 8,
+      "intentionalAssertionFailures": 2,
+      "trapped": 4,
+      "hostDumps": 4,
+      "registrations": 14
+    },
+    "TestChaiSizedArrayNodeOracle": {
+      "status": "PASS",
+      "passed": 3,
+      "failed": 0,
+      "sparseEqualityTraps": 2,
+      "unprovenZeroSignTraps": 2
+    }
+  },
+  "resources": {
+    "sharedFlock": true,
+    "memoryMax": "48G",
+    "nice": 10,
+    "loadAdmission": "<12"
+  },
+  "osgSourcesModified": false
+}

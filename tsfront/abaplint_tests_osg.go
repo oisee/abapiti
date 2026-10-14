@@ -42,6 +42,10 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 	}
 	var manifest struct {
 		Initialization []string `json:"initialization"`
+		Shards         []struct {
+			Name           string   `json:"name"`
+			Initialization []string `json:"initialization"`
+		} `json:"shards"`
 	}
 	if err = json.Unmarshal(raw, &manifest); err != nil {
 		return nil, err
@@ -59,48 +63,73 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 	n := names.Get
 	assertionClass := n("exception.testAssertion." + hir.Ref("builtin.Error").String())
 	var initialization, hostDeclarations, hostMethods strings.Builder
-	initIndex := 0
+	initIndex, hostIndex := 0, 0
 	addAction := func(class, file, action string) {
 		initIndex++
-		boundary := fmt.Sprintf("host_init_%d", initIndex)
+		hostIndex++
+		boundary := fmt.Sprintf("host_init_%d", hostIndex)
 		fmt.Fprintf(&hostDeclarations, "CLASS-METHODS %s RETURNING VALUE(result) TYPE string.\n", boundary)
 		fmt.Fprintf(&hostMethods, "METHOD %s.\n%s=>%s( ).\nENDMETHOD.\n", boundary, n(class), action)
 		fmt.Fprintf(&initialization, "IF skip_init NS ',%d,'.\ncheckpoint( `{\"kind\":\"init\",\"index\":%d,\"file\":` && quote( %s ) && `,\"action\":` && quote( %s ) && `}` ).\n", initIndex, initIndex, abapTestLiteral(file), abapTestLiteral(action))
-		fmt.Fprintf(&initialization, "TRY.\nDATA(host_message_%d) = %s( ).\nIF host_message_%d IS NOT INITIAL.\nadd_initialization( file = %s action = %s status = 'trapped' message = host_message_%d ).\nENDIF.\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", initIndex, boundary, initIndex, abapTestLiteral(file), abapTestLiteral(action), initIndex, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
+		fmt.Fprintf(&initialization, "TRY.\nDATA(host_message_%d) = %s( ).\nIF host_message_%d IS NOT INITIAL.\nadd_initialization( file = %s action = %s status = 'trapped' message = host_message_%d ).\nENDIF.\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", hostIndex, boundary, hostIndex, abapTestLiteral(file), abapTestLiteral(action), hostIndex, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
 		initialization.WriteString("checkpoint( `{\"kind\":\"init-done\"}` ).\nENDIF.\n")
 	}
-	for _, file := range manifest.Initialization {
-		c := modules[file+".module"]
-		if c == nil {
-			continue
+	// Each shard replays exactly its own dependency-first manifest, including
+	// borrowed test modules. Local checkpoint indices restart at one per shard.
+	runtime := modules["runtime/mocha.ts.TestRuntime"]
+	addOrder := func(order []string) {
+		for _, file := range order {
+			c := modules[file+".module"]
+			if c == nil {
+				continue
+			}
+			actions := []string{}
+			for _, m := range c.Methods {
+				if m.Static && m.Name == "class_constructor" {
+					actions = append(actions, n("builtin.initialize."+c.Name))
+				}
+			}
+			for _, m := range c.Methods {
+				if isTestInitialization(m) {
+					actions = append(actions, n("member."+m.Name))
+				}
+			}
+			for _, action := range actions {
+				addAction(c.Name, file, action)
+			}
 		}
-		actions := []string{}
-		for _, m := range c.Methods {
+		// Force the runtime initializer even when a closure did not otherwise use it.
+		for _, m := range runtime.Methods {
 			if m.Static && m.Name == "class_constructor" {
-				actions = append(actions, n("builtin.initialize."+c.Name))
+				addAction(runtime.Name, "runtime/mocha.ts", n("builtin.initialize."+runtime.Name))
 			}
-		}
-		for _, m := range c.Methods {
-			if isTestInitialization(m) {
-				actions = append(actions, n("member."+m.Name))
-			}
-		}
-		for _, action := range actions {
-			addAction(c.Name, file, action)
 		}
 	}
-	// Force the runtime initializer even when a closure did not otherwise use it.
-	runtime := modules["runtime/mocha.ts.TestRuntime"]
-	for _, m := range runtime.Methods {
-		if m.Static && m.Name == "class_constructor" {
-			addAction(runtime.Name, "runtime/mocha.ts", n("builtin.initialize."+runtime.Name))
+	var selectedInitialization strings.Builder
+	if len(manifest.Shards) == 0 {
+		addOrder(manifest.Initialization)
+		fmt.Fprintf(&selectedInitialization, "checkpoint( '{\"kind\":\"plan\",\"initializations\":%d}' ).\n%s", initIndex, initialization.String())
+	} else {
+		selectedInitialization.WriteString("CASE shard.\n")
+		seen := map[string]bool{}
+		for _, shard := range manifest.Shards {
+			if shard.Name == "" || seen[shard.Name] || len(shard.Initialization) == 0 {
+				return nil, fmt.Errorf("invalid test shard initialization: %q", shard.Name)
+			}
+			seen[shard.Name] = true
+			initialization.Reset()
+			initIndex = 0
+			addOrder(shard.Initialization)
+			fmt.Fprintf(&selectedInitialization, "WHEN %s.\ncheckpoint( '{\"kind\":\"plan\",\"initializations\":%d}' ).\n%s", abapTestLiteral(shard.Name), initIndex, initialization.String())
 		}
+		// An unknown selector produces no plan; the parent fails closed.
+		selectedInitialization.WriteString("WHEN OTHERS.\nRETURN.\nENDCASE.\n")
 	}
 	if _, ok := files[assertionClass+".clas.abap"]; !ok {
 		return nil, fmt.Errorf("test closure has no assertion exception marker")
 	}
 	replacements := strings.NewReplacer(
-		"INITIALIZATION", initialization.String(), "INITCOUNT", fmt.Sprint(initIndex),
+		"INITIALIZATION", selectedInitialization.String(),
 		"HOSTDECLARATIONS", hostDeclarations.String(), "HOSTMETHODS", hostMethods.String(),
 		"RUNTIME", n(runtime.Name), "TESTS", n("member.tests"), "FOCUSED", n("member.focused"),
 		"TESTCASE", n("runtime/mocha.ts.TestCase"), "TITLE", n("member.title"), "SKIPPED", n("member.skipped"), "ONLY", n("member.only"),
@@ -127,7 +156,7 @@ func abapTestLiteral(s string) string { return "`" + strings.ReplaceAll(s, "`", 
 
 const abapTestRunner = `CLASS zcl_abapiti_test_runner DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CLASS-METHODS run IMPORTING start_index TYPE i skip_init TYPE string RETURNING VALUE(result) TYPE string.
+CLASS-METHODS run IMPORTING start_index TYPE i skip_init TYPE string shard TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS checkpoint IMPORTING value TYPE string.
 PRIVATE SECTION.
 HOSTDECLARATIONS
@@ -178,7 +207,6 @@ DATA test TYPE REF TO TESTCASE.
 DATA suite TYPE REF TO SUITECLASS.
 DATA settled TYPE REF TO PROMISECLASS.
 CLEAR initialization.
-checkpoint( '{"kind":"plan","initializations":INITCOUNT}' ).
 INITIALIZATION
 LOOP AT RUNTIME=>TESTS->items INTO DATA(registration).
 test ?= registration.

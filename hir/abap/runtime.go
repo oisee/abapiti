@@ -38,6 +38,11 @@ func (e *emitter) runtime(t hir.Type) {
 	case hir.Optional:
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
+		// Optionals of every numeric kind can share one ABAP class (same value
+		// type), so the non-finite marker is declared for all of them.
+		if k := t.Args[0].Kind; k == hir.Number || k == hir.I64 || k == hir.I32 {
+			line("DATA number_special TYPE i.")
+		}
 	case hir.Array:
 		e.chaiArrays = append(e.chaiArrays, t)
 		line(e.sparseArrayDefinition(t, name))
@@ -268,8 +273,13 @@ func (e *emitter) support() {
 		name := e.name("builtin.Error")
 		opt := e.typ(hir.T(hir.Optional, hir.T(hir.String)))
 		hidden, impl := "", ""
+		// Error is emitted by this runtime, not class(). Its subclasses still
+		// need the inherited presence mask used by ordinary field writes.
+		if e.recordDelete {
+			hidden = "DATA " + e.name("record.deleted") + " TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n"
+		}
 		if e.descriptors {
-			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
+			hidden += "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
 			impl = "METHOD " + e.name("builtin.classOf") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.classOf") + ".\nresult = me->" + e.name("builtin.classOf") + "( ).\nENDMETHOD.\n"
 			impl += "METHOD " + e.name("builtin.nativeConstructor") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.nativeConstructor") + ".\nresult = me->" + e.name("builtin.nativeConstructor") + "( ).\nENDMETHOD.\n"
 		}
@@ -513,6 +523,7 @@ METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bo
 METHODS replace IMPORTING p0 TYPE string p1 TYPE string RETURNING VALUE(result) TYPE string.
 PROTECTED SECTION.
 PRIVATE SECTION.
+METHODS class_hyphens IMPORTING pattern TYPE string RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 CLASS ` + name + ` IMPLEMENTATION.
 METHOD constructor.
@@ -521,6 +532,11 @@ DATA n TYPE i.
 DATA c TYPE string.
 DATA in_class TYPE abap_bool.
 DATA escaped TYPE abap_bool.
+DATA whitespace TYPE string.
+DATA dot_class TYPE string.
+DATA normalized TYPE string.
+whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
+dot_class = ` + regexABAPString(jsDotClass) + `.
 me->flags = flags.
 n = strlen( pattern ).
 WHILE i < n.
@@ -551,15 +567,16 @@ ENDIF.
 i = 0.
 in_class = abap_false.
 excluded = excluded_pattern.
-n = strlen( pattern ).
+normalized = class_hyphens( pattern ).
+n = strlen( normalized ).
 WHILE i < n.
-  c = pattern+i(1).
+  c = normalized+i(1).
   IF c = '\'.
     i = i + 1.
     IF i >= n.
       EXIT.
     ENDIF.
-    c = pattern+i(1).
+    c = normalized+i(1).
     CASE c.
       WHEN 'w'.
         IF in_class = abap_true.
@@ -585,9 +602,23 @@ WHILE i < n.
         ELSE.
           CONCATENATE posix '[^0-9]' INTO posix RESPECTING BLANKS.
         ENDIF.
+      WHEN 's'.
+        IF in_class = abap_true.
+          CONCATENATE posix whitespace INTO posix RESPECTING BLANKS.
+        ELSE.
+          CONCATENATE posix '[' whitespace ']' INTO posix RESPECTING BLANKS.
+        ENDIF.
+      WHEN 'S'.
+        IF in_class = abap_true.
+          RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
+        ELSE.
+          CONCATENATE posix '[^' whitespace ']' INTO posix RESPECTING BLANKS.
+        ENDIF.
       WHEN OTHERS.
         CONCATENATE posix '\' c INTO posix RESPECTING BLANKS.
     ENDCASE.
+  ELSEIF in_class = abap_false AND c = '.' AND flags NA 's'.
+    CONCATENATE posix dot_class INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '^' AND flags NA 'm'.
     CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
@@ -751,6 +782,7 @@ ENDMETHOD.
 ENDCLASS.
 `
 	}
+	e.files[name+".clas.abap"] = strings.TrimSuffix(e.files[name+".clas.abap"], "ENDCLASS.\n") + regexHyphensRuntime + "ENDCLASS.\n"
 	if js {
 		// This runtime always implements full JS state, even if only a lazy
 		// literal's match/replace was the reason it was reached.
@@ -779,6 +811,7 @@ CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i V
 DATA tag TYPE i.
 DATA sval TYPE string.
 DATA nval TYPE f.
+DATA number_special TYPE i.
 DATA cval TYPE REF TO ` + e.name("runtime.classvalue") + `.
 DATA oval TYPE REF TO object.
 ` + dynamicGraphDefinition(name) + `
@@ -801,6 +834,9 @@ ENDMETHOD.
 METHOD as_number.
 IF tag <> tag_number.
 RAISE EXCEPTION TYPE cx_sy_move_cast_error.
+ENDIF.
+IF number_special <> 0.
+RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
 ENDIF.
 result = nval.
 ENDMETHOD.
@@ -833,6 +869,17 @@ ENDIF.
 ELSEIF tag = tag_null.
 result = ` + "`null`" + `.
 ELSEIF tag = tag_number.
+CASE number_special.
+WHEN 1.
+result = 'NaN'.
+RETURN.
+WHEN 2.
+result = 'Infinity'.
+RETURN.
+WHEN 3.
+result = '-Infinity'.
+RETURN.
+ENDCASE.
 IF nval <> trunc( nval ) OR nval > '9007199254740991' OR nval < '-9007199254740991'.
 RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
 ENDIF.

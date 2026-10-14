@@ -39,11 +39,15 @@ IF excluded IS NOT INITIAL.
     RETURN.
   ENDIF.
 ENDIF.
-search = '(?<![\s\S])[\s\S]{' && |{ start }| && '}'.
-IF sticky = abap_false.
-  search = search && '[\s\S]*?'.
+IF global = abap_true OR sticky = abap_true.
+  search = '(?<![\s\S])[\s\S]{' && |{ start }| && '}'.
+  IF sticky = abap_false.
+    search = search && '[\s\S]*?'.
+  ENDIF.
+  search = search && '(' && exec_pattern && ')'.
+ELSE.
+  search = exec_pattern.
 ENDIF.
-search = search && '(' && exec_pattern && ')'.
 IF ignore_case = abap_true.
   FIND FIRST OCCURRENCE OF REGEX search IN text IGNORING CASE RESULTS hit.
 ELSE.
@@ -56,10 +60,12 @@ IF sy-subrc <> 0.
   RETURN.
 ENDIF.
 groups = hit-submatches.
-READ TABLE groups INDEX 1 INTO group.
-hit-offset = hit-offset + hit-length - group-length.
-hit-length = group-length.
-DELETE groups INDEX 1.
+IF global = abap_true OR sticky = abap_true.
+  READ TABLE groups INDEX 1 INTO group.
+  hit-offset = hit-offset + hit-length - group-length.
+  hit-length = group-length.
+  DELETE groups INDEX 1.
+ENDIF.
 IF global = abap_true OR sticky = abap_true.
   last_index = hit-offset + hit-length.
 ENDIF.

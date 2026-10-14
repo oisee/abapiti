@@ -8,7 +8,10 @@ import (
 // pcreRegexPattern uses syntax shared by PCRE and the pinned JS ABAP runtime.
 // Absolute assertions also prevent that runtime's implicit m flag from
 // changing JavaScript non-m anchors. The reviewed m pattern has no anchors.
+// OSG 16c024c8 uses non-UCP PCRE boundaries: native \b/\B have JavaScript's
+// non-u ASCII [A-Za-z0-9_] membership, including next to non-ASCII text.
 func pcreRegexPattern(pattern string) string {
+	pattern = regexClassHyphens(pattern)
 	var out strings.Builder
 	inClass := false
 	for i := 0; i < len(pattern); i++ {
@@ -32,11 +35,6 @@ func pcreRegexPattern(pattern string) string {
 						continue
 					}
 				}
-			}
-			if i == 0 && strings.HasPrefix(pattern, `\b[dD][eE][fF][iI][nN][eE]`) {
-				out.WriteString(`(?<![A-Za-z0-9_])`)
-				i++
-				continue
 			}
 			out.WriteByte(c)
 			i++

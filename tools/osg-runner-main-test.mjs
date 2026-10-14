@@ -16,8 +16,8 @@ test('generated Go executable agrees with reportStatus, including initialization
   writeFileSync(join(dir, 'main.go'), runnerMain);
   writeFileSync(join(dir, 'fixture.go'), `package main
 import("os";"osg/gogen/abap")
-func ZCL_ABAPITI_TEST_RUNNER_RUN(s *abap.Session, start int32, skip string) string {
- if start != 1 || skip != ",2," {panic("runner inputs lost")}
+func ZCL_ABAPITI_TEST_RUNNER_RUN(s *abap.Session, start int32, skip string, shard string) string {
+ if start != 1 || skip != ",2," || shard != "fixture" {panic("runner inputs lost")}
  return os.Getenv("ABAPITI_FIXTURE_REPORT")
 }
 `);
@@ -32,7 +32,7 @@ func ZCL_ABAPITI_TEST_RUNNER_RUN(s *abap.Session, start int32, skip string) stri
    ...['failed','trapped','asyncPending'].map(key => ({...clean, [key]:1}))];
   for (const report of cases) {
    const run = spawnSync(binary, [join(dir, 'names.json')], {encoding:'utf8', env:{...process.env,
-    ABAPITI_OSG_START_INDEX:'1', ABAPITI_OSG_SKIP_INIT:',2,', ABAPITI_FIXTURE_REPORT:JSON.stringify(report)}});
+    ABAPITI_OSG_START_INDEX:'1', ABAPITI_OSG_SKIP_INIT:',2,', ABAPITI_OSG_SHARD:'fixture', ABAPITI_FIXTURE_REPORT:JSON.stringify(report)}});
    assert.equal(run.status, reportStatus(report), run.stderr);
    assert.deepEqual(JSON.parse(run.stdout), report);
   }

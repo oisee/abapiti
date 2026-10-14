@@ -64,6 +64,16 @@ func TestRegexJSRequirements(t *testing.T) {
 		js   bool
 	}{
 		{"^abc$", "i", false},
+		{`a.b`, "s", false},
+		{`\bx\b`, "", true},
+		{`\Bx\B`, "i", true},
+		{`\bx\b`, "g", false},
+		{`[\b]x`, "", false},
+		{`\\bx`, "", false},
+		// Anchored and uncertified boundaries retain the legacy gap:
+		// the checked host would need refused lookarounds for the anchors.
+		{`^\bx\b$`, "", false},
+		{`\bé\b`, "", false},
 		{`^(?!(?:IF|ELSE)$)[A-Z]+$`, "", false},
 		{`[?*+]`, "", false},
 		{`[(?<]`, "", false},
@@ -94,9 +104,36 @@ func TestLazyMatchEnablesOnlyJSRegexRuntime(t *testing.T) {
 	if !strings.Contains(files[jsFile], "FIND FIRST OCCURRENCE OF PCRE search") {
 		t.Fatal("lazy match requires the JS runtime even without an exec call")
 	}
+	if !strings.Contains(files[jsFile], "posix = `\\b[dD][eE][fF][iI][nN][eE]") || strings.Contains(files[jsFile], `(?<![A-Za-z0-9_])`) {
+		t.Fatal("DDL pattern must emit the host's native ASCII word boundary")
+	}
 	for file, text := range files {
 		if strings.Contains(text, "PCRE") && file != jsFile {
 			t.Errorf("PCRE leaked into %s", file)
+		}
+	}
+}
+
+func TestPOSIXRegexClassComplementRefusal(t *testing.T) {
+	for _, pattern := range []string{`[\S]`, `[a\S]`, `[^\S]`} {
+		m := method("run", hir.T(hir.Bool), ret(rt("regexp.test", regexNew(hir.L(str, pattern), ""), hir.T(hir.Bool), hir.L(str, "x"))))
+		_, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}})
+		if err == nil || !strings.Contains(err.Error(), `\S inside a character class`) {
+			t.Fatalf("%s: missing class complement refusal: %v", pattern, err)
+		}
+	}
+}
+
+func TestDynamicWordBoundaryLegacyGap(t *testing.T) {
+	// No safe automatic PCRE upgrade for an unknown pattern. ABAP POSIX
+	// boundaries remain locale-dependent, unlike JS's ASCII word membership.
+	x := regexNew(hir.V("pattern", str), "i")
+	if regexNeedsJS(x) {
+		t.Fatal("unknown pattern unexpectedly upgraded")
+	}
+	for _, pattern := range []string{`\bx\b`, `\Bx\B`} {
+		if regexClasses(pattern) != pattern {
+			t.Fatal("legacy boundary was silently guessed")
 		}
 	}
 }

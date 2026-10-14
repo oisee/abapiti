@@ -152,11 +152,11 @@ else {
  // GNU time measures the heaviest build child, not just the small Go driver.
  const rssFile=join(out,'build-rss.txt');
  const timed=existsSync('/usr/bin/time');
- const build=spawnSync(timed?'/usr/bin/time':'go',timed?['-f','%M','-o',rssFile,'go',...buildArgs,'-o',binary,'./cmd/abapitests']:[...buildArgs,'-o',binary,'./cmd/abapitests'],{cwd:go,env:buildEnv,encoding:'utf8',maxBuffer:32*1024*1024});
+ const build=spawnSync(timed?'/usr/bin/time':'go',timed?['-v','-o',rssFile,'go',...buildArgs,'-o',binary,'./cmd/abapitests']:[...buildArgs,'-o',binary,'./cmd/abapitests'],{cwd:go,env:buildEnv,encoding:'utf8',maxBuffer:32*1024*1024});
  timingMs.goBuild=Math.round(performance.now()-started);
  if(timed && existsSync(rssFile)){
-  const text=readFileSync(rssFile,'utf8').trim().split('\n').at(-1);
-  if(/^\d+$/.test(text))buildPeakRSSKiB=Number(text);
+  const match=readFileSync(rssFile,'utf8').match(/Maximum resident set size \(kbytes\):\s*(\d+)/);
+  if(match)buildPeakRSSKiB=Number(match[1]);
  }
  writeFileSync(join(out,'build.log'),(build.stdout??'')+(build.stderr??''));
  if(build.status!==0){
@@ -173,9 +173,13 @@ started=performance.now();
 // only known dumping initialization actions, and validates stable test indices.
 let status=2;
 try {
- const run=resumeRunner(binary,{cwd:out,args:[join(input,'names.json')],diagnostic:text=>process.stderr.write(text)});
- process.stdout.write(JSON.stringify(run.report)+'\n');
- status=run.status;
+ if (process.env.ABAPITI_OSG_BUILD_ONLY === '1') {
+  status=0;
+ } else {
+  const run=resumeRunner(binary,{cwd:out,args:[join(input,'names.json')],diagnostic:text=>process.stderr.write(text)});
+  process.stdout.write(JSON.stringify(run.report)+'\n');
+  status=run.status;
+ }
 } catch (error) { process.stderr.write(String(error)+'\n'); }
 timingMs.run=Math.round(performance.now()-started);
 writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,regexAdapter,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');

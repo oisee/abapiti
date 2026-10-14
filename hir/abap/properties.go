@@ -115,7 +115,7 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 				line("IF %s->has( key ) = abap_false.", source)
 				line("CASE key.")
 				for _, key := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
-					line("WHEN `%s`.\nRAISE EXCEPTION TYPE %s.", key, e.name("view.refusal"))
+					line("WHEN `%s`.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `properties.go: delete: required or prototype slot cannot retain absence`.", key, e.name("view.refusal"))
 				}
 				line("ENDCASE.\nENDIF.\nresult = %s->get( key ).", source)
 			} else {

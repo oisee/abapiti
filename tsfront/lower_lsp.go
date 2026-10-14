@@ -127,8 +127,8 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 			}
 			numbers = append(numbers, l.tempInit(arg, hir.T(hir.Number), l.coerce(x, hir.T(hir.Number))))
 		}
-		values["start"] = &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(pos.Name), Args: numbers[:2]}
-		values["end"] = &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(pos.Name), Args: numbers[2:]}
+		values["start"] = &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(pos.Name), Op: "lsp.Position.create", Args: numbers[:2]}
+		values["end"] = &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(pos.Name), Op: "lsp.Position.create", Args: numbers[2:]}
 	} else {
 		fields := map[string][]string{"Position": {"line", "character"}, "Range": {"start", "end"}, "TextEdit": {"range", "newText"}, "TextDocumentEdit": {"textDocument", "edits"}, "Command": {"title", "command"}, "RenameFile": {"oldUri", "newUri", "options", "annotationId"}}[name]
 		for i, field := range fields {
@@ -190,7 +190,11 @@ func (l *lowerer) lspCall(n, receiver *ast.Node, method string) (*hir.Expr, bool
 		ctorArgs = append(ctorArgs, l.coerce(x, p.Type))
 	}
 	out := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(c.Name), Args: ctorArgs}
-	if name != "RenameFile" {
+	if name == "RenameFile" {
+		// Keep factory provenance separate from OwnKeys: optional arguments
+		// determine property presence at runtime, not the static layout.
+		out.Op = "lsp.RenameFile.create"
+	} else {
 		// These factories return fresh records with exactly their required
 		// fields plus Command's supplied argument array. RenameFile's
 		// conditional options need a separate runtime presence proof.

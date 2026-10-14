@@ -18,7 +18,7 @@ func TestPCREReviewedPatternSyntax(t *testing.T) {
 		`\\z`:                                 `\\z`,
 		`[^^$]\^\$`:                           `[^^$]\^\$`,
 		`[\x{0009}-\x{000D}\x{00A0}\x{2028}]`: "[\t-\r\u00a0\u2028]",
-		`\b[dD][eE][fF][iI][nN][eE]`:          `(?<![A-Za-z0-9_])[dD][eE][fF][iI][nN][eE]`,
+		`\b[dD][eE][fF][iI][nN][eE]`:          `\b[dD][eE][fF][iI][nN][eE]`,
 		`\\x{2028}`:                           `\\x{2028}`,
 		`a b#c[ #]`:                           `a[ ]b[#]c[ #]`,
 		`\x{0020}\x{0023}\x{000B}`:            "[ ][#][\v]",
@@ -28,6 +28,53 @@ func TestPCREReviewedPatternSyntax(t *testing.T) {
 	for in, want := range cases {
 		if got := pcreRegexPattern(in); got != want {
 			t.Errorf("%q: got %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Native PCRE/RE2 boundaries must retain JS non-u ASCII membership. Check
+// both the subset translation and the reviewed DDL pattern's leading boundary.
+func TestPCREWordBoundariesNodeOracle(t *testing.T) {
+	type probe struct {
+		JS, Flags, PCRE, Input string
+	}
+	probes := []probe{}
+	for _, source := range []string{`\bdefine\s+behavior`, `\Bdefine\s+behavior`} {
+		translated, ok := jsregex.TranslateSubset(source, "i")
+		if !ok {
+			t.Fatalf("subset refused %q", source)
+		}
+		pattern := pcreRegexPattern(translated)
+		if !strings.HasPrefix(pattern, source[:2]) || strings.Contains(pattern, "(?<") {
+			t.Fatalf("boundary is not native: %q", pattern)
+		}
+		for _, input := range []string{"define behavior", "xdefine behavior", "é define behavior", "_define behavior", "édefine behavior", "DEFINE BEHAVIOR", "Kdefine behavior", "ſdefine behavior"} {
+			probes = append(probes, probe{source, "i", pattern, input})
+		}
+	}
+	key := `\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi`
+	for _, input := range []string{"define behavior for foo", "xdefine behavior for foo", "édefine behavior for foo", "_define behavior for foo"} {
+		probes = append(probes, probe{strings.TrimSuffix(key, "/gi"), "i", pcreRegexPattern(jsregex.Reviewed[key][0]), input})
+	}
+	raw, err := json.Marshal(probes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := exec.Command("node", "-e", `console.log(JSON.stringify(JSON.parse(process.argv[1]).map(p=>{const a=new RegExp(p.JS,p.Flags).test(p.Input);const b=new RegExp(p.PCRE).test(p.Input);if(a!==b)throw Error(JSON.stringify(p));return a})))`, string(raw)).CombinedOutput()
+	if err != nil {
+		t.Fatalf("Node oracle: %v\n%s", err, out)
+	}
+	var want []bool
+	if err := json.Unmarshal(out, &want); err != nil {
+		t.Fatal(err)
+	}
+	for i, p := range probes {
+		re, err := regexp.Compile(p.PCRE)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := re.MatchString(p.Input); got != want[i] {
+			t.Errorf("/%s/%s on %q: RE2 %v != Node %v", p.JS, p.Flags, p.Input, got, want[i])
 		}
 	}
 }

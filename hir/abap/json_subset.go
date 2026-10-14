@@ -14,6 +14,8 @@ func (e *emitter) jsonSubsetRuntime() {
 	e.dynamicRuntime()
 	name, dynamic := e.name(id), e.name("runtime.dynamic")
 	exception := e.name("exception.RegistryJSONSubsetError")
+	syntax := e.name("exception.JSONSyntaxError")
+	e.files[syntax+".clas.abap"] = "CLASS " + syntax + " DEFINITION PUBLIC INHERITING FROM " + exception + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + syntax + " IMPLEMENTATION.\nENDCLASS.\n"
 	e.files[exception+".clas.abap"] = "CLASS " + exception + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nMETHODS get_text REDEFINITION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + exception + " IMPLEMENTATION.\nMETHOD get_text.\nresult = `input is outside the supported strict JSON subset`.\nENDMETHOD.\nENDCLASS.\n"
 	code := `CLASS $P DEFINITION PUBLIC CREATE PRIVATE.
 PUBLIC SECTION.
@@ -249,5 +251,11 @@ ENDCASE.
 ENDMETHOD.
 ENDCLASS.
 `
-	e.files[name+".clas.abap"] = strings.NewReplacer("$SPACE", "` `", "$P", name, "$D", dynamic, "$E", exception).Replace(code)
+	// Grammar failures are source exceptions; valid JSON whose value cannot be
+	// represented remains a coverage refusal. The public JS operation adapts
+	// only the grammar signal into the translated throw ABI.
+	code = strings.ReplaceAll(code, "RAISE EXCEPTION TYPE $E.", "RAISE EXCEPTION TYPE $SYNTAX.")
+	code = strings.Replace(code, "ELSE.\nRAISE EXCEPTION TYPE $SYNTAX.\nENDIF.\nELSE.\nunit = code.", "ELSE.\nRAISE EXCEPTION TYPE $E.\nENDIF.\nELSE.\nunit = code.", 1)
+	code = strings.Replace(code, "CATCH cx_sy_conversion_error cx_sy_arithmetic_error.\nRAISE EXCEPTION TYPE $SYNTAX.", "CATCH cx_sy_conversion_error cx_sy_arithmetic_error.\nRAISE EXCEPTION TYPE $E.", 1)
+	e.files[name+".clas.abap"] = strings.NewReplacer("$SPACE", "` `", "$P", name, "$D", dynamic, "$E", exception, "$SYNTAX", syntax).Replace(code)
 }

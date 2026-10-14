@@ -18,12 +18,17 @@ type emitter struct {
 	chaiUsed        bool
 	chaiArrays      []hir.Type
 	chaiMaps        []hir.Type
+	ownKeysUsed     bool
+	ownAdapters     map[string]bool
 	classIndex      map[string]*hir.Class
 	descendantIndex map[string][]*hir.Class
 	liveClasses     map[string]bool
 	arrayViews      bool
 	recordDelete    bool
+	numberExprs     map[*hir.Expr]bool
+	numberFields    map[string]map[string]bool
 	constructorArgs bool
+	constructorGet  bool
 	configJSON      bool
 	subsetJSONRoots []hir.Type
 	jsonOwnKeys     bool
@@ -127,11 +132,12 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
+	p, numberExprs, numberFields := retainNonfiniteStorage(p)
 	names := hir.NewNames()
 	if os.Getenv("ABAPITI_NAMES") == "readable" {
 		names = hir.NewReadableNames(p, "LNT")
 	}
-	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners}
+	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs, numberFields: numberFields}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	e.arrayViews = len(e.liveClasses) > 0
@@ -147,7 +153,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
 			e.arrayViews = true
 		}
 		findStorage(x.X)
@@ -170,12 +176,25 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		e.liveRuntime()
 	}
 	e.scanUsage()
+	if e.ownKeysUsed {
+		e.ownKeysRuntime()
+	}
+	for _, c := range p.Classes {
+		if callableClass(c) {
+			n := e.name("runtime.callable")
+			e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nENDINTERFACE.\n"
+			break
+		}
+	}
 	e.findStaticConstants()
 	e.findConstSets()
 	e.promoteValueSlots()
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
+	}
+	if e.constructorGet {
+		e.dynamicConstructorRuntime()
 	}
 	for _, i := range p.Interfaces {
 		var b strings.Builder
@@ -367,6 +386,13 @@ func (e *emitter) scanUsage() {
 			return
 		}
 		e.walkStmt(x.Stmt, walk)
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.get" && len(x.Args) == 1 && x.Args[0].Kind == hir.Lit && (x.Args[0].Value == "constructor" || x.Args[0].Value == "name") {
+			need = true
+			e.constructorGet = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+			e.ownKeysUsed = true
+		}
 		scanType(x.Type)
 		if x.Kind == hir.ClassOf {
 			need = true
@@ -386,6 +412,10 @@ func (e *emitter) scanUsage() {
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
 			e.jsonOwnKeys = true
+			// The subset writer synthesizes a ClassValue handler for dynamic
+			// function values. Discover its descriptor ABI before emitting any
+			// interfaces/classes, not later in configJSONRuntime.
+			need = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.materialize" {
 			e.materializer(x.Type)
@@ -552,6 +582,20 @@ func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 	return "METHOD " + b.implemented + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
+// callableClass matches the Go backend's compiled-function predicate. Merely
+// having a call method does not prove a source value is a JavaScript function.
+func callableClass(c *hir.Class) bool {
+	if !strings.HasPrefix(c.Name, "closure.") {
+		return false
+	}
+	for _, i := range c.Implements {
+		if i == "closure.thunk" || strings.HasPrefix(i, "closure.function.") {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *emitter) class(c *hir.Class) {
 	if e.liveClasses[c.Name] && c.Ctor == nil {
 		// Even a data class with no initializers needs a source-binding constructor.
@@ -579,6 +623,9 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	if e.materialized[c.Name] {
 		fmt.Fprintf(&b, "DATA %s TYPE REF TO %s.\n", e.name("builtin.materializedSource"), e.name("runtime.dynamic"))
+	}
+	if callableClass(c) {
+		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name("runtime.callable"))
 	}
 	for _, i := range c.Implements {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
@@ -740,7 +787,7 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
 	if !m.Static && name != "constructor" && e.liveClasses[c.Name] {
-		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `emit.go: constructor: live source cannot run native initializer`.\nENDIF.")
 	}
 	if name == "constructor" && e.liveClasses[c.Name] {
 		e.liveConstructor(b, c)
@@ -871,6 +918,11 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 	if src.Equal(dst) {
 		return value
 	}
+	if taggedNumber(src) && (dst.Kind == hir.Number || dst.Kind == hir.I32 || dst.Kind == hir.I64) {
+		n := b.temp(dst)
+		b.line(n + " = " + b.e.numberBoxRuntime() + "=>finite( " + value + " ).")
+		return n
+	}
 	if dst.Kind == hir.Dynamic {
 		// A typed value into an erased `any` slot: box it.
 		n := b.temp(dst)
@@ -926,7 +978,20 @@ func (b *body) receiver(x *hir.Expr) string {
 	}
 	return b.expr(x)
 }
-func (b *body) value(x *hir.Expr, dst hir.Type) string { return b.convert(b.expr(x), x.Type, dst) }
+func (b *body) value(x *hir.Expr, dst hir.Type) string {
+	// Optional numeric storage has a tagged nonfinite lane. Numeric parsers
+	// never turn NaN into undefined (nor into a fabricated finite zero).
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Number && x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber") {
+		n := b.temp(dst)
+		parser := "float_optional"
+		if x.Op == "string.parseIntNumber" {
+			parser = "int_optional"
+		}
+		b.line(n + " = " + b.e.stringOpsRuntime() + "=>" + parser + "( " + b.expr(x.X) + " ).")
+		return n
+	}
+	return b.convert(b.expr(x), x.Type, dst)
+}
 func (b *body) expr(x *hir.Expr) string {
 	if x == nil {
 		return ""
@@ -965,6 +1030,9 @@ func (b *body) expr(x *hir.Expr) string {
 		return ""
 	}
 	n := b.temp(t)
+	if b.numberStorageExpr(x, n) {
+		return n
+	}
 	switch x.Kind {
 	case hir.PromiseFulfill:
 		b.line(n + " = NEW #( ).")
@@ -1081,10 +1149,10 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.CheckedNumericConvert:
-		a := b.expr(x.X)
+		a := b.scalarNumber(x.X)
 		loName := "check_lo_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n")
 		hiName := "check_hi_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Max, 36), "-", "n")
-		if x.X.Type.Kind == hir.Number {
+		if x.X.Type.Kind == hir.Number || taggedNumber(x.X.Type) {
 			low := b.constant(loName, "f", strconv.FormatInt(x.Range.Min, 10))
 			high := b.constant(hiName, "f", strconv.FormatInt(x.Range.Max, 10))
 			b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " < " + low + " OR " + a + " > " + high + ".")
@@ -1096,7 +1164,7 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("ENDIF.")
 		b.line(n + " = " + a + ".")
 	case hir.NumericConvert:
-		b.line(n + " = " + b.expr(x.X) + ".")
+		b.line(n + " = " + b.value(x.X, t) + ".")
 	case hir.Local:
 		b.line(n + " = " + b.locals[x.Name] + ".")
 	case hir.This:
@@ -1145,9 +1213,8 @@ func (b *body) expr(x *hir.Expr) string {
 				if x.Args[0].Type.Kind == hir.Number {
 					b.line("IF " + cnt + " <> trunc( " + cnt + " ).\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
 				}
-				if e.chaiUsed {
-					b.line("IF " + cnt + " > 0.\nRAISE EXCEPTION TYPE " + e.name("exception.chaiRefusal") + " EXPORTING reason = `array.length: hole-aware storage required`.\nENDIF.")
-				}
+				// allocate records holes; observation-specific adapters must
+				// either preserve their semantics or refuse at the read boundary.
 				count := b.temp(hir.T(hir.I32))
 				b.line(count + " = " + cnt + ".")
 				b.line(n + "->allocate( " + count + " ).")
@@ -1156,11 +1223,18 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if t.Kind == hir.RegExp {
 			e.regexpUsed = true
+			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok && regexHasClassComplement(raw) {
+				e.refuse(fmt.Errorf("JavaScript regexp %q: \\S inside a character class is not expressible on the legacy POSIX path", raw))
+			}
 			js := regexNeedsJS(x) || e.execUsed && regexMayHaveState(x)
 			original := b.value(x.Args[0], hir.T(hir.String))
 			pattern, reject := original, ""
 			if raw, ok := x.Args[0].Value.(string); !js && x.Args[0].Kind == hir.Lit && ok {
-				translated, excluded := regexPattern(raw)
+				flags := ""
+				if len(x.Args) > 1 {
+					flags, _ = x.Args[1].Value.(string)
+				}
+				translated, excluded := regexPattern(raw, flags)
 				if translated != raw || excluded != "" {
 					pattern = b.temp(hir.T(hir.String))
 					b.stringLit(pattern, translated)
@@ -1195,7 +1269,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		var jsonArgs []string
 		class := e.classBy(t.Name)
-		if e.jsonOwnKeys && class != nil && class.Structural && class.Super == "" && x.OwnKeys != nil {
+		if class != nil && class.Structural && x.OwnKeys != nil && (e.jsonOwnKeys && class.Super == "" || e.ownAdapter(class)) {
 			ctor := e.p.Constructor(t.Name)
 			jsonArgs = make([]string, len(x.Args))
 			evaluate := func(i int) {
@@ -1284,7 +1358,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 
 		z := b.expr(x.Y)
-		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
+		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && referenceStorage(x.X.Type) && referenceStorage(x.Y.Type) {
 			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
 			b.boxDynamic(left, a, x.X.Type)
 			b.boxDynamic(right, z, x.Y.Type)
@@ -1341,8 +1415,14 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + ah + " = " + zh + ".")
 			b.line("IF " + ah + " = abap_false.")
 			b.line(n + " = abap_true.")
-			b.line("ELSEIF " + a + "->value = " + z + "->value.")
-			b.line(n + " = abap_true.")
+			if x.X.Type.Args[0].Kind == hir.Number {
+				b.line("ELSE.\nIF " + a + "->number_special <> 0 OR " + z + "->number_special <> 0.")
+				b.line(n + " = xsdbool( " + a + "->number_special = " + z + "->number_special AND " + a + "->number_special <> 1 ).")
+				b.line("ELSE.\n" + n + " = xsdbool( " + a + "->value = " + z + "->value ).\nENDIF.")
+			} else {
+				b.line("ELSEIF " + a + "->value = " + z + "->value.")
+				b.line(n + " = abap_true.")
+			}
 			b.line("ENDIF.")
 			b.line("ENDIF.")
 			if x.Op == "!=" {
@@ -1370,6 +1450,10 @@ func (b *body) expr(x *hir.Expr) string {
 		a := b.expr(x.X)
 		if x.Op == "!" {
 			b.line(n + " = xsdbool( " + a + " = abap_false ).")
+		} else if t.Kind == hir.Number {
+			// Binary 0 - x loses the sign when x is +0. JS unary negation
+			// flips the IEEE sign, which Chai deep equality can observe.
+			b.line(n + " = - " + a + ".")
 		} else {
 			b.line(n + " = 0 - " + a + ".")
 			if x.CheckIntegerOverflow {
@@ -1446,7 +1530,7 @@ func (b *body) expr(x *hir.Expr) string {
 		for _, stmt := range x.Stmt.List {
 			b.stmt(stmt)
 		}
-		b.line(n + " = " + b.expr(x.Y) + ".")
+		b.line(n + " = " + b.value(x.Y, t) + ".")
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
@@ -1464,7 +1548,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.serial++
 			row := fmt.Sprintf("t%d", b.serial)
 			if e.arrayViews {
-				b.line("IF " + a + "->source IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+				b.line("IF " + a + "->source IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `emit.go: array mutation: graph-backed storage requires live mutation ABI`.\nENDIF.")
 			}
 			b.line("CREATE OBJECT " + n + ".")
 			b.line("LOOP AT " + a + "->items INTO DATA(" + row + ").")
@@ -1484,6 +1568,9 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if x.X.Type.Kind == hir.Optional {
 			base := x.X.Type.Args[0]
+			if base.Kind == hir.Number {
+				b.line("IF " + a + "->number_special <> 0.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+			}
 			if !base.IsRef() {
 				a += "->value"
 			}
@@ -1510,7 +1597,13 @@ func (b *body) expr(x *hir.Expr) string {
 		if at.Kind == hir.Optional && !at.Args[0].IsRef() {
 			b.line("IF " + a + " IS BOUND.")
 			b.line("IF " + a + "->has = abap_true.")
+			if at.Args[0].Kind == hir.Number {
+				b.line("IF " + a + "->number_special <> 0.\n" + n + " = xsdbool( " + a + "->number_special <> 1 ).\nELSE.")
+			}
 			b.truth(n, a+"->value", at.Args[0])
+			if at.Args[0].Kind == hir.Number {
+				b.line("ENDIF.")
+			}
 			b.line("ENDIF.")
 			b.line("ENDIF.")
 		} else {
@@ -1911,6 +2004,19 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.numberStorageRuntime(x, n) {
+		return
+	}
+	// Immediate boxing does not change a native string array's ToPrimitive.
+	// Keep evaluation once and use the existing checked, dense comma join;
+	// erased refs, other element types and hooks stay outside this proof.
+	if x.Op == "dynamic.toString" && x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" && x.X.X != nil && x.X.X.Type.Kind == hir.Array && len(x.X.X.Type.Args) == 1 && x.X.X.Type.Args[0].Kind == hir.String {
+		a := b.expr(x.X.X)
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->join( VALUE #( ) ).")
+		b.line("ELSE.\n" + n + " = `undefined`.\nENDIF.")
+		return
+	}
 	if b.constSetHas(x, n) || b.replaceFreshCharacterRegex(x, n) {
 		return
 	}
@@ -2354,8 +2460,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.nativeCall0(x, n, a)
 		return
 	case "dynamic.keys":
-		b.e.liveRuntime()
-		b.line("RAISE EXCEPTION TYPE " + b.e.name("view.refusal") + ".")
+		b.e.ownKeysRuntime()
+		b.line(n + " = " + b.e.name("runtime.ownKeys") + "=>keys( " + a + " ).")
 		return
 	case "dynamic.classView":
 		b.liveView(x, n, a)
@@ -2368,7 +2474,28 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
+		b.e.errorUsed = true
+		b.line("TRY.")
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		b.line("CATCH " + b.e.name("exception.JSONSyntaxError") + ".")
+		message := b.temp(hir.T(hir.Optional, hir.T(hir.String)))
+		b.line(message + " = NEW #( ).\n" + message + "->has = abap_true.\n" + message + "->value = `Invalid JSON`.")
+		syntax := b.e.name("builtin.SyntaxError")
+		if b.e.classBy("builtin.SyntaxError") == nil {
+			b.e.files[syntax+".clas.abap"] = "CLASS " + syntax + " DEFINITION PUBLIC INHERITING FROM " + b.e.name("builtin.Error") + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + syntax + " IMPLEMENTATION.\nENDCLASS.\n"
+		}
+		payload := b.temp(hir.Ref("builtin.SyntaxError"))
+		b.line(payload + " = NEW " + syntax + "( " + b.e.param("message") + " = " + message + " ).")
+		// Ordinary source catches bind an Error; settled async catches bind
+		// Dynamic through the shared source_value slot. Preserve both lanes.
+		err := b.rawTemp("REF TO " + b.e.exception(hir.Ref("builtin.Error")))
+		b.line(err + " = NEW #( ).\n" + err + "->payload = " + payload + ".")
+		if b.e.promiseUsed {
+			boxed := b.temp(hir.T(hir.Dynamic))
+			b.boxDynamic(boxed, payload, hir.Ref("builtin.SyntaxError"))
+			b.line(err + "->source_value = " + boxed + ".")
+		}
+		b.line("RAISE EXCEPTION " + err + ".\nENDTRY.")
 		return
 	case "json5.parse":
 		b.e.json5SubsetRuntime()
@@ -2526,7 +2653,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
 		if x.Op == "dynamic.recordString" {
 			b.line("IF " + a + " IS BOUND.")
-			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array OR " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
 			b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": ABAP record string conversion requires primitive dynamic storage"})
 			b.line("ENDIF.")
 			b.line("ENDIF.")
@@ -2536,22 +2663,29 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if x.Op == "dynamic.toString" || x.Op == "dynamic.recordString" {
 			method = "to_string"
 		}
+		if x.Op == "dynamic.recordString" {
+			// Ordinary tagged records have Object.prototype's default coercion.
+			// Presence, including an own undefined hook, leaves that domain.
+			b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_object.")
+			for _, key := range []string{"toString", "valueOf", "__proto__"} {
+				b.line("READ TABLE " + a + "->entries WITH KEY k = `" + key + "` TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.")
+				b.stmt(&hir.Stmt{Kind: hir.Trap, Name: x.Source + ": record string conversion requires the original default Object coercion hooks"})
+				b.line("ENDIF.")
+			}
+			b.line(n + " = `[object Object]`.\nELSE.")
+		}
 		b.line(n + " = " + a + "->" + method + "( ).")
+		if x.Op == "dynamic.recordString" {
+			b.line("ENDIF.")
+		}
 		if x.Op == "dynamic.typeofValue" {
-			// Lifted function objects retain their ordinary reference representation;
-			// their real compiled class, rather than the reference tag, is callable.
-			for _, c := range b.e.p.Classes {
-				if !strings.HasPrefix(c.Name, "closure.") {
-					continue
-				}
-				for _, i := range c.Implements {
-					if i == "closure.thunk" || strings.HasPrefix(i, "closure.function.") {
-						b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + b.e.name(c.Name) + ".")
-						b.line(n + " = `function`.")
-						b.line("ENDIF.")
-						break
-					}
-				}
+			// Keep the ordinary box representation and the Go callable predicate,
+			// but test one shared marker instead of enumerating every closure here.
+			marker := b.e.name("runtime.callable")
+			if _, ok := b.e.files[marker+".intf.abap"]; ok {
+				b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + marker + ".")
+				b.line(n + " = `function`.")
+				b.line("ENDIF.")
 			}
 		}
 		b.line("ELSE.")
@@ -2576,6 +2710,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		return
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array {
+			// A tagged array's as_ref returns the graph itself, not a typed
+			// table wrapper. Publish a live view instead of downcasting it.
+			b.arrayView(x.Type, n, a)
+			return
+		}
 		// The box methods use snake_case ABAP names.
 		op := map[string]string{"dynamic.isNumber": "is_number", "dynamic.asNumber": "as_number", "dynamic.isString": "is_string", "dynamic.isFunction": "is_function", "dynamic.asString": "as_string", "dynamic.asClassValue": "as_classvalue", "dynamic.asRef": "as_ref"}[x.Op]
 		target := n
@@ -2788,6 +2928,10 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("ENDDO.")
 	case hir.ForEach:
 		a := b.expr(s.X)
+		if e.chaiUsed && e.arrayViews {
+			b.line(a + "->load( ).")
+		}
+		b.chaiDenseIteration(a)
 		n := b.temp(s.Type)
 		old, ok := b.locals[s.Name]
 		b.locals[s.Name] = n
@@ -2801,6 +2945,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if e.arrayViews {
 			idx := b.temp(hir.T(hir.I32))
 			b.line("DO.\n" + a + "->load( ).\nIF " + idx + " >= lines( " + a + "->items ).\nEXIT.\nENDIF.")
+			b.chaiDenseIteration(a)
 			b.line("CLEAR " + row + ".\nREAD TABLE " + a + "->items INDEX " + idx + " + 1 INTO " + row + ".")
 			if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
 				b.line("IF " + a + "->has( " + idx + " ) = abap_false.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
@@ -2813,6 +2958,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("ENDDO.")
 		} else {
 			b.line("LOOP AT " + a + "->items INTO " + row + ".")
+			b.chaiDenseIteration(a)
 			if row != n {
 				b.arrayElement(n, row, s.Type)
 			}
@@ -2856,7 +3002,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if e.assertionOwners[s.SiteOwner] {
 			base := name
 			name = e.name("exception.testAssertion." + s.X.Type.String())
-			e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+			e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 		}
 		n := b.rawTemp("REF TO " + name)
 		v := b.expr(s.X)
@@ -2967,10 +3113,14 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 			test += " AND " + a + "->has = abap_true"
 		}
 		b.line("IF " + test + ".")
+		optional := a
 		if !base.IsRef() {
 			a += "->value"
 		}
 		b.boxDynamic(n, a, base)
+		if base.Kind == hir.Number {
+			b.line(n + "->number_special = " + optional + "->number_special.")
+		}
 		b.line("ENDIF.")
 		return
 	}

@@ -471,8 +471,8 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 func (l *lowerer) regexFlags(n *ast.Node, flags string) bool {
 	seen := map[rune]bool{}
 	for _, flag := range flags {
-		if !strings.ContainsRune("igym", flag) || seen[flag] {
-			l.diagf(n, "unsupported-regex", "RegExp flags %q are not lowered: unique i/g/y flags and reviewed m patterns only", flags)
+		if !strings.ContainsRune("igyms", flag) || seen[flag] {
+			l.diagf(n, "unsupported-regex", "RegExp flags %q are not lowered: unique i/g/y/s flags and reviewed m patterns only", flags)
 			return false
 		}
 		seen[flag] = true

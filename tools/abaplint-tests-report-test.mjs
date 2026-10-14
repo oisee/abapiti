@@ -58,5 +58,21 @@ try {
  assert.throws(audit,/harness executed Node-pending test/);
  writeFileSync(join(dir,'audit-node.json'),JSON.stringify({total:2,titles:['collision','collision'],pendingTitles:['collision']}));
  assert.throws(audit,/ambiguous active\/pending title collision/);
+ // Exact multi-line/quoted duplicate titles: equal host counts do not imply parity.
+ const title = 'keywordCase: lower "quoted"\n  class zcl_my.\n';
+ const multiNode = {total:3, passed:3, failed:0, pending:0, titles:[title,title,'other'], pendingTitles:[]};
+ const multiRun = {results:[{title,status:'passed',message:''},{title:'other',status:'passed',message:''},{title:'unexpected',status:'passed',message:''}]};
+ writeFileSync(join(dir,'shards.json'),JSON.stringify({partial:true,files:['test/probe.ts'],shards:[{id:'rules',name:'rules',roots:['test/probe.ts']}]}));
+ writeFileSync(join(dir,'node-rules.json'),JSON.stringify(multiNode));
+ writeFileSync(join(dir,'go-rules.json'),JSON.stringify(multiRun));
+ // Deliberately stale report says unregistered 0; summary must use raw JSON.
+ writeFileSync(join(dir,'report-rules.json'),JSON.stringify({...r,notRunReasons:{unregistered:0}}));
+ execFileSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-summary.mjs'),dir,join(dir,'multi-summary.json')]);
+ const ms=JSON.parse(readFileSync(join(dir,'multi-summary.json')));
+ assert.equal(ms.uniqueTotal.unregistered,1);
+ assert.equal(ms.nodeActive.unregistered,1);
+ assert.equal(ms.registrationParity,false);
+ assert.deepEqual(ms.shards[0].unregisteredTitles,[title]);
+ assert.equal(ms.shards[0].unmatched,1);
  console.log('report multiset, async, unregistered, unmatched, Node-active/pending audit, four-shard summary, trap ranking: ok');
 } finally {rmSync(dir,{recursive:true,force:true});}

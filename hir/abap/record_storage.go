@@ -21,11 +21,11 @@ DATA adapter TYPE REF TO $S.
 TRY.
 adapter ?= oval.
 CATCH cx_sy_move_cast_error.
-RAISE EXCEPTION TYPE $E.
+RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.has: reference lacks view storage'.
 ENDTRY.
 result = adapter->has( p0 ).
 ELSE.
-RAISE EXCEPTION TYPE $E.
+RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.has: source is not object or reference'.
 ENDIF.
 ENDMETHOD.
 METHOD delete.
@@ -37,18 +37,18 @@ DATA adapter TYPE REF TO $S.
 TRY.
 adapter ?= oval.
 CATCH cx_sy_move_cast_error.
-RAISE EXCEPTION TYPE $E.
+RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: reference lacks view storage'.
 ENDTRY.
 result = adapter->delete( p0 ).
 ELSE.
-RAISE EXCEPTION TYPE $E.
+RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: source is not object or reference'.
 ENDIF.
 ENDMETHOD.
 `
 	if e.recordDelete {
 		fallback := e.nativeRecordDeleteRuntime()
 		start := strings.Index(code, "METHOD delete.")
-		code = code[:start] + strings.Replace(code[start:], "CATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE $E.", "CATCH cx_sy_move_cast_error.\nresult = "+fallback+"=>run( p0 = oval key = p0 ).\nRETURN.", 1)
+		code = code[:start] + strings.Replace(code[start:], "CATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: reference lacks view storage'.", "CATCH cx_sy_move_cast_error.\nresult = "+fallback+"=>run( p0 = oval key = p0 ).\nRETURN.", 1)
 	}
 	text = strings.Replace(text, "METHOD as_ref.\n", "METHOD as_ref.\nIF tag = tag_object OR tag = tag_array.\nresult = me.\nRETURN.\nENDIF.\n", 1)
 	text = strings.TrimSuffix(text, "ENDCLASS.\n") + strings.NewReplacer("$S", adapter, "$E", trap).Replace(code) + "ENDCLASS.\n"
@@ -60,7 +60,11 @@ func (b *body) markOwnKey(receiver, key string) {
 }
 func (b *body) attachOwnKeys(x *hir.Expr, n string) {
 	c := b.e.classBy(x.Type.Name)
-	if !b.e.types["runtime.liveView"] || c == nil || !c.Structural || x.OwnKeys == nil {
+	if !b.e.types["runtime.liveView"] || c == nil || !c.Structural {
+		return
+	}
+	if x.OwnKeys == nil {
+		b.factoryOwnKeys(x, n)
 		return
 	}
 	bag := n + "->" + b.e.name("view.ownKeys")
@@ -75,7 +79,7 @@ func (e *emitter) nativeStructuralPresence(out *strings.Builder, c *hir.Class) {
 	if e.liveRoot(c) {
 		fmt.Fprintf(out, "IF me->%s IS BOUND.\nresult = me->%s->has( p0 ).\nRETURN.\nENDIF.\n", e.name("view.source"), e.name("view.source"))
 	}
-	fmt.Fprintf(out, "IF %s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\nresult = %s->has( p0 ).\nIF result = abap_false AND me->%s IS BOUND.\nresult = me->%s->has( p0 ).\nENDIF.\nENDMETHOD.\n", bag, trap, bag, e.name("view.extras"), e.name("view.extras"))
+	fmt.Fprintf(out, "IF %s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: structural.has: own-key metadata absent`.\nENDIF.\nresult = %s->has( p0 ).\nIF result = abap_false AND me->%s IS BOUND.\nresult = me->%s->has( p0 ).\nENDIF.\nENDMETHOD.\n", bag, trap, bag, e.name("view.extras"), e.name("view.extras"))
 	fmt.Fprintf(out, "METHOD %s~delete.\nDATA ignored TYPE abap_bool.\n", storage)
 	if e.liveRoot(c) {
 		fmt.Fprintf(out, "IF me->%s IS BOUND.\nresult = me->%s->delete( p0 ).\nRETURN.\nENDIF.\n", e.name("view.source"), e.name("view.source"))
@@ -86,8 +90,9 @@ func (e *emitter) nativeStructuralPresence(out *strings.Builder, c *hir.Class) {
 			continue
 		}
 		fmt.Fprintf(out, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
-		if prototypeProperty(f.Name) || f.Type.Kind != hir.Optional && f.Type.Kind != hir.Dynamic {
-			fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s.\n", trap)
+		typ := e.semanticFieldType(c, f)
+		if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+			fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: structural.delete: required or prototype slot cannot retain absence`.\n", trap)
 		} else {
 			fmt.Fprintf(out, "CLEAR me->%s.\n", e.member(f.Name))
 			if e.recordDelete {
@@ -108,11 +113,11 @@ func (b *body) erasedPropertyHas(x *hir.Expr, n, a, key string) {
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
 	trap := e.name("view.refusal")
 	b.line("CLEAR " + d + ".\nCLEAR " + adapter + ".")
-	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
+	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: receiver is undefined`.\nENDIF.")
 	b.line("TRY.\n" + d + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
-	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.\n" + d + " = " + adapter + "->source( ).")
-	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) = abap_false.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\n" + n + " = " + adapter + "->has( " + key + " ).\nELSE.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.\nELSE.")
-	b.line("IF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.")
+	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: reference lacks view storage`.\nENDTRY.\n" + d + " = " + adapter + "->source( ).")
+	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) = abap_false.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: source-less storage is not structural`.\nENDIF.\n" + n + " = " + adapter + "->has( " + key + " ).\nELSE.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.\nELSE.")
+	b.line("IF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: source is not object graph`.\nENDIF.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.")
 	if x.Op == "object.has" {
 		b.line("IF " + n + " = abap_false.")
 		clauses := []string{}
@@ -132,7 +137,7 @@ func (e *emitter) nativeRecordDeleteRuntime() string {
 	}
 	e.types[name] = true
 	var code strings.Builder
-	fmt.Fprintf(&code, "CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\nCLASS-METHODS run IMPORTING p0 TYPE REF TO object key TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD run.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\n", name, name, e.name("view.refusal"))
+	fmt.Fprintf(&code, "CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\nCLASS-METHODS run IMPORTING p0 TYPE REF TO object key TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD run.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: receiver is undefined`.\nENDIF.\n", name, name, e.name("view.refusal"))
 	for i, c := range e.classesByDepth() {
 		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native%d TYPE REF TO %s.\nnative%d ?= p0.\nCASE key.\n", e.name(c.Name), i, e.name(c.Name), i)
 		seen := map[string]bool{}
@@ -143,8 +148,9 @@ func (e *emitter) nativeRecordDeleteRuntime() string {
 				}
 				seen[f.Name] = true
 				fmt.Fprintf(&code, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
-				if prototypeProperty(f.Name) || f.Type.Kind != hir.Optional && f.Type.Kind != hir.Dynamic {
-					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s.\n", e.name("view.refusal"))
+				typ := e.semanticFieldType(base, f)
+				if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", e.name("view.refusal"))
 				} else {
 					fmt.Fprintf(&code, "CLEAR native%d->%s.\nINSERT key INTO TABLE native%d->%s.\n", i, e.member(f.Name), i, e.name("record.deleted"))
 				}
@@ -152,7 +158,7 @@ func (e *emitter) nativeRecordDeleteRuntime() string {
 		}
 		code.WriteString("ENDCASE.\nresult = abap_true.\nRETURN.\nENDIF.\n")
 	}
-	fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s.\nENDMETHOD.\nENDCLASS.\n", e.name("view.refusal"))
+	fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\nENDMETHOD.\nENDCLASS.\n", e.name("view.refusal"))
 	e.files[name+".clas.abap"] = code.String()
 	return name
 }

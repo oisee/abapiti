@@ -223,6 +223,8 @@ ENDMETHOD.
 		case hir.Optional:
 			if t.Args[0].IsRef() {
 				line("result = %s.", call(t.Args[0], "p0"))
+			} else if t.Args[0].Kind == hir.Number {
+				line("IF p0->has = abap_true.\nIF p0->number_special <> 0.\nresult = `null`.\nELSE.\nresult = %s.\nENDIF.\nENDIF.", call(t.Args[0], "p0->value"))
 			} else {
 				line("IF p0->has = abap_true.\nresult = %s.\nENDIF.", call(t.Args[0], "p0->value"))
 			}
@@ -279,7 +281,8 @@ ENDMETHOD.
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
 			if subset {
-				if c == nil || c.CoercionUnsafe || c.ViewUnsafe || !jsonKeyNamesSafe(c) {
+				_, nominalProven := e.lspTokenJSONOrder(c)
+				if c == nil || c.CoercionUnsafe || c.ViewUnsafe && !nominalProven || !jsonKeyNamesSafe(c) {
 					fail()
 					break
 				}
@@ -331,7 +334,10 @@ ENDMETHOD.
 						line("WHEN `%s`.\nown_text = %s.\nIF own_text IS NOT INITIAL.\nown_child = %s=>parse( own_text ).\nENDIF.", strings.ReplaceAll(field.Name, "`", "``"), call(field.Type, "p0->"+e.member(field.Name)), e.name("runtime.jsonSubset"))
 					}
 					line("WHEN OTHERS.")
-					if len(e.liveClasses) > 0 && !e.liveClasses[c.Name] {
+					// Both source-backed live shapes and native structural shapes
+					// retain added own properties in extras. A live class without
+					// a source is still a native object, not a reason to omit them.
+					if e.types["runtime.liveView"] {
 						extras := "p0->" + e.name("view.extras")
 						line("IF %s IS NOT BOUND.", extras)
 						fail()
@@ -344,6 +350,38 @@ ENDMETHOD.
 						fail()
 					}
 					line("ENDCASE.\nown_graph->put( p0 = own_row-k p1 = own_child ).\nENDLOOP.\nresult = %s.\nleave( p0 ).\nRETURN.\nENDIF.", call(hir.T(hir.Dynamic), "own_graph"))
+				}
+				if order, proven := e.lspTokenJSONOrder(c); proven {
+					// Known subclasses serialize their own complete layout. A
+					// subclass without a certificate must never fall through.
+					for _, child := range e.descendants(c) {
+						line("IF p0 IS INSTANCE OF %s.", e.name(child.Name))
+						if _, ok := e.lspTokenJSONOrder(child); ok {
+							local := e.name("json.native." + child.Name)
+							line("DATA %s TYPE REF TO %s.\n%s ?= p0.\nresult = %s.\nRETURN.", local, e.name(child.Name), local, call(hir.Ref(child.Name), local))
+						} else {
+							fail()
+						}
+						line("ENDIF.")
+					}
+					line("enter( p0 ).\nDATA native_graph TYPE REF TO %s.\nDATA native_child TYPE REF TO %s.\nDATA native_text TYPE string.\nCREATE OBJECT native_graph.\nnative_graph->tag = %s=>tag_object.", dyn, dyn, dyn)
+					for _, key := range order {
+						owner := e.fieldOwner(c, key)
+						for _, field := range owner.Fields {
+							if field.Static || field.Name != key {
+								continue
+							}
+							if e.recordDelete {
+								line("READ TABLE p0->%s WITH KEY table_line = `%s` TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.", e.name("record.deleted"), strings.ReplaceAll(key, "`", "``"))
+							}
+							line("native_text = %s.\nIF native_text IS NOT INITIAL.\nnative_child = %s=>parse( native_text ).\nnative_graph->put( p0 = `%s` p1 = native_child ).\nENDIF.", call(field.Type, "p0->"+e.member(key)), e.name("runtime.jsonSubset"), strings.ReplaceAll(key, "`", "``"))
+							if e.recordDelete {
+								line("ENDIF.")
+							}
+						}
+					}
+					line("result = %s.\nleave( p0 ).", call(hir.T(hir.Dynamic), "native_graph"))
+					break
 				}
 				if !e.materialized[c.Name] {
 					fail()
@@ -424,7 +462,7 @@ ENDMETHOD.
 			line("DATA text TYPE string.\nDATA key TYPE string.\nDATA comma TYPE string.\nDATA child TYPE REF TO %s.\nDATA row TYPE %s=>entry.", dyn, dyn)
 			line("TYPES: BEGIN OF indexed_entry, idx TYPE p LENGTH 8 DECIMALS 0, row TYPE %s=>entry, END OF indexed_entry.", dyn)
 			line("DATA indexed TYPE STANDARD TABLE OF indexed_entry WITH DEFAULT KEY.\nDATA indexed_row TYPE indexed_entry.\nDATA rest TYPE %s=>entries_type.\nDATA ordered TYPE %s=>entries_type.\nDATA canonical TYPE string.\nDATA idx TYPE p LENGTH 8 DECIMALS 0.", dyn, dyn)
-			line("CASE p0->tag.\nWHEN %s=>tag_string.\nresult = quote( p0->sval ).\nWHEN %s=>tag_number.\nresult = number( p0->nval ).\nWHEN %s=>tag_boolean.", dyn, dyn, dyn)
+			line("CASE p0->tag.\nWHEN %s=>tag_string.\nresult = quote( p0->sval ).\nWHEN %s=>tag_number.\nIF p0->number_special <> 0.\nresult = `null`.\nELSE.\nresult = number( p0->nval ).\nENDIF.\nWHEN %s=>tag_boolean.", dyn, dyn, dyn)
 			line("IF p0->bval = abap_true.\nresult = `true`.\nELSE.\nresult = `false`.\nENDIF.\nWHEN %s=>tag_null.\nresult = `null`.\nWHEN %s=>tag_array.", dyn, dyn)
 			line("enter( p0 ).\nDATA itemidx TYPE i.\nDATA childref TYPE REF TO object.\nresult = `[`.\nWHILE itemidx < lines( p0->items ).\nitemidx = itemidx + 1.\nREAD TABLE p0->items INDEX itemidx INTO childref.\nchild ?= childref.\ntext = %s.\nIF text IS INITIAL.\ntext = `null`.\nENDIF.\nCONCATENATE result comma text INTO result RESPECTING BLANKS.\ncomma = `,`.\nENDWHILE.\nCONCATENATE result `]` INTO result.\nleave( p0 ).", call(t, "child"))
 			if subset {

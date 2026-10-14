@@ -75,6 +75,7 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	x = l.observedArrayIndex(x)
 	if x.Type.Kind == hir.Bool {
 		return x
 	}
@@ -1623,17 +1624,30 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("number.toString", recv, str), true
 		}
 	case hir.RegExp:
+		input := func() *hir.Expr {
+			if !l.unprunedFeatures {
+				return one()
+			}
+			if len(args) != 1 {
+				return nil
+			}
+			x := l.observedArrayIndex(l.expr(args[0]))
+			if x == nil {
+				return nil
+			}
+			return l.primitiveString(args[0], x)
+		}
 		switch name {
 		case "test":
-			return l.rtOp("regexp.test", recv, boolT, one()), true
+			return l.rtOp("regexp.test", recv, boolT, input()), true
 		case "exec":
 			// Discarded captures retain the pre-exec test ABI.
 			if isConditionOnly(n) {
 				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
-				return l.rtOp("regexp.test", recv, boolT, one()), true
+				return l.rtOp("regexp.test", recv, boolT, input()), true
 			}
 			if len(args) == 1 {
-				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), one()), true
+				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), true
 			}
 		case "toString":
 			if len(args) == 0 {
@@ -1665,6 +1679,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	case hir.Array:
 		switch name {
+		case "fill":
+			if len(args) != 1 {
+				return nil, false
+			}
+			return l.fillArray(n, recv, args), true
 		case "flat":
 			return l.flatArray(n, recv, args), true
 		case "reverse":
@@ -2481,7 +2500,15 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if x == nil || y == nil {
 		return nil
 	}
-	if (x.Type.Kind == hir.Bool && y.Type.IsRef()) || (y.Type.Kind == hir.Bool && x.Type.IsRef()) {
+	if b.OperatorToken.Kind == ast.KindEqualsEqualsEqualsToken || b.OperatorToken.Kind == ast.KindExclamationEqualsEqualsToken {
+		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
+	}
+	// Dynamic uses reference storage but can carry a primitive boolean.
+	// Keep its tag for equality instead of applying the object-only proof.
+	tagged := func(t hir.Type) bool {
+		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
+	}
+	if (x.Type.Kind == hir.Bool && y.Type.IsRef() && !tagged(y.Type)) || (y.Type.Kind == hir.Bool && x.Type.IsRef() && !tagged(x.Type)) {
 		// An object is never equal to a boolean (`this.conf === true` under
 		// a ts-ignore): the operands are evaluated, the result is constant.
 		l.diagf(n, "note-equality-unrelated", "equality between a reference and a boolean is the constant %v", negated)
@@ -2538,9 +2565,6 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			}
 			return test
 		}
-	}
-	tagged := func(t hir.Type) bool {
-		return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
 	}
 	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
@@ -2803,6 +2827,20 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		}
 		l.diagf(n, "unsupported-type", "object literal needs a named lowered shape")
 		return nil
+	}
+	if l.unprunedFeatures && (l.shapeLike[target.Name] || strings.HasPrefix(target.Name, "shape.")) {
+		for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+			if p.Kind == ast.KindSpreadAssignment {
+				// A spread's own keys/presence/order belong to the source
+				// instance, not the destination's checker field layout. Keep
+				// the runtime snapshot as backing storage for the typed view.
+				record := l.dynamicRecordLiteral(n)
+				if record == nil {
+					return nil
+				}
+				return l.dynamicReference(record, hir.Ref(target.Name))
+			}
+		}
 	}
 	if l.unprunedFeatures && !l.shapeLike[target.Name] && !strings.HasPrefix(target.Name, "shape.") {
 		// A class annotation does not run a constructor on a JS literal.

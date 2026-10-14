@@ -71,17 +71,19 @@ func TestAbaplintTestHostOSGEmission(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	dir := t.TempDir()
-	// The newline PCRE is deliberately a host NOT_COMPILED, not a catchable
-	// ABAP exception: exercise both initialization and test-body restarts.
-	// Use checked replacement: with the CDS exec fixture present, .test routes
-	// through an absolute-anchor exec search that OSG now accepts on newlines.
+	// OSG 16c024c8 accepts newline PCRE and ASCII word boundaries (#726).
+	// An admitted sticky regex with lastIndex=1001 emits a cursor repeat
+	// [\s\S]{1001}, beyond RE2's 1000-repeat limit. compilePCRE in
+	// gogen/go/abap/find.go refuses it with host NOT_COMPILED, not a
+	// catchable ABAP exception: exercise init and body restarts.
 	sources := map[string]string{
-		"test/init_dump.ts": `"a\nb".replace(/x+/g, "");`,
+		"test/init_dump.ts": `const initPattern = /a/y; initPattern.lastIndex = 1001; initPattern.exec("a".repeat(1002));`,
 		"test/host.ts": `import {expect} from "../runtime/chai";
 it("pass",()=>{});it("assertion",()=>{expect(1).equal(2)});it("refusal",()=>{new Date()});it("intentional fail",()=>expect.fail("intentional failure"));
-it("host dump",()=>{"a\nb".replace(/x+/g, "")});it("after host dump",()=>{});
-it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo")});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage refusal",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
-		"test/native-init.ts": `const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi; r.exec("define behavior for foo");`,
+it("host dump",()=>{const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002))});it("after host dump",()=>{});
+it("JS whitespace on multiline text",()=>{expect("a\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeffb\u0085\u180ec".replace(/\s+/g,"_")).equal("a_b\u0085\u180ec")});it("JS ASCII word and digit",()=>{expect("a\nA_0é١\ufeff".replace(/[\w\d]+/g,"_")).equal("_\n_é١\ufeff")});
+it("native host refusal",()=>{const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002))});it("CDS normalization",()=>{expect("a\n\u00a0b\vc😀".replace(/\u00a0/g," ").replace(/\u000b/g," ")).equal("a\n b c😀")});it("native exception identity",()=>{throw new Error("ordinary throw")});it("checked absolute anchors",()=>{const r = new RegExp("^foo$",""); expect(r.exec("foo") === null).equal(false); expect(r.exec("xfoo") === null).equal(true); expect(r.exec("foo\nbar") === null).equal(true)});it("CDS quoted grammar",()=>{const r = /^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$/; expect(r.exec("'he''llo'") === null).equal(false); expect(r.exec("''junk") === null).equal(true)});it("array storage length",()=>{const a = new Array<number>(2); expect(a.length).equal(2)});`,
+		"test/native-init.ts": `const r = (()=>{const regex = /a/y; regex.lastIndex = 1001; regex.exec("a".repeat(1002)); return regex})(); r.exec("a");`,
 	}
 	for _, name := range []string{"mocha", "chai"} {
 		raw, err := os.ReadFile("testdata/abaplint-tests/runtime/" + name + ".ts")
@@ -170,7 +172,7 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 		if dumps := strings.Count(stderr.String(), "OSG harness refused:"); dumps != 4 {
 			t.Fatalf("wanted four real host dumps (two init, two body), got %d:\n%s\n%s", dumps, stdout.String(), stderr.String())
 		}
-		t.Log("4 real host dumps; 5 binary invocations; 12 registrations reported")
+		t.Log("4 real host dumps; 5 binary invocations; 14 registrations reported")
 		var summary struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
@@ -179,39 +181,55 @@ it("native host refusal",()=>{const r = /\bdefine\s+(?:\w+\s+)*?behavior\s+for\s
 		if err := json.Unmarshal([]byte(stdout.String()), &summary); err != nil {
 			t.Fatalf("OSG fixture returned no valid report: %v\nstdout: %s\nstderr: %s", err, stdout.String(), stderr.String())
 		}
-		if summary.Passed != 5 || summary.Failed != 2 || summary.Trapped != 5 {
+		// Recovery preserves host traps; hole-aware allocation now permits
+		// the sized-array length observation without a blanket Chai refusal.
+		if summary.Passed != 8 || summary.Failed != 2 || summary.Trapped != 4 {
 			t.Fatalf("OSG misclassification: %s", stdout.String())
 		}
-		if len(summary.Results) != 12 || summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
+		wantTitles := []string{"pass", "assertion", "refusal", "intentional fail", "host dump", "after host dump", "JS whitespace on multiline text", "JS ASCII word and digit", "native host refusal", "CDS normalization", "native exception identity", "checked absolute anchors", "CDS quoted grammar", "array storage length"}
+		if len(summary.Results) != len(wantTitles) {
+			t.Fatalf("lost or duplicated registrations: %s", stdout.String())
+		}
+		for i, title := range wantTitles {
+			if summary.Results[i].Title != title {
+				t.Fatalf("registration %d: want %q, got %q", i+1, title, summary.Results[i].Title)
+			}
+		}
+		for _, i := range []int{6, 7} {
+			if summary.Results[i].Status != "passed" {
+				t.Fatalf("16c024c8 newline replacement regressed: %s", stdout.String())
+			}
+		}
+		if summary.Results[1].Title != "assertion" || summary.Results[1].Status != "failed" || summary.Results[1].Message != "assertion failed: expected 1 to equal 2" || summary.Results[2].Title != "refusal" || summary.Results[2].Status != "trapped" {
 			t.Fatalf("Chai assertion/trap boundary was lost: %s", stdout.String())
 		}
 		intentional := summary.Results[3]
 		if intentional.Title != "intentional fail" || intentional.Status != "failed" || intentional.Message != "intentional failure" {
 			t.Fatalf("settled assertion was lost: %s", stdout.String())
 		}
-		if len(summary.Initialization) != 3 || summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "NOT_COMPILED in FIND PCRE") {
+		if len(summary.Initialization) != 3 || summary.Initialization[1].File != "test/native-init.ts" || summary.Initialization[1].Status != "trapped" || !strings.Contains(summary.Initialization[1].Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(summary.Initialization[1].Message, "invalid repeat count: `{1001}`") || !strings.Contains(summary.Initialization[1].Message, "find.go:") {
 			t.Fatalf("native initialization refusal was lost: %s", stdout.String())
 		}
 		if summary.Initialization[2].File != "test/native-init.ts" || summary.Initialization[2].Status != "trapped" || !strings.Contains(summary.Initialization[2].Message, "was not initialized") {
 			t.Fatalf("subsequent real action did not retain its binding refusal: %s", stdout.String())
 		}
-		native := summary.Results[6]
-		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") {
+		native := summary.Results[8]
+		if native.Title != "native host refusal" || native.Status != "trapped" || !strings.Contains(native.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(native.Message, "invalid repeat count: `{1001}`") || !strings.Contains(native.Message, "find.go:") {
 			t.Fatalf("native refusal escaped its body or became a pass: %s", stdout.String())
 		}
-		generic := summary.Results[8]
+		generic := summary.Results[10]
 		if generic.Title != "native exception identity" || generic.Status != "trapped" || !strings.Contains(generic.Message, "[exception.") {
 			t.Fatalf("native exception identity was lost or relabeled: %s", stdout.String())
 		}
 		holes := summary.Results[len(summary.Results)-1]
-		if holes.Title != "array storage refusal" || holes.Status != "trapped" || !strings.Contains(holes.Message, "array.length: hole-aware storage required") {
-			t.Fatalf("hole-aware storage refusal was lost: %s", stdout.String())
+		if holes.Title != "array storage length" || holes.Status != "passed" {
+			t.Fatalf("hole-aware array length was refused: %s", stdout.String())
 		}
 		hostDump, last := summary.Results[4], summary.Results[5]
-		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
+		if hostDump.Title != "host dump" || hostDump.Status != "trapped" || !strings.Contains(hostDump.Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(hostDump.Message, "invalid repeat count: `{1001}`") || !strings.Contains(hostDump.Message, "find.go:") || last.Title != "after host dump" || last.Status != "passed" {
 			t.Fatalf("host dump did not resume with location: %s", stdout.String())
 		}
-		if len(summary.Initialization) != 3 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED") {
+		if len(summary.Initialization) != 3 || summary.Initialization[0].File != "test/init_dump.ts" || summary.Initialization[0].Status != "trapped" || !strings.Contains(summary.Initialization[0].Message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(summary.Initialization[0].Message, "invalid repeat count: `{1001}`") {
 			t.Fatalf("initialization dump did not survive: %s", stdout.String())
 		}
 	}
