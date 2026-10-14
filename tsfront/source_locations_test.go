@@ -85,9 +85,15 @@ describe("locations",()=>{it("refusal",()=>Probe.refused());it("unsupported",()=
 					if err != nil {
 						t.Fatal(err)
 					}
-					for name, source := range support {
-						files[name] = source
+					// Copy: the tracked fixture map must stay class-only.
+					merged := make(map[string]string, len(files)+len(support))
+					for name, source := range files {
+						merged[name] = source
 					}
+					for name, source := range support {
+						merged[name] = source
+					}
+					files = merged
 				}
 				metadata, err := json.Marshal(l.Diagnostics)
 				if err != nil {
