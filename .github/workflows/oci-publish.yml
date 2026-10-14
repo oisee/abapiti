@@ -37,7 +37,7 @@ jobs:
           mkdir assets
           gh release download "$TAG" --repo "${{ github.repository }}" --dir assets \
             --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
-          (cd assets && grep -E 'a4h(-tests-[a-z_0-9]+)?\.zip$' SHA256SUMS | grep -v 'a4h-tests\.zip$' | sha256sum -c -)
+          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
       - name: Push one layer per archive, then the system index
         run: |
           set -euo pipefail
@@ -69,7 +69,7 @@ jobs:
               --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
               --annotation "org.opencontainers.image.revision=$commit" \
               --annotation "org.opencontainers.image.version=$TAG" \
-              abap.zip:application/zip)
+              abap.zip:application/vnd.osd.abapgit.zip)
             digest=$(oras resolve "$REPO/abaplint-a4h:$name-$TAG")
             manifests+=("$digest")
             printf '| %s | `%s:%s` | `%s` | `%s` |\n' "$n" "abaplint-a4h" "$name-$TAG" "$digest" "$(sha256sum "$zip" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
