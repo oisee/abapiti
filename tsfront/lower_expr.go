@@ -2351,6 +2351,8 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		l.diagf(n, "unsupported-expr", "assignment expression needs a field reference")
 		return nil
+	case ast.KindQuestionQuestionEqualsToken:
+		return l.nullishAssignExpr(n)
 	case ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
 		l.diagf(n, "unsupported-expr", "assignment inside an expression is not lowered")
 		return nil
