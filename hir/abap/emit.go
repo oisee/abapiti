@@ -795,11 +795,19 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	e.currentMethod = m
 	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
+	if name == "constructor" && c.Super != "" && !e.liveClasses[c.Name] {
+		if _, _, _, valid := e.splitSuperConstructor(m.Body); !valid {
+			e.refuse(fmt.Errorf("class %s constructor: requires a single top-level super constructor call without early return or THIS access", c.Name))
+		}
+	}
 	if !m.Static && name != "constructor" && e.liveClasses[c.Name] {
 		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `emit.go: constructor: live source cannot run native initializer`.\nENDIF.")
 	}
 	if name == "constructor" && e.liveClasses[c.Name] {
-		e.liveConstructor(b, c)
+		// Keep the original HIR untouched: Go emission shares this program.
+		copy := *m
+		copy.Body = e.liveConstructor(b, c, m)
+		m = &copy
 	}
 	if m.Name == "class_constructor" && m.Static {
 		flag := e.name("builtin.initialized." + c.Name)
@@ -807,15 +815,18 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.line("RETURN.")
 		b.line("ENDIF.")
 		b.line(flag + " = abap_true.")
-	} else if m.Static || m.Name == "constructor" {
+	} else if m.Static || m.Name == "constructor" && !e.liveClasses[c.Name] {
 		b.initialize(c.Name)
 	}
-	if name == "constructor" && !m.Static && e.needsImplicitSuper(c, m) {
+	if name == "constructor" && !m.Static && !e.liveClasses[c.Name] && e.needsImplicitSuper(c, m) {
 		// TypeScript's implicit super() precedes field initializers; ABAP
 		// refuses any access to ME before SUPER->CONSTRUCTOR (A4H, 2026-10-09).
 		b.line("super->constructor( ).")
 	}
 	for _, p := range m.Params {
+		if b.locals[p.Name] != "" {
+			continue
+		}
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
 		b.line(n + " = " + e.param(p.Name) + ".")

@@ -153,14 +153,19 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 		if e.testPackages && testDeclaration(c) != testPart {
 			continue
 		}
-		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native%d TYPE REF TO %s.\nnative%d ?= p0.\nCASE key.\n", e.name(c.Name), i, e.name(c.Name), i)
+		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native%d TYPE REF TO %s.\nnative%d ?= p0.\n", e.name(c.Name), i, e.name(c.Name), i)
 		seen := map[string]bool{}
+		caseOpened := false
 		for base := c; base != nil; base = e.classBy(base.Super) {
 			for _, f := range base.Fields {
 				if f.Static || seen[f.Name] {
 					continue
 				}
 				seen[f.Name] = true
+				if !caseOpened {
+					code.WriteString("CASE key.\n")
+					caseOpened = true
+				}
 				fmt.Fprintf(&code, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
 				typ := e.semanticFieldType(base, f)
 				if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
@@ -170,7 +175,10 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 				}
 			}
 		}
-		code.WriteString("ENDCASE.\nresult = abap_true.\nRETURN.\nENDIF.\n")
+		if caseOpened {
+			code.WriteString("ENDCASE.\n")
+		}
+		code.WriteString("result = abap_true.\nRETURN.\nENDIF.\n")
 	}
 	if testPart {
 		text := code.String()
