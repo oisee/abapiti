@@ -1,6 +1,6 @@
 🎉 **abaplint's whole test suite passes on a real SAP kernel: TS-HA@A4H 11,060 / 11,060.**
 
-v0.5.1 is v0.5.0 plus one kernel fix, and these are the archives that reach 100 % on A4H as shipped.
+v0.5.1 is v0.5.0 plus one kernel fix. **The A4H result was measured on the v0.5.0 archives plus that fix (#155), deployed as a two-class delta.** The v0.5.1 archives differ from that deployment in no logic. Error messages carry root-relative instead of absolute build paths, and the tests' `rules` packaging splits differently between `rules_1` and `rules_2`.
 
 | Host | Shards | Tests passing | Wrong answers | Traps |
 |---|---:|---:|---:|---:|
