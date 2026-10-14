@@ -15,7 +15,15 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool) {
 		return p, nil
 	}
 	q := copyNumberProgram(p)
-	a := &numberStorage{classes: map[string]*hir.Class{}, methods: map[string]*hir.Method{}, locals: map[*hir.Method]map[string]*hir.Type{}, tagged: map[*hir.Type]bool{}, exprs: map[*hir.Expr]bool{}}
+	a := &numberStorage{
+		classes:    map[string]*hir.Class{},
+		interfaces: map[string]*hir.Interface{},
+		methods:    map[string]*hir.Method{},
+		owners:     map[*hir.Method]string{},
+		locals:     map[*hir.Method]map[string]*hir.Type{},
+		tagged:     map[*hir.Type]bool{},
+		exprs:      map[*hir.Expr]bool{},
+	}
 	for _, c := range q.Classes {
 		a.classes[c.Name] = c
 		if c.Ctor != nil {
@@ -26,6 +34,7 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool) {
 		}
 	}
 	for _, i := range q.Interfaces {
+		a.interfaces[i.Name] = i
 		for _, m := range i.Methods {
 			a.addMethod(i.Name, m)
 		}
@@ -40,8 +49,17 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool) {
 				a.stmt(m, m.Body)
 			}
 			for _, m := range c.Methods {
-				for _, owner := range append([]string{c.Super}, c.Implements...) {
-					a.linkMethods(m, a.lookupMethod(owner, m.Name))
+				a.linkMethods(m, a.lookupMethod(c.Super, m.Name))
+			}
+			// Interface forwarding methods can use an inherited implementation.
+			// Link those signatures too, even if the subclass declares no body.
+			for _, owner := range c.Implements {
+				if i := a.interfaces[owner]; i != nil {
+					for _, n := range i.Methods {
+						if m := a.lookupMethod(c.Name, n.Name); m != nil {
+							a.linkMethods(m, n)
+						}
+					}
 				}
 			}
 		}
@@ -93,16 +111,19 @@ func hasNaNBoundary(p *hir.Program) bool {
 }
 
 type numberStorage struct {
-	classes map[string]*hir.Class
-	methods map[string]*hir.Method
-	locals  map[*hir.Method]map[string]*hir.Type
-	tagged  map[*hir.Type]bool
-	exprs   map[*hir.Expr]bool
-	changed bool
+	classes    map[string]*hir.Class
+	interfaces map[string]*hir.Interface
+	methods    map[string]*hir.Method
+	owners     map[*hir.Method]string
+	locals     map[*hir.Method]map[string]*hir.Type
+	tagged     map[*hir.Type]bool
+	exprs      map[*hir.Expr]bool
+	changed    bool
 }
 
 func (a *numberStorage) addMethod(owner string, m *hir.Method) {
 	a.methods[owner+"\x00"+m.Name] = m
+	a.owners[m] = owner
 	slots := map[string]*hir.Type{}
 	for i := range m.Params {
 		slots[m.Params[i].Name] = &m.Params[i].Type
@@ -254,8 +275,19 @@ func (a *numberStorage) expr(m *hir.Method, x *hir.Expr) bool {
 		}
 	case hir.New, hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		owner, name := x.Owner, x.Name
+		// Match body.call: instance receivers, not Expr.Owner, determine
+		// dispatch. Super calls have neither Owner nor a receiver in HIR.
 		if x.Kind == hir.New {
 			owner, name = x.Type.Name, "constructor"
+		} else if x.Kind == hir.SuperCall {
+			if c := a.classes[a.owners[m]]; c != nil {
+				owner = c.Super
+			}
+			if original, _, specialized := strings.Cut(name, "_instantiated_"); specialized {
+				name = original
+			}
+		} else if x.X != nil {
+			owner = x.X.Type.Name
 		}
 		callee := a.lookupMethod(owner, name)
 		if callee != nil {

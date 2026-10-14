@@ -9,6 +9,64 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
+// Virtual/super HIR calls need not carry Owner. Their declared Number
+// results must follow the callee's tagged storage, including inherited and
+// interface dispatch; otherwise ABAP emits a reference MOVE into TYPE f.
+func TestNonfiniteReceiverCallStorage(t *testing.T) {
+	for _, dispatch := range []string{"direct", "virtual", "inherited", "interface", "inherited-interface", "super"} {
+		t.Run(dispatch, func(t *testing.T) {
+			num := hir.T(hir.Number)
+			read := method("read", num, ret(rt("string.parseFloatNumber", hir.L(str, "NaN"), num)))
+			read.Virtual = true
+			base := &hir.Class{Name: "Base", Methods: []*hir.Method{read}}
+			child := &hir.Class{Name: "Child", Super: "Base"}
+			p := &hir.Program{Classes: []*hir.Class{base, child}}
+			call := &hir.Expr{Kind: hir.VirtualCall, Name: "read", Type: num, X: &hir.Expr{Kind: hir.New, Type: hir.Ref("Base")}}
+			switch dispatch {
+			case "direct":
+				read.Virtual = false
+				call.Kind, call.Owner = hir.DirectCall, "Base"
+			case "inherited":
+				call.X.Type = hir.Ref("Child")
+			case "interface", "inherited-interface":
+				view := hir.Type{Kind: hir.InterfaceRef, Name: "Source"}
+				if dispatch == "inherited-interface" {
+					child.Implements = []string{"Source"}
+					call.X.Type = hir.Ref("Child")
+				} else {
+					base.Implements = []string{"Source"}
+				}
+				p.Interfaces = []*hir.Interface{{Name: "Source", Methods: []*hir.Method{method("read", num, nil)}}}
+				call.X = &hir.Expr{Kind: hir.Cast, Type: view, X: call.X}
+			case "super":
+				forward := method("forward", num, ret(&hir.Expr{Kind: hir.SuperCall, Name: "read", Type: num}))
+				forward.Virtual = true
+				child.Methods = []*hir.Method{forward}
+				call.Name, call.X.Type = "forward", hir.Ref("Child")
+			}
+			probe := method("value", num, ret(call))
+			probe.Static = true
+			check := method("check", boolean, ret(rt("number.isNaN", &hir.Expr{Kind: hir.DirectCall, Owner: "Probe", Name: "value", Type: num}, boolean)))
+			check.Static = true
+			p.Classes = append(p.Classes, &hir.Class{Name: "Probe", Methods: []*hir.Method{probe, check}})
+			files, names, err := emitABAPNamed(t, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !call.Type.Equal(num) || !probe.Result.Equal(num) {
+				t.Fatal("call storage lowering mutated source HIR")
+			}
+			owner := names.Get("Probe")
+			boxed := "TYPE REF TO " + names.Get("runtime."+hir.T(hir.Optional, num).String())
+			if !strings.Contains(files[owner+".clas.abap"], "RETURNING VALUE(result) "+boxed) {
+				t.Fatalf("receiver call result remained a native float:\n%s", files[owner+".clas.abap"])
+			}
+			files[owner+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\nENDMETHOD.\nENDCLASS.\n", owner, names.Get("member.check"))
+			storageHostFixture(t, files, owner)
+		})
+	}
+}
+
 func TestNonfiniteScalarStorage(t *testing.T) {
 	out, err := exec.Command("node", "-e", `class Box { constructor(value) { this.value=value; } get() { return this.value; } } const x=new Box(undefined+1+0); console.log(String(x.get()),Number.isNaN(x.get()),x.get()===x.get(),x.get()<0,Math.trunc(x.get())||0);`).CombinedOutput()
 	if err != nil || string(out) != "NaN true false false 0\n" {
