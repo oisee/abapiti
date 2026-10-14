@@ -1,0 +1,13 @@
+{
+  "path": ".tmp/selfhost/osg-check-kit.zip",
+  "bytes": 3034640,
+  "sha256": "d89410d913af0737b50d36a7ebb8e92a4453fc9e3bac2637d08b9a6b99002a65",
+  "members": 2804,
+  "workloadFiles": 2785,
+  "verified": true,
+  "tracked": false,
+  "variants": [
+    "clean"
+  ],
+  "note": "Frozen inventory only; no artificial seeded variant. Full loader contract in README.md."
+}

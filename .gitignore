@@ -17,3 +17,6 @@ node_modules/
 wasm/testdata/abaplint.wasm
 
 .tmp
+
+# Frozen self-hosting inputs
+/.osg/
