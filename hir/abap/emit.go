@@ -1957,6 +1957,16 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	// Immediate boxing does not change a native string array's ToPrimitive.
+	// Keep evaluation once and use the existing checked, dense comma join;
+	// erased refs, other element types and hooks stay outside this proof.
+	if x.Op == "dynamic.toString" && x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" && x.X.X != nil && x.X.X.Type.Kind == hir.Array && len(x.X.X.Type.Args) == 1 && x.X.X.Type.Args[0].Kind == hir.String {
+		a := b.expr(x.X.X)
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->join( VALUE #( ) ).")
+		b.line("ELSE.\n" + n + " = `undefined`.\nENDIF.")
+		return
+	}
 	if b.constSetHas(x, n) || b.replaceFreshCharacterRegex(x, n) {
 		return
 	}
