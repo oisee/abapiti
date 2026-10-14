@@ -380,7 +380,6 @@ CLASS z_runtime_opti_8df4f98f9a3a52 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
     DATA value TYPE f.
     DATA has TYPE abap_bool.
-    DATA number_special TYPE i.
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.

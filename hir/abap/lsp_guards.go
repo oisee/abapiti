@@ -38,7 +38,7 @@ ENDIF.
 ENDMETHOD.
 METHOD integer_value.
 IF p0 IS BOUND AND p0->tag = $D=>tag_number.
-result = xsdbool( p0->number_special = 0 AND p0->nval >= '-2147483648' AND p0->nval <= '2147483647' ).
+result = xsdbool( p0->nval >= '-2147483648' AND p0->nval <= '2147483647' ).
 ENDIF.
 ENDMETHOD.
 METHOD text_document.
@@ -79,8 +79,7 @@ METHOD candidate.
 DATA falsy TYPE abap_bool.
 falsy = abap_true.
 IF p0 IS BOUND.
-falsy = xsdbool( p0->tag = $D=>tag_null OR p0->tag = $D=>tag_string AND p0->sval IS INITIAL OR p0->tag = $D=>tag_number AND p0->number_special = 1
-OR p0->tag = $D=>tag_number AND p0->number_special = 0 AND p0->nval = 0 ).
+falsy = xsdbool( p0->tag = $D=>tag_null OR p0->tag = $D=>tag_string AND p0->sval IS INITIAL OR p0->tag = $D=>tag_number AND p0->nval = 0 ).
 ENDIF.
 IF falsy = abap_true.
 IF condition = abap_false.

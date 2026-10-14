@@ -38,9 +38,6 @@ func (e *emitter) runtime(t hir.Type) {
 	case hir.Optional:
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
-		if t.Args[0].Kind == hir.Number {
-			line("DATA number_special TYPE i.")
-		}
 	case hir.Array:
 		e.chaiArrays = append(e.chaiArrays, t)
 		line(e.sparseArrayDefinition(t, name))
@@ -516,7 +513,6 @@ METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bo
 METHODS replace IMPORTING p0 TYPE string p1 TYPE string RETURNING VALUE(result) TYPE string.
 PROTECTED SECTION.
 PRIVATE SECTION.
-METHODS class_hyphens IMPORTING pattern TYPE string RETURNING VALUE(result) TYPE string.
 ENDCLASS.
 CLASS ` + name + ` IMPLEMENTATION.
 METHOD constructor.
@@ -527,7 +523,6 @@ DATA in_class TYPE abap_bool.
 DATA escaped TYPE abap_bool.
 DATA whitespace TYPE string.
 DATA dot_class TYPE string.
-DATA normalized TYPE string.
 whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
 dot_class = ` + regexABAPString(jsDotClass) + `.
 me->flags = flags.
@@ -560,16 +555,15 @@ ENDIF.
 i = 0.
 in_class = abap_false.
 excluded = excluded_pattern.
-normalized = class_hyphens( pattern ).
-n = strlen( normalized ).
+n = strlen( pattern ).
 WHILE i < n.
-  c = normalized+i(1).
+  c = pattern+i(1).
   IF c = '\'.
     i = i + 1.
     IF i >= n.
       EXIT.
     ENDIF.
-    c = normalized+i(1).
+    c = pattern+i(1).
     CASE c.
       WHEN 'w'.
         IF in_class = abap_true.
@@ -775,7 +769,6 @@ ENDMETHOD.
 ENDCLASS.
 `
 	}
-	e.files[name+".clas.abap"] = strings.TrimSuffix(e.files[name+".clas.abap"], "ENDCLASS.\n") + regexHyphensRuntime + "ENDCLASS.\n"
 	if js {
 		// This runtime always implements full JS state, even if only a lazy
 		// literal's match/replace was the reason it was reached.
@@ -804,7 +797,6 @@ CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i V
 DATA tag TYPE i.
 DATA sval TYPE string.
 DATA nval TYPE f.
-DATA number_special TYPE i.
 DATA cval TYPE REF TO ` + e.name("runtime.classvalue") + `.
 DATA oval TYPE REF TO object.
 ` + dynamicGraphDefinition(name) + `
@@ -827,9 +819,6 @@ ENDMETHOD.
 METHOD as_number.
 IF tag <> tag_number.
 RAISE EXCEPTION TYPE cx_sy_move_cast_error.
-ENDIF.
-IF number_special <> 0.
-RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
 ENDIF.
 result = nval.
 ENDMETHOD.
@@ -862,17 +851,6 @@ ENDIF.
 ELSEIF tag = tag_null.
 result = ` + "`null`" + `.
 ELSEIF tag = tag_number.
-CASE number_special.
-WHEN 1.
-result = 'NaN'.
-RETURN.
-WHEN 2.
-result = 'Infinity'.
-RETURN.
-WHEN 3.
-result = '-Infinity'.
-RETURN.
-ENDCASE.
 IF nval <> trunc( nval ) OR nval > '9007199254740991' OR nval < '-9007199254740991'.
 RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
 ENDIF.

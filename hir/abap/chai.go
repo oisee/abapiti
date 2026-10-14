@@ -26,14 +26,10 @@ func (b *body) chaiBox(n, a string, t hir.Type) {
 			test += " AND " + a + "->has = abap_true"
 		}
 		b.line("CLEAR " + n + ".\nIF " + test + ".")
-		optional := a
 		if !base.IsRef() {
 			a += "->value"
 		}
 		b.chaiBox(n, a, base)
-		if base.Kind == hir.Number {
-			b.line(n + "->number_special = " + optional + "->number_special.")
-		}
 		b.line("ENDIF.")
 		return
 	}
@@ -309,7 +305,6 @@ const chaiRuntimeSource = `CLASS $N DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 CLASS-METHODS box_ref IMPORTING p0 TYPE REF TO object RETURNING VALUE(result) TYPE REF TO $D.
 CLASS-METHODS deepEqual IMPORTING p0 TYPE REF TO $D p1 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
-CLASS-METHODS zero_sign IMPORTING p0 TYPE f RETURNING VALUE(result) TYPE i.
 CLASS-METHODS deepInclude IMPORTING p0 TYPE REF TO $D p1 TYPE REF TO $D RETURNING VALUE(result) TYPE i.
 CLASS-METHODS arrayInclude IMPORTING p0 TYPE REF TO $D p1 TYPE REF TO $D RETURNING VALUE(result) TYPE abap_bool.
 CLASS-METHODS members IMPORTING p0 TYPE REF TO $D p1 TYPE REF TO $D p2 TYPE abap_bool RETURNING VALUE(result) TYPE abap_bool.
@@ -397,15 +392,6 @@ $ENTRIES
 ENDIF.
 RAISE EXCEPTION TYPE $T.
 ENDMETHOD.
-METHOD zero_sign.
-DATA text TYPE string.
-text = |{ p0 DECIMALS = 0 }|.
-result = 1.
-FIND FIRST OCCURRENCE OF '-' IN text.
-IF sy-subrc = 0.
-result = 2.
-ENDIF.
-ENDMETHOD.
 METHOD deepEqual.
 DATA seen TYPE pairs.
 result = equal( EXPORTING p0 = p0 p1 = p1 CHANGING seen = seen ).
@@ -422,16 +408,9 @@ CASE ak.
 WHEN 0 OR $D=>tag_null.
 result = abap_true.
 WHEN $D=>tag_number.
-IF p0->number_special <> 0 OR p1->number_special <> 0.
-result = xsdbool( p0->number_special = p1->number_special ).
-RETURN.
-ENDIF.
 IF p0->nval = 0 AND p1->nval = 0.
-IF p0->chai_zero_sign = 0.
-p0->chai_zero_sign = zero_sign( p0->nval ).
-ENDIF.
-IF p1->chai_zero_sign = 0.
-p1->chai_zero_sign = zero_sign( p1->nval ).
+IF p0->chai_zero_sign = 0 OR p1->chai_zero_sign = 0.
+RAISE EXCEPTION TYPE $T.
 ENDIF.
 result = xsdbool( p0->chai_zero_sign = p1->chai_zero_sign ).
 RETURN.
