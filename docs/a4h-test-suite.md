@@ -67,6 +67,94 @@ formatter. **FIND/REPLACE PCRE itself requires 7.55**; A4H 7.58 supports it. The
 existing CI lint gate uses v750 for non-PCRE fixtures and the narrow v755 PCRE
 exception. Calling PCRE genuine v750 syntax would be incorrect.
 
+## Parallel offline import: base + independent test parts
+
+Reuse the full build above; **do not re-emit or rename its objects**:
+
+```sh
+node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS"
+node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS" --verify
+node tools/a4h-tests-parts-test.mjs
+```
+
+The splitter uses `closure/closure.json` (each original shard's initialization
+files, including borrowed roots) and `names.json` source identities. Objects
+shared by original shards, mocha/chai, runner/log/report/table, unmapped synthetic
+helpers, and shared rules utilities start in base. Small ABAP shards are grouped
+with statements; objects/rename/LSP stay together. Rules is split into two halves
+by deterministic, largest-first **emitted-source byte** balancing of indivisible
+TS root files. `parts.json` records the roots, provenance, assignments, dependency
+promotions, original versus added object counts, zip sizes/hashes and import
+prerequisites. The syntax shard's large single registration module is deliberately
+not cut apart, so its part is larger than the others.
+
+An ABAP lexical scan checks *all* Z identifiers that designate objects, not just
+`TYPE REF TO`: it covers `NEW`, `CAST`, static calls, inheritance, interfaces,
+exception/type names and references inside string-template expressions. Literal
+test fixtures, comments, locally declared names and member/method selectors are
+excluded. Unknown object references fail closed. Cross-part targets are promoted
+to base to a fixed point; base is checked too. The verification command reopens
+each emitted zip, checks hashes and object coverage, rescans the **actual emitted
+ABAP**, rejects duplicate/core-overlapping names, and confirms that all unadapted
+original objects retain their original full serialized object hashes.
+
+The original runner does **not** discover tests through package membership or
+TADIR. It contains the full manifest's per-shard initialization plans. Only its
+zero-argument test `host_init_*` wrappers change to named dynamic calls; the
+original selectors, order, registrations, checkpoint/resume ABI and report remain
+unchanged. Import **all parts before running**, especially both rules halves when
+selecting `P_SHARD=rules`.
+
+Three other suite-wide generated switches would otherwise drag almost all test
+classes into base: constructor factory, delete dispatch, and chai entries/invoke.
+Their original typed leaf bodies now live in three generated helper classes per
+package. Base routers dynamically call the appropriate helper. Constructor
+argument conversions and exceptions are unchanged. Delete/chai use the receiver's
+RTTI ancestor chain to preserve the original `IS INSTANCE OF` **first-match
+order**, rather than grouping execution by package; superclass traversal uses the
+standard `SUPER_CLASS_NOT_FOUND` exception. These dynamic routes are runtime test
+dispatch, not static activation dependencies between offline repositories. Missing
+imports are not swallowed by the routers. All 5,002 original names remain; only
+four original implementations change, plus 21 named helper classes.
+
+### Verified split (2026-10-14)
+
+Counts exclude the one DEVC in each archive; include the three new dispatch
+helpers per package. Each zip has its own `.abapgit.xml`, `src/package.devc.xml`
+and SHA-256 object manifest, using the original length-framed algorithm.
+
+| Part / zip suffix | Package | Original objects | Total objects | Zip bytes | MiB |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `base` | `$ZLNT_TESTS_BASE` | 82 | 85 | 685,986 | 0.65 |
+| `statements` | `$ZLNT_TESTS_STATEMENTS` | 565 | 568 | 2,670,698 | 2.55 |
+| `rules_1` | `$ZLNT_TESTS_RULES_1` | 1,086 | 1,089 | 3,874,724 | 3.70 |
+| `rules_2` | `$ZLNT_TESTS_RULES_2` | 822 | 825 | 3,603,624 | 3.44 |
+| `syntax` | `$ZLNT_TESTS_SYNTAX` | 1,392 | 1,395 | 6,450,684 | 6.15 |
+| `objects` | `$ZLNT_TESTS_OBJECTS` | 485 | 488 | 2,966,980 | 2.83 |
+| `rest` | `$ZLNT_TESTS_REST` | 570 | 573 | 2,197,314 | 2.10 |
+
+Independence: **5,023 objects, 115,034 unique-per-object reference edges,
+zero violations**. The initial base has 81 objects; the source scan promotes
+`ZCL_LNT_DUMMY_NODE` from statements because the CDS parser tests in rest also
+reference it. All 4,998 unadapted original objects have identical serialized
+hashes. Actual emitted-source syntax lint (core + parts, standard read-only
+dependencies, v755 PCRE exception): **12,383 files, zero issues**.
+
+Import/activate **`zlnt.zip` → `zlnt_tests_base.zip` → the six shard zips in
+parallel**, each into its indicated package with its **own offline abapGit repo**.
+Do not also import `zlnt_tests.zip`: these are the same object names, not duplicate
+copies. The DEVC files are root packages, with **no superpackage/PARENTCL**;
+creating `$ZLNT_TESTS` is unnecessary. They use the same standalone offline repo
+layout as the original build. Actual SAP import/activation remains a coordinator
+check; this preparation never contacts SAP.
+
+Splitter tests cover synthetic cross-part failure, iterative promotion, lexical
+contexts/templates, shard mapping, rules balancing, dispatch preservation,
+reproducible standalone archives and hash tampering. Gates: `go vet ./...`;
+`GOFLAGS=-buildvcs=false go test -short -p 2 ./tsfront/ ./cmd/... -count=1`;
+all **18** `tools/*-test.mjs` scripts individually with Go 1.26.0; lint against
+`origin/main`: **0 new issues**, canary 5/5. No OSG heavy runs were needed.
+
 ## Run and resume (coordinator, after deployment)
 
 Schedule `ZLNT_TESTS_RUN` as a **background report**, not ABAP Unit. Selection:
