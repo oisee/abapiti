@@ -60,7 +60,11 @@ func (b *body) markOwnKey(receiver, key string) {
 }
 func (b *body) attachOwnKeys(x *hir.Expr, n string) {
 	c := b.e.classBy(x.Type.Name)
-	if !b.e.types["runtime.liveView"] || c == nil || !c.Structural || x.OwnKeys == nil {
+	if !b.e.types["runtime.liveView"] || c == nil || !c.Structural {
+		return
+	}
+	if x.OwnKeys == nil {
+		b.factoryOwnKeys(x, n)
 		return
 	}
 	bag := n + "->" + b.e.name("view.ownKeys")

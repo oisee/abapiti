@@ -332,7 +332,7 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 		}
 		if c.Structural {
 			metadata := "me->" + e.name("view.ownKeys")
-			b.line("IF " + metadata + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: slot: structural own-key metadata absent`.\nENDIF.")
+			b.line("IF " + metadata + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: " + op + " " + strings.ReplaceAll(c.Name, "`", "``") + ": structural own-key metadata absent`.\nENDIF.")
 			if op == "get" {
 				b.line("READ TABLE " + metadata + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
 			}

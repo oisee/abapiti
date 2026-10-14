@@ -174,8 +174,10 @@ type Expr struct {
 	// ABAP raises natively; this also enforces the contract in bigint runtimes.
 	CheckIntegerOverflow bool
 	Node
-	Kind            ExprKind
-	Type            Type
+	Kind ExprKind
+	Type Type
+	// New.Op may retain a checked library factory origin; it is not an
+	// own-key proof by itself when arguments determine presence at runtime.
 	Name, Owner, Op string
 	Value           any // nil denotes undefined; primitive Optional literals denote present values
 	X, Y, Z         *Expr
