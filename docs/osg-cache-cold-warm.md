@@ -761,3 +761,89 @@ python3 .cache/osg-cache-measure/catch-da7984a0.py \
   > .cache/osg-cache-measure/catch-da7984a0-progress.log 2>&1
 python3 .cache/osg-cache-measure/catch-da7984a0-analyze.py
 ```
+
+## Combined main a92b3c14 (end of day)
+
+Measured 2026-10-14: exactly three serial `abap/statements` invocations,
+TS-HA@OSGO, **without CPU profiling**. OSG main
+`a92b3c14a544f9be5dc635590b11ad6c10114b8a` combines #731 cache version
+cleanup, #732 definition/fingerprint encoding, and #733 CATCH hierarchy
+index. The detached worktree `.cache/osg-a92b3c14` was prepared with
+`npm ci` and `node tools/osd-libs.mjs --sync` and remained clean before
+and after measurement. The local `.github/ci/osgo.ref` points to this SHA.
+No source implementation changed and nothing was pushed.
+
+Reused the original instrumented CLI, local `bridge.mjs`, materialized
+statements closure, `time.py`, and `.cache/train-o5/env.sh` setup.
+`ABAPITI_OSG_ONE_BUILD=0` remained set throughout, disabling whole-program
+snapshot reads and writes. No-cache started at **18:04:00 UTC** with
+`ABAPITI_OSG_CACHE` unset. Cold started at **18:13:27 UTC** with the fresh,
+empty `.cache/osg-cache-measure/combined-a92b3c14-cache`; warm started at
+**18:24:15 UTC** using that same cache, after cold exited and its record
+was saved. Every invocation used a fresh output directory. Prepared Go
+build/module and filesystem caches remained enabled. Process checks before
+and throughout measurement showed no competing substantial workload.
+Neither a profiling wrapper nor `--cpu-prof` was used.
+
+All times in seconds; peak RSS is GiB using the original `wait4` definition.
+
+| Shard | Condition | TS lowering | ABAP emission | gogen frontend | gogen emission | Go build | Execution | Harness total | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | combined main, no cache dir | 58.7 | 23.5 | 131.9 | 48.6 | 2.4 | 287.0 | 567.0 | 8.4 |
+| `abap/statements` | combined main, cold cache | 59.1 | 23.6 | 206.5 | 53.1 | 2.4 | 287.8 | 647.5 | 8.6 |
+| `abap/statements` | combined main, warm cache | 59.4 | 23.4 | 118.0 | 49.8 | 2.3 | 289.9 | 558.0 | 9.1 |
+
+No-cache frontend took **131.862 s**, versus the day's **179.2 / 184.1 s**
+controls: **47.3 / 52.2 s less (26.4% / 28.4%)**, or **27.4% less** than
+their mean. Cold frontend took **206.535 s**, versus **488.0 s**:
+**281.5 s less (57.7%, 2.36x faster)**. Warm frontend took **117.974 s**,
+versus **119.5 s**: **1.5 s less (1.3%)**.
+
+Within these three samples, cold recording took **74.673 s longer (56.6%)**
+than no-cache. Warm saved **88.561 s (42.9%, 1.75x)** against cold and
+**13.888 s (10.5%)** against no-cache. These are single observations per
+condition, with no confidence interval or isolated causal attribution to
+one of the three merged changes. The day's baselines used OSG `c681c9f7`;
+both those baselines and this combined-main measurement were unprofiled.
+Short Go builds reflect the independent prepared Go build cache.
+
+| Condition | Round 0 H/M | Round 1 H/M | Reused classes | Cache MiB on disk |
+| --- | ---: | ---: | ---: | ---: |
+| no cache dir | 0 / 2,730 | 1,146 / 1,586 | 1,146 | — |
+| cold cache | 0 / 2,730 | 1,168 / 1,564 | 1,168 | 386.4 |
+| warm cache | 2,724 / 6 | 2,728 / 4 | 2,728 | 386.4 |
+
+Reused classes is the distinct union across closure rounds. No-cache and
+cold reuse is within-run; warm round 0 has **2,724 disk hits**, while round 1
+can also reuse in-memory entries. Allocated cache size was **405,203,456
+bytes (386.432 MiB)** after both cold and warm, with no growth. Only
+`gogen-frontend` exists under the cache root; no whole-program snapshots
+were written. No-cache snapshot labels are `frontend: disabled` and
+`binary: disabled`; `gogenFrontend: unsupported` also covers the absence of
+a `cacheDir` in this instrument. Cold and warm snapshot labels remain
+initialized to `miss` despite snapshot paths being bypassed;
+`gogenFrontend: enabled`.
+
+All three invocations exited **0**, with **4,962 pass, 0 fail, 0 trap,
+0 not-run**. Complete `(title, status, message)` multisets and generated
+`zz_generated.go` bytes match each other and the original statements cold
+baseline exactly. Title/status SHA-256 remains
+`8f575909715661385438b0299cc9e96be087768913a0e427d2b423aaee9a6f14`;
+generated-Go SHA-256 remains
+`8ba2a5afd939c9177dc5f66d9c5efd1ec6447ebc1f41dda6a90c5f9ca7fb1ed6`.
+
+Raw evidence remains local under `.cache/osg-cache-measure/`:
+`abap-statements-combined-a92b3c14-{no-cache,cold,warm}` output directories
+and matching `.stdout.json`, `.stderr.log`, `.rss` files;
+`combined-a92b3c14-{records,analysis}.json`,
+`combined-a92b3c14-progress.log`, and the local runner/analyzer. The runner
+asserts fresh cache/output paths, unsets the cache for the first condition,
+and uses the same cache for cold and warm. Reproduction requires fresh
+paths after preparing the pinned worktree and local pin:
+
+```sh
+. .cache/train-o5/env.sh
+python3 .cache/osg-cache-measure/combined-a92b3c14.py \
+  > .cache/osg-cache-measure/combined-a92b3c14-progress.log 2>&1
+python3 .cache/osg-cache-measure/combined-a92b3c14-analyze.py
+```
