@@ -2,7 +2,8 @@
 """Offline release gate: inspect every file and every zip/tar member.
 
 Binary bytes are scanned as well as `strings -a` output, including binaries
-inside archives. No allowlist: a leak prevents checksums/publication.
+inside archives. User names are identifier tokens, not substrings of unrelated
+words (e.g. a CSS color). No path allowlist: a leak prevents checksums/publication.
 """
 import argparse
 import getpass
@@ -10,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tarfile
 import tempfile
@@ -18,12 +20,22 @@ import zipfile
 
 def scan(stream, needles):
     tail = b""
-    keep = max(map(len, needles)) - 1
+    keep = max(map(len, needles)) + 2
+    user = next(needle for needle, label in needles.items() if label == "user")
+    identity = re.compile(rb"(?<![A-Za-z0-9_])" + re.escape(user) + rb"(?![A-Za-z0-9_])")
     found = set()
+    context = False
     while chunk := stream.read(1024 * 1024):
         data = tail + chunk
-        found.update(label for needle, label in needles.items() if needle in data)
-        tail = data[-keep:] if keep else b""
+        found.update(label for needle, label in needles.items() if label != "user" and needle in data)
+        # An end-of-chunk token needs its following byte before deciding
+        # whether it is a whole identity. The overlap retains both boundaries.
+        if any(m.end() < len(data) and (m.start() > 0 or not context) for m in identity.finditer(data)):
+            found.add("user")
+        context = len(data) > keep
+        tail = data[-keep:]
+    if any(m.start() > 0 or not context for m in identity.finditer(tail)):
+        found.add("user")
     return found
 
 

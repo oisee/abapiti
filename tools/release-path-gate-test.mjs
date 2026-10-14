@@ -11,6 +11,14 @@ try {
  const run = () => spawnSync('python3', [gate, assets, '--root', '/build/private', '--user', 'builder_name'], {encoding:'utf8'});
  writeFileSync(join(assets, 'clean.json'), '{"source":"src/lsp/help.ts:222:7"}');
  assert.equal(run().status, 0);
+ writeFileSync(join(assets, 'unrelated.txt'), 'builder_nameblue currentcolor|aliceblue|antiquewhite');
+ assert.equal(run().status, 0, 'unrelated word is not a build-user identity');
+ const boundary = Buffer.concat([Buffer.alloc(1024 * 1024 - 'builder_name'.length, 32), Buffer.from('builder_nameblue')]);
+ writeFileSync(join(assets, 'boundary.bin'), boundary);
+ assert.equal(run().status, 0, 'defer a chunk-boundary username until its following byte');
+ writeFileSync(join(assets, 'boundary.bin'), Buffer.concat([boundary, Buffer.from(' /builder_name/') ]));
+ assert.equal(run().status, 1, 'a complete identity after a chunk boundary is rejected');
+ rmSync(join(assets,'boundary.bin'));
  for (const [i, token] of ['/mnt/private/', '/home/private/', '/tmp/private/', '/build/private', 'builder_name'].entries()) {
   writeFileSync(join(assets, `binary-${i}`), Buffer.concat([Buffer.from('ELF\0'), Buffer.from(token)]));
  }

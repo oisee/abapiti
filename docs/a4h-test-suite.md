@@ -173,7 +173,9 @@ then the six remaining parts in parallel. Import all parts before running tests.
 Before generating `SHA256SUMS`, the release script runs
 `tools/release-path-gate.py` over **every asset**, all decompressed zip/tar entries
 and binary `strings -a` output. Build roots, local mount/home/temp prefixes and
-the build user's name are forbidden; any match fails the build. The gate reports
+the build user's name as an identifier token are forbidden; any match fails the
+build. Identifier boundaries distinguish a user name from unrelated words such
+as CSS color names; there is no allowlist for path-prefix matches. The gate reports
 zero leaked entries per asset rather than relying on a quick binary spot check.
 
 ## Run and resume (coordinator, after deployment)

@@ -57,6 +57,12 @@ describe("locations",()=>{it("refusal",()=>Probe.refused());it("unsupported",()=
 	}
 	for _, target := range []string{"go", "abap", "osg", "a4h"} {
 		t.Run(target, func(t *testing.T) {
+			t.Setenv("ABAPITI_NAMES", "")
+			if target == "a4h" {
+				// A4H uses this shared source emitter with readable identities;
+				// zip packaging/metadata is additionally checked by the release gate.
+				t.Setenv("ABAPITI_NAMES", "readable")
+			}
 			var first map[string]string
 			for _, root := range roots {
 				l, err := LowerAbaplintTests(root)

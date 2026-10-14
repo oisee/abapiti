@@ -18,12 +18,13 @@ export NODE_OPTIONS=--max-old-space-size=24576
 # The native compiler's generated report is large. This bounded mode is also
 # used by a4h-zabapgit-check.mjs, not optimized against an unoptimized baseline.
 platforms=(darwin-amd64 darwin-arm64 linux-amd64 linux-arm64 windows-amd64 windows-arm64)
-# Resume only after successful emission, with the same sources/pins/WORK.
-if [ "${RELEASE_RESUME:-}" != packages ]; then
+# Always rebuild the compiler clients, including their embedded declarations.
 for platform in "${platforms[@]}"; do
   ext=; [[ "$platform" == windows-* ]] && ext=.exe
   GOOS=${platform%-*} GOARCH=${platform#*-} go build -p 2 -trimpath -ldflags="-s -w -X main.version=$version" -o "$assets/abapiti-$platform$ext" ./cmd/abapiti
 done
+# Resume only after successful emission, with the same lowered sources/pins/WORK.
+if [ "${RELEASE_RESUME:-}" != packages ]; then
 "$assets/abapiti-linux-amd64" abaplint "$upstream" -o "$work/default" --target abap,go --evidence
 # The release A4H pair must be emitted together, not made by mixing separate
 # core and test name/shape tables. This is build only, with no kernel access.
