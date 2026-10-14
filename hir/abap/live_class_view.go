@@ -83,19 +83,133 @@ func (e *emitter) liveClassDeclaration(b *strings.Builder, c *hir.Class) {
 		fmt.Fprintf(b, "METHODS %s RETURNING VALUE(result) TYPE %s.\nMETHODS %s IMPORTING p0 TYPE %s.\n", e.name("view.read."+c.Name+"."+f.Name), e.typ(f.Type), e.name("view.write."+c.Name+"."+f.Name), e.typ(f.Type))
 	}
 }
-func (e *emitter) liveConstructor(b *body, c *hir.Class) {
-	b.line("IF view_source IS BOUND.")
-	if c.Super != "" {
-		args := []string{"view_source = view_source"}
-		if base := e.classBy(c.Super); base != nil && base.Ctor != nil {
-			for _, p := range base.Ctor.Params {
-				args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
+
+func (e *emitter) constructorExprs(s *hir.Stmt, visit func(*hir.Expr)) {
+	var walk func(*hir.Expr)
+	walk = func(x *hir.Expr) {
+		if x == nil {
+			return
+		}
+		visit(x)
+		walk(x.X)
+		walk(x.Y)
+		walk(x.Z)
+		for _, arg := range x.Args {
+			walk(arg)
+		}
+		e.walkStmt(x.Stmt, walk)
+	}
+	e.walkStmt(s, walk)
+}
+
+// splitSuperConstructor retains native parameter defaults and argument setup
+// before a unique top-level call. Conditional calls, early returns and access
+// to THIS before SUPER cannot be moved safely and remain explicit refusals.
+func (e *emitter) splitSuperConstructor(body *hir.Stmt) (super *hir.Expr, before, after *hir.Stmt, valid bool) {
+	calls := 0
+	e.constructorExprs(body, func(x *hir.Expr) {
+		if x != nil && x.Kind == hir.SuperCall && x.Name == "constructor" {
+			calls++
+		}
+	})
+	if calls == 0 {
+		return nil, nil, body, true
+	}
+	if calls != 1 {
+		return nil, nil, body, false
+	}
+	parts := []*hir.Stmt{body}
+	if body != nil && body.Kind == hir.Block {
+		parts = body.List
+	}
+	for i, part := range parts {
+		if part == nil || part.Kind != hir.ExprStmt || part.X == nil || part.X.Kind != hir.SuperCall || part.X.Name != "constructor" {
+			continue
+		}
+		before, after = hir.B(parts[:i]...), hir.B(parts[i+1:]...)
+		unsafe := false
+		var returns func(*hir.Stmt)
+		returns = func(s *hir.Stmt) {
+			if s == nil {
+				return
 			}
+			if s.Kind == hir.Return {
+				unsafe = true
+			}
+			returns(s.Body)
+			returns(s.Else)
+			for _, child := range s.List {
+				returns(child)
+			}
+		}
+		returns(before)
+		e.constructorExprs(hir.B(before, part), func(x *hir.Expr) {
+			if x != nil && x.Kind == hir.This {
+				unsafe = true
+			}
+			if x != nil {
+				returns(x.Stmt)
+			}
+		})
+		return part.X, before, after, !unsafe
+	}
+	return nil, nil, body, false
+}
+
+// liveConstructor joins the native and view paths before invoking SUPER. A view
+// supplies initial argument slots without evaluating native argument expressions;
+// every ancestor receives the same source and skips its native initializer.
+func (e *emitter) liveConstructor(b *body, c *hir.Class, m *hir.Method) *hir.Stmt {
+	body := m.Body
+	// Lazy static initialization used to precede native argument evaluation.
+	// A structural view must continue to skip it.
+	if e.staticInit[c.Name] {
+		b.line("IF view_source IS NOT BOUND.")
+		b.initialize(c.Name)
+		b.line("ENDIF.")
+	}
+	if c.Super != "" {
+		super, before, after, valid := e.splitSuperConstructor(body)
+		if !valid {
+			e.refuse(fmt.Errorf("class %s constructor: requires a single top-level super constructor call without early return or THIS access", c.Name))
+			return body
+		}
+		parent := e.p.Constructor(c.Super)
+		if super != nil && (parent == nil && len(super.Args) > 0 || parent != nil && len(super.Args) > len(parent.Params)) {
+			e.refuse(fmt.Errorf("class %s constructor: superclass argument signature is unknown", c.Name))
+			return body
+		}
+		args := []string{}
+		if super != nil {
+			// Evaluation may have side effects or throw: it belongs only to the
+			// native path. The call itself must remain outside this control block.
+			b.line("IF view_source IS NOT BOUND.")
+			for _, p := range m.Params {
+				n := b.temp(p.Type)
+				b.locals[p.Name] = n
+				b.line(n + " = " + e.param(p.Name) + ".")
+			}
+			b.stmt(before)
+			for i, a := range super.Args {
+				p := parent.Params[i]
+				n := b.temp(p.Type)
+				b.line(n + " = " + b.value(a, p.Type) + ".")
+				args = append(args, e.param(p.Name)+" = "+n)
+			}
+			b.line("ENDIF.")
+			body = after
+		} else if !e.needsImplicitSuper(c, m) {
+			e.refuse(fmt.Errorf("class %s constructor: missing required superclass arguments", c.Name))
+		}
+		if e.liveClasses[c.Super] {
+			args = append(args, "view_source = view_source")
 		}
 		b.line("super->constructor( " + strings.Join(args, " ") + " ).")
 	}
+	b.line("IF view_source IS BOUND.")
 	b.line("me->" + e.name("view.source") + " = view_source.")
 	b.line("RETURN.\nENDIF.")
+	return body
 }
 func (b *body) liveUnbox(n, d string, t hir.Type) {
 	e := b.e
