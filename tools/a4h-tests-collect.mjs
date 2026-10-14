@@ -21,7 +21,7 @@ function eventsFromRows(rows, shard) {
  for(const row of rows) {
   const get=k=>row[k] ?? row[k.toLowerCase()];
   if(shard && get('SHARD')?.trim()!==shard) throw new Error('mixed shard log');
-  const seq=Number(get('SEQ')),part=Number(get('PART')),used=Number(get('USED'));
+  const seq=Number(get('SEQ')),part=Number(get('CHUNK_NO')),used=Number(get('USED'));
   if(!Number.isSafeInteger(seq)||seq<1||!Number.isSafeInteger(part)||part<1||!Number.isInteger(used)||used<1||used>255) throw new Error('invalid log chunk');
   const payload=get('PAYLOAD');
   if(typeof payload!=='string'||payload.length<used) throw new Error('short log chunk (fetch must preserve spaces)');

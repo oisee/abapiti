@@ -14,7 +14,7 @@ test('PCRE is an additional category, never a pass or suppressed FAIL',()=>{
 });
 test('ordered chunk rows and dump resume retain every executed test',()=>{
  const events=[{kind:'test',index:1,title:'a'},{kind:'result',index:1,record:pass},{kind:'test',index:2,title:'b'},{kind:'resume',startIndex:3},{kind:'complete',report:{results:[]}}];
- const rows=events.flatMap((e,i)=>{const text=JSON.stringify(e);return Array.from({length:Math.ceil(text.length/15)},(_,j)=>({RUN_ID:'run',SEQ:i+1,PART:j+1,USED:Math.min(15,text.length-j*15),SHARD:'utils',PAYLOAD:text.slice(j*15,j*15+15).padEnd(255,' ')}))}).reverse();
+ const rows=events.flatMap((e,i)=>{const text=JSON.stringify(e);return Array.from({length:Math.ceil(text.length/15)},(_,j)=>({RUN_ID:'run',SEQ:i+1,CHUNK_NO:j+1,USED:Math.min(15,text.length-j*15),SHARD:'utils',PAYLOAD:text.slice(j*15,j*15+15).padEnd(255,' ')}))}).reverse();
  const r=collectResults(rows,{shard:'utils',dumps:{2:'REPLACE PCRE: kernel dump'}});
  assert.equal(r.passed,1);assert.equal(r.trapped,1);assert.equal(r.categories['pcre-drift'],1);
  assert.deepEqual(r.results.map(r=>r.title),['a','b']);
