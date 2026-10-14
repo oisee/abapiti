@@ -1,0 +1,21 @@
+{
+  "schema": "selfhost-emission/1",
+  "compilerCommit": "953eae439f7fe5d39fcf6a4f4d8f4fb8d6a262ab",
+  "abaplintPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "go": "go version go1.26.0 linux/amd64",
+  "node": "v26.9.0",
+  "exitCode": 0,
+  "signal": null,
+  "wallSeconds": 590.415551139,
+  "command": "node tools/a4h-tests-build.mjs UPSTREAM OUTPUT",
+  "log": ".tmp/selfhost-m2/emission.log",
+  "loweringGate": {
+    "Files": 2167,
+    "Classes": 7053,
+    "Interfaces": 85,
+    "Blocking": 0,
+    "HIRErrors": 0,
+    "CoverageTraps": 0,
+    "Ranked": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "path": ".tmp/selfhost-m2/zlnt-check-kit.zip",
+  "bytes": 11749881,
+  "sha256": "a60cfb97004d894cce1331c85280ac7b641456f7546fc59634fc66139ad0b932",
+  "members": 4696,
+  "workloadFiles": 4678,
+  "verified": true,
+  "verificationScope": "ZIP CRCs and every workload member SHA-256",
+  "nativeStatus": "incomplete",
+  "byteEqualToNode": null,
+  "tracked": false,
+  "variants": [
+    "clean"
+  ],
+  "note": "Single frozen emitted-core workload; clean names the original variant, not zero issues. Host-only multi-file adapter; see README.md."
+}
