@@ -1222,7 +1222,9 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 			}
 		}
 		e.Y = p.rewriteExpr(e.Y, scope, info)
-		e.Type = e.Y.Type
+		if e.Y != nil {
+			e.Type = e.Y.Type
+		}
 		result := e
 		if numberType(original) && r.state == 1 {
 			result = rangeConversion(e, hir.T(r.kind()), r)
@@ -1253,6 +1255,9 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 			e.Value = r.lo
 		}
 	case hir.NumericMinMax:
+		if e.X == nil {
+			break
+		}
 		if e.Y == nil {
 			e.Type = e.X.Type.Args[0]
 			break
@@ -1261,17 +1266,22 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 		e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 		e.Y = rangeConversion(e.Y, e.Type, info.exprs[e.Y])
 	case hir.Binary:
+		if e.X == nil || e.Y == nil {
+			// Partial HIR from a failed lowering: its diagnostic is already
+			// recorded; leave the node for the verifier to refuse.
+			break
+		}
 		if numberType(original) {
 			e.Type = numericJoinType(hir.T(r.kind()), numericJoinType(e.X.Type, e.Y.Type))
 			e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 			e.Y = rangeConversion(e.Y, e.Type, info.exprs[e.Y])
-		} else if e.X != nil && e.Y != nil && numberType(e.X.Type) && numberType(e.Y.Type) {
+		} else if numberType(e.X.Type) && numberType(e.Y.Type) {
 			t := numericJoinType(e.X.Type, e.Y.Type)
 			e.X = rangeConversion(e.X, t, info.exprs[e.X])
 			e.Y = rangeConversion(e.Y, t, info.exprs[e.Y])
 		}
 	case hir.Unary:
-		if numberType(original) {
+		if e.X != nil && numberType(original) {
 			e.Type = hir.T(r.kind())
 			e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 		}
