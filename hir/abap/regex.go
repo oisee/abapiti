@@ -59,6 +59,7 @@ const jsDotClass = "[^\n\r\u2028\u2029]"
 // bracketed class. Escaped brackets do not change the scanner's class state.
 // Unrepresentable class complements are checked before emission/construction.
 func regexClasses(pattern string, flags ...string) string {
+	pattern = regexClassHyphens(pattern)
 	dotAll := len(flags) > 0 && strings.Contains(flags[0], "s")
 	var b strings.Builder
 	inClass := false

@@ -9,6 +9,7 @@ import (
 // Absolute assertions also prevent that runtime's implicit m flag from
 // changing JavaScript non-m anchors. The reviewed m pattern has no anchors.
 func pcreRegexPattern(pattern string) string {
+	pattern = regexClassHyphens(pattern)
 	var out strings.Builder
 	inClass := false
 	for i := 0; i < len(pattern); i++ {

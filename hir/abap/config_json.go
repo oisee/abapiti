@@ -223,6 +223,8 @@ ENDMETHOD.
 		case hir.Optional:
 			if t.Args[0].IsRef() {
 				line("result = %s.", call(t.Args[0], "p0"))
+			} else if t.Args[0].Kind == hir.Number {
+				line("IF p0->has = abap_true.\nIF p0->number_special <> 0.\nresult = `null`.\nELSE.\nresult = %s.\nENDIF.\nENDIF.", call(t.Args[0], "p0->value"))
 			} else {
 				line("IF p0->has = abap_true.\nresult = %s.\nENDIF.", call(t.Args[0], "p0->value"))
 			}
@@ -424,7 +426,7 @@ ENDMETHOD.
 			line("DATA text TYPE string.\nDATA key TYPE string.\nDATA comma TYPE string.\nDATA child TYPE REF TO %s.\nDATA row TYPE %s=>entry.", dyn, dyn)
 			line("TYPES: BEGIN OF indexed_entry, idx TYPE p LENGTH 8 DECIMALS 0, row TYPE %s=>entry, END OF indexed_entry.", dyn)
 			line("DATA indexed TYPE STANDARD TABLE OF indexed_entry WITH DEFAULT KEY.\nDATA indexed_row TYPE indexed_entry.\nDATA rest TYPE %s=>entries_type.\nDATA ordered TYPE %s=>entries_type.\nDATA canonical TYPE string.\nDATA idx TYPE p LENGTH 8 DECIMALS 0.", dyn, dyn)
-			line("CASE p0->tag.\nWHEN %s=>tag_string.\nresult = quote( p0->sval ).\nWHEN %s=>tag_number.\nresult = number( p0->nval ).\nWHEN %s=>tag_boolean.", dyn, dyn, dyn)
+			line("CASE p0->tag.\nWHEN %s=>tag_string.\nresult = quote( p0->sval ).\nWHEN %s=>tag_number.\nIF p0->number_special <> 0.\nresult = `null`.\nELSE.\nresult = number( p0->nval ).\nENDIF.\nWHEN %s=>tag_boolean.", dyn, dyn, dyn)
 			line("IF p0->bval = abap_true.\nresult = `true`.\nELSE.\nresult = `false`.\nENDIF.\nWHEN %s=>tag_null.\nresult = `null`.\nWHEN %s=>tag_array.", dyn, dyn)
 			line("enter( p0 ).\nDATA itemidx TYPE i.\nDATA childref TYPE REF TO object.\nresult = `[`.\nWHILE itemidx < lines( p0->items ).\nitemidx = itemidx + 1.\nREAD TABLE p0->items INDEX itemidx INTO childref.\nchild ?= childref.\ntext = %s.\nIF text IS INITIAL.\ntext = `null`.\nENDIF.\nCONCATENATE result comma text INTO result RESPECTING BLANKS.\ncomma = `,`.\nENDWHILE.\nCONCATENATE result `]` INTO result.\nleave( p0 ).", call(t, "child"))
 			if subset {

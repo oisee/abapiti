@@ -41,7 +41,13 @@ func (e *emitter) materializer(t hir.Type) string {
 			line("result = %s.", call(base, "p0"))
 		} else {
 			line("CREATE OBJECT result.\nresult->has = abap_true.")
-			line("result->value = %s.", call(base, "p0"))
+			if base.Kind == hir.Number {
+				line("IF p0->tag <> %s=>tag_number.", dynamic)
+				fail()
+				line("ENDIF.\nresult->number_special = p0->number_special.\nresult->value = p0->nval.")
+			} else {
+				line("result->value = %s.", call(base, "p0"))
+			}
 		}
 	case hir.String, hir.Bool, hir.Number:
 		line("IF p0 IS NOT BOUND.")
@@ -57,6 +63,11 @@ func (e *emitter) materializer(t hir.Type) string {
 		line("IF p0->tag <> %s=>%s.", dynamic, tag)
 		fail()
 		line("ENDIF.")
+		if t.Kind == hir.Number {
+			line("IF p0->number_special <> 0.")
+			fail()
+			line("ENDIF.")
+		}
 		line("result = p0->%s.", field)
 	case hir.Array:
 		line("IF p0 IS NOT BOUND.\nRETURN.\nENDIF.")
