@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 )
 
 // Exercise actual refusals, registration metadata, HIR spans and names.json,
@@ -74,9 +73,9 @@ describe("locations",()=>{it("refusal",()=>Probe.refused());it("unsupported",()=
 				case "go":
 					files, err = EmitAbaplintTests(root, l)
 				case "abap":
-					files, err = abap.Emit(l.Prog)
+					files, err = emitABAP(t, l.Prog)
 				case "osg", "a4h":
-					files, err = EmitAbaplintTestsOSG(root, l)
+					files, err = emitABAPTestsOSG(t, root, l)
 				}
 				if err != nil {
 					t.Fatal(err)
