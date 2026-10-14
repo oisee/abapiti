@@ -14,6 +14,12 @@ import (
 // LowerAbaplintTests verifies and lowers a tools/abaplint-tests-closure.mjs
 // closure. Failed bodies trap; no coverage manifest or workload pruning.
 func LowerAbaplintTests(dir string) (*RegistryLowering, error) {
+	return LowerAbaplintTestsWithCore(dir, false)
+}
+
+// LowerAbaplintTestsWithCore includes the deployment harness in the same
+// unpruned program as the tests, so both clients share one name table and core.
+func LowerAbaplintTestsWithCore(dir string, fullCore bool) (*RegistryLowering, error) {
 	raw, err := os.ReadFile(filepath.Join(dir, "closure.json"))
 	if err != nil {
 		return nil, err
@@ -31,7 +37,36 @@ func LowerAbaplintTests(dir string) (*RegistryLowering, error) {
 	}
 	// Unpruned tests use binary64 number semantics, not a workload-specific
 	// assume-integer contract. Ignore ABAPITI_ASSUME_INT deliberately.
-	return LowerRegistryWithOptions(dir, closure.Files(), registry, nil, LowerOptions{TrapOnFailure: true})
+	files := closure.Files()
+	if fullCore {
+		path := filepath.Join(dir, RegistryHarnessPath)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(path, RegistryHarness(), 0644); err != nil {
+			return nil, err
+		}
+		files = append(files, RegistryHarnessPath)
+		configPath := filepath.Join(dir, "tsconfig.json")
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, err
+		}
+		var config map[string]any
+		if err := json.Unmarshal(data, &config); err != nil {
+			return nil, err
+		}
+		include, _ := config["include"].([]any)
+		config["include"] = append(include, "harness/**/*.ts")
+		data, err = json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(configPath, data, 0644); err != nil {
+			return nil, err
+		}
+	}
+	return LowerRegistryWithOptions(dir, files, registry, nil, LowerOptions{TrapOnFailure: true})
 }
 
 // EmitAbaplintTests emits verified programs, including failure-trapped bodies.

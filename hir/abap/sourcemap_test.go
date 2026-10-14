@@ -7,7 +7,9 @@ func TestRelSource(t *testing.T) {
 		"/tmp/abapiti-abaplint-1/src/abap/1_lexer/lexer.ts:64:3":                "src/abap/1_lexer/lexer.ts:64:3",
 		"/tmp/abapiti-abaplint-1/harness/registry_run.ts:28:3":                  "harness/registry_run.ts:28:3",
 		"/tmp/abapiti-abaplint-1/node_modules/fast-xml-parser/src/fxp.d.ts:9:1": "node_modules/fast-xml-parser/src/fxp.d.ts:9:1",
-		"src/registry.ts:70:7": "src/registry.ts:70:7",
+		"src/registry.ts:70:7":              "src/registry.ts:70:7",
+		"/tmp/build/test/rules/foo.ts:12:4": "test/rules/foo.ts:12:4",
+		"/tmp/build/runtime/chai.ts:18:3":   "runtime/chai.ts:18:3",
 	} {
 		if got := relSource(in); got != want {
 			t.Errorf("relSource(%q) = %q, want %q", in, got, want)

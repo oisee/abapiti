@@ -19,7 +19,7 @@ type SourceEntry struct {
 
 // relSource drops the build directory: src/…, harness/… or node_modules/… with line:col.
 func relSource(s string) string {
-	for _, root := range []string{"/node_modules/", "/harness/", "/src/"} {
+	for _, root := range []string{"/node_modules/", "/harness/", "/src/", "/test/", "/runtime/"} {
 		if i := strings.Index(s, root); i >= 0 {
 			return s[i+1:]
 		}

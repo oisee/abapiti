@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -20,9 +21,10 @@ var abaplintTestsCmd = &cobra.Command{
 
 func init() {
 	abaplintTestsCmd.Flags().StringP("output", "o", "", "Output module and lowering evidence (required)")
-	abaplintTestsCmd.Flags().String("target", "go", "Test host: go or osg")
+	abaplintTestsCmd.Flags().String("target", "go", "Test host: go, osg or a4h (build only, full readable two-package union)")
 	abaplintTestsCmd.Flags().String("osg-home", "", "Existing clean OSG checkout at the CI pin (never modified)")
 	abaplintTestsCmd.Flags().String("osg-runner", "tools/abaplint-tests-osg.mjs", "Path to the read-only OSG host bridge")
+	abaplintTestsCmd.Flags().Bool("full-core", false, "Include the zabapgit deployment harness in the unpruned test core")
 	abaplintTestsCmd.Flags().Bool("gap-only", false, "Measure all ABAP emitter refusals without compiling (requires --target osg)")
 	_ = abaplintTestsCmd.MarkFlagRequired("output")
 	rootCmd.AddCommand(abaplintTestsCmd)
@@ -31,13 +33,22 @@ func runAbaplintTests(cmd *cobra.Command, args []string) error {
 	out, _ := cmd.Flags().GetString("output")
 	target, _ := cmd.Flags().GetString("target")
 	gapOnly, _ := cmd.Flags().GetBool("gap-only")
-	if target != "go" && target != "osg" {
-		return fmt.Errorf("--target: use go or osg")
+	if target != "go" && target != "osg" && target != "a4h" {
+		return fmt.Errorf("--target: use go, osg or a4h")
 	}
 	if gapOnly && target != "osg" {
 		return fmt.Errorf("--gap-only requires --target osg")
 	}
-	lowering, err := tsfront.LowerAbaplintTests(args[0])
+	fullCore, _ := cmd.Flags().GetBool("full-core")
+	if target == "a4h" {
+		fullCore = true
+		previous := os.Getenv("ABAPITI_NAMES")
+		if err := os.Setenv("ABAPITI_NAMES", "readable"); err != nil {
+			return err
+		}
+		defer func() { _ = os.Setenv("ABAPITI_NAMES", previous) }()
+	}
+	lowering, err := tsfront.LowerAbaplintTestsWithCore(args[0], fullCore)
 	if err != nil {
 		return err
 	}
@@ -77,6 +88,9 @@ func runAbaplintTests(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Fprintf(cmd.ErrOrStderr(), "test closure: %d files, %d blocking diagnostics, %d HIR errors, %d coverage traps\n", report.Files, report.Blocking, report.HIRErrors, report.CoverageTraps)
+	if target == "a4h" {
+		return buildAbaplintTestsA4H(args[0], out, lowering)
+	}
 	if target == "osg" {
 		gap := tsfront.MeasureABAPTestGap(lowering)
 		raw, err := json.MarshalIndent(gap, "", "  ")

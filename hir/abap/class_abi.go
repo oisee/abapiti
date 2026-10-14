@@ -85,6 +85,9 @@ func (e *emitter) argumentFactoryABAP() ([]factoryCase, string, string) {
 	serial := 0
 
 	for index, c := range e.p.Classes {
+		if e.testPackages && testDeclaration(c) != e.factoryTestPart {
+			continue
+		}
 		entry := factoryCase{name: strings.ToUpper(e.name(c.Name))}
 		ctor := e.p.Constructor(c.Name)
 		owner := c

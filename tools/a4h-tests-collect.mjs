@@ -29,7 +29,8 @@ function eventsFromRows(rows, shard) {
   if(pieces.has(part)) throw new Error('duplicate log chunk');
   pieces.set(part,payload.slice(0,used));groups.set(seq,pieces);
  }
- return [...groups].sort(([a],[b])=>a-b).map(([,pieces])=>{
+ return [...groups].sort(([a],[b])=>a-b).map(([seq,pieces],index)=>{
+  if(seq!==index+1) throw new Error('missing log event');
   const parts=[...pieces].sort(([a],[b])=>a-b);
   if(parts.some(([part],i)=>part!==i+1)) throw new Error('missing log chunk');
   return JSON.parse(parts.map(([,text])=>text).join(''));

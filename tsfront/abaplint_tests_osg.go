@@ -15,6 +15,26 @@ import (
 // runner. Target refusals are traps, never assertions. Unimplemented hook/async
 // execution is explicitly refused, not silently skipped or credited as a pass.
 func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]string, error) {
+	return emitAbaplintTestsOSG(dir, lowering, nil)
+}
+
+// EmitAbaplintTestsCore emits the full test closure and a native zabapgit
+// client using precisely the same names and translated core.
+func EmitAbaplintTestsCore(dir string, lowering *RegistryLowering, wantSHA string) (map[string]string, string, error) {
+	var report, driver string
+	files, err := emitAbaplintTestsOSG(dir, lowering, func(names *hir.Names) {
+		report = RegistryCLIReport("zabaplint", names)
+		driver = RegistryRunCorpusClass("zcl_lnt_registry_a4h", wantSHA, nil, names)
+	})
+	if err == nil {
+		files["zcl_lnt_registry_a4h.clas.abap"] = driver
+		files["zlnt_registry_run.prog.abap"] = RegistryRunReport("zlnt_registry_run", "zcl_lnt_registry_a4h", false)
+		files["zlnt_registry_clean.prog.abap"] = RegistryRunReport("zlnt_registry_clean", "zcl_lnt_registry_a4h", false)
+	}
+	return files, report, err
+}
+
+func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*hir.Names)) (map[string]string, error) {
 	if err := lowering.Err(); err != nil {
 		return nil, err
 	}
@@ -32,9 +52,16 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 			}
 		}
 	}
-	files, names, err := abap.EmitTestNamed(lowering.Prog, assertionOwners)
+	emit := abap.EmitTestNamed
+	if client != nil {
+		emit = abap.EmitTestPackageNamed
+	}
+	files, names, err := emit(lowering.Prog, assertionOwners)
 	if err != nil {
 		return nil, err
+	}
+	if client != nil {
+		client(names)
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "closure.json"))
 	if err != nil {
@@ -139,6 +166,9 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 		"TRAPCLASS", n("exception.unexecuted"), "ASSERTCLASS", assertionClass, "ERRORMESSAGE", n("member.message"),
 	)
 	runner := replacements.Replace(abapTestRunner)
+	if client != nil {
+		runner = strings.Replace(runner, "METHOD run.\n", "METHOD run.\n"+n("runtime.classvalue.factory")+"=>extension = NEW zcl_lnt_test_extension( ).\n", 1)
+	}
 	formatted, err := abap.Format(runner)
 	if err != nil {
 		return nil, err
@@ -147,6 +177,19 @@ func EmitAbaplintTestsOSG(dir string, lowering *RegistryLowering) (map[string]st
 	sourceMap, err := abap.SourceMap(lowering.Prog, names)
 	if err != nil {
 		return nil, err
+	}
+	if client != nil {
+		var entries map[string]abap.SourceEntry
+		if err := json.Unmarshal(sourceMap, &entries); err != nil {
+			return nil, err
+		}
+		for _, name := range []string{"ZCL_LNT_TEST_FACTORY", "ZCL_LNT_TEST_DELETE", "ZCL_LNT_TEST_EXTENSION", "ZIF_LNT_RUNTIME_EXTENSION"} {
+			entries[name] = abap.SourceEntry{ID: "generated." + name, Kind: "runtime", Source: "hir/abap/test_packages.go"}
+		}
+		sourceMap, err = json.MarshalIndent(entries, "", " ")
+		if err != nil {
+			return nil, err
+		}
 	}
 	files["names.json"] = string(sourceMap)
 	return files, nil

@@ -411,12 +411,28 @@ func (e *emitter) descriptorShards() {
 		def.WriteString(init.String() + "ENDMETHOD.\nENDCLASS.\n")
 		e.files[shard+".clas.abap"] = def.String()
 	}
+	e.classFactoryRuntime(false)
+	if e.testPackages {
+		e.classFactoryRuntime(true)
+		e.testPackageExtension()
+	}
+}
+
+func (e *emitter) classFactoryRuntime(testPart bool) {
+	e.factoryTestPart = testPart
+	defer func() { e.factoryTestPart = false }()
 	// The factory exposes known zero-argument constructors as explicit type
 	// references so runtime closure discovery includes descriptor-only classes.
 	// Constructors with required arguments retain the checked dynamic fallback.
 	factory := e.name("runtime.classvalue.factory")
+	if testPart {
+		factory = "zcl_lnt_test_factory"
+	}
 	var cases []factoryCase
 	for i, c := range e.p.Classes {
+		if e.testPackages && testDeclaration(c) != testPart {
+			continue
+		}
 		if c.Abstract {
 			continue
 		}
@@ -440,20 +456,37 @@ func (e *emitter) descriptorShards() {
 		cases = append(cases, entry)
 	}
 	params := "p0 TYPE REF TO " + e.name("runtime.classvalue")
-	privateDefs, helpers, dispatch := e.splitFactory("new_part", params, "p0 = p0", "CREATE OBJECT result TYPE (class_name).\n", cases)
+	fallback := "CREATE OBJECT result TYPE (class_name).\n"
+	if testPart {
+		fallback = "RETURN.\n"
+	}
+	privateDefs, helpers, dispatch := e.splitFactory("new_part", params, "p0 = p0", fallback, cases)
 	extraSignature, extraImpl := "", ""
-	if e.constructorArgs {
+	if e.constructorArgs || e.testPackages {
 		extraSignature = "CLASS-METHODS new_args IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " p1 TYPE " + e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))) + " RETURNING VALUE(result) TYPE REF TO object.\n"
 		entries, wideDefs, wideImpl := e.argumentFactoryABAP()
-		defs, impl, call := e.splitFactory("args_part", params+" p1 TYPE "+e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), "p0 = p0 p1 = p1", "RAISE EXCEPTION TYPE "+e.classRefusal()+".\n", entries)
+		fallback := "RAISE EXCEPTION TYPE " + e.classRefusal() + ".\n"
+		if testPart {
+			fallback = "RETURN.\n"
+		}
+		defs, impl, call := e.splitFactory("args_part", params+" p1 TYPE "+e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), "p0 = p0 p1 = p1", fallback, entries)
 		privateDefs += wideDefs + defs
 		extraImpl = impl + wideImpl
 		if e.arrayViews {
 			call = "IF p1 IS BOUND.\np1->load( ).\nENDIF.\n" + call
 		}
-		extraImpl = "METHOD new_args.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + call + "ENDMETHOD.\n" + extraImpl
+		extension := ""
+		if e.testPackages && !testPart {
+			extension = "IF extension IS BOUND.\nresult = extension->new_args( p0 = p0 p1 = p1 ).\nIF result IS BOUND.\nRETURN.\nENDIF.\nENDIF.\n"
+		}
+		extraImpl = "METHOD new_args.\n" + extension + "IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.classRefusal() + ".\nENDIF.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + call + "ENDMETHOD.\n" + extraImpl
 	}
-	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\n" + privateDefs + "ENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\nDATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch + "ENDMETHOD.\n" + helpers + extraImpl + "ENDCLASS.\n"
+	extensionDef, extensionCall := "", ""
+	if e.testPackages && !testPart {
+		extensionDef = "CLASS-DATA extension TYPE REF TO zif_lnt_runtime_extension.\n"
+		extensionCall = "IF extension IS BOUND.\nresult = extension->new( p0 ).\nIF result IS BOUND.\nRETURN.\nENDIF.\nENDIF.\n"
+	}
+	e.files[factory+".clas.abap"] = "CLASS " + factory + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + extensionDef + "CLASS-METHODS new IMPORTING p0 TYPE REF TO " + e.name("runtime.classvalue") + " RETURNING VALUE(result) TYPE REF TO object.\n" + extraSignature + "PROTECTED SECTION.\nPRIVATE SECTION.\n" + privateDefs + "ENDCLASS.\nCLASS " + factory + " IMPLEMENTATION.\nMETHOD new.\n" + extensionCall + "DATA class_name TYPE string.\nclass_name = p0->emitted.\nTRANSLATE class_name TO UPPER CASE.\n" + dispatch + "ENDMETHOD.\n" + helpers + extraImpl + "ENDCLASS.\n"
 }
 
 // staticsOf lists the raw member names of the static members of a class.
