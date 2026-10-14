@@ -230,3 +230,90 @@ python3 /work/.cache/speed-338a538/run.py
 # Resume with the same environment and run.py; complete rows are skipped.
 # Archive an incomplete sample directory before rerunning it.
 ```
+
+## Optimised OSG build
+
+Measured on 2026-10-14 with the same ABAPITI `338a5385` product code, OSG
+`f83dc5c3`, upstream abaplint, toolchains, environment, meter, compiler overlay
+and execution instrumentation used above. The measurement checkout is
+`fe1e754` (the documentation branch); its only difference from `338a5385` is
+this report. No tracked product source or OSG source was changed.
+
+The only build-setting change is `ABAPITI_OSG_BUILD_MODE=default`, giving
+`go build -p 1 -trimpath -ldflags='-s -w'
+-gcflags='osg/gogen/cmd/abapitests=-dwarf=false'`: optimisation and inlining
+are enabled. `ABAPITI_OSG_ONE_BUILD=0` remains set; `ABAPITI_OSG_CACHE` is
+unset. Retained evidence confirms `mode=default`, frontend and binary
+caches disabled, and no gogen frontend-cache support at this pin. The shared
+Go compiler cache remains enabled, exactly as for the original rows.
+
+Two samples per shard ran sequentially, statements 1/2 then rules 1/2,
+with no other benchmark, build or test workload on the machine. All four
+recorded admission waits are zero. Seconds are wall time; build peak RSS is
+GiB measured by the original `wait4` meter. Execution-only time is the metered
+binary process, excluding driver-side JSON/checkpoint processing. Every sample
+used one binary invocation, with no restarts. ms/pass amortises the complete
+workload over the pass count, as above.
+
+| Shard | Sample | TS frontend/lowering | ABAP emission | Gogen frontend | Gogen emission | Go build | Build peak RSS (GiB) | Execution only | ms/pass | Harness total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | 1 | 58.241 | 23.229 | 182.621 | 49.610 | 235.621 | 17.332 | 238.168985 | 47.998586 | 826.540 |
+| `abap/statements` | 2 | 59.047 | 23.845 | 180.832 | 48.919 | 234.362 | 17.222 | 238.132101 | 47.991153 | 824.473 |
+| `rules` | 1 | 123.088 | 33.764 | 292.824 | 51.484 | 278.664 | 19.458 | 240.729173 | 76.446228 | 1064.983 |
+| `rules` | 2 | 124.281 | 33.274 | 283.440 | 49.964 | 279.111 | 19.399 | 240.714047 | 76.441425 | 1054.747 |
+
+Comparison uses the median of each two-sample pair (the arithmetic mean).
+The Go and OSG-fast baselines are the original rows above, without rerunning
+them. Ratios below divide the optimised OSG measurement by the named baseline;
+build deltas subtract that baseline.
+
+| Shard | Optimised execution (s) | Optimised/Go execution | Optimised/OSG-fast execution | Optimised build (s) | Build vs OSG-fast: delta / ratio | Build vs Go: delta / ratio | Build peak RSS: optimised / fast / Go (GiB) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | 238.150543 | 4.949× | 0.817× | 234.992 | +86.612 s / 1.584× | +192.688 s / 5.555× | 17.277 / 11.064 / 3.431 |
+| `rules` | 240.721610 | 4.529× | 0.866× | 278.888 | +99.261 s / 1.553× | +221.539 s / 4.863× | 19.428 / 13.462 / 4.758 |
+
+For `abap/statements`, optimisation reduces execution by 18.3% (53.462 s), but adds 86.612 s of build time (58.4%). Median harness total is 825.507 s versus 793.752 s in fast mode (+31.755 s, 4.0%) and 178.156 s for Go (4.63×).
+
+For `rules`, optimisation reduces execution by 13.4% (37.169 s), but adds 99.261 s of build time (55.3%). Median harness total is 1059.865 s versus 993.136 s in fast mode (+66.730 s, 6.7%) and 267.434 s for Go (3.96×).
+
+Normal optimisation narrows the execution gap to Go, while the extra build
+time outweighs the execution saving for these complete harness runs. Build
+peak RSS also rises. These are two-sample observations under the recorded
+settings, rather than an estimate of variance across machines.
+
+Correctness: every optimised sample has the exact same **ordered**
+`(title, status)` vector as **both** fast-mode samples for its shard, preserving
+repeated-title multiplicity. Each also exactly covers its retained Node oracle's
+title multiset. Statements: 4,962 registered, 4,962 pass, zero fail/trap/not-run.
+Rules: 3,159 registered, 3,149 pass, 10 not-run, zero fail/trap. All four harnesses
+exit zero and have zero async-pending cases.
+
+Raw accepted samples follow; local logs, raw results, timing evidence and
+retained scratch are under `.cache/speed-338a538`, in
+`abap-statements-osg-optimised-{1,2}` and `rules-osg-optimised-{1,2}`.
+`hostRun` is the broader harness execution phase and is not used in ratios.
+
+```json
+{"shard":"abap/statements","repeat":1,"lower":58.241474026,"emit":23.229290642,"gogenFront":182.621,"gogenEmit":49.61,"build":235.621415955,"buildPeakRSSKiB":18173788,"execution":238.168985404,"msPerPass":47.998586336960905,"hostRun":238.246,"total":826.540177162,"testPeakRSSKiB":153768,"processes":1,"passed":4962,"failed":0,"trapped":0,"notRun":0,"asyncPending":0,"registered":4962}
+{"shard":"abap/statements","repeat":2,"lower":59.047447698,"emit":23.844733806,"gogenFront":180.832,"gogenEmit":48.919,"build":234.362303578,"buildPeakRSSKiB":18058960,"execution":238.132100988,"msPerPass":47.991152960096734,"hostRun":238.213,"total":824.47317554,"testPeakRSSKiB":153324,"processes":1,"passed":4962,"failed":0,"trapped":0,"notRun":0,"asyncPending":0,"registered":4962}
+{"shard":"rules","repeat":1,"lower":123.087711045,"emit":33.763674125,"gogenFront":292.824,"gogenEmit":51.484,"build":278.664256582,"buildPeakRSSKiB":20403024,"execution":240.729173237,"msPerPass":76.44622840171483,"hostRun":240.793,"total":1064.982933968,"testPeakRSSKiB":287468,"processes":1,"passed":3149,"failed":0,"trapped":0,"notRun":10,"asyncPending":0,"registered":3159}
+{"shard":"rules","repeat":2,"lower":124.281156958,"emit":33.273772169,"gogenFront":283.44,"gogenEmit":49.964,"build":279.111035463,"buildPeakRSSKiB":20340856,"execution":240.714047105,"msPerPass":76.44142493013655,"hostRun":240.78,"total":1054.747262712,"testPeakRSSKiB":283296,"processes":1,"passed":3149,"failed":0,"trapped":0,"notRun":10,"asyncPending":0,"registered":3159}
+```
+
+To reproduce using the original instrument setup in **Exact commands** above,
+keep the same measurement checkout and source `.cache/train-o5/env.sh`. Reuse
+`meter`, `bin/go`, `overlay.json` and `preload.mjs` unchanged. Copy the original
+`run.py` to `run-optimised.py` and make these changes:
+
+- Set `base['ABAPITI_OSG_BUILD_MODE']='default'` before the loops.
+- Iterate shards `['abap/statements','rules']`, repeats `[1,2]`, targets `['osg']`.
+- Use labels `shard.replace('/','-')+'-'+target+'-optimised-'+str(repeat)`.
+- Write the combined rows to `optimised-rows.json`, preserving `rows.json`.
+
+Run `python3 .cache/speed-338a538/run-optimised.py` from the repository root,
+with no other workload. The copied runner retains `ABAPITI_OSG_ONE_BUILD=0`,
+unsets `ABAPITI_OSG_CACHE`, and invokes the same meter, overlay-enabled Go
+wrapper and binary-execution preload. Complete sample directories are skipped;
+archive an incomplete directory before repeating it. Compare each raw result's
+ordered `(title, status)` vector with both corresponding fast-mode `raw.json`
+files before accepting it.
