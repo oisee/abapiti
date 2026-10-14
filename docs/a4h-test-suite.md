@@ -166,6 +166,13 @@ rules_1, rules_2, syntax, objects, rest), their manifests, and
 `parts.json`. The index's zip filenames refer to the
 published downloads; its archive hashes are unchanged by renaming.
 
+The table above records the initial splitter measurement. After root-relative
+locations shorten emitted sources, byte-weight balancing is recomputed: the
+release parts contain **85 / 568 / 1,097 / 817 / 1,395 / 488 / 573** objects
+(base / statements / rules_1 / rules_2 / syntax / objects / rest), still **5,023
+objects and zero independence violations**. Current sizes are recorded in
+[the release inventory](release-v0.5.0-assets.tsv) and `parts.json`.
+
 Choose **either** the monolith **or** the parts, never both. Import the release
 core `abaplint-577f875e-a4h.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
 then the six remaining parts in parallel. Import all parts before running tests.
