@@ -26,6 +26,7 @@ type emitter struct {
 	arrayViews      bool
 	recordDelete    bool
 	numberExprs     map[*hir.Expr]bool
+	numberFields    map[string]map[string]bool
 	constructorArgs bool
 	constructorGet  bool
 	configJSON      bool
@@ -131,12 +132,12 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
-	p, numberExprs := retainNonfiniteStorage(p)
+	p, numberExprs, numberFields := retainNonfiniteStorage(p)
 	names := hir.NewNames()
 	if os.Getenv("ABAPITI_NAMES") == "readable" {
 		names = hir.NewReadableNames(p, "LNT")
 	}
-	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs}
+	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs, numberFields: numberFields}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	e.arrayViews = len(e.liveClasses) > 0

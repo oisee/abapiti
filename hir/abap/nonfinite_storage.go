@@ -10,9 +10,9 @@ import (
 // boundary use the existing tagged numeric box, including across scalar fields
 // and call signatures. This is a storage lowering, not ToNumber(undefined)=0.
 // Work on a copy: Go emission and the input HIR retain their Number semantics.
-func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool) {
+func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool, map[string]map[string]bool) {
 	if !hasNaNBoundary(p) {
-		return p, nil
+		return p, nil, nil
 	}
 	q := copyNumberProgram(p)
 	a := &numberStorage{
@@ -67,13 +67,27 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool) {
 			break
 		}
 	}
+	// Keep the required-field proof separate from the optional numeric box.
+	// Only fields widened by this pass qualify; source optional fields do not.
+	fields := map[string]map[string]bool{}
+	for _, c := range q.Classes {
+		for i := range c.Fields {
+			f := &c.Fields[i]
+			if a.tagged[&f.Type] {
+				if fields[c.Name] == nil {
+					fields[c.Name] = map[string]bool{}
+				}
+				fields[c.Name][f.Name] = true
+			}
+		}
+	}
 	for t := range a.tagged {
 		*t = hir.T(hir.Optional, hir.T(hir.Number))
 	}
 	for x := range a.exprs {
 		x.Type = hir.T(hir.Optional, hir.T(hir.Number))
 	}
-	return q, a.exprs
+	return q, a.exprs, fields
 }
 
 // The frontend's absent numeric operand uses this checked NaN producer.
@@ -368,4 +382,13 @@ func copyNumberExpr(x *hir.Expr) *hir.Expr {
 		n.Args[i] = copyNumberExpr(v)
 	}
 	return &n
+}
+
+// semanticFieldType preserves JavaScript requiredness after numeric storage
+// lowering. Use the emitted field type for values, this type for presence proofs.
+func (e *emitter) semanticFieldType(c *hir.Class, f hir.Field) hir.Type {
+	if e.numberFields[c.Name][f.Name] && taggedNumber(f.Type) {
+		return hir.T(hir.Number)
+	}
+	return f.Type
 }

@@ -3,6 +3,7 @@ package abap
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
@@ -102,4 +103,58 @@ func TestLSPIdentifierJSONCertificateRefusals(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLSPIdentifierJSONTaggedPosition(t *testing.T) {
+	out, err := exec.Command("node", "-e", `class Position{constructor(row,col){this.row=row;this.col=col}}class AbstractToken{constructor(start,str,strUpper){this.start=start;this.str=str;this.strUpper=strUpper}}class Token extends AbstractToken{}class Identifier{constructor(token,filename){this.token=token;this.filename=filename}}console.log(JSON.stringify(new Identifier(new Token(new Position(1,2),"select","SELECT"),'file "α".abap ')));console.log(JSON.stringify(new Position(NaN,2)));`).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(want) != 2 {
+		t.Fatalf("Node: %s", out)
+	}
+	p := lspIdentifierJSONFixture()
+	position := p.Classes[0]
+	number := hir.T(hir.Number)
+	for i := range position.Fields {
+		position.Fields[i].Type = number
+		position.Ctor.Params[i].Type = number
+		position.Ctor.Body.List[i].X.Type = number
+		position.Ctor.Body.List[i].Y.Type = number
+	}
+	probe := p.Classes[3]
+	pos := probe.Methods[0].Body.X.X.Args[0].Args[0]
+	for i := range pos.Args {
+		pos.Args[i] = hir.L(number, float64(i+1))
+	}
+	nan := &hir.Expr{Kind: hir.New, Type: hir.Ref(position.Name), Args: []*hir.Expr{
+		rt("string.parseFloatNumber", hir.L(str, "NaN"), number), hir.L(number, float64(2)),
+	}}
+	m := method("nan", str, ret(rt("json.stringifySubset", nan, str)))
+	m.Static = true
+	probe.Methods = append(probe.Methods, m)
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := names.Get(probe.Name)
+	files[owner+".clas.testclasses.abap"] = fmt.Sprintf(`CLASS ltcl_tagged DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.
+PRIVATE SECTION.
+METHODS check FOR TESTING.
+ENDCLASS.
+CLASS ltcl_tagged IMPLEMENTATION.
+METHOD check.
+DATA actual TYPE string.
+actual = %s=>%s( ).
+cl_abap_unit_assert=>assert_equals( act = actual exp = %s ).
+actual = %s=>%s( ).
+cl_abap_unit_assert=>assert_equals( act = actual exp = %s ).
+ENDMETHOD.
+ENDCLASS.
+`, owner, names.Get("member.run"), "`"+want[0]+"`", owner, names.Get("member.nan"), "`"+want[1]+"`")
+	if !strings.Contains(files[names.Get(position.Name)+".clas.abap"], "TYPE REF TO "+names.Get("runtime."+hir.T(hir.Optional, number).String())) {
+		t.Fatal("fixture did not widen Position storage")
+	}
+	storageHostFixture(t, files, owner)
 }

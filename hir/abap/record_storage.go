@@ -90,7 +90,8 @@ func (e *emitter) nativeStructuralPresence(out *strings.Builder, c *hir.Class) {
 			continue
 		}
 		fmt.Fprintf(out, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
-		if prototypeProperty(f.Name) || f.Type.Kind != hir.Optional && f.Type.Kind != hir.Dynamic {
+		typ := e.semanticFieldType(c, f)
+		if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
 			fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: structural.delete: required or prototype slot cannot retain absence`.\n", trap)
 		} else {
 			fmt.Fprintf(out, "CLEAR me->%s.\n", e.member(f.Name))
@@ -147,7 +148,8 @@ func (e *emitter) nativeRecordDeleteRuntime() string {
 				}
 				seen[f.Name] = true
 				fmt.Fprintf(&code, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
-				if prototypeProperty(f.Name) || f.Type.Kind != hir.Optional && f.Type.Kind != hir.Dynamic {
+				typ := e.semanticFieldType(base, f)
+				if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
 					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", e.name("view.refusal"))
 				} else {
 					fmt.Fprintf(&code, "CLEAR native%d->%s.\nINSERT key INTO TABLE native%d->%s.\n", i, e.member(f.Name), i, e.name("record.deleted"))

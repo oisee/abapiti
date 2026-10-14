@@ -26,7 +26,7 @@ func (b *body) factoryOwnKeys(x *hir.Expr, n string) {
 	for base := c; base != nil; base = b.e.classBy(base.Super) {
 		for _, f := range base.Fields {
 			if !f.Static {
-				fields[f.Name] = f.Type
+				fields[f.Name] = b.e.semanticFieldType(base, f)
 			}
 		}
 	}

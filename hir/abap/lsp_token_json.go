@@ -49,7 +49,8 @@ func (e *emitter) lspTokenJSONOrder(c *hir.Class) ([]string, bool) {
 				// Native deletion refuses required slots. Deletable slots can
 				// be reinserted in a different order, which this certificate
 				// does not track; keep those layouts outside its domain.
-				if f.Type.Kind == hir.Optional || f.Type.Kind == hir.Dynamic {
+				typ := e.semanticFieldType(p, f)
+				if typ.Kind == hir.Optional || typ.Kind == hir.Dynamic {
 					return nil, false
 				}
 				if strings.HasPrefix(f.Name, "#") || f.Name == "__proto__" {

@@ -105,7 +105,13 @@ func TestNonfiniteScalarStorage(t *testing.T) {
 		ret(ok),
 	))
 	check.Static = true
-	p := &hir.Program{Classes: []*hir.Class{{Name: "Box", Fields: []hir.Field{{Name: "value", Type: num}}, Ctor: ctor, Methods: []*hir.Method{getter}}, {Name: "Probe", Methods: []*hir.Method{check}}}}
+	dyn := hir.T(hir.Dynamic)
+	erase := method("erase", boolean, hir.B(
+		decl("box", ref, &hir.Expr{Kind: hir.New, Type: ref, Args: []*hir.Expr{hir.L(num, 3)}}),
+		ret(rt("dynamic.delete", rt("dynamic.of", local("box", ref), dyn), boolean, hir.L(str, "value"))),
+	))
+	erase.Static = true
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Box", Fields: []hir.Field{{Name: "value", Type: num}}, Ctor: ctor, Methods: []*hir.Method{getter}}, {Name: "Probe", Methods: []*hir.Method{check, erase}}}}
 	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
@@ -117,6 +123,6 @@ func TestNonfiniteScalarStorage(t *testing.T) {
 		t.Fatal("nonfinite field was not boxed")
 	}
 	owner := names.Get("Probe")
-	files[owner+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\nENDMETHOD.\nENDCLASS.\n", owner, names.Get("member.check"))
+	files[owner+".clas.testclasses.abap"] = fmt.Sprintf("CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\nDATA failure TYPE REF TO %s.\nDATA ignored TYPE abap_bool.\nDATA refused TYPE abap_bool.\ncl_abap_unit_assert=>assert_true( %s=>%s( ) ).\nTRY.\nignored = %s=>%s( ).\nCATCH %s INTO failure.\ncl_abap_unit_assert=>assert_equals( act = failure->get_text( ) exp = `ABAP view refused: record_storage.go: nativeDelete: required or prototype slot cannot retain absence` ).\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\nENDMETHOD.\nENDCLASS.\n", names.Get("view.refusal"), owner, names.Get("member.check"), owner, names.Get("member.erase"), names.Get("view.refusal"))
 	storageHostFixture(t, files, owner)
 }

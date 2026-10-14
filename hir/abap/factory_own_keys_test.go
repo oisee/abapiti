@@ -12,6 +12,14 @@ import (
 )
 
 func TestLSPFactoryPresence(t *testing.T) {
+	for _, tagged := range []bool{false, true} {
+		t.Run(fmt.Sprintf("tagged=%v", tagged), func(t *testing.T) {
+			lspFactoryPresence(t, tagged)
+		})
+	}
+}
+
+func lspFactoryPresence(t *testing.T, tagged bool) {
 	const prefix = "node_modules/vscode-languageserver-types/lib/umd/main.d.ts."
 	opts := hir.Ref(prefix + "RenameFileOptions")
 	rename := hir.Ref(prefix + "RenameFile")
@@ -47,12 +55,25 @@ func TestLSPFactoryPresence(t *testing.T) {
 	ignore.Static = true
 	pos := method("position", dyn, ret(rt("dynamic.of", &hir.Expr{Kind: hir.New, Type: position, Op: "lsp.Position.create", Args: []*hir.Expr{hir.L(hir.T(hir.Number), float64(2)), hir.L(hir.T(hir.Number), float64(3))}}, dyn)))
 	pos.Static = true
+
 	unknown := method("unknown", dyn, ret(rt("dynamic.of", &hir.Expr{Kind: hir.New, Type: rename, Args: []*hir.Expr{hir.L(str, "rename"), hir.L(str, "old"), hir.L(str, "new"), hir.L(oo, nil), hir.L(annotationType, nil)}}, dyn)))
 	unknown.Static = true
 	keys := method("keys", str, ret(rt("array.join", rt("dynamic.keys", local("input", dyn), hir.T(hir.Array, str)), str, hir.L(str, ","))))
 	keys.Static = true
 	keys.Params = []hir.Param{{Name: "input", Type: dyn}}
-	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{optClass, renameClass, posClass, {Name: "FactoryProbe", Methods: []*hir.Method{create, empty, flag, ignore, pos, unknown, keys}}}})
+	// An actual optional Number is not a required Number storage box.
+	optionalPosition := hir.Ref("node_modules/vscode-languageserver-types/optional.d.ts.Position")
+	optionalClass := shape(optionalPosition, []hir.Field{{Name: "line", Type: hir.T(hir.Optional, hir.T(hir.Number))}, {Name: "character", Type: hir.T(hir.Number)}})
+	bad := method("badPosition", dyn, ret(rt("dynamic.of", &hir.Expr{Kind: hir.New, Type: optionalPosition, Op: "lsp.Position.create", Args: []*hir.Expr{hir.L(optionalClass.Fields[0].Type, nil), hir.L(hir.T(hir.Number), float64(3))}}, dyn)))
+	bad.Static = true
+	methods := []*hir.Method{create, empty, flag, ignore, pos, unknown, keys, bad}
+	if tagged {
+		nan := rt("string.parseFloatNumber", hir.L(str, "NaN"), hir.T(hir.Number))
+		nanPos := method("nanPosition", dyn, ret(rt("dynamic.of", &hir.Expr{Kind: hir.New, Type: position, Op: "lsp.Position.create", Args: []*hir.Expr{nan, nan}}, dyn)))
+		nanPos.Static = true
+		methods = append(methods, nanPos)
+	}
+	files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{optClass, renameClass, posClass, optionalClass, {Name: "FactoryProbe", Methods: methods}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +159,14 @@ cl_abap_unit_assert=>assert_true( refused ).
 ENDMETHOD.
 ENDCLASS.
 `, d, names.Get(prefix+"RenameFileOptions"), names.Get("runtime."+annotationType.String()), d, owner, names.Get("member.create"), owner, names.Get("member.keys"), owner, names.Get("member.empty"), owner, names.Get("member.create"), owner, names.Get("member.flag"), owner, names.Get("member.create"), owner, names.Get("member.keys"), owner, names.Get("member.ignore"), owner, names.Get("member.create"), owner, names.Get("member.keys"), owner, names.Get("member.position"), owner, names.Get("member.keys"), owner, names.Get("member.unknown"), names.Get("view.refusal"))
+	unit = strings.Replace(unit, "DATA refused TYPE abap_bool.", "DATA refused TYPE abap_bool.\nDATA failure TYPE REF TO "+names.Get("view.refusal")+".", 1)
+	unit = strings.Replace(unit, "ENDMETHOD.", fmt.Sprintf("CLEAR refused.\nTRY.\ninput = %s=>%s( ).\nCATCH %s INTO failure.\ncl_abap_unit_assert=>assert_equals( act = failure->get_text( ) exp = `ABAP view refused: factory_own_keys.go: checked LSP factory layout does not match its ABI` ).\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\nENDMETHOD.", owner, names.Get("member.badPosition"), names.Get("view.refusal")), 1)
+	if tagged {
+		// A required numeric slot retains keys and NaN without becoming deletable.
+		checks := fmt.Sprintf("input = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = %s=>%s( input ) exp = 'line,character' ).\nvalue = input->get( 'line' ).\ncl_abap_unit_assert=>assert_equals( act = value->number_special exp = 1 ).\nCLEAR refused.\nTRY.\nrefused = input->delete( 'line' ).\nrefused = abap_false.\nCATCH %s INTO failure.\ncl_abap_unit_assert=>assert_equals( act = failure->get_text( ) exp = `ABAP view refused: record_storage.go: structural.delete: required or prototype slot cannot retain absence` ).\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member.nanPosition"), owner, names.Get("member.keys"), names.Get("view.refusal"))
+		checks += fmt.Sprintf("cl_abap_unit_assert=>assert_equals( act = %s=>%s( input ) exp = 'line,character' ).\n", owner, names.Get("member.keys"))
+		unit = strings.Replace(unit, "ENDMETHOD.", checks+"ENDMETHOD.", 1)
+	}
 	files[owner+".clas.testclasses.abap"] = strings.ReplaceAll(unit, "options = options annotation = annotation", names.Get("param.options")+" = options "+names.Get("param.annotation")+" = annotation")
 	storageHostFixture(t, files, owner)
 }
