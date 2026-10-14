@@ -69,7 +69,7 @@ func TestLSPTokenJSONDeclarationOrder(t *testing.T) {
 }
 
 func TestLSPTokenJSONCertificateRefusals(t *testing.T) {
-	for _, scenario := range []string{"order", "missing", "escape", "hook", "accessor", "scoped", "privateSlot", "prototype", "subclass"} {
+	for _, scenario := range []string{"order", "missing", "escape", "hook", "accessor", "scoped", "privateSlot", "prototype", "optionalSlot", "dynamicSlot", "subclass"} {
 		t.Run(scenario, func(t *testing.T) {
 			p := lspTokenJSONFixture()
 			c := p.Classes[1]
@@ -93,6 +93,10 @@ func TestLSPTokenJSONCertificateRefusals(t *testing.T) {
 				}
 				c.Fields[0].Name = key
 				c.Ctor.Body.List[0].X.Name = key
+			case "optionalSlot":
+				c.Fields[0].Type = hir.T(hir.Optional, c.Fields[0].Type)
+			case "dynamicSlot":
+				c.Fields[0].Type = hir.T(hir.Dynamic)
 			case "subclass":
 				p.Classes[2].Fields = []hir.Field{{Name: "extra", Type: str}}
 			}
