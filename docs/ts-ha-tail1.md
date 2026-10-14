@@ -108,9 +108,37 @@ All gates pass with Go **1.26.0**:
 * `.github/ci/lint.sh gate origin/main`: **0 new issues**, canaries **5/5**,
   pinned golangci-lint **2.13.2**.
 
-The global-definition golden changes by one line: the optional-number ABI's
-`number_special` tag. New emitter fixtures use `emitABAPNamed`; the golden uses
-its existing tracked emitter helper. No fixture emission bypass was added.
+The global-definition golden includes `number_special` for every numeric
+optional ABI, including I32/I64 wrappers that may share runtime storage.
+New emitter fixtures use `emitABAPNamed`; the golden uses its existing tracked
+emitter helper. No fixture emission bypass was added.
+
+### CI lint follow-up
+
+The initial gates above missed the generated-ABAP lint set in `hir-unit.sh`.
+After the class-section/numeric-optional repairs, subset JSON still discovered
+its synthesized ClassValue handler too late: builtin Error implemented the
+described interface, but that interface had not been emitted. Usage scanning
+now enables the descriptor ABI before emitting interfaces or any class.
+A regression covers an early class, the JSON caller, and synthetic builtin Error.
+
+The config JSON v702 gate also could not parse a shared array dependency's
+live-box `IF ... IS INSTANCE OF` block. An equivalent checked cast preserves
+boxing and identity without that newer structural syntax. A second regression
+covers the generated shared array helper.
+
+`HIR_RUNTIMES=" " GOFLAGS=-buildvcs=false .github/ci/hir-unit.sh "$work"` exits **0**:
+all **34** ABAP lint reports have **0 issues**, including config JSON v702.
+The checkout matching the branch's `16c024c8` OSG pin is needed for the final
+lexer validation. No lint rules or fixture selection were weakened.
+
+The eleven-file focused OSGO recheck after `8025ea0` remains **1783 pass /
+0 FAIL / 3 known traps**, with **1812/1812 registrations**, **26 Node-pending**,
+and **0 active skips / unregistered / async-pending**. The scoped build and
+executions used the shared heavy-run lock and the same pinned runtime.
+`go vet`, the short Go suite, all 15 individual Node test files, and the
+0-new-issues lint gate are green. OSG source remained clean; no generated
+`tools/gogen/.out/go-cache` was left behind.
 
 ## Reproduction and resource discipline
 

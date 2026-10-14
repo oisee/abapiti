@@ -38,7 +38,9 @@ func (e *emitter) runtime(t hir.Type) {
 	case hir.Optional:
 		line("DATA value TYPE " + e.typ(t.Args[0]) + ".")
 		line("DATA has TYPE abap_bool.")
-		if t.Args[0].Kind == hir.Number {
+		// Optionals of every numeric kind can share one ABAP class (same value
+		// type), so the non-finite marker is declared for all of them.
+		if k := t.Args[0].Kind; k == hir.Number || k == hir.I64 || k == hir.I32 {
 			line("DATA number_special TYPE i.")
 		}
 	case hir.Array:
