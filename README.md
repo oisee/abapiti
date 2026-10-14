@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
-> **🪞 Self-hosting M1: abaplint compiled by abapiti checks open-steamgate's own ABAP.** TS-HA@OSGO and TS-HG@Go check open-steamgate's own ABAP (2,210 objects, OSG 3ee404ca) byte-identically to Node abaplint 577f875e: 80 issues, the same bytes on all three. TS-HA@OSGO takes 133 s, TS-HG@Go 48 s. Verified independently, with a separate Node reference computed on another machine (14 Oct 2026, branch `selfhost`).
+> **🪞 Self-hosting M1: abaplint compiled by abapiti checks open-steamgate's own ABAP.** TS-HA@OSGO and TS-HG@Go check open-steamgate's own ABAP (2,785 files / 2,210 objects, OSG 3ee404ca) byte-identically to Node abaplint 577f875e: 80 issues, the same bytes on all three. TS-HA@OSGO takes 133 s, TS-HG@Go 48 s. Verified independently, with a separate Node reference computed on another machine (14 Oct 2026, branch `selfhost`).
 >
 > | Host | Output vs Node 577f875e | Time |
 > |---|---|---:|
