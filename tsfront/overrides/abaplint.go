@@ -7,6 +7,8 @@ import "github.com/oisee/abapiti/hir"
 // never return an incomplete registry as though it were the upstream result.
 func Abaplint() *Registry {
 	entries := structuresOverrides()
+	entries = append(entries, ddicViewLookups()...)
+	entries = append(entries, skipLogicGeneratedGroup()...)
 	entries = append(entries,
 		Entry{ID: "abaplint-registry-input-progress", Key: Key{"src/_iregistry.ts", "IRunInput", "KindInterfaceDeclaration"}, SHA256: "1bcfd155a49444b0afb43f77e4c2c46b5da664a638035f2df8a77fa996d02748", Rationale: "progress callback remains an opaque reference; async registry parsing is outside this closure", Types: map[string]hir.Type{"progress": hir.Ref(hir.RootObject)}},
 		Entry{ID: "abaplint-map-input-constructor", Key: Key{"src/abap/2_statements/combi.ts", "mapInput", "KindFunctionDeclaration"}, SHA256: "ae304084bb6ce64c2176d481cbafb04d12414e535cf7ff0008908666f2c8e8f2", Rationale: "the typeof function branch proves the ts-ignore constructor and name accesses", Expressions: map[string]func() *hir.Expr{

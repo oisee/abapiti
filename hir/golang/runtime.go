@@ -878,10 +878,31 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
- source:=pattern.replaceAll(str("/"),str("\\/"))
- if pattern=="" {source=str("(?:)")}
+ source:=jsRegExpSource(p)
  return &jsRegExp{Source:source,Flags:flags,compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
 
+}
+// jsRegExpSource is RegExp.prototype.source as V8 escapes it: "/" outside a
+// character class and line terminators; escapes and class contents stay verbatim.
+func jsRegExpSource(p string) jsString {
+ if p=="" {return str("(?:)")}
+ var b strings.Builder
+ escaped, inClass := false, false
+ for _,c:=range p {
+  switch {
+  case escaped: escaped=false; b.WriteRune(c)
+  case c=='\\': escaped=true; b.WriteRune(c)
+  case c=='/' && !inClass: b.WriteString("\\/")
+  case c=='\n': b.WriteString("\\n")
+  case c=='\r': b.WriteString("\\r")
+  case c=='\u2028': b.WriteString("\\u2028")
+  case c=='\u2029': b.WriteString("\\u2029")
+  default:
+   if c=='[' {inClass=true} else if c==']' {inClass=false}
+   b.WriteRune(c)
+  }
+ }
+ return str(b.String())
 }
 func compileCheckedRegexp(translated, pattern, flags string) *regexp.Regexp {
  r,err:=regexp.Compile(translated);if err!=nil {panic(newTrap("invalid checked JavaScript regexp /"+pattern+"/"+flags+": "+err.Error()))};return r
