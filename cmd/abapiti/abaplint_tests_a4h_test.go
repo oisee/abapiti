@@ -28,6 +28,25 @@ func TestSplitTestPackages(t *testing.T) {
 	}
 }
 
+func TestA4HSourceEnvelope(t *testing.T) {
+	valid := map[string]string{"zcl_lnt_a.clas.abap": "CLASS zcl_lnt_a. ENDCLASS."}
+	if err := validateA4HSources(valid); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []map[string]string{
+		{"zcl_lnt_" + strings.Repeat("a", 30) + ".clas.abap": ""},
+		{"zcl_lnt_b.clas.abap": strings.Repeat("x", 256)},
+		{"zcl_lnt_BAD.clas.abap": ""},
+	} {
+		if err := validateA4HSources(invalid); err == nil {
+			t.Fatal("accepted invalid envelope")
+		}
+	}
+	if err := validateA4HSources(valid, valid); err == nil {
+		t.Fatal("accepted cross-package collision")
+	}
+}
+
 func TestAbapGitObjectManifest(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.zip")

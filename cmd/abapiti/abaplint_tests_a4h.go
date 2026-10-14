@@ -13,6 +13,7 @@ import (
 )
 
 var abapObjectRef = regexp.MustCompile(`(?i)\b(?:zcl_lnt_|zif_lnt_|zcx_lnt_|zlnt_)[a-z0-9_]+\b`)
+var a4hObjectName = regexp.MustCompile(`^[a-z][a-z0-9_]{0,29}$`)
 var abapQuoted = regexp.MustCompile("`(?:``|[^`])*`|'(?:''|[^'])*'|\"[^\n]*")
 
 // Partition by the static dependency closure of ALL original core declarations,
@@ -70,6 +71,30 @@ func splitTestPackages(files map[string]string) (map[string]string, map[string]s
 		}
 	}
 	return core, tests, nil
+}
+
+func validateA4HSources(packages ...map[string]string) error {
+	seen := map[string]bool{}
+	for _, sources := range packages {
+		for file, source := range sources {
+			name := strings.Split(file, ".")[0]
+			if !a4hObjectName.MatchString(name) {
+				return fmt.Errorf("invalid A4H object name %s", name)
+			}
+			if seen[name] {
+				return fmt.Errorf("duplicate A4H object across packages: %s", name)
+			}
+			seen[name] = true
+			if strings.HasSuffix(file, ".abap") {
+				for i, line := range strings.Split(source, "\n") {
+					if len(line) > 255 {
+						return fmt.Errorf("%s:%d exceeds 255 bytes", file, i+1)
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) error {
@@ -142,6 +167,9 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	}
 	for file, source := range support {
 		tests[file] = source
+	}
+	if err := validateA4HSources(core, tests); err != nil {
+		return err
 	}
 	if err := writeSources(filepath.Join(out, "tests"), tests); err != nil {
 		return err

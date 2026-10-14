@@ -41,7 +41,7 @@ func A4HTestSupport() (map[string]string, error) {
 		if f.typ == "INT4" {
 			inttype = "I"
 		}
-		fmt.Fprintf(&fields, "<DD03P><FIELDNAME>%s</FIELDNAME><KEYFLAG>%s</KEYFLAG><ADMINFIELD>0</ADMINFIELD><COMPTYPE>E</COMPTYPE><INTTYPE>%s</INTTYPE><INTLEN>%s</INTLEN><DATATYPE>%s</DATATYPE><LENG>%s</LENG><MASK>  %s</MASK></DD03P>\n", f.name, key, inttype, f.internal, f.typ, f.length, f.typ)
+		fmt.Fprintf(&fields, "<DD03P><FIELDNAME>%s</FIELDNAME><KEYFLAG>%s</KEYFLAG><NOTNULL>%s</NOTNULL><ADMINFIELD>0</ADMINFIELD><COMPTYPE>E</COMPTYPE><INTTYPE>%s</INTTYPE><INTLEN>%s</INTLEN><DATATYPE>%s</DATATYPE><LENG>%s</LENG><MASK>  %s</MASK></DD03P>\n", f.name, key, key, inttype, f.internal, f.typ, f.length, f.typ)
 	}
 	files["zlnt_testrun.tabl.xml"] = `<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_TABL" serializer_version="v1.0.0">
