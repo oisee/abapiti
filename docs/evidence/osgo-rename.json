@@ -1,0 +1,138 @@
+{
+  "base": "83e9ca4bf86fbc3a2df14339a3fc09472bf72445",
+  "implementation": "a2f6165",
+  "upstreamPin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "osgPin": "b32d0f6049ec0a3a32a2b5a561fd673fcaf44974",
+  "files": 9,
+  "roots": [
+    "test/objects/rename/rename_data_element.ts",
+    "test/objects/rename/rename_domain.ts",
+    "test/objects/rename/rename_global_class.ts",
+    "test/objects/rename/rename_global_interface.ts",
+    "test/objects/rename/rename_icf_service.ts",
+    "test/objects/rename/rename_message_class.ts",
+    "test/objects/rename/rename_program.ts",
+    "test/objects/rename/rename_table.ts",
+    "test/objects/rename/rename_table_type.ts"
+  ],
+  "osg": {
+    "before": {
+      "passed": 0,
+      "failed": 0,
+      "trapped": 31,
+      "registered": 31,
+      "nodeActive": 31
+    },
+    "after": {
+      "passed": 31,
+      "failed": 0,
+      "trapped": 0,
+      "registered": 31,
+      "nodeActive": 31
+    },
+    "baselineReason": "Z_VIEW_REFUSAL_6FCECBE45FBFF9: ABAP view refused: own_keys.go: get node_modules/vscode-languageserver-types/lib/umd/main.d.ts.RenameFile: structural own-key metadata absent [view.refusal]",
+    "envelope": {
+      "files": 2366,
+      "maxLineBytes": 255,
+      "overlongLines": 0,
+      "maxObjectNameBytes": 29
+    },
+    "timingMs": {
+      "cache": 0,
+      "frontend": 296320,
+      "emit": 27701,
+      "release": 1795,
+      "goBuild": 203756,
+      "run": 4763
+    }
+  },
+  "go": {
+    "passed": 31,
+    "failed": 0,
+    "trapped": 0,
+    "registered": 31,
+    "nodeActive": 31
+  },
+  "static": {
+    "roots": 625,
+    "shards": 17,
+    "before": {
+      "files": 2166,
+      "classes": 7052,
+      "interfaces": 85,
+      "blocking": 0,
+      "hirErrors": 0,
+      "coverageTraps": 0,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ]
+    },
+    "after": {
+      "files": 2166,
+      "classes": 7052,
+      "interfaces": 85,
+      "blocking": 0,
+      "hirErrors": 0,
+      "coverageTraps": 0,
+      "nonfiniteLiteralSites": 0,
+      "unsupportedCatalogue": [
+        "string.parseFloat"
+      ],
+      "runtime": [],
+      "refusals": [
+        {
+          "reason": "json.stringifySubset ABAP own-property order/toJSON is unproven for classref<src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken>",
+          "sites": 1
+        }
+      ]
+    },
+    "gapJSONIdentical": true,
+    "renameRelatedEmitterSites": {
+      "before": 0,
+      "after": 0
+    },
+    "countingRule": "Unchanged gap tool: runtime sites before ABAP passes and distinct emitter refusals after passes. Generated runtime RAISE statements are not added to this census."
+  },
+  "runtimeRecordMapRefusals": {
+    "baselineSpecializations": 49,
+    "baselineHasRaises": 49,
+    "baselineDeleteRaises": 49,
+    "implementationUnchanged": true
+  },
+  "gates": {
+    "vet": true,
+    "short": true,
+    "graceLexerFacts": true,
+    "graceGoldenChanged": false,
+    "defaultBackendCoverage": true,
+    "lintNewIssues": 0,
+    "lintCanary": "5/5"
+  },
+  "defaultGo": {
+    "files": 9,
+    "diffAgainstRequestedBase": {
+      "status": 0,
+      "bytes": 0
+    },
+    "diffAgainstOriginMain": {
+      "status": 1,
+      "main": "fd77046a9c7d67e5ee95ad08301eb8c033cbe177",
+      "inherited": true,
+      "changedFiles": [
+        "go/hir.go",
+        "go/hir_profile.go",
+        "go/runtime.go",
+        "go/zabaplint-go"
+      ],
+      "reason": "Requested base already contains Go sparse-array changes absent from origin/main. Rename patch changes no default Go bytes."
+    }
+  }
+}
