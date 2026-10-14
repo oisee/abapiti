@@ -2442,7 +2442,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(message + " = NEW #( ).\n" + message + "->has = abap_true.\n" + message + "->value = `Invalid JSON`.")
 		syntax := b.e.name("builtin.SyntaxError")
 		if b.e.classBy("builtin.SyntaxError") == nil {
-			b.e.files[syntax+".clas.abap"] = "CLASS " + syntax + " DEFINITION PUBLIC INHERITING FROM " + b.e.name("builtin.Error") + " CREATE PUBLIC.\nENDCLASS.\nCLASS " + syntax + " IMPLEMENTATION.\nENDCLASS.\n"
+			b.e.files[syntax+".clas.abap"] = "CLASS " + syntax + " DEFINITION PUBLIC INHERITING FROM " + b.e.name("builtin.Error") + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + syntax + " IMPLEMENTATION.\nENDCLASS.\n"
 		}
 		payload := b.temp(hir.Ref("builtin.SyntaxError"))
 		b.line(payload + " = NEW " + syntax + "( " + b.e.param("message") + " = " + message + " ).")
@@ -2948,7 +2948,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if e.assertionOwners[s.SiteOwner] {
 			base := name
 			name = e.name("exception.testAssertion." + s.X.Type.String())
-			e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
+			e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM " + base + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
 		}
 		n := b.rawTemp("REF TO " + name)
 		v := b.expr(s.X)
