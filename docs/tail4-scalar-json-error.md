@@ -74,3 +74,21 @@ node tools/abaplint-tests-all.mjs "$ABAPLINT_HOME" "$EVIDENCE/focused.json"
 Use `ABAPITI_OSG_ONE_BUILD=0` for independent shard builds, and
 `ABAPITI_TESTS_TARGET=go` for the same-file Go comparison. All heavy commands
 must use the shared flock, memory-limited scope, and resource admission.
+
+## Verification
+
+- Original `90a02a5` compiler, independent downport build: all five specified
+  NOT_COMPILED traps reproduce, with the missing inherited-mask diagnostic.
+  The focused selection also exposes the three optional-identity FAILs above.
+- Production Go, OSG one-build union, and OSG independent shards: **323/323
+  Node-active**, **0 FAIL**, **0 traps**; five upstream-pending tests excluded.
+- OSG abap/lexer: **200/200**, zero FAIL/trap.
+- Four emitted-ABAP regression fixtures execute successfully on the pin.
+- Mandatory `hir-unit.sh` lint gate with `HIR_RUNTIMES=" "`: exit 0.
+- `go vet ./...`, requested short HIR/tsfront/cmd tests, and every individual
+  `tools/*-test.mjs`: green. Lint against `origin/main`: 0 new issues, canary 5/5.
+
+The final union has one shared build and uses no optional frontend/binary
+cache. A separate persistent-cache attempt exceeded gogen's default 12 GiB
+Node heap and auto-split; that resource failure is retained as evidence, not
+counted as a final verdict. No OSG source was changed.
