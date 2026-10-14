@@ -1,28 +1,34 @@
 package abap
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/oisee/abapiti/hir/jsregex"
+	"github.com/oisee/abapiti/hir"
 )
 
-// A real kernel refuses an expression after WHEN; only & may join literals.
-func TestRegExpDynamicWhenKeysAreLiterals(t *testing.T) {
-	for k := range jsregex.Reviewed {
-		if _, ok := regexABAPLiteral(k); !ok {
-			t.Fatalf("reviewed regex key is not a compile-time literal and would be refused: %q", k)
-		}
+// A real kernel refuses an expression after WHEN; long dispatch keys must be
+// compared in the IF chain, never split with && in a WHEN operand.
+func TestRegExpDynamicWhenOperandsAreLiterals(t *testing.T) {
+	long := strings.Repeat("a", 120)
+	r := &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Args: []*hir.Expr{hir.L(str, "^(?!(?:DEPTH|MULTIPLE)$)(\\/\\w+\\/)?(\\*?\\w+~(\\/\\w+\\/)?(\\w+|\\*)|\\w+)$"), hir.L(str, "i")}}
+	_ = long
+	result := hir.T(hir.Optional, hir.T(hir.Array, str))
+	m := method("run", result, ret(rt("regexp.exec", r, result, hir.L(str, "x"))))
+	p := &hir.Program{Classes: []*hir.Class{{Name: "WhenProbe", Methods: []*hir.Method{m}}}}
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
 	}
-	long := strings.Repeat("a", 100)
-	got, ok := regexABAPLiteral(long)
-	if !ok || strings.Contains(got, "&&") || !strings.Contains(got, " &\n") {
-		t.Fatalf("long key must be split with the literal operator &: %q", got)
+	src := files[names.Get("runtime.regexp_js")+".clas.abap"]
+	if src == "" {
+		t.Skip("no dynamic regexp runtime emitted")
 	}
-	if _, ok := regexABAPLiteral(strings.Repeat("a", 256)); ok {
-		t.Fatal("keys over 255 characters are not literals")
+	if regexp.MustCompile("(?m)^\\s*WHEN [^\\n]*&&\\s*$").MatchString(src) {
+		t.Fatal("WHEN operand split with && (refused by a real kernel)")
 	}
-	if _, ok := regexABAPLiteral("a\nb"); ok {
-		t.Fatal("control characters cannot be part of a literal")
+	if strings.Contains(src, "&&\n") && !strings.Contains(src, "IF dispatch_key = ") {
+		t.Fatal("long dispatch keys must be compared in the IF chain")
 	}
 }

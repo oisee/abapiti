@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"unicode/utf8"
 )
 
 // Runtime strings must not bypass the reviewed JS regex language. The table
@@ -15,23 +14,35 @@ func (e *emitter) regexpDynamicRuntime(name string) {
 	text = strings.Replace(text, "excluded_pattern TYPE string OPTIONAL.", "excluded_pattern TYPE string OPTIONAL checked TYPE abap_bool OPTIONAL.", 1)
 	quote := regexABAPString
 	var code strings.Builder
-	code.WriteString("IF checked = abap_true.\nCASE pattern && `/` && flags.\n")
 	reviewed := e.regexpLiteralTable()
 	keys := make([]string, 0, len(reviewed))
 	for k := range reviewed {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	// WHEN takes only a literal or data object on a real kernel, so a key
+	// that needs several literal chunks is compared in an IF chain first
+	// (an expression is fine there); short keys stay in the CASE.
+	var long, short strings.Builder
 	for _, k := range keys {
 		spec := reviewed[k]
-		when, ok := regexABAPLiteral(k)
-		if !ok {
-			// Not expressible as a compile-time literal: leave it to WHEN
-			// OTHERS, which refuses loudly instead of guessing.
+		key := quote(k)
+		body := "posix = " + quote(pcreRegexPattern(spec[0])) + ".\nexcluded = " + quote(pcreRegexPattern(spec[1])) + ".\nignore_case = abap_false.\n"
+		if strings.Contains(key, "\n") {
+			if long.Len() == 0 {
+				long.WriteString("IF dispatch_key = " + key + ".\n" + body)
+			} else {
+				long.WriteString("ELSEIF dispatch_key = " + key + ".\n" + body)
+			}
 			continue
 		}
-		code.WriteString("WHEN " + when + ".\nposix = " + quote(pcreRegexPattern(spec[0])) + ".\nexcluded = " + quote(pcreRegexPattern(spec[1])) + ".\nignore_case = abap_false.\n")
+		short.WriteString("WHEN " + key + ".\n" + body)
 	}
+	code.WriteString("IF checked = abap_true.\nDATA dispatch_key TYPE string.\ndispatch_key = pattern && `/` && flags.\n")
+	if long.Len() > 0 {
+		code.WriteString(long.String() + "ELSE.\n")
+	}
+	code.WriteString("CASE dispatch_key.\n" + short.String())
 	code.WriteString(`WHEN OTHERS.
 IF flags = 'g'.
   FIND PCRE '\A&[1-9][0-9]*\z' IN pattern.
@@ -59,7 +70,7 @@ IF flags = 'i'.
   ignore_case = abap_false.
 ENDIF.
 ENDCASE.
-posix = me->pcre_pattern( posix ).
+@LONG_END@posix = me->pcre_pattern( posix ).
 TRY.
   FIND REGEX posix IN ' '.
 CATCH cx_root.
@@ -70,7 +81,11 @@ ENDIF.
 	if e.execUsed {
 		code.WriteString("exec_pattern = posix.\n")
 	}
-	text = strings.Replace(text, "ENDMETHOD.\nMETHOD test.", code.String()+"ENDMETHOD.\nMETHOD test.", 1)
+	longEnd := ""
+	if long.Len() > 0 {
+		longEnd = "ENDIF.\n"
+	}
+	text = strings.Replace(text, "ENDMETHOD.\nMETHOD test.", strings.Replace(code.String(), "@LONG_END@", longEnd, 1)+"ENDMETHOD.\nMETHOD test.", 1)
 	trap := e.name("runtime.regex_error")
 	text = strings.ReplaceAll(text, "@REGEX_ERROR@", trap)
 	text = strings.Replace(text, "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.", "RAISE EXCEPTION TYPE "+trap+" EXPORTING pattern = pattern flags = flags.", 1)
@@ -98,35 +113,6 @@ ENDCLASS.
 }
 
 // Preserve control characters and Unicode separators in generated ABAP source.
-// regexABAPLiteral renders s as one compile-time literal for operand
-// positions that take no expression (WHEN). A real kernel rejects `a` && `b`
-// there; the literal operator & joins literals at compile time, up to 255
-// characters, and cannot carry control characters.
-func regexABAPLiteral(s string) (string, bool) {
-	if s == "" {
-		return "``", true
-	}
-	if utf8.RuneCountInString(s) > 255 {
-		return "", false
-	}
-	var parts []string
-	var chunk []rune
-	for _, r := range s {
-		if r < 32 || r == 127 || r == 0xfeff || r == 0x2028 || r == 0x2029 {
-			return "", false
-		}
-		chunk = append(chunk, r)
-		if len(chunk) == 80 {
-			parts = append(parts, "`"+strings.ReplaceAll(string(chunk), "`", "``")+"`")
-			chunk = nil
-		}
-	}
-	if len(chunk) > 0 {
-		parts = append(parts, "`"+strings.ReplaceAll(string(chunk), "`", "``")+"`")
-	}
-	return strings.Join(parts, " &\n"), true
-}
-
 func regexABAPString(s string) string {
 	if s == "" {
 		return "``"
