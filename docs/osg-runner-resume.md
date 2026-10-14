@@ -26,6 +26,14 @@ must now pass, not lower its leading `\b` to a lookbehind. The earlier
 `"a\nb".replace(/x+/g, "")` trigger also no longer dumps. No OSG sources or
 emitted test bodies are patched.
 
+## Native word-boundary re-verification
+
+The DDL fix now passes **138/138 active unknown_types tests** on both OSG and
+Go, with **0 FAIL or trap** and one unchanged Node-pending case. Both BDEF alias
+tests pass. Lexer remains **200/200**. Both real-dump fixtures retain their
+original counts with the repeat-limit trigger described above. See
+[the focused evidence and gates](pcre-word-boundary.md).
+
 ## Hole-aware sized-array follow-up
 
 The obsolete construction-time Chai refusal is removed. The focused corpus now
