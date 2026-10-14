@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// KernelViolations catches constructor forms accepted by the OSG
+// KernelViolations catches constructor and CASE forms accepted by the OSG
 // parser but rejected by an ABAP kernel. Inspect statements, not lines: the
 // emitter wraps calls and quoted text can contain apparent control keywords.
 func KernelViolations(files map[string]string) []string {
@@ -19,6 +19,7 @@ func KernelViolations(files map[string]string) []string {
 		}
 		var statement []string
 		var blocks []string
+		var cases []bool
 		constructor, returned := false, false
 		calls := 0
 		report := func(reason string) { issues = append(issues, file+": "+reason) }
@@ -36,7 +37,7 @@ func KernelViolations(files map[string]string) []string {
 			word := statement[0]
 			if word == "method" {
 				constructor = len(statement) > 1 && statement[1] == "constructor"
-				blocks = nil
+				blocks, cases = nil, nil
 				returned, calls = false, 0
 			}
 			if constructor {
@@ -66,7 +67,21 @@ func KernelViolations(files map[string]string) []string {
 					blocks = blocks[:len(blocks)-1]
 				}
 			}
-			if word == "endmethod" {
+			switch word {
+			case "case":
+				cases = append(cases, false)
+			case "when":
+				if len(cases) > 0 {
+					cases[len(cases)-1] = true
+				}
+			case "endcase":
+				if len(cases) > 0 {
+					if !cases[len(cases)-1] {
+						report("CASE without WHEN")
+					}
+					cases = cases[:len(cases)-1]
+				}
+			case "endmethod":
 				if constructor && calls > 1 {
 					report(fmt.Sprintf("constructor calls super %d times", calls))
 				}

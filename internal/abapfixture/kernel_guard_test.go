@@ -14,6 +14,8 @@ func TestKernelViolations(t *testing.T) {
 		{"METHOD constructor. LOOP AT xs INTO x. super->constructor( ). ENDLOOP. ENDMETHOD.", "inside loop"},
 		{"METHOD constructor. RETURN. super->constructor( ). ENDMETHOD.", "RETURN before"},
 		{"METHOD constructor. super->constructor( ). super->constructor( ). ENDMETHOD.", "calls super 2"},
+		{"METHOD run. CASE key. ENDCASE. ENDMETHOD.", "CASE without WHEN"},
+		{"METHOD run. CASE a. CASE b. WHEN 1. ENDCASE. ENDCASE. ENDMETHOD.", "CASE without WHEN"},
 		{"METHOD run. CASE key. WHEN OTHERS. ENDCASE. ENDMETHOD.", ""},
 		{"METHOD constructor. super->constructor( ). x = `IF. CASE. super->constructor( ).`. \" IF.\n ENDMETHOD.", ""},
 	} {
