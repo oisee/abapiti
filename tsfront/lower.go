@@ -50,7 +50,8 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 type LowerOptions struct {
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
-	// TrapOnFailure is a tests-only, fail-closed partial lowering policy.
+	// TrapOnFailure is the fail-closed policy used by the suite and full-core
+	// client: unsupported bodies refuse execution instead of being guessed.
 	TrapOnFailure bool
 }
 

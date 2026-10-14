@@ -16,7 +16,7 @@
 > | abaplint tests passing, all 17 shards | **11,060** of 11,060 (100 %) | 11,060 |
 > | wrong answers (tests that run and disagree with Node) | **0** | 0 |
 > | tests trapped / not registered on Go | **0 / 0** | 0 |
-> | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
+> | Raw full-core measurement (`abapiti abaplint --full --assume-int=false`) | **0 blocking diagnostics / 8 HIR errors**; the emitted build retains explicit refusals on unsupported paths | 0 / 0 |
 >
 > The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Reached 100 % on the ABAP host, TS-HA@OSGO (below). Next goal: TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
@@ -31,7 +31,7 @@ ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compil
 ```mermaid
 flowchart LR
   T["abaplint core<br/>(TypeScript)"] -->|"tsgo checker"| H["HIR<br/>typed object IR"]
-  H -->|verify · emit| A["2,110 ABAP classes"]
+  H -->|verify · emit| A["readable ABAP core"]
   A --> K["SAP kernel (A4H)"]
   A --> O["osgo<br/>open-steamgate, Go"]
   A --> J["OSG-JS<br/>open-steamgate, JS"]
@@ -59,13 +59,13 @@ A seeded variant with one error per rule equals vanilla on every host too. What 
 
 The goal was the whole of abaplint core, not just the zabapgit paths: **every test of abaplint's own suite passes on abaplint compiled by abapiti**. The suite has 625 files; 11,060 of its mocha tests are active on Node (32 more are `it.skip` there too). The test files are compiled through abapiti together with the unpruned core, with a small TypeScript stand-in for mocha and chai, and run on TS-HG@Go, the fastest host.
 
-Where it stands (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0)):
+Where it stood (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0)):
 
 | Measure | Today | Target |
 |---|---|---|
 | abaplint tests passing on the compiled abaplint (TS-HG@Go) | **11,060 / 11,060**, 0 wrong answers | 11,060 / 11,060 |
 | Tests trapped / not registered on Go | **0 / 0** | 0 |
-| Unique blocking diagnostics, all of core lowered without pruning (`abapiti abaplint --full` since it exists) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
+| Historical assume-integer full-core blocking diagnostics (`--full --assume-int`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 
 **Next goal: TS-HA@A4H** — the ABAP host is at 100 % on OSGO (11,060 / 11,060, certified 2026-10-14); the same suite now goes to a real SAP kernel. After that, a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
 
@@ -79,12 +79,12 @@ Download `abapiti` for your platform from the [latest release](https://github.co
 abapiti abaplint -o out
 ```
 
-abaplint 577f875e is built into the binary (every file checked against its recorded SHA-256), so this needs no network. It translates in a few seconds and writes:
+abaplint 577f875e is built into the binary (every file checked against its recorded SHA-256), so this needs no network. The full core takes longer to build than the old pruned scope (`--scope zabapgit`) and writes:
 
 | Directory | For | Run it |
 |---|---|---|
 | `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
-| `out/a4h/` | an **ABAP system** (7.50 or later for the default build; JS regex features require 7.55) | import `abaplint-577f875e-a4h.zip` with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
+| `out/a4h/` | an **ABAP system** (the full core uses PCRE, requiring 7.55; kernel certification is in progress) | import `abaplint-577f875e-a4h.zip` into `$ZLNT` with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
 An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:

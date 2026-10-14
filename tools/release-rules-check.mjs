@@ -21,7 +21,7 @@ try {
  writeFileSync(join(out,filename),raw);
  const results=[];
  for(const rule of ['keyword_case','line_only_punc','sequential_blank']) {
-  const config=JSON.stringify({global:{files:'**/*.abap'},syntax:{version:'v750'},rules:{[rule]:true}});
+  const config=JSON.stringify({global:{files:'**/*.abap'},syntax:{version:'v750',errorNamespace:'^(Z|Y|LT?CL_|TY_|LIF_)'},rules:{[rule]:true}});
   const configPath=join(out,rule+'.json');writeFileSync(configPath,config);
   const oracle=new RegistryRun();oracle.addFile(filename,raw);
   const expected=oracle.run(config)+'\n';

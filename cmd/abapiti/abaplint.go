@@ -29,9 +29,8 @@ var abaplintCmd = &cobra.Command{
 577f875e, @abaplint/core 2.120.56) into ABAP, without Node.
 
 With a checkout path, the checkout must be at that commit with "npm ci" done
-in packages/core. Without one, abapiti downloads the source archive of the
-commit and the three npm packages the translation needs (verified against
-the lockfile's sha512 integrity) into the user cache directory.
+in packages/core. Without one, abapiti unpacks its built-in source archive and
+three pinned npm declaration packages into a temporary directory (no network).
 
 The default build includes all of core and all rules, with readable ABAP
 names. --scope zabapgit selects the old smaller, trace-pruned build (v702,
