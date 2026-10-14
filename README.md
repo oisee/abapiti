@@ -18,27 +18,13 @@
 > | tests trapped / not registered on Go | **0 / 0** | 0 |
 > | Unique blocking diagnostics, all of core unpruned (`abapiti abaplint --full`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 >
-> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Next goal: 100 % on the ABAP host, TS-HA@OSGO and then TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
+> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Reached 100 % on the ABAP host, TS-HA@OSGO (below). Next goal: TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
-> **On the ABAP host — TS-HA@OSGO: 5,329 of 11,060, 0 wrong answers** (abaplint compiled by abapiti to ABAP, running on [open-steamgate](https://github.com/oisee/open-steamgate)'s Go runtime)
+> **On the ABAP host — TS-HA@OSGO: 11,060 of 11,060 (100 %), 0 wrong answers, 0 traps, 0 unregistered** (abaplint compiled by abapiti to ABAP, running on [open-steamgate](https://github.com/oisee/open-steamgate)'s Go runtime)
 >
-> 521 (first full run) → 677 (train O2) → **5,329** (train O3) · measured 2026-10-13, OSG `98fa0675`; rows marked § are earlier measurements (OSG `368baab2`), not re-run in O3
+> 521 (first full run) → 677 (train O2) → 5,329 (O3) → 10,767 → 10,996 → 11,037 → **11,060** · certified 2026-10-14 on all 17 shards, OSG `f83dc5c3`, express train #149 (`8ad792f`); TS-HG@Go on the same commit: 11,060 / 11,060
 >
-> | Shard | Pass / Node-active |
-> |---|---:|
-> | abap/statements | 4,962 / 4,962 |
-> | abap/lexer | 200 / 200 |
-> | abap/expressions | 107 / 107 |
-> | utils | 15 / 15 |
-> | pretty_printer | 23 / 31 |
-> | cds + ddl § | 17 / 390 |
-> | rules § | 5 / 3,149 |
-> | abap, abap/types | registration refused — 0 / 245 (fixes in #144, #146) |
-> | **total measured** | **5,329 / 11,060** |
->
-> Not yet measured on OSGO: abap/structures, abap/nodes, abap/syntax, objects, objects/rename, lsp, root.
->
-> Every test that runs agrees with Node; the rest stop at an explicit refusal (a trap), never a wrong answer. Next: the remaining shards, then the same suite on a real SAP kernel (TS-HA@A4H).
+> In every shard, passes equal Node-active tests; the only tests not run are the ones Node itself marks pending. Next: the same suite on a real SAP kernel (TS-HA@A4H).
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -81,7 +67,7 @@ Where it stands (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://git
 | Tests trapped / not registered on Go | **0 / 0** | 0 |
 | Unique blocking diagnostics, all of core lowered without pruning (`abapiti abaplint --full` since it exists) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 
-**Next goal: 100 % on the ABAP host**, first TS-HA@OSGO, then TS-HA@A4H (nothing goes to A4H before it passes on OSGO). After that, a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
+**Next goal: TS-HA@A4H** — the ABAP host is at 100 % on OSGO (11,060 / 11,060, certified 2026-10-14); the same suite now goes to a real SAP kernel. After that, a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
 
 > **`wasm/` and `abap/wasm_compiler/`: experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.**
 
