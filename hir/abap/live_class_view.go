@@ -32,6 +32,7 @@ func (e *emitter) liveRuntime() {
 PUBLIC SECTION.
 METHODS constructor IMPORTING reason TYPE string.
 METHODS get_text REDEFINITION.
+PROTECTED SECTION.
 PRIVATE SECTION.
 DATA reason TYPE string.
 ENDCLASS.
