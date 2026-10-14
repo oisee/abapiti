@@ -5,6 +5,15 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
+> **🪞 Self-hosting M1: abaplint compiled by abapiti checks open-steamgate's own ABAP.** TS-HA@OSGO and TS-HG@Go check open-steamgate's own ABAP (2,785 files / 2,210 objects, OSG 3ee404ca) byte-identically to Node abaplint 577f875e: 80 issues, the same bytes on all three. TS-HA@OSGO takes 133 s, TS-HG@Go 48 s. Verified independently, with a separate Node reference computed on another machine (14 Oct 2026, branch `selfhost`).
+>
+> | Host | Output vs Node 577f875e | Time |
+> |---|---|---:|
+> | TS-HG@Go | byte-identical (80 issues) | 48 s |
+> | **TS-HA@OSGO** | **byte-identical** (80 issues) | 133 s |
+>
+> The workload is OSG's sources plus `libs.lock` libraries and default packs, with OSG's syntax settings and the zabapgit kit's six rules (workload and reproduction: #164). It needed three fixes zabapgit never reached: DDIC VIEW lookups, one boolean-typed record read, and V8's `RegExp.source` escaping (#166). The native client also gained `--files LIST` (#167). Next is M2, the fixed point: abaplint-in-ABAP checks the ABAP abapiti emitted for abaplint itself.
+
 > **🎉🎉 On a real SAP kernel: TS-HA@A4H 11,060 of 11,060 (100 %), 0 wrong answers, 0 traps, 0 unregistered**
 >
 > abaplint's own test suite, compiled by abapiti from TypeScript to ABAP, imported with abapGit into an SAP NetWeaver 7.58 system (A4H) and run there as background jobs. Every one of the 11,060 Node-active tests passes, each title reconciled against the same Node oracle as OSGO.
