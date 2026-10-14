@@ -273,8 +273,13 @@ func (e *emitter) support() {
 		name := e.name("builtin.Error")
 		opt := e.typ(hir.T(hir.Optional, hir.T(hir.String)))
 		hidden, impl := "", ""
+		// Error is emitted by this runtime, not class(). Its subclasses still
+		// need the inherited presence mask used by ordinary field writes.
+		if e.recordDelete {
+			hidden = "DATA " + e.name("record.deleted") + " TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n"
+		}
 		if e.descriptors {
-			hidden = "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
+			hidden += "INTERFACES " + e.name("runtime.described") + ".\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\n"
 			impl = "METHOD " + e.name("builtin.classOf") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.classOf") + ".\nresult = me->" + e.name("builtin.classOf") + "( ).\nENDMETHOD.\n"
 			impl += "METHOD " + e.name("builtin.nativeConstructor") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.nativeConstructor") + ".\nresult = me->" + e.name("builtin.nativeConstructor") + "( ).\nENDMETHOD.\n"
 		}

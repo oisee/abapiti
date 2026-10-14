@@ -334,7 +334,10 @@ ENDMETHOD.
 						line("WHEN `%s`.\nown_text = %s.\nIF own_text IS NOT INITIAL.\nown_child = %s=>parse( own_text ).\nENDIF.", strings.ReplaceAll(field.Name, "`", "``"), call(field.Type, "p0->"+e.member(field.Name)), e.name("runtime.jsonSubset"))
 					}
 					line("WHEN OTHERS.")
-					if len(e.liveClasses) > 0 && !e.liveClasses[c.Name] {
+					// Both source-backed live shapes and native structural shapes
+					// retain added own properties in extras. A live class without
+					// a source is still a native object, not a reason to omit them.
+					if e.types["runtime.liveView"] {
 						extras := "p0->" + e.name("view.extras")
 						line("IF %s IS NOT BOUND.", extras)
 						fail()

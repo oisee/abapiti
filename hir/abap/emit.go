@@ -25,6 +25,7 @@ type emitter struct {
 	liveClasses     map[string]bool
 	arrayViews      bool
 	recordDelete    bool
+	numberExprs     map[*hir.Expr]bool
 	constructorArgs bool
 	constructorGet  bool
 	configJSON      bool
@@ -130,11 +131,12 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if err := inline(p); err != nil {
 		return nil, nil, err
 	}
+	p, numberExprs := retainNonfiniteStorage(p)
 	names := hir.NewNames()
 	if os.Getenv("ABAPITI_NAMES") == "readable" {
 		names = hir.NewReadableNames(p, "LNT")
 	}
-	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners}
+	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	e.arrayViews = len(e.liveClasses) > 0
@@ -915,6 +917,11 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 	if src.Equal(dst) {
 		return value
 	}
+	if taggedNumber(src) && (dst.Kind == hir.Number || dst.Kind == hir.I32 || dst.Kind == hir.I64) {
+		n := b.temp(dst)
+		b.line(n + " = " + b.e.numberBoxRuntime() + "=>finite( " + value + " ).")
+		return n
+	}
 	if dst.Kind == hir.Dynamic {
 		// A typed value into an erased `any` slot: box it.
 		n := b.temp(dst)
@@ -1022,6 +1029,9 @@ func (b *body) expr(x *hir.Expr) string {
 		return ""
 	}
 	n := b.temp(t)
+	if b.numberStorageExpr(x, n) {
+		return n
+	}
 	switch x.Kind {
 	case hir.PromiseFulfill:
 		b.line(n + " = NEW #( ).")
@@ -1138,10 +1148,10 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.CheckedNumericConvert:
-		a := b.expr(x.X)
+		a := b.scalarNumber(x.X)
 		loName := "check_lo_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Min, 36), "-", "n")
 		hiName := "check_hi_" + strings.ReplaceAll(strconv.FormatInt(x.Range.Max, 36), "-", "n")
-		if x.X.Type.Kind == hir.Number {
+		if x.X.Type.Kind == hir.Number || taggedNumber(x.X.Type) {
 			low := b.constant(loName, "f", strconv.FormatInt(x.Range.Min, 10))
 			high := b.constant(hiName, "f", strconv.FormatInt(x.Range.Max, 10))
 			b.line("IF " + a + " <> trunc( " + a + " ) OR " + a + " < " + low + " OR " + a + " > " + high + ".")
@@ -1153,7 +1163,7 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("ENDIF.")
 		b.line(n + " = " + a + ".")
 	case hir.NumericConvert:
-		b.line(n + " = " + b.expr(x.X) + ".")
+		b.line(n + " = " + b.value(x.X, t) + ".")
 	case hir.Local:
 		b.line(n + " = " + b.locals[x.Name] + ".")
 	case hir.This:
@@ -1347,7 +1357,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 
 		z := b.expr(x.Y)
-		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
+		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && referenceStorage(x.X.Type) && referenceStorage(x.Y.Type) {
 			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
 			b.boxDynamic(left, a, x.X.Type)
 			b.boxDynamic(right, z, x.Y.Type)
@@ -1519,7 +1529,7 @@ func (b *body) expr(x *hir.Expr) string {
 		for _, stmt := range x.Stmt.List {
 			b.stmt(stmt)
 		}
-		b.line(n + " = " + b.expr(x.Y) + ".")
+		b.line(n + " = " + b.value(x.Y, t) + ".")
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
@@ -1993,6 +2003,9 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.numberStorageRuntime(x, n) {
+		return
+	}
 	// Immediate boxing does not change a native string array's ToPrimitive.
 	// Keep evaluation once and use the existing checked, dense comma join;
 	// erased refs, other element types and hooks stay outside this proof.

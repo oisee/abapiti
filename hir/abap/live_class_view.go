@@ -307,6 +307,10 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 	}
 	b.line("ENDIF.\nENDIF.")
 }
+func referenceStorage(t hir.Type) bool {
+	return t.IsRef() || t.Kind == hir.Optional && t.Args[0].IsRef()
+}
+
 func (b *body) liveBox(n, a string, t hir.Type) {
 	e := b.e
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
