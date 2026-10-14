@@ -19,7 +19,7 @@ import (
 )
 
 // version may be overridden at build time with -ldflags "-X main.version=...".
-var version = "0.5.0"
+var version = "0.5.1"
 
 var rootCmd = &cobra.Command{
 	Use:   "abapiti [file.wasm]",
