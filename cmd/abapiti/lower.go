@@ -37,11 +37,10 @@ func sourceInScope(loc, dir string) bool {
 		return false // Synthetic/global errors have no attributable source file.
 	}
 	file := locationSuffix.ReplaceAllString(loc, "")
-	abs, err := filepath.Abs(file)
-	if err != nil {
-		return false
-	}
-	rel, err := filepath.Rel(dir, abs)
+	// Locations and scopes share the tsconfig-relative coordinate system.
+	// Absolute locations are accepted only with an absolute scope (legacy
+	// callers); never resolve a relative location against the process cwd.
+	rel, err := filepath.Rel(dir, filepath.FromSlash(file))
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
@@ -115,7 +114,13 @@ func runLower(cmd *cobra.Command, args []string) error {
 	checker := p.CheckerDiagnostics(cmd.Context())
 	scope, _ := f.GetString("scope")
 	if scope != "" {
-		scope = filepath.Join(filepath.Dir(config), scope)
+		if filepath.IsAbs(scope) {
+			scope, err = filepath.Rel(filepath.Dir(config), scope)
+			if err != nil {
+				return err
+			}
+		}
+		scope = filepath.Clean(scope)
 		r = scopedLowering(r, scope)
 		filtered := []tsfront.Diagnostic{}
 		for _, d := range checker {

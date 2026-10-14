@@ -29,13 +29,13 @@ var abaplintCmd = &cobra.Command{
 577f875e, @abaplint/core 2.120.56) into ABAP, without Node.
 
 With a checkout path, the checkout must be at that commit with "npm ci" done
-in packages/core. Without one, abapiti downloads the source archive of the
-commit and the three npm packages the translation needs (verified against
-the lockfile's sha512 integrity) into the user cache directory.
+in packages/core. Without one, abapiti unpacks its built-in source archive and
+three pinned npm declaration packages into a temporary directory (no network).
 
-The build is pruned to the code paths that checking zabapgit_standalone with
-abapGit's ci/abaplint.json (v702, six rules) executes; other inputs or rules
-may be refused with the TypeScript location, never answered silently wrong.
+The default build includes all of core and all rules, with readable ABAP
+names. --scope zabapgit selects the old smaller, trace-pruned build (v702,
+six rules). Unsupported operations are refused with their TypeScript location,
+never answered silently wrong.
 
 Outputs under <outdir>:
   classes/  the translated classes and interfaces
@@ -55,14 +55,15 @@ Outputs under <outdir>:
 func init() {
 	f := abaplintCmd.Flags()
 	f.StringP("output", "o", "", "Output directory (required unless --full, which defaults to out)")
-	f.String("target", "all", "Targets to write: all (ABAP targets), a4h, osg, native or go (comma-separated)")
-	f.String("package", "$ZABAPLINT", "ABAP package named in the A4H abapGit zip")
+	f.String("target", "all", "Targets to write: all or abap (ABAP targets), a4h, osg, native or go (comma-separated)")
+	f.String("scope", "core", "Build scope: core (all rules) or zabapgit (legacy trace-pruned build)")
+	f.String("package", "$ZLNT", "ABAP package named in the A4H abapGit zip")
 	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
 	f.String("deps", "", "osg: folder of dependency files")
 	f.String("config", "", "osg: abaplint.json for the embedded run")
 	f.String("run-sha", zabapgitRunSHA, "SHA-256 of the expected issue dump that the run drivers compare against (default: zabapgit_standalone with abapGit's ci/abaplint.json)")
 	f.String("negative", "", "a4h: seeded negative variant (JSON: sha, extra, append); adds ZABAPITI_REGISTRY_NEG")
-	f.Bool("assume-int", true, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
+	f.Bool("assume-int", false, "Translate TypeScript number as int8 (assume-only-integer-calculations, ABAPITI_ASSUME_INT); false keeps binary64 f")
 	f.BoolP("quiet", "q", false, "Do not narrate the steps")
 	f.Bool("full", false, "Measure the whole closure without pruning; write evidence instead of emitting targets")
 	f.Bool("evidence", false, "Also write the lowering evidence (overrides, traps, blocking diagnostics) to <outdir>/evidence")
@@ -91,12 +92,12 @@ func parseTargets(s string) (map[string]bool, error) {
 	targets := map[string]bool{}
 	for _, t := range strings.Split(s, ",") {
 		switch t = strings.TrimSpace(strings.ToLower(t)); t {
-		case "all":
+		case "all", "abap":
 			targets["a4h"], targets["osg"], targets["native"] = true, true, true
 		case "a4h", "osg", "native", "go":
 			targets[t] = true
 		default:
-			return nil, fmt.Errorf("--target %q: use all, a4h, osg, native or go", t)
+			return nil, fmt.Errorf("--target %q: use all, abap, a4h, osg, native or go", t)
 		}
 	}
 	return targets, nil
@@ -113,7 +114,22 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	runSHA, _ := flags.GetString("run-sha")
 	negativePath, _ := flags.GetString("negative")
 	quiet, _ := flags.GetBool("quiet")
+	scope, _ := flags.GetString("scope")
+	if scope != "core" && scope != "zabapgit" {
+		return fmt.Errorf("--scope %q: use core or zabapgit", scope)
+	}
 	assumeInt, _ := flags.GetBool("assume-int")
+	if scope == "zabapgit" && !flags.Changed("assume-int") {
+		assumeInt = true // Preserve the legacy pruned numeric contract.
+	}
+	if scope == "zabapgit" && !flags.Changed("package") {
+		pkg = "$ZABAPLINT"
+	}
+	oldNames := os.Getenv("ABAPITI_NAMES")
+	if scope == "core" {
+		os.Setenv("ABAPITI_NAMES", "readable")
+		defer os.Setenv("ABAPITI_NAMES", oldNames)
+	}
 	if assumeInt {
 		os.Setenv("ABAPITI_ASSUME_INT", "1")
 	} else {
@@ -208,14 +224,20 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	coverage, err := tsfront.EmbeddedReachability()
-	if err != nil {
-		return err
+	var coverage *tsfront.Reachability
+	if scope == "zabapgit" && !full {
+		coverage, err = tsfront.EmbeddedReachability()
+		if err != nil {
+			return err
+		}
 	}
-	if full {
-		coverage = nil
-	}
-	lowering, err := tsfront.LowerRegistry(work, files, registry, coverage)
+	// The full build uses the suite's fail-closed policy: unsupported bodies
+	// become source-located refusals, not reachability/coverage traps. --full
+	// remains an unmodified diagnostic measurement, including HIR failures.
+	lowering, err := tsfront.LowerRegistryWithOptions(work, files, registry, coverage, tsfront.LowerOptions{
+		AssumeOnlyIntegerCalculations: assumeInt,
+		TrapOnFailure:                 scope == "core" && !full,
+	})
 	if err != nil {
 		return fmt.Errorf("front end: %v", err)
 	}
@@ -241,8 +263,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	n.say("  HIR verified: %d errors; %d fingerprinted overrides applied", len(lowering.Verification), len(registry.Inventory()))
-	live, recorded := coverage.LiveSpans()
-	n.say("  reachability: %d of %d recorded functions run by the zabapgit workloads; %d bodies trapped", live, recorded, lowering.TrapCount())
+	if coverage != nil {
+		live, recorded := coverage.LiveSpans()
+		n.say("  reachability: %d of %d recorded functions run by the zabapgit workloads; %d bodies trapped", live, recorded, lowering.TrapCount())
+	} else {
+		n.say("  scope: full core, all rules; no reachability pruning")
+	}
 	for _, note := range lowering.Notes {
 		n.say("  %s", note)
 	}
@@ -396,8 +422,11 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	for _, line := range next {
 		n.say("  %s", line)
 	}
-	n.say("Scope: the build covers the code paths of checking zabapgit_standalone with abapGit's ci/abaplint.json (v702, six rules);")
-	n.say("outside them a check is refused with the TypeScript location of the missing code.")
+	if scope == "zabapgit" {
+		n.say("Scope: legacy zabapgit paths (v702, six rules); outside them checks may be refused.")
+	} else {
+		n.say("Scope: all of core, all rules; unsupported operations retain source-located refusals.")
+	}
 	return nil
 }
 

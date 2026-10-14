@@ -110,11 +110,22 @@ func TestParseTargets(t *testing.T) {
 	if got, err := parseTargets("native, osg"); err != nil || got["a4h"] || !got["native"] || !got["osg"] {
 		t.Fatalf("native,osg: %v %v", got, err)
 	}
+	if got, err := parseTargets("abap"); err != nil || !got["a4h"] || !got["osg"] || !got["native"] || got["go"] {
+		t.Fatalf("abap: %v %v", got, err)
+	}
 	if got, err := parseTargets("go"); err != nil || len(got) != 1 || !got["go"] {
 		t.Fatalf("go: %v %v", got, err)
 	}
 	if _, err := parseTargets("wasm"); err == nil {
 		t.Fatal("unknown target accepted")
+	}
+}
+
+func TestAbaplintFullCoreDefaults(t *testing.T) {
+	for flag, want := range map[string]string{"scope": "core", "assume-int": "false", "package": "$ZLNT"} {
+		if got := abaplintCmd.Flags().Lookup(flag).DefValue; got != want {
+			t.Fatalf("--%s default %q, want %q", flag, got, want)
+		}
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -50,7 +49,8 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 type LowerOptions struct {
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
-	// TrapOnFailure is a tests-only, fail-closed partial lowering policy.
+	// TrapOnFailure is the fail-closed policy used by the suite and full-core
+	// client: unsupported bodies refuse execution instead of being guessed.
 	TrapOnFailure bool
 }
 
@@ -720,9 +720,9 @@ func (l *lowerer) locOf(n *ast.Node) string {
 		if l.file == nil {
 			return "<unknown>"
 		}
-		return locString(l.file, 0)
+		return l.prog.locString(l.file, 0)
 	}
-	return locString(l.file, scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/))
+	return l.prog.locString(l.file, scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/))
 }
 
 // qualifiedName builds the stable identity of a declaration: the file path
@@ -736,31 +736,13 @@ func (l *lowerer) qualifiedName(f *ast.SourceFile, name string) string {
 // node_modules) is named from its node_modules segment: generated names and
 // locations never depend on where the project or its packages live.
 func (l *lowerer) relFile(f *ast.SourceFile) string {
-	rel, err := filepath.Rel(l.prog.configDir, f.FileName())
-	if err != nil {
-		return f.FileName()
-	}
-	rel = filepath.ToSlash(rel)
-	if strings.HasPrefix(rel, "../") {
-		if i := strings.Index(rel, "/node_modules/"); i >= 0 {
-			rel = rel[i+1:]
-		}
-	}
-	return rel
+	return relativeSource(l.prog.configDir, f.FileName())
 }
 
 // trapLocation is the location a trap reports at run time: relative
 // "file:line:col", like the reachability traps.
 func (l *lowerer) trapLocation(n *ast.Node) string {
-	if l.file == nil {
-		return "<unknown>"
-	}
-	pos := 0
-	if n != nil {
-		pos = scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/)
-	}
-	line, col := lineCol(l.file, pos)
-	return fmt.Sprintf("%s:%d:%d", l.relFile(l.file), line, col)
+	return l.locOf(n)
 }
 
 // resolve returns the symbol at node with import aliases resolved. Property

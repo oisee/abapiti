@@ -63,6 +63,8 @@ func writeAbapGitZip(file, pkg, desc string, sources map[string]string) (int, er
 			text := truncate(desc, 70)
 			files["src/"+obj+".prog.xml"] = abapGitXML("PROG", fmt.Sprintf("<PROGDIR>\n    <NAME>%s</NAME>\n    <SUBC>1</SUBC>\n    <RSTAT>K</RSTAT>\n    <FIXPT>X</FIXPT>\n    <UCCHECK>X</UCCHECK>\n   </PROGDIR>\n   <TPOOL>\n    <item>\n     <ID>R</ID>\n     <ENTRY>%s</ENTRY>\n     <LENGTH>%d</LENGTH>\n    </item>\n   </TPOOL>", strings.ToUpper(obj), xmlText(text), len(text)))
 			objects++
+		case strings.HasSuffix(name, ".tabl.xml"):
+			objects++
 		case strings.HasSuffix(name, ".clas.testclasses.abap"):
 		default:
 			return 0, fmt.Errorf("abapGit zip: unsupported file %s", name)

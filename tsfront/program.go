@@ -111,7 +111,11 @@ func (p *Program) CheckerDiagnostics(ctx context.Context) []Diagnostic {
 	var out []Diagnostic
 	add := func(ds []*ast.Diagnostic) {
 		for _, d := range ds {
-			out = append(out, NewDiagnostic(d))
+			diag := NewDiagnostic(d)
+			if f := d.File(); f != nil {
+				diag.Loc = p.locString(f, d.Pos())
+			}
+			out = append(out, diag)
 		}
 	}
 
@@ -212,10 +216,36 @@ func errorDiagnostics(lists ...[]*ast.Diagnostic) []*ast.Diagnostic {
 	return out
 }
 
-// locString renders "file:line:col" (1-based) for a position in f.
-func locString(f *ast.SourceFile, pos int) string {
+// relativeSource names project files from the lowering root. Symlinked
+// dependencies use their node_modules identity, not the machine's layout.
+func relativeSource(root, file string) string {
+	name := filepath.ToSlash(file)
+	if root != "" {
+		if rel, err := filepath.Rel(root, file); err == nil {
+			name = filepath.ToSlash(rel)
+		}
+	}
+	if strings.HasPrefix(name, "../") || filepath.IsAbs(name) {
+		if i := strings.Index(name, "/node_modules/"); i >= 0 {
+			return name[i+1:]
+		}
+	}
+	// Standalone diagnostics have no project root (and Rel can fail across
+	// Windows volumes). Never fall back to a machine-absolute location.
+	if filepath.IsAbs(name) {
+		return filepath.Base(file)
+	}
+	return name
+}
+
+func (p *Program) locString(f *ast.SourceFile, pos int) string {
 	line, col := lineCol(f, pos)
-	return fmt.Sprintf("%s:%d:%d", f.FileName(), line, col)
+	return fmt.Sprintf("%s:%d:%d", relativeSource(p.configDir, f.FileName()), line, col)
+}
+
+// locString is for standalone diagnostics without a project root.
+func locString(f *ast.SourceFile, pos int) string {
+	return (&Program{}).locString(f, pos)
 }
 
 // lineCol returns the 1-based line and column of pos in f. Positions are

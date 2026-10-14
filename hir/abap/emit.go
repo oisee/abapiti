@@ -15,6 +15,8 @@ import (
 )
 
 type emitter struct {
+	testPackages    bool
+	factoryTestPart bool
 	chaiUsed        bool
 	chaiArrays      []hir.Type
 	chaiMaps        []hir.Type
@@ -75,13 +77,20 @@ func Emit(p *hir.Program) (map[string]string, error) {
 
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
-	return emitNamed(p, nil, nil)
+	return emitNamed(p, nil, nil, false)
 }
 
 // EmitTestNamed marks only explicitly identified assertion throws. The marker
 // extends the original payload wrapper, preserving source catch semantics.
 func EmitTestNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
-	return emitNamed(p, nil, assertionOwners)
+	return emitNamed(p, nil, assertionOwners, false)
+}
+
+// EmitTestPackageNamed separates global runtime dispatch for test declarations
+// behind a registered extension. Ordinary (hashed or readable) OSG emission is
+// unchanged; only the two-package full build opts into this ABI.
+func EmitTestPackageNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
+	return emitNamed(p, nil, assertionOwners, true)
 }
 
 // Audit runs the same emitter, collecting every refusal instead of retaining
@@ -89,7 +98,7 @@ func EmitTestNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]
 // Like EmitNamed, it applies the target's HIR passes in place.
 func Audit(p *hir.Program) []error {
 	refusals := []error{}
-	_, _, err := emitNamed(p, &refusals, nil)
+	_, _, err := emitNamed(p, &refusals, nil, false)
 	if err != nil && len(refusals) == 0 {
 		refusals = append(refusals, err)
 	}
@@ -121,7 +130,7 @@ func (e *emitter) refuse(err error) {
 	}
 }
 
-func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
+func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]bool, testPackages bool) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
@@ -134,10 +143,10 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	}
 	p, numberExprs, numberFields := retainNonfiniteStorage(p)
 	names := hir.NewNames()
-	if os.Getenv("ABAPITI_NAMES") == "readable" {
+	if testPackages || os.Getenv("ABAPITI_NAMES") == "readable" {
 		names = hir.NewReadableNames(p, "LNT")
 	}
-	e := &emitter{p: p, names: names, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs, numberFields: numberFields}
+	e := &emitter{p: p, names: names, testPackages: testPackages, files: map[string]string{}, types: map[string]bool{}, descCount: map[string]int{}, refusals: refusals, assertionOwners: assertionOwners, numberExprs: numberExprs, numberFields: numberFields}
 	e.promiseUsed = hir.UsesSettledPromises(p)
 	e.liveClasses = hir.LiveClassViewLayouts(p)
 	e.arrayViews = len(e.liveClasses) > 0

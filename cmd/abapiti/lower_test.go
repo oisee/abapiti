@@ -55,7 +55,7 @@ func TestLowerFullProject(t *testing.T) {
 	if err := json.Unmarshal(data, &checker); err != nil {
 		t.Fatal(err)
 	}
-	if len(checker) != 1 || !sourceInScope(checker[0].Loc, filepath.Join(dir, "src")) {
+	if len(checker) != 1 || !sourceInScope(checker[0].Loc, "src") {
 		t.Fatal(checker)
 	}
 	// Measurement reports gaps successfully; it must not emit target code.
@@ -75,5 +75,15 @@ func TestLowerScopeBoundaries(t *testing.T) {
 	s := scopedLowering(r, dir)
 	if len(s.Blocking) != 1 || len(s.Verification) != 1 || len(r.Blocking) != 2 {
 		t.Fatal(s)
+	}
+	for _, loc := range []string{"src/probe.ts:1:2", "src/nested/probe.ts:1:2"} {
+		if !sourceInScope(loc, "src") {
+			t.Errorf("relative source outside scope: %s", loc)
+		}
+	}
+	for _, loc := range []string{"src-other/probe.ts:1:2", "../src/probe.ts:1:2", "synthetic"} {
+		if sourceInScope(loc, "src") {
+			t.Errorf("out-of-scope source accepted: %s", loc)
+		}
 	}
 }
