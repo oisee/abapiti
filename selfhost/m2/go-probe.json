@@ -1,0 +1,75 @@
+{
+  "schema": "selfhost-go-probe/1",
+  "compilerCommit": "953eae439f7fe5d39fcf6a4f4d8f4fb8d6a262ab",
+  "scope": "core",
+  "go": "go version go1.26.0 linux/amd64",
+  "multiFileSupport": "#167 is absent from frozen HEAD and origin/selfhost; M1 go-multifile host adapter",
+  "workloadSha256": "26c2bf72e27031fcefcd1719543dfd14ff4a668f521211b3daecabd09e81c23f",
+  "configSha256": "53385376b70cfef2b5c7d39b879fd68ebc9fe484aa6b1f0035cc68b5976c1eed",
+  "blockingDiagnostics": 0,
+  "hirVerificationErrors": 0,
+  "generationSeconds": 78.411,
+  "originalBuildSeconds": 48.1,
+  "originalHostSha256": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+  "adapterHostSha256": "ec537151662bda6855f3e4295be047fb4d966cb852add67002c99e68588a160a",
+  "unchangedGeneratedSourceFiles": 7,
+  "adapterBuild": {
+    "exitCode": 0,
+    "signal": null,
+    "wallSeconds": 44.984711645999994,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr": "",
+    "timeoutSeconds": 1200
+  },
+  "fullWorkload": {
+    "exitCode": null,
+    "signal": "SIGKILL",
+    "wallSeconds": 1113.8036405850003,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr": "",
+    "loader": "M1 generated main.go I/O adaptation; every files.txt member is addFile with relative path; no dependencies",
+    "files": 4677,
+    "totalIssues": null,
+    "byteEqualToNode": null,
+    "issueMultisetEqualToNode": null,
+    "nodeOnly": null,
+    "goOnly": null,
+    "status": "incomplete",
+    "timeoutSeconds": 1200,
+    "resourceEvidence": {
+      "memoryMaxBytes": 34359738368,
+      "workspacePeakBytes": 34359742464,
+      "memoryEventsBefore": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0
+      },
+      "memoryEventsAfter": {
+        "low": 0,
+        "high": 0,
+        "max": 947,
+        "oom": 8,
+        "oom_kill": 1,
+        "oom_group_kill": 0
+      },
+      "oomKillsDuringRun": 1
+    },
+    "incompleteReason": "cgroup_oom"
+  },
+  "environment": {
+    "GOMAXPROCS": "8",
+    "GOMEMLIMIT": "24GiB"
+  },
+  "kitExtraction": {
+    "workloadFilesVerified": 4678,
+    "contractHashesVerified": true,
+    "runnerShellSyntaxVerified": true,
+    "nativeRunRepeated": false,
+    "note": "Archive extraction and runner syntax verified; native full-workload outcome is recorded separately."
+  }
+}

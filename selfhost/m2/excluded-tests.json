@@ -1,0 +1,118 @@
+{
+  "scope": "size inventory only; excluded from M2 lint inputs",
+  "monolith": {
+    "package": "$ZLNT_TESTS",
+    "zipSha256": "7da392c4252994516f677dcf5fa80304a4b15b3feeba2600d126ba7e5521b356",
+    "zipBytes": 22543490,
+    "members": 10005,
+    "uncompressedBytes": 117797655,
+    "classes": 4994,
+    "interfaces": 6,
+    "programs": 1,
+    "note": "Paired release build required for stable shared names/layouts; no test-package members are lint inputs."
+  },
+  "parts": {
+    "base": {
+      "package": "$ZLNT_TESTS_BASE",
+      "bytes": 685803,
+      "sha256": "5a6ab2de159bdd932260654f38049ce88cfeccec4211ac396b956a701fc053e8",
+      "objectCount": 85,
+      "dependsOn": [
+        "$ZLNT"
+      ],
+      "members": 171,
+      "uncompressedBytes": 11300782,
+      "classes": 83,
+      "interfaces": 0
+    },
+    "statements": {
+      "package": "$ZLNT_TESTS_STATEMENTS",
+      "bytes": 2656531,
+      "sha256": "0511e0af89cbb6e464493c15347b90dc077b1564cb3f11f1c86e4aaf44910564",
+      "objectCount": 568,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 1138,
+      "uncompressedBytes": 15797990,
+      "classes": 568,
+      "interfaces": 0
+    },
+    "rules_1": {
+      "package": "$ZLNT_TESTS_RULES_1",
+      "bytes": 3864348,
+      "sha256": "1e27ebe14000185a19a05ad06eb8582ec899b2284f9166939362a805f6f08c1b",
+      "objectCount": 1097,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 2196,
+      "uncompressedBytes": 19155905,
+      "classes": 1097,
+      "interfaces": 0
+    },
+    "rules_2": {
+      "package": "$ZLNT_TESTS_RULES_2",
+      "bytes": 3528640,
+      "sha256": "81a8b8bc617169eddafedc3e6dba157f6f81f0019cea7377acb5d9a17192051c",
+      "objectCount": 817,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 1636,
+      "uncompressedBytes": 18710623,
+      "classes": 817,
+      "interfaces": 0
+    },
+    "syntax": {
+      "package": "$ZLNT_TESTS_SYNTAX",
+      "bytes": 6359827,
+      "sha256": "cad723400e33edaa6804c817de36c73b168952ebdecca5c1bbf292cdccbcc2d8",
+      "objectCount": 1395,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 2792,
+      "uncompressedBytes": 31427493,
+      "classes": 1394,
+      "interfaces": 1
+    },
+    "objects": {
+      "package": "$ZLNT_TESTS_OBJECTS",
+      "bytes": 2943083,
+      "sha256": "749a9a1fd0ab3399172c671c14a474c7fd263cec8a1e3a2f5539c67769dd6b47",
+      "objectCount": 488,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 978,
+      "uncompressedBytes": 16842375,
+      "classes": 486,
+      "interfaces": 2
+    },
+    "rest": {
+      "package": "$ZLNT_TESTS_REST",
+      "bytes": 2188174,
+      "sha256": "aba5cd3889be3f20bfdb7b1fc97f6fe54b70d1f5cc7e25fb93cd5e00e54d8b97",
+      "objectCount": 573,
+      "dependsOn": [
+        "$ZLNT",
+        "$ZLNT_TESTS_BASE"
+      ],
+      "members": 1148,
+      "uncompressedBytes": 10259637,
+      "classes": 570,
+      "interfaces": 3
+    }
+  },
+  "totalPartZipBytes": 22226406,
+  "totalPartUncompressedBytes": 123494805,
+  "totalPartClasses": 5015,
+  "splitterHelperObjects": 21,
+  "independenceViolations": 0
+}
