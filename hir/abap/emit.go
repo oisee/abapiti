@@ -966,7 +966,16 @@ func (b *body) receiver(x *hir.Expr) string {
 	}
 	return b.expr(x)
 }
-func (b *body) value(x *hir.Expr, dst hir.Type) string { return b.convert(b.expr(x), x.Type, dst) }
+func (b *body) value(x *hir.Expr, dst hir.Type) string {
+	// Optional numeric storage has a tagged nonfinite lane. parseFloat never
+	// turns NaN into undefined (nor into a fabricated finite zero).
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Number && x.Kind == hir.RuntimeOp && x.Op == "string.parseFloatNumber" {
+		n := b.temp(dst)
+		b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_optional( " + b.expr(x.X) + " ).")
+		return n
+	}
+	return b.convert(b.expr(x), x.Type, dst)
+}
 func (b *body) expr(x *hir.Expr) string {
 	if x == nil {
 		return ""
@@ -1387,8 +1396,14 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + ah + " = " + zh + ".")
 			b.line("IF " + ah + " = abap_false.")
 			b.line(n + " = abap_true.")
-			b.line("ELSEIF " + a + "->value = " + z + "->value.")
-			b.line(n + " = abap_true.")
+			if x.X.Type.Args[0].Kind == hir.Number {
+				b.line("ELSE.\nIF " + a + "->number_special <> 0 OR " + z + "->number_special <> 0.")
+				b.line(n + " = xsdbool( " + a + "->number_special = " + z + "->number_special AND " + a + "->number_special <> 1 ).")
+				b.line("ELSE.\n" + n + " = xsdbool( " + a + "->value = " + z + "->value ).\nENDIF.")
+			} else {
+				b.line("ELSEIF " + a + "->value = " + z + "->value.")
+				b.line(n + " = abap_true.")
+			}
 			b.line("ENDIF.")
 			b.line("ENDIF.")
 			if x.Op == "!=" {
@@ -1416,6 +1431,10 @@ func (b *body) expr(x *hir.Expr) string {
 		a := b.expr(x.X)
 		if x.Op == "!" {
 			b.line(n + " = xsdbool( " + a + " = abap_false ).")
+		} else if t.Kind == hir.Number {
+			// Binary 0 - x loses the sign when x is +0. JS unary negation
+			// flips the IEEE sign, which Chai deep equality can observe.
+			b.line(n + " = - " + a + ".")
 		} else {
 			b.line(n + " = 0 - " + a + ".")
 			if x.CheckIntegerOverflow {
@@ -1530,6 +1549,9 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if x.X.Type.Kind == hir.Optional {
 			base := x.X.Type.Args[0]
+			if base.Kind == hir.Number {
+				b.line("IF " + a + "->number_special <> 0.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
+			}
 			if !base.IsRef() {
 				a += "->value"
 			}
@@ -1556,7 +1578,13 @@ func (b *body) expr(x *hir.Expr) string {
 		if at.Kind == hir.Optional && !at.Args[0].IsRef() {
 			b.line("IF " + a + " IS BOUND.")
 			b.line("IF " + a + "->has = abap_true.")
+			if at.Args[0].Kind == hir.Number {
+				b.line("IF " + a + "->number_special <> 0.\n" + n + " = xsdbool( " + a + "->number_special <> 1 ).\nELSE.")
+			}
 			b.truth(n, a+"->value", at.Args[0])
+			if at.Args[0].Kind == hir.Number {
+				b.line("ENDIF.")
+			}
 			b.line("ENDIF.")
 			b.line("ENDIF.")
 		} else {
@@ -2424,7 +2452,28 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "json.parseSubset":
 		b.e.jsonSubsetRuntime()
+		b.e.errorUsed = true
+		b.line("TRY.")
 		b.line(n + " = " + b.e.name("runtime.jsonSubset") + "=>parse( " + a + " ).")
+		b.line("CATCH " + b.e.name("exception.JSONSyntaxError") + ".")
+		message := b.temp(hir.T(hir.Optional, hir.T(hir.String)))
+		b.line(message + " = NEW #( ).\n" + message + "->has = abap_true.\n" + message + "->value = `Invalid JSON`.")
+		syntax := b.e.name("builtin.SyntaxError")
+		if b.e.classBy("builtin.SyntaxError") == nil {
+			b.e.files[syntax+".clas.abap"] = "CLASS " + syntax + " DEFINITION PUBLIC INHERITING FROM " + b.e.name("builtin.Error") + " CREATE PUBLIC.\nENDCLASS.\nCLASS " + syntax + " IMPLEMENTATION.\nENDCLASS.\n"
+		}
+		payload := b.temp(hir.Ref("builtin.SyntaxError"))
+		b.line(payload + " = NEW " + syntax + "( " + b.e.param("message") + " = " + message + " ).")
+		// Ordinary source catches bind an Error; settled async catches bind
+		// Dynamic through the shared source_value slot. Preserve both lanes.
+		err := b.rawTemp("REF TO " + b.e.exception(hir.Ref("builtin.Error")))
+		b.line(err + " = NEW #( ).\n" + err + "->payload = " + payload + ".")
+		if b.e.promiseUsed {
+			boxed := b.temp(hir.T(hir.Dynamic))
+			b.boxDynamic(boxed, payload, hir.Ref("builtin.SyntaxError"))
+			b.line(err + "->source_value = " + boxed + ".")
+		}
+		b.line("RAISE EXCEPTION " + err + ".\nENDTRY.")
 		return
 	case "json5.parse":
 		b.e.json5SubsetRuntime()
@@ -3042,10 +3091,14 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 			test += " AND " + a + "->has = abap_true"
 		}
 		b.line("IF " + test + ".")
+		optional := a
 		if !base.IsRef() {
 			a += "->value"
 		}
 		b.boxDynamic(n, a, base)
+		if base.Kind == hir.Number {
+			b.line(n + "->number_special = " + optional + "->number_special.")
+		}
 		b.line("ENDIF.")
 		return
 	}
