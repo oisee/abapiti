@@ -132,6 +132,14 @@ all **34** ABAP lint reports have **0 issues**, including config JSON v702.
 The checkout matching the branch's `16c024c8` OSG pin is needed for the final
 lexer validation. No lint rules or fixture selection were weakened.
 
+The eleven-file focused OSGO recheck after `8025ea0` remains **1783 pass /
+0 FAIL / 3 known traps**, with **1812/1812 registrations**, **26 Node-pending**,
+and **0 active skips / unregistered / async-pending**. The scoped build and
+executions used the shared heavy-run lock and the same pinned runtime.
+`go vet`, the short Go suite, all 15 individual Node test files, and the
+0-new-issues lint gate are green. OSG source remained clean; no generated
+`tools/gogen/.out/go-cache` was left behind.
+
 ## Reproduction and resource discipline
 
 Select the eight pending-audit files above plus
