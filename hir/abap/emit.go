@@ -971,11 +971,15 @@ func (b *body) receiver(x *hir.Expr) string {
 	return b.expr(x)
 }
 func (b *body) value(x *hir.Expr, dst hir.Type) string {
-	// Optional numeric storage has a tagged nonfinite lane. parseFloat never
-	// turns NaN into undefined (nor into a fabricated finite zero).
-	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Number && x.Kind == hir.RuntimeOp && x.Op == "string.parseFloatNumber" {
+	// Optional numeric storage has a tagged nonfinite lane. Numeric parsers
+	// never turn NaN into undefined (nor into a fabricated finite zero).
+	if dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Number && x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber") {
 		n := b.temp(dst)
-		b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_optional( " + b.expr(x.X) + " ).")
+		parser := "float_optional"
+		if x.Op == "string.parseIntNumber" {
+			parser = "int_optional"
+		}
+		b.line(n + " = " + b.e.stringOpsRuntime() + "=>" + parser + "( " + b.expr(x.X) + " ).")
 		return n
 	}
 	return b.convert(b.expr(x), x.Type, dst)

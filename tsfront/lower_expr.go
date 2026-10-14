@@ -1624,17 +1624,30 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("number.toString", recv, str), true
 		}
 	case hir.RegExp:
+		input := func() *hir.Expr {
+			if !l.unprunedFeatures {
+				return one()
+			}
+			if len(args) != 1 {
+				return nil
+			}
+			x := l.observedArrayIndex(l.expr(args[0]))
+			if x == nil {
+				return nil
+			}
+			return l.primitiveString(args[0], x)
+		}
 		switch name {
 		case "test":
-			return l.rtOp("regexp.test", recv, boolT, one()), true
+			return l.rtOp("regexp.test", recv, boolT, input()), true
 		case "exec":
 			// Discarded captures retain the pre-exec test ABI.
 			if isConditionOnly(n) {
 				l.diagf(n, "note-exec-as-test", "exec read only for truthiness lowered as test")
-				return l.rtOp("regexp.test", recv, boolT, one()), true
+				return l.rtOp("regexp.test", recv, boolT, input()), true
 			}
 			if len(args) == 1 {
-				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), one()), true
+				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), true
 			}
 		case "toString":
 			if len(args) == 0 {
