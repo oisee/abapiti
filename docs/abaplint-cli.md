@@ -5,7 +5,8 @@ Translates the core of [abaplint](https://github.com/abaplint/abaplint) from Typ
 ```sh
 abapiti abaplint -o out                      # abaplint 577f875e is built into abapiti: no network
 abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, after npm ci in packages/core)
-abapiti abaplint -o out --target native      # one target only: all (default ABAP set), a4h, osg, native, go
+abapiti abaplint -o out --target native      # all / abap (ABAP set), a4h, osg, native, go
+abapiti abaplint -o small --scope zabapgit   # explicit legacy six-rule pruned build
 ```
 
 The ABAP emitter inlines small methods with Grace's inline rules by default.
@@ -33,12 +34,12 @@ In both cases every source file of the closure (1,538 files reachable from `regi
 
 | Directory | Contents | Next step |
 |---|---|---|
-| `classes/` | the translated classes and interfaces (2,110 objects), shared by the ABAP targets | |
-| `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_ABAPITI_REGISTRY_A4H` and the report `ZABAPITI_REGISTRY_RUN` (package `$ZABAPLINT`, set with `--package`) | import with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
+| `classes/` | the full translated core and runtime, with readable `ZCL_LNT_` / `ZIF_LNT_` names, shared by the ABAP targets | |
+| `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_ABAPITI_REGISTRY_A4H` and the report `ZABAPITI_REGISTRY_RUN` (package `$ZLNT`, set with `--package`; the legacy scope defaults to `$ZABAPLINT`) | import with abapGit, then run `ZABAPITI_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
 | `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_ABAPITI_REGISTRY_RUN`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
 | `native/` | `zabaplint.prog.abap` and `lib/` with the classes | in an open-steamgate checkout: `node tools/gogen/osabap.mjs native/zabaplint.prog.abap --lib native/lib` (set GOOS/GOARCH for cross builds), then `.out/osabap --file zabapgit_standalone.prog.abap --config abaplint.json -allow-read .` |
 
-The output is deterministic. The same pinned input gives byte-identical files on every run and from any directory, and they are the same files that the `TestRegistryClosureGate` test path emits. `--evidence` also writes the lowering evidence (the overrides applied, the trapped bodies, and the blocking diagnostics, of which there are none).
+The output is deterministic for the same pinned input and build scope. `--evidence` also writes the lowering evidence (overrides, source-located refusal bodies, and blocking diagnostics). The default is **all of core, all rules**, binary64 numbers, with no reachability pruning. It uses the same fail-closed body-repair policy as the certified test build: unsupported operations are refused, not guessed. `--scope zabapgit` retains the old trace-pruned, assume-integer build for size/speed. Its default numeric policy can be overridden with `--assume-int=false`.
 
 ## Full-closure measurement
 
@@ -53,7 +54,7 @@ cascades caused by an earlier failed declaration in the same function.
 `files` counts distinct files with blocking or HIR diagnostics. The default
 integer assumption is supported; use `--assume-int=false` to measure binary64
 lowering instead. `--quiet` suppresses the narration, not the evidence.
-Source/IO failures remain errors; without `--full` the normal build is unchanged.
+Source/IO failures remain errors. `--full` is still a diagnostic-only mode, not the flag needed to emit all rules; the normal build now emits the full core.
 
 ### Other TypeScript projects
 
@@ -83,7 +84,9 @@ example and its limitations.
 
 ## Limits
 
-The build is pruned to the code paths that checking `zabapgit_standalone` with abapGit's `ci/abaplint.json` executes (release v702, six rules). These are the paths recorded in `tsfront/testdata/registrycorpus/reachability.json`. Function bodies outside them are compiled as traps. Other inputs or rules may reach such a trap. In that case the check is refused, and the refusal names the TypeScript location of the missing code (for example `refused: this build has no code for src/rules/….ts:42`). It never gives a silently wrong answer.
+The default includes every rule, not just the six used by the zabapgit check. Certification covers the pinned core's 11,060 Node-active tests on Go and OSGO, not arbitrary TypeScript or every possible input. Unsupported bodies/operations retain source-located refusals. Only **`--scope zabapgit`** prunes to the trace in `tsfront/testdata/registrycorpus/reachability.json` (v702, six rules); other rules can reach coverage traps in that explicit legacy build. Neither scope silently substitutes an answer.
+
+The release's `$ZLNT` / `$ZLNT_TESTS` pair is built together from the complete 17-shard union so both packages share exactly one name/shape table. Use [the A4H build guide](a4h-test-suite.md) to reproduce those zips; A4H kernel certification is still in progress.
 
 ## TS-HG@Go
 
@@ -125,7 +128,7 @@ location. Input-dependent limits refuse the check with a nonzero exit and
 `refused: <TS location>: <reason>` on stderr. Runtime helpers capture the nearest
 translated TS method only on failure; this names the method's declaration, while
 pruned bodies retain their recorded body location. There is no Go panic traceback
-for a refused CLI check. These contracts are bounded to the reviewed workload:
+for a refused CLI check. The following historical pruned-build limits describe the explicit legacy scope; the full build supports the additional operations exercised by the certified suite:
 
 | Rejected shape | Diagnostic boundary |
 |---|---|

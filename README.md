@@ -53,7 +53,7 @@ TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti, TS-HG the s
 
 A seeded variant with one error per rule equals vanilla on every host too. What changed in each step is in the release notes of [v0.3.0](https://github.com/oisee/abapiti/releases/tag/v0.3.0) and [v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
-> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for one job, abaplint core at commit `577f875e` (2.120.56). The build is pruned to the code paths that checking zabapgit with the six rules above executes. A check that leaves those paths is refused with the TypeScript location of the missing code. It never gives a silently different answer. Making it general comes after self-hosting works.
+> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for abaplint core at commit `577f875e` (2.120.56). Since v0.5.0 the default build includes **all of core and all rules**, with readable ABAP names. `--scope zabapgit` retains the old smaller six-rule, trace-pruned build. Unsupported operations are still refused with their TypeScript location, never answered silently differently. A4H kernel certification is in progress.
 
 ### Goal: 100 % of abaplint — reached
 
@@ -99,7 +99,7 @@ deps list and each listed dependency. Dependency paths are relative to `deps.txt
 repeat `-allow-read DIR` to grant more roots. Symlinks and `..` cannot escape those
 roots.
 
-`all` retains the three ABAP targets: the automatic Go build would add a toolchain dependency and change the default command’s behavior. TS-HG@Go uses the same pinned sources, overrides and pruned workload; see [its limits](docs/abaplint-cli.md#ts-hggo).
+`all` retains the three ABAP targets: the automatic Go build would add a toolchain dependency and change the default command’s behavior. TS-HG@Go uses the same pinned sources, overrides and full core; see [its limits](docs/abaplint-cli.md#ts-hggo).
 
 To have the open-steamgate output check zabapgit itself, pass the inputs. They are embedded into a driver class whose result is compared with Node's:
 

@@ -13,9 +13,9 @@ import (
 //go:embed testdata/default-runtime-ops.txt
 var defaultRuntimeOps string
 
-// Runs in the normal short gate: this is the actual pruned zabapgit lowering,
+// Runs in the normal short gate: the legacy --scope zabapgit lowering,
 // not a synthetic sample or the full closure without reachability.
-func TestDefaultZabapgitRuntimeOpsSupportedByEveryBackend(t *testing.T) {
+func TestPrunedZabapgitRuntimeOpsSupportedByEveryBackend(t *testing.T) {
 	t.Setenv("ABAPITI_ASSUME_INT", "1")
 	src, err := embeddedAbaplint(t.TempDir())
 	if err != nil {
