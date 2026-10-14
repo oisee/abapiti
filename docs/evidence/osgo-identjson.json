@@ -1,0 +1,230 @@
+{
+  "scope": "Identifier own-key order for test/lsp/help.ts",
+  "pins": {
+    "base": "90a02a543ddbafdde6a24ff7f14f29e7bad5e671",
+    "implementation": "b31884e9974ddda7f9b0c34c0a410067ba44d801",
+    "main": "fd77046a9c7d67e5ee95ad08301eb8c033cbe177",
+    "upstream": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+    "osg": "f83dc5c3e05bfaea71268fd6ad0e9ff88532cce6",
+    "transpiler": "f34e9bf4947daaf6464566b42b1e3ef1eaeb369c",
+    "parser": "2.120.73"
+  },
+  "certificate": {
+    "newRoot": "src/abap/4_file_information/_identifier.ts.Identifier",
+    "ownKeys": [
+      "token",
+      "filename"
+    ],
+    "tokenKeys": [
+      "start",
+      "str",
+      "strUpper"
+    ],
+    "positionKeys": [
+      "row",
+      "col"
+    ],
+    "unknownSubclass": "explicit RegistryJSONSubsetError",
+    "unsupportedOpsRemoved": []
+  },
+  "static": {
+    "countingTool": "LowerAbaplintTests / MeasureABAPTestGap",
+    "inline": "classic",
+    "roots": 625,
+    "before": {
+      "gate": {
+        "Files": 2166,
+        "Classes": 7052,
+        "Interfaces": 85,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      },
+      "gap": {
+        "files": 2166,
+        "nonfiniteLiteralSites": 0,
+        "unsupportedCatalogue": [
+          "string.parseFloat"
+        ],
+        "runtime": [],
+        "refusals": []
+      }
+    },
+    "after": {
+      "gate": {
+        "Files": 2166,
+        "Classes": 7052,
+        "Interfaces": 85,
+        "Blocking": 0,
+        "HIRErrors": 0,
+        "CoverageTraps": 0,
+        "Ranked": []
+      },
+      "gap": {
+        "files": 2166,
+        "nonfiniteLiteralSites": 0,
+        "unsupportedCatalogue": [
+          "string.parseFloat"
+        ],
+        "runtime": [],
+        "refusals": []
+      }
+    },
+    "assignedEmitterRefusalSites": {
+      "before": 0,
+      "after": 0
+    },
+    "runtimeGuardIsNotEmitterDiagnostic": true
+  },
+  "execution": {
+    "osgBefore": {
+      "files": [
+        "test/lsp/help.ts"
+      ],
+      "active": {
+        "total": 3,
+        "passed": 2,
+        "failed": 0,
+        "trapped": 1,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 1
+      },
+      "pending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "registrationParity": true,
+      "traps": [
+        {
+          "message": "Z_EXCEPTION_RE_478AC52845E523: input is outside the supported strict JSON subset [exception.RegistryJSONSubsetError]",
+          "count": 1,
+          "shards": {
+            "lsp": 1
+          },
+          "example": "Z_EXCEPTION_RE_478AC52845E523: input is outside the supported strict JSON subset [exception.RegistryJSONSubsetError]"
+        }
+      ]
+    },
+    "osgAfter": {
+      "files": [
+        "test/lsp/help.ts"
+      ],
+      "active": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "pending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "registrationParity": true,
+      "traps": [],
+      "envelope": {
+        "files": 2325,
+        "maxLineBytes": 255,
+        "overlongLines": 0,
+        "maxObjectNameBytes": 29
+      },
+      "cache": {
+        "frontend": "disabled",
+        "binary": "disabled",
+        "gogenFrontend": "unsupported"
+      }
+    },
+    "goAfter": {
+      "files": [
+        "test/lsp/help.ts"
+      ],
+      "active": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "trapped": 0,
+        "asyncPending": 0,
+        "skipped": 0,
+        "unregistered": 0,
+        "notPassing": 0
+      },
+      "pending": {
+        "total": 0,
+        "skipped": 0,
+        "unregistered": 0
+      },
+      "registrationParity": true,
+      "traps": []
+    }
+  },
+  "byteComparison": {
+    "help": {
+      "nodeBytes": 6801,
+      "osgBytes": 6801,
+      "equal": true,
+      "nodeSHA256": "689060fa1769728ab975d929dc0e52c5c07a4bf2d573d578262974962fd46c0f",
+      "osgSHA256": "689060fa1769728ab975d929dc0e52c5c07a4bf2d573d578262974962fd46c0f"
+    },
+    "infoDump": {
+      "nodeBytes": 1052,
+      "osgBytes": 1052,
+      "equal": true,
+      "nodeSHA256": "7ec943dd842bb3bf7cc022dfca024a3578326a889b5094ca7f9e99bd3012e2c0",
+      "osgSHA256": "7ec943dd842bb3bf7cc022dfca024a3578326a889b5094ca7f9e99bd3012e2c0"
+    }
+  },
+  "gates": {
+    "vet": {
+      "exit": 0
+    },
+    "short": {
+      "exit": 0,
+      "timeout": "30m"
+    },
+    "GraceLexerFacts": {
+      "exit": 0,
+      "goldenRegenerated": false
+    },
+    "backendCatalogue": {
+      "exit": 0
+    },
+    "lintMain": {
+      "exit": 0,
+      "newIssues": 0
+    },
+    "ciHIRLint": {
+      "exit": 0
+    },
+    "IdentifierFixtureLint": {
+      "exit": 0
+    },
+    "helpByteProbe": {
+      "exit": 0
+    },
+    "emittedFixtures": {
+      "compiler": "pinned gogen / OSG kernel",
+      "IdentifierJSON": "1 SUCCESS row",
+      "TokenJSON": "1 SUCCESS row",
+      "entry": "emitABAPNamed / storageHostFixture"
+    }
+  },
+  "goOutput": {
+    "baselineRawDiffExit": 0,
+    "mainRawDiffExit": 1,
+    "inheritedChangedFiles": [
+      "go/hir.go",
+      "go/hir_profile.go",
+      "go/runtime.go",
+      "go/zabaplint-go"
+    ],
+    "baselineRawDiffBytes": 0
+  }
+}
