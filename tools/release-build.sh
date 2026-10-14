@@ -12,7 +12,7 @@ mkdir -p "$4" "$5"
 assets=$(realpath "$4"); work=$(realpath "$5")
 root=$(git rev-parse --show-toplevel)
 cd "$root"
-version=0.5.0
+version=0.5.1
 export GOFLAGS=-buildvcs=false GOTOOLCHAIN=go1.26.0 CGO_ENABLED=0 GOMAXPROCS=8
 export NODE_OPTIONS=--max-old-space-size=24576
 # The native compiler's generated report is large. This bounded mode is also
