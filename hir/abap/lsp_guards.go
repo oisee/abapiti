@@ -83,7 +83,7 @@ falsy = xsdbool( p0->tag = $D=>tag_null OR p0->tag = $D=>tag_string AND p0->sval
 ENDIF.
 IF falsy = abap_true.
 IF condition = abap_false.
-RAISE EXCEPTION TYPE $E.
+RAISE EXCEPTION TYPE $E EXPORTING reason = 'lsp_guards.go: matches: conditional proof absent'.
 ENDIF.
 RETURN.
 ENDIF.

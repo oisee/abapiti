@@ -28,11 +28,27 @@ func (e *emitter) liveRuntime() {
 	storage := e.name("view.storage")
 	e.files[storage+".intf.abap"] = "INTERFACE " + storage + " PUBLIC.\nMETHODS structural RETURNING VALUE(result) TYPE abap_bool.\nMETHODS source RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nENDINTERFACE.\n"
 	trap := e.name("view.refusal")
-	e.files[trap+".clas.abap"] = "CLASS " + trap + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + trap + " IMPLEMENTATION.\nENDCLASS.\n"
+	e.files[trap+".clas.abap"] = "CLASS " + trap + ` DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.
+PUBLIC SECTION.
+METHODS constructor IMPORTING reason TYPE string.
+METHODS get_text REDEFINITION.
+PRIVATE SECTION.
+DATA reason TYPE string.
+ENDCLASS.
+CLASS ` + trap + ` IMPLEMENTATION.
+METHOD constructor.
+super->constructor( ).
+me->reason = reason.
+ENDMETHOD.
+METHOD get_text.
+result = |ABAP view refused: { reason }|.
+ENDMETHOD.
+ENDCLASS.
+`
 	// Native structural shapes expose their existing slots through the same graph API.
 	text := e.files[d+".clas.abap"]
-	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+".\nENDTRY.\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
-	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+".\nENDTRY.\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
+	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.get: reference does not implement view storage`.\nENDTRY.\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
+	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.put: reference does not implement view storage`.\nENDTRY.\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
 	e.files[d+".clas.abap"] = text
 	e.recordGraphRuntime()
 }
@@ -102,7 +118,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 	case hir.String:
 		b.line(n + " = " + d + "->as_string( ).")
 	case hir.Number:
-		b.line("IF " + d + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF " + d + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: undefined cannot inhabit required slot`.\nENDIF.")
 		b.line(n + " = " + d + "->as_number( ).")
 	case hir.I32, hir.I64:
 		v := b.temp(hir.T(hir.Number))
@@ -111,7 +127,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		if t.Kind == hir.I64 {
 			lo, hi = "-9007199254740991", "9007199254740991"
 		}
-		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < '" + lo + "' OR " + v + " > '" + hi + "'.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < '" + lo + "' OR " + v + " > '" + hi + "'.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: integer is fractional or outside exact range`.\nENDIF.")
 		b.line(n + " = " + v + ".")
 	case hir.Bool:
 		b.line(n + " = " + d + "->as_boolean( ).")
@@ -131,7 +147,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line(n + " ?= " + v + ".")
 	default:
-		b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+		b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: slot has no exact unbox ABI`.")
 	}
 }
 func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
@@ -178,13 +194,13 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 	}
 	storage := e.name("view.storage")
 	if e.liveRoot(c) && !c.Structural && !e.ownAdapter(c) {
-		fallback := "RAISE EXCEPTION TYPE " + e.name("view.refusal") + "."
+		fallback := "RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: nominal.delete: no backing source or deletion adapter`."
 		if e.recordDelete {
 			fallback = "result = " + e.nativeRecordDeleteRuntime() + "=>run( p0 = me key = p0 ).\nRETURN."
 		}
-		fmt.Fprintf(out, "METHOD %s~has.\nIF me->%s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s.\nENDIF.\nresult = me->%s->has( p0 ).\nENDMETHOD.\nMETHOD %s~delete.\nIF me->%s IS NOT BOUND.\n%s\nENDIF.\nresult = me->%s->delete( p0 ).\nENDMETHOD.\n", storage, e.name("view.source"), e.name("view.refusal"), e.name("view.source"), storage, e.name("view.source"), fallback, e.name("view.source"))
+		fmt.Fprintf(out, "METHOD %s~has.\nIF me->%s IS NOT BOUND.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `live_class_view.go: nominal.has: no backing source`.\nENDIF.\nresult = me->%s->has( p0 ).\nENDMETHOD.\nMETHOD %s~delete.\nIF me->%s IS NOT BOUND.\n%s\nENDIF.\nresult = me->%s->delete( p0 ).\nENDMETHOD.\n", storage, e.name("view.source"), e.name("view.refusal"), e.name("view.source"), storage, e.name("view.source"), fallback, e.name("view.source"))
 		fmt.Fprintf(out, "METHOD %s~structural.\nENDMETHOD.\n", storage)
-		fmt.Fprintf(out, "METHOD %s~source.\nresult = me->%s.\nENDMETHOD.\nMETHOD %s~get.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\nMETHOD %s~put.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", storage, e.name("view.source"), storage, e.name("view.refusal"), storage, e.name("view.refusal"))
+		fmt.Fprintf(out, "METHOD %s~source.\nresult = me->%s.\nENDMETHOD.\nMETHOD %s~get.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `live_class_view.go: nominal.get: generic native slot reads unavailable`.\nENDMETHOD.\nMETHOD %s~put.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `live_class_view.go: nominal.put: generic native slot writes unavailable`.\nENDMETHOD.\n", storage, e.name("view.source"), storage, e.name("view.refusal"), storage, e.name("view.refusal"))
 	}
 	if e.ownAdapter(c) {
 		e.ownClassImplementation(out, c)
@@ -209,7 +225,7 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		if !f.Static {
 			b.line("WHEN `" + strings.ReplaceAll(f.Name, "`", "``") + "`.")
 			if f.Type.Kind == hir.I64 || f.Type.Kind == hir.Optional && f.Type.Args[0].Kind == hir.I64 {
-				b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+				b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: structural.get: i64 boxing unavailable`.")
 			} else {
 				b.boxDynamic("result", "me->"+e.member(f.Name), f.Type)
 			}
@@ -239,7 +255,7 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 	}
 	b.line("WHEN OTHERS.")
 	e.refuseUnknownNativeSubclass(b, c)
-	b.line("IF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nCREATE OBJECT me->" + e.name("view.extras") + ".\nme->" + e.name("view.extras") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.\nENDIF.\nme->" + e.name("view.extras") + "->put( p0 = p0 p1 = p1 ).\nENDCASE.")
+	b.line("IF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: structural.put: prototype mutation unavailable`.\nENDIF.\nIF me->" + e.name("view.extras") + " IS NOT BOUND.\nCREATE OBJECT me->" + e.name("view.extras") + ".\nme->" + e.name("view.extras") + "->tag = " + e.name("runtime.dynamic") + "=>tag_object.\nENDIF.\nme->" + e.name("view.extras") + "->put( p0 = p0 p1 = p1 ).\nENDCASE.")
 	if e.jsonOwnKeys && c.Structural && c.Super == "" {
 		b.jsonRecordKey("me", "p0")
 	}
@@ -255,7 +271,7 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 	b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
 	b.line("IF " + n + " IS NOT BOUND.")
 	if !hir.DataClassView(e.p, x.Type.Name) {
-		b.line("RAISE EXCEPTION TYPE " + trap + ".")
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: behaviour-bearing class requires compatible native reference`.")
 	} else {
 		allowed := a + "->tag <> " + d + "=>tag_object"
 		for c := e.classBy(x.Type.Name); c != nil; c = e.classBy(c.Super) {
@@ -268,8 +284,8 @@ func (b *body) liveView(x *hir.Expr, n, a string) {
 		}
 		b.line("IF " + allowed + ".")
 		adapter := b.rawTemp("REF TO " + e.name("view.storage"))
-		b.line("IF " + a + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
-		b.line("TRY.\n" + adapter + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.\nENDIF.")
+		b.line("IF " + a + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: source is neither object graph nor reference`.\nENDIF.")
+		b.line("TRY.\n" + adapter + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference does not implement view storage`.\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference storage is not structural`.\nENDIF.\nENDIF.")
 		args := []string{"view_source = " + a}
 		c := e.classBy(x.Type.Name)
 		if c.Ctor != nil {
@@ -304,6 +320,6 @@ func (b *body) liveBox(n, a string, t hir.Type) {
 // sources delegate before this guard; source-less unknown slots refuse.
 func (e *emitter) refuseUnknownNativeSubclass(b *body, c *hir.Class) {
 	for _, child := range e.descendants(c) {
-		b.line("IF me IS INSTANCE OF " + e.name(child.Name) + ".\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF me IS INSTANCE OF " + e.name(child.Name) + ".\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: nativeSubclass: inherited adapter lacks child slot layout`.\nENDIF.")
 	}
 }

@@ -124,7 +124,7 @@ ENDCLASS.
 CLASS $H IMPLEMENTATION.
 METHOD keys.
 IF p0 IS NOT BOUND.
-RAISE EXCEPTION TYPE $T.
+RAISE EXCEPTION TYPE $T EXPORTING reason = 'own_keys.go: keys: undefined receiver'.
 ENDIF.
 IF p0->tag = $D=>tag_ref.
 DATA storage TYPE REF TO $S.
@@ -144,13 +144,13 @@ DATA native TYPE REF TO $I.
 TRY.
 native ?= p0->oval.
 CATCH cx_sy_move_cast_error.
-RAISE EXCEPTION TYPE $T.
+RAISE EXCEPTION TYPE $T EXPORTING reason = 'own_keys.go: keys: reference lacks own-key adapter'.
 ENDTRY.
 result = native->keys( ).
 RETURN.
 ENDIF.
 IF p0->tag <> $D=>tag_object.
-RAISE EXCEPTION TYPE $T.
+RAISE EXCEPTION TYPE $T EXPORTING reason = 'own_keys.go: keys: primitive key enumeration unavailable'.
 ENDIF.
 TYPES: BEGIN OF ordered_key, k TYPE string, category TYPE i, number TYPE int8, position TYPE i, END OF ordered_key.
 DATA ordered TYPE STANDARD TABLE OF ordered_key WITH DEFAULT KEY.
@@ -213,7 +213,7 @@ func (e *emitter) refuseInheritedOwnAdapter(out *strings.Builder, c *hir.Class) 
 		return false
 	}
 	for _, name := range []string{e.name("own.storage") + "~keys", e.name("view.storage") + "~get", e.name("view.storage") + "~put", e.name("view.storage") + "~has", e.name("view.storage") + "~delete"} {
-		fmt.Fprintf(out, "METHOD %s.\nRAISE EXCEPTION TYPE %s.\nENDMETHOD.\n", name, e.name("view.refusal"))
+		fmt.Fprintf(out, "METHOD %s.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `own_keys.go: inheritedAdapter: child own-slot layout unavailable`.\nENDMETHOD.\n", name, e.name("view.refusal"))
 	}
 	return true
 }
@@ -267,9 +267,9 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 	}
 	if c.Structural {
 		b.line(graph + " = me->" + e.name("view.ownKeys") + ".")
-		b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: keys: structural own-key metadata absent`.\nENDIF.")
 	} else if !e.nativeOwnKeysProven(e.classBy(c.Name)) {
-		b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+		b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: keys: native own-key order unproven`.")
 	} else {
 		b.line(graph + " = NEW #( ).\n" + graph + "->tag = " + d + "=>tag_object.")
 		for _, f := range fields {
@@ -299,15 +299,15 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 				if e.liveClasses[c.Name] {
 					source := "me->" + e.name("view.source")
 					b.line("IF " + source + " IS BOUND.")
-					b.line("IF " + source + "->tag = " + d + "=>tag_object.\nREAD TABLE " + source + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nELSEIF " + source + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nELSE.")
+					b.line("IF " + source + "->tag = " + d + "=>tag_object.\nREAD TABLE " + source + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: inherited prototype value unavailable from graph`.\nENDIF.\nELSEIF " + source + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: primitive prototype lookup unavailable`.\nENDIF.\nELSE.")
 				}
 				if c.Structural {
 					graph = "me->" + e.name("view.ownKeys")
 				}
 				if graph == "" {
-					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: native prototype lookup unavailable`.")
 				} else {
-					b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nREAD TABLE " + graph + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+					b.line("IF " + graph + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: prototype presence metadata absent`.\nENDIF.\nREAD TABLE " + graph + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: inherited prototype value unavailable from native slots`.\nENDIF.")
 				}
 				if e.liveClasses[c.Name] {
 					b.line("ENDIF.")
@@ -328,11 +328,11 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 		if !c.Structural && !e.nativeOwnKeysProven(e.classBy(c.Name)) {
 			// A native default slot cannot stand in for a missing JS property.
 			// Source-backed views above keep their own presence-aware adapter.
-			b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+			b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: slot: native own-key presence unproven`.")
 		}
 		if c.Structural {
 			metadata := "me->" + e.name("view.ownKeys")
-			b.line("IF " + metadata + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+			b.line("IF " + metadata + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: " + op + " " + strings.ReplaceAll(c.Name, "`", "``") + ": structural own-key metadata absent`.\nENDIF.")
 			if op == "get" {
 				b.line("READ TABLE " + metadata + "->entries WITH KEY k = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
 			}
@@ -357,7 +357,7 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 				if !base.IsRef() && base.Kind != hir.String && base.Kind != hir.Number && base.Kind != hir.I32 && base.Kind != hir.Bool {
 					// Keep unsupported scalar boxing a field-read refusal;
 					// key enumeration itself does not need the field value.
-					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+					b.line("RAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: get: scalar field has no exact box ABI`.")
 				} else {
 					b.boxDynamic("result", "me->"+e.member(f.Name), f.Type)
 				}
@@ -373,10 +373,10 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 			if op == "get" {
 				b.line("WHEN OTHERS.\nIF " + extras + " IS BOUND.\nresult = " + extras + "->get( p0 ).\nENDIF.")
 			} else {
-				b.line("WHEN OTHERS.\nIF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.\nIF " + extras + " IS NOT BOUND.\n" + extras + " = NEW #( ).\n" + extras + "->tag = " + d + "=>tag_object.\nENDIF.\n" + extras + "->put( p0 = p0 p1 = p1 ).")
+				b.line("WHEN OTHERS.\nIF p0 = `__proto__`.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: put: prototype mutation unavailable`.\nENDIF.\nIF " + extras + " IS NOT BOUND.\n" + extras + " = NEW #( ).\n" + extras + "->tag = " + d + "=>tag_object.\nENDIF.\n" + extras + "->put( p0 = p0 p1 = p1 ).")
 			}
 		} else if op == "put" {
-			b.line("WHEN OTHERS.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".")
+			b.line("WHEN OTHERS.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `own_keys.go: put: unknown nominal slot has no storage`.")
 		}
 		b.line("ENDCASE.")
 		if op == "put" && c.Structural {
@@ -413,7 +413,7 @@ func (e *emitter) nativeOwnPresence(out *strings.Builder, c *hir.Class) {
 				fmt.Fprintf(out, "READ TABLE me->%s WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_false.\nENDIF.\n", e.name("record.deleted"))
 			}
 		} else {
-			fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s.\n", trap)
+			fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s EXPORTING reason = `own_keys.go: presence: native presence or deletion ABI unproven`.\n", trap)
 		}
 		out.WriteString("ENDMETHOD.\n")
 	}

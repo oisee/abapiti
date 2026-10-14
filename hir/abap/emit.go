@@ -772,7 +772,7 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
 	if !m.Static && name != "constructor" && e.liveClasses[c.Name] {
-		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+		b.line("IF me->" + e.name("view.source") + " IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `emit.go: constructor: live source cannot run native initializer`.\nENDIF.")
 	}
 	if name == "constructor" && e.liveClasses[c.Name] {
 		e.liveConstructor(b, c)
@@ -1502,7 +1502,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.serial++
 			row := fmt.Sprintf("t%d", b.serial)
 			if e.arrayViews {
-				b.line("IF " + a + "->source IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + ".\nENDIF.")
+				b.line("IF " + a + "->source IS BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `emit.go: array mutation: graph-backed storage requires live mutation ABI`.\nENDIF.")
 			}
 			b.line("CREATE OBJECT " + n + ".")
 			b.line("LOOP AT " + a + "->items INTO DATA(" + row + ").")
