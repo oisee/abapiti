@@ -163,7 +163,7 @@ all **18** `tools/*-test.mjs` scripts individually with Go 1.26.0; lint against
 `tools/release-build.sh` retains the monolithic tests zip for compatibility and
 also publishes `abaplint-577f875e-a4h-tests-<part>.zip` (base, statements,
 rules_1, rules_2, syntax, objects, rest), their manifests, and
-`abaplint-577f875e-a4h-tests-parts.json`. The index's zip filenames refer to the
+`parts.json`. The index's zip filenames refer to the
 published downloads; its archive hashes are unchanged by renaming.
 
 Choose **either** the monolith **or** the parts, never both. Import the release

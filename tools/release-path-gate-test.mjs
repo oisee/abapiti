@@ -28,5 +28,13 @@ try {
  writeFileSync(join(entries,'builder_name.txt'),'relative source');
  execFileSync('zip',['-q',join(assets,'name.zip'),'builder_name.txt'],{cwd:entries});
  assert.equal(run().status,1);
- console.log('release-path-gate: clean files pass; all forbidden tokens, binary strings, zip/tar entries and names rejected');
+ rmSync(join(assets,'name.zip'));
+ // Isolate the raw archive-comment check from entry names/content.
+ execFileSync('python3',['-c',`import zipfile,sys
+with zipfile.ZipFile(sys.argv[1], 'w') as z:
+ z.writestr('clean.txt', 'relative source')
+ z.comment = b'/tmp/private-build'
+`,join(assets,'comment.zip')]);
+ assert.equal(run().status,1);
+ console.log('release-path-gate: clean files pass; all forbidden tokens, binary strings, zip/tar entries, names and archive comments rejected');
 } finally {rmSync(work,{recursive:true,force:true});}

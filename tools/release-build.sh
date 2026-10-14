@@ -43,7 +43,7 @@ for file in "$work/parts"/zlnt_tests_*; do
   name=$(basename "$file")
   cp "$file" "$assets/abaplint-577f875e-a4h-tests-${name#zlnt_tests_}"
 done
-python3 - "$work/parts/parts.json" "$assets/abaplint-577f875e-a4h-tests-parts.json" <<'PY'
+python3 - "$work/parts/parts.json" "$assets/parts.json" <<'PY'
 import json, sys
 with open(sys.argv[1]) as f:
     index = json.load(f)

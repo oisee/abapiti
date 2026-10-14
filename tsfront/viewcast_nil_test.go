@@ -30,7 +30,7 @@ func TestViewCastCallWithoutLoweredSignature(t *testing.T) {
 	}
 	for _, d := range diags {
 		if d.Category == "unsupported-call" && strings.Contains(d.Message, "method run on view view.Vendor has no lowered signature") {
-			if !strings.HasPrefix(d.Loc, filepath.Join(dir, "probe.ts")+":1:") || d.Cascade {
+			if !strings.HasPrefix(d.Loc, "probe.ts:1:") || d.Cascade {
 				t.Fatalf("expected a located root diagnostic: %+v", d)
 			}
 			return

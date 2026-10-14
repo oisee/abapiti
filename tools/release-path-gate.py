@@ -55,6 +55,11 @@ def check_asset(path, needles):
             # Avoid reproducing leaked paths in the release report.
             violations.append({"entry": len(violations) + 1, "tokens": sorted(found)})
 
+    # Include the asset name and raw archive metadata (comments/headers),
+    # then inspect decompressed members as well. Compressed bytes alone are
+    # never evidence that embedded sources/binaries are clean.
+    with path.open("rb") as stream:
+        check(path.name, stream)
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
             for entry in archive.infolist():
@@ -68,9 +73,6 @@ def check_asset(path, needles):
                         check(entry.name, stream)
                 else:
                     check(entry.name + " " + entry.linkname, io.BytesIO(b""))
-    else:
-        with path.open("rb") as stream:
-            check(path.name, stream)
     return {"asset": path.name, "leakedEntries": len(violations), "violations": violations}
 
 
