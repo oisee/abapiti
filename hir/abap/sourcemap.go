@@ -17,9 +17,9 @@ type SourceEntry struct {
 	Declared []string `json:"declared,omitempty"` // member: Class.method@file:line
 }
 
-// relSource drops the build directory: src/…, harness/… or node_modules/… with line:col.
+// relSource drops the build directory, retaining the source root and line:col.
 func relSource(s string) string {
-	for _, root := range []string{"/node_modules/", "/harness/", "/src/"} {
+	for _, root := range []string{"/node_modules/", "/harness/", "/src/", "/test/", "/runtime/"} {
 		if i := strings.Index(s, root); i >= 0 {
 			return s[i+1:]
 		}
