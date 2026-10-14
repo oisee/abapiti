@@ -14,7 +14,7 @@ name: CI
 # default branch by ci-report.yml, never from here.
 on:
   push:
-    branches: [main]
+    branches: [main, selfhost]
   pull_request:
 
 permissions:
