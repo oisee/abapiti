@@ -46,6 +46,9 @@ Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`
   abapGit files**, including generated metadata and DEVC. The manifest describes
   its SHA-256 length-framing algorithm. Compare object keys/hashes for diff
   deployment; a missing old object must be handled as a deletion, not ignored.
+* All emitted locations (refusals, HIR spans, test registration metadata and
+  diagnostics) are relative to the lowering root, for ABAP/A4H, OSG and Go.
+  A two-root regression compares emitted bytes, including `names.json`.
 * `names.json` maps ABAP names to TS identities and relative file:line:column.
   Synthetic runtime objects have no original TS declaration; generated wrappers
   identify their generator. Readable declaration names use `ZCL_LNT_`,
@@ -155,6 +158,24 @@ reproducible standalone archives and hash tampering. Gates: `go vet ./...`;
 all **18** `tools/*-test.mjs` scripts individually with Go 1.26.0; lint against
 `origin/main`: **0 new issues**, canary 5/5. No OSG heavy runs were needed.
 
+### v0.5.0 download names and path gate
+
+`tools/release-build.sh` retains the monolithic tests zip for compatibility and
+also publishes `abaplint-577f875e-a4h-tests-<part>.zip` (base, statements,
+rules_1, rules_2, syntax, objects, rest), their manifests, and
+`abaplint-577f875e-a4h-tests-parts.json`. The index's zip filenames refer to the
+published downloads; its archive hashes are unchanged by renaming.
+
+Choose **either** the monolith **or** the parts, never both. Import the release
+core `abaplint-577f875e-a4h.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
+then the six remaining parts in parallel. Import all parts before running tests.
+
+Before generating `SHA256SUMS`, the release script runs
+`tools/release-path-gate.py` over **every asset**, all decompressed zip/tar entries
+and binary `strings -a` output. Build roots, local mount/home/temp prefixes and
+the build user's name are forbidden; any match fails the build. The gate reports
+zero leaked entries per asset rather than relying on a quick binary spot check.
+
 ## Run and resume (coordinator, after deployment)
 
 Schedule `ZLNT_TESTS_RUN` as a **background report**, not ABAP Unit. Selection:
@@ -170,7 +191,7 @@ same ID. A run ID is bound to its shard; changing shards is rejected.
 
 There is no `ZCL_ABAPITI_LOG` in this generated closure, so the zip includes a
 small independent table/log service. Each checkpoint is split into 255-character
-rows (`SEQ`, `PART`, `USED`, `PAYLOAD`) and committed **before the test body**.
+rows (`SEQ`, `CHUNK_NO`, `USED`, `PAYLOAD`) and committed **before the test body**.
 `NEXT_IDX` already points to the next test when a dump occurs. Completed tests
 emit an indexed result checkpoint; the final report is also written in chunks.
 Checkpoint commits are intended for these in-memory tests, not arbitrary
@@ -187,7 +208,9 @@ replay into the same ID produces duplicate results and is rejected by collection
 
 Fetch **all rows of one run ID** through the coordinator's approved mechanism.
 Export a JSON array of column objects; preserve payload padding (or at least
-`USED` characters), `SEQ` and `PART`. The collector sorts rows, validates chunks,
+`USED` characters), `SEQ` and `CHUNK_NO`.
+`PART` is a DDIC reserved word; the generated table and collector use
+`CHUNK_NO` instead. The collector sorts rows, validates chunks,
 and reconstructs checkpoint JSON. It also accepts a raw runner JSON object or
 an array of decoded checkpoint events.
 

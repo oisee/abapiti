@@ -35,6 +35,24 @@ cp "$work/a4h/zlnt_tests.zip" "$assets/abaplint-577f875e-a4h-tests.zip"
 cp "$work/a4h/zlnt.manifest.json" "$assets/abaplint-577f875e-a4h.manifest.json"
 cp "$work/a4h/zlnt_tests.manifest.json" "$assets/abaplint-577f875e-a4h-tests.manifest.json"
 cp "$work/a4h/names.json" "$assets/abaplint-577f875e-names.json"
+# Keep the monolith for compatibility; independent parts install core -> base
+# -> remaining parts (parallel). The splitter independently verifies the zips.
+node tools/a4h-tests-parts.mjs "$work/a4h" "$work/parts"
+node tools/a4h-tests-parts.mjs "$work/a4h" "$work/parts" --verify
+for file in "$work/parts"/zlnt_tests_*; do
+  name=$(basename "$file")
+  cp "$file" "$assets/abaplint-577f875e-a4h-tests-${name#zlnt_tests_}"
+done
+python3 - "$work/parts/parts.json" "$assets/abaplint-577f875e-a4h-tests-parts.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as f:
+    index = json.load(f)
+for part in index['parts'].values():
+    part['zip'] = part['zip'].replace('zlnt_tests_', 'abaplint-577f875e-a4h-tests-', 1)
+with open(sys.argv[2], 'w') as f:
+    json.dump(index, f, indent=2)
+    f.write('\n')
+PY
 cp "$kit" "$assets/zabapgit-check-kit.zip"
 mkdir -p "$work/kit"
 unzip -q -o "$kit" -d "$work/kit"
@@ -70,4 +88,7 @@ for platform in "${platforms[@]}"; do
     tar -czf "$assets/abaplint-abap-$platform.tar.gz" -C "$work/bundles" "abaplint-abap-$platform"
   fi
 done
+# Scan all downloads, decompressed archive members and binary strings before
+# regenerating checksums; any local path/user leak is a release blocker.
+python3 tools/release-path-gate.py "$assets" --root "$root" --root "$work"
 (cd "$assets" && find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' | LC_ALL=C sort | xargs sha256sum > SHA256SUMS && sha256sum -c SHA256SUMS)

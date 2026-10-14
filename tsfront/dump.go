@@ -110,7 +110,7 @@ type dumper struct {
 }
 
 func (d *dumper) walkFile(f *ast.SourceFile) {
-	d.result = FileDump{File: f.FileName()}
+	d.result = FileDump{File: relativeSource(d.program.configDir, f.FileName())}
 	walk(f.AsNode(), d.visit)
 }
 
@@ -401,14 +401,14 @@ func (d *dumper) symbolDecl(sym *ast.Symbol) string {
 	if f == nil {
 		return ""
 	}
-	return locString(f, scanner.GetTokenPosOfNode(decl, f, false /*includeJSDoc*/))
+	return d.program.locString(f, scanner.GetTokenPosOfNode(decl, f, false /*includeJSDoc*/))
 }
 
 // locOf renders "file:line:col" at node's first token (skipping leading
 // trivia), which is where the node is declared — not node.Pos(), which
 // points at the end of the preceding node's trivia.
 func (d *dumper) locOf(node *ast.Node) string {
-	return locString(d.file, scanner.GetTokenPosOfNode(node, d.file, false /*includeJSDoc*/))
+	return d.program.locString(d.file, scanner.GetTokenPosOfNode(node, d.file, false /*includeJSDoc*/))
 }
 
 func (d *dumper) typeString(t *checker.Type) string {

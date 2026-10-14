@@ -43,7 +43,7 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 			}
 			key := overrides.Key{File: rel, Symbol: symbol, Kind: n.Kind.String()}
 			start := scanner.GetTokenPosOfNode(n, f, false)
-			entry, ok, err := registry.Lookup(key, f.Text()[start:n.End()], locString(f, start))
+			entry, ok, err := registry.Lookup(key, f.Text()[start:n.End()], l.prog.locString(f, start))
 			if err != nil {
 				failure = err
 				return

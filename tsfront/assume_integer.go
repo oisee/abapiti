@@ -60,7 +60,7 @@ func (l *lowerer) validateIntegerExceptions(files []string) error {
 			key := fmt.Sprintf("%s:%d", rel, start)
 			if e, ok := entries[key]; ok && integerHazard(n) != "" {
 				if overrides.Fingerprint(f.Text()[start:n.End()]) != e.SHA256 {
-					failure = fmt.Errorf("integer exception stale at %s", locString(f, start))
+					failure = fmt.Errorf("integer exception stale at %s", l.prog.locString(f, start))
 					return
 				}
 				seen[key]++
