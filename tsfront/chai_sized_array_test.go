@@ -48,9 +48,8 @@ it('foreach skip',()=>{let visits=0;new Array<number>(3).forEach(()=>{visits++;}
 		t.Fatalf("code=%d %s %s", code, stdout, stderr)
 	}
 	if osg := os.Getenv("ABAPITI_OSG_HOME"); osg != "" {
-		// Sparse equality and floating-array zero sign remain uncertified.
-		// Certified integer zero-fill is covered by the emitter fixture;
-		// nonzero fill, length and presence-aware forEach are supported.
+		// Sparse equality remains uncertified. Native floating-array zero
+		// signs are now observed, not refused on missing source provenance.
 		l, err := LowerAbaplintTests(dir)
 		if err != nil {
 			t.Fatal(err)
@@ -76,16 +75,16 @@ it('foreach skip',()=>{let visits=0;new Array<number>(3).forEach(()=>{visits++;}
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
 		}
-		if err := json.Unmarshal([]byte(stdout.String()), &got); err != nil || got.Passed != 3 || got.Failed != 0 || got.Trapped != 4 {
+		if err := json.Unmarshal([]byte(stdout.String()), &got); err != nil || got.Passed != 5 || got.Failed != 0 || got.Trapped != 2 {
 			t.Fatalf("OSG: %s %s", stdout.String(), stderr.String())
 		}
-		refusals := map[string]string{"holes eql": "chai.array_items", "holes reverse eql": "chai.array_items", "sized fill": "chai.equal", "fill identity": "chai.equal"}
+		refusals := map[string]string{"holes eql": "chai.array_items", "holes reverse eql": "chai.array_items"}
 		for _, row := range got.Results {
 			if reason, refused := refusals[row.Title]; refused && (row.Status != "trapped" || !strings.Contains(row.Message, reason)) {
 				t.Fatalf("uncertified observation must loudly refuse: %+v", row)
 			}
 		}
-		t.Log("OSG: 3 pass / 0 FAIL / 2 sparse equality traps / 2 zero-sign traps")
+		t.Log("OSG: 5 pass / 0 FAIL / 2 sparse equality traps")
 	}
 }
 

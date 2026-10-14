@@ -171,14 +171,15 @@ func TestChaiFixtures(t *testing.T) {
 		fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_equals( act = %s exp = %s msg = 'Chai case %d' ).\n", expr, want, i)
 	}
 	fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_equals( act = %s exp = 2 ).\n", op("deepInclude", "a", "empty"))
-	// Refusals remain observable: unsupported class enumeration, signed zero,
-	// and a translated coverage trap must never become assertion success.
+	// Refusals remain observable: unsupported class enumeration and a
+	// translated coverage trap must never become assertion success.
 	fmt.Fprintf(&unit, "DATA zero TYPE REF TO %s.\nzero = %s=>%s( 0 ).\nDATA nominal TYPE REF TO %s.\nDATA nominal2 TYPE REF TO %s.\nnominal = %s=>box_ref( NEW %s( ) ).\nnominal2 = %s=>box_ref( NEW %s( ) ).\nDATA answer TYPE abap_bool.\nDATA trapped TYPE abap_bool.\n", d, cls, names.Get("member.boxnumber"), d, d, runtime, names.Get("ChaiNominal"), runtime, names.Get("ChaiNominal"))
-	for _, expr := range []string{op("deepEqual", "zero", "zero"), op("deepEqual", "nominal", "nominal2"), op("throwMatch", "blocked", "``")} {
+	fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_true( %s ).\n", op("deepEqual", "zero", "zero"))
+	for _, expr := range []string{op("deepEqual", "nominal", "nominal2"), op("throwMatch", "blocked", "``")} {
 		unit.WriteString("CLEAR trapped.\nTRY.\nanswer = " + expr + ".\nCATCH " + names.Get("exception.chaiRefusal") + " " + names.Get("exception.unexecuted") + ".\ntrapped = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( trapped ).\n")
 	}
 	fmt.Fprintf(&unit, "DATA typed_record TYPE REF TO %s.\nDATA native_map TYPE REF TO %s.\ntyped_record = %s=>%s( undef ).\nnative_map = %s=>%s( undef ).\ncl_abap_unit_assert=>assert_true( %s ).\nCLEAR trapped.\nTRY.\nanswer = %s.\nCATCH %s.\ntrapped = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( trapped ).\n", d, d, cls, names.Get("member.record"), cls, names.Get("member.nativeMap"), op("deepEqual", "typed_record", "a"), op("deepEqual", "native_map", "a"), names.Get("exception.chaiRefusal"))
-	// The zero sign is proven at source-literal/integral/JSON boundaries only.
+	// Deep equality distinguishes signed zero, including native f values.
 	zeroOracle, err := exec.Command("node", "-e", `const {expect}=require(process.argv[1]);const ok=f=>{try{f();return true}catch(e){if(e.name!=="AssertionError")throw e;return false}};console.log(JSON.stringify([ok(()=>expect(0).eql(-0)),ok(()=>expect(-0).eql(JSON.parse("-0"))),ok(()=>expect(0).eql(JSON.parse("0")))]))`, chai).CombinedOutput()
 	if err != nil {
 		t.Fatal(err, string(zeroOracle))

@@ -7,8 +7,8 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-// The finite Number domain cannot publish NaN/Infinity or a negative zero.
-// All unsupported observations use a coverage exception, not a JS payload.
+// Native f observations remain checked. Optional numeric storage additionally
+// retains NaN/Infinity as tagged values, never conflating them with undefined.
 func (e *emitter) stringOpsRuntime() string {
 	id := "runtime.stringOps"
 	name := e.name(id)
@@ -20,6 +20,7 @@ func (e *emitter) stringOpsRuntime() string {
 	e.files[refusal+".clas.abap"] = "CLASS " + refusal + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nMETHODS get_text REDEFINITION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + refusal + " IMPLEMENTATION.\nMETHOD get_text.\nresult = `string operation outside the checked ABAP domain`.\nENDMETHOD.\nENDCLASS.\n"
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
 	regex := e.typ(hir.T(hir.RegExp))
+	optionalNumber := e.typ(hir.T(hir.Optional, hir.T(hir.Number)))
 	var white strings.Builder
 	for _, cp := range jsWhiteSpace {
 		fmt.Fprintf(&white, " OR code = %d", cp)
@@ -28,6 +29,7 @@ func (e *emitter) stringOpsRuntime() string {
 PUBLIC SECTION.
 CLASS-METHODS pad IMPORTING text TYPE string target TYPE f fill TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS float_prefix IMPORTING text TYPE string RETURNING VALUE(result) TYPE f.
+CLASS-METHODS float_optional IMPORTING text TYPE string RETURNING VALUE(result) TYPE $N.
 CLASS-METHODS sha1 IMPORTING text TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS split IMPORTING text TYPE string pattern TYPE $R limit TYPE f RETURNING VALUE(result) TYPE $A.
 PROTECTED SECTION.
@@ -81,6 +83,45 @@ needed = needed - take.
 ENDWHILE.
 APPEND text TO fragments.
 CONCATENATE LINES OF fragments INTO result RESPECTING BLANKS.
+ENDMETHOD.
+METHOD float_optional.
+DATA start TYPE i.
+DATA count TYPE i.
+DATA ch TYPE string.
+DATA input TYPE string.
+DATA token TYPE string.
+result = NEW #( ).
+result->has = abap_true.
+WHILE start < strlen( text ).
+ch = text+start(1).
+IF whitespace( ch ) = abap_false.
+EXIT.
+ENDIF.
+start = start + 1.
+ENDWHILE.
+input = substring( val = text off = start ).
+FIND REGEX '^[+-]?Infinity' IN input MATCH LENGTH count.
+IF sy-subrc = 0.
+result->number_special = 2.
+IF input+0(1) = '-'.
+result->number_special = 3.
+ENDIF.
+RETURN.
+ENDIF.
+FIND REGEX '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?' IN input MATCH LENGTH count.
+IF sy-subrc <> 0 OR count = 0.
+result->number_special = 1.
+RETURN.
+ENDIF.
+token = input+0(count).
+TRY.
+result->value = token.
+CATCH cx_sy_conversion_overflow.
+result->number_special = 2.
+IF token+0(1) = '-'.
+result->number_special = 3.
+ENDIF.
+ENDTRY.
 ENDMETHOD.
 METHOD float_prefix.
 DATA start TYPE i.
@@ -207,6 +248,6 @@ APPEND part TO result->items.
 ENDMETHOD.
 ENDCLASS.
 `
-	e.files[name+".clas.abap"] = strings.NewReplacer("$EMPTY", "``", "$P", name, "$E", refusal, "$R", regex, "$A", arr, "$WHITE", white.String()).Replace(code)
+	e.files[name+".clas.abap"] = strings.NewReplacer("$EMPTY", "``", "$P", name, "$E", refusal, "$R", regex, "$A", arr, "$N", optionalNumber, "$WHITE", white.String()).Replace(code)
 	return name
 }

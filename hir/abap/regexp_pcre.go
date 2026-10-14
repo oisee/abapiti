@@ -11,6 +11,7 @@ import (
 // OSG 16c024c8 uses non-UCP PCRE boundaries: native \b/\B have JavaScript's
 // non-u ASCII [A-Za-z0-9_] membership, including next to non-ASCII text.
 func pcreRegexPattern(pattern string) string {
+	pattern = regexClassHyphens(pattern)
 	var out strings.Builder
 	inClass := false
 	for i := 0; i < len(pattern); i++ {

@@ -121,7 +121,11 @@ result = abap_false.
 WHEN tag_string.
 result = xsdbool( strlen( sval ) > 0 ).
 WHEN tag_number.
+IF number_special <> 0.
+result = xsdbool( number_special <> 1 ).
+ELSE.
 result = xsdbool( nval <> 0 ).
+ENDIF.
 WHEN tag_boolean.
 result = bval.
 WHEN OTHERS.
@@ -142,7 +146,11 @@ CASE tag.
 WHEN tag_string.
 result = xsdbool( sval = p0->sval ).
 WHEN tag_number.
+IF number_special <> 0 OR p0->number_special <> 0.
+result = xsdbool( number_special = p0->number_special AND number_special <> 1 ).
+ELSE.
 result = xsdbool( nval = p0->nval ).
+ENDIF.
 WHEN tag_boolean.
 result = xsdbool( bval = p0->bval ).
 WHEN tag_null.
