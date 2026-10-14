@@ -5,6 +5,18 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
+> **🎉🎉 On a real SAP kernel: TS-HA@A4H 11,060 of 11,060 (100 %), 0 wrong answers, 0 traps, 0 unregistered**
+>
+> abaplint's own test suite, compiled by abapiti from TypeScript to ABAP, imported with abapGit into an SAP NetWeaver 7.58 system (A4H) and run there as background jobs. Every one of the 11,060 Node-active tests passes, each title reconciled against the same Node oracle as OSGO.
+>
+> | Host | Shards | Tests passing | Wrong answers | Traps |
+> |---|---:|---:|---:|---:|
+> | TS-HG@Go (abaplint → HIR → Go) | 17 | **11,060** / 11,060 | 0 | 0 |
+> | TS-HA@OSGO (→ ABAP, open-steamgate Go runtime) | 17 | **11,060** / 11,060 | 0 | 0 |
+> | **TS-HA@A4H (→ ABAP, real SAP kernel 7.58)** | 17 | **11,060** / 11,060 | 0 | 0 |
+>
+> On A4H: 2,338 core classes + 5,015 test classes, 0 syntax errors; the longest shards are `rules` (24 min) and `abap/statements` (22 min). The first full A4H run had 11,055: the kernel refuses an empty POSIX regex that JavaScript's `new RegExp("")` accepts; fixed in #155 (`(?:)`). Certified 14 Oct 2026 and reconciled twice, independently, title by title against the pinned Node oracle (upstream `577f875e`). One accounting note: the `abap/syntax` and `lsp` shards also register the 6 `sql_value_conversion` tests that belong to `rules`. They pass there as well, so A4H ran 11,072 test executions for the 11,060 Node-active titles: 12 duplicate registrations, not extra passes. Archives: [v0.5.0](https://github.com/oisee/abapiti/releases/tag/v0.5.0) (11,055 as shipped; 11,060 with the #155 delta), and v0.5.1 next. How to run them on your own system: [docs/a4h-test-suite.md](docs/a4h-test-suite.md).
+
 > **🎉 11,060 of 11,060 abaplint tests pass on abaplint compiled by abapiti (TS-HG@Go), 0 wrong answers**
 >
 > [The goal](#goal-100--of-abaplint) is reached: every Node-active test of abaplint's own suite (625 files, all 17 shards) passes on abaplint compiled from its TypeScript by abapiti and run as Go. Measured 12 Oct 2026 on train 13, twice, on two machines ([train 13](docs/train-13.md)); released as [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0).
@@ -18,13 +30,13 @@
 > | tests trapped / not registered on Go | **0 / 0** | 0 |
 > | Raw full-core measurement (`abapiti abaplint --full --assume-int=false`) | **0 blocking diagnostics / 8 HIR errors**; the emitted build retains explicit refusals on unsupported paths | 0 / 0 |
 >
-> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Reached 100 % on the ABAP host, TS-HA@OSGO (below). Next goal: TS-HA@A4H.** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
+> The 32 tests that Node itself skips (`it.skip`) are outside the denominator. **Reached 100 % on the ABAP host, on TS-HA@OSGO and TS-HA@A4H, a real SAP kernel (above and below).** After that, a second project, [@abaplint/transpiler](docs/generality-transpiler.md).
 
 > **On the ABAP host — TS-HA@OSGO: 11,060 of 11,060 (100 %), 0 wrong answers, 0 traps, 0 unregistered** (abaplint compiled by abapiti to ABAP, running on [open-steamgate](https://github.com/oisee/open-steamgate)'s Go runtime)
 >
 > 521 (first full run) → 677 (train O2) → 5,329 (O3) → 10,767 → 10,996 → 11,037 → **11,060** · certified 2026-10-14 on all 17 shards, OSG `f83dc5c3`, express train #149 (`8ad792f`); TS-HG@Go on the same commit: 11,060 / 11,060
 >
-> In every shard, passes equal Node-active tests; the only tests not run are the ones Node itself marks pending. Next: the same suite on a real SAP kernel (TS-HA@A4H).
+> In every shard, passes equal Node-active tests; the only tests not run are the ones Node itself marks pending. The same suite then passed on a real SAP kernel, TS-HA@A4H, 11,060 / 11,060 (above).
 
 ABAPiti is a **TypeScript → ABAP** transpiler. Its first real job is to compile [abaplint](https://github.com/abaplint/abaplint) itself into ABAP, and later the [abaplint transpiler](https://github.com/abaplint/transpiler). The result runs off-stack, on [open-steamgate](https://github.com/oisee/open-steamgate) (Go and JS), and on-stack, on a real SAP kernel. That is a step towards self-hosting: the ABAP tooling running in ABAP.
 
@@ -53,7 +65,7 @@ TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti, TS-HG the s
 
 A seeded variant with one error per rule equals vanilla on every host too. What changed in each step is in the release notes of [v0.3.0](https://github.com/oisee/abapiti/releases/tag/v0.3.0) and [v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
-> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for abaplint core at commit `577f875e` (2.120.56). Since v0.5.0 the default build includes **all of core and all rules**, with readable ABAP names. `--scope zabapgit` retains the old smaller six-rule, trace-pruned build. Unsupported operations are still refused with their TypeScript location, never answered silently differently. A4H kernel certification is in progress.
+> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for abaplint core at commit `577f875e` (2.120.56). Since v0.5.0 the default build includes **all of core and all rules**, with readable ABAP names. `--scope zabapgit` retains the old smaller six-rule, trace-pruned build. Unsupported operations are still refused with their TypeScript location, never answered silently differently. Certified on a real SAP kernel: TS-HA@A4H 11,060 / 11,060.
 
 ### Goal: 100 % of abaplint — reached
 
@@ -67,7 +79,7 @@ Where it stood (12 Oct 2026, [train 13](docs/train-13.md), [v0.4.0](https://gith
 | Tests trapped / not registered on Go | **0 / 0** | 0 |
 | Historical assume-integer full-core blocking diagnostics (`--full --assume-int`) | **19** (644 → 33 in train 3 → 48 → 42 → 37 → 19); none of the 11,060 tests reaches them | 0 |
 
-**Next goal: TS-HA@A4H** — the ABAP host is at 100 % on OSGO (11,060 / 11,060, certified 2026-10-14); the same suite now goes to a real SAP kernel. After that, a second project ([@abaplint/transpiler probe](docs/generality-transpiler.md)).
+**Reached on every host: TS-HG@Go, TS-HA@OSGO and TS-HA@A4H (a real SAP 7.58 kernel), each 11,060 / 11,060.** Next: a second project, the [@abaplint/transpiler probe](docs/generality-transpiler.md).
 
 > **`wasm/` and `abap/wasm_compiler/`: experimental, deprecated (2026-10-10): tests off by default (`go test -tags wasmlegacy ./wasm`), planned for removal; the supported path is TypeScript → HIR → ABAP/Go.**
 
@@ -142,6 +154,8 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 <summary><b>Legacy WASM: experimental, deprecated (2026-10-10). Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
+
+**2026-10-14 — 🎉🎉 [v0.5.0](https://github.com/oisee/abapiti/releases/tag/v0.5.0): abaplint's whole test suite passes on a real SAP kernel.** TS-HA@A4H **11,060 / 11,060**, all 17 shards, run as background jobs on SAP 7.58 after an abapGit import of the readable `$ZLNT` core and the `$ZLNT_TESTS_*` packages. On OSGO, also 11,060 / 11,060. The default build now has all of core and all rules. The kernel taught two lessons: `WHEN` with `&&` keys, and conditional `super->constructor` plus empty `CASE` (#153, #154). The last 5 tests were an empty regex that the kernel refuses (#155).
 
 **2026-10-12 — 🎉 [v0.4.0](https://github.com/oisee/abapiti/releases/tag/v0.4.0): 100 % of abaplint's own tests on the compiled abaplint.** All 11,060 Node-active tests pass on abaplint compiled by abapiti (TS-HG@Go), with 0 wrong answers, confirmed by two independent full runs. It took thirteen integration trains in two days (9,022 → 11,060 since the suite was wired up in full). Every new lowering came with a Node oracle. Each genuine mismatch caught on the way was stopped, root-caused and kept as a regression; one reached an integration train (train 9) and was fixed before it was merged, none reached main.
 
