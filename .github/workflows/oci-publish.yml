@@ -69,7 +69,7 @@ jobs:
               --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
               --annotation "org.opencontainers.image.revision=$commit" \
               --annotation "org.opencontainers.image.version=$TAG" \
-              abap.zip:application/zip)
+              abap.zip:application/vnd.osd.abapgit.zip)
             digest=$(oras resolve "$REPO/abaplint-a4h:$name-$TAG")
             manifests+=("$digest")
             printf '| %s | `%s:%s` | `%s` | `%s` |\n' "$n" "abaplint-a4h" "$name-$TAG" "$digest" "$(sha256sum "$zip" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
