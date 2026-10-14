@@ -498,10 +498,13 @@ func (l *lowerer) completeInterfaceValueSlots() {
 	}
 }
 
-// dynamicRecordLiteral lowers an object literal typed `any` to a tagged
+// dynamicRecordLiteral lowers erased literals and structural spreads to a tagged
 // record (the representation of parsed JSON/XML objects): an empty record
-// from the strict JSON runtime, one dynamic.put per property.
+// from the strict JSON runtime, one dynamic.put per property. Spreads snapshot
+// each source once and copy enumerable own keys in their runtime order.
 func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
+	hint := l.hint
+	defer func() { l.hint = hint }()
 	record := l.tempInit(n, hir.T(hir.Dynamic), l.rtOp("json.parseSubset", hir.L(hir.T(hir.String), "{}"), hir.T(hir.Dynamic)))
 	for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
 		var value *ast.Node
@@ -510,6 +513,33 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 			value = p.Initializer()
 		case ast.KindShorthandPropertyAssignment:
 			value = p.Name()
+		case ast.KindSpreadAssignment:
+			l.hint = hir.Type{}
+			source := l.expr(p.Expression())
+			base := hir.Type{}
+			if source != nil {
+				base = source.Type
+				if base.Kind == hir.Optional {
+					base = base.Args[0]
+				}
+			}
+			if source == nil || base.Kind != hir.ClassRef && base.Kind != hir.Dynamic {
+				l.diagf(p, "unsupported-type", "tagged record spread needs object storage")
+				return nil
+			}
+			source = l.tempInit(p, hir.T(hir.Dynamic), l.coerce(source, hir.T(hir.Dynamic)))
+			l.serial++
+			key := "spreadKey" + itoa(l.serial)
+			keyType := hir.T(hir.String)
+			copy := &hir.Stmt{Kind: hir.ForEach, Node: l.node(p), Name: key, Type: keyType,
+				X: l.rtOp("dynamic.keys", source, hir.T(hir.Array, keyType)),
+				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p),
+					X: l.rtOp("dynamic.put", record, hir.T(hir.Void), hir.V(key, keyType),
+						l.rtOp("dynamic.get", source, hir.T(hir.Dynamic), hir.V(key, keyType)))})}
+			l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(p),
+				X:    &hir.Expr{Kind: hir.Unary, Type: hir.T(hir.Bool), Op: "!", X: l.rtOp("dynamic.isNullish", source, hir.T(hir.Bool))},
+				Body: hir.B(copy)})
+			continue
 		default:
 			l.diagf(p, "unsupported-type", "tagged record property %s is not lowered", p.Kind.String())
 			return nil
@@ -519,14 +549,18 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 			l.diagf(p, "unsupported-type", "tagged record property needs a literal name")
 			return nil
 		}
+		if name.Text() == "__proto__" && p.Kind == ast.KindPropertyAssignment {
+			l.diagf(p, "unsupported-type", "tagged record prototype setter is not lowered")
+			return nil
+		}
 		l.hint = hir.T(hir.Dynamic)
 		v := l.expr(value)
-		l.hint = hir.Type{}
+		l.hint = hint
 		if v == nil {
 			return nil
 		}
 		l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p), X: l.rtOp("dynamic.put", record, hir.T(hir.Void), hir.L(hir.T(hir.String), name.Text()), l.coerce(v, hir.T(hir.Dynamic)))})
 	}
-	l.diagf(n, "note-dynamic-record", "object literal typed any lowered as a tagged record")
+	l.diagf(n, "note-dynamic-record", "object literal lowered as a tagged property snapshot")
 	return record
 }

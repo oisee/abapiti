@@ -78,6 +78,12 @@ export function assertNoFailures(name, run) {
  if (failures.length) throw new Error(`STOP: ${name}: ${failures.length} genuine FAIL(s)\n${JSON.stringify(failures, null, 2)}`);
 }
 
+export function assertRegistrationParity(summary) {
+ if (!summary.registrationParity || summary.uniqueTotal.unregistered !== 0) {
+  throw new Error(`registration parity failed: ${summary.uniqueTotal.unregistered} unregistered test(s)`);
+ }
+}
+
 // Drain in-flight work before cleanup, and do not schedule past a genuine FAIL.
 export async function runShards(shards, workers, runShard, admit = async () => {}) {
  if (!Number.isInteger(workers) || workers < 1 || workers > 17) throw new Error('ABAPITI_TESTS_WORKERS must be an integer from 1 to 17');
@@ -231,9 +237,11 @@ async function main() {
        timingMs:{...shared.evidence.host?.timingMs, ...host.timingMs}} : shared.evidence.host};
      }
     }
-    rmSync(build, {recursive:true, force:true});
-    rmSync(closure, {recursive:true, force:true});
-    mkdirSync(closure);
+    if (process.env.ABAPITI_TESTS_KEEP_ARTIFACTS !== '1') {
+     rmSync(build, {recursive:true, force:true});
+     rmSync(closure, {recursive:true, force:true});
+    }
+    mkdirSync(closure, {recursive:true});
     writeFileSync(join(closure,'closure.json'), JSON.stringify({roots, upstreamPin:manifest?.upstreamPin ?? upstreamPin}));
    }
    // Borrowed test bodies are real executions too: never hide their FAILs
@@ -261,6 +269,7 @@ async function main() {
   if (summary.nodeActive) console.log(`Node-active not passing: ${summary.nodeActive.notPassing} = ${summary.nodeActive.trapped} traps + ${summary.nodeActive.unregistered} unregistered + ${summary.nodeActive.skipped} skipped + ${summary.nodeActive.failed} FAIL + ${summary.nodeActive.asyncPending} async-pending; Node-pending outside denominator: ${summary.nodePending.total}`);
   if (summary.shards.some(s => s.infrastructureFailure || s.unmatched)) process.exitCode = 1;
   finished = true;
+  assertRegistrationParity(summary);
  } finally {
   oracleBuild?.dispose();
   if (finished && process.env.ABAPITI_TESTS_KEEP_ARTIFACTS !== '1') rmSync(run, {recursive:true, force:true});

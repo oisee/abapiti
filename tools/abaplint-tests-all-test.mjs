@@ -4,7 +4,7 @@ import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {discoverShards, selectShards, selectFiles, prioritizeShards, assertNoFailures, runShards, readOSGEvidence} from './abaplint-tests-all.mjs';
+import {discoverShards, selectShards, selectFiles, prioritizeShards, assertNoFailures, assertRegistrationParity, runShards, readOSGEvidence} from './abaplint-tests-all.mjs';
 import {ownedResults} from './abaplint-tests-owned.mjs';
 // A failing worker must drain its peer without ever launching queued work.
 let releasePeer, rejectFirst;
@@ -32,6 +32,9 @@ try {
  assertNoFailures('syntax', {results:[{status:'passed'},{status:'trapped',message:'refusal'}]});
  assert.throws(() => assertNoFailures('syntax', {results:[{status:'failed',title:'regression',message:'expected 0 to equal 1'}]}), /STOP: syntax: 1 genuine FAIL.*regression.*expected 0 to equal 1/s);
  assert.throws(() => assertNoFailures('root', {results:[], initialization:[{file:'test/root.ts',action:'describe',status:'failed',message:'expected 0 to equal 1'}]}), /STOP: root: 1 genuine FAIL.*test\/root.ts.*expected 0 to equal 1/s);
+ assertRegistrationParity({registrationParity:true, uniqueTotal:{unregistered:0}});
+ assert.throws(() => assertRegistrationParity({registrationParity:false, uniqueTotal:{unregistered:1}}), /1 unregistered/);
+ assert.throws(() => assertRegistrationParity({registrationParity:false, uniqueTotal:{unregistered:0}}), /registration parity failed/);
  const paths = ['root.ts', 'abap/helper.ts', 'abap/syntax/syntax.ts', 'abap/syntax/basic.ts', 'objects/object.ts', 'objects/rename/rename.ts', 'new_directory/future.ts'];
  for (const path of paths) {
   const file = join(dir, 'packages/core/test', path);
