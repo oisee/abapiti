@@ -594,3 +594,170 @@ python3 .cache/osg-cache-measure/fingerprint-08e9907e.py \
   > .cache/osg-cache-measure/fingerprint-08e9907e-progress.log 2>&1
 python3 .cache/osg-cache-measure/fingerprint-08e9907e-analyze.py
 ```
+
+## stoker CATCH hierarchy da7984a0
+
+Measured 2026-10-14: exactly two serial `abap/statements` invocations,
+TS-HA@OSGO, both CPU profiled. OSG branch `perf/gogen-catch-hierarchy`, SHA
+`da7984a09a9a24860a915a491e5fe3fcc639c06d`, has the verified ancestry
+`8feecd5d` plus one commit: a per-record superclass-chain index for CATCH
+lowering with a `caughtClasses` memo. The detached worktree
+`.cache/osg-da7984a0` was prepared with `npm ci` and
+`node tools/osd-libs.mjs --sync` and remained clean. The local
+`.github/ci/osgo.ref` points to this SHA; no push.
+
+Reused the original instrumented CLI, local `bridge.mjs`, materialized
+statements closure, `time.py`, and `.cache/train-o5/env.sh` environment.
+`ABAPITI_OSG_ONE_BUILD=0` remained set for both runs. No-cache started at
+**17:30:35 UTC** with `ABAPITI_OSG_CACHE` unset. After it exited and its
+profile was saved, cold-cache started at **17:40:07 UTC** with
+`ABAPITI_OSG_CACHE=/work/.cache/osg-cache-measure/catch-da7984a0-cache`,
+a fresh empty directory unused by the first condition. Both used fresh
+output directories. Prepared Go build/module and filesystem caches
+remained enabled. Process checks before and throughout the runs showed
+no competing substantial workload. No warm run or additional sample ran.
+
+All times in seconds; peak RSS is GiB using the original `wait4` definition.
+
+| Shard | Condition | TS lowering | ABAP emission | gogen frontend | gogen emission | Go build | Execution | Harness total | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | CATCH fix, no cache dir, CPU profile | 58.9 | 23.5 | 131.0 | 48.9 | 2.4 | 290.8 | 571.9 | 9.7 |
+| `abap/statements` | CATCH fix, cold cache, CPU profile | 58.4 | 23.6 | 204.7 | 50.0 | 2.4 | 289.2 | 643.9 | 8.8 |
+
+No-cache frontend took **130.961 s**, meeting the requested **below 180 s**
+expectation. Against the earlier no-cache **179.2 / 184.1 s**, this is
+**48.2 / 53.1 s less (26.9% / 28.9%)**; against their mean, **27.9% less**.
+Cold-cache frontend took **204.736 s**, versus the earlier cold-with-cache
+**488.0 s**: **283.3 s less (58.0%, 2.38x faster)**. It is **14.2% / 11.2%**
+longer than the earlier no-cache controls. Within this candidate's two
+profiled samples, cold-cache took **73.775 s longer (56.3%, 1.56x)** than
+no-cache. These are single observations, not confidence intervals or an
+isolated causal estimate: earlier samples used OSG `c681c9f7` and were
+unprofiled; this candidate also includes intervening main changes.
+The short Go builds reflect the independent prepared Go build cache.
+
+Both invocations exited **0** with **4,962 pass, 0 fail, 0 trap, 0 not-run**.
+Complete `(title, status, message)` multisets and generated Go bytes match
+the original statements cold baseline exactly. Title/status SHA-256 is
+`8f575909715661385438b0299cc9e96be087768913a0e427d2b423aaee9a6f14`;
+generated-Go SHA-256 is
+`8ba2a5afd939c9177dc5f66d9c5efd1ec6447ebc1f41dda6a90c5f9ca7fb1ed6`.
+
+| Condition | Round 0 H/M | Round 1 H/M | Reused classes | Cache MiB on disk |
+| --- | ---: | ---: | ---: | ---: |
+| no cache dir | 0 / 2,730 | 1,146 / 1,586 | 1,146 | — |
+| cold cache | 0 / 2,730 | 1,168 / 1,564 | 1,168 | 386.6 |
+
+All reuse here is within-run; round 0 has no disk hits in either condition.
+Cold cache occupies **405,394,944 allocated bytes (386.615 MiB)** and
+contains only `gogen-frontend`, with no whole-program snapshots.
+No-cache bridge labels are `frontend: disabled`, `binary: disabled`,
+`gogenFrontend: unsupported` (the instrument also uses this last label
+when no `cacheDir` is supplied). Cold's snapshot labels are initialized to
+`miss` despite `ABAPITI_OSG_ONE_BUILD=0` bypassing reads/writes;
+`gogenFrontend: enabled`.
+
+### CPU profiles: top 25 by sampled self time, excluding spawnSync
+
+The local `catch-da7984a0-node-bin/node` wrapper appends
+`--cpu-prof --cpu-prof-dir=$CATCH_PROFILE_DIR` to inherited `NODE_OPTIONS`
+only for the existing gogen bridge process. Other Node invocations retain
+the prepared options. Each condition has exactly one profile.
+
+Self ms sums sample `timeDeltas` (microseconds / 1,000) at each leaf call
+frame, aggregated by function and source location (line/column), with no
+child/inclusive time. Lines are one-based; `OSG/` means
+`.cache/osg-da7984a0/`. V8 pseudo-functions have no source location.
+Percentages use each profile's sampled time **after removing `spawnSync`**.
+That synchronous wait primarily represents test execution via
+`resumeRunner`, plus Go build, and is excluded from both top-25 tables and
+the frontend interpretation. The retained profile still covers frontend,
+emission and bridge overhead; it is not a frontend-only time window.
+Garbage collection is retained as a V8 runtime pseudo-function.
+
+#### No cache dir
+
+Profile: `.cache/osg-cache-measure/catch-da7984a0-no-cache-profile/CPU.20261014.173210.425.0.001.cpuprofile`.
+
+451,851 samples; total sampled time **476,198.186 ms**;
+excluded `spawnSync` **293,326.872 ms**; percentage
+denominator **182,871.314 ms**.
+
+| Function | File:line | Self ms | % |
+| --- | --- | ---: | ---: |
+| `(garbage collector)` | `(V8/runtime)` | 22,379.564 | 12.24 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:517` | 7,208.956 | 3.94 |
+| `toTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:306` | 6,603.957 | 3.61 |
+| `fingerprint` | `OSG/tools/gogen/frontend-replay.mjs:5` | 3,880.603 | 2.12 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:808` | 3,879.623 | 2.12 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:594` | 3,625.995 | 1.98 |
+| `statement` | `OSG/tools/gogen/frontend.mjs:2377` | 2,530.096 | 1.38 |
+| `isStmt` | `OSG/tools/gogen/frontend.mjs:65` | 2,310.375 | 1.26 |
+| `upper` | `OSG/tools/gogen/frontend.mjs:69` | 2,262.767 | 1.24 |
+| `walkMove` | `OSG/tools/gogen/emit-table-move.mjs:92` | 2,240.999 | 1.23 |
+| `(anonymous)` | `OSG/tools/gogen/frontend.mjs:1998` | 2,105.119 | 1.15 |
+| `RegExp: \b(CL_AMC_CHANNEL_MANAGER\|IF_AMC_MESSAGE_PRODUCER\w*\|IF_AMC_MESSAGE_CONSUMER)\b` | `(V8/runtime)` | 2,049.758 | 1.12 |
+| `getCol` | `OSG/node_modules/@abaplint/core/build/src/abap/1_lexer/tokens/abstract_token.js:24` | 2,009.826 | 1.10 |
+| `concatTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:67` | 1,922.142 | 1.05 |
+| `clone` | `OSG/tools/gogen/frontend-replay.mjs:8` | 1,840.397 | 1.01 |
+| `flatten` | `OSG/node_modules/@abaplint/transpiler/build/src/rearranger.js:171` | 1,670.719 | 0.91 |
+| `classIr` | `OSG/tools/gogen/frontend.mjs:1475` | 1,643.137 | 0.90 |
+| `children` | `OSG/tools/gogen/frontend-owned.mjs:22` | 1,578.084 | 0.86 |
+| `toTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/expression_node.js:116` | 1,477.293 | 0.81 |
+| `getObject` | `OSG/node_modules/@abaplint/core/build/src/registry.js:140` | 1,360.593 | 0.74 |
+| `findFirstExpression` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/expression_node.js:259` | 1,339.249 | 0.73 |
+| `blockList` | `OSG/tools/gogen/frontend.mjs:1895` | 1,202.722 | 0.66 |
+| `chainHas` | `OSG/tools/gogen/frontend-hierarchy.mjs:10` | 1,178.033 | 0.64 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:71` | 1,158.899 | 0.63 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:104` | 1,156.365 | 0.63 |
+
+#### Cold cache
+
+Profile: `.cache/osg-cache-measure/catch-da7984a0-cold-profile/CPU.20261014.174141.662.0.001.cpuprofile`.
+
+517,743 samples; total sampled time **548,454.572 ms**;
+excluded `spawnSync` **291,675.119 ms**; percentage
+denominator **256,779.453 ms**.
+
+| Function | File:line | Self ms | % |
+| --- | --- | ---: | ---: |
+| `(garbage collector)` | `(V8/runtime)` | 37,705.146 | 14.68 |
+| `processChunkSync` | `node:zlib:429` | 7,855.924 | 3.06 |
+| `fingerprint` | `OSG/tools/gogen/frontend-replay.mjs:5` | 7,456.290 | 2.90 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:517` | 7,346.298 | 2.86 |
+| `toTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:306` | 7,279.081 | 2.83 |
+| `compactLowering` | `OSG/tools/gogen/frontend-object-cache.mjs:82` | 7,255.630 | 2.83 |
+| `portableWithin` | `OSG/tools/gogen/frontend-object-cache.mjs:49` | 7,120.475 | 2.77 |
+| `registry.getObject` | `OSG/tools/gogen/frontend-object-cache.mjs:186` | 6,435.776 | 2.51 |
+| `serialize` | `node:v8:512` | 6,026.954 | 2.35 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:808` | 4,036.184 | 1.57 |
+| `run` | `OSG/node_modules/@abaplint/core/build/src/abap/2_statements/combi.js:594` | 3,732.855 | 1.45 |
+| `clone` | `OSG/tools/gogen/frontend-replay.mjs:8` | 2,694.470 | 1.05 |
+| `statement` | `OSG/tools/gogen/frontend.mjs:2377` | 2,605.766 | 1.01 |
+| `walkMove` | `OSG/tools/gogen/emit-table-move.mjs:92` | 2,550.511 | 0.99 |
+| `(anonymous)` | `OSG/tools/gogen/frontend.mjs:1998` | 2,511.384 | 0.98 |
+| `clasDef` | `OSG/tools/gogen/frontend.mjs:566` | 2,441.252 | 0.95 |
+| `isStmt` | `OSG/tools/gogen/frontend.mjs:65` | 2,389.766 | 0.93 |
+| `upper` | `OSG/tools/gogen/frontend.mjs:69` | 2,291.159 | 0.89 |
+| `RegExp: \b(CL_AMC_CHANNEL_MANAGER\|IF_AMC_MESSAGE_PRODUCER\w*\|IF_AMC_MESSAGE_CONSUMER)\b` | `(V8/runtime)` | 2,104.024 | 0.82 |
+| `(anonymous)` | `OSG/tools/gogen/frontend-replay.mjs:56` | 2,086.055 | 0.81 |
+| `getObject` | `OSG/node_modules/@abaplint/core/build/src/registry.js:140` | 2,057.905 | 0.80 |
+| `getCol` | `OSG/node_modules/@abaplint/core/build/src/abap/1_lexer/tokens/abstract_token.js:24` | 2,030.112 | 0.79 |
+| `concatTokens` | `OSG/node_modules/@abaplint/core/build/src/abap/nodes/statement_node.js:67` | 1,922.568 | 0.75 |
+| `children` | `OSG/tools/gogen/frontend-owned.mjs:22` | 1,704.676 | 0.66 |
+| `flatten` | `OSG/node_modules/@abaplint/transpiler/build/src/rearranger.js:171` | 1,643.267 | 0.64 |
+
+Raw evidence remains local under `.cache/osg-cache-measure/`:
+`abap-statements-catch-da7984a0-{no-cache,cold}` output directories and
+matching `.stdout.json`, `.stderr.log`, `.rss` files;
+`catch-da7984a0-{records,analysis}.json`, `catch-da7984a0-progress.log`,
+both profile directories, and the local runner/analyzer/wrapper.
+Reproduction requires fresh output/cache/profile paths because the runner
+asserts freshness. After preparing the pinned worktree and local pin:
+
+```sh
+. .cache/train-o5/env.sh
+python3 .cache/osg-cache-measure/catch-da7984a0.py \
+  > .cache/osg-cache-measure/catch-da7984a0-progress.log 2>&1
+python3 .cache/osg-cache-measure/catch-da7984a0-analyze.py
+```
