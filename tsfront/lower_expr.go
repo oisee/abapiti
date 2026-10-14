@@ -2815,6 +2815,20 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		l.diagf(n, "unsupported-type", "object literal needs a named lowered shape")
 		return nil
 	}
+	if l.unprunedFeatures && (l.shapeLike[target.Name] || strings.HasPrefix(target.Name, "shape.")) {
+		for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+			if p.Kind == ast.KindSpreadAssignment {
+				// A spread's own keys/presence/order belong to the source
+				// instance, not the destination's checker field layout. Keep
+				// the runtime snapshot as backing storage for the typed view.
+				record := l.dynamicRecordLiteral(n)
+				if record == nil {
+					return nil
+				}
+				return l.dynamicReference(record, hir.Ref(target.Name))
+			}
+		}
+	}
 	if l.unprunedFeatures && !l.shapeLike[target.Name] && !strings.HasPrefix(target.Name, "shape.") {
 		// A class annotation does not run a constructor on a JS literal.
 		// Keep its supplied properties in insertion order and attach only the
