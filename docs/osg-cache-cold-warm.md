@@ -281,3 +281,60 @@ for item in summary: print(json.dumps(item))
 PY
 python3 .cache/osg-cache-measure/analyze.py
 ```
+
+## Control: no cache dir
+
+Measured 2026-10-14 at stoker's request: two serial, fresh-process
+`abap/statements` samples using TS-HA@OSGO, the same materialized closure,
+instrumented CLI, local bridge, prepared environment and clean OSG
+`c681c9f7` worktree as above. `ABAPITI_OSG_ONE_BUILD=0` remained set;
+`ABAPITI_OSG_CACHE` was **unset**, rather than pointing at an empty directory.
+No frontend cache directory was supplied or created by either control.
+Each sample used a new output directory. Prepared Go build/module and
+filesystem caches remained enabled, matching the earlier method; “cold”
+here means no cross-run gogen frontend or whole-program snapshot reuse.
+No other heavy workload ran during either sample; process checks showed
+only the benchmark consuming substantial CPU. Sample starts were
+15:51:22 UTC and 16:01:37 UTC, with the second starting after the first exited.
+
+All times in seconds. Peak RSS uses the same `wait4` definition and is GiB.
+
+| Shard | Condition | TS lowering | ABAP emission | gogen frontend | gogen emission | Go build | Execution | Harness total | Peak RSS |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `abap/statements` | no cache dir, cold sample 1 | 59.0 | 23.3 | 179.2 | 48.3 | 2.4 | 287.0 | 615.7 | 11.6 |
+| `abap/statements` | no cache dir, cold sample 2 | 59.2 | 23.5 | 184.1 | 48.6 | 2.4 | 286.5 | 619.6 | 10.4 |
+
+**The frontend is ~184 s, not ~488 s.** The two-sample mean is **181.6 s**,
+compared with **488.0 s** for the earlier cold run with cache recording
+enabled. This control supports cache-recording-path overhead as the cause
+of the earlier frontend slowdown, rather than a persistent host/regression
+slowdown. It does not isolate serialization, hashing or disk I/O costs
+within that path. Go's independent build-cache reuse explains the short
+Go builds and must not be attributed to disabling the frontend cache.
+
+Both controls exited 0 with **4,962 pass, 0 fail, 0 trap, 0 not-run**.
+Complete `(title, status, message)` multisets and generated Go bytes match
+the original statements cold run exactly, retaining the title/status and
+generated-Go SHA-256 digests listed above. Both controls report round 0
+H/M **0 / 2,730**, round 1 H/M **1,146 / 1,586**; the latter is within-run
+in-memory reuse, with no disk hits. Bridge snapshot counters report
+`frontend: disabled` and `binary: disabled`. Its `gogenFrontend: unsupported`
+label also covers the no-`cacheDir` case in this instrument; it does not
+indicate that this OSG pin lacks cache support.
+
+Raw evidence remains local under `.cache/osg-cache-measure/`:
+`abap-statements-control-no-cache-{1,2}` output directories, matching
+`.stdout.json`, `.stderr.log` and `.rss` files, plus `control-records.json`,
+`control-analysis.json` and `control-progress.log`. The local `control.py`
+adapter reuses `time.py`, `abapiti` and `bridge.mjs`, removes
+`ABAPITI_OSG_CACHE` and `CACHE_EDIT_FILE` from each child environment,
+asserts fresh output directories, and runs samples 1 and 2 sequentially.
+Reproduce with fresh output names using:
+
+```sh
+. .cache/train-o5/env.sh
+unset ABAPITI_OSG_CACHE CACHE_EDIT_FILE
+python3 .cache/osg-cache-measure/control.py \
+  > .cache/osg-cache-measure/control-progress.log 2>&1
+python3 .cache/osg-cache-measure/control-analyze.py
+```
