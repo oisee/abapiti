@@ -666,6 +666,9 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, 
 			if a == nil {
 				return nil, false
 			}
+			if p.Type.Kind == hir.Optional || p.Type.Kind == hir.Dynamic {
+				a = l.observedArrayIndex(a)
+			}
 			a = l.presentValue(args[i], a, p.Type)
 			out = append(out, snapshot(l.coerce(a, p.Type)))
 			continue
