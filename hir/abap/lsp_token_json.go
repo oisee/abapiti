@@ -6,8 +6,9 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-// The LSP debug dump needs native lexer tokens and their Position values. Keep
-// this certificate local to that family: ordinary class layout is not an own-
+// The LSP debug dump needs native lexer tokens, Position, and file-information
+// Identifier values. Keep this certificate local to those families: ordinary
+// class layout is not an own-
 // property proof. Validate every constructor in base-first insertion order;
 // parameters are permitted, but this must not escape during initialization.
 func (e *emitter) lspTokenJSONOrder(c *hir.Class) ([]string, bool) {
@@ -21,7 +22,7 @@ func (e *emitter) lspTokenJSONOrder(c *hir.Class) ([]string, bool) {
 			return nil, false
 		}
 	}
-	if root.Name != "src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken" && root.Name != "src/position.ts.Position" {
+	if root.Name != "src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken" && root.Name != "src/position.ts.Position" && root.Name != "src/abap/4_file_information/_identifier.ts.Identifier" {
 		return nil, false
 	}
 	var chain []*hir.Class
