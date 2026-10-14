@@ -1343,7 +1343,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 
 		z := b.expr(x.Y)
-		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && x.X.Type.IsRef() && x.Y.Type.IsRef() {
+		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && referenceStorage(x.X.Type) && referenceStorage(x.Y.Type) {
 			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
 			b.boxDynamic(left, a, x.X.Type)
 			b.boxDynamic(right, z, x.Y.Type)
