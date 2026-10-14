@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 func TestRegexJSClasses(t *testing.T) {
@@ -83,6 +85,23 @@ func TestRegexCharacterClassesAndBoundedExclusions(t *testing.T) {
 			if got != want {
 				t.Errorf("%s input %q: %v, want %v", tt.pattern, input, got, want)
 			}
+		}
+	}
+}
+
+// A real kernel refuses an empty POSIX pattern; new RegExp("") must not.
+func TestRegexEmptyPatternIsKernelSafe(t *testing.T) {
+	for _, js := range []bool{false, true} {
+		e := &emitter{p: &hir.Program{}, names: hir.NewNames(), descCount: map[string]int{}, types: map[string]bool{}, files: map[string]string{}}
+		id := "runtime.regexp"
+		if js {
+			id = "runtime.regexp_js"
+		}
+		e.buildRegexpRuntime(id, js)
+		src := e.files[e.name(id)+".clas.abap"]
+		ctor := src[strings.Index(src, "METHOD constructor."):strings.Index(src, "METHOD test.")]
+		if !strings.HasSuffix(ctor, "IF posix IS INITIAL.\n  posix = '(?:)'.\nENDIF.\nENDMETHOD.\n") {
+			t.Errorf("js=%v: constructor does not end with the empty-pattern guard", js)
 		}
 	}
 }

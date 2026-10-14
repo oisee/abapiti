@@ -795,6 +795,9 @@ ENDCLASS.
 	} else {
 		e.regexpLegacyRuntime(name)
 	}
+	// A real kernel refuses an empty POSIX pattern (CX_SY_INVALID_REGEX);
+	// JavaScript's new RegExp("") matches everywhere, as does (?:).
+	e.files[name+".clas.abap"] = strings.Replace(e.files[name+".clas.abap"], "ENDMETHOD.\nMETHOD test.", "IF posix IS INITIAL.\n  posix = '(?:)'.\nENDIF.\nENDMETHOD.\nMETHOD test.", 1)
 }
 
 // dynamicRuntime emits the tagged union box for Dynamic values.
