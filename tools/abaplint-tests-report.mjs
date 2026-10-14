@@ -2,10 +2,10 @@
 // Reconcile against an independently executed original mocha run, including
 // duplicate titles. Unregistered tests are not-run, never assumed failures.
 import {readFileSync, writeFileSync} from 'node:fs';
-const [oraclePath, goPath, output] = process.argv.slice(2);
-if (!output) throw new Error('usage: abaplint-tests-report.mjs NODE.json GO.json OUTPUT.json');
-const oracle = JSON.parse(readFileSync(oraclePath, 'utf8'));
-const run = JSON.parse(readFileSync(goPath, 'utf8'));
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+
+export function reconcileResults(oracle, run) {
 const available = new Map();
 for (const title of oracle.titles) available.set(title, (available.get(title) ?? 0) + 1);
 const report = {total:oracle.total ?? oracle.titles.length, passed:0, failed:0, trapped:0, asyncPending:0, notRun:0, registered:run.results.length, notRunReasons:{asyncOrDone:0, skippedOrFocused:0, unregistered:0}, unmatched:[], topTraps:[]};
@@ -59,5 +59,13 @@ if (audited) {
 }
 report.topTraps = [...traps.values()].sort((a,b)=>b.count-a.count || a.message.localeCompare(b.message)).slice(0,20);
 if (report.passed+report.failed+report.trapped+report.asyncPending+report.notRun !== report.total) throw new Error('oracle reconciliation did not sum to total');
-writeFileSync(output,JSON.stringify(report,null,2)+'\n');
-console.log(JSON.stringify(report));
+return report;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+ const [oraclePath, goPath, output] = process.argv.slice(2);
+ if (!output) throw new Error('usage: abaplint-tests-report.mjs NODE.json GO.json OUTPUT.json');
+ const report = reconcileResults(JSON.parse(readFileSync(oraclePath, 'utf8')), JSON.parse(readFileSync(goPath, 'utf8')));
+ writeFileSync(output,JSON.stringify(report,null,2)+'\n');
+ console.log(JSON.stringify(report));
+}

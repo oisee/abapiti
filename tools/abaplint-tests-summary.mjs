@@ -3,6 +3,7 @@
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {resolve, join} from 'node:path';
 import {execFileSync} from 'node:child_process';
+import {reconcileResults} from './abaplint-tests-report.mjs';
 const [directory, output, prefix = ''] = process.argv.slice(2);
 if (!output) throw new Error('usage: abaplint-tests-summary.mjs RUN OUTPUT.json [artifact-prefix]');
 const read = name => JSON.parse(readFileSync(join(directory, name), 'utf8'));
@@ -15,9 +16,10 @@ const specs = manifest?.shards ?? ['rules','lexer','statements','structures'].ma
 const nodeTotals = {passed:0, failed:0, pending:0, total:0};
 const titles = new Map();
 for (const {id:name, name:label} of specs) {
- const report = read(`${prefix}report-${name}.json`);
  const run = read(`${prefix}go-${name}.json`);
  const node = read(`node-${name}.json`);
+ // Raw oracle/host title multisets are authoritative, not a stale saved report.
+ const report = reconcileResults(node, run);
  const closure = read(`${prefix}${name}/closure.json`);
  if (pin && pin !== closure.upstreamPin) throw new Error('mixed upstream pins');
  pin = closure.upstreamPin;
@@ -80,7 +82,7 @@ const result = {...(manifest?.target ? {target:manifest.target} : {}), nodeActiv
  ...(manifest?.partial ? {selectedSuite:{shards:specs.map(s => s.name), files:manifest.files.length, excluded:manifest.excluded, active:nodeTotals.passed + nodeTotals.failed}} : {}),
  countingRule:'passed/active counts only original Node-active titles (11,060 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.',
  asyncInitializationFailures:shards.flatMap(s => s.initialization).filter(r => r.message.includes('unsupported-async')).length,
- registrationParity:shards.every(s => s.registered === s.total && s.unmatched === 0),
+ registrationParity:shards.every(s => s.unregisteredTitles.length === 0 && s.unmatched === 0),
  allTraps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)),
  top20Traps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)).slice(0,20)};
 if (manifest?.target === 'osg') result.countingRule = 'Counts use only original Node-active titles; pending titles remain outside the denominator. Only the dedicated assertion marker is failed. Typed lowering/runtime refusals and other native ABAP exceptions are trapped; unsupported async/done and not-run remain separate. Infrastructure failures never manufacture test results. Refusal-body impacts may overlap and are not operation-execution counts.';
