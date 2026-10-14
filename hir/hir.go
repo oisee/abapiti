@@ -24,7 +24,10 @@ const (
 	// Dynamic is a tagged union value (string, class value or object
 	// reference in one variable): JavaScript `typeof` dispatch works on it.
 	Dynamic Kind = "dynamic"
-	Void    Kind = "void"
+	// UnionRef is a closed structural family, resolved by name in Program.Unions.
+	// Recursive edges never expand inside Args.
+	UnionRef Kind = "unionref"
+	Void     Kind = "void"
 )
 
 // Type describes meaning, never a target spelling. Number is binary64 and
@@ -53,7 +56,7 @@ func (t Type) String() string {
 }
 func (t Type) Equal(u Type) bool { return t.String() == u.String() }
 func (t Type) IsRef() bool {
-	return t.Kind == Promise || t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet || t.Kind == RegExp || t.Kind == Dynamic || t.Kind == ClassValue
+	return t.Kind == UnionRef || t.Kind == Promise || t.Kind == ClassRef || t.Kind == InterfaceRef || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet || t.Kind == RegExp || t.Kind == Dynamic || t.Kind == ClassValue
 }
 
 type Node struct {
@@ -68,6 +71,22 @@ type Node struct {
 type Program struct {
 	Classes    []*Class
 	Interfaces []*Interface
+	Unions     []*UnionDecl `json:",omitempty"`
+}
+
+// UnionDecl retains semantic membership independently of physical boxing.
+// Complete is set only after every layout in a recursive component succeeds.
+type UnionDecl struct {
+	Node
+	Name, Discriminant string
+	Complete           bool
+	Alternatives       []UnionAlternative
+}
+
+type UnionAlternative struct {
+	ID      string
+	Tags    []string
+	Payload Type
 }
 type Class struct {
 	Node

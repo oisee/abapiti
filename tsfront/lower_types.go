@@ -37,6 +37,9 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		l.diagf(n, "unsupported-type", "no checker type for annotation")
 		return hir.T(hir.Void)
 	}
+	if mapped, ok := l.recursiveFamilyType(n, t); ok {
+		return mapped
+	}
 	switch n.Kind {
 	case ast.KindNumberKeyword:
 		l.diagf(n, "note-number-binary64", "number defaults to binary64 pending integer range inference")
@@ -385,6 +388,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	if t == nil {
 		l.diagf(n, "unsupported-type", "no checker type")
 		return hir.T(hir.Void)
+	}
+	if mapped, ok := l.recursiveFamilyType(n, t); ok {
+		return mapped
 	}
 	if l.mappingTypes[t] {
 		l.diagf(n, "unsupported-type", "recursive checker type has no lowered nominal reference")

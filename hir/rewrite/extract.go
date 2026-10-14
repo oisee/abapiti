@@ -88,7 +88,16 @@ func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 	}
 	if !syntaxOnly {
 		x.findInitializers(p)
-		x.addEffects()
+		x.addEffects(len(p.Unions) > 0)
+		for _, u := range p.Unions {
+			x.add("union", u.Name, u.Discriminant, strconv.FormatBool(u.Complete))
+			for _, a := range u.Alternatives {
+				x.add("union_alternative", u.Name, a.ID, a.Payload.String())
+				for _, tag := range a.Tags {
+					x.add("union_tag", u.Name, a.ID, tag)
+				}
+			}
+		}
 		for _, a := range p.Interfaces {
 			for _, b := range p.Interfaces {
 				if interfaceAccepts(a, b) {
