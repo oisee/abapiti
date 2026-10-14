@@ -1,0 +1,46 @@
+{
+  "schema": "selfhost-go-probe/1",
+  "compilerCommit": "6ed0e12230c7e491c32f04775d23f6bdff6a374e",
+  "scope": "core",
+  "go": "go version go1.26.9 linux/amd64",
+  "existingCLI": {
+    "exitCode": 1,
+    "signal": null,
+    "wallSeconds": 55.57509949999999,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr": "refused: src/ddic.ts:192:3: value outside supported numeric, ordering or conversion domain",
+    "checkedFile": "gen/amdp/zcl_osd_amdp_demo.clas.abap",
+    "totalIssues": null,
+    "limitation": "--file accepts one main file; --deps registers other objects as dependencies, so this is not a full-workload parity test"
+  },
+  "adapterBuild": {
+    "exitCode": 0,
+    "signal": null,
+    "wallSeconds": 49.46866036000001,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr": ""
+  },
+  "fullWorkload": {
+    "exitCode": 1,
+    "signal": null,
+    "wallSeconds": 52.578019655,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr": "refused: src/ddic.ts:192:3: value outside supported numeric, ordering or conversion domain",
+    "loader": "generated main.go host-only adaptation: all files addFile; preserve synthetic paths; no dependencies",
+    "totalIssues": null,
+    "byteEqualToNode": false,
+    "issueMultisetEqualToNode": false,
+    "nodeOnly": null,
+    "goOnly": null
+  },
+  "generationSeconds": 76.663,
+  "originalBuildSeconds": 47,
+  "kitRunner": {
+    "exitCode": 1,
+    "signal": null,
+    "wallSeconds": 50.741393659,
+    "stderr": "refused: src/ddic.ts:192:3: value outside supported numeric, ordering or conversion domain",
+    "stdout": "",
+    "extractedWorkloadHashesVerified": true
+  }
+}

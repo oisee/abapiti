@@ -1,0 +1,22 @@
+{
+  "global": {
+    "files": "/**/*.*",
+    "skipGeneratedGatewayClasses": true,
+    "skipGeneratedPersistentClasses": true,
+    "skipGeneratedFunctionGroups": true,
+    "errorOnDuplicateFilenames": true
+  },
+  "dependencies": [],
+  "syntax": {
+    "version": "open-abap",
+    "errorNamespace": "."
+  },
+  "rules": {
+    "unknown_types": true,
+    "allowed_object_naming": true,
+    "check_syntax": true,
+    "implement_methods": true,
+    "superclass_final": true,
+    "parser_error": true
+  }
+}
