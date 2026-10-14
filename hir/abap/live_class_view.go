@@ -292,7 +292,9 @@ func (b *body) liveBox(n, a string, t hir.Type) {
 	raw := b.rawTemp("REF TO object")
 	b.line("CLEAR " + adapter + ".")
 	b.line(raw + " = " + a + ".")
-	b.line("IF " + raw + " IS INSTANCE OF " + e.name("runtime.dynamic") + ".\n" + n + " ?= " + raw + ".\nELSE.")
+	// Keep the probe parseable in v702 dependencies: an unrecognized IF
+	// IS INSTANCE OF prevents resolution of the entire live array class.
+	b.line("TRY.\n" + n + " ?= " + raw + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF " + n + " IS NOT BOUND.")
 	b.line("TRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
 	b.line("IF " + adapter + " IS BOUND.\n" + n + " = " + adapter + "->source( ).\nENDIF.")
 	b.line("IF " + n + " IS NOT BOUND.\nCREATE OBJECT " + n + ".\n" + n + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + "->oval = " + a + ".\nENDIF.\nENDIF.")

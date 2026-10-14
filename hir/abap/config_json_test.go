@@ -247,6 +247,15 @@ func TestConfigJSONFixtures(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if i == 0 {
+			// dependencies activates live array casts. The v702 config gate
+			// loads the array as a dependency: IS INSTANCE OF in an IF there
+			// destroys its parse structure and hides even dense/items/missing.
+			array := files[names.Get("runtime."+hir.T(hir.Array, hir.Ref(hir.RootObject)).String())+".clas.abap"]
+			if !strings.Contains(array, "INTERFACES "+names.Get("view.storage")+".") || !strings.Contains(array, "CATCH cx_sy_move_cast_error.") || strings.Contains(array, "IS INSTANCE OF") {
+				t.Fatal("live reference-array runtime must remain resolvable by the config JSON v702 gate")
+			}
+		}
 		// Cases have overlapping generated identities, so give each a separate directory.
 		dir := filepath.Join(out, fmt.Sprintf("case%d", i))
 		if err := os.MkdirAll(dir, 0755); err != nil {
