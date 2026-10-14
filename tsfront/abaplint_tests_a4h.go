@@ -64,6 +64,15 @@ CLASS-DATA id TYPE c LENGTH 32.
 CLASS-DATA selected TYPE c LENGTH 40.
 CLASS-DATA seq TYPE i.
 CLASS-DATA next TYPE i.
+CLASS-DATA handle TYPE balloghndl.
+CLASS-DATA started TYPE timestampl.
+CLASS-DATA passed TYPE i.
+CLASS-DATA failed TYPE i.
+CLASS-DATA trapped TYPE i.
+CLASS-DATA not_run TYPE i.
+CLASS-DATA async TYPE i.
+CLASS-METHODS bal IMPORTING type TYPE symsgty text TYPE csequence.
+CLASS-METHODS bal_event IMPORTING value TYPE string.
 ENDCLASS.
 CLASS zcl_lnt_test_log IMPLEMENTATION.
 METHOD begin.
@@ -83,6 +92,16 @@ IF start_index > 0.
 next = start_index.
 ENDIF.
 next_index = next.
+DATA header TYPE bal_s_log.
+header-object = 'ZABAPITI'.
+header-subobject = 'CHECK'.
+header-extnumber = |TESTS { id } { selected }|.
+CALL FUNCTION 'BAL_LOG_CREATE' EXPORTING i_s_log = header IMPORTING e_log_handle = handle EXCEPTIONS OTHERS = 1.
+IF sy-subrc <> 0.
+CLEAR handle.
+ENDIF.
+GET TIME STAMP FIELD started.
+bal( type = 'I' text = |start run { id } shard { selected } at index { next }| ).
 append( '{"kind":"resume","startIndex":' && |{ next }| && '}' ).
 ENDMETHOD.
 METHOD append.
@@ -111,15 +130,60 @@ MESSAGE 'Test log insert failed; stop rather than lose checkpoints' TYPE 'A'.
 ENDIF.
 offset = offset + count.
 ENDWHILE.
+bal_event( value ).
 COMMIT WORK AND WAIT.
+ENDMETHOD.
+METHOD bal.
+DATA free TYPE c LENGTH 200.
+DATA handles TYPE bal_t_logh.
+IF handle IS INITIAL.
+RETURN.
+ENDIF.
+free = text.
+CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT' EXPORTING i_log_handle = handle i_msgty = type i_text = free EXCEPTIONS OTHERS = 1.
+INSERT handle INTO TABLE handles.
+CALL FUNCTION 'BAL_DB_SAVE' EXPORTING i_t_log_handle = handles EXCEPTIONS OTHERS = 1.
+ENDMETHOD.
+METHOD bal_event.
+DATA status TYPE string.
+DATA title TYPE string.
+DATA message TYPE string.
+DATA now TYPE timestampl.
+DATA seconds TYPE tzntstmpl.
+IF value CP '{"kind":"registry"*'.
+bal( type = 'I' text = |registry: { count( val = value sub = '","' ) + 1 } tests| ).
+ELSEIF value CP '{"kind":"result"*'.
+FIND PCRE '"status":"([a-z-]+)"\}\}$' IN value SUBMATCHES status.
+CASE status.
+WHEN 'passed'.
+passed = passed + 1.
+WHEN 'failed'.
+failed = failed + 1.
+WHEN 'trapped'.
+trapped = trapped + 1.
+WHEN 'not-run'.
+not_run = not_run + 1.
+WHEN OTHERS.
+async = async + 1.
+ENDCASE.
+IF status <> 'passed' AND status <> 'not-run'.
+FIND PCRE '"title":"((?:[^"\\]|\\.)*)"' IN value SUBMATCHES title.
+FIND PCRE '"message":"((?:[^"\\]|\\.)*)"' IN value SUBMATCHES message.
+bal( type = 'E' text = |{ status }: { title }: { message }| ).
+ENDIF.
+ELSEIF value CP '{"kind":"complete"*'.
+GET TIME STAMP FIELD now.
+seconds = cl_abap_tstmp=>subtract( tstmp1 = now tstmp2 = started ).
+bal( type = 'S' text = |done shard { selected } run { id }: passed { passed } failed { failed } trapped { trapped } not-run { not_run } async { async } in { seconds DECIMALS = 0 } s| ).
+ENDIF.
 ENDMETHOD.
 ENDCLASS.
 `
 
 const a4hTestReport = `REPORT zlnt_tests_run.
-PARAMETERS p_shard TYPE c LENGTH 40 OBLIGATORY.
+PARAMETERS p_shard TYPE c LENGTH 40 OBLIGATORY LOWER CASE.
 PARAMETERS p_start TYPE i DEFAULT 0.
-PARAMETERS p_run TYPE c LENGTH 32 OBLIGATORY.
+PARAMETERS p_run TYPE c LENGTH 32 OBLIGATORY LOWER CASE.
 START-OF-SELECTION.
 DATA next_index TYPE i.
 DATA result TYPE string.
