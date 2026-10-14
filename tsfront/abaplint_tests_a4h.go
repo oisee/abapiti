@@ -27,7 +27,7 @@ func A4HTestSupport() (map[string]string, error) {
 		{"MANDT", "CLNT", "000003", "000006", true},
 		{"RUN_ID", "CHAR", "000032", "000064", true},
 		{"SEQ", "INT4", "000010", "000004", true},
-		{"PART", "INT4", "000010", "000004", true},
+		{"CHUNK_NO", "INT4", "000010", "000004", true},
 		{"SHARD", "CHAR", "000040", "000080", false},
 		{"NEXT_IDX", "INT4", "000010", "000004", false},
 		{"USED", "INT4", "000010", "000004", false},
@@ -73,7 +73,7 @@ selected = shard.
 SELECT MAX( seq ) FROM zlnt_testrun WHERE run_id = @id INTO @seq.
 next = 1.
 IF seq > 0.
-SELECT SINGLE * FROM zlnt_testrun WHERE run_id = @id AND seq = @seq AND part = 1 INTO @row.
+SELECT SINGLE * FROM zlnt_testrun WHERE run_id = @id AND seq = @seq AND chunk_no = 1 INTO @row.
 IF row-shard <> selected.
 MESSAGE 'Run ID already belongs to another shard' TYPE 'E'.
 ENDIF.
@@ -102,7 +102,7 @@ row-shard = selected.
 row-next_idx = next.
 WHILE offset < strlen( value ).
 count = nmin( val1 = 255 val2 = strlen( value ) - offset ).
-row-part = row-part + 1.
+row-chunk_no = row-chunk_no + 1.
 row-used = count.
 row-payload = substring( val = value off = offset len = count ).
 INSERT zlnt_testrun FROM @row.
