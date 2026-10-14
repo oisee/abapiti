@@ -9,16 +9,30 @@ allocation now permits the array-length case rather than trapping it. Both multi
 ASCII word/digit replacements must pass. Every registration is checked in
 order, once; both earlier assertion FAILs survive recovery.
 
-The deliberate initialization and body dumps now use the reviewed DDL
-`/\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi`
-exec pattern on `"define behavior for foo"`. Its leading `\b` lowers to
-`(?<![A-Za-z0-9_])`. OSG's `tools/gogen/go/abap/find.go` `compilePCRE` still
-emits `NOT_COMPILED in FIND PCRE` for negative lookbehind, which is not in
-Go's RE2. Unlike absolute anchors, `adaptTestRegex` does not rewrite this
-assertion. Tests require that exact reason and the native `find.go` location.
-OSG #726 accepts unanchored newline PCRE at this pin, so the old
-`"a\nb".replace(/x+/g, "")` is no longer a dump trigger. No OSG sources or
+The deliberate initialization and body dumps use the admitted sticky literal
+`/a/y`, set `lastIndex = 1001`, then call `exec("a".repeat(1002))`. The emitted
+cursor prefix contains `[\s\S]{1001}`, exceeding Go RE2's 1000-repeat limit.
+OSG's `tools/gogen/go/abap/find.go` `compilePCRE` emits
+`NOT_COMPILED in FIND PCRE` with ``invalid repeat count: `{1001}``` (the diagnostic
+includes backticks around the count). Tests require that exact count/reason and
+the native `find.go` location. The native initialization case performs this
+inside a binding initializer, so recovery also checks the subsequent access to
+its uninitialized binding. An arbitrary JS lookbehind literal would instead
+hit abapiti's unreviewed-regex exception before FIND PCRE, not a host dump.
+
+OSG #726 at this pin accepts unanchored newline PCRE and gives native `\b`/`\B`
+non-UCP ASCII `[A-Za-z0-9_]` membership. The former DDL `define behavior` trigger
+must now pass, not lower its leading `\b` to a lookbehind. The earlier
+`"a\nb".replace(/x+/g, "")` trigger also no longer dumps. No OSG sources or
 emitted test bodies are patched.
+
+## Native word-boundary re-verification
+
+The DDL fix now passes **138/138 active unknown_types tests** on both OSG and
+Go, with **0 FAIL or trap** and one unchanged Node-pending case. Both BDEF alias
+tests pass. Lexer remains **200/200**. Both real-dump fixtures retain their
+original counts with the repeat-limit trigger described above. See
+[the focused evidence and gates](pcre-word-boundary.md).
 
 ## Hole-aware sized-array follow-up
 
@@ -213,12 +227,12 @@ only a previous invocation dumped and the final invocation is clean.
 ## Tests and limits
 
 - The fixture-collecting `TestAbaplintTestHostOSGEmission` uses an original
-  synthetic TS closure with the reviewed DDL exec pattern, once during file
-  initialization and once inside a test, plus #141's native-PCRE refusal
-  cases. It exercises four real gogen/OSGO dumps, checks their lookbehind
-  reasons, checks the later pass, and preserves both earlier assertion FAILs.
+  synthetic TS closure with the sticky cursor repeat-limit trigger, twice
+  during initialization and twice inside tests. It exercises four real
+  gogen/OSGO dumps, checks their invalid-repeat-count reasons, checks the
+  later pass, and preserves both earlier assertion FAILs.
   It does not patch emitted test bodies to manufacture dumps. The Node resume
-  tests use a matching simulated lookbehind diagnostic; the resume helper
+  tests use a matching simulated repeat-limit diagnostic; the resume helper
   itself has no newline-specific assumption.
 - The fixture-collecting `TestAbaplintTestShardsOSGEmission` compiles one union
   and alternates a/b/a/b selections. It checks duplicate-title multiplicity,

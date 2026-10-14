@@ -16,13 +16,13 @@ func TestAbaplintTestShardsOSGEmission(t *testing.T) {
 	t.Setenv("ABAPITI_INLINE", "0")
 	t.Setenv("ABAPITI_SINGLETON", "0")
 	dir := t.TempDir()
-	// OSG 16c024c8 accepts newline PCRE (#726); the reviewed DDL exec pattern's
-	// leading \b lowers to a negative lookbehind that gogen still refuses with
-	// a host NOT_COMPILED dump: exercise init/body recovery without editing ABAP.
+	// A sticky cursor at 1001 emits [\s\S]{1001}, exceeding RE2's repeat
+	// limit at OSG 16c024c8: exercise real init/body NOT_COMPILED recovery
+	// without editing ABAP. Newline PCRE and ASCII boundaries now work.
 	sources := map[string]string{
-		"test/init_a.ts": `(/\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi).exec("define behavior for foo");`,
+		"test/init_a.ts": `const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002));`,
 		"test/shared.ts": `it("duplicate",()=>{});`,
-		"test/a.ts":      `import {expect} from "../runtime/chai"; import "./shared"; it("duplicate",()=>{const r=/foo/; r.exec("foo")}); it("assertion",()=>expect.fail("keep FAIL")); it("dump",()=>{(/\bdefine\s+(?:\w+\s+)*?behavior\s+for\s+([\w/]+)(?:\s+alias\s+(\w+))?/gi).exec("define behavior for foo")}); it("after",()=>{});`,
+		"test/a.ts":      `import {expect} from "../runtime/chai"; import "./shared"; it("duplicate",()=>{const r=/foo/; r.exec("foo")}); it("assertion",()=>expect.fail("keep FAIL")); it("dump",()=>{const r = /a/y; r.lastIndex = 1001; r.exec("a".repeat(1002))}); it("after",()=>{});`,
 		"test/b.ts":      `import "./shared"; it("duplicate",()=>{const r=/foo/; r.exec("foo")});`,
 	}
 	for _, name := range []string{"mocha", "chai"} {
@@ -102,7 +102,7 @@ func TestAbaplintTestShardsOSGEmission(t *testing.T) {
 		var report struct {
 			Passed, Failed, Trapped int
 			Results                 []struct{ Title, Status, Message string }
-			Initialization          []struct{ File, Status string }
+			Initialization          []struct{ File, Status, Message string }
 		}
 		if decode := json.Unmarshal([]byte(stdout.String()), &report); decode != nil {
 			t.Fatalf("shard %s: %v / %v\n%s\n%s", shard, err, decode, stdout.String(), stderr.String())
@@ -124,6 +124,13 @@ func TestAbaplintTestShardsOSGEmission(t *testing.T) {
 		}
 		if report.Failed != wantFailed || !reflect.DeepEqual(titles, want) {
 			t.Fatalf("shard %s registration multiplicity: %v, want %v", shard, titles, want)
+		}
+		if shard == "a" {
+			for _, message := range []string{report.Initialization[0].Message, report.Results[3].Message} {
+				if !strings.Contains(message, "NOT_COMPILED in FIND PCRE") || !strings.Contains(message, "invalid repeat count: `{1001}`") || !strings.Contains(message, "find.go:") {
+					t.Fatalf("wrong host dump reason: %s", message)
+				}
+			}
 		}
 		if shard == "a" && (report.Results[2].Status != "failed" || report.Results[2].Message != "keep FAIL" || report.Results[3].Status != "trapped" || report.Results[4].Status != "passed") {
 			t.Fatalf("FAIL/dump/following pass changed: %s", stdout.String())
