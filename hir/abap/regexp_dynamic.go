@@ -14,17 +14,35 @@ func (e *emitter) regexpDynamicRuntime(name string) {
 	text = strings.Replace(text, "excluded_pattern TYPE string OPTIONAL.", "excluded_pattern TYPE string OPTIONAL checked TYPE abap_bool OPTIONAL.", 1)
 	quote := regexABAPString
 	var code strings.Builder
-	code.WriteString("IF checked = abap_true.\nCASE pattern && `/` && flags.\n")
 	reviewed := e.regexpLiteralTable()
 	keys := make([]string, 0, len(reviewed))
 	for k := range reviewed {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+	// WHEN takes only a literal or data object on a real kernel, so a key
+	// that needs several literal chunks is compared in an IF chain first
+	// (an expression is fine there); short keys stay in the CASE.
+	var long, short strings.Builder
 	for _, k := range keys {
 		spec := reviewed[k]
-		code.WriteString("WHEN " + quote(k) + ".\nposix = " + quote(pcreRegexPattern(spec[0])) + ".\nexcluded = " + quote(pcreRegexPattern(spec[1])) + ".\nignore_case = abap_false.\n")
+		key := quote(k)
+		body := "posix = " + quote(pcreRegexPattern(spec[0])) + ".\nexcluded = " + quote(pcreRegexPattern(spec[1])) + ".\nignore_case = abap_false.\n"
+		if strings.Contains(key, "\n") {
+			if long.Len() == 0 {
+				long.WriteString("IF dispatch_key = " + key + ".\n" + body)
+			} else {
+				long.WriteString("ELSEIF dispatch_key = " + key + ".\n" + body)
+			}
+			continue
+		}
+		short.WriteString("WHEN " + key + ".\n" + body)
 	}
+	code.WriteString("IF checked = abap_true.\nDATA dispatch_key TYPE string.\ndispatch_key = pattern && `/` && flags.\n")
+	if long.Len() > 0 {
+		code.WriteString(long.String() + "ELSE.\n")
+	}
+	code.WriteString("CASE dispatch_key.\n" + short.String())
 	code.WriteString(`WHEN OTHERS.
 IF flags = 'g'.
   FIND PCRE '\A&[1-9][0-9]*\z' IN pattern.
@@ -52,7 +70,7 @@ IF flags = 'i'.
   ignore_case = abap_false.
 ENDIF.
 ENDCASE.
-posix = me->pcre_pattern( posix ).
+@LONG_END@posix = me->pcre_pattern( posix ).
 TRY.
   FIND REGEX posix IN ' '.
 CATCH cx_root.
@@ -63,7 +81,11 @@ ENDIF.
 	if e.execUsed {
 		code.WriteString("exec_pattern = posix.\n")
 	}
-	text = strings.Replace(text, "ENDMETHOD.\nMETHOD test.", code.String()+"ENDMETHOD.\nMETHOD test.", 1)
+	longEnd := ""
+	if long.Len() > 0 {
+		longEnd = "ENDIF.\n"
+	}
+	text = strings.Replace(text, "ENDMETHOD.\nMETHOD test.", strings.Replace(code.String(), "@LONG_END@", longEnd, 1)+"ENDMETHOD.\nMETHOD test.", 1)
 	trap := e.name("runtime.regex_error")
 	text = strings.ReplaceAll(text, "@REGEX_ERROR@", trap)
 	text = strings.Replace(text, "RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.", "RAISE EXCEPTION TYPE "+trap+" EXPORTING pattern = pattern flags = flags.", 1)
