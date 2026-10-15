@@ -59,7 +59,7 @@ func (v *verifier) externCall(e *Expr, check func(*Expr) Type) {
 			p = s.Params[i]
 		}
 		if !check(a).Equal(p) {
-			v.fail(a.Node, "extern argument type mismatch")
+			v.fail(e.Node, "extern argument type mismatch")
 		}
 	}
 }
