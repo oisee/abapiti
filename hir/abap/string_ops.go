@@ -29,6 +29,7 @@ func (e *emitter) stringOpsRuntime() string {
 PUBLIC SECTION.
 CLASS-METHODS pad IMPORTING text TYPE string target TYPE f fill TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS float_prefix IMPORTING text TYPE string RETURNING VALUE(result) TYPE f.
+CLASS-METHODS to_number IMPORTING text TYPE string RETURNING VALUE(result) TYPE f.
 CLASS-METHODS float_optional IMPORTING text TYPE string RETURNING VALUE(result) TYPE $N.
 CLASS-METHODS int_optional IMPORTING text TYPE string RETURNING VALUE(result) TYPE $N.
 CLASS-METHODS sha1 IMPORTING text TYPE string RETURNING VALUE(result) TYPE string.
@@ -180,6 +181,75 @@ CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
 RAISE EXCEPTION TYPE $E.
 ENDTRY.
 IF result = 0 AND token+0(1) = '-'.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+ENDMETHOD.
+METHOD to_number.
+DATA start TYPE i.
+DATA stop TYPE i.
+DATA count TYPE i.
+DATA radix TYPE i.
+DATA digit TYPE i.
+DATA ch TYPE string.
+DATA input TYPE string.
+stop = strlen( text ).
+WHILE start < stop.
+ch = text+start(1).
+IF whitespace( ch ) = abap_false.
+EXIT.
+ENDIF.
+start = start + 1.
+ENDWHILE.
+WHILE stop > start.
+count = stop - 1.
+ch = text+count(1).
+IF whitespace( ch ) = abap_false.
+EXIT.
+ENDIF.
+stop = count.
+ENDWHILE.
+count = stop - start.
+input = substring( val = text off = start len = count ).
+IF input = $EMPTY.
+RETURN.
+ENDIF.
+IF strlen( input ) > 2 AND input+0(1) = '0'.
+ch = input+1(1).
+CASE ch.
+WHEN 'x' OR 'X'.
+radix = 16.
+WHEN 'o' OR 'O'.
+radix = 8.
+WHEN 'b' OR 'B'.
+radix = 2.
+ENDCASE.
+ENDIF.
+IF radix > 0.
+start = 2.
+WHILE start < strlen( input ).
+ch = to_lower( input+start(1) ).
+digit = find( val = '0123456789abcdef' sub = ch ).
+IF digit < 0 OR digit >= radix.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+result = result * radix + digit.
+IF result > 9007199254740991.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+start = start + 1.
+ENDWHILE.
+RETURN.
+ENDIF.
+FIND REGEX '^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$' IN input.
+IF sy-subrc <> 0.
+RAISE EXCEPTION TYPE $E.
+ENDIF.
+TRY.
+result = input.
+CATCH cx_sy_conversion_error cx_sy_arithmetic_error.
+RAISE EXCEPTION TYPE $E.
+ENDTRY.
+IF result = 0 AND input+0(1) = '-'.
 RAISE EXCEPTION TYPE $E.
 ENDIF.
 ENDMETHOD.

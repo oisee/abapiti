@@ -22,7 +22,7 @@ var supportedOps = map[string]bool{
 	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex":          true,
-	"string.parseFloatNumber": true, "string.parseIntNumber": true, "number.isNaN": true,
+	"string.parseFloatNumber": true, "string.parseIntNumber": true, "string.toNumber": true, "dynamic.toNumber": true, "number.isNaN": true,
 	"string.repeat": true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
@@ -114,6 +114,10 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.parseFloatNumber":
 		code = "parseFloatNumber(" + a + ")"
+	case "string.toNumber":
+		code = "stringToNumber(" + a + ")"
+	case "dynamic.toNumber":
+		code = "dynToNumber(" + a + ")"
 	case "string.parseIntNumber":
 		code = "parseIntNumber(" + a + ")"
 	case "number.isNaN":

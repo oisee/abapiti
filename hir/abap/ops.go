@@ -7,7 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true,
+	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true, "string.toNumber": true,
 	"string.sha1Hex": true, "xml.parseWithErrors": true,
 	"json5.parse": true,
 	"chai.box":    true, "chai.deepEqual": true, "chai.deepInclude": true,
@@ -58,6 +58,8 @@ var unsupportedOps = map[string]bool{
 	"union.tag": true, "union.widen": true,
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
 	"dynamic.spread": true,
+	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
+	"dynamic.toNumber": true,
 	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
 	"dynamic.isMap": true, "dynamic.isSet": true, "map.markJS": true,
 	// JSON.stringify replacer callbacks need a per-property callback ABI.

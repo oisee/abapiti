@@ -19,6 +19,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.padStart":           {String, 2, false},
 	"string.parseFloatNumber":   {String, 0, false},
 	"string.parseIntNumber":     {String, 0, false},
+	"string.toNumber":           {String, 0, false},
 	"number.isNaN":              {Number, 0, false},
 	"string.parseFloat":         {String, 0, false},
 	"string.match":              {String, 1, false},
@@ -90,7 +91,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"classvalue.name":  {ClassValue, 0, false},
 	"classvalue.has":   {ClassValue, 1, false},
 	"regexp.lastIndex": {RegExp, 0, false}, "regexp.setLastIndex": {RegExp, 1, false}, "regexp.exec": {RegExp, 1, false}, "regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
-	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
+	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.toNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false}, "dynamic.isArray": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
 }
@@ -177,7 +178,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, t.Args[0].Kind == String
 	case "string.match":
 		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
-	case "string.parseFloatNumber", "string.parseIntNumber":
+	case "string.parseFloatNumber", "string.parseIntNumber", "string.toNumber":
 		return nil, T(Number), true
 	case "number.isNaN":
 		return nil, T(Bool), true
@@ -219,7 +220,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(I64), true
 	case "number.remainder2", "number.fromI32", "number.ceil":
 		return nil, T(Number), true
-	case "dynamic.asNumber":
+	case "dynamic.asNumber", "dynamic.toNumber":
 		return nil, T(Number), true
 	case "dynamic.call0":
 		return []Type{T(String)}, T(Dynamic), true
