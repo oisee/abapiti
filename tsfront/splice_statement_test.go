@@ -26,7 +26,16 @@ func TestSpliceStatementNodeOracle(t *testing.T) {
   delete holes[0];
   holes.splice(1, 1);
   const used = [7, 8, 9].splice(1, 1);
-  return a.join(",") + "|" + b.join(",") + "|" + holes.length + ":" + Probe.show(holes) + "|" + used.join(",");
+  const s = [1, 2, 3, 4];
+  const tail = s.splice(1);
+  s.push(9);
+  tail.push(8);
+  tail[0] = 7;
+  const z = [5, 6];
+  const all = z.splice(0);
+  z.push(1);
+  all.push(2);
+  return a.join(",") + "|" + b.join(",") + "|" + holes.length + ":" + Probe.show(holes) + "|" + used.join(",") + "|" + s.join(",") + "/" + tail.join(",") + "|" + z.join(",") + "/" + all.join(",");
  }
 }`
 	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
