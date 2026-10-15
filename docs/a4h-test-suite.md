@@ -4,7 +4,7 @@ This is **phase 2, stage 1: build only**. None of these tools connect to SAP,
 activate objects, create jobs, or fetch database rows. Deployment, activation,
 background jobs and ST22 inspection belong to the coordinator.
 
-## Build the two packages
+## Build the core, registry and tests packages
 
 Use the pinned abaplint checkout (commit `577f875e`, core 2.120.56, `npm ci`
 already completed), Go 1.26.0 and the project's normal Node dependencies:
@@ -28,14 +28,19 @@ go run ./cmd/abapiti abaplint-tests "$BUILD/closure" -o "$BUILD" --target a4h
 
 `--target a4h` is build-only, forces readable names, adds the zabapgit deployment
 harness, and refuses partial/duplicate shard plans. There is no trace-based
-pruning or assume-integer contract. A single emission/name table serves both
+pruning or assume-integer contract. A single emission/name table serves all three
 packages; shared structural shapes may originate at either a core or test site.
 
-Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`**:
+Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_registry.zip` to
+`$ZLNT_A4H`**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`**:
 
 * `$ZLNT`: the full translated core and its shared runtime, including the
   deployment harness used by the zabapgit client. No executable test
   registrations, test lambdas or mocha/chai classes belong here.
+* `$ZLNT_A4H`: the readable `ZCL_LNT_REGISTRY_A4H` driver and
+  `ZLNT_REGISTRY_RUN`/`CLEAN` reports (plus `NEG` when emitted), corpus/log
+  runtime and setup reports, and optional `ZCL_LNT_TEST_LOG_BAL`. These objects
+  belong only to the registry archive.
 * `$ZLNT_TESTS`: original test registrations/bodies, mocha/chai, test-only
   runtime helpers, `ZCL_LNT_TEST_RUNNER`, `ZCL_LNT_TEST_LOG`,
   `ZLNT_TESTS_RUN`, and the transparent table `ZLNT_TESTRUN`.
@@ -57,13 +62,22 @@ Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`
 
 `core/` is the exact shared source set. `native/zabaplint.prog.abap` is an OSGO
 client for that set, not another translated core. `native/lib/` contains the
-same translated core bytes, excluding only the generated SAP corpus driver
-and its two reports. The SAP corpus driver in `$ZLNT` expects the existing
+same translated core bytes. The SAP corpus driver and its
 `ZCL_ABAPITI_CORPUS`, `ZIF_ABAPITI_CORPUS`, `ZABAPITI_CORPUS` and
-`ZCL_ABAPITI_LOG` services from `tools/allbackends/corpus-abap`; these services
-are not copied into either new package. `abap/` is the combined test
-fixture before replacing the empty OSG checkpoint hook with durable A4H logging.
+`ZCL_ABAPITI_LOG` services are packaged together in `$ZLNT_A4H`.
+`abap/` is the combined test fixture before replacing the empty OSG checkpoint hook with durable A4H logging.
 Do not deploy `abap/` separately or overwrite the old hashed-name package.
+
+`tools/release-build.sh` copies this build's `zlnt.zip`, `zlnt_registry.zip`
+and test archives to the release assets. It checks object ownership and scans
+core for driver/corpus-log references, once with the monolithic tests and again
+with the seven test parts. The monolith and parts are alternative installs.
+The standalone corpus archive is retired because registry owns those objects.
+Set `RELEASE_PACKAGES_ONLY=1` to run the real release packaging path offline
+without building native clients/bundles; supply the usual five arguments and
+a fresh WORK/ASSETS pair. This mode builds the full readable union, lints
+core/tests and the matching registry driver, splits/verifies the tests, and
+checks both archive install sets. SAP BAL adapter activation still requires SAP.
 
 The generated ABAP uses the project's 7.50-style syntax and 255-byte line
 formatter. **FIND/REPLACE PCRE itself requires 7.55**; A4H 7.58 supports it. The
@@ -77,6 +91,7 @@ Reuse the full build above; **do not re-emit or rename its objects**:
 ```sh
 node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS"
 node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS" --verify
+node tools/a4h-tests-ddic-test.mjs "$BUILD" "$OSG"
 node tools/a4h-tests-parts-test.mjs
 ```
 
@@ -174,8 +189,26 @@ objects and zero independence violations**. Current sizes are recorded in
 [the release inventory](release-v0.5.0-assets.tsv) and `parts.json`.
 
 Choose **either** the monolith **or** the parts, never both. Import the release
-core `abaplint-577f875e-a4h.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
+core `abaplint-577f875e-a4h.zip`, then (from v0.5.2)
+`abaplint-577f875e-a4h-registry.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
 then the six remaining parts in parallel. Import all parts before running tests.
+
+From v0.5.2 the core archive contains only translated core. The registry archive
+has its own `$ZLNT_A4H` package: driver, run/clean reports (neg with `--negative`),
+`ZCL_ABAPITI_CORPUS`, `ZCL_ABAPITI_LOG`, their interface and tables, and the corpus
+loader/log setup reports, plus the optional `ZCL_LNT_TEST_LOG_BAL` progress adapter.
+Runtime files are embedded in the standalone binary.
+Run `ZABAPITI_LOG_SETUP` once and load inputs with `ZABAPITI_CORPUS_LOAD` before
+using the registry reports. Test packages retain their independent table logging
+service.
+The OCI import order is `zlnt-core` (lib), `zlnt-registry-a4h` (input), then
+`zlnt-tests-base` and the test parts. This fixes the system self-containment gap
+found by the E.10 OSGO proof (13 syntax issues in the registry driver).
+
+`tools/a4h-tests-lint.mjs` checks extracted core/tests sources with corpus runtime
+as repository dependencies. To verify release self-containment, extract the new
+registry archive too and check all layer sources together; do not let the
+repository corpus dependency mask a missing registry layer.
 
 Before generating `SHA256SUMS`, the release script runs
 `tools/release-path-gate.py` over **every asset**, all decompressed zip/tar entries
@@ -184,6 +217,44 @@ the build user's name as an identifier token are forbidden; any match fails the
 build. Identifier boundaries distinguish a user name from unrelated words such
 as CSS color names; there is no allowlist for path-prefix matches. The gate reports
 zero leaked entries per asset rather than relying on a quick binary spot check.
+
+### Bounded generated methods (v0.5.2)
+
+The shared emitter keeps shard selection in `ZCL_LNT_TEST_RUNNER=>RUN` and
+moves each branch to a private `run_<shard>` method. Non-identifier shard names
+use the emitter's sanitized hash names within ABAP's 30-character limit.
+Each shard calls ordered chunks of about 200 initialization statements. The
+original `host_init_*` recovery boundaries, checkpoint indices, JSON, and common
+RUN prologue/epilogue remain in order. Initialization scratch attributes reset
+where the former RUN locals were initialized.
+
+Large translated registration actions also use ordered chunks, with typed private
+frames cleared at action entry to retain locals across calls. Deletion and Chai
+first-match dispatch use bounded helpers with explicit early-return propagation.
+The parts adapter discovers their leaf branches and initializes RTTI locals in
+each helper scope. Both archive forms receive these changes before packaging.
+
+To compare with an earlier build and inspect every emitted test class:
+
+```sh
+node tools/a4h-runner-split-test.mjs "$BEFORE_BUILD" "$BUILD" "$PARTS"
+node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS" --verify
+```
+
+The pinned 17-shard closure measures **66,994 → 3,963 lines** for the largest
+method across the monolithic and seven-part test archives. RUN itself is now
+**152 lines**; the largest runner helper is **192 lines**. Syntax checks report
+zero issues for the monolithic install set (7,340 files) and reconstructed parts
+(12,383 source/XML files), using the established v755 PCRE exception. Parts
+verification checks 5,023 objects with zero dependency violations; both install
+sets pass archive hashes and unique ownership checks.
+
+The first check recursively inlines the monolithic and base-part runners and
+compares the complete original RUN statement sequence, reversing only the
+explicit local-to-attribute declaration/reset plumbing. It also reopens all eight
+test ZIPs and asserts a 5,000-line method ceiling. The ordinary unit gates cover
+4,962 ordered registration boundaries, unusual shard names, cross-chunk locals,
+and dispatch order/return propagation.
 
 ## Run and resume (coordinator, after deployment)
 
@@ -203,6 +274,19 @@ small independent table/log service. Each checkpoint is split into 255-character
 rows (`SEQ`, `CHUNK_NO`, `USED`, `PAYLOAD`) and committed **before the test body**.
 `NEXT_IDX` already points to the next test when a dump occurs. Completed tests
 emit an indexed result checkpoint; the final report is also written in chunks.
+`ZLNT_TESTRUN` is the only source of truth. The tests base layer has no SAP BAL
+types or function modules. Optional BAL/SLG1 progress requires importing the
+`abaplint-577f875e-a4h-registry.zip` archive, which owns `ZCL_LNT_TEST_LOG_BAL`.
+The logger calls its `BEGIN` and `EVENT` methods dynamically and tolerates an
+absent adapter. SLG1 is a progress mirror and is never used for resume or collection.
+
+The checkpoint TABL uses the corpus tables' standard-data-element DD03P layout:
+`MANDT`, `CHAR32`, `INT4`, `CHAR40`, and `CHAR255`, with `COMPTYPE E`.
+The DDIC regression check resolves those elements with abaplint and compares
+all eight field types/lengths with the previous primitive definitions. Because
+the old `COMPTYPE E` had no `ROLLNAME`, the baseline parses its explicit
+`DATATYPE`/`LENG` as built-in fields. Field order, keys and nullability stay unchanged.
+
 Checkpoint commits are intended for these in-memory tests, not arbitrary
 transactional application code. Retain logs until collection is verified.
 

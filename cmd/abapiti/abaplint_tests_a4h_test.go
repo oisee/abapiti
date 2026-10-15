@@ -1,7 +1,11 @@
 package main
 
 import (
+	"archive/zip"
+	"io"
+
 	"encoding/json"
+	"github.com/oisee/abapiti/tsfront"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,5 +98,87 @@ func TestAbapGitObjectManifest(t *testing.T) {
 	}
 	if strings.Contains(string(first), dir) {
 		t.Fatal("absolute path in manifest")
+	}
+}
+
+func TestA4HTestsArchivePortable(t *testing.T) {
+	support, err := tsfront.A4HTestSupport()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateA4HTestSources(support); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateA4HTestSources(map[string]string{"fixture.clas.abap": "CLASS lcl_global_func DEFINITION. ENDCLASS."}); err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{"BAL_LOG_CREATE", "balloghndl", "bal_s_log", "bal_t_logh", "symsgty"} {
+		if err := validateA4HTestSources(map[string]string{"test.clas.abap": token}); err == nil {
+			t.Errorf("accepted SAP dependency %s", token)
+		}
+	}
+	if err := validateA4HTestSources(map[string]string{"zcl_lnt_test_log_bal.clas.abap": ""}); err == nil {
+		t.Fatal("accepted BAL adapter into tests")
+	}
+	path := filepath.Join(t.TempDir(), "tests.zip")
+	if _, err := writeAbapGitZip(path, "$ZLNT_TESTS", "tests", support); err != nil {
+		t.Fatal(err)
+	}
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	files := map[string]string{}
+	for _, file := range r.File {
+		rc, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, readErr := io.ReadAll(rc)
+		closeErr := rc.Close()
+		if readErr != nil || closeErr != nil {
+			t.Fatalf("read %s: %v / %v", file.Name, readErr, closeErr)
+		}
+		files[file.Name] = string(body)
+	}
+	if err := validateA4HTestSources(files); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReleaseReadableRegistryOwnership(t *testing.T) {
+	core := map[string]string{
+		"zcl_lnt_core.clas.abap":         "CLASS zcl_lnt_core DEFINITION. ENDCLASS.",
+		"zcl_lnt_registry_a4h.clas.abap": "CLASS zcl_lnt_registry_a4h DEFINITION. DATA h TYPE REF TO zcl_lnt_core. ENDCLASS.",
+		"zlnt_registry_run.prog.abap":    "REPORT zlnt_registry_run.",
+		"zlnt_registry_clean.prog.abap":  "REPORT zlnt_registry_clean.",
+		"zlnt_registry_neg.prog.abap":    "REPORT zlnt_registry_neg.",
+	}
+	registry, err := splitA4HRegistry(core)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(core) != 1 {
+		t.Fatalf("driver retained in core: %v", core)
+	}
+	for _, file := range []string{"zcl_lnt_registry_a4h.clas.abap", "zlnt_registry_run.prog.abap", "zlnt_registry_clean.prog.abap", "zlnt_registry_neg.prog.abap", "zcl_abapiti_corpus.clas.abap", "zcl_abapiti_log.clas.abap", "zcl_lnt_test_log_bal.clas.abap", "zabapiti_corpus.tabl.xml", "zabapiti_runlog.tabl.xml"} {
+		if registry[file] == "" {
+			t.Errorf("registry missing %s", file)
+		}
+	}
+	if !strings.Contains(registry["zcl_lnt_registry_a4h.clas.abap"], "zcl_lnt_core") {
+		t.Fatal("driver must preserve union names")
+	}
+	if err := validateA4HSources(core, registry); err != nil {
+		t.Fatal(err)
+	}
+	core["zcl_lnt_core.clas.abap"] += " zcl_abapiti_log=>create( )."
+	if _, err := splitA4HRegistry(core); err == nil {
+		t.Fatal("accepted corpus/log dependency in core")
 	}
 }

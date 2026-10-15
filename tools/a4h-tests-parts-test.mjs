@@ -1,12 +1,19 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import {identifiers, checkIndependence, promote, initialAssignment, balanceRules, adaptRunner, dispatchPlan, adaptDispatch, chaiPlan, adaptChai, groups, split, verifyParts} from './a4h-tests-parts.mjs';
+import {checkPortableTestObject, identifiers, checkIndependence, promote, initialAssignment, balanceRules, adaptRunner, dispatchPlan, adaptDispatch, chaiPlan, adaptChai, groups, split, verifyParts} from './a4h-tests-parts.mjs';
 import {mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 const sha = b => createHash('sha256').update(b).digest('hex');
+
+checkPortableTestObject('zcl_lnt_test_log.clas.abap', "TRY. CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('EVENT') EXPORTING value = value. CATCH cx_sy_dyn_call_error. ENDTRY.");
+checkPortableTestObject('test.clas.abap', 'CLASS lcl_global_func DEFINITION. ENDCLASS.');
+for (const token of ['BAL_LOG_CREATE', 'balloghndl', 'bal_s_log', 'bal_t_logh', 'symsgty']) {
+ assert.throws(() => checkPortableTestObject('test.clas.abap', token), /SAP BAL dependency/);
+}
+assert.throws(() => checkPortableTestObject('zcl_lnt_test_log_bal.clas.xml', '<class/>'), /SAP BAL dependency/);
 
 const refs = identifiers(`CLASS zcl_a DEFINITION INHERITING FROM zcl_parent.
  INTERFACES zif_a.
@@ -31,6 +38,7 @@ METHOD work.
 ENDMETHOD.`);
 assert.deepEqual([...refs].sort(), ['ZCL_A','ZCL_B','ZCL_C','ZCL_D','ZCL_E','ZCL_F','ZCL_PARENT','ZCX_A','ZCX_B','ZIF_A','ZTYPE'].sort());
 assert(identifiers('DATA zcl_shadow TYPE string. DATA r TYPE REF TO zcl_shadow.').has('ZCL_SHADOW'), 'local names must not hide explicit global type references');
+assert.deepEqual([...identifiers('TYPES: BEGIN OF zlnt_frame, value TYPE REF TO zcl_global, END OF zlnt_frame. CLASS-DATA zlnt_state TYPE zlnt_frame. zlnt_state-value = NEW zcl_global( ).')], ['ZCL_GLOBAL']);
 const assignment = new Map([['ZCL_A','statements'],['ZCL_B','syntax'],['ZCL_C','syntax'],['ZCL_BASE','base']]);
 const core = new Set(['ZCL_CORE']);
 const edges = new Map([['ZCL_A', identifiers('DATA r TYPE REF TO zcl_b. zcl_base=>run( ). zcl_core=>run( ).')], ['ZCL_B', identifiers('r = NEW zcl_c( ).')]]);
@@ -122,6 +130,19 @@ const ch = adaptChai(chai, cb, owners);
 assert(!identifiers(ch.source).has('ZCL_A'));
 assert.match(ch.helpers.get('ZCL_LNT_P_RULES_1_CHAI').source, /IF p0->oval IS INSTANCE OF zcl_a/);
 
+// Each split method needs its own RTTI locals and handled propagation. Leaf
+// providers keep the original ABI and must not acquire an undeclared flag.
+const splitChai = [0, 1].map(i => chai.replace('METHOD invoke.', `METHOD invoke_part_${i}.`).replaceAll('      RETURN.', '      handled = abap_true.\n      RETURN.')).join('');
+const splitBlocks = chaiPlan(splitChai);
+assert.equal(splitBlocks.length, 4);
+const splitAdapted = adaptChai(splitChai, splitBlocks, owners);
+assert.equal((splitAdapted.source.match(/DATA ancestors TYPE/g) ?? []).length, 2);
+assert.equal((splitAdapted.source.match(/handled = abap_true/g) ?? []).length, 4);
+for (const helper of splitAdapted.helpers.values()) assert(!helper.source.includes('handled ='));
+const splitDeletion = deletion.replace('METHOD run.', 'METHOD run_part_0.') + deletion.replace('METHOD run.', 'METHOD run_part_1.');
+const splitDispatch = adaptDispatch(factory, splitDeletion, dispatchPlan(factory, splitDeletion), owners);
+assert.equal((splitDispatch.deletion.match(/DATA ancestors TYPE/g) ?? []).length, 2);
+
 // End-to-end archive fixture, including DEVC, reproducible bytes, object hashes,
 // name preservation, generated helpers, and manifest tampering refusal.
 const scratch = mkdtempSync(join(tmpdir(), 'a4h-parts-test-'));
@@ -129,6 +150,7 @@ try {
  const build = join(scratch,'build'), input = join(build,'input'), output = join(scratch,'output');
  mkdirSync(join(input,'src'),{recursive:true}); mkdirSync(join(build,'closure'));
  const support = {ZCL_LNT_TEST_RUNNER:runner,ZCL_LNT_TEST_FACTORY:factory,ZCL_LNT_TEST_DELETE:deletion,
+ ZCL_LNT_TEST_LOG: "CLASS zcl_lnt_test_log IMPLEMENTATION. METHOD append. TRY. CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('EVENT') EXPORTING value = value. CATCH cx_sy_dyn_call_error. ENDTRY. ENDMETHOD. ENDCLASS.\n",
  ZLNT_RUNTIME_CHAI_63495E43F558:chai,ZCL_A:'CLASS zcl_a DEFINITION PUBLIC. ENDCLASS.\n',ZCL_B:'CLASS zcl_b DEFINITION PUBLIC. ENDCLASS.\n'};
  writeFileSync(join(input,'.abapgit.xml'), '<DATA><STARTING_FOLDER>/src/</STARTING_FOLDER><FOLDER_LOGIC>PREFIX</FOLDER_LOGIC></DATA>');
  writeFileSync(join(input,'src/package.devc.xml'), '<DEVC><CTEXT>fixture</CTEXT></DEVC>');
@@ -158,7 +180,9 @@ with zipfile.ZipFile(sys.argv[2],'w') as z:
  assert.deepEqual(first,again,'archives must be reproducible');
  const result=JSON.parse(readFileSync(join(output,'parts.json')));
  assert.equal(result.independence.violations,0);
- assert.equal(result.independence.originalObjects,6);
+ assert.equal(result.assignments.ZCL_LNT_TEST_LOG.part,'base');
+ assert(!result.assignments.ZCL_LNT_TEST_LOG_BAL, 'optional BAL adapter must remain outside tests layers');
+ assert.equal(result.independence.originalObjects,7);
  assert.equal(verifyParts(build,output).checkedObjects,result.independence.checkedObjects);
  for(const info of Object.values(first)) {
   assert.equal(info.sha256,sha(readFileSync(join(output,info.zip))));

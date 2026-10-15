@@ -5,10 +5,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	corpusabap "github.com/oisee/abapiti/tools/allbackends/corpus-abap"
+	"github.com/oisee/abapiti/tsfront"
 )
 
 // The abaplint sources and npm type declarations built into abapiti unpack
@@ -66,11 +70,13 @@ func TestWriteAbapGitZip(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "a.zip")
 	objects, err := writeAbapGitZip(file, "$ZABAPLINT", "test", map[string]string{
 		"zcl_a.clas.abap":             "CLASS zcl_a DEFINITION.",
+		"zcl_embedded.clas.abap":      "CLASS zcl_embedded DEFINITION.",
+		"zcl_embedded.clas.xml":       "<preserved-class-metadata/>",
 		"zcl_a.clas.testclasses.abap": "CLASS ltcl DEFINITION FOR TESTING.",
 		"zif_b.intf.abap":             "INTERFACE zif_b.",
 		"zprog.prog.abap":             "REPORT zprog.",
 	})
-	if err != nil || objects != 3 {
+	if err != nil || objects != 4 {
 		t.Fatalf("objects %d: %v", objects, err)
 	}
 	r, err := zip.OpenReader(file)
@@ -94,7 +100,7 @@ func TestWriteAbapGitZip(t *testing.T) {
 			t.Errorf("missing %s", name)
 		}
 	}
-	if !strings.Contains(got["src/zcl_a.clas.xml"], "<WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>") || !strings.Contains(got["src/zif_b.intf.xml"], "<CLSNAME>ZIF_B</CLSNAME>") {
+	if !strings.Contains(got["src/zcl_a.clas.xml"], "<WITH_UNIT_TESTS>X</WITH_UNIT_TESTS>") || got["src/zcl_embedded.clas.xml"] != "<preserved-class-metadata/>" || !strings.Contains(got["src/zif_b.intf.xml"], "<CLSNAME>ZIF_B</CLSNAME>") {
 		t.Error("class or interface metadata wrong")
 	}
 	if _, err := writeAbapGitZip(file, "$Z", "t", map[string]string{"x.txt": ""}); err == nil {
@@ -136,8 +142,13 @@ func TestAbaplintCommand(t *testing.T) {
 	if checkout == "" {
 		t.Skip("set ABAPITI_ABAPLINT_CHECKOUT to an abaplint checkout at 577f875e")
 	}
+	t.Setenv("ABAPITI_NAMES", "readable")
 	out := t.TempDir()
-	rootCmd.SetArgs([]string{"abaplint", checkout, "-o", out, "-q"})
+	negative := filepath.Join(out, "negative.json")
+	if err := os.WriteFile(negative, []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	rootCmd.SetArgs([]string{"abaplint", checkout, "-o", out, "-q", "--negative", negative})
 	if err := rootCmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -149,9 +160,83 @@ func TestAbaplintCommand(t *testing.T) {
 	if len(classes) < 2000 || len(lib) != len(classes) {
 		t.Fatalf("classes %d, native/lib %d", len(classes), len(lib))
 	}
-	for _, f := range []string{"native/zabaplint.prog.abap", "a4h/abaplint-577f875e-a4h.zip", "osg/README.txt"} {
+	for _, f := range []string{"native/zabaplint.prog.abap", "a4h/abaplint-577f875e-a4h.zip", "a4h/abaplint-577f875e-a4h-registry.zip", "osg/README.txt"} {
 		if _, err := os.Stat(filepath.Join(out, filepath.FromSlash(f))); err != nil {
 			t.Error(err)
 		}
+	}
+	assertA4HArchiveSplit(t, out)
+}
+
+// Check every archive entry, including XML, for accidental runtime coupling.
+func assertA4HArchiveSplit(t *testing.T, out string) {
+	t.Helper()
+	read := func(name string) map[string]string {
+		t.Helper()
+		r, err := zip.OpenReader(filepath.Join(out, "a4h", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+		files := map[string]string{}
+		for _, f := range r.File {
+			rc, err := f.Open()
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, readErr := io.ReadAll(rc)
+			closeErr := rc.Close()
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if closeErr != nil {
+				t.Fatal(closeErr)
+			}
+			files[f.Name] = string(data)
+		}
+		return files
+	}
+	d := tsfront.Drivers()
+	core := read("abaplint-577f875e-a4h.zip")
+	for name, body := range core {
+		content := strings.ToLower(name + "\n" + body)
+		for _, forbidden := range []string{d.A4HClass, d.RunReport, d.CleanReport, d.NegReport, "zcl_abapiti_"} {
+			if strings.Contains(content, strings.ToLower(forbidden)) {
+				t.Errorf("core %s references %s", name, forbidden)
+			}
+		}
+	}
+	registry := read("abaplint-577f875e-a4h-registry.zip")
+	entries, err := corpusabap.Runtime.ReadDir("src")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		body, err := corpusabap.Runtime.ReadFile("src/" + entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if registry["src/"+entry.Name()] != string(body) {
+			t.Errorf("embedded runtime changed: %s", entry.Name())
+		}
+	}
+	for _, object := range []string{d.A4HClass + ".clas", d.RunReport + ".prog", d.CleanReport + ".prog", d.NegReport + ".prog", "zcl_abapiti_corpus.clas", "zcl_abapiti_log.clas", "zcl_lnt_test_log_bal.clas", "zif_abapiti_corpus.intf", "zabapiti_corpus_load.prog", "zabapiti_log_setup.prog"} {
+		for _, ext := range []string{".abap", ".xml"} {
+			if registry["src/"+object+ext] == "" {
+				t.Errorf("registry missing %s%s", object, ext)
+			}
+		}
+	}
+	for _, table := range []string{"zabapiti_corpus", "zabapiti_runlog"} {
+		if registry["src/"+table+".tabl.xml"] == "" {
+			t.Errorf("registry missing %s", table)
+		}
+	}
+	if !strings.Contains(registry["src/package.devc.xml"], "$ZLNT_A4H") {
+		t.Error("registry package missing")
 	}
 }

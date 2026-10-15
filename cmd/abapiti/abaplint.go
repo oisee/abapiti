@@ -13,6 +13,7 @@ import (
 
 	"github.com/oisee/abapiti/hir/abap"
 	gohir "github.com/oisee/abapiti/hir/golang"
+	corpusabap "github.com/oisee/abapiti/tools/allbackends/corpus-abap"
 	"github.com/oisee/abapiti/tsfront"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ never answered silently wrong.
 
 Outputs under <outdir>:
   classes/  the translated classes and interfaces
-  a4h/      abapGit zip: classes + the A4H driver + reports _CLEAN (timings) and _RUN (profiles)
+  a4h/      abapGit zips: translated core, then A4H registry driver + corpus/log runtime
   osg/      classes for open-steamgate unit runners (+ ZCL_ABAPITI_REGISTRY_RUN
             with embedded inputs when --input, --deps and --config are given)
   native/   zabaplint.prog.abap + lib/ for open-steamgate's osabap native build
@@ -341,7 +342,23 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	var next []string
 	if targets["a4h"] {
 		dir := filepath.Join(out, "a4h")
-		sources := copyMap(emitted)
+		sources := map[string]string{}
+		entries, err := corpusabap.Runtime.ReadDir("src")
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			data, err := corpusabap.Runtime.ReadFile("src/" + entry.Name())
+			if err != nil {
+				return err
+			}
+			sources[entry.Name()] = string(data)
+		}
+		logBAL, err := tsfront.A4HTestLogBAL()
+		if err != nil {
+			return err
+		}
+		sources["zcl_lnt_test_log_bal.clas.abap"] = logBAL
 		d := tsfront.Drivers()
 		a4h := d.A4HClass
 		sources[a4h+".clas.abap"] = tsfront.RegistryRunCorpusClass(a4h, runSHA, negative, names)
@@ -354,7 +371,13 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		zipFile := filepath.Join(dir, "abaplint-"+pin+"-a4h.zip")
-		objects, err := writeAbapGitZip(zipFile, pkg, "abaplint "+pin+" translated by abapiti", sources)
+		objects, err := writeAbapGitZip(zipFile, pkg, "abaplint "+pin+" translated by abapiti", emitted)
+		if err != nil {
+			return err
+		}
+		registryPkg := truncate(strings.ToUpper(pkg), 26) + "_A4H"
+		registryZip := filepath.Join(dir, "abaplint-"+pin+"-a4h-registry.zip")
+		registryObjects, err := writeAbapGitZip(registryZip, registryPkg, "abaplint "+pin+" translated by abapiti", sources)
 		if err != nil {
 			return err
 		}
@@ -365,12 +388,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 				break
 			}
 		}
-		line := fmt.Sprintf("a4h/     abapGit zip, %d objects%s. Import it with abapGit (New Offline, package %s), then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from the ZABAPITI_CORPUS table (ZCL_ABAPITI_CORPUS, ZCL_ABAPITI_LOG must be installed) and prints ok=X when the issues match Node's.", objects, releaseNote, pkg, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
+		line := fmt.Sprintf("a4h/     Import %s first with abapGit (New Offline, package %s): translated core only, %d objects%s. Then import %s (package %s): A4H registry driver, run/clean reports (negative report with --negative), corpus/log runtime and setup reports, optional BAL/SLG1 test progress adapter, %d objects. Run ZABAPITI_LOG_SETUP once and load the corpus with ZABAPITI_CORPUS_LOAD, then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from ZABAPITI_CORPUS and prints ok=X when the issues match Node's.", filepath.Base(zipFile), pkg, objects, releaseNote, filepath.Base(registryZip), registryPkg, registryObjects, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
 		if err := os.WriteFile(filepath.Join(dir, "README.txt"), []byte(line+"\n"), 0644); err != nil {
 			return err
 		}
 		next = append(next, line)
-		n.step("packaged a4h: %s", zipFile)
+		n.step("packaged a4h: %s + %s", zipFile, registryZip)
 	}
 	if targets["osg"] {
 		dir := filepath.Join(out, "osg")

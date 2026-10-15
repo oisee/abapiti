@@ -90,8 +90,10 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 	n := names.Get
 	assertionClass := n("exception.testAssertion." + hir.Ref("builtin.Error").String())
 	var initialization, hostDeclarations, hostMethods strings.Builder
+	var initBlocks []string
 	initIndex, hostIndex := 0, 0
 	addAction := func(class, file, action string) {
+		blockStart := initialization.Len()
 		initIndex++
 		hostIndex++
 		boundary := fmt.Sprintf("host_init_%d", hostIndex)
@@ -100,6 +102,7 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 		fmt.Fprintf(&initialization, "IF skip_init NS ',%d,'.\ncheckpoint( `{\"kind\":\"init\",\"index\":%d,\"file\":` && quote( %s ) && `,\"action\":` && quote( %s ) && `}` ).\n", initIndex, initIndex, abapTestLiteral(file), abapTestLiteral(action))
 		fmt.Fprintf(&initialization, "TRY.\nDATA(host_message_%d) = %s( ).\nIF host_message_%d IS NOT INITIAL.\nadd_initialization( file = %s action = %s status = 'trapped' message = host_message_%d ).\nENDIF.\nCATCH %s INTO init_assertion.\nadd_initialization( file = %s action = %s status = 'failed' message = init_assertion->payload->%s ).\nCATCH %s INTO init_trap.\nadd_initialization( file = %s action = %s status = 'trapped' message = init_trap->source_location ).\nCATCH cx_root INTO init_error.\nerror_class = cl_abap_classdescr=>get_class_name( init_error ).\nREPLACE FIRST OCCURRENCE OF '\\CLASS=' IN error_class WITH ''.\nerror_text = init_error->get_text( ).\nadd_initialization( file = %s action = %s status = 'trapped' message = error_class && |: | && error_text ).\nENDTRY.\n", hostIndex, boundary, hostIndex, abapTestLiteral(file), abapTestLiteral(action), hostIndex, assertionClass, abapTestLiteral(file), abapTestLiteral(action), n("member.message"), n("exception.unexecuted"), abapTestLiteral(file), abapTestLiteral(action), abapTestLiteral(file), abapTestLiteral(action))
 		initialization.WriteString("checkpoint( `{\"kind\":\"init-done\"}` ).\nENDIF.\n")
+		initBlocks = append(initBlocks, initialization.String()[blockStart:])
 	}
 	// Each shard replays exactly its own dependency-first manifest, including
 	// borrowed test modules. Local checkpoint indices restart at one per shard.
@@ -132,7 +135,7 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 			}
 		}
 	}
-	var selectedInitialization strings.Builder
+	var selectedInitialization, shardDeclarations, shardMethods strings.Builder
 	if len(manifest.Shards) == 0 {
 		addOrder(manifest.Initialization)
 		fmt.Fprintf(&selectedInitialization, "checkpoint( '{\"kind\":\"plan\",\"initializations\":%d}' ).\n%s", initIndex, initialization.String())
@@ -145,9 +148,14 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 			}
 			seen[shard.Name] = true
 			initialization.Reset()
+			initBlocks = nil
 			initIndex = 0
 			addOrder(shard.Initialization)
-			fmt.Fprintf(&selectedInitialization, "WHEN %s.\ncheckpoint( '{\"kind\":\"plan\",\"initializations\":%d}' ).\n%s", abapTestLiteral(shard.Name), initIndex, initialization.String())
+			method := testShardMethod(shard.Name)
+			fmt.Fprintf(&selectedInitialization, "WHEN %s.\nresult = %s( start_index = start_index skip_init = skip_init ).\n", abapTestLiteral(shard.Name), method)
+			decl, body := testShardMethods(method, initIndex, initBlocks)
+			shardDeclarations.WriteString(decl)
+			shardMethods.WriteString(body)
 		}
 		// An unknown selector produces no plan; the parent fails closed.
 		selectedInitialization.WriteString("WHEN OTHERS.\nRETURN.\nENDCASE.\n")
@@ -157,7 +165,7 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 	}
 	replacements := strings.NewReplacer(
 		"INITIALIZATION", selectedInitialization.String(),
-		"HOSTDECLARATIONS", hostDeclarations.String(), "HOSTMETHODS", hostMethods.String(),
+		"HOSTDECLARATIONS", hostDeclarations.String()+shardDeclarations.String(), "HOSTMETHODS", hostMethods.String()+shardMethods.String(),
 		"RUNTIME", n(runtime.Name), "TESTS", n("member.tests"), "FOCUSED", n("member.focused"),
 		"TESTCASE", n("runtime/mocha.ts.TestCase"), "TITLE", n("member.title"), "SKIPPED", n("member.skipped"), "ONLY", n("member.only"),
 		"BODY", n("member.body"), "CALL", n("member.call"),
@@ -205,6 +213,11 @@ PRIVATE SECTION.
 HOSTDECLARATIONS
 CLASS-METHODS host_body IMPORTING test TYPE REF TO TESTCASE EXPORTING settled TYPE REF TO PROMISECLASS message TYPE string.
 CLASS-DATA initialization TYPE string.
+CLASS-DATA init_error TYPE REF TO cx_root.
+CLASS-DATA init_assertion TYPE REF TO ASSERTCLASS.
+CLASS-DATA init_trap TYPE REF TO TRAPCLASS.
+CLASS-DATA error_class TYPE string.
+CLASS-DATA error_text TYPE string.
 CLASS-METHODS quote IMPORTING value TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS add_initialization IMPORTING file TYPE string action TYPE string status TYPE string message TYPE string.
 ENDCLASS.
@@ -228,12 +241,12 @@ METHOD host_body.
 settled = test->BODY->CALL( ).
 ENDMETHOD.
 METHOD run.
-DATA init_error TYPE REF TO cx_root.
+CLEAR init_error.
 DATA test_error TYPE REF TO cx_root.
-DATA error_class TYPE string.
-DATA error_text TYPE string.
-DATA init_assertion TYPE REF TO ASSERTCLASS.
-DATA init_trap TYPE REF TO TRAPCLASS.
+CLEAR error_class.
+CLEAR error_text.
+CLEAR init_assertion.
+CLEAR init_trap.
 DATA passed TYPE i.
 DATA failed TYPE i.
 DATA trapped TYPE i.

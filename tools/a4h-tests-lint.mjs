@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Syntax-check the actual two-package sources and table, with read-only deps.
+// Syntax-check translated core/tests and the matching readable registry driver.
+// Corpus/log runtime remains a dependency; its optional BAL adapter needs SAP.
 import {createRequire} from 'node:module';
 import {readFileSync,readdirSync} from 'node:fs';
 import {resolve,join} from 'node:path';
@@ -15,8 +16,9 @@ config.get().syntax.errorNamespace='.*';
 config.get().rules={parser_error:true,check_syntax:true};
 const reg=new lint.Registry(config);
 let objects=0;
-for(const part of ['core','tests']) for(const name of readdirSync(join(build,part))) {
+for(const part of ['core','tests','registry']) for(const name of readdirSync(join(build,part))) {
  if(!/\.(?:abap|xml)$/.test(name)) continue;
+ if(part==='registry'&&!/^(?:zcl_lnt_registry_a4h|zlnt_registry_(?:run|clean|neg))\./.test(name)) continue;
  const source=readFileSync(join(build,part,name),'utf8');
  if(name.endsWith('.abap')) {
   if(Buffer.byteLength(name.split('.')[0])>30) throw new Error(`overlong name ${name}`);
@@ -36,5 +38,5 @@ dependencies(resolve(import.meta.dirname,'allbackends/corpus-abap/src'));
 reg.parse();
 const issues=reg.findIssues();
 for(const issue of issues) console.error(`${issue.getFilename()}:${issue.getStart().getRow()}: ${issue.getMessage()}`);
-console.log(`A4H two-package ABAP v755 (PCRE exception): ${objects} files, ${issues.length} issues`);
+console.log(`A4H core/tests/registry driver ABAP v755 (PCRE exception): ${objects} files, ${issues.length} issues`);
 process.exitCode=issues.length?1:0;

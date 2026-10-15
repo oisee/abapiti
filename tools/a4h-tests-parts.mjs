@@ -24,6 +24,7 @@ const nameOf = key => key.split('.')[0];
 export function identifiers(source) {
  const tokens = [];
  const locals = new Set();
+ const localTypes = new Set();
  let i = 0, previousWord = '';
  function code(templateExpression = false) {
   while (i < source.length) {
@@ -48,6 +49,8 @@ export function identifiers(source) {
     while (i < source.length && /[a-z0-9_]/i.test(source[i])) i++;
     const token = source.slice(start, i).toUpperCase();
     const before = source.slice(0, start).slice(-80);
+    const typeDeclaration = previousWord === 'TYPES' || /\bTYPES\s*:\s*BEGIN\s+OF\s*$/i.test(before);
+    if (typeDeclaration) localTypes.add(token);
     const declaration = ['DATA', 'METHODS', 'CONSTANTS', 'TYPES'].includes(previousWord);
     if (declaration) locals.add(token);
     const member = /(?:->|=>|~)\s*$/.test(before) || declaration || previousWord === 'METHOD';
@@ -58,7 +61,12 @@ export function identifiers(source) {
   }
  }
  code();
- return new Set(tokens.filter(t => t.objectContext || !locals.has(t.token)).map(t => t.token));
+ return new Set(tokens.filter(t => !localTypes.has(t.token) && (t.objectContext || !locals.has(t.token))).map(t => t.token));
+}
+
+// Check every emitted object file, including XML, for SAP BAL dependencies.
+export function checkPortableTestObject(file, source) {
+ if (/zcl_lnt_test_log_bal\./i.test(file) || /\b(?:bal_|balloghndl\b|symsgty\b)/i.test(source)) throw new Error(`SAP BAL dependency in tests object: ${file}`);
 }
 
 export function checkIndependence(edges, assignment, core, external = new Set()) {
@@ -177,8 +185,8 @@ const ancestors = receiver => `    DATA ancestors TYPE STANDARD TABLE OF string 
 `;
 export function chaiPlan(source) {
  const blocks = [];
- for (const m of source.matchAll(/  METHOD (entries|invoke)\.\n([\s\S]*?)  ENDMETHOD\./g)) {
-  const lines = m[2].split('\n');
+ for (const m of source.matchAll(/  METHOD ((entries|invoke)(?:_part_\d+)?)\.\n([\s\S]*?)  ENDMETHOD\./g)) {
+  const lines = m[3].split('\n');
   for (let i = 0; i < lines.length; i++) {
    const match = lines[i].match(/^\s+IF p0->oval IS INSTANCE OF (z[a-z0-9_]+)\.$/);
    if (!match) continue;
@@ -190,7 +198,7 @@ export function chaiPlan(source) {
    }
    if (depth) throw new Error('unbalanced chai dispatch block');
    i--;
-   blocks.push({kind: 'chai', method: `c_${blocks.length}`, operation: m[1], target: match[1].toUpperCase(), text: lines.slice(start, i + 1).join('\n') + '\n'});
+   blocks.push({kind: 'chai', method: `c_${blocks.length}`, scope: m[1], operation: m[2], target: match[1].toUpperCase(), text: lines.slice(start, i + 1).join('\n') + '\n'});
   }
  }
  if (!blocks.length) throw new Error('unsupported chai layout');
@@ -204,10 +212,10 @@ export function adaptChai(source, blocks, assignment) {
   if (!helpers.has(name)) helpers.set(name, {part, declarations: [], methods: []});
   const h = helpers.get(name), returns = b.operation === 'entries';
   h.declarations.push(`    CLASS-METHODS ${b.method} IMPORTING p0 TYPE REF TO zlnt_runtime_dyna_a429568d5be8${returns ? ' RETURNING VALUE(result) TYPE zlnt_runtime_dyna_a429568d5be8=>entries_type' : ''}.`);
-  h.methods.push(`  METHOD ${b.method}.\n${b.text}  ENDMETHOD.\n`);
-  const setup = initialized.has(b.operation) ? '' : ancestors('p0->oval');
-  initialized.add(b.operation);
-  source = source.replace(b.text, `${setup}    IF line_exists( ancestors[ table_line = '\\CLASS=${b.target}' ] ).\n      CALL METHOD ('${name}')=>('${b.method.toUpperCase()}')\n        EXPORTING p0 = p0${returns ? ' RECEIVING result = result' : ''}.\n      RETURN.\n    ENDIF.\n`);
+  h.methods.push(`  METHOD ${b.method}.\n${b.text.replace(/^\s*handled = abap_true\.\n/gm, '')}  ENDMETHOD.\n`);
+  const setup = initialized.has(b.scope ?? b.operation) ? '' : ancestors('p0->oval');
+  initialized.add(b.scope ?? b.operation);
+  source = source.replace(b.text, `${setup}    IF line_exists( ancestors[ table_line = '\\CLASS=${b.target}' ] ).\n      CALL METHOD ('${name}')=>('${b.method.toUpperCase()}')\n        EXPORTING p0 = p0${returns ? ' RECEIVING result = result' : ''}.\n${b.scope?.includes('_part_') ? '      handled = abap_true.\n' : ''}      RETURN.\n    ENDIF.\n`);
  }
  return {source, helpers: new Map([...helpers].map(([name, h]) => [name, {part: h.part, source: `CLASS ${name.toLowerCase()} DEFINITION PUBLIC CREATE PRIVATE.\n  PUBLIC SECTION.\n${h.declarations.join('\n')}\nENDCLASS.\nCLASS ${name.toLowerCase()} IMPLEMENTATION.\n${h.methods.join('')}ENDCLASS.\n` }]))};
 }
@@ -232,7 +240,7 @@ export function adaptDispatch(factory, deletion, plan, assignment) {
  }
  // RTTI ancestor membership implements the original IS INSTANCE OF conditions,
  // in precisely their original order (not regrouped by package).
- deletion = deletion.replace('    IF p0 IS INSTANCE OF', ancestors('p0') + '    IF p0 IS INSTANCE OF');
+ deletion = deletion.replace(/(  METHOD [a-z0-9_]+\.\n)([\s\S]*?)(  ENDMETHOD\.)/g, (text, begin, body, end) => begin + body.replace('    IF p0 IS INSTANCE OF', ancestors('p0') + '    IF p0 IS INSTANCE OF') + end);
  for (const b of plan.blocks) {
   const provider = add(b);
   deletion = deletion.replace(b.text, `    IF line_exists( ancestors[ table_line = '\\CLASS=${b.target}' ] ).\n      CALL METHOD ('${provider}')=>('${b.method.toUpperCase()}')\n        EXPORTING p0 = p0 key = key IMPORTING handled = handled result = result.\n      RETURN.\n    ENDIF.\n`);
@@ -310,6 +318,7 @@ export function verifyParts(build, output) {
    verifyManifest(directory, manifest);
    for (const [key, object] of Object.entries(manifest.objects)) {
     if (key === 'PACKAGE.DEVC') continue;
+    for (const file of object.files) checkPortableTestObject(file, readFileSync(join(directory, file), 'utf8'));
     const name = nameOf(key);
     if (assignment.has(name) || core.has(name)) throw new Error(`duplicate object: ${name}`);
     assignment.set(name, part); hashes.set(key, object.sha256);

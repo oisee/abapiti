@@ -190,7 +190,11 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 	} else {
 		fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\nENDMETHOD.\nENDCLASS.\n", e.name("view.refusal"))
 	}
-	e.files[name+".clas.abap"] = code.String()
+	source := code.String()
+	if testPart {
+		source = splitTestDispatch(source, "run", "IF p0 IS INSTANCE OF ", "p0 TYPE REF TO object key TYPE string", " result TYPE abap_bool")
+	}
+	e.files[name+".clas.abap"] = source
 	return name
 }
 

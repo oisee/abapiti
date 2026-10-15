@@ -300,7 +300,12 @@ ENDCLASS.
 			lines[i] = strings.ReplaceAll(line, "RAISE EXCEPTION TYPE "+trap+".", "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `chai."+method+"`.")
 		}
 	}
-	e.files[name+".clas.abap"] = strings.Join(lines, "\n")
+	source = strings.Join(lines, "\n")
+	if e.testPackages {
+		source = splitTestDispatch(source, "entries", "IF p0->oval IS INSTANCE OF ", "p0 TYPE REF TO "+d, " result TYPE "+d+"=>entries_type")
+		source = splitTestDispatch(source, "invoke", "IF p0->oval IS INSTANCE OF ", "p0 TYPE REF TO "+d, "")
+	}
+	e.files[name+".clas.abap"] = source
 }
 
 // Only integral boxes, source literals and parsed JSON certify zero's sign.

@@ -21,34 +21,36 @@ func A4HTestSupport() (map[string]string, error) {
 	}
 	var fields strings.Builder
 	for _, f := range []struct {
-		name, typ, length, internal string
-		key                         bool
+		name, rollname string
+		key            bool
 	}{
-		{"MANDT", "CLNT", "000003", "000006", true},
-		{"RUN_ID", "CHAR", "000032", "000064", true},
-		{"SEQ", "INT4", "000010", "000004", true},
-		{"CHUNK_NO", "INT4", "000010", "000004", true},
-		{"SHARD", "CHAR", "000040", "000080", false},
-		{"NEXT_IDX", "INT4", "000010", "000004", false},
-		{"USED", "INT4", "000010", "000004", false},
-		{"PAYLOAD", "CHAR", "000255", "000510", false},
+		{"MANDT", "MANDT", true},
+		{"RUN_ID", "CHAR32", true},
+		{"SEQ", "INT4", true},
+		{"CHUNK_NO", "INT4", true},
+		{"SHARD", "CHAR40", false},
+		{"NEXT_IDX", "INT4", false},
+		{"USED", "INT4", false},
+		{"PAYLOAD", "CHAR255", false},
 	} {
-		key := ""
+		// Match the standard-data-element layout in zabapiti_corpus.tabl.xml.
+		fmt.Fprintf(&fields, "    <DD03P>\n     <FIELDNAME>%s</FIELDNAME>\n", f.name)
 		if f.key {
-			key = "X"
+			fields.WriteString("     <KEYFLAG>X</KEYFLAG>\n")
 		}
-		inttype := "C"
-		if f.typ == "INT4" {
-			inttype = "I"
+		fmt.Fprintf(&fields, "     <ROLLNAME>%s</ROLLNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n", f.rollname)
+		if f.key {
+			fields.WriteString("     <NOTNULL>X</NOTNULL>\n")
 		}
-		fmt.Fprintf(&fields, "<DD03P><FIELDNAME>%s</FIELDNAME><KEYFLAG>%s</KEYFLAG><NOTNULL>%s</NOTNULL><ADMINFIELD>0</ADMINFIELD><COMPTYPE>E</COMPTYPE><INTTYPE>%s</INTTYPE><INTLEN>%s</INTLEN><DATATYPE>%s</DATATYPE><LENG>%s</LENG><MASK>  %s</MASK></DD03P>\n", f.name, key, key, inttype, f.internal, f.typ, f.length, f.typ)
+		fields.WriteString("     <COMPTYPE>E</COMPTYPE>\n    </DD03P>\n")
 	}
 	files["zlnt_testrun.tabl.xml"] = `<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_TABL" serializer_version="v1.0.0">
 <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0"><asx:values>
 <DD02V><TABNAME>ZLNT_TESTRUN</TABNAME><DDLANGUAGE>E</DDLANGUAGE><TABCLASS>TRANSP</TABCLASS><CLIDEP>X</CLIDEP><DDTEXT>abaplint test checkpoints and chunked JSON</DDTEXT><MAINFLAG>X</MAINFLAG><CONTFLAG>A</CONTFLAG><EXCLASS>1</EXCLASS></DD02V>
 <DD09L><TABNAME>ZLNT_TESTRUN</TABNAME><AS4LOCAL>A</AS4LOCAL><TABKAT>0</TABKAT><TABART>APPL0</TABART><BUFALLOW>N</BUFALLOW></DD09L>
-<DD03P_TABLE>` + fields.String() + `</DD03P_TABLE>
+<DD03P_TABLE>
+` + fields.String() + `</DD03P_TABLE>
 </asx:values></asx:abap></abapGit>
 `
 	return files, nil
@@ -64,15 +66,6 @@ CLASS-DATA id TYPE c LENGTH 32.
 CLASS-DATA selected TYPE c LENGTH 40.
 CLASS-DATA seq TYPE i.
 CLASS-DATA next TYPE i.
-CLASS-DATA handle TYPE balloghndl.
-CLASS-DATA started TYPE timestampl.
-CLASS-DATA passed TYPE i.
-CLASS-DATA failed TYPE i.
-CLASS-DATA trapped TYPE i.
-CLASS-DATA not_run TYPE i.
-CLASS-DATA async TYPE i.
-CLASS-METHODS bal IMPORTING type TYPE symsgty text TYPE csequence.
-CLASS-METHODS bal_event IMPORTING value TYPE string.
 ENDCLASS.
 CLASS zcl_lnt_test_log IMPLEMENTATION.
 METHOD begin.
@@ -92,16 +85,10 @@ IF start_index > 0.
 next = start_index.
 ENDIF.
 next_index = next.
-DATA header TYPE bal_s_log.
-header-object = 'ZABAPITI'.
-header-subobject = 'CHECK'.
-header-extnumber = |TESTS { id } { selected }|.
-CALL FUNCTION 'BAL_LOG_CREATE' EXPORTING i_s_log = header IMPORTING e_log_handle = handle EXCEPTIONS OTHERS = 1.
-IF sy-subrc <> 0.
-CLEAR handle.
-ENDIF.
-GET TIME STAMP FIELD started.
-bal( type = 'I' text = |start run { id } shard { selected } at index { next }| ).
+TRY.
+CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('BEGIN') EXPORTING run_id = id shard = selected next_index = next.
+CATCH cx_sy_dyn_call_error.
+ENDTRY.
 append( '{"kind":"resume","startIndex":' && |{ next }| && '}' ).
 ENDMETHOD.
 METHOD append.
@@ -130,8 +117,51 @@ MESSAGE 'Test log insert failed; stop rather than lose checkpoints' TYPE 'A'.
 ENDIF.
 offset = offset + count.
 ENDWHILE.
-bal_event( value ).
+TRY.
+CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('EVENT') EXPORTING value = value.
+CATCH cx_sy_dyn_call_error.
+ENDTRY.
 COMMIT WORK AND WAIT.
+ENDMETHOD.
+ENDCLASS.
+`
+
+// A4HTestLogBAL is an optional SAP BAL/SLG1 mirror, shipped only in the
+// registry archive. ZLNT_TESTRUN remains the source of truth for checkpoints.
+func A4HTestLogBAL() (string, error) {
+	return abap.Format(a4hTestLogBAL)
+}
+
+const a4hTestLogBAL = `CLASS zcl_lnt_test_log_bal DEFINITION PUBLIC FINAL CREATE PRIVATE.
+PUBLIC SECTION.
+CLASS-METHODS begin IMPORTING run_id TYPE c shard TYPE c next_index TYPE i.
+CLASS-METHODS event IMPORTING value TYPE string.
+PRIVATE SECTION.
+CLASS-DATA id TYPE c LENGTH 32.
+CLASS-DATA selected TYPE c LENGTH 40.
+CLASS-DATA handle TYPE balloghndl.
+CLASS-DATA started TYPE timestampl.
+CLASS-DATA passed TYPE i.
+CLASS-DATA failed TYPE i.
+CLASS-DATA trapped TYPE i.
+CLASS-DATA not_run TYPE i.
+CLASS-DATA async TYPE i.
+CLASS-METHODS bal IMPORTING type TYPE symsgty text TYPE csequence.
+ENDCLASS.
+CLASS zcl_lnt_test_log_bal IMPLEMENTATION.
+METHOD begin.
+id = run_id.
+selected = shard.
+DATA header TYPE bal_s_log.
+header-object = 'ZABAPITI'.
+header-subobject = 'CHECK'.
+header-extnumber = |TESTS { id } { selected }|.
+CALL FUNCTION 'BAL_LOG_CREATE' EXPORTING i_s_log = header IMPORTING e_log_handle = handle EXCEPTIONS OTHERS = 1.
+IF sy-subrc <> 0.
+CLEAR handle.
+ENDIF.
+GET TIME STAMP FIELD started.
+bal( type = 'I' text = |start run { id } shard { selected } at index { next_index }| ).
 ENDMETHOD.
 METHOD bal.
 DATA free TYPE c LENGTH 200.
@@ -144,7 +174,7 @@ CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT' EXPORTING i_log_handle = handle i_msgt
 INSERT handle INTO TABLE handles.
 CALL FUNCTION 'BAL_DB_SAVE' EXPORTING i_t_log_handle = handles EXCEPTIONS OTHERS = 1.
 ENDMETHOD.
-METHOD bal_event.
+METHOD event.
 DATA status TYPE string.
 DATA title TYPE string.
 DATA message TYPE string.

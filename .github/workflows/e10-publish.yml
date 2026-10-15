@@ -1,9 +1,9 @@
 name: e10-publish
 
-# Publishes a release's eight A4H abapGit archives (readable core, tests base
+# Publishes a release's nine A4H abapGit archives (readable core, registry, tests base
 # and six tests parts) as open-steamgate E.10 OSD layers, built by OSG's own
 # tools/osd-layer.mjs (deterministic zip, leak gate), plus one ordered system
-# index ghcr.io/<owner>/abapiti/zlnt-system:<tag> (core -> base -> parts).
+# index ghcr.io/<owner>/abapiti/zlnt-system:<tag> (core -> registry -> base -> parts).
 # Manual only; digests go to the job summary.
 on:
   workflow_dispatch:
@@ -65,10 +65,10 @@ jobs:
           set -euo pipefail
           mkdir -p assets layers
           gh release download "$TAG" --repo "${{ github.repository }}" --dir assets \
-            --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
-          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
-          for z in assets/abaplint-*-a4h.zip assets/abaplint-*-a4h-tests-{base,statements,rules_1,rules_2,syntax,objects,rest}.zip; do
-            name=$(basename "$z" .zip | sed 's/^abaplint-[0-9a-f]*-a4h/zlnt-core/; s/^zlnt-core-tests-/zlnt-tests-/; s/_/-/g')
+            --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-registry.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
+          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-registry|-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
+          for z in assets/abaplint-*-a4h.zip assets/abaplint-*-a4h-registry.zip assets/abaplint-*-a4h-tests-{base,statements,rules_1,rules_2,syntax,objects,rest}.zip; do
+            name=$(basename "$z" .zip | sed 's/^abaplint-[0-9a-f]*-a4h/zlnt-core/; s/^zlnt-core-registry$/zlnt-registry-a4h/; s/^zlnt-core-tests-/zlnt-tests-/; s/_/-/g')
             mkdir -p "layers/$name" && (cd "layers/$name" && unzip -q "../../$z")
           done
           ls layers
@@ -85,7 +85,7 @@ jobs:
           refs=()
           printf '| order | layer | ref |\n|---:|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
           n=0
-          for name in zlnt-core zlnt-tests-base zlnt-tests-statements zlnt-tests-rules-1 zlnt-tests-rules-2 zlnt-tests-syntax zlnt-tests-objects zlnt-tests-rest; do
+          for name in zlnt-core zlnt-registry-a4h zlnt-tests-base zlnt-tests-statements zlnt-tests-rules-1 zlnt-tests-rules-2 zlnt-tests-syntax zlnt-tests-objects zlnt-tests-rest; do
             kind=input; [ "$name" = zlnt-core ] && kind=lib
             source=(); [ -n "$commit" ] && source=(--source "https://github.com/${{ github.repository }}@$commit:src")
             # reviewed exceptions for public upstream test vectors (stoker, #757)

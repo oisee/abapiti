@@ -1,6 +1,6 @@
 name: oci-publish
 
-# Publishes the eight A4H abapGit archives of a release (readable core, tests
+# Publishes the nine A4H abapGit archives of a release (readable core, registry, tests
 # base and six tests parts) to ghcr.io/<repo>/abaplint-a4h as OCI artifacts,
 # one per archive (tag <layer>-<release>), plus a system index (tag <release>)
 # listing them in import order. The blobs are the release
@@ -36,28 +36,29 @@ jobs:
           set -euo pipefail
           mkdir assets
           gh release download "$TAG" --repo "${{ github.repository }}" --dir assets \
-            --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
-          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
+            --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-registry.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
+          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-registry|-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
       - name: Push one layer per archive, then the system index
         run: |
           set -euo pipefail
           commit=$(git ls-remote "https://github.com/${{ github.repository }}" "refs/tags/$TAG^{}" "refs/tags/$TAG" | head -1 | cut -f1)
           core=$(ls assets/abaplint-*-a4h.zip)
-          order=("$core")
+          registry=$(ls assets/abaplint-*-a4h-registry.zip)
+          order=("$core" "$registry")
           for part in base statements rules_1 rules_2 syntax objects rest; do
             order+=("$(ls assets/abaplint-*-a4h-tests-$part.zip)")
           done
-          [ "${#order[@]}" = 8 ]
+          [ "${#order[@]}" = 9 ]
           printf '| order | layer | digest | blob sha256 |\n|---:|---|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
           manifests=()
           n=0
           for zip in "${order[@]}"; do
             n=$((n + 1))
             base=$(basename "$zip" .zip)
-            name=${base/abaplint-*-a4h/core}
-            name=${name/core-tests-/tests-}
+            name=$(printf '%s' "$base" | sed 's/^abaplint-[0-9a-f]*-a4h/zlnt-core/; s/^zlnt-core-registry$/zlnt-registry-a4h/; s/^zlnt-core-tests-/tests-/; s/^zlnt-core$/core/')
             kind=pack
             [ "$n" = 1 ] && kind=lib
+            [ "$name" = zlnt-registry-a4h ] && kind=input
             dir=$(mktemp -d)
             cp "$zip" "$dir/abap.zip"
             printf '{"name":"%s","kind":"%s","source":{"repo":"https://github.com/%s","commit":"%s","path":"%s"}}' \
