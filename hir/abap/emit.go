@@ -797,6 +797,10 @@ type body struct {
 	splitTypes                   []string
 }
 
+// initializerSplitLines bounds a generated test initializer before its body is
+// re-emitted as a frame plus statement chunks (tests lower it to keep fixtures small).
+var initializerSplitLines = 3000
+
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	return e.methodBody(c, m, name, false)
 }
@@ -857,7 +861,7 @@ func (e *emitter) methodBody(c *hir.Class, m *hir.Method, name string, split boo
 		body = kept
 	}
 	b.stmt(body)
-	if !split && strings.HasPrefix(m.Name, "test.initialize.") && strings.Count(b.code.String(), "\n") > 3000 {
+	if !split && strings.HasPrefix(m.Name, "test.initialize.") && strings.Count(b.code.String(), "\n") > initializerSplitLines {
 		return e.methodBody(c, m, name, true)
 	}
 	if split {

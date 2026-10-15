@@ -36,6 +36,10 @@ func TestGeneratedDispatchSplitEquivalence(t *testing.T) {
 }
 
 func TestRegistrationInitializerFrame(t *testing.T) {
+	// A 3,000-line fixture exhausts gogen's heap in the OSGO fixture run.
+	saved := initializerSplitLines
+	initializerSplitLines = 300
+	defer func() { initializerSplitLines = saved }()
 	c := &hir.Class{Name: "test/large.ts.module"}
 	m := &hir.Method{Name: "test.initialize.1", Static: true, Result: hir.T(hir.Void)}
 	var stmts []*hir.Stmt
