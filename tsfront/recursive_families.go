@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
@@ -37,81 +36,15 @@ func (l *lowerer) familyAliasKey(t *checker.Type) string {
 	return name
 }
 
-// Alias arguments start their own cycle traversal. Their stack observations
-// cannot constrain a caller using a different visiting map.
+// Alias arguments are independent keys; ids are context-free (family_key_memo.go).
 func (l *lowerer) familyTypeKeyIndependent(t *checker.Type) string {
-	m := l.familyKeyState()
-	saved := m.frames
-	m.frames = nil
-	defer func() { m.frames = saved }()
-	return l.familyTypeKey(t, true, map[*checker.Type]bool{})
+	return l.familyKeyCached(t, true)
 }
 
-func (l *lowerer) familyTypeKey(t *checker.Type, named bool, visiting map[*checker.Type]bool) string {
-	return l.familyKeyCached(t, named, visiting) // family_key_memo.go
-}
-
-// familyTypeKeyRaw hashes one node's canonical description. Child keys are
-// already Merkle ids, so shared descendants never expand into structural text.
-// Keep back-references literal: their identity has no stack depth or position.
-func (l *lowerer) familyTypeKeyRaw(t *checker.Type, named bool, visiting map[*checker.Type]bool) (key string) {
-	defer func() {
-		if len(key) > familyKeyMaxLen {
-			panic(familyKeyRefusal{familyKeyID{t, named}, fmt.Sprintf("exceeds %d bytes", familyKeyMaxLen)})
-		}
-		if !strings.HasPrefix(key, "back:") {
-			sum := sha256.Sum256([]byte(key))
-			key = fmt.Sprintf("%x", sum[:16])
-		}
-	}()
-	if t == nil {
-		return "missing"
-	}
-	if named {
-		if name := l.familyAliasKey(t); name != "" {
-			return "alias:" + name
-		}
-		if t.Symbol() != nil && t.Symbol().Flags&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass) != 0 {
-			name := l.familySymbolKey(t.Symbol())
-			for _, a := range l.familyArguments(t) {
-				name += "[" + l.familyTypeKey(a, true, visiting) + "]"
-			}
-			return "decl:" + name
-		}
-	}
-	if visiting[t] {
-		return "back:" + l.familySymbolKey(t.Symbol())
-	}
-	visiting[t] = true
-	defer delete(visiting, t)
-	if t.IsUnion() || t.Flags()&checker.TypeFlagsIntersection != 0 {
-		parts := []string{}
-		for _, p := range t.AsUnionOrIntersectionType().Types() {
-			parts = append(parts, l.familyTypeKey(p, true, visiting))
-		}
-		sort.Strings(parts)
-		return fmt.Sprintf("%d:%s", t.Flags(), strings.Join(parts, "|"))
-	}
-	if t.Flags()&checker.TypeFlagsObject != 0 {
-		if args := l.familyArguments(t); len(args) > 0 {
-			parts := []string{}
-			for _, a := range args {
-				parts = append(parts, l.familyTypeKey(a, true, visiting))
-			}
-			name := "array"
-			if t.Symbol() != nil {
-				name = t.Symbol().Name
-			}
-			return name + "<" + strings.Join(parts, ",") + ">"
-		}
-		parts := []string{}
-		for _, p := range l.ck.GetPropertiesOfType(t) {
-			parts = append(parts, fmt.Sprintf("%q:%t:%t:%s", p.Name, p.Flags&ast.SymbolFlagsOptional != 0, shapePropertyReadonly(p), l.familyTypeKey(l.ck.GetTypeOfPropertyOfType(t, p.Name), true, visiting)))
-		}
-		sort.Strings(parts)
-		return "{" + strings.Join(parts, ";") + "}"
-	}
-	return l.ck.TypeToString(t)
+// familyTypeKey returns the context-free id of (t, named). The visiting map is
+// kept for callers' signatures only; SCC ids need no traversal context.
+func (l *lowerer) familyTypeKey(t *checker.Type, named bool, _ map[*checker.Type]bool) string {
+	return l.familyKeyCached(t, named) // family_key_memo.go
 }
 
 func (l *lowerer) familyTags(t *checker.Type) []string {
