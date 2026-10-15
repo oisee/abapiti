@@ -926,6 +926,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	// A structural copy of a family member (RuntimeFields<Type> narrowed by
+	// flow) maps to the member's payload: read its field by name.
+	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && strings.HasPrefix(recv.Type.Name, "family.") && !ast.IsAssignmentTarget(n) {
+		if c := l.classByName(recv.Type.Name); c != nil {
+			for _, f := range c.Fields {
+				if f.Name == n.Name().Text() && !f.Static {
+					return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: recv}
+				}
+			}
+		}
+	}
 	// A record member with a literal name reads the map.
 	if recv.Type.Kind == hir.OrderedMap && n.Name() != nil {
 		key := n.Name().Text()
