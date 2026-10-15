@@ -100,6 +100,9 @@ func (l *lowerer) iterableValues(n *ast.Node) *hir.Expr {
 	for n != nil && n.Kind == ast.KindParenthesizedExpression {
 		n = n.Expression()
 	}
+	if x, ok := l.optionalIterable(n); ok {
+		return x
+	}
 	if n != nil && n.Kind == ast.KindCallExpression && len(n.Arguments()) == 0 {
 		callee := n.Expression()
 		if callee != nil && callee.Kind == ast.KindPropertyAccessExpression {
@@ -157,4 +160,90 @@ func (l *lowerer) spreadInto(el *ast.Node, kind string, recv *hir.Expr, elemType
 	}
 	return &hir.Stmt{Kind: hir.ForEach, Node: l.node(el), Name: v.Name, Type: v.Type, X: src,
 		Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(el), X: l.rtOp(op, recv, res, l.coerce(v, elemType))})}
+}
+
+// optionalIterable handles "x?.keys() ?? fallback" (also values()) for an
+// optional Map/Set x consumed at once: the fallback when x is undefined,
+// otherwise the snapshot. x is evaluated once; the fallback only when used.
+func (l *lowerer) optionalIterable(n *ast.Node) (*hir.Expr, bool) {
+	if n == nil || n.Kind != ast.KindBinaryExpression {
+		return nil, false
+	}
+	b := n.AsBinaryExpression()
+	if b.OperatorToken.Kind != ast.KindQuestionQuestionToken {
+		return nil, false
+	}
+	left := b.Left
+	for left != nil && left.Kind == ast.KindParenthesizedExpression {
+		left = left.Expression()
+	}
+	if left == nil || left.Kind != ast.KindCallExpression || len(left.Arguments()) != 0 {
+		return nil, false
+	}
+	callee := left.Expression()
+	if callee == nil || callee.Kind != ast.KindPropertyAccessExpression || callee.AsPropertyAccessExpression().QuestionDotToken == nil {
+		return nil, false
+	}
+	name := callee.Name().Text()
+	if name != "keys" && name != "values" {
+		return nil, false
+	}
+	t := l.ck.GetTypeAtLocation(callee.Expression())
+	if t == nil {
+		return nil, false
+	}
+	before := len(l.diags)
+	recvType := l.mapCheckerType(callee.Expression(), t)
+	l.diags = l.diags[:before]
+	if recvType.Kind != hir.Optional {
+		return nil, false
+	}
+	base := recvType.Args[0]
+	var elem hir.Type
+	op := ""
+	switch {
+	case base.Kind == hir.OrderedMap && len(base.Args) == 2:
+		elem, op = base.Args[0], "map.keys"
+		if name == "values" {
+			elem, op = base.Args[1], "map.values"
+		}
+	case base.Kind == hir.OrderedSet && len(base.Args) == 1:
+		elem, op = base.Args[0], "set.values"
+	default:
+		return nil, false
+	}
+	arr := hir.T(hir.Array, elem)
+	recv := l.expr(callee.Expression())
+	if recv == nil {
+		return nil, true
+	}
+	if recv.Type.Kind != hir.Optional {
+		return l.rtOp(op, recv, arr), true
+	}
+	saved := l.tempInit(n, recv.Type, recv)
+	// The fallback is lowered in its own prelude scope so it runs only when used.
+	pend := l.pend
+	l.pend = nil
+	hint := l.hint
+	l.hint = arr
+	fallback := l.expr(b.Right)
+	l.hint = hint
+	inner := l.pend
+	l.pend = pend
+	if fallback == nil {
+		return nil, true
+	}
+	if fallback.Type.Kind == hir.OrderedSet {
+		fallback = l.rtOp("set.values", fallback, hir.T(hir.Array, fallback.Type.Args[0]))
+	}
+	if fallback.Type.Kind != hir.Array {
+		l.diagf(b.Right, "unsupported-array", "?? fallback of an iterable needs an array")
+		return nil, true
+	}
+	result := l.tempInit(n, arr, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: arr})
+	present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: saved}
+	l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved},
+		Body: hir.B(append(inner, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: l.coerce(fallback, arr)})...),
+		Else: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: l.rtOp(op, present, arr)})})
+	return result, true
 }
