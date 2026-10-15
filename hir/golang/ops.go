@@ -32,6 +32,8 @@ var supportedOps = map[string]bool{
 	"object.checkedClassView": true,
 	"dynamic.keys":            true,
 	"dynamic.spread":          true,
+	"dynamic.isMap":           true,
+	"dynamic.isSet":           true,
 	"dynamic.classView":       true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -338,6 +340,13 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "dynamic.isMap", "dynamic.isSet":
+		kind := "orderedMap["
+		if x.Op == "dynamic.isSet" {
+			kind = "orderedSet["
+		}
+		code = "dynIsCollection(" + a + "," + strconv.Quote(kind) + ")"
+		b.e.collectionProbe = true
 	case "dynamic.spread":
 		code = "dynSpread(" + a + ")"
 		b.e.spreadRuntime = true
@@ -424,5 +433,18 @@ func dynSpread(d *dynamic) *array[any] {
   }
  }
  panic(newRangeFault())
+}
+`
+
+// dynIsCollection is instanceof Map / Set on a tagged value. A record shares
+// the ordered-map storage of a Map; record allocations are marked
+// (enumerableRecord) whenever this probe is emitted, so they answer false.
+const dynIsCollectionSource = `
+func dynIsCollection(d *dynamic, kind string) bool {
+ if d==nil || d.Tag!=2 {return false}
+ rv:=reflect.ValueOf(d.Value)
+ if rv.Kind()!=reflect.Pointer || rv.IsNil() || rv.Elem().Kind()!=reflect.Struct || !strings.HasPrefix(rv.Elem().Type().Name(),kind) {return false}
+ if f:=rv.Elem().FieldByName("enumerableRecord");f.IsValid() && f.Bool() {return false}
+ return true
 }
 `

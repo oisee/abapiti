@@ -57,6 +57,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
 					e.usesLiveArrays = true
 				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet") {
+					e.collectionProbe = true // before record allocations are emitted
+				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
 					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && (x.X.Type.Name == hir.RootObject || len(e.liveClasses) > 0)) {
 					e.extraRuntimeKeys = true
@@ -171,6 +174,12 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.spreadRuntime {
 		runtime += dynSpreadSource
 	}
+	if e.collectionProbe {
+		runtime += dynIsCollectionSource
+		if !e.chaiDeep {
+			runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", 1)
+		}
+	}
 	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
@@ -239,6 +248,7 @@ type emitter struct {
 	recordDeletion    bool
 	usesLiveArrays    bool
 	spreadRuntime     bool
+	collectionProbe   bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool
@@ -827,7 +837,7 @@ func (b *body) expr(x *hir.Expr) string {
 				a = append(a, b.expr(v))
 			}
 			code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{}"
-			if e.chaiDeep && t.Kind == hir.OrderedMap && x.OwnKeys != nil {
+			if (e.chaiDeep || e.collectionProbe) && t.Kind == hir.OrderedMap && x.OwnKeys != nil {
 				code = "&" + strings.TrimPrefix(e.typ(t), "*") + "{enumerableRecord:true}"
 			}
 			if t.Kind == hir.RegExp {

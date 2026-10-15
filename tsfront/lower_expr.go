@@ -2486,6 +2486,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if probe, ok := l.collectionInstanceOf(n, b, x); ok {
+		return probe
+	}
 	if c := l.classOf(l.resolve(b.Right)); c != nil && !c.Scoped {
 		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
 			// A box holding a string, number or class value is never an
@@ -2518,6 +2521,26 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	}
 	l.diagf(n, "unsupported-expr", "instanceof needs a lowered class operand")
 	return nil
+}
+
+// collectionInstanceOf lowers `v instanceof Map` / `v instanceof Set` for a
+// tagged (any/unknown) v: a runtime test of the boxed collection; absent or
+// non-collection values answer false.
+func (l *lowerer) collectionInstanceOf(n *ast.Node, b *ast.BinaryExpression, x *hir.Expr) (*hir.Expr, bool) {
+	if !l.unprunedFeatures || b.Right.Kind != ast.KindIdentifier {
+		return nil, false
+	}
+	name := b.Right.Text()
+	if name != "Map" && name != "Set" {
+		return nil, false
+	}
+	if sym := l.resolve(b.Right); sym == nil || !l.librarySymbol(sym) {
+		return nil, false
+	}
+	if x.Type.Kind != hir.Dynamic && !(x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
+		return nil, false
+	}
+	return l.rtOp("dynamic.is"+name, l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Bool)), true
 }
 
 // equality lowers === and !==, mapping comparisons with undefined to the

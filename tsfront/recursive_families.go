@@ -239,7 +239,9 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 		}
 		return hir.T(hir.Void), true
 	}
-	if len(l.familyShapes) > 0 && (t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0) {
+	if len(l.familyShapes) > 0 && (t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0) && !l.ck.TypeHasCallOrConstructSignatures(t) {
+		// A constructor or function type is never a data record, even when
+		// its (empty) property key matches a family shape.
 		if mapped, ok := l.familyShapes[l.familyTypeKey(t, false, map[*checker.Type]bool{})]; ok {
 			return mapped, true
 		}

@@ -36,6 +36,8 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.typeofValue":       {Dynamic, 0, false},
 	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.spread":            {Dynamic, 0, false},
+	"dynamic.isMap":             {Dynamic, 0, false},
+	"dynamic.isSet":             {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.call0":             {Dynamic, 1, true},
 	"dynamic.put":               {Dynamic, 2, true},
@@ -145,6 +147,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Array, T(String)), true
 	case "dynamic.spread":
 		return nil, T(Array, T(Dynamic)), true
+	case "dynamic.isMap", "dynamic.isSet":
+		return nil, T(Bool), true
 	case "dynamic.delete":
 		return []Type{T(String)}, T(Bool), true
 	case "dynamic.get":
