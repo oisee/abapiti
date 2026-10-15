@@ -43,6 +43,9 @@ func EmitWithSites(p *hir.Program) (map[string]string, *hir.SiteMap, error) {
 	if err := e.addLocations(sites, files["hir.go"], "go", "hir.go", 2); err != nil {
 		return nil, nil, err
 	}
+	// Sites are located on the emitted text; hoisting literals afterwards
+	// keeps every line and only shortens the calls.
+	internLiteralFiles(files, "main")
 	prof, pe, err := emitPackage(p, "main", true)
 	if err != nil {
 		return nil, nil, err

@@ -106,9 +106,13 @@ func TestGoLexerDifferential(t *testing.T) {
 		t.Fatalf("got %d cases", len(got))
 	}
 	mutatedOut := runGoHIR(t, p, driver.String(), func(files map[string]string) {
-		before := files["hir.go"]
-		files["hir.go"] = strings.ReplaceAll(before, `str("Identifier")`, `str("MutatedIdentifier")`)
-		if files["hir.go"] == before {
+		// Literals may be hoisted into literals.go; mutate wherever it lives.
+		changed := false
+		for name, before := range files {
+			files[name] = strings.ReplaceAll(before, `str("Identifier")`, `str("MutatedIdentifier")`)
+			changed = changed || files[name] != before
+		}
+		if !changed {
 			t.Fatal("mutation did not change emitted token type")
 		}
 	})

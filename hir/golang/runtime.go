@@ -24,6 +24,52 @@ import (
 // comparable representation makes string and optional equality value based.
 type jsString string
 
+// ownKeyState is an instance's own-property order. While keys are written
+// in ascending canonical order (the class's declared fields, bases first),
+// the order is the set bits of mask over names and no map exists; the first
+// out-of-order write, unknown key or delete materialises the ordered map,
+// which then behaves exactly as before.
+type ownKeyState struct {
+	mask  uint64
+	names []jsString
+	m     *orderedMap[jsString, *dynamic]
+}
+
+func (s *ownKeyState) materialize() *orderedMap[jsString, *dynamic] {
+	if s.m == nil {
+		s.m = &orderedMap[jsString, *dynamic]{}
+		for i, n := range s.names {
+			if i < 64 && s.mask&(1<<uint(i)) != 0 {
+				s.m.set(n, nil)
+			}
+		}
+	}
+	return s.m
+}
+func (s *ownKeyState) set(k jsString, _ *dynamic) {
+	if s.m == nil {
+		for i, n := range s.names {
+			if n != k {
+				continue
+			}
+			if i >= 64 {
+				break
+			}
+			bit := uint64(1) << uint(i)
+			if s.mask&bit != 0 {
+				return
+			}
+			if s.mask>>uint(i) == 0 {
+				s.mask |= bit
+				return
+			}
+			break
+		}
+	}
+	s.materialize().set(k, nil)
+}
+func (s *ownKeyState) delete(k jsString) bool { return s.materialize().delete(k) }
+
 func str(s string) jsString {
 	u := utf16.Encode([]rune(s))
 	b := make([]byte, 2*len(u))
@@ -627,6 +673,14 @@ func (a *array[T]) splice2(i, n int32) *array[T] {
 	out := a.slice2(i, i+n)
 	a.Items = append(a.Items[:i], a.Items[i+n:]...)
 	return out
+}
+// spliceDrop2 is splice(i, n) whose removed elements are discarded: same
+// mutation, no result array.
+func (a *array[T]) spliceDrop2(i, n int32) *array[T] {
+	i = sliceIndex(i, int32(len(a.Items)))
+	n = max(0, min(n, int32(len(a.Items))-i))
+	a.Items = append(a.Items[:i], a.Items[i+n:]...)
+	return nil
 }
 func (a *array[T]) splice3(i, n int32, v T) *array[T] {
 	i = sliceIndex(i, int32(len(a.Items)))
