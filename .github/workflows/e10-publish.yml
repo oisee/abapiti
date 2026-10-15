@@ -37,6 +37,11 @@ jobs:
           ref: ${{ inputs.osg_ref }}
           path: osg
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/e10-leak-allow
+          path: self
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -83,12 +88,15 @@ jobs:
           for name in zlnt-core zlnt-tests-base zlnt-tests-statements zlnt-tests-rules-1 zlnt-tests-rules-2 zlnt-tests-syntax zlnt-tests-objects zlnt-tests-rest; do
             kind=input; [ "$name" = zlnt-core ] && kind=lib
             source=(); [ -n "$commit" ] && source=(--source "https://github.com/${{ github.repository }}@$commit:src")
-            ref=$(node tools/osd-layer.mjs push "$repo/$name:$TAG" "$GITHUB_WORKSPACE/layers/$name" --name "$name" --kind "$kind" "${source[@]}")
+            # reviewed exceptions for public upstream test vectors (stoker, #757)
+            allow=(); f="$GITHUB_WORKSPACE/self/.github/e10-leak-allow/$name.json"; [ -f "$f" ] && allow=(--leak-allow "$f")
+            ref=$(node tools/osd-layer.mjs push "$repo/$name:$TAG" "$GITHUB_WORKSPACE/layers/$name" --name "$name" --kind "$kind" "${source[@]}" "${allow[@]}")
             refs+=("$ref")
             printf '| %s | %s | `%s` |\n' "$n" "$name" "$ref" >> "$GITHUB_STEP_SUMMARY"
             n=$((n + 1))
           done
-          system=$(node tools/osd-layer.mjs system push "$repo/zlnt-system:$TAG" "${refs[@]}")
+          sysallow=(); for f in "$GITHUB_WORKSPACE"/self/.github/e10-leak-allow/*.json; do [ -f "$f" ] && sysallow+=(--leak-allow "$f"); done
+          system=$(node tools/osd-layer.mjs system push "$repo/zlnt-system:$TAG" "${refs[@]}" "${sysallow[@]}")
           node tools/osd-layer.mjs inspect "$system"
           printf '\nsystem: `%s`\n' "$system" >> "$GITHUB_STEP_SUMMARY"
       - name: remove the identifier list

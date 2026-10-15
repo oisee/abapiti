@@ -1,0 +1,10 @@
+{
+ "allow": [
+  {
+   "file": "src/zcl_lnt_closure_00da8841.clas.abap",
+   "value": "c8613ae5-bbb5-4ec8-9871-675c1b41f734",
+   "reason": "literal from abaplint@577f875e packages/core/test/rules/allowed_object_naming.ts:127 (GUID in an object name), public test vector; verified by stoker",
+   "layer": "zlnt-tests-rules-1"
+  }
+ ]
+}
