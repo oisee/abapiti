@@ -1424,6 +1424,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 		if x == nil && !handled {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
 		return x
