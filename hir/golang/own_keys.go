@@ -90,7 +90,7 @@ func (e *emitter) newOwnKeys(c *hir.Class) {
 }
 
 // constructorFieldOrder is a level's likely own-key creation order: the
-// fields its constructor assigns on this at top level, in first-write order
+// fields its constructor assigns on this, in first-write (pre-order) order
 // (initializers come first there under es2017), then the remaining declared
 // instance fields. It is only a hint: any other order stays exact through
 // ownKeyState's materialised map.
@@ -103,13 +103,13 @@ func constructorFieldOrder(c *hir.Class) []string {
 	}
 	seen := map[string]bool{}
 	var out []string
-	if c.Ctor != nil && c.Ctor.Body != nil {
-		for _, st := range c.Ctor.Body.List {
+	if c.Ctor != nil {
+		walkStmt(c.Ctor.Body, func(st *hir.Stmt) {
 			if st.Kind == hir.Assign && st.X != nil && st.X.Kind == hir.FieldGet && st.X.X != nil && st.X.X.Kind == hir.This && declared[st.X.Name] && !seen[st.X.Name] {
 				seen[st.X.Name] = true
 				out = append(out, st.X.Name)
 			}
-		}
+		}, func(*hir.Expr, *hir.Expr) {})
 	}
 	for _, f := range c.Fields {
 		if declared[f.Name] && !seen[f.Name] {
