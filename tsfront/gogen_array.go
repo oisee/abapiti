@@ -6,6 +6,16 @@ import (
 )
 
 func (l *lowerer) gogenArrayCall(n *ast.Node, name string, receiver *hir.Expr, args []*ast.Node) (*hir.Expr, bool) {
+	// A lone spread keeps the established loop (abaplint's closure relies on
+	// it); mixed and multi-argument pushes take the hole-aware path below.
+	if name == "push" && len(args) == 1 && args[0].Kind == ast.KindSpreadElement && receiver.Type.Args[0].Kind != hir.Optional {
+		if !receiver.Type.Args[0].IsRef() && l.deletedSpreadSource(args[0].Expression()) {
+			l.diagf(args[0], "unsupported-call", "push spread element storage cannot represent undefined from array holes")
+			return nil, true
+		}
+		l.diagf(n, "note-spread-push", "push(...x) inlined into a loop")
+		return l.spreadPush(n, receiver, args[0]), true
+	}
 	if name == "push" && (len(args) != 1 || args[0].Kind == ast.KindSpreadElement) {
 		return l.multiPush(n, receiver, args), true
 	}
