@@ -984,7 +984,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.cryptoHashCall(n); ok {
 		return x
 	}
-	callee := n.Expression()
+	callee := gogenCallee(n.Expression())
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
 		return nil
