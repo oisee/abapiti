@@ -34,8 +34,7 @@ func (l *lowerer) bindObjectParameter(p *ast.Node, hp hir.Param) []*hir.Stmt {
 	}
 	var out []*hir.Stmt
 	receiver := hir.V(hp.Name, hp.Type)
-	l.builtinError()
-	errorType := hir.Ref("builtin.TypeError")
+	errorType := hir.Ref(l.builtinTypeError())
 	check := l.rtOp("dynamic.isNullish", l.rtOp("dynamic.of", receiver, hir.T(hir.Dynamic)), hir.T(hir.Bool))
 	check.Node = l.node(p)
 	out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p), X: check,

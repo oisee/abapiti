@@ -192,6 +192,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		return hir.T(hir.RegExp)
 	case "SyntaxError", "TypeError":
 		if l.unprunedFeatures && l.librarySymbol(sym) {
+			if sym.Name == "TypeError" {
+				return hir.Ref(l.builtinTypeError())
+			}
 			l.builtinError()
 			return hir.Ref("builtin." + sym.Name)
 		}
@@ -619,6 +622,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				return hir.T(hir.RegExp)
 			}
 			if l.unprunedFeatures && (t.Symbol().Name == "SyntaxError" || t.Symbol().Name == "TypeError") && l.librarySymbol(t.Symbol()) && l.classOf(t.Symbol()) == nil {
+				if t.Symbol().Name == "TypeError" {
+					return hir.Ref(l.builtinTypeError())
+				}
 				l.builtinError()
 				return hir.Ref("builtin." + t.Symbol().Name)
 			}
