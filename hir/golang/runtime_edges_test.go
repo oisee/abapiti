@@ -194,7 +194,7 @@ func TestIndexedCollectionEdges(t *testing.T) {
  s:=&orderedSet[any]{};s.add(ref).add(nil).add(a).add(b);snap:=s.values();check(len(s.Items)==3)
  check(s.delete(a)&&s.has(b));s.add(a);check(s.Items[1]==b&&s.Items[2]==a&&snap.Items[1]==a)
  nums:=&orderedSet[float64]{};nums.add(negativeZero()).add(0);check(len(nums.Items)==1&&nums.has(0))
- nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==3&&!nums.has(nan)&&!nums.delete(nan))
+ nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==2&&nums.has(nan)&&nums.delete(nan)&&!nums.has(nan))
  nums.add(63).add(64).add(127).add(128).add(255).add(256).add(-1).add(0.5)
  for _,v:=range []float64{0,63,64,127,128,255,256,-1,0.5}{check(nums.has(v))}
  check(!nums.has(254)&&nums.delete(64)&&!nums.has(64));nums.add(64);check(nums.has(64))
