@@ -31,3 +31,27 @@ export class Probe {
 }
 `, false)
 }
+
+// instanceof Map / Set follows the runtime value exactly: records built any
+// way (literal, Object.fromEntries, spread, Object.assign, JSON.parse) and
+// class instances are not Maps; Maps from every constructor form are.
+func TestInstanceOfMapExactNodeOracle(t *testing.T) {
+	runMjsOracle(t, `export class Box { constructor() { this.a = 1; } }
+/** @param {any} v @returns {string} */
+const kind = (v) => (v instanceof Map ? "M" : "-") + (v instanceof Set ? "S" : "-");
+export class Probe {
+  /** @returns {string} */ static run() {
+    /** @type {Record<string, number>} */ const lit = {a: 1};
+    /** @type {Record<string, number>} */ const fromEntries = Object.fromEntries([["a", 1], ["b", 2]]);
+    /** @type {Record<string, number>} */ const spread = {...lit, c: 3};
+    /** @type {Record<string, number>} */ const assigned = Object.assign({}, lit);
+    const parsed = JSON.parse('{"a":1}');
+    /** @type {Map<string, number>} */ const empty = new Map();
+    /** @type {Map<string, number>} */ const rows = new Map([["a", 1]]);
+    /** @type {Map<string, number>} */ const copy = new Map(rows);
+    /** @type {Set<string>} */ const set = new Set(["x"]);
+    return [kind(lit), kind(fromEntries), kind(spread), kind(assigned), kind(parsed), kind(new Box()), kind(empty), kind(rows), kind(copy), kind(set), kind([1]), kind("s")].join(",");
+  }
+}
+`, false)
+}

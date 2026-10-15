@@ -884,6 +884,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		if expr == nil {
 			return nil
 		}
+		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		stmts = append(stmts, l.assignStatic(mod, d, name, expr, typ))
 	default:

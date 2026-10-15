@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/bundled"
@@ -31,6 +32,10 @@ type Program struct {
 	prog      *compiler.Program
 	configDir string                     // absolute directory of the tsconfig
 	files     map[string]*ast.SourceFile // cleaned absolute path -> file
+	// mapProbe caches whether any source tests `x instanceof Map`; only then
+	// do Map constructions carry the runtime JS Map marker.
+	mapProbeOnce sync.Once
+	mapProbe     bool
 }
 
 // Load builds a Program for the project described by tsconfigPath. The

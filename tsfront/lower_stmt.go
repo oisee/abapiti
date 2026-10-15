@@ -298,6 +298,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if expr == nil {
 			return nil
 		}
+		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:

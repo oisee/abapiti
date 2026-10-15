@@ -59,7 +59,7 @@ var unsupportedOps = map[string]bool{
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
 	"dynamic.spread": true,
 	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
-	"dynamic.isMap": true, "dynamic.isSet": true,
+	"dynamic.isMap": true, "dynamic.isSet": true, "map.markJS": true,
 }
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
