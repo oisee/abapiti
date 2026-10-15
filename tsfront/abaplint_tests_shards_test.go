@@ -69,8 +69,8 @@ func TestAbaplintTestShardsOSGEmission(t *testing.T) {
 			t.Fatalf("missing selection boundary %q", key)
 		}
 	}
-	a := strings.Split(strings.Split(runner, "WHEN `a`.\n")[1], "WHEN `b`.")[0]
-	b := strings.Split(strings.Split(runner, "WHEN `b`.\n")[1], "WHEN OTHERS.")[0]
+	a := flattenedShard(t, runner, "a")
+	b := flattenedShard(t, runner, "b")
 	if strings.Contains(a, "test/b.ts") || strings.Contains(b, "test/a.ts") || strings.Contains(b, "test/init_a.ts") || !strings.Contains(a, `"index":1,`) || !strings.Contains(b, `"index":1,`) {
 		t.Fatal("shard initialization leaked or indices did not restart")
 	}

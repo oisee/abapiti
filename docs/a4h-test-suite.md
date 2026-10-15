@@ -217,6 +217,44 @@ build. Identifier boundaries distinguish a user name from unrelated words such
 as CSS color names; there is no allowlist for path-prefix matches. The gate reports
 zero leaked entries per asset rather than relying on a quick binary spot check.
 
+### Bounded generated methods (v0.5.2)
+
+The shared emitter keeps shard selection in `ZCL_LNT_TEST_RUNNER=>RUN` and
+moves each branch to a private `run_<shard>` method. Non-identifier shard names
+use the emitter's sanitized hash names within ABAP's 30-character limit.
+Each shard calls ordered chunks of about 200 initialization statements. The
+original `host_init_*` recovery boundaries, checkpoint indices, JSON, and common
+RUN prologue/epilogue remain in order. Initialization scratch attributes reset
+where the former RUN locals were initialized.
+
+Large translated registration actions also use ordered chunks, with typed private
+frames cleared at action entry to retain locals across calls. Deletion and Chai
+first-match dispatch use bounded helpers with explicit early-return propagation.
+The parts adapter discovers their leaf branches and initializes RTTI locals in
+each helper scope. Both archive forms receive these changes before packaging.
+
+To compare with an earlier build and inspect every emitted test class:
+
+```sh
+node tools/a4h-runner-split-test.mjs "$BEFORE_BUILD" "$BUILD" "$PARTS"
+node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS" --verify
+```
+
+The pinned 17-shard closure measures **66,994 → 3,963 lines** for the largest
+method across the monolithic and seven-part test archives. RUN itself is now
+**152 lines**; the largest runner helper is **192 lines**. Syntax checks report
+zero issues for the monolithic install set (7,340 files) and reconstructed parts
+(12,383 source/XML files), using the established v755 PCRE exception. Parts
+verification checks 5,023 objects with zero dependency violations; both install
+sets pass archive hashes and unique ownership checks.
+
+The first check recursively inlines the monolithic and base-part runners and
+compares the complete original RUN statement sequence, reversing only the
+explicit local-to-attribute declaration/reset plumbing. It also reopens all eight
+test ZIPs and asserts a 5,000-line method ceiling. The ordinary unit gates cover
+4,962 ordered registration boundaries, unusual shard names, cross-chunk locals,
+and dispatch order/return propagation.
+
 ## Run and resume (coordinator, after deployment)
 
 Schedule `ZLNT_TESTS_RUN` as a **background report**, not ABAP Unit. Selection:

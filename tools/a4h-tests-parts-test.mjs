@@ -38,6 +38,7 @@ METHOD work.
 ENDMETHOD.`);
 assert.deepEqual([...refs].sort(), ['ZCL_A','ZCL_B','ZCL_C','ZCL_D','ZCL_E','ZCL_F','ZCL_PARENT','ZCX_A','ZCX_B','ZIF_A','ZTYPE'].sort());
 assert(identifiers('DATA zcl_shadow TYPE string. DATA r TYPE REF TO zcl_shadow.').has('ZCL_SHADOW'), 'local names must not hide explicit global type references');
+assert.deepEqual([...identifiers('TYPES: BEGIN OF zlnt_frame, value TYPE REF TO zcl_global, END OF zlnt_frame. CLASS-DATA zlnt_state TYPE zlnt_frame. zlnt_state-value = NEW zcl_global( ).')], ['ZCL_GLOBAL']);
 const assignment = new Map([['ZCL_A','statements'],['ZCL_B','syntax'],['ZCL_C','syntax'],['ZCL_BASE','base']]);
 const core = new Set(['ZCL_CORE']);
 const edges = new Map([['ZCL_A', identifiers('DATA r TYPE REF TO zcl_b. zcl_base=>run( ). zcl_core=>run( ).')], ['ZCL_B', identifiers('r = NEW zcl_c( ).')]]);
@@ -128,6 +129,19 @@ const cb = chaiPlan(chai); assert.equal(cb.length,2); assert.match(cb[0].text, /
 const ch = adaptChai(chai, cb, owners);
 assert(!identifiers(ch.source).has('ZCL_A'));
 assert.match(ch.helpers.get('ZCL_LNT_P_RULES_1_CHAI').source, /IF p0->oval IS INSTANCE OF zcl_a/);
+
+// Each split method needs its own RTTI locals and handled propagation. Leaf
+// providers keep the original ABI and must not acquire an undeclared flag.
+const splitChai = [0, 1].map(i => chai.replace('METHOD invoke.', `METHOD invoke_part_${i}.`).replaceAll('      RETURN.', '      handled = abap_true.\n      RETURN.')).join('');
+const splitBlocks = chaiPlan(splitChai);
+assert.equal(splitBlocks.length, 4);
+const splitAdapted = adaptChai(splitChai, splitBlocks, owners);
+assert.equal((splitAdapted.source.match(/DATA ancestors TYPE/g) ?? []).length, 2);
+assert.equal((splitAdapted.source.match(/handled = abap_true/g) ?? []).length, 4);
+for (const helper of splitAdapted.helpers.values()) assert(!helper.source.includes('handled ='));
+const splitDeletion = deletion.replace('METHOD run.', 'METHOD run_part_0.') + deletion.replace('METHOD run.', 'METHOD run_part_1.');
+const splitDispatch = adaptDispatch(factory, splitDeletion, dispatchPlan(factory, splitDeletion), owners);
+assert.equal((splitDispatch.deletion.match(/DATA ancestors TYPE/g) ?? []).length, 2);
 
 // End-to-end archive fixture, including DEVC, reproducible bytes, object hashes,
 // name preservation, generated helpers, and manifest tampering refusal.

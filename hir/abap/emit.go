@@ -15,6 +15,8 @@ import (
 )
 
 type emitter struct {
+	splitDeclarations map[string]string
+
 	testPackages    bool
 	factoryTestPart bool
 	chaiUsed        bool
@@ -775,6 +777,9 @@ func (e *emitter) class(c *hir.Class) {
 	if e.codeUnits[c.Name] {
 		out = strings.Replace(out, "PRIVATE SECTION.\nENDCLASS.\n", "PRIVATE SECTION.\nCLASS-DATA "+e.name("builtin.codeUnit."+c.Name)+" TYPE REF TO cl_abap_conv_out_ce.\nENDCLASS.\n", 1)
 	}
+	if defs := e.splitDeclarations[c.Name]; defs != "" {
+		out = strings.Replace(out, "PRIVATE SECTION.\n", "PRIVATE SECTION.\n"+defs, 1)
+	}
 	e.files[e.name(c.Name)+".clas.abap"] = originComment(c.Name, c.Source) + out
 }
 
@@ -788,13 +793,22 @@ type body struct {
 	serial                       int
 	lastInit, lastName, lastType string
 	constants                    map[string]string
+	splitState                   string
+	splitTypes                   []string
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
+	return e.methodBody(c, m, name, false)
+}
+
+func (e *emitter) methodBody(c *hir.Class, m *hir.Method, name string, split bool) string {
 	m = e.emittedMethod(c, m)
 	e.currentMethod = m
 	defer func() { e.currentMethod = nil }()
 	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
+	if split {
+		b.splitState = e.name(c.Name + "." + m.Name + ".state")
+	}
 	if name == "constructor" && c.Super != "" && !e.liveClasses[c.Name] {
 		if _, _, _, valid := e.splitSuperConstructor(m.Body); !valid {
 			e.refuse(fmt.Errorf("class %s constructor: requires a single top-level super constructor call without early return or THIS access", c.Name))
@@ -843,6 +857,12 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		body = kept
 	}
 	b.stmt(body)
+	if !split && strings.HasPrefix(m.Name, "test.initialize.") && strings.Count(b.code.String(), "\n") > 3000 {
+		return e.methodBody(c, m, name, true)
+	}
+	if split {
+		return e.splitTestInitializer(b, name)
+	}
 	return "METHOD " + name + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 }
 
@@ -922,6 +942,10 @@ func (b *body) temp(t hir.Type) string { return b.rawTemp(b.e.typ(t)) }
 func (b *body) rawTemp(typ string) string {
 	b.serial++
 	n := fmt.Sprintf("t%d", b.serial)
+	if b.splitState != "" {
+		b.splitTypes = append(b.splitTypes, n+" TYPE "+typ)
+		n = b.splitState + "-" + n
+	}
 	var init string
 	if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") {
 		init = "DATA " + n + " TYPE " + typ + ".\nCLEAR " + n + ".\n"
