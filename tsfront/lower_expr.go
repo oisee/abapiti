@@ -2206,6 +2206,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				return nil
 			}
 			x = l.tempInit(n, x.Type, x)
+			if result, ok := l.objectLogical(n, x); ok {
+				return result
+			}
 			hint := l.hint
 			base := x.Type
 			if base.Kind == hir.Optional {

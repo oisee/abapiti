@@ -104,7 +104,7 @@ func TestGogenObjectParameterGetters(t *testing.T) {
 }
 
 func TestGogenObjectParameterRefusals(t *testing.T) {
-	for _, pattern := range []string{"{a = 1}", "{...rest}", "{a: {b}}"} {
+	for _, pattern := range []string{"{...rest}", "{a: {b}}"} {
 		t.Run(pattern, func(t *testing.T) {
 			requireDiagnostic(t, sourceProbe(t, "function f("+pattern+": any):void {}"), "unsupported-param")
 		})

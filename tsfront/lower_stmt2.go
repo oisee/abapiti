@@ -13,6 +13,9 @@ import (
 // `instanceof` then narrows exactly like the original.
 func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 	t := n.AsTryStatement()
+	if t.FinallyBlock != nil && t.CatchClause == nil && l.containsReturn(t.TryBlock) {
+		return l.returningFinally(n)
+	}
 	if t.FinallyBlock != nil && t.CatchClause == nil {
 		if l.containsReturn(t.TryBlock) || l.containsLoopControl(t.TryBlock) {
 			l.diagf(t.FinallyBlock, "unsupported-statement", "finally with return, break or continue in the try block is not lowered")

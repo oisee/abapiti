@@ -17,8 +17,6 @@ func (l *lowerer) objectParameter(p *ast.Node) bool {
 		switch {
 		case be.DotDotDotToken != nil:
 			l.diagf(el, "unsupported-param", "rest element in object parameter")
-		case be.Initializer != nil:
-			l.diagf(el, "unsupported-param", "default value in object parameter")
 		case be.Name() == nil || be.Name().Kind != ast.KindIdentifier:
 			l.diagf(el, "unsupported-param", "nested binding pattern in object parameter")
 		case be.PropertyName != nil && be.PropertyName.Kind != ast.KindIdentifier:
@@ -71,6 +69,7 @@ func (l *lowerer) bindObjectParameter(p *ast.Node, hp hir.Param) []*hir.Stmt {
 				}
 			}
 		}
+		value = l.objectBindingDefault(el, value)
 		l.declare(local, value.Type)
 		out = append(out, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value})
 	}

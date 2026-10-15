@@ -55,7 +55,7 @@ func (l *lowerer) useResumableGenerators() {
 
 func (l *lowerer) generatorTypeNode(n *ast.Node) hir.Type {
 	a := n.TypeArguments()
-	if len(a) != 3 || a[1].Kind != ast.KindVoidKeyword || a[2].Kind != ast.KindUndefinedKeyword {
+	if !generatorSyntaxDefaults(a) {
 		l.diagf(n, "unsupported-generator", "only Generator<T, void, undefined> is lowered")
 		return hir.T(hir.Void)
 	}
@@ -88,7 +88,7 @@ func (l *lowerer) generatorCheckerType(n *ast.Node, t *checker.Type) (hir.Type, 
 		return hir.Type{}, false
 	}
 	a := l.ck.GetTypeArguments(t)
-	if len(a) != 3 || a[1].Flags()&checker.TypeFlagsVoid == 0 || a[2].Flags()&checker.TypeFlagsUndefined == 0 {
+	if !generatorCheckerDefaults(a) {
 		l.diagf(n, "unsupported-generator", "only Generator<T, void, undefined> is lowered")
 		return hir.T(hir.Void), true
 	}

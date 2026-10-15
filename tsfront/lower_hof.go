@@ -19,7 +19,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return nil, false
 	}
 	elem := recv.Type.Args[0]
-	if len(args) > 0 && (args[0].Kind == ast.KindPropertyAccessExpression || args[0].Kind == ast.KindCallExpression) {
+	if len(args) > 0 && (args[0].Kind == ast.KindIdentifier || args[0].Kind == ast.KindPropertyAccessExpression || args[0].Kind == ast.KindCallExpression) {
 		switch name {
 		case "map", "filter", "some", "reduce", "find", "forEach", "every", "sort":
 			// The receiver expression precedes callback lookup/bind. Keeping
@@ -215,6 +215,11 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 // `x => { return expr; }` with exactly one return, a plain identifier naming
 // a module function, and destructured first parameters.
 func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
+	if cb.Kind == ast.KindIdentifier {
+		if x, names, ok := l.localValueCallback(n, cb, elem); ok {
+			return x, names, x != nil
+		}
+	}
 	if body, params, ok := l.booleanCallback(n, cb, elem); ok {
 		return body, params, true
 	}
