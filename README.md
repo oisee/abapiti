@@ -5,6 +5,8 @@
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
+> **🔁 Self-hosting M2, the fixed point: abaplint-in-ABAP checks itself.** TS-HA@OSGO and TS-HG@Go check the ABAP abapiti emitted for abaplint itself (zlnt core, 4,676 files + 716 deps, v755) byte-identically to Node 577f875e (0 issues); OSGO 1,379 s / 17 GB, Go 435 s / 43 GB. This was verified independently as well (14 Oct 2026). "0 issues" shows that every check ran to completion with the same verdict. It is a weaker discriminator than M1's 80 issues. The stronger test is next: the same core without dependencies (20,179 issues on Node, #169), pending the own-key-order memory work. Speed is the open problem: Node takes 63 s, and the speed train is underway.
+
 > **🪞 Self-hosting M1: abaplint compiled by abapiti checks open-steamgate's own ABAP.** TS-HA@OSGO and TS-HG@Go check open-steamgate's own ABAP (2,785 files / 2,210 objects, OSG 3ee404ca) byte-identically to Node abaplint 577f875e: 80 issues, the same bytes on all three. TS-HA@OSGO takes 133 s, TS-HG@Go 48 s. Verified independently, with a separate Node reference computed on another machine (14 Oct 2026, branch `selfhost`).
 >
 > | Host | Output vs Node 577f875e | Time |
