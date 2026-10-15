@@ -222,7 +222,10 @@ func (l *lowerer) gogenArrayElement(t *checker.Type) *checker.Type {
 }
 
 func (l *lowerer) gogenResolvedArray(n *ast.Node, t *checker.Type) (hir.Type, bool) {
-	if !l.unprunedFeatures || t.IsTupleType() {
+	// Canonical arrays already have a type-argument lowering path, including
+	// speculative failure handling for recursive contextual types. The numeric
+	// index fallback is only needed for arrays from another pooled checker.
+	if !l.unprunedFeatures || t.IsTupleType() || l.ck.IsArrayType(t) {
 		return hir.Type{}, false
 	}
 	if element := l.gogenArrayElement(t); element != nil && element.Flags()&checker.TypeFlagsNever == 0 {
