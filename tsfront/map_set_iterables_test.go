@@ -16,6 +16,14 @@ class Bag {
  static make(): Bag { Bag.made++; return new Bag(); }
 }
 class Probe {
+ static maybe(on: boolean): Map<string, number> | undefined { return on ? new Map<string, number>([["m", 1], ["n", 2]]) : undefined; }
+ static optional(): string {
+  const a = Probe.maybe(true);
+  const b = Probe.maybe(false);
+  const both = new Set([...[...(a?.keys() ?? [])], ...[...(b?.keys() ?? ["none"])], ...(a?.keys() ?? [])]);
+  const sum = [...(a?.values() ?? [])].reduce((x, y) => x + y, 0);
+  return [...both].join(",") + ":" + sum + ":" + [...(b?.values() ?? [])].length;
+ }
  static more(): string {
   const own = [...Bag.make().keys()];
   const opt = new Map<string, number | undefined>([["a", undefined], ["b", 2]]);
@@ -46,7 +54,7 @@ class Probe {
   copy.set("z", 9);
   const fromKeys = new Set(counts.keys());
   return byName.size + ":" + byName.get("b")!.size + "|" + counts.get("x") + ":" + keys.join(",") + ":" + values.join(",") +
-   "|" + [...names].join(",") + "|" + [...both].join(",") + "|" + counts.size + "/" + copy.size + "|" + [...fromKeys].join(",") + "\n" + Probe.more();
+   "|" + [...names].join(",") + "|" + [...both].join(",") + "|" + counts.size + "/" + copy.size + "|" + [...fromKeys].join(",") + "\n" + Probe.more() + "\n" + Probe.optional();
  }
 }`
 	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
