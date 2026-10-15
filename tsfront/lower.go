@@ -63,9 +63,13 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 }
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
+	// A pinned or declaration-graph (schema 2) manifest selects the pruned
+	// build; a generic schema 1 workload manifest (no pin, from
+	// tools/coverage-manifest.mjs) only traps unexecuted bodies.
+	pruned := coverage != nil && (coverage.UpstreamPin != "" || coverage.Schema == 2)
 	l := &lowerer{
-		unprunedFeatures:   coverage == nil,
-		settledEnabled:     coverage == nil,
+		unprunedFeatures:   !pruned,
+		settledEnabled:     !pruned,
 		generatorEnabled:   true,
 		asyncMethods:       map[*hir.Method]bool{},
 		settlementWorld:    map[*ast.Node]string{},
@@ -111,10 +115,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if err := l.validateReachability(files, coverage); err != nil {
 		return nil, nil, err
 	}
-	if err := l.validateOverrides(files, registry.WithReachability(coverage != nil)); err != nil {
+	if err := l.validateOverrides(files, registry.WithReachability(pruned)); err != nil {
 		return nil, nil, err
 	}
-	if coverage == nil {
+	if !pruned {
 		l.useResumableGenerators()
 	} else {
 		for _, entry := range l.overrides {
@@ -124,7 +128,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			}
 		}
 	}
-	if coverage != nil && coverage.Schema == 2 {
+	if pruned && coverage.Schema == 2 {
 		var err error
 		files, err = l.pruneDeclarations(files)
 		if err != nil {
@@ -133,7 +137,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	}
 	// Only expand the external LSP ABI when a callable constructor needs it.
 	// Coverage-trapped signatures retain their existing opaque/structural ABI.
-	l.lspConstructors = coverage == nil
+	l.lspConstructors = !pruned
 	if !l.lspConstructors {
 		for _, name := range files {
 			f, ok := p.File(name)
@@ -417,7 +421,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		hir.SealLiveClassViewBoundary(l.out)
 	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
-	if coverage == nil {
+	if !pruned {
 		l.classifyCascades()
 	}
 	return l.out, l.diags, nil

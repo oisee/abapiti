@@ -319,7 +319,9 @@ func TestGenericWorkloadManifestPrunesAnyProject(t *testing.T) {
 	dir := t.TempDir()
 	config := filepath.Join(dir, "tsconfig.json")
 	body := "dead(): number { return new Date().getTime(); }"
-	source := "export class Probe { live(): number { return 7; } " + body + " }"
+	// A generic manifest keeps the full lowering mode: Math.ceil is lowered
+	// only outside the pruned abaplint build.
+	source := "export class Probe { live(x: number): number { return Math.ceil(x); } " + body + " }"
 	for name, text := range map[string]string{config: `{"compilerOptions":{"strict":true},"files":["probe.ts"]}`, filepath.Join(dir, "probe.ts"): source} {
 		if err := os.WriteFile(name, []byte(text), 0600); err != nil {
 			t.Fatal(err)
