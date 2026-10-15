@@ -365,7 +365,11 @@ func (l *lowerer) destructureDecl(d *ast.Node) []*hir.Stmt {
 	l.serial++
 	tmp := "s" + itoa(l.serial)
 	l.declare(tmp, t)
-	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: tmp, Type: t, X: l.expr(d.Initializer())}
+	value := l.expr(d.Initializer())
+	if value == nil {
+		return nil
+	}
+	decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(d), Name: tmp, Type: t, X: l.coerce(value, t)}
 	out := []*hir.Stmt{decl}
 	// destructurePattern appends to the prelude; collect around it.
 	saved := l.pend

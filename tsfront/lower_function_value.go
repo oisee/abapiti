@@ -220,7 +220,13 @@ func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 			}
 		} else if method != nil {
 			sym := l.resolve(n)
-			if sym.ValueDeclaration == nil || sym.ValueDeclaration.Body() == nil || touchesThis(sym.ValueDeclaration.Body()) {
+			if sym.ValueDeclaration == nil || sym.ValueDeclaration.Body() == nil {
+				// An interface or abstract method: the implementation that
+				// would run without its receiver is not known statically.
+				l.diagf(n, "unsupported-closure", "unbound method value has no known implementation to check for this")
+				return nil
+			}
+			if touchesThis(sym.ValueDeclaration.Body()) {
 				l.diagf(n, "unsupported-closure", "unbound method value uses this")
 				return nil
 			}
@@ -333,12 +339,21 @@ func (l *lowerer) assignedInFunction(fn *ast.Node, symbol *ast.Symbol) bool {
 		}
 		if n.Kind == ast.KindBinaryExpression {
 			b := n.AsBinaryExpression()
-			if b.Left.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(b.Left) == symbol {
-				switch b.OperatorToken.Kind {
-				case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
-					found = true
-				}
+			if ast.IsAssignmentOperator(b.OperatorToken.Kind) && b.Left.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(b.Left) == symbol {
+				found = true
 			}
+		}
+		var updated *ast.Node
+		if n.Kind == ast.KindPostfixUnaryExpression {
+			updated = n.AsPostfixUnaryExpression().Operand
+		} else if n.Kind == ast.KindPrefixUnaryExpression {
+			u := n.AsPrefixUnaryExpression()
+			if u.Operator == ast.KindPlusPlusToken || u.Operator == ast.KindMinusMinusToken {
+				updated = u.Operand
+			}
+		}
+		if updated != nil && updated.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(updated) == symbol {
+			found = true
 		}
 		n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
 	}
@@ -347,20 +362,78 @@ func (l *lowerer) assignedInFunction(fn *ast.Node, symbol *ast.Symbol) bool {
 }
 
 func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
-	x := l.expr(callee)
+	x := l.callReceiverExpr(callee)
 	if x == nil {
 		return nil
 	}
-	m := l.callableMethod(x.Type)
+	if (x.Type.Kind == hir.Dynamic || x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) && l.checkedStoredCallable(callee) != nil {
+		typ := l.functionType(callee, l.checkedStoredCallable(callee))
+		x = l.coerce(x, typ)
+	}
+	optional := false
+	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && l.callableMethod(x.Type.Args[0]) != nil {
+		// An optional function member: f?.() yields undefined when absent;
+		// a plain f() on an absent member is JavaScript's TypeError, here the
+		// checked narrowing that raises.
+		optional = n.AsCallExpression().QuestionDotToken != nil
+		x = l.tempInit(callee, x.Type, x)
+	}
+	slot := x
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 {
+		slot = &hir.Expr{Kind: hir.Narrow, Node: l.node(callee), Type: x.Type.Args[0], X: x}
+	}
+	m := l.callableMethod(slot.Type)
 	if m == nil {
+		l.diagf(n, "unsupported-call", "stored function has no lowered call signature")
 		return nil
 	}
-	x = l.callReceiver(n, x, nil)
+	recv := l.callReceiver(n, slot, nil)
 	args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
 	if !ok {
 		return nil
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: m.Result, X: x, Args: args}
+	if recv.Type.Name == thunkInterfaceName {
+		return l.invokeThunk(n, recv)
+	}
+	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: m.Result, X: recv, Args: args}
+	if !optional || m.Result.Kind == hir.Void {
+		if optional {
+			absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
+			l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: call})})
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(), Y: hir.L(hir.T(hir.Bool), false)}
+		}
+		return call
+	}
+	result := m.Result
+	if result.Kind != hir.Optional {
+		result = hir.T(hir.Optional, result)
+	}
+	return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x},
+		Y: &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: result}, Z: l.coerce(call, result)}
+}
+
+// Nullable callable unions retain tagged storage so null and undefined stay
+// distinct. Only a checked declaration can recover their callable ABI.
+func (l *lowerer) checkedStoredCallable(n *ast.Node) *checker.Type {
+	if !l.unprunedFeatures {
+		return nil
+	}
+	sym := l.resolve(n)
+	if sym == nil {
+		return nil
+	}
+	t := l.ck.GetNonNullableType(l.ck.GetTypeOfSymbol(sym))
+	if t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 || len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) != 1 {
+		return nil
+	}
+	return t
+}
+
+func (l *lowerer) storedCallableType(n *ast.Node, t hir.Type) bool {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	return l.isCallableValueType(t) || t.Kind == hir.Dynamic && l.checkedStoredCallable(n) != nil
 }
 
 func (l *lowerer) bindingMutable(symbol *ast.Symbol) bool {

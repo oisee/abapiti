@@ -50,6 +50,12 @@ func scopedLowering(r *tsfront.RegistryLowering, dir string) *tsfront.RegistryLo
 	s := *r
 	s.Blocking = nil
 	s.Verification = nil
+	s.Diagnostics = nil
+	for _, d := range r.Diagnostics {
+		if sourceInScope(d.Loc, dir) {
+			s.Diagnostics = append(s.Diagnostics, d)
+		}
+	}
 	for _, d := range r.Blocking {
 		if sourceInScope(d.Loc, dir) {
 			s.Blocking = append(s.Blocking, d)

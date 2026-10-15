@@ -298,6 +298,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if expr == nil {
 			return nil
 		}
+		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		x = expr
 	case init != nil && init.Kind == ast.KindArrayLiteralExpression && d.Type() == nil:
@@ -540,6 +541,9 @@ func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
 // an indexed element).
 func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 	if lhs == nil {
+		return nil
+	}
+	if l.gogenIndexWrite(lhs) {
 		return nil
 	}
 	switch lhs.Kind {

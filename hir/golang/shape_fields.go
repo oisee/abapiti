@@ -167,7 +167,7 @@ func (e *emitter) shapeFields(c *hir.Class) {
 		}
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
-		e.line("};if key==str(\"__proto__\") {panic(newTrap(\"prototype mutation through class view is unsupported\"))};if self.viewExtras==nil {self.viewExtras=&orderedMap[jsString,*dynamic]{}};self.viewExtras.set(key,value) }")
+		e.line("};if key==str(\"__proto__\") {panic(newTrap(\"prototype mutation through class view is unsupported\"))};if self.viewExtras==nil {self.viewExtras=&fastOrderedMap[jsString,*dynamic]{}};self.viewExtras.set(key,value) }")
 	} else {
 		e.line("};panic(newTrap(\"dynamic field assignment outside certified storage\")) }")
 	}

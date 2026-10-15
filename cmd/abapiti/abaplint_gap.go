@@ -23,6 +23,9 @@ type gapSummary struct {
 	ByArea          map[string]int `json:"byArea"`
 	ByRootMessage   []gapMessage   `json:"byRootMessage"`
 	Files           int            `json:"files"`
+	// PartialFieldReads counts note-partial-field-read: JavaScript reads of a
+	// union field that only some members declare (undefined for the others).
+	PartialFieldReads int `json:"partialFieldReads,omitempty"`
 }
 
 var locationSuffix = regexp.MustCompile(`:[0-9]+:[0-9]+$`)
@@ -90,6 +93,11 @@ func summarizeGaps(r *tsfront.RegistryLowering) gapSummary {
 	for _, err := range r.Verification {
 		if e, ok := err.(hir.Error); ok && locationSuffix.MatchString(e.Source) {
 			files[gapSourceFile(e.Source)] = true
+		}
+	}
+	for _, d := range r.Diagnostics {
+		if d.Category == "note-partial-field-read" {
+			s.PartialFieldReads++
 		}
 	}
 	s.Files = len(files)

@@ -3,7 +3,7 @@ package tsfront
 import "github.com/oisee/abapiti/hir"
 
 // Property-only structural compatibility. Container storage remains invariant;
-// a present primitive may widen to its optional slot through the existing live
+// a present primitive or reference may widen to its optional slot through the live
 // adapter. Absent writes into required backing storage still explicitly refuse.
 // Native classes/configs and nested row/array covariance are not admitted.
 func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
@@ -20,8 +20,11 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 		}
 		found := false
 		for _, g := range s.Fields {
-			compatible := f.Type.Equal(g.Type)
+			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
+				if f.Type.Kind == hir.Optional && g.Type.IsRef() {
+					compatible = true
+				}
 				switch g.Type.Kind {
 				case hir.String, hir.Number, hir.I32, hir.I64, hir.Bool:
 					compatible = true
@@ -32,7 +35,7 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 				break
 			}
 		}
-		if !found {
+		if !found && !l.gogenAbsentShapeField(f, s) {
 			return false
 		}
 	}

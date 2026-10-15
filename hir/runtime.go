@@ -19,6 +19,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.padStart":           {String, 2, false},
 	"string.parseFloatNumber":   {String, 0, false},
 	"string.parseIntNumber":     {String, 0, false},
+	"string.toNumber":           {String, 0, false},
 	"number.isNaN":              {Number, 0, false},
 	"string.parseFloat":         {String, 0, false},
 	"string.match":              {String, 1, false},
@@ -35,6 +36,10 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.recordString":      {Dynamic, 0, false},
 	"dynamic.typeofValue":       {Dynamic, 0, false},
 	"dynamic.keys":              {Dynamic, 0, false},
+	"dynamic.spread":            {Dynamic, 0, false},
+	"dynamic.isMap":             {Dynamic, 0, false},
+	"map.markJS":                {OrderedMap, 0, true},
+	"dynamic.isSet":             {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.call0":             {Dynamic, 1, true},
 	"dynamic.put":               {Dynamic, 2, true},
@@ -86,7 +91,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"classvalue.name":  {ClassValue, 0, false},
 	"classvalue.has":   {ClassValue, 1, false},
 	"regexp.lastIndex": {RegExp, 0, false}, "regexp.setLastIndex": {RegExp, 1, false}, "regexp.exec": {RegExp, 1, false}, "regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
-	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
+	"dynamic.isNumber": {Dynamic, 0, false}, "dynamic.asNumber": {Dynamic, 0, false}, "dynamic.toNumber": {Dynamic, 0, false}, "dynamic.typeof": {Dynamic, 0, false}, "dynamic.toString": {Dynamic, 0, false},
 	"dynamic.isString": {Dynamic, 0, false}, "dynamic.isFunction": {Dynamic, 0, false}, "dynamic.isArray": {Dynamic, 0, false},
 	"dynamic.asString": {Dynamic, 0, false}, "dynamic.asClassValue": {Dynamic, 0, false},
 }
@@ -117,6 +122,9 @@ var SpecialOps = map[string]bool{
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
+	// JSON data graph, replacer (key, value) => value closure or absent,
+	// replacer key list or absent, gap -> optional String.
+	"json.stringifyReplacer": true,
 }
 
 // optionalOf wraps t as an Optional; an optional element stays as it is
@@ -142,6 +150,12 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Dynamic), true
 	case "dynamic.keys":
 		return nil, T(Array, T(String)), true
+	case "dynamic.spread":
+		return nil, T(Array, T(Dynamic)), true
+	case "dynamic.isMap", "dynamic.isSet":
+		return nil, T(Bool), true
+	case "map.markJS":
+		return nil, t, true
 	case "dynamic.delete":
 		return []Type{T(String)}, T(Bool), true
 	case "dynamic.get":
@@ -164,7 +178,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, t.Args[0].Kind == String
 	case "string.match":
 		return []Type{T(RegExp)}, T(Optional, T(Array, T(String))), true
-	case "string.parseFloatNumber", "string.parseIntNumber":
+	case "string.parseFloatNumber", "string.parseIntNumber", "string.toNumber":
 		return nil, T(Number), true
 	case "number.isNaN":
 		return nil, T(Bool), true
@@ -206,7 +220,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(I64), true
 	case "number.remainder2", "number.fromI32", "number.ceil":
 		return nil, T(Number), true
-	case "dynamic.asNumber":
+	case "dynamic.asNumber", "dynamic.toNumber":
 		return nil, T(Number), true
 	case "dynamic.call0":
 		return []Type{T(String)}, T(Dynamic), true

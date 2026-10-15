@@ -1,0 +1,13 @@
+Baseline: 8b625f1; OSG: 7ba2f475b89dc20bf8c96b1c4a9fd379816e5ff0.
+Both pilots used measure-step4.sh, systemd MemoryMax=16G, nice, and the requested Go environment.
+Reference SHA-256: 61618e3b5618ce52b919a37e0e746765f2c2c2631bd35268e3debcfc7847be17 (unchanged).
+
+Observed baseline: 594 blocking diagnostics, 2041 HIR errors; 48 scoped identifier-call diagnostics at 47 unique sites (rather than the stated 38).
+Final: 562 blocking diagnostics, 1802 HIR errors; 41 scoped identifier-call diagnostics.
+Pilot times: 215.66s baseline, 474.07s final; peak RSS: 1476996KB, 1422208KB.
+
+All nine original typed source-call sites in tools/gogen are resolved. The driver compileProgram call outside that scope is also resolved.
+The audit includes 19 unchanged G sites, 11 remaining Number conversions, eight remaining typed Node platform calls, and two newly exposed source-call blockers (param and mutually recursive scanBody). Remaining typed sites are recorded as A, never mislabeled G. This does not complete the broader all-A requirement.
+
+Red Node/Go oracles preceded fixes; final oracles and ABAP fixture exports pass. Gofmt, vet, trap sum=2, and M1 build/output comparison pass. Both emitted abaplint HIR Go files match baseline byte-for-byte.
+Full suite, pinned trap test, Grace full, and lexer facts pass. Grace full facts match baseline exactly (1927 classes, 64 interfaces; zero lowering/verification errors).

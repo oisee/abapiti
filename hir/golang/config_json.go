@@ -17,6 +17,7 @@ var configJSONOrders = map[string][]string{
 }
 
 func (e *emitter) configJSONClass(c *hir.Class) {
+	e.structuralCallableJSON(c)
 	e.line("func (self *%s) configJSON(w *configJSONWriter) jsString {", e.obj(c.Name))
 	if e.liveClasses[c.Name] {
 		e.line("if self!=nil && self.viewSource!=nil {s,ok:=w.value(self.viewSource);if !ok {panic(newRangeFault())};return s}")
@@ -87,7 +88,7 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 	if materializable {
 		e.line("if self!=nil && self.source!=nil {")
 		e.line("w.enter(self);defer w.leave(self);entries:=[]entry[jsString,any]{};seen:=map[jsString]bool{}")
-		e.line("for _,item:=range self.source.Value.(*orderedMap[jsString,*dynamic]).Entries {key:=item.Key;seen[key]=true;var value any=item.Value;switch key {")
+		e.line("for _,item:=range self.source.Value.(*fastOrderedMap[jsString,*dynamic]).Entries {key:=item.Key;seen[key]=true;var value any=item.Value;switch key {")
 		for _, f := range c.Fields {
 			if !f.Static {
 				e.line("case str(%q): value=self.%s", f.Name, e.member(f.Name))

@@ -22,7 +22,7 @@ var supportedOps = map[string]bool{
 	"lsp.isTextDocumentEdit": true, "lsp.isRenameFile": true, "lsp.isCreateFile": true, "lsp.isDeleteFile": true,
 	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex":          true,
-	"string.parseFloatNumber": true, "string.parseIntNumber": true, "number.isNaN": true,
+	"string.parseFloatNumber": true, "string.parseIntNumber": true, "string.toNumber": true, "dynamic.toNumber": true, "number.isNaN": true,
 	"string.repeat": true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
@@ -31,6 +31,11 @@ var supportedOps = map[string]bool{
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
 	"object.checkedClassView": true,
 	"dynamic.keys":            true,
+	"dynamic.spread":          true,
+	"dynamic.isMap":           true,
+	"dynamic.isSet":           true,
+	"map.markJS":              true,
+	"json.stringifyReplacer":  true,
 	"dynamic.classView":       true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -109,6 +114,10 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.parseFloatNumber":
 		code = "parseFloatNumber(" + a + ")"
+	case "string.toNumber":
+		code = "stringToNumber(" + a + ")"
+	case "dynamic.toNumber":
+		code = "dynToNumber(" + a + ")"
 	case "string.parseIntNumber":
 		code = "parseIntNumber(" + a + ")"
 	case "number.isNaN":
@@ -337,6 +346,34 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "json.stringifyReplacer":
+		fn := "nil"
+		if x.Args[0].Kind != hir.Lit {
+			var m *hir.Method
+			for _, in := range b.e.p.Interfaces {
+				if in.Name == x.Args[0].Type.Name {
+					m = in.Methods[0]
+				}
+			}
+			fn = "func(k jsString, v *dynamic) *dynamic {return (" + args[0] + ")." + b.e.member(m.Name) + "(k,v)}"
+		}
+		code = "stringifyReplacer(" + a + "," + fn + "," + args[1] + "," + args[2] + ")"
+	case "map.markJS":
+		code = "markJSMap(" + a + ")"
+		if b.e.directCollectionKey(x.X.Type.Args[0]) {
+			code = "markJSFastMap(" + a + ")"
+		}
+		b.e.collectionProbe = true
+	case "dynamic.isMap", "dynamic.isSet":
+		kind := "orderedMap["
+		if x.Op == "dynamic.isSet" {
+			kind = "orderedSet["
+		}
+		code = "dynIsCollection(" + a + "," + strconv.Quote(kind) + ")"
+		b.e.collectionProbe = true
+	case "dynamic.spread":
+		code = "dynSpread(" + a + ")"
+		b.e.spreadRuntime = true
 	case "dynamic.keys":
 		code = "dynamicKeys(" + a + ")"
 		b.e.extraRuntimeKeys = true
@@ -375,7 +412,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "referenceArray(" + code + ")"
 	}
 	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {
-		code = "referenceSetFromArray(" + a + "," + args[0] + ")"
+		helper := "referenceSetFromArray"
+		if b.e.directCollectionKey(x.X.Type.Args[0]) {
+			helper = "referenceFastSetFromArray"
+		}
+		code = helper + "(" + a + "," + args[0] + ")"
 	}
 	if x.Op == "set.has" && x.X.Kind == hir.StaticGet {
 		if classifier := b.e.classifiers[staticKey(x.X)]; classifier != "" {
@@ -390,3 +431,80 @@ func (b *body) runtime(x *hir.Expr) string {
 
 // SupportsRuntimeOp reports explicit Go emitter coverage.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
+
+// dynSpread is [...v] over a tagged iterable: a string by code point, an
+// array or Set by element. Any other value raises (JavaScript: TypeError).
+const dynSpreadSource = `
+func dynSpread(d *dynamic) *array[any] {
+ if d==nil {panic(newRangeFault())}
+ out:=&array[any]{}
+ if d.Tag==1 {
+  s:=d.Value.(jsString);n:=s.length()
+  for i:=int32(0);i<n; {
+   w:=int32(1);c:=s.charCodeAt(i)
+   if c>=0xD800 && c<=0xDBFF && i+1<n {if m:=s.charCodeAt(i+1);m>=0xDC00 && m<=0xDFFF {w=2}}
+   out.Items=append(out.Items,box(s[2*i:2*(i+w)]));i+=w
+  }
+  return out
+ }
+ if d.Tag==2 || d.Tag==tagArray {
+  if rv:=reflect.ValueOf(d.Value);rv.Kind()==reflect.Pointer && !rv.IsNil() && rv.Elem().Kind()==reflect.Struct {
+   e:=rv.Elem();name:=collectionTypeName(e.Type())
+   if strings.HasPrefix(name,"orderedSet[") || strings.HasPrefix(name,"array[") {
+    items,missing:=e.FieldByName("Items"),e.FieldByName("Missing")
+    for i:=0;i<items.Len();i++ {
+     if missing.IsValid() && missing.Len()>0 && missing.MapIndex(reflect.ValueOf(int32(i))).IsValid() {out.Items=append(out.Items,nil);continue}
+     out.Items=append(out.Items,box(items.Index(i).Interface()))
+    }
+    return out
+   }
+  }
+ }
+ panic(newRangeFault())
+}
+`
+
+// collectionTypeNameSource maps the concrete-key fast collections onto the
+// orderedMap/orderedSet names the reflective probes recognise.
+const collectionTypeNameSource = `
+func collectionTypeName(t reflect.Type) string {
+ name:=t.Name();if rest,ok:=strings.CutPrefix(name,"fastO");ok {return "o"+rest};return name
+}
+`
+
+// dynIsCollection is instanceof Map / Set on a tagged value: the exact Go
+// collection type, and for a Map the jsMap marker that only the Map
+// constructor sets (records share the ordered-map storage).
+const dynIsCollectionSource = `
+func markJSMap[K comparable, V any](m *orderedMap[K, V]) *orderedMap[K, V] {if m!=nil {m.jsMap=true};return m}
+func markJSFastMap[K comparable, V any](m *fastOrderedMap[K, V]) *fastOrderedMap[K, V] {if m!=nil {m.jsMap=true};return m}
+func dynIsCollection(d *dynamic, kind string) bool {
+ if d==nil || d.Tag!=2 {return false}
+ rv:=reflect.ValueOf(d.Value)
+ if rv.Kind()!=reflect.Pointer || rv.IsNil() || rv.Elem().Kind()!=reflect.Struct || !strings.HasPrefix(collectionTypeName(rv.Elem().Type()),kind) {return false}
+ if kind=="orderedMap[" {f:=rv.Elem().FieldByName("jsMap");return f.IsValid() && f.Bool()}
+ return true
+}
+`
+
+// configJSONReplacerPatches extend the usage-gated JSON writer with
+// JSON.stringify's replacer function and key list (SerializeJSONProperty /
+// SerializeJSONObject), only when a program uses them.
+var configJSONReplacerPatches = [][2]string{
+	{"type configJSONWriter struct { active map[any]bool }", "type configJSONWriter struct { active map[any]bool; replacer func(jsString,*dynamic)*dynamic; keys []jsString; hasKeys bool }"},
+	{`out:=str("{");comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);`, `all:=append(indexed,rest...);if w.hasKeys {byKey:=map[jsString]any{};present:=map[jsString]bool{};for _,e:=range all {byKey[e.Key]=e.Value;present[e.Key]=true};all=nil;for _,k:=range w.keys {if present[k] {all=append(all,entry[jsString,any]{k,byKey[k]})}}};out:=str("{");comma:=false;for _,e:=range all {s,ok:=w.prop(e.Key,e.Value);`},
+	{`s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")}`, `s,ok:=w.prop(str(strconv.Itoa(i)),a.get(int32(i)));if !ok {s=str("null")}`},
+}
+
+const configJSONReplacerSource = `
+func jsonBoxed(v any) *dynamic {if o,ok:=v.(interface{configJSONOptional()(any,bool)});ok {value,has:=o.configJSONOptional();if !has {return nil};return jsonBoxed(value)};return box(v)}
+func (w *configJSONWriter) prop(k jsString, v any) (jsString,bool) {if w.replacer==nil {return w.value(v)};return w.value(w.replacer(k,jsonBoxed(v)))}
+func stringifyReplacer(v any, fn func(jsString,*dynamic)*dynamic, keys *array[jsString], gap jsString) optional[jsString] {
+ w:=&configJSONWriter{active:map[any]bool{},replacer:fn}
+ if keys!=nil && fn==nil {seen:=map[jsString]bool{};for _,k:=range keys.Items {if !seen[k] {seen[k]=true;w.keys=append(w.keys,k)}};w.hasKeys=true}
+ s,ok:=w.prop(str(""),v)
+ if !ok {return optional[jsString]{}}
+ if gap!=str("") {s=indentJSON(s,gap)}
+ return present(s)
+}
+`

@@ -53,7 +53,7 @@ func (e *emitter) ownKeyClass(c *hir.Class) {
 		}
 	}
 	visit(c)
-	e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};bag:=&orderedMap[jsString,*dynamic]{}", e.obj(c.Name))
+	e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};bag:=&fastOrderedMap[jsString,*dynamic]{}", e.obj(c.Name))
 	if e.recordDeletion {
 		e.line("if self.deletionOrder!=nil {return self.deletionOrder.keys()}")
 	}

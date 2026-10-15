@@ -473,6 +473,11 @@ type lowerer struct {
 	unexecuted         map[*ast.Node]string
 	overrides          map[*ast.Node]overrides.Entry
 	prog               *Program
+	// absentOnlyFields marks data members declared only as absent
+	// (class name + "." + field), see dataMemberFallback.
+	absentOnlyFields map[string]bool
+	// erasableTypeParams caches typeParamErasable per type parameter.
+	erasableTypeParams map[*ast.Symbol]bool
 	ck                 *checker.Checker
 	file               *ast.SourceFile
 	out                *hir.Program
@@ -523,7 +528,8 @@ type lowerer struct {
 	ifaceClassBaseNames map[string][]string
 	// shapeLike marks data-interface classes: plain objects that an
 	// anonymous shape with the same fields may reuse.
-	shapeLike map[string]bool
+	shapeLike        map[string]bool
+	gogenMappedTypes map[*checker.Type]hir.Type
 	// thisOverride replaces `this` while a closure body is lowered.
 	thisOverride *hir.Expr
 	// widenedLets: let symbols whose HIR type is the common base of their
@@ -884,6 +890,7 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		if expr == nil {
 			return nil
 		}
+		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		stmts = append(stmts, l.assignStatic(mod, d, name, expr, typ))
 	default:
