@@ -166,6 +166,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", 1)
 		runtime += chaiDeepRuntimeSource
 	}
+	if e.spreadRuntime {
+		runtime += dynSpreadSource
+	}
 	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
@@ -233,6 +236,7 @@ type emitter struct {
 	extraRuntimeKeys  bool
 	recordDeletion    bool
 	usesLiveArrays    bool
+	spreadRuntime     bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool

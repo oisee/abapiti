@@ -551,15 +551,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		arr := l.tempVar(n, typ)
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
-				sv := l.iterableValues(el.Expression())
-				if sv != nil && l.generatorABIFor(sv.Type) != nil {
-					sv = l.drainGenerator(sv)
-				}
-				if sv != nil && sv.Type.Kind == hir.OrderedSet {
-					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
-				}
-				if sv == nil || sv.Type.Kind != hir.Array {
-					l.diagf(el, "unsupported-array", "spread element needs an array")
+				sv := l.spreadValues(el, elem, true)
+				if sv == nil {
 					return nil
 				}
 				nxt := l.rtOp("array.concat", arr, typ, sv)

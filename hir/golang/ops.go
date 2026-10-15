@@ -31,6 +31,7 @@ var supportedOps = map[string]bool{
 	"object.get":           true, "object.hasOwn": true, "object.has": true,
 	"object.checkedClassView": true,
 	"dynamic.keys":            true,
+	"dynamic.spread":          true,
 	"dynamic.classView":       true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -323,6 +324,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "dynamic.spread":
+		code = "dynSpread(" + a + ")"
+		b.e.spreadRuntime = true
 	case "dynamic.keys":
 		code = "dynamicKeys(" + a + ")"
 		b.e.extraRuntimeKeys = true
@@ -376,3 +380,35 @@ func (b *body) runtime(x *hir.Expr) string {
 
 // SupportsRuntimeOp reports explicit Go emitter coverage.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
+
+// dynSpread is [...v] over a tagged iterable: a string by code point, an
+// array or Set by element. Any other value raises (JavaScript: TypeError).
+const dynSpreadSource = `
+func dynSpread(d *dynamic) *array[any] {
+ if d==nil {panic(newRangeFault())}
+ out:=&array[any]{}
+ if d.Tag==1 {
+  s:=d.Value.(jsString);n:=s.length()
+  for i:=int32(0);i<n; {
+   w:=int32(1);c:=s.charCodeAt(i)
+   if c>=0xD800 && c<=0xDBFF && i+1<n {if m:=s.charCodeAt(i+1);m>=0xDC00 && m<=0xDFFF {w=2}}
+   out.Items=append(out.Items,box(s[2*i:2*(i+w)]));i+=w
+  }
+  return out
+ }
+ if d.Tag==2 || d.Tag==tagArray {
+  if rv:=reflect.ValueOf(d.Value);rv.Kind()==reflect.Pointer && !rv.IsNil() && rv.Elem().Kind()==reflect.Struct {
+   e:=rv.Elem();name:=e.Type().Name()
+   if strings.HasPrefix(name,"orderedSet[") || strings.HasPrefix(name,"array[") {
+    items,missing:=e.FieldByName("Items"),e.FieldByName("Missing")
+    for i:=0;i<items.Len();i++ {
+     if missing.IsValid() && missing.Len()>0 && missing.MapIndex(reflect.ValueOf(int32(i))).IsValid() {out.Items=append(out.Items,nil);continue}
+     out.Items=append(out.Items,box(items.Index(i).Interface()))
+    }
+    return out
+   }
+  }
+ }
+ panic(newRangeFault())
+}
+`

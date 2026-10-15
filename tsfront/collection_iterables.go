@@ -144,12 +144,8 @@ func (l *lowerer) iterableValues(n *ast.Node) *hir.Expr {
 // spreadInto adds each element of a spread inside new Set([...]) or
 // new Array([...]) to the collection under construction, in order.
 func (l *lowerer) spreadInto(el *ast.Node, kind string, recv *hir.Expr, elemType hir.Type) *hir.Stmt {
-	src := l.iterableValues(el.Expression())
-	if src != nil && src.Type.Kind == hir.OrderedSet {
-		src = l.rtOp("set.values", src, hir.T(hir.Array, src.Type.Args[0]))
-	}
-	if src == nil || src.Type.Kind != hir.Array || len(src.Type.Args) != 1 {
-		l.diagf(el, "unsupported-array", "spread element needs an array")
+	src := l.spreadValues(el, elemType, false)
+	if src == nil {
 		return nil
 	}
 	l.serial++
