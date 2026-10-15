@@ -23,6 +23,9 @@ func Emit(p *hir.Program) (map[string]string, error) { return EmitPackage(p, "ma
 // EmitPackage selects the package name. Output contains only standard-library dependencies.
 func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
 	files, _, err := emitPackage(p, pkg, false)
+	if err == nil {
+		internLiteralFiles(files, pkg)
+	}
 	return files, err
 }
 
