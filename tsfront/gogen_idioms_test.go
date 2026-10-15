@@ -105,3 +105,8 @@ func TestGogenObjectParameterRefusals(t *testing.T) {
 		})
 	}
 }
+
+func TestGogenObjectParameterNameCollision(t *testing.T) {
+	gogenOracle(t, `function f($binding1:string, {expr}: {expr:string}):string {return $binding1+expr;}
+ class Probe {static run():string {return f("a",{expr:"b"});}}`, "ab")
+}
