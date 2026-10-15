@@ -163,6 +163,29 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 			mapped, ok = l.familySubsetParts(present)
 		}
 	}
+	var lowered *hir.Expr
+	if !ok && l.unprunedFeatures && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 && ast.IsInJSFile(n) && !ast.IsAssignmentTarget(n) {
+		// checkJs:false JavaScript: the checker has no type for the receiver
+		// (a partial read upstream), but its lowered value is a family.
+		savedPend, savedDiags, savedHint := l.pend, len(l.diags), l.hint
+		l.pend, l.hint = nil, hir.Type{}
+		recv := l.expr(expression)
+		l.hint = savedHint
+		// a?.f reads the unwrapped value; a plain a.f on an absent value is
+		// JavaScript's TypeError, here the checked narrowing that raises.
+		if recv != nil && recv.Type.Kind == hir.Optional && len(recv.Type.Args) == 1 && recv.Type.Args[0].Kind == hir.UnionRef {
+			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+		}
+		if recv != nil && recv.Type.Kind == hir.UnionRef && !hasBlocking(l.diags[savedDiags:]) {
+			if len(l.pend) > 0 {
+				recv = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: recv.Type, Stmt: hir.B(l.pend...), Y: recv}
+			}
+			l.pend = savedPend
+			lowered, mapped, ok = recv, recv.Type, true
+		} else {
+			l.pend, l.diags = savedPend, l.diags[:savedDiags]
+		}
+	}
 	if !ok || mapped.Kind != hir.UnionRef {
 		return nil, false
 	}
@@ -222,10 +245,13 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		}
 		l.diagf(n, "note-partial-field-read", "recursive union field %s is absent in some members and reads undefined there", name)
 	}
-	saved := l.hint
-	l.hint = hir.Type{}
-	recv := l.expr(expression)
-	l.hint = saved
+	recv := lowered
+	if recv == nil {
+		saved := l.hint
+		l.hint = hir.Type{}
+		recv = l.expr(expression)
+		l.hint = saved
+	}
 	if recv == nil {
 		return nil, true
 	}

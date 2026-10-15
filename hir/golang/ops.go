@@ -35,6 +35,7 @@ var supportedOps = map[string]bool{
 	"dynamic.isMap":           true,
 	"dynamic.isSet":           true,
 	"map.markJS":              true,
+	"json.stringifyReplacer":  true,
 	"dynamic.classView":       true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
@@ -341,6 +342,18 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynString(" + a + ")"
 	case "object.checkedClassView":
 		code = "castRef[" + b.e.typ(x.Type) + "](" + a + ")"
+	case "json.stringifyReplacer":
+		fn := "nil"
+		if x.Args[0].Kind != hir.Lit {
+			var m *hir.Method
+			for _, in := range b.e.p.Interfaces {
+				if in.Name == x.Args[0].Type.Name {
+					m = in.Methods[0]
+				}
+			}
+			fn = "func(k jsString, v *dynamic) *dynamic {return (" + args[0] + ")." + b.e.member(m.Name) + "(k,v)}"
+		}
+		code = "stringifyReplacer(" + a + "," + fn + "," + args[1] + "," + args[2] + ")"
 	case "map.markJS":
 		code = "markJSMap(" + a + ")"
 		b.e.collectionProbe = true
@@ -451,5 +464,27 @@ func dynIsCollection(d *dynamic, kind string) bool {
  if rv.Kind()!=reflect.Pointer || rv.IsNil() || rv.Elem().Kind()!=reflect.Struct || !strings.HasPrefix(rv.Elem().Type().Name(),kind) {return false}
  if kind=="orderedMap[" {f:=rv.Elem().FieldByName("jsMap");return f.IsValid() && f.Bool()}
  return true
+}
+`
+
+// configJSONReplacerPatches extend the usage-gated JSON writer with
+// JSON.stringify's replacer function and key list (SerializeJSONProperty /
+// SerializeJSONObject), only when a program uses them.
+var configJSONReplacerPatches = [][2]string{
+	{"type configJSONWriter struct { active map[any]bool }", "type configJSONWriter struct { active map[any]bool; replacer func(jsString,*dynamic)*dynamic; keys []jsString; hasKeys bool }"},
+	{`out:=str("{");comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);`, `all:=append(indexed,rest...);if w.hasKeys {byKey:=map[jsString]any{};present:=map[jsString]bool{};for _,e:=range all {byKey[e.Key]=e.Value;present[e.Key]=true};all=nil;for _,k:=range w.keys {if present[k] {all=append(all,entry[jsString,any]{k,byKey[k]})}}};out:=str("{");comma:=false;for _,e:=range all {s,ok:=w.prop(e.Key,e.Value);`},
+	{`s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")}`, `s,ok:=w.prop(str(strconv.Itoa(i)),a.get(int32(i)));if !ok {s=str("null")}`},
+}
+
+const configJSONReplacerSource = `
+func jsonBoxed(v any) *dynamic {if o,ok:=v.(interface{configJSONOptional()(any,bool)});ok {value,has:=o.configJSONOptional();if !has {return nil};return jsonBoxed(value)};return box(v)}
+func (w *configJSONWriter) prop(k jsString, v any) (jsString,bool) {if w.replacer==nil {return w.value(v)};return w.value(w.replacer(k,jsonBoxed(v)))}
+func stringifyReplacer(v any, fn func(jsString,*dynamic)*dynamic, keys *array[jsString], gap jsString) optional[jsString] {
+ w:=&configJSONWriter{active:map[any]bool{},replacer:fn}
+ if keys!=nil && fn==nil {seen:=map[jsString]bool{};for _,k:=range keys.Items {if !seen[k] {seen[k]=true;w.keys=append(w.keys,k)}};w.hasKeys=true}
+ s,ok:=w.prop(str(""),v)
+ if !ok {return optional[jsString]{}}
+ if gap!=str("") {s=indentJSON(s,gap)}
+ return present(s)
 }
 `

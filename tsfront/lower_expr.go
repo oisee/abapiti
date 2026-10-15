@@ -710,7 +710,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	if x, handled := l.gogenIndexRead(n); handled {
 		return x
 	}
-	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
+	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 && !l.storedFunctionField(sym) {
 		if value := l.functionValue(n); value != nil {
 			return value
 		}
@@ -926,6 +926,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	// A structural copy of a family member (RuntimeFields<Type> narrowed by
+	// flow) maps to the member's payload: read its field by name.
+	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && strings.HasPrefix(recv.Type.Name, "family.") && !ast.IsAssignmentTarget(n) {
+		if c := l.classByName(recv.Type.Name); c != nil {
+			for _, f := range c.Fields {
+				if f.Name == n.Name().Text() && !f.Static {
+					return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: recv}
+				}
+			}
+		}
+	}
 	// A record member with a literal name reads the map.
 	if recv.Type.Kind == hir.OrderedMap && n.Name() != nil {
 		key := n.Name().Text()
@@ -1047,8 +1058,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if l.unprunedFeatures && callee.Kind == ast.KindPropertyAccessExpression {
-		if field, ok := l.fieldOf(l.resolve(callee)); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
-			return l.functionValueCall(n, callee)
+		// A class method is called through its class, never as a stored
+		// function value, even when a structural shape lists it as a field.
+		// Interface/type-literal method signatures are stored functions.
+		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+			if field, ok := l.fieldOf(sym); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
+				return l.functionValueCall(n, callee)
+			}
 		}
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
@@ -1136,6 +1152,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// An index-signature read the checker types as present: a
 				// checked narrow raises where JavaScript would throw a TypeError.
 				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
+			}
+			if l.unprunedFeatures && ast.IsInJSFile(n) && recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// checkJs:false JavaScript calls the method on the value it
+				// has: an absent array throws, here the checked narrowing raises.
+				recvX = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recvX.Type.Args[0], X: recvX}
 			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
@@ -1413,6 +1434,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
 		}
+		if x, handled := l.arrayIterationCall(n, name, recv); handled {
+			return x
+		}
 		x, handled := l.libraryCall(n, name, recv)
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
 			for _, c := range l.out.Classes {
@@ -1425,6 +1449,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 		if x == nil && !handled {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
 		return x
@@ -2569,6 +2596,17 @@ func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
 		return x
 	}
 	return l.rtOp("map.markJS", x, x.Type)
+}
+
+// storedFunctionField: an interface method signature that a data shape
+// stores as a function-typed field. Reading it yields the stored function
+// value itself, exactly as JavaScript does (no receiver is bound).
+func (l *lowerer) storedFunctionField(sym *ast.Symbol) bool {
+	if !l.unprunedFeatures || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodSignature {
+		return false
+	}
+	field, ok := l.fieldOf(sym)
+	return ok && l.callableMethod(field.Type) != nil
 }
 
 // collectionInstanceOf lowers `v instanceof Map` / `v instanceof Set` for a

@@ -60,6 +60,8 @@ var unsupportedOps = map[string]bool{
 	"dynamic.spread": true,
 	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
 	"dynamic.isMap": true, "dynamic.isSet": true, "map.markJS": true,
+	// JSON.stringify replacer callbacks need a per-property callback ABI.
+	"json.stringifyReplacer": true,
 }
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.

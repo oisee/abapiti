@@ -121,6 +121,9 @@ var SpecialOps = map[string]bool{
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
+	// JSON data graph, replacer (key, value) => value closure or absent,
+	// replacer key list or absent, gap -> optional String.
+	"json.stringifyReplacer": true,
 }
 
 // optionalOf wraps t as an Optional; an optional element stays as it is

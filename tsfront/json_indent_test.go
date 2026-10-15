@@ -35,9 +35,10 @@ func TestJSONLiteralIndentNodeOracle(t *testing.T) {
 	}
 }
 
+// A key-list replacer with space is supported (TestJSONReplacerNodeOracle); a
+// non-literal space and a non-literal replacer stay refused.
 func TestJSONIndentRefusesReplacerAndNonliteralSpace(t *testing.T) {
 	for _, source := range []string{
-		`export class Probe {run():string{return JSON.stringify({a:1},["a"],2);}}`,
 		`export class Probe {run(space:number):string{return JSON.stringify({a:1},null,space);}}`,
 		`export class Probe {run(undefined:any[]):string{return JSON.stringify({a:1},undefined,2);}}`,
 	} {

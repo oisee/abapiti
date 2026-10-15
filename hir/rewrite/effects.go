@@ -71,6 +71,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.keys":              {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.spread":            {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None"},
 	"dynamic.isMap":             {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"json.stringifyReplacer":    {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.isSet":             {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"map.markJS":                {Reads: OpReads{Receiver: true}, Writes: "Receiver", MayRaise: "None", Aliases: "Receiver"},
 	"dynamic.classView":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},

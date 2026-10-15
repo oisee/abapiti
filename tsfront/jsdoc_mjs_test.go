@@ -19,7 +19,7 @@ func runMjsOracle(t *testing.T, mjs string, abap bool) {
 }
 
 // runMjsOracleTypes is runMjsOracle with its own type-only types.ts.
-func runMjsOracleTypes(t *testing.T, types, mjs string, abap bool) []LowerDiagnostic {
+func runMjsOracleTypes(t *testing.T, types, mjs string, abap bool, lowerTypes ...bool) []LowerDiagnostic {
 	t.Helper()
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "types.ts"), []byte(types), 0600)
@@ -33,7 +33,11 @@ func runMjsOracleTypes(t *testing.T, types, mjs string, abap bool) []LowerDiagno
 	if err != nil {
 		t.Fatal(err)
 	}
-	prog, diags, err := p.Lower([]string{"probe.mjs"})
+	files := []string{"probe.mjs"}
+	if len(lowerTypes) > 0 && lowerTypes[0] {
+		files = append(files, "types.ts")
+	}
+	prog, diags, err := p.Lower(files)
 	if err != nil {
 		t.Fatal(err)
 	}

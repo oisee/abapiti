@@ -72,3 +72,20 @@ func TestGogenInheritedShapeLocations(t *testing.T) {
 func TestGogenMethodInterfaceClassBrand(t *testing.T) {
 	gogenOracle(t, `class Identifier {private name:string;constructor(name:string){this.name=name;}getName():string{return this.name;}} interface Definition extends Identifier {value():string;} class Concrete extends Identifier implements Definition {value():string{return "v";}} function read(d:Definition):string{return d.getName()+":"+d.value();} class Probe {static run():string{return read(new Concrete("n"));}}`, "n:v")
 }
+
+// An interface extending a class lists the class's methods among its
+// properties; calls of those methods on class instances stay method calls
+// (they read this), never stored-function calls.
+func TestGogenInterfaceExtendsClassMethods(t *testing.T) {
+	gogenOracle(t, `class Ident {private name:string; constructor(name:string){this.name=name;} getName():string {return this.name;} equals(o:Ident):boolean {return o.getName()===this.getName();}}
+interface Def extends Ident {kind:string;}
+class Probe {static run():string {const a=new Ident("n");const b=new Ident("n");return (a.equals(b)?"n":"x")+":"+a.getName().replace("n","v");}}`, "n:v")
+}
+
+// A data shape's method signature holds a stored function: taking it as a
+// value (h.rowValue passed as a callback) reads that function.
+func TestGogenStoredFunctionValue(t *testing.T) {
+	gogenOracle(t, `interface Renderers {tag:string;value(x:number):string;}
+function apply(f:(x:number)=>string):string {return f(3);}
+class Probe {static run():string {const r:Renderers={tag:"v",value:(x:number):string=>"n:"+x};return apply(r.value).replace("3","")+r.tag;}}`, "n:v")
+}
