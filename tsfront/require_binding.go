@@ -238,10 +238,26 @@ func (l *lowerer) bindRequired(d *ast.Node, mod *ast.Symbol) bool {
 				target = resolved
 			}
 		}
+		if !immutableExport(target) {
+			// Node copies the current value; a static binding would read live.
+			l.diagf(el, "unsupported-require", "require destructuring of %s: only class, function, enum, namespace and const exports (unchangeable after initialization) may be destructured", key.Text())
+			return false
+		}
 		bound[el.Symbol()] = target
 	}
 	for k, v := range bound {
 		l.require.targets[k] = v
 	}
 	return true
+}
+
+// immutableExport: destructuring copies the export's value at that moment,
+// which equals a static binding only when the export cannot be reassigned
+// after module initialization.
+func immutableExport(sym *ast.Symbol) bool {
+	if sym.Flags&(ast.SymbolFlagsClass|ast.SymbolFlagsFunction|ast.SymbolFlagsEnum|ast.SymbolFlagsValueModule) != 0 {
+		return true
+	}
+	d := sym.ValueDeclaration
+	return sym.Flags&ast.SymbolFlagsBlockScopedVariable != 0 && d != nil && d.Kind == ast.KindVariableDeclaration && ast.IsVarConst(d)
 }

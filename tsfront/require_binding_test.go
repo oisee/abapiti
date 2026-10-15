@@ -147,6 +147,9 @@ const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`
 		{"mismatched literal", coreDecl, `const core = transpilerRequire("@fake/transpiler/build/src/rearranger");`, "probe.mjs:5:14", "unsupported-require"},
 		{"missing annotation", rearrangerDecl, "\n" + `const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`, "probe.mjs:7:22", "unsupported-require"},
 		{"non-literal argument", coreDecl, `const core = transpilerRequire("@fake/" + "core");`, "probe.mjs:5:14", "unsupported-require"},
+		{"mutable export destructured", rearrangerDecl, rearrangerDecl + `
+/** @type {typeof import("@fake/values")} */
+const {count} = require("@fake/values");`, "probe.mjs:9:8", "unsupported-require"},
 		{"other createRequire use", "export class Probe {", `const other = createRequire("/elsewhere.js");
 export class Probe {`, "probe.mjs:10:15", "unsupported-call"},
 	}
