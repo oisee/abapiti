@@ -211,6 +211,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
+	if source := e.nodePlatformSource(pkg); source != "" {
+		files["nodeplatform.go"] = source
+	}
 	if source := e.externSource(pkg); source != "" {
 		files["extern.go"] = source
 	}

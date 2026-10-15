@@ -14,6 +14,9 @@ func (l *lowerer) gogenCheckerType(n *ast.Node, t *checker.Type) (hir.Type, bool
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if l.nodeDirentType(t) {
+		return hir.Ref(l.builtinDirent()), true
+	}
 	if mapped, ok := l.gogenResolvedArray(n, t); ok {
 		return mapped, true
 	}
@@ -102,6 +105,9 @@ func (l *lowerer) gogenCall(n *ast.Node) (*hir.Expr, bool) {
 	if callee.Kind == ast.KindIdentifier && callee.Text() == "BigInt" && l.librarySymbol(l.resolve(callee)) {
 		l.diagf(n, "unsupported-bigint", "BigInt conversion requires bigint values, which have no HIR representation")
 		return nil, true
+	}
+	if x, handled := l.direntMember(callee, true, len(n.Arguments())); handled {
+		return x, true
 	}
 	if callee.Kind != ast.KindPropertyAccessExpression || callee.Name().Text() != "now" {
 		return nil, false

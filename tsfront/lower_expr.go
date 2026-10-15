@@ -719,6 +719,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
+	if x, handled := l.direntMember(n, false, 0); handled {
+		return x
+	}
 	if x, handled := l.gogenIndexRead(n); handled {
 		return x
 	}
@@ -1011,6 +1014,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.cryptoHashCall(n); ok {
+		return x
+	}
+	if x, ok := l.nodePlatformCall(n); ok {
 		return x
 	}
 	callee := gogenCallee(n.Expression())
