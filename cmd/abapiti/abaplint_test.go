@@ -224,7 +224,7 @@ func assertA4HArchiveSplit(t *testing.T, out string) {
 			t.Errorf("embedded runtime changed: %s", entry.Name())
 		}
 	}
-	for _, object := range []string{d.A4HClass + ".clas", d.RunReport + ".prog", d.CleanReport + ".prog", d.NegReport + ".prog", "zcl_abapiti_corpus.clas", "zcl_abapiti_log.clas", "zif_abapiti_corpus.intf", "zabapiti_corpus_load.prog", "zabapiti_log_setup.prog"} {
+	for _, object := range []string{d.A4HClass + ".clas", d.RunReport + ".prog", d.CleanReport + ".prog", d.NegReport + ".prog", "zcl_abapiti_corpus.clas", "zcl_abapiti_log.clas", "zcl_lnt_test_log_bal.clas", "zif_abapiti_corpus.intf", "zabapiti_corpus_load.prog", "zabapiti_log_setup.prog"} {
 		for _, ext := range []string{".abap", ".xml"} {
 			if registry["src/"+object+ext] == "" {
 				t.Errorf("registry missing %s%s", object, ext)

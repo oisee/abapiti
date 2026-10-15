@@ -354,6 +354,11 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			}
 			sources[entry.Name()] = string(data)
 		}
+		logBAL, err := tsfront.A4HTestLogBAL()
+		if err != nil {
+			return err
+		}
+		sources["zcl_lnt_test_log_bal.clas.abap"] = logBAL
 		d := tsfront.Drivers()
 		a4h := d.A4HClass
 		sources[a4h+".clas.abap"] = tsfront.RegistryRunCorpusClass(a4h, runSHA, negative, names)
@@ -383,7 +388,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 				break
 			}
 		}
-		line := fmt.Sprintf("a4h/     Import %s first with abapGit (New Offline, package %s): translated core only, %d objects%s. Then import %s (package %s): A4H registry driver, run/clean reports (negative report with --negative), corpus/log runtime and setup reports, %d objects. Run ZABAPITI_LOG_SETUP once and load the corpus with ZABAPITI_CORPUS_LOAD, then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from ZABAPITI_CORPUS and prints ok=X when the issues match Node's.", filepath.Base(zipFile), pkg, objects, releaseNote, filepath.Base(registryZip), registryPkg, registryObjects, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
+		line := fmt.Sprintf("a4h/     Import %s first with abapGit (New Offline, package %s): translated core only, %d objects%s. Then import %s (package %s): A4H registry driver, run/clean reports (negative report with --negative), corpus/log runtime and setup reports, optional BAL/SLG1 test progress adapter, %d objects. Run ZABAPITI_LOG_SETUP once and load the corpus with ZABAPITI_CORPUS_LOAD, then run %s as a background job (SM36 or F9 in SE38; %s is the same report, kept for trace requests); it reads zabapgit from ZABAPITI_CORPUS and prints ok=X when the issues match Node's.", filepath.Base(zipFile), pkg, objects, releaseNote, filepath.Base(registryZip), registryPkg, registryObjects, strings.ToUpper(d.CleanReport), strings.ToUpper(d.RunReport))
 		if err := os.WriteFile(filepath.Join(dir, "README.txt"), []byte(line+"\n"), 0644); err != nil {
 			return err
 		}

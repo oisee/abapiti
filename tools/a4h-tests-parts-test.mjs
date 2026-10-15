@@ -1,12 +1,19 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import {identifiers, checkIndependence, promote, initialAssignment, balanceRules, adaptRunner, dispatchPlan, adaptDispatch, chaiPlan, adaptChai, groups, split, verifyParts} from './a4h-tests-parts.mjs';
+import {checkPortableTestObject, identifiers, checkIndependence, promote, initialAssignment, balanceRules, adaptRunner, dispatchPlan, adaptDispatch, chaiPlan, adaptChai, groups, split, verifyParts} from './a4h-tests-parts.mjs';
 import {mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 const sha = b => createHash('sha256').update(b).digest('hex');
+
+checkPortableTestObject('zcl_lnt_test_log.clas.abap', "TRY. CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('EVENT') EXPORTING value = value. CATCH cx_sy_dyn_call_error. ENDTRY.");
+checkPortableTestObject('test.clas.abap', 'CLASS lcl_global_func DEFINITION. ENDCLASS.');
+for (const token of ['BAL_LOG_CREATE', 'balloghndl', 'bal_s_log', 'bal_t_logh', 'symsgty']) {
+ assert.throws(() => checkPortableTestObject('test.clas.abap', token), /SAP BAL dependency/);
+}
+assert.throws(() => checkPortableTestObject('zcl_lnt_test_log_bal.clas.xml', '<class/>'), /SAP BAL dependency/);
 
 const refs = identifiers(`CLASS zcl_a DEFINITION INHERITING FROM zcl_parent.
  INTERFACES zif_a.
@@ -129,6 +136,7 @@ try {
  const build = join(scratch,'build'), input = join(build,'input'), output = join(scratch,'output');
  mkdirSync(join(input,'src'),{recursive:true}); mkdirSync(join(build,'closure'));
  const support = {ZCL_LNT_TEST_RUNNER:runner,ZCL_LNT_TEST_FACTORY:factory,ZCL_LNT_TEST_DELETE:deletion,
+ ZCL_LNT_TEST_LOG: "CLASS zcl_lnt_test_log IMPLEMENTATION. METHOD append. TRY. CALL METHOD ('ZCL_LNT_TEST_LOG_BAL')=>('EVENT') EXPORTING value = value. CATCH cx_sy_dyn_call_error. ENDTRY. ENDMETHOD. ENDCLASS.\n",
  ZLNT_RUNTIME_CHAI_63495E43F558:chai,ZCL_A:'CLASS zcl_a DEFINITION PUBLIC. ENDCLASS.\n',ZCL_B:'CLASS zcl_b DEFINITION PUBLIC. ENDCLASS.\n'};
  writeFileSync(join(input,'.abapgit.xml'), '<DATA><STARTING_FOLDER>/src/</STARTING_FOLDER><FOLDER_LOGIC>PREFIX</FOLDER_LOGIC></DATA>');
  writeFileSync(join(input,'src/package.devc.xml'), '<DEVC><CTEXT>fixture</CTEXT></DEVC>');
@@ -158,7 +166,9 @@ with zipfile.ZipFile(sys.argv[2],'w') as z:
  assert.deepEqual(first,again,'archives must be reproducible');
  const result=JSON.parse(readFileSync(join(output,'parts.json')));
  assert.equal(result.independence.violations,0);
- assert.equal(result.independence.originalObjects,6);
+ assert.equal(result.assignments.ZCL_LNT_TEST_LOG.part,'base');
+ assert(!result.assignments.ZCL_LNT_TEST_LOG_BAL, 'optional BAL adapter must remain outside tests layers');
+ assert.equal(result.independence.originalObjects,7);
  assert.equal(verifyParts(build,output).checkedObjects,result.independence.checkedObjects);
  for(const info of Object.values(first)) {
   assert.equal(info.sha256,sha(readFileSync(join(output,info.zip))));

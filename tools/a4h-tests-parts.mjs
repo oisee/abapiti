@@ -61,6 +61,11 @@ export function identifiers(source) {
  return new Set(tokens.filter(t => t.objectContext || !locals.has(t.token)).map(t => t.token));
 }
 
+// Check every emitted object file, including XML, for SAP BAL dependencies.
+export function checkPortableTestObject(file, source) {
+ if (/zcl_lnt_test_log_bal\./i.test(file) || /\b(?:bal_|balloghndl\b|symsgty\b)/i.test(source)) throw new Error(`SAP BAL dependency in tests object: ${file}`);
+}
+
 export function checkIndependence(edges, assignment, core, external = new Set()) {
  const violations = [];
  for (const [from, refs] of edges) for (const to of refs) {
@@ -310,6 +315,7 @@ export function verifyParts(build, output) {
    verifyManifest(directory, manifest);
    for (const [key, object] of Object.entries(manifest.objects)) {
     if (key === 'PACKAGE.DEVC') continue;
+    for (const file of object.files) checkPortableTestObject(file, readFileSync(join(directory, file), 'utf8'));
     const name = nameOf(key);
     if (assignment.has(name) || core.has(name)) throw new Error(`duplicate object: ${name}`);
     assignment.set(name, part); hashes.set(key, object.sha256);

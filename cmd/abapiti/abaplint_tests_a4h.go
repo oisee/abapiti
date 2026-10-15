@@ -97,6 +97,21 @@ func validateA4HSources(packages ...map[string]string) error {
 	return nil
 }
 
+var a4hTestBALRef = regexp.MustCompile(`(?i)\b(?:bal_|balloghndl\b|symsgty\b)`)
+
+// Tests layers must activate without the optional SAP BAL adapter.
+func validateA4HTestSources(sources map[string]string) error {
+	for file, source := range sources {
+		if strings.HasPrefix(strings.ToLower(filepath.Base(file)), "zcl_lnt_test_log_bal.") {
+			return fmt.Errorf("BAL adapter must be packaged only in the registry archive: %s", file)
+		}
+		if forbidden := a4hTestBALRef.FindString(source); forbidden != "" {
+			return fmt.Errorf("tests object %s depends on SAP BAL: %s", file, forbidden)
+		}
+	}
+	return nil
+}
+
 func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) error {
 	var manifest struct {
 		Shards []struct {
@@ -167,6 +182,9 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	}
 	for file, source := range support {
 		tests[file] = source
+	}
+	if err := validateA4HTestSources(tests); err != nil {
+		return err
 	}
 	if err := validateA4HSources(core, tests); err != nil {
 		return err
