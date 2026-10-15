@@ -181,9 +181,11 @@ then the six remaining parts in parallel. Import all parts before running tests.
 From v0.5.2 the core archive contains only translated core. The registry archive
 has its own `$ZLNT_A4H` package: driver, run/clean reports (neg with `--negative`),
 `ZCL_ABAPITI_CORPUS`, `ZCL_ABAPITI_LOG`, their interface and tables, and the corpus
-loader/log setup reports. Runtime files are embedded in the standalone binary.
+loader/log setup reports, plus the optional `ZCL_LNT_TEST_LOG_BAL` progress adapter.
+Runtime files are embedded in the standalone binary.
 Run `ZABAPITI_LOG_SETUP` once and load inputs with `ZABAPITI_CORPUS_LOAD` before
-using the registry reports. Test packages retain their independent logging service.
+using the registry reports. Test packages retain their independent table logging
+service.
 The OCI import order is `zlnt-core` (lib), `zlnt-registry-a4h` (input), then
 `zlnt-tests-base` and the test parts. This fixes the system self-containment gap
 found by the E.10 OSGO proof (13 syntax issues in the registry driver).
@@ -219,6 +221,12 @@ small independent table/log service. Each checkpoint is split into 255-character
 rows (`SEQ`, `CHUNK_NO`, `USED`, `PAYLOAD`) and committed **before the test body**.
 `NEXT_IDX` already points to the next test when a dump occurs. Completed tests
 emit an indexed result checkpoint; the final report is also written in chunks.
+`ZLNT_TESTRUN` is the only source of truth. The tests base layer has no SAP BAL
+types or function modules. Optional BAL/SLG1 progress requires importing the
+`abaplint-577f875e-a4h-registry.zip` archive, which owns `ZCL_LNT_TEST_LOG_BAL`.
+The logger calls its `BEGIN` and `EVENT` methods dynamically and tolerates an
+absent adapter. SLG1 is a progress mirror and is never used for resume or collection.
+
 Checkpoint commits are intended for these in-memory tests, not arbitrary
 transactional application code. Retain logs until collection is verified.
 

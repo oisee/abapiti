@@ -35,7 +35,7 @@ In both cases every source file of the closure (1,538 files reachable from `regi
 | Directory | Contents | Next step |
 |---|---|---|
 | `classes/` | the full translated core and runtime, with readable `ZCL_LNT_` / `ZIF_LNT_` names, shared by the ABAP targets | |
-| `a4h/` | Two abapGit offline repositories: `abaplint-577f875e-a4h.zip` contains translated core only; `abaplint-577f875e-a4h-registry.zip` contains `ZCL_LNT_REGISTRY_A4H`, run/clean reports (and neg with `--negative`), plus embedded corpus/log runtime, interface, tables and loader/setup reports | Import core first into `$ZLNT` (`--package`; legacy scope defaults to `$ZABAPLINT`), then registry into `$ZLNT_A4H` (uppercase package truncated to 26 characters + `_A4H`). Run `ZABAPITI_LOG_SETUP` once, load inputs with `ZABAPITI_CORPUS_LOAD`, then run `ZLNT_REGISTRY_RUN` as a background job. |
+| `a4h/` | Two abapGit offline repositories: `abaplint-577f875e-a4h.zip` contains translated core only; `abaplint-577f875e-a4h-registry.zip` contains `ZCL_LNT_REGISTRY_A4H`, run/clean reports (and neg with `--negative`), the optional `ZCL_LNT_TEST_LOG_BAL` adapter for BAL/SLG1 test progress, plus embedded corpus/log runtime, interface, tables and loader/setup reports | Import core first into `$ZLNT` (`--package`; legacy scope defaults to `$ZABAPLINT`), then registry into `$ZLNT_A4H` (uppercase package truncated to 26 characters + `_A4H`). Run `ZABAPITI_LOG_SETUP` once, load inputs with `ZABAPITI_CORPUS_LOAD`, then run `ZLNT_REGISTRY_RUN` as a background job. |
 | `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_ABAPITI_REGISTRY_RUN`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
 | `native/` | `zabaplint.prog.abap` and `lib/` with the classes | in an open-steamgate checkout: `node tools/gogen/osabap.mjs native/zabaplint.prog.abap --lib native/lib` (set GOOS/GOARCH for cross builds), then `.out/osabap --file zabapgit_standalone.prog.abap --config abaplint.json -allow-read .` |
 
@@ -86,7 +86,7 @@ example and its limitations.
 
 The default includes every rule, not just the six used by the zabapgit check. Certification covers the pinned core's 11,060 Node-active tests on Go and OSGO, not arbitrary TypeScript or every possible input. Unsupported bodies/operations retain source-located refusals. Only **`--scope zabapgit`** prunes to the trace in `tsfront/testdata/registrycorpus/reachability.json` (v702, six rules); other rules can reach coverage traps in that explicit legacy build. Neither scope silently substitutes an answer.
 
-The release's `$ZLNT` / `$ZLNT_TESTS` pair is built together from the complete 17-shard union so both packages share exactly one name/shape table. Use [the A4H build guide](a4h-test-suite.md) to reproduce those zips; A4H kernel certification is still in progress.
+The release's `$ZLNT` / `$ZLNT_TESTS` pair is built together from the complete 17-shard union so both packages share exactly one name/shape table. Tests layers do not depend on SAP BAL; BAL/SLG1 progress needs the registry zip. `ZLNT_TESTRUN` is the only source of truth for test checkpoints and collection. Use [the A4H build guide](a4h-test-suite.md) to reproduce those zips; A4H kernel certification is still in progress.
 
 ## TS-HG@Go
 
