@@ -85,7 +85,7 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 				c.ForEachChild(func(child *ast.Node) bool { root(child); return false })
 			}
 			root(n)
-		case ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
+		case ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindJSTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 			// These declarations have no independent execution root.
 		default:
 			// Includes module variable initializers and any unsupported side effect.

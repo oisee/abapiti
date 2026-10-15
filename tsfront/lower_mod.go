@@ -253,7 +253,7 @@ func (l *lowerer) lowerModule2(f *ast.SourceFile) *hir.Class {
 			}
 			// External LSP namespaces are type declarations; supported calls
 			// are checked individually by lspCall, not emitted as modules.
-		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
+		case ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindJSTypeAliasDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 		default:
 			if l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(f), "test/") {
 				vars = true
@@ -435,10 +435,6 @@ func (l *lowerer) lowerModuleVars(f *ast.SourceFile, mod *hir.Class, body *[]*hi
 
 func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Class, body *[]*hir.Stmt) {
 	for _, stmt := range statements {
-		if stmt.Kind == ast.KindVariableStatement && stmt.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsConst == 0 && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/")) {
-			l.diagf(stmt, "unsupported-top-level", "mutable module variables are not lowered")
-			continue
-		}
 		if stmt.Kind != ast.KindVariableStatement {
 			continue
 		}
