@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 // strLiteralCall matches str("…") with a Go-quoted constant argument.
@@ -47,4 +49,16 @@ func internStrLiterals(files map[string]string, names []string) string {
 // internLiteralFiles adds literals.go for hir.go and runtime.go.
 func internLiteralFiles(files map[string]string, pkg string) {
 	files["literals.go"] = "package " + pkg + "\n" + internStrLiterals(files, []string{"hir.go", "runtime.go"})
+}
+
+// discardedResult selects a statement form that skips building a value
+// nobody reads: splice(i, n) as a statement keeps the mutation but not the
+// removed-elements array. Everything else is returned unchanged.
+func discardedResult(x *hir.Expr) *hir.Expr {
+	if x != nil && x.Kind == hir.RuntimeOp && x.Op == "array.splice2" {
+		drop := *x
+		drop.Op = "array.spliceDrop2"
+		return &drop
+	}
+	return x
 }

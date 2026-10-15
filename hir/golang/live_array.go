@@ -24,6 +24,8 @@ func liveArrayRuntime(source string) string {
 		"splice1(i int32) *array[T]":            "if a.live!=nil {return a.splice2(i,a.length())}",
 		"splice1_view(i int32) *array[T]":       "if a.live!=nil {return a.splice1(i)}",
 		"splice2(i, n int32) *array[T]":         "if a.live!=nil {return a.proxySplice(i,n,nil,false)}",
+		"spliceDrop2(i, n int32) *array[T]":     "if a.live!=nil {a.proxySplice(i,n,nil,false);return nil}",
+		"spliceDrop2(i,n int32) *array[T]":      "if a.live!=nil {a.proxySplice(i,n,nil,false);return nil}",
 		"splice2(i,n int32) *array[T]":          "if a.live!=nil {return a.proxySplice(i,n,nil,false)}",
 		"splice3(i, n int32, v T) *array[T]":    "if a.live!=nil {return a.proxySplice(i,n,box(v),true)}",
 		"splice3(i,n int32,v T) *array[T]":      "if a.live!=nil {return a.proxySplice(i,n,box(v),true)}",

@@ -1153,7 +1153,7 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("%s=%s", a, v)
 		}
 	case hir.ExprStmt:
-		b.expr(s.X)
+		b.expr(discardedResult(s.X))
 	case hir.If:
 		a := b.expr(s.X)
 		b.line("if %s {", a)

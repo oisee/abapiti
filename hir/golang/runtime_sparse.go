@@ -68,6 +68,11 @@ func sparseRuntime(source string) string {
   for k:=range a.holes {if k<int(i) {holes[k]=true} else if k>=int(i+n) {holes[k-int(n)]=true}}
   a.Items=append(a.Items[:i],a.Items[i+n:]...);a.holes=holes;return out
  }
+ func (a *array[T]) spliceDrop2(i,n int32) *array[T] {
+  if len(a.holes)>0 {a.splice2(i,n);return nil}
+  i=sliceIndex(i,int32(len(a.Items)));n=max(0,min(n,int32(len(a.Items))-i))
+  a.Items=append(a.Items[:i],a.Items[i+n:]...);return nil
+ }
  func (a *array[T]) splice3(i,n int32,v T) *array[T] {
   i=sliceIndex(i,int32(len(a.Items)));out:=a.splice2(i,n);holes:=map[int]bool{}
   for k:=range a.holes {if k<int(i) {holes[k]=true} else {holes[k+1]=true}};a.holes=holes

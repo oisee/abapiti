@@ -628,6 +628,14 @@ func (a *array[T]) splice2(i, n int32) *array[T] {
 	a.Items = append(a.Items[:i], a.Items[i+n:]...)
 	return out
 }
+// spliceDrop2 is splice(i, n) whose removed elements are discarded: same
+// mutation, no result array.
+func (a *array[T]) spliceDrop2(i, n int32) *array[T] {
+	i = sliceIndex(i, int32(len(a.Items)))
+	n = max(0, min(n, int32(len(a.Items))-i))
+	a.Items = append(a.Items[:i], a.Items[i+n:]...)
+	return nil
+}
 func (a *array[T]) splice3(i, n int32, v T) *array[T] {
 	i = sliceIndex(i, int32(len(a.Items)))
 	out := a.splice2(i, n)
