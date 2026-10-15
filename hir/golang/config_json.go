@@ -17,6 +17,7 @@ var configJSONOrders = map[string][]string{
 }
 
 func (e *emitter) configJSONClass(c *hir.Class) {
+	e.structuralCallableJSON(c)
 	e.line("func (self *%s) configJSON(w *configJSONWriter) jsString {", e.obj(c.Name))
 	if e.liveClasses[c.Name] {
 		e.line("if self!=nil && self.viewSource!=nil {s,ok:=w.value(self.viewSource);if !ok {panic(newRangeFault())};return s}")

@@ -523,7 +523,8 @@ type lowerer struct {
 	ifaceClassBaseNames map[string][]string
 	// shapeLike marks data-interface classes: plain objects that an
 	// anonymous shape with the same fields may reuse.
-	shapeLike map[string]bool
+	shapeLike        map[string]bool
+	gogenMappedTypes map[*checker.Type]hir.Type
 	// thisOverride replaces `this` while a closure body is lowered.
 	thisOverride *hir.Expr
 	// widenedLets: let symbols whose HIR type is the common base of their

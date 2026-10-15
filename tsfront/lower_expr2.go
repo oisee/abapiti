@@ -604,6 +604,9 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		x = l.presentValue(args[0], x, hir.Type{})
 		switch x.Type.Kind {
 		case hir.OrderedMap:
+			if keys := l.gogenRecordKeys(n, x); keys != nil {
+				return keys, true
+			}
 			return l.rtOp("map.keys", x, hir.T(hir.Array, x.Type.Args[0])), true
 		case hir.ClassRef:
 			// ES2022 public class fields are own properties, including fields

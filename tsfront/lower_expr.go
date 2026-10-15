@@ -3072,7 +3072,7 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		if l.unprunedFeatures {
 			a = l.presentValue(value, a, ctor.Params[idx].Type)
 		}
-		if strings.HasPrefix(target.Name, "family.payload.") || strings.HasPrefix(target.Name, "family.shape.") {
+		if l.gogenStructuralArguments(target) || strings.HasPrefix(target.Name, "family.payload.") || strings.HasPrefix(target.Name, "family.shape.") {
 			a = l.tempInit(value, a.Type, a)
 		}
 		args[idx] = l.coerce(a, ctor.Params[idx].Type)

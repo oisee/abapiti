@@ -14,6 +14,12 @@ func (l *lowerer) gogenCheckerType(n *ast.Node, t *checker.Type) (hir.Type, bool
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if mapped, ok := l.gogenResolvedArray(n, t); ok {
+		return mapped, true
+	}
+	if mapped, ok := l.gogenGenericShape(n, t); ok {
+		return mapped, true
+	}
 	if mapped, ok := l.gogenIndexedType(t); ok {
 		return mapped, true
 	}
@@ -197,6 +203,9 @@ func (l *lowerer) gogenBuiltinClass(sym *ast.Symbol) *hir.Class {
 func (l *lowerer) gogenAnnotationType(n *ast.Node) (hir.Type, bool) {
 	if !l.unprunedFeatures {
 		return hir.Type{}, false
+	}
+	if mapped, ok := l.gogenResolvedAnnotation(n); ok {
+		return mapped, true
 	}
 	t := l.ck.GetTypeFromTypeNode(n)
 	if mapped, ok := l.gogenValueType(t); ok {

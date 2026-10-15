@@ -14,6 +14,9 @@ func (l *lowerer) gogenValueType(t *checker.Type) (hir.Type, bool) {
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if l.gogenRecursiveArrayValue(t) {
+		return hir.T(hir.Dynamic), true
+	}
 	parts := []*checker.Type{t}
 	if t.IsUnion() {
 		parts = t.AsUnionOrIntersectionType().Types()

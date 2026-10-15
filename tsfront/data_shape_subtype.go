@@ -20,7 +20,7 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 		}
 		found := false
 		for _, g := range s.Fields {
-			compatible := f.Type.Equal(g.Type)
+			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
 				if f.Type.Kind == hir.Optional && g.Type.IsRef() {
 					compatible = true
@@ -35,7 +35,7 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 				break
 			}
 		}
-		if !found {
+		if !found && !l.gogenAbsentShapeField(f, s) {
 			return false
 		}
 	}

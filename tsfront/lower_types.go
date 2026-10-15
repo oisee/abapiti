@@ -393,7 +393,11 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 // mapCheckerType maps the checker type of an expression (or an inferred
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
-func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
+func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type) {
+	if cached, ok := l.gogenCachedType(t); ok {
+		return cached
+	}
+	defer l.gogenRememberType(t, &mapped)
 	if typ, ok := l.gogenDirectCallable(n, t); ok {
 		return typ
 	}
@@ -408,6 +412,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		return mapped
 	}
 	if l.mappingTypes[t] {
+		if mapped, ok := l.gogenRecursiveStructuralType(t); ok {
+			return mapped
+		}
 		l.diagf(n, "unsupported-type", "recursive checker type has no lowered nominal reference")
 		return hir.T(hir.Void)
 	}
@@ -715,6 +722,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 
 // synthFromProperties builds a shape class from a list of property symbols.
 func (l *lowerer) synthFromProperties(n *ast.Node, props []*ast.Symbol) *hir.Class {
+	if c, ok := l.gogenStructuralShape(n, props); ok {
+		return c
+	}
 	return l.synthFromPropertyTypes(n, props, nil)
 }
 
@@ -727,6 +737,10 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 		var ft hir.Type
 		if slot, ok := slots[p.Name]; ok {
 			ft = slot
+		} else if typ, ok := l.gogenStructuralProperty(n, pt); ok {
+			ft = typ
+		} else if typ, ok := l.gogenNullishProperty(pt); ok {
+			ft = typ
 		} else if pt != nil && pt.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) != 0 {
 			ft = hir.T(hir.Optional, hir.Ref(hir.RootObject))
 		} else if l.isNeverArray(pt) {
