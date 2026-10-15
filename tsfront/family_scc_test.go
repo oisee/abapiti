@@ -314,7 +314,7 @@ func TestFamilySCCRelationOracleFile(t *testing.T) {
 			t.Fatalf("bad row %q", sc.Text())
 		}
 		row := [2]string{cols[0], cols[1]}
-		if seen[row] && row[1] != "skip" {
+		if seen[row] {
 			continue
 		}
 		seen[row] = true

@@ -15,7 +15,8 @@ import (
 
 // The oracle compares the equal/unequal relation of SCC ids with #186 ids.
 // ABAPITI_FAMILY_KEY_ORACLE=<file> appends "scc-id<TAB>186-id|skip<TAB>acyclic|cyclic<TAB>type"
-// for every outermost key; the #186 side gets a time budget per key.
+// for every outermost key; the #186 side gets a time budget per key
+// (ABAPITI_FAMILY_KEY_ORACLE_BUDGET, a Go duration, default 2s).
 type familyKeyOracleLog struct {
 	mu     sync.Mutex
 	budget time.Duration
@@ -37,7 +38,11 @@ var familyKeyOracle = func() *familyKeyOracleLog {
 		fmt.Fprintln(os.Stderr, "family key oracle:", err)
 		return nil
 	}
-	return &familyKeyOracleLog{budget: 2 * time.Second, file: f, pairs: map[familyKeyID][2]string{}}
+	budget := 2 * time.Second
+	if d, err := time.ParseDuration(os.Getenv("ABAPITI_FAMILY_KEY_ORACLE_BUDGET")); err == nil {
+		budget = d
+	}
+	return &familyKeyOracleLog{budget: budget, file: f, pairs: map[familyKeyID][2]string{}}
 }()
 
 type familyKeyOracleTimeout struct{}
