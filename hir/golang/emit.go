@@ -183,6 +183,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.spreadRuntime {
 		runtime += dynSpreadSource
 	}
+	if e.spreadRuntime || e.collectionProbe {
+		runtime += collectionTypeNameSource
+	}
 	if e.collectionProbe {
 		runtime += dynIsCollectionSource
 		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { jsMap bool;", 1)
