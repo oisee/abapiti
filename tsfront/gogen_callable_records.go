@@ -56,27 +56,14 @@ func (l *lowerer) gogenDataCallable(m *ast.Node, c *hir.Class, ctor *hir.Method,
 	return true
 }
 
-// Ordinary strict functions receive undefined on the direct-call ABI; arrows
-// continue to capture lexical this. Mocha's explicit context ABI is separate.
-func (l *lowerer) gogenUndefinedReceiver(n *ast.Node) bool {
-	if !l.unprunedFeatures || n.Kind != ast.KindFunctionExpression || l.isTestCallback(n) {
-		return false
-	}
-	if l.file.ExternalModuleIndicator != nil {
+// Ordinary functions need a call-site receiver, including when first lifted
+// into a local. Arrows keep lexical this; test callbacks have a separate ABI.
+func (l *lowerer) gogenRefuseReceiver(n *ast.Node) bool {
+	if l.unprunedFeatures && (n.Kind == ast.KindFunctionExpression || n.Kind == ast.KindFunctionDeclaration) && !l.isTestCallback(n) && touchesThis(n.Body()) {
+		l.diagf(n, "unsupported-closure", "ordinary function reads call-site this; callable receiver ABI is not lowered")
 		return true
 	}
-	for p := n.Parent; p != nil; p = p.Parent {
-		if p.Kind == ast.KindClassDeclaration || p.Kind == ast.KindClassExpression {
-			return true
-		}
-	}
 	return false
-}
-
-func (l *lowerer) gogenClosureReceiver(n *ast.Node) {
-	if l.gogenUndefinedReceiver(n) {
-		l.thisOverride = &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: hir.T(hir.Optional, hir.T(hir.Dynamic))}
-	}
 }
 
 // Only directly invoked function slots need an additional callable ABI. Keep

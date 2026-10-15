@@ -4,11 +4,34 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
 )
+
+func TestNumberCollectionsNodeOracle(t *testing.T) {
+	node := `const n=NaN, z=-0;
+const m=new Map(); m.set(n,1);m.set(Number("x"),2);m.set(z,3);
+console.log(m.has(n),m.get(n),m.size,Object.is([...m.keys()][1],0),m.has(z),m.get(z),m.delete(z),m.has(0),m.delete(n),m.size);
+const s=new Set();s.add(n);s.add(Number("x"));s.add(z);
+console.log(s.has(n),s.size,Object.is([...s][1],0),s.has(z),s.delete(z),s.has(0),s.delete(n),s.size);
+for(let i=0;i<20;i++)s.add(i);s.add(n);console.log(s.has(n),s.delete(n),s.has(n),s.size);`
+	want, err := exec.Command("node", "-e", node).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	main := `zero:=float64(0);n:=zero/zero;z:=-zero
+m:=&orderedMap[float64,int32]{};m.set(n,1);m.set(n+n,2);m.set(z,3)
+fmt.Println(m.has(n),m.get(n).Value,len(m.Entries),fmt.Sprint(m.keys().Items[1])=="0",m.has(z),m.get(z).Value,m.delete(z),m.has(0),m.delete(n),len(m.Entries))
+s:=&orderedSet[float64]{};s.add(n);s.add(-n);s.add(z)
+fmt.Println(s.has(n),len(s.Items),fmt.Sprint(s.values().Items[1])=="0",s.has(z),s.delete(z),s.has(0),s.delete(n),len(s.Items))
+for i:=0;i<20;i++ {s.add(float64(i))};s.add(n);fmt.Println(s.has(n),s.delete(n),s.has(n),len(s.Items))`
+	if got := execute(t, &hir.Program{}, main); got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
 
 func TestSpliceViewIndependence(t *testing.T) {
 	main := `
@@ -194,7 +217,7 @@ func TestIndexedCollectionEdges(t *testing.T) {
  s:=&orderedSet[any]{};s.add(ref).add(nil).add(a).add(b);snap:=s.values();check(len(s.Items)==3)
  check(s.delete(a)&&s.has(b));s.add(a);check(s.Items[1]==b&&s.Items[2]==a&&snap.Items[1]==a)
  nums:=&orderedSet[float64]{};nums.add(negativeZero()).add(0);check(len(nums.Items)==1&&nums.has(0))
- nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==3&&!nums.has(nan)&&!nums.delete(nan))
+ nan:=negativeZero()/negativeZero();nums.add(nan).add(nan);check(len(nums.Items)==2&&nums.has(nan)&&nums.delete(nan))
  nums.add(63).add(64).add(127).add(128).add(255).add(256).add(-1).add(0.5)
  for _,v:=range []float64{0,63,64,127,128,255,256,-1,0.5}{check(nums.has(v))}
  check(!nums.has(254)&&nums.delete(64)&&!nums.has(64));nums.add(64);check(nums.has(64))

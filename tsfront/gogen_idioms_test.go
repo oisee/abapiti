@@ -116,9 +116,36 @@ interface Renderers extends Base { place(x: number): string; }
 class Probe { static invoke(h: Renderers): string { const {render, place} = h; return render(2) + place(3); } static run(): string { return Probe.invoke({label: "r", render: (x) => "r" + x, place: (x) => "p" + x}); } }`, "")
 }
 
-func TestGogenFunctionUndefinedThisNodeOracle(t *testing.T) {
-	runMjsOracle(t, `/** @param {(x: number) => string} f */ function invoke(f) { return f(2); }
-export class Probe { static run() { return invoke(function(x) { return (this === undefined) + ":" + x; }); } }`, true)
+func TestGogenFunctionReceiverRefusalNodeOracle(t *testing.T) {
+	testGogenThisRefusal(t, `class Probe { static run() { const h = {f: function() { return this === undefined; }}; const f = h.f; return h.f() + ":" + f(); } }`, "false:true\n")
+	testGogenThisRefusal(t, `class Probe { static run() { const h = {f: function() { return this === h; }}; const f = h.f; return h.f() + ":" + f(); } }`, "true:false\n")
+	testGogenThisRefusal(t, `class Probe { static run() { const f = function() { return this === undefined; }; const h = {f}; const g = h.f; return h.f() + ":" + g(); } }`, "false:true\n")
+	testGogenThisRefusal(t, `class Probe { static run() { function f() { return this === undefined; } const h = {f}; const g = h.f; return h.f() + ":" + g(); } }`, "false:true\n")
+	testGogenThisRefusal(t, `function invoke(f) { return f(2); } class Probe { static run() { return invoke(function(x) { return (this === undefined) + ":" + x; }); } }`, "true:2\n")
+}
+
+func testGogenThisRefusal(t *testing.T, source, want string) {
+	t.Helper()
+	if got := conversionOracle(t, source); got != want {
+		t.Fatalf("Node %q, want %q", got, want)
+	}
+	_, diags := lowerProbe(t, sourceProbe(t, source))
+	for _, d := range diags {
+		if d.Category == "unsupported-closure" && strings.Contains(d.Loc, "input.ts:") && strings.Contains(d.Message, "call-site this") {
+			return
+		}
+	}
+	t.Fatal("missing located call-site this refusal", diags)
+}
+
+func TestGogenMapNumberNodeOracle(t *testing.T) {
+	source := `type M = Map<number,string>; class Probe { static run(): string { const m:M = new Map(); const n = parseFloat("x"); m.set(n,"a"); m.set(n,"b"); return m.has(n) + ":" + m.size + ":" + m.get(n) + ":" + m.delete(n) + ":" + m.has(n); } }`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
 }
 
 func TestGogenEpochABAPRefusal(t *testing.T) {

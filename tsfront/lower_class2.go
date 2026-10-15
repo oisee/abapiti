@@ -188,6 +188,9 @@ func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	if l.gogenRefuseReceiver(fn) {
+		return nil
+	}
 	if l.localFns == nil {
 		l.localFns = map[string]*localFn{}
 	}

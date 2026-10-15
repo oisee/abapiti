@@ -546,24 +546,31 @@ type entry[K, V any] struct {
 	Key   K
 	Value V
 }
-// Collection keys are primitive values or references. Normalize typed nil
-// references to the zero key, retaining the equality used by equal().
-func collectionKey[K comparable](k K) K {
+// SameValueZero uses one NaN key and equates signed zeros. Keep the typed
+// value for all other keys, including the existing typed-nil normalization.
+type collectionIndexKey[K comparable] struct {Value K; NaN bool}
+func collectionKey[K comparable](k K) collectionIndexKey[K] {
  switch any(k).(type) {
- case jsString, bool, int32, int64, float64:
-  return k
+ case float64:
+  if math.IsNaN(any(k).(float64)) {return collectionIndexKey[K]{NaN:true}}
+ case jsString, bool, int32, int64:
  default:
-  if nilRef(k) { var zero K; return zero }
-  return k
+  if nilRef(k) { var zero K; k=zero }
  }
+ return collectionIndexKey[K]{Value:k}
+}
+// Iteration must expose +0 even when insertion supplied -0.
+func collectionValue[K comparable](k K) K {
+ if n,ok:=any(k).(float64);ok && n==0 {return any(float64(0)).(K)}
+ return k
 }
 type orderedMap[K comparable, V any] struct {
  Entries []entry[K,V]
- index map[K]int
+ index map[collectionIndexKey[K]]int
 }
 func (m *orderedMap[K,V]) ensureIndex() {
  if m.index != nil { return }
- m.index=make(map[K]int,len(m.Entries))
+ m.index=make(map[collectionIndexKey[K]]int,len(m.Entries))
  for i,e:=range m.Entries { m.index[collectionKey(e.Key)]=i }
 }
 func (m *orderedMap[K, V]) set(k K, v V) *orderedMap[K, V] {
@@ -571,7 +578,7 @@ func (m *orderedMap[K, V]) set(k K, v V) *orderedMap[K, V] {
  key:=collectionKey(k)
  if i,ok:=m.index[key];ok { m.Entries[i].Value=v;return m }
  m.index[key]=len(m.Entries)
- m.Entries=append(m.Entries,entry[K,V]{k,v})
+ m.Entries=append(m.Entries,entry[K,V]{collectionValue(k),v})
  return m
 }
 func (m *orderedMap[K,V]) get(k K) optional[V] {
@@ -604,18 +611,18 @@ func floatByte(v any) (uint8,bool) {
 }
 type orderedSet[T comparable] struct {
  Items []T
- index map[T]int
+ index map[collectionIndexKey[T]]int
  bytes [4]uint64
 }
 func (s *orderedSet[T]) ensureIndex() {
  if s.index != nil { return }
- s.index=make(map[T]int,len(s.Items))
+ s.index=make(map[collectionIndexKey[T]]int,len(s.Items))
  for i,v:=range s.Items { s.index[collectionKey(v)]=i;if b,ok:=floatByte(v);ok {s.bytes[b>>6]|=uint64(1)<<(b&63)} }
 }
 func (s *orderedSet[T]) has(v T) bool {
  if s.index!=nil {if b,ok:=floatByte(v);ok {return s.bytes[b>>6]&(uint64(1)<<(b&63))!=0}}
  // Small primitive sets avoid hashing and compare unboxed typed values.
- if len(s.Items)<=16 {
+ if len(s.Items)<=16 && v==v {
   switch any(v).(type) {
   case jsString, bool, int32, int64, float64:
    for _,x:=range s.Items { if x==v { return true } }
@@ -629,7 +636,7 @@ func (s *orderedSet[T]) has(v T) bool {
 func (s *orderedSet[T]) add(v T) *orderedSet[T] {
  s.ensureIndex()
  key:=collectionKey(v)
- if _,ok:=s.index[key];!ok { s.index[key]=len(s.Items);s.Items=append(s.Items,v);if b,ok:=floatByte(v);ok {s.bytes[b>>6]|=uint64(1)<<(b&63)} }
+ if _,ok:=s.index[key];!ok { s.index[key]=len(s.Items);s.Items=append(s.Items,collectionValue(v));if b,ok:=floatByte(v);ok {s.bytes[b>>6]|=uint64(1)<<(b&63)} }
  return s
 }
 func (s *orderedSet[T]) values() *array[T] { return &array[T]{Items: append([]T(nil), s.Items...)} }
