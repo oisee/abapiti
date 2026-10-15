@@ -8,6 +8,12 @@ import (
 func Dump(p *Program) string {
 	var b strings.Builder
 	b.WriteString("hir v1\n")
+	for _, u := range p.Unions {
+		fmt.Fprintf(&b, "union %s tag %s complete %t\n", u.Name, u.Discriminant, u.Complete)
+		for _, a := range u.Alternatives {
+			fmt.Fprintf(&b, "  alternative %s tags %q payload %s\n", a.ID, a.Tags, a.Payload)
+		}
+	}
 	method := func(m *Method) {
 		fmt.Fprintf(&b, "  method %s", m.Name)
 		if m.Static {
@@ -190,6 +196,9 @@ func dumpExpr(e *Expr) string {
 		s = "seq " + dumpExpr(e.Y)
 	case RuntimeOp:
 		s = e.Op + "(" + dumpExpr(e.X)
+		if strings.HasPrefix(e.Op, "union.") {
+			s += ", " + e.Owner + "/" + e.Name
+		}
 		if a != "" {
 			s += ", " + a
 		}

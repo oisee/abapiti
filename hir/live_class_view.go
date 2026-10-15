@@ -36,6 +36,13 @@ func SealLiveClassViewBoundary(p *Program) {
 
 func classViewTargets(p *Program) map[string]bool {
 	out := map[string]bool{}
+	for _, u := range p.Unions {
+		if u != nil {
+			for _, a := range u.Alternatives {
+				out[a.Payload.Name] = true
+			}
+		}
+	}
 	var expr func(*Expr)
 	var stmt func(*Stmt)
 	expr = func(x *Expr) {

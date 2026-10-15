@@ -585,6 +585,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
+		return l.familyAdmission(x, dst)
+	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not
 		// nominal TS types. Reuse the live data-class view: never copy fields

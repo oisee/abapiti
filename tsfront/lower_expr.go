@@ -273,6 +273,23 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
+		if typ.Equal(x.Type) {
+			return x
+		}
+		if typ.Kind == hir.ClassRef {
+			if u := l.out.Union(x.Type.Name); u != nil {
+				for _, a := range u.Alternatives {
+					if a.Payload.Equal(typ) {
+						return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: "union.project", Owner: u.Name, Name: a.ID, Type: typ, X: x}
+					}
+				}
+			}
+		}
+		// Other checker-selected subsets are implemented in Slice 2. Do not
+		// erase the family's membership to an unrelated root or Dynamic view.
+		return x
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassValue {
 		// Class/enum namespaces already have their value ABI. The checker's
 		// anonymous property shape is not an instance or a downcast proof.
@@ -745,6 +762,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, handled := l.familyFieldAccess(n); handled {
+		return x
 	}
 	if x, handled := l.unionFieldAccess(n); handled {
 		return x
@@ -1775,7 +1795,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.mapRead(recv, one()), true
 		case "set":
 			var a, b *hir.Expr
-			if recv.Type.Args[1].Kind == hir.Optional && len(args) == 2 {
+			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
 				a = l.expr(args[0])
 				saved := l.hint
 				l.hint = recv.Type.Args[1]
@@ -2568,7 +2588,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return test
 		}
 	}
-	structuralIdentity := l.unprunedFeatures && (l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
+	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
@@ -2733,6 +2753,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 	hint := l.hint
 	if hint.Kind == hir.Optional && len(hint.Args) == 1 {
 		hint = hint.Args[0]
+	}
+	if hint.Kind == hir.UnionRef {
+		return l.familyLiteral(n, hint)
 	}
 	if hint.Kind == hir.InterfaceRef {
 		if part, ok := l.unionShapeFor(n, hint); ok {
@@ -2941,6 +2964,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		}
 		if l.unprunedFeatures {
 			a = l.presentValue(value, a, ctor.Params[idx].Type)
+		}
+		if strings.HasPrefix(target.Name, "family.payload.") || strings.HasPrefix(target.Name, "family.shape.") {
+			a = l.tempInit(value, a.Type, a)
 		}
 		args[idx] = l.coerce(a, ctor.Params[idx].Type)
 	}

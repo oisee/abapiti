@@ -94,6 +94,11 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
+	"union.admit":             true,
+	"union.widen":             true,
+	"union.project":           true,
+	"union.tag":               true,
+	"union.read":              true,
 	"object.get":              true, // nominal static property table -> Dynamic
 	"object.hasOwn":           true,
 	"object.has":              true,

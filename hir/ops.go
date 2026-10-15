@@ -9,6 +9,12 @@ func UsedRuntimeOps(p *Program) map[string]Node {
 	if p == nil {
 		return used
 	}
+	for _, u := range p.Unions {
+		if u != nil {
+			used["union.declarations"] = u.Node
+			break
+		}
+	}
 	visit := func(x *Expr) {
 		if x.Kind == RuntimeOp {
 			if _, ok := used[x.Op]; !ok {

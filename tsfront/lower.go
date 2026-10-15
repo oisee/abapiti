@@ -479,6 +479,11 @@ type lowerer struct {
 	// to stop structural expansion. Reject those instead of overflowing the
 	// Go stack. Entries live only for the current recursive mapping call.
 	mappingTypes map[*checker.Type]bool
+	// Closed recursive structural families are published only after registration
+	// of the entire reachable component succeeds.
+	familyTypes  map[string]hir.Type
+	familyFailed map[string]bool
+	familyShapes map[string]hir.Type
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

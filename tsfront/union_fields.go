@@ -20,6 +20,10 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	}
 	p := n.AsPropertyAccessExpression()
 	t := l.ck.GetTypeAtLocation(p.Expression)
+	if ast.IsAssignmentTarget(n) && l.familyWriteDestination(t) {
+		l.diagf(n, "unsupported-assignment", "recursive union payload write requires narrowing and a proven alias-invalidation policy")
+		return nil, true
+	}
 	if t == nil || !t.IsUnion() {
 		return nil, false
 	}

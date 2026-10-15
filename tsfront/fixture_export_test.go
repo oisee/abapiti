@@ -39,3 +39,12 @@ func emitABAPNamed(t *testing.T, p *hir.Program) (map[string]string, *hir.Names,
 	}
 	return files, names, err
 }
+
+func emitABAPTestNamed(t *testing.T, p *hir.Program, owners map[string]bool) (map[string]string, *hir.Names, error) {
+	t.Helper()
+	files, names, err := abap.EmitTestNamed(p, owners)
+	if err == nil {
+		abapfixture.Track(t, "tsfront", files)
+	}
+	return files, names, err
+}

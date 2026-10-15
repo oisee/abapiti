@@ -134,7 +134,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
-	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); refusals == nil && len(errors) > 0 {
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
 	hir.SealLiveClassViewBoundary(p)

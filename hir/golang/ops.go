@@ -10,6 +10,12 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"union.declarations":     true,
+	"union.admit":            true,
+	"union.widen":            true,
+	"union.project":          true,
+	"union.tag":              true,
+	"union.read":             true,
 	"dynamic.typeofValue":    true,
 	"dynamic.recordString":   true,
 	"dynamic.call0":          true,
@@ -320,6 +326,8 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "dynamic.keys":
 		code = "dynamicKeys(" + a + ")"
 		b.e.extraRuntimeKeys = true
+	case "union.admit", "union.widen", "union.project", "union.tag", "union.read":
+		code = b.unionOperation(x, a)
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":
