@@ -957,6 +957,12 @@ func (l *lowerer) collectionInit(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
 		elemType, ok = l.typeArgAt(n, 0)
 	case "Array":
 		elemType, ok = l.typeArgAt(n, 0)
+	case "Map":
+		if x, handled := l.newMapFromIterable(n); handled {
+			return nil, x
+		}
+		l.diagf(n, "unsupported-new", "new %s is not lowered", name)
+		return nil, nil
 	default:
 		l.diagf(n, "unsupported-new", "new %s is not lowered", name)
 		return nil, nil

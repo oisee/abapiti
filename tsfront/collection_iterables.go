@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
@@ -41,17 +43,27 @@ func (l *lowerer) newMapFromIterable(n *ast.Node) (*hir.Expr, bool) {
 	m := l.tempInit(n, typ, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ})
 	switch {
 	case src.Type.Kind == hir.OrderedMap && len(src.Type.Args) == 2:
+		// Walk the value snapshot and take keys from a fresh key snapshot in
+		// step: a stored undefined value is copied as is (no get + presence
+		// narrowing). Only the key is narrowed, so it must not be optional.
+		kt, vt := src.Type.Args[0], src.Type.Args[1]
+		if kt.Kind == hir.Optional {
+			l.diagf(n, "unsupported-new", "new Map(map) with possibly undefined keys")
+			return nil, true
+		}
+		keys := l.tempInit(n, hir.T(hir.Array, kt), l.rtOp("map.keys", src, hir.T(hir.Array, kt)))
 		l.serial++
-		key := hir.V("k"+itoa(l.serial), src.Type.Args[0])
-		value := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: src.Type.Args[1], X: l.rtOp("map.get", src, hir.T(hir.Optional, src.Type.Args[1]), key)}
-		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: key.Type, X: l.rtOp("map.keys", src, hir.T(hir.Array, key.Type)),
+		value := hir.V("v"+itoa(l.serial), vt)
+		key := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: kt, X: l.rtOp("array.shift", keys, hir.T(hir.Optional, kt))}
+		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: value.Name, Type: vt, X: l.rtOp("map.values", src, hir.T(hir.Array, vt)),
 			Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("map.set", m, typ, l.coerce(key, keyT), l.coerce(value, valT))})})
 		return m, true
 	case src.Type.Kind == hir.Array && len(src.Type.Args) == 1 && src.Type.Args[0].Kind == hir.ClassRef:
 		row := src.Type.Args[0]
 		var f0, f1 hir.Type
 		for _, c := range l.out.Classes {
-			if c.Name != row.Name {
+			// Only tupleShape's own [key, value] classes qualify (fail closed).
+			if c.Name != row.Name || !strings.HasPrefix(c.Name, "tuple.") || len(c.Fields) != 2 {
 				continue
 			}
 			for _, f := range c.Fields {
@@ -93,6 +105,17 @@ func (l *lowerer) iterableValues(n *ast.Node) *hir.Expr {
 		if callee != nil && callee.Kind == ast.KindPropertyAccessExpression {
 			name := callee.Name().Text()
 			if name == "keys" || name == "values" {
+				// Decide from the checker type before lowering anything, so the
+				// receiver is lowered (and evaluated) exactly once either way.
+				kind := hir.Void
+				if t := l.ck.GetTypeAtLocation(callee.Expression()); t != nil {
+					before := len(l.diags)
+					kind = l.mapCheckerType(callee.Expression(), t).Kind
+					l.diags = l.diags[:before]
+				}
+				if kind != hir.OrderedMap && kind != hir.OrderedSet {
+					return l.expr(n)
+				}
 				recv := l.expr(callee.Expression())
 				if recv == nil {
 					return nil
