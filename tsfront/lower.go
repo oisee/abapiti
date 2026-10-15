@@ -473,6 +473,8 @@ type lowerer struct {
 	unexecuted         map[*ast.Node]string
 	overrides          map[*ast.Node]overrides.Entry
 	prog               *Program
+	// erasableTypeParams caches typeParamErasable per type parameter.
+	erasableTypeParams map[*ast.Symbol]bool
 	ck                 *checker.Checker
 	file               *ast.SourceFile
 	out                *hir.Program

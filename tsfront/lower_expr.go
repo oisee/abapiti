@@ -273,6 +273,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if x.Type.Kind == hir.InterfaceRef && typ.Kind == hir.InterfaceRef {
+		if adapted := l.closureAdapter(n, x, typ); adapted != nil {
+			return adapted
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.UnionRef && (typ.Kind == hir.UnionRef || typ.Kind == hir.ClassRef) {
 		// Flow proved an optional family value present (a?.k === 'm'):
 		// checked presence, then the family projection.
