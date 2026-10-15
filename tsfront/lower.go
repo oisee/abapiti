@@ -47,6 +47,7 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 // LowerOptions makes numeric contracts and partial-lowering policy explicit.
 // Integer exceptions are source pinned.
 type LowerOptions struct {
+	Externs                       []ExternModule
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
 	// TrapOnFailure is the fail-closed policy used by the suite and full-core
@@ -103,6 +104,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		ifaceNodes:         map[string]*ast.Node{},
 		funcsBy:            map[string]funcRef{},
 		covariants:         map[string]map[string]bool{},
+	}
+	files, err := l.prepareExterns(files, options.Externs)
+	if err != nil {
+		return nil, nil, err
 	}
 	for _, name := range files {
 		if f, ok := p.File(name); ok {
@@ -430,6 +435,8 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	externs         map[string]ExternModule
+	externFunctions map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	unprunedFeatures   bool

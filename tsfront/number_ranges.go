@@ -457,7 +457,7 @@ func (p *numberPass) expr(e *hir.Expr, env map[string]numberInterval) numberInte
 		if spec, ok := hir.RuntimeSpecs[e.Op]; ok && spec.Mutates {
 			p.invalidateFields(env)
 		}
-	case hir.DirectCall, hir.VirtualCall, hir.SuperCall, hir.New:
+	case hir.ExternCall, hir.DirectCall, hir.VirtualCall, hir.SuperCall, hir.New:
 		p.expr(e.X, env)
 		args := make([]numberInterval, len(e.Args))
 		for i, a := range e.Args {
@@ -575,7 +575,7 @@ func numberFieldEffects(e *hir.Expr) bool {
 		}
 	}, func(x *hir.Expr) {
 		switch x.Kind {
-		case hir.DirectCall, hir.VirtualCall, hir.SuperCall, hir.New:
+		case hir.ExternCall, hir.DirectCall, hir.VirtualCall, hir.SuperCall, hir.New:
 			changed = true
 		case hir.RuntimeOp:
 			if spec, ok := hir.RuntimeSpecs[x.Op]; ok && spec.Mutates {
@@ -1335,6 +1335,8 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 		}
 	case hir.IndexGet:
 		e.Y = rangeConversion(e.Y, hir.T(hir.I32), info.exprs[e.Y])
+	case hir.ExternCall:
+		p.externRangeArgs(e, info)
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall, hir.New:
 		if m := p.resolve(e); m != nil {
 			if e.Kind != hir.New {

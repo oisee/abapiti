@@ -193,8 +193,9 @@ type Expr struct {
 	// ABAP raises natively; this also enforces the contract in bigint runtimes.
 	CheckIntegerOverflow bool
 	Node
-	Kind ExprKind
-	Type Type
+	Kind   ExprKind
+	Extern *ExternSignature `json:",omitempty"`
+	Type   Type
 	// New.Op may retain a checked library factory origin; it is not an
 	// own-key proof by itself when arguments determine presence at runtime.
 	Name, Owner, Op string

@@ -194,6 +194,8 @@ func dumpExpr(e *Expr) string {
 		s = string(e.Kind) + " " + e.Owner
 	case Seq:
 		s = "seq " + dumpExpr(e.Y)
+	case ExternCall:
+		s = "extern " + e.Owner + "." + e.Name + "(" + a + ")"
 	case RuntimeOp:
 		s = e.Op + "(" + dumpExpr(e.X)
 		if strings.HasPrefix(e.Op, "union.") {

@@ -935,6 +935,8 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 		} else {
 			eq(t, a.Args[0])
 		}
+	case ExternCall:
+		v.externCall(e, check)
 	case RuntimeOp:
 		a := check(e.X)
 		if SpecialOps[e.Op] {

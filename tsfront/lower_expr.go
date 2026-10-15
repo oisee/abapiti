@@ -346,6 +346,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	if n == nil {
 		return nil
 	}
+	if l.externValue(n) {
+		return nil
+	}
 	if matched, ok := l.pinnedMatchTest(n); ok {
 		return matched
 	}
@@ -944,6 +947,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.externCall(n); ok {
+		return x
+	}
 	if x, handled := l.mathCeilCall(n); handled {
 		return x
 	}

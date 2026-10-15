@@ -55,6 +55,7 @@ Outputs under <outdir>:
 func init() {
 	f := abaplintCmd.Flags()
 	f.StringP("output", "o", "", "Output directory (required unless --full, which defaults to out)")
+	f.String("externs", "", "Extern module JSON configuration")
 	f.String("target", "all", "Targets to write: all or abap (ABAP targets), a4h, osg, native or go (comma-separated)")
 	f.String("scope", "core", "Build scope: core (all rules) or zabapgit (legacy trace-pruned build)")
 	f.String("package", "$ZLNT", "ABAP package named in the A4H abapGit zip")
@@ -234,7 +235,13 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	// The full build uses the suite's fail-closed policy: unsupported bodies
 	// become source-located refusals, not reachability/coverage traps. --full
 	// remains an unmodified diagnostic measurement, including HIR failures.
+	externFile, _ := flags.GetString("externs")
+	externs, err := tsfront.ReadExterns(externFile)
+	if err != nil {
+		return err
+	}
 	lowering, err := tsfront.LowerRegistryWithOptions(work, files, registry, coverage, tsfront.LowerOptions{
+		Externs:                       externs,
 		AssumeOnlyIntegerCalculations: assumeInt,
 		TrapOnFailure:                 scope == "core" && !full,
 	})
@@ -284,7 +291,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		files["main.go"] = tsfront.RegistryGoCLIWithSites()
-		files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
+		files["go.mod"] = tsfront.ExternGoMod("zabaplint", externs, work)
 		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
 			return err
 		}

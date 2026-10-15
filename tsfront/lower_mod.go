@@ -40,7 +40,7 @@ func (l *lowerer) scanModuleUse(f *ast.SourceFile) {
 			if alias == nil {
 				continue
 			}
-			if l.namespaceUsedAsValue(f, alias.Text()) {
+			if l.namespaceUsedAsValue(f, alias) {
 				if mod := l.moduleOfDeclaration(stmt); mod != nil {
 					l.nsNeeded[mod.FileName()] = true
 				}
@@ -51,11 +51,13 @@ func (l *lowerer) scanModuleUse(f *ast.SourceFile) {
 	}
 }
 
-// namespaceUsedAsValue reports whether the alias name appears in the file
-// beyond the import statement (as `alias.member` the checker would keep the
-// namespace as an alias; any use at all forces the map because `for (k in
-// alias)` and `const x: any = alias` also need it).
-func (l *lowerer) namespaceUsedAsValue(f *ast.SourceFile, alias string) bool {
+// namespaceUsedAsValue reports whether the namespace import's symbol is used
+// beyond the import statement and outside a qualified member access.
+func (l *lowerer) namespaceUsedAsValue(f *ast.SourceFile, alias *ast.Node) bool {
+	symbol := l.resolve(alias)
+	if symbol == nil {
+		return false
+	}
 	found := false
 	var walk func(*ast.Node, bool)
 	walk = func(n *ast.Node, inImport bool) {
@@ -65,7 +67,7 @@ func (l *lowerer) namespaceUsedAsValue(f *ast.SourceFile, alias string) bool {
 		if e, ok := l.overrides[n]; ok && e.Method != nil {
 			return
 		}
-		if n.Kind == ast.KindIdentifier && !inImport && n.Text() == alias {
+		if n.Kind == ast.KindIdentifier && !inImport && l.resolve(n) == symbol {
 			if n.Parent != nil && n.Parent.Kind == ast.KindPropertyAccessExpression && n.Parent.Expression() == n {
 				return
 			}

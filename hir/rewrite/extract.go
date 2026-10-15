@@ -298,6 +298,8 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			}
 		}
 		x.add("argument", path, "this", ids[0])
+	case hir.ExternCall:
+		x.externCall(e, path)
 	case hir.DirectCall, hir.SuperCall:
 		if e.Kind == hir.SuperCall {
 			owner = x.classes[x.owner].Super
