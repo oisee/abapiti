@@ -1408,3 +1408,17 @@ func referenceSetFromArray[T comparable](s *orderedSet[T], a *array[any]) *order
 	return s
 }
 `
+
+const spreadArraySource = `
+func spreadOptionalArray[T any](a *array[T], length int32) *array[optional[T]] {
+ out:=&array[optional[T]]{}
+ for i:=int32(0);i<length;i++ {out.push(a.get(i))}
+ return out
+}
+
+func spreadArray[T any](a *array[T], length int32) *array[T] {
+ out:=&array[T]{}
+ for i:=int32(0);i<length;i++ {v:=a.get(i);out.push(v.Value)}
+ return out
+}
+`

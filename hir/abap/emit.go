@@ -1228,6 +1228,14 @@ func (b *body) expr(x *hir.Expr) string {
 			b.arrayElement(n, row, t)
 		}
 	case hir.New:
+		if t.Kind == hir.OrderedSet && len(t.Args) == 1 && (t.Args[0].Kind == hir.Optional || t.Args[0].Kind == hir.Dynamic) {
+			e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
+			return n
+		}
+		if t.Kind == hir.ClassRef && t.Name == "builtin.TypeError" {
+			e.refuse(fmt.Errorf("node %d (%s): ABAP RequireObjectCoercible cannot raise an equivalent JS TypeError", x.ID, x.Source))
+			return n
+		}
 		if t.Kind == hir.Array {
 			b.line("CREATE OBJECT " + n + ".")
 			if len(x.Args) == 1 {
@@ -2028,6 +2036,15 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if x.Op == "array.spread0" {
+		b.e.refuse(fmt.Errorf("node %d (%s): ABAP array spread with undefined values is unsupported", x.ID, x.Source))
+		return
+	}
+	if x.X != nil && x.X.Type.Kind == hir.OrderedSet && len(x.X.Type.Args) == 1 && (x.X.Type.Args[0].Kind == hir.Optional || x.X.Type.Args[0].Kind == hir.Dynamic) {
+		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
+		return
+	}
+
 	if b.numberStorageRuntime(x, n) {
 		return
 	}

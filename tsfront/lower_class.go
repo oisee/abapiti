@@ -497,6 +497,8 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 		name := ""
 		if p.Name() != nil && p.Name().Kind == ast.KindIdentifier {
 			name = p.Name().Text()
+		} else if l.objectParameter(p) {
+			name = "$binding." + itoa(i)
 		} else {
 			l.diagf(p, "unsupported-param", "parameter with a binding pattern")
 			name = "p" + itoa(i)

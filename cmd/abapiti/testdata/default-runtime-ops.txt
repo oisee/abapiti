@@ -1,5 +1,6 @@
 array.concat
 array.get
+array.has
 array.includes
 array.indexOf
 array.join

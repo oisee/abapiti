@@ -66,7 +66,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.splitRegex":   {String, 2, false},
 	"array.reverse":       {Array, 0, true},
 	"array.unshift":       {Array, 1, true}, "array.push": {Array, 1, true}, "array.has": {Array, 1, false}, "array.delete": {Array, 1, true}, "array.length": {Array, 0, false}, "array.get": {Array, 1, false},
-	"array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
+	"array.spread0": {Array, 0, false}, "array.concat": {Array, 1, false}, "array.slice0": {Array, 0, false},
 	"array.slice1": {Array, 1, false}, "array.slice2": {Array, 2, false},
 	"array.splice1": {Array, 1, true}, "array.splice2": {Array, 2, true},
 	"array.splice3": {Array, 3, true}, "array.splice1_view": {Array, 1, true}, "array.pop": {Array, 0, true}, "array.shift": {Array, 0, true},
@@ -223,6 +223,11 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, t, true
 	case "array.concat":
 		return []Type{t}, t, true
+	case "array.spread0":
+		if t.Args[0].Kind != Optional && !t.Args[0].IsRef() {
+			return nil, T(Array, T(Optional, t.Args[0])), true
+		}
+		return nil, t, true
 	case "array.slice0":
 		return nil, t, true
 	case "array.slice1":

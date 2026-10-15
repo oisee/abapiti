@@ -128,6 +128,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	runtime = sameValueZeroRuntime(runtime)
 	if e.recordString {
 		runtime += recordStringSource
 	}
@@ -176,7 +177,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		// runtime.go's imports are not package-wide Go imports.
 		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"math\"\n", 1)
 	}
-	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+unicodeUpperSource+jsonRuntimeSource+json5RuntimeSource+json5UnicodeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
+	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+spreadArraySource+unicodeUpperSource+jsonRuntimeSource+json5RuntimeSource+json5UnicodeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
