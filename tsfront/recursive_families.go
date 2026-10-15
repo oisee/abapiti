@@ -8,6 +8,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"github.com/oisee/abapiti/internal/tsgo/scanner"
 )
 
 // Identity uses normalized declarations and resolved arguments; checker pointers
@@ -149,6 +150,67 @@ type familyRegistration struct {
 	// siblings are the union members around the layout being recorded; an
 	// exactly-undefined property takes the field type its siblings declare.
 	siblings []*checker.Type
+	// member is the declaration whose type is being laid out, for reasons.
+	member     string
+	memberNode *ast.Node
+	// memberOf maps each member of a family being registered to its alias.
+	memberOf map[*checker.Type]string
+}
+
+func (r *familyRegistration) hasNull(t *checker.Type) bool {
+	for _, p := range t.AsUnionOrIntersectionType().Types() {
+		if p.Flags()&checker.TypeFlagsNull != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// familyMembers maps T in `T | undefined` back to its family when the members
+// are exactly a family under registration, or a published family (subset).
+// This matches how ordinary lowering types the same annotation, so stored and
+// read values share one HIR type.
+func (r *familyRegistration) familyMembers(parts []*checker.Type) (hir.Type, bool) {
+	if len(parts) < 2 {
+		return hir.Type{}, false
+	}
+	alias := r.memberOf[parts[0]]
+	if alias != "" {
+		for _, p := range parts {
+			if r.memberOf[p] != alias {
+				return hir.Type{}, false
+			}
+		}
+		count := 0
+		for _, a := range r.memberOf {
+			if a == alias {
+				count++
+			}
+		}
+		if count == len(parts) {
+			return hir.Type{Kind: hir.UnionRef, Name: alias}, true
+		}
+		return hir.Type{}, false
+	}
+	return r.l.familySubsetParts(parts)
+}
+
+// memberReason names the member being laid out, its location and its type.
+func (r *familyRegistration) memberReason(t *checker.Type) string {
+	if r.member == "" {
+		return ""
+	}
+	text := r.l.ck.TypeToString(t)
+	if len(text) > 200 {
+		text = text[:197] + "..."
+	}
+	loc := ""
+	if r.memberNode != nil {
+		if file := ast.GetSourceFileOfNode(r.memberNode); file != nil {
+			loc = " at " + r.l.prog.locString(file, scanner.GetTokenPosOfNode(r.memberNode, file, false))
+		}
+	}
+	return " for member " + r.member + loc + ": " + text
 }
 
 func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Type, handled bool) {
@@ -262,6 +324,12 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 			decl := t.Alias().Symbol().Declarations[0]
 			u := &hir.UnionDecl{Node: l.familyNode(decl), Name: alias, Discriminant: tag}
 			r.unions[alias] = u
+			if r.memberOf == nil {
+				r.memberOf = map[*checker.Type]string{}
+			}
+			for _, part := range t.AsUnionOrIntersectionType().Types() {
+				r.memberOf[part] = alias
+			}
 			for _, part := range t.AsUnionOrIntersectionType().Types() {
 				key := l.familyTypeKey(part, false, map[*checker.Type]bool{})
 				id := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
@@ -274,6 +342,17 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 		}
 		optional, nullable := false, false
 		var parts []hir.Type
+		var present []*checker.Type
+		for _, p := range t.AsUnionOrIntersectionType().Types() {
+			if p.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull) == 0 {
+				present = append(present, p)
+			}
+		}
+		if optional := len(present) < len(t.AsUnionOrIntersectionType().Types()); optional {
+			if family, ok := r.familyMembers(present); ok && t.Flags()&checker.TypeFlagsUnion != 0 && !r.hasNull(t) {
+				return hir.T(hir.Optional, family)
+			}
+		}
 		for _, p := range t.AsUnionOrIntersectionType().Types() {
 			if p.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
@@ -319,6 +398,9 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 		return hir.Ref(hir.RootObject)
 	case t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0:
 		args := l.familyArguments(t)
+		if t.IsTupleType() {
+			return r.tuple(n, t)
+		}
 		if l.ck.IsArrayType(t) && len(args) == 1 {
 			return hir.T(hir.Array, r.typ(n, args[0]))
 		}
@@ -387,7 +469,7 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 	if len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) > 0 || len(l.ck.GetSignaturesOfType(t, checker.SignatureKindConstruct)) > 0 || len(l.ck.GetIndexInfosOfType(t)) > 0 {
 		r.failed = true
 		if r.reason == "" {
-			r.reason = "callable or indexed layout " + name
+			r.reason = "callable or indexed layout " + name + r.memberReason(t)
 		}
 		return hir.T(hir.Void)
 	}
@@ -416,12 +498,18 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 			continue
 		}
 		pt := l.ck.GetTypeOfPropertyOfType(t, p.Name)
+		savedMember, savedNode := r.member, r.memberNode
+		r.member, r.memberNode = name+"."+p.Name, nil
+		if len(p.Declarations) > 0 {
+			r.memberNode = p.Declarations[0]
+		}
 		var ft hir.Type
 		if pt != nil && pt.Flags()&checker.TypeFlagsUndefined != 0 {
 			ft = r.undefinedField(n, t, siblings, p.Name)
 		} else {
 			ft = r.typ(n, pt)
 		}
+		r.member, r.memberNode = savedMember, savedNode
 		if ft.Kind == hir.Void {
 			r.failed = true
 		}
@@ -435,6 +523,44 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 	}
 	c.Ctor = ctor
 	return ref
+}
+
+// tuple lays out a fixed tuple of required elements of one type as an array
+// of that type, like non-recursive tuple lowering (lower_types.go). Optional,
+// rest and heterogeneous elements have no family layout and refuse.
+func (r *familyRegistration) tuple(n *ast.Node, t *checker.Type) hir.Type {
+	l := r.l
+	refuse := func(why string) hir.Type {
+		r.failed = true
+		if r.reason == "" {
+			r.reason = why + r.memberReason(t)
+		}
+		return hir.T(hir.Void)
+	}
+	flags := t.Target().AsTupleType().ElementFlags()
+	if len(flags) == 0 {
+		return refuse("empty tuple layout")
+	}
+	elem := hir.Type{}
+	for i, f := range flags {
+		if f != checker.ElementFlagsRequired {
+			return refuse("tuple layout with optional or rest elements")
+		}
+		sym := l.ck.GetPropertyOfType(t, itoa(i))
+		if sym == nil {
+			return refuse("tuple layout without element " + itoa(i))
+		}
+		et := r.typ(n, l.ck.GetTypeOfSymbol(sym))
+		if et.Kind == hir.Void {
+			return et
+		}
+		if elem.Kind == "" {
+			elem = et
+		} else if !elem.Equal(et) {
+			return refuse("heterogeneous tuple layout")
+		}
+	}
+	return hir.T(hir.Array, elem)
 }
 
 // undefinedField lays out a property whose checker type is exactly undefined

@@ -104,12 +104,30 @@ func (l *lowerer) familyResolve(t *checker.Type, named bool) familyNode {
 	switch {
 	case t == nil:
 		return familyNode{nil, familyNodeMissing}
-	case named && t.Alias() != nil && l.familySymbolKey(t.Alias().Symbol()) != "":
+	case named && t.Alias() != nil && l.familySymbolKey(t.Alias().Symbol()) != "" && !l.familyIndexedLibraryAlias(t):
 		return familyNode{t, familyNodeAlias}
 	case named && t.Symbol() != nil && t.Symbol().Flags&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass) != 0:
 		return familyNode{t, familyNodeDecl}
 	}
 	return familyNode{t, familyNodeStruct}
+}
+
+// familyIndexedLibraryAlias reports a default-library alias (Record,
+// Readonly<Record<...>>) whose type carries index signatures. Its arguments
+// may contain the family being keyed, so it is keyed by structure in the same
+// SCC traversal instead of as an alias leaf with independent arguments.
+func (l *lowerer) familyIndexedLibraryAlias(t *checker.Type) bool {
+	sym := t.Alias().Symbol()
+	if sym == nil || len(sym.Declarations) == 0 || len(l.ck.GetIndexInfosOfType(t)) == 0 {
+		return false
+	}
+	for _, d := range sym.Declarations {
+		f := ast.GetSourceFileOfNode(d)
+		if f == nil || !l.prog.prog.IsSourceFileDefaultLibrary(f.Path()) {
+			return false
+		}
+	}
+	return true
 }
 
 // familyKeyCached returns the context-free id of (t, named).
@@ -229,12 +247,24 @@ func (l *lowerer) familyDescribe(v familyNode) familyDesc {
 			heads = append(heads, fmt.Sprintf("%q:%t:%t:", p.Name, p.Flags&ast.SymbolFlagsOptional != 0, shapePropertyReadonly(p)))
 			d.kids = append(d.kids, l.familyResolve(l.ck.GetTypeOfPropertyOfType(t, p.Name), true))
 		}
+		// Index signatures are part of the structure: Record<string, T>
+		// and Record<string, U> must not share an id. Types without index
+		// signatures keep their former text.
+		props := len(heads)
+		var indexes []string
+		for _, info := range l.ck.GetIndexInfosOfType(t) {
+			indexes = append(indexes, fmt.Sprintf("[%t]", info.IsReadonly()))
+			d.kids = append(d.kids, l.familyResolve(info.KeyType(), true), l.familyResolve(info.ValueType(), true))
+		}
 		d.render = func(ids []string) string {
-			parts := make([]string, len(ids))
-			for i, id := range ids {
-				parts[i] = heads[i] + id
+			parts := make([]string, props)
+			for i := range props {
+				parts[i] = heads[i] + ids[i]
 			}
 			sort.Strings(parts)
+			for i, head := range indexes {
+				parts = append(parts, head+ids[props+2*i]+":"+ids[props+2*i+1])
+			}
 			return "{" + strings.Join(parts, ";") + "}"
 		}
 		return d

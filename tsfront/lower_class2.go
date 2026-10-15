@@ -588,6 +588,13 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
 	}
+	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef {
+		// A flow-narrowed payload stored into `F | undefined` is admitted to
+		// F first; the optional wrapping is the ordinary present value.
+		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
+			return l.coerce(admitted, dst)
+		}
+	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not
 		// nominal TS types. Reuse the live data-class view: never copy fields

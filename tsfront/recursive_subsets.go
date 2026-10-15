@@ -28,7 +28,15 @@ func (l *lowerer) familySubsetType(t *checker.Type) (hir.Type, bool) {
 	if t == nil || !t.IsUnion() || len(l.familyShapes) == 0 {
 		return hir.Type{}, false
 	}
-	parts := t.AsUnionOrIntersectionType().Types()
+	return l.familySubsetParts(t.AsUnionOrIntersectionType().Types())
+}
+
+// familySubsetParts is familySubsetType over explicit union members (for
+// example a union with undefined removed).
+func (l *lowerer) familySubsetParts(parts []*checker.Type) (hir.Type, bool) {
+	if len(parts) == 0 || len(l.familyShapes) == 0 {
+		return hir.Type{}, false
+	}
 	// Only registered families supply membership; never infer one from tag text.
 	for _, u := range l.out.Unions {
 		var alternatives []hir.UnionAlternative

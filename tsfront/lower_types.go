@@ -418,6 +418,27 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 		if matchArray && onlyMatch {
 			return hir.T(hir.Optional, hir.T(hir.Array, hir.T(hir.String)))
 		}
+		if l.unprunedFeatures && len(l.familyShapes) > 0 {
+			// `F | undefined` for a published family F: its members map back
+			// to F (as family layouts do), not to separate payload classes.
+			var present []*checker.Type
+			undefinedOnly := true
+			for _, c := range t.AsUnionOrIntersectionType().Types() {
+				if c.Flags()&checker.TypeFlagsUndefined != 0 {
+					continue
+				}
+				if c.Flags()&checker.TypeFlagsNull != 0 {
+					undefinedOnly = false
+					break
+				}
+				present = append(present, c)
+			}
+			if undefinedOnly && len(present) > 1 && len(present) < len(t.AsUnionOrIntersectionType().Types()) {
+				if family, ok := l.familySubsetParts(present); ok {
+					return hir.T(hir.Optional, family)
+				}
+			}
+		}
 		optional := false
 		var parts []hir.Type
 		for _, c := range t.AsUnionOrIntersectionType().Types() {
