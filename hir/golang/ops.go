@@ -75,6 +75,9 @@ func RuntimeOps() (supported, unsupported []string) {
 }
 
 func (b *body) runtime(x *hir.Expr) string {
+	if code, ok := b.gogenRuntime(x); ok {
+		return code
+	}
 	if !supportedOps[x.Op] {
 		b.e.unsupported(x.Node, x.Op)
 		return ""

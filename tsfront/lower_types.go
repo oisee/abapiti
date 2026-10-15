@@ -23,6 +23,9 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	if t, ok := l.gogenAnnotationType(n); ok {
+		return t
+	}
 	for parent := n; parent != nil; parent = parent.Parent {
 		if entry, ok := l.overrides[parent]; ok && entry.Patterns != nil {
 			span := l.file.Text()[scanner.GetTokenPosOfNode(n, l.file, false):n.End()]
@@ -385,6 +388,9 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
 func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
+	if typ, ok := l.gogenDirectCallable(n, t); ok {
+		return typ
+	}
 	if t == nil {
 		l.diagf(n, "unsupported-type", "no checker type")
 		return hir.T(hir.Void)
@@ -401,6 +407,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	}
 	l.mappingTypes[t] = true
 	defer delete(l.mappingTypes, t)
+	if mapped, ok := l.gogenCheckerType(n, t); ok {
+		return mapped
+	}
 	if mapped, ok := l.generatorResultCheckerType(n, t); ok {
 		return mapped
 	}
@@ -558,7 +567,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 			l.diagf(n, "note-thunk-type", "parameterless void function type lowered as the closure thunk interface")
 			return l.thunkType()
 		}
-		if l.unprunedFeatures && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 && len(l.ck.GetSignaturesOfType(l.ck.GetTypeAtLocation(n), checker.SignatureKindCall)) > 0 {
+		if l.unprunedFeatures && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 && l.gogenCallableNeeded(n, t) {
 			return l.functionType(n, t)
 		}
 		// Coverage-pruned builds retain their opaque ABI. Unpruned lowering

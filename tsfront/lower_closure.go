@@ -90,7 +90,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	captures := l.testFixtureCaptures(n, l.freeLocals(n))
-	usesThis := touchesThis(body)
+	usesThis := touchesThis(body) && !l.gogenUndefinedReceiver(n)
 	contextThis := l.integerOptions.TrapOnFailure && n.Kind == ast.KindFunctionExpression && usesThis && l.isTestCallback(n)
 	if contextThis {
 		usesThis = false
@@ -242,6 +242,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	} else {
 		l.thisOverride = nil
 	}
+	l.gogenClosureReceiver(n)
 	if contextThis {
 		l.thisOverride = &hir.Expr{Node: l.node(n), Kind: hir.FieldGet, Name: "context", Type: outerType, X: self}
 	}

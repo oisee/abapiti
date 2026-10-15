@@ -140,6 +140,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			return nil, nil, err
 		}
 	}
+	l.scanGogenCallables(files)
 	l.scanRequireBindings(files)
 	// Only expand the external LSP ABI when a callable constructor needs it.
 	// Coverage-trapped signatures retain their existing opaque/structural ABI.
@@ -440,6 +441,7 @@ type lowerer struct {
 	externFunctions map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
+	gogenCallables     map[*ast.Node]bool
 	unprunedFeatures   bool
 	absentFields       map[*ast.Node]bool
 	absentParams       map[*ast.Node]bool
@@ -606,6 +608,9 @@ type localCapture struct {
 // fallback is scoped to the declaring file: TypeScript files are namespaces,
 // and abaplint has Plus the token and Plus the combinator.
 func (l *lowerer) classOf(sym *ast.Symbol) *hir.Class {
+	if c := l.gogenBuiltinClass(sym); c != nil {
+		return c
+	}
 	if sym == nil {
 		return nil
 	}

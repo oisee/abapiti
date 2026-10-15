@@ -128,6 +128,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = configJSONRuntimeSource
 	}
 	runtime := runtimeSource
+	runtime += e.gogenRuntimeSource()
 	if e.recordString {
 		runtime += recordStringSource
 	}
