@@ -52,6 +52,7 @@ var supportedOps = map[string]bool{
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
 	"string.parseFloat": true,
+	"array.spread0":     true,
 	// Recursive structural families use the Go oracle until the ABAP ABI exists.
 	"union.admit": true, "union.project": true, "union.read": true,
 	"union.tag": true, "union.widen": true,

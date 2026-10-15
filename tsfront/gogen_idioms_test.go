@@ -11,13 +11,13 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-func gogenOracle(t *testing.T, source, expected string) {
+func gogenOracle(t *testing.T, source, expected string, abapRefusal ...string) {
 	t.Helper()
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	gogenCheck(t, p, "probe.ts", source, expected)
+	gogenCheck(t, p, "probe.ts", source, expected, abapRefusal...)
 }
 
-func gogenCheck(t *testing.T, p *hir.Program, file, source, expected string) {
+func gogenCheck(t *testing.T, p *hir.Program, file, source, expected string, abapRefusal ...string) {
 	t.Helper()
 	if t.Failed() {
 		return
@@ -26,8 +26,13 @@ func gogenCheck(t *testing.T, p *hir.Program, file, source, expected string) {
 	if got != expected+"\n" {
 		t.Fatalf("Go %q want %q", got, expected)
 	}
-	if _, err := emitABAP(t, p); err != nil {
-		t.Fatal(err)
+	_, abapErr := emitABAP(t, p)
+	if len(abapRefusal) > 0 {
+		if abapErr == nil || !strings.Contains(abapErr.Error(), abapRefusal[0]) || !strings.Contains(abapErr.Error(), file+":") {
+			t.Fatalf("expected located ABAP refusal %q, got %v", abapRefusal[0], abapErr)
+		}
+	} else if abapErr != nil {
+		t.Fatal(abapErr)
 	}
 	if _, err := exec.LookPath("node"); err == nil {
 		want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
@@ -38,7 +43,7 @@ func gogenCheck(t *testing.T, p *hir.Program, file, source, expected string) {
 			t.Fatalf("Go %q Node %q", got, want)
 		}
 	} else {
-		t.Log("Node absent; Go and ABAP checks still ran")
+		t.Log("Node absent; Go and ABAP emission/refusal checks still ran")
 	}
 }
 
@@ -74,7 +79,7 @@ func TestGogenJSDocObjectParameters(t *testing.T) {
 	if errs := hir.Verify(p); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	gogenCheck(t, p, "probe.js", source, "6ep:pgiCPa")
+	gogenCheck(t, p, "probe.js", source, "6ep:pgiCPa", "RequireObjectCoercible")
 }
 
 func TestGogenObjectParameters(t *testing.T) {
@@ -84,7 +89,7 @@ func TestGogenObjectParameters(t *testing.T) {
   return st + ctx + t + expr + place + rowValue;
  }
  function g(program: string, {classes: CLASSES, poly: POLY}: {classes: string; poly: string}): string { return program + CLASSES + POLY; }
- class Probe { static run(): string { const r = {expr:"e", place:"p", rowValue:3}; return f("s","c",2,r) + ":" + r.expr + ":" + g("g",{classes:"C",poly:"P"}); } }`, "sc2e!p3:e:gCP")
+ class Probe { static run(): string { const r = {expr:"e", place:"p", rowValue:3}; return f("s","c",2,r) + ":" + r.expr + ":" + g("g",{classes:"C",poly:"P"}); } }`, "sc2e!p3:e:gCP", "RequireObjectCoercible")
 }
 
 func TestGogenObjectParameterGetters(t *testing.T) {
@@ -95,7 +100,7 @@ func TestGogenObjectParameterGetters(t *testing.T) {
  static arg(): number {Source.trace += "a";return 1;}
  }
  function read({expr, place: renamed}: Source, n: number): string {return expr+":"+renamed+":"+Source.trace+n;}
- class Probe {static run(): string {return read(new Source(),Source.arg());}}`, "ae:aep:aep1")
+ class Probe {static run(): string {return read(new Source(),Source.arg());}}`, "ae:aep:aep1", "RequireObjectCoercible")
 }
 
 func TestGogenObjectParameterRefusals(t *testing.T) {
@@ -108,5 +113,5 @@ func TestGogenObjectParameterRefusals(t *testing.T) {
 
 func TestGogenObjectParameterNameCollision(t *testing.T) {
 	gogenOracle(t, `function f($binding1:string, {expr}: {expr:string}):string {return $binding1+expr;}
- class Probe {static run():string {return f("a",{expr:"b"});}}`, "ab")
+ class Probe {static run():string {return f("a",{expr:"b"});}}`, "ab", "RequireObjectCoercible")
 }

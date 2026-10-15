@@ -6,7 +6,7 @@ import (
 )
 
 func (l *lowerer) gogenArrayCall(n *ast.Node, name string, receiver *hir.Expr, args []*ast.Node) (*hir.Expr, bool) {
-	if name == "push" && len(args) != 1 {
+	if name == "push" && (len(args) != 1 || args[0].Kind == ast.KindSpreadElement) {
 		return l.multiPush(n, receiver, args), true
 	}
 	if name == "at" {
@@ -33,11 +33,23 @@ func (l *lowerer) multiPush(n *ast.Node, receiver *hir.Expr, args []*ast.Node) *
 			if xs == nil {
 				return nil
 			}
+			if xs.Type.Kind == hir.OrderedSet {
+				xs = l.rtOp("set.values", xs, hir.T(hir.Array, xs.Type.Args[0]))
+			}
 			if xs.Type.Kind != hir.Array || !l.acceptsType(recv.Type.Args[0], xs.Type.Args[0]) {
 				l.diagf(arg, "unsupported-call", "push spread requires a matching array iterable")
 				return nil
 			}
-			values = append(values, argument{l.tempInit(arg, xs.Type, l.rtOp("array.slice0", xs, xs.Type)), true})
+			if recv.Type.Args[0].Kind != hir.Optional && !recv.Type.Args[0].IsRef() {
+				if l.deletedSpreadSource(arg.Expression()) {
+					l.diagf(arg, "unsupported-call", "push spread element storage cannot represent undefined from array holes")
+					return nil
+				}
+				xs = l.checkedDenseSpread(arg, xs)
+			} else {
+				xs = l.coerce(l.spreadSnapshot(arg, xs), recv.Type)
+			}
+			values = append(values, argument{l.tempInit(arg, xs.Type, xs), true})
 			continue
 		}
 		saved := l.hint
@@ -103,4 +115,63 @@ func (l *lowerer) arrayAt(n *ast.Node, receiver *hir.Expr, args []*ast.Node) *hi
 	l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: bin("&&", bin(">=", index, hir.L(number, 0)), bin("<", index, length)),
 		Body: hir.B(&hir.Stmt{Kind: hir.Assign, X: result, Y: l.rtOp("array.get", recv, optional, l.indexValue(index))})})
 	return result
+}
+
+// spreadSnapshot materializes iterator values: holes become present undefined
+// elements. Array literal spreads and push spreads share this boundary.
+func (l *lowerer) spreadSnapshot(n *ast.Node, xs *hir.Expr) *hir.Expr {
+	typ := xs.Type
+	if typ.Args[0].IsRef() {
+		source := l.tempInit(n, typ, xs)
+		result := l.tempInit(n, typ, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ})
+		index := l.tempInit(n, hir.T(hir.I32), hir.L(hir.T(hir.I32), 0))
+		limit := l.tempInit(n, hir.T(hir.I32), l.rtOp("array.length", source, hir.T(hir.I32)))
+		value := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ.Args[0], X: l.rtOp("array.get", source, hir.T(hir.Optional, typ.Args[0]), index)}
+		l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit},
+			Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, hir.T(hir.I32), value)},
+				&hir.Stmt{Kind: hir.Assign, X: index, Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})})
+		return result
+	}
+	if typ.Args[0].Kind != hir.Optional && !typ.Args[0].IsRef() {
+		typ = hir.T(hir.Array, hir.T(hir.Optional, typ.Args[0]))
+	}
+	x := l.rtOp("array.spread0", xs, typ)
+	x.Node = l.node(n)
+	return x
+}
+
+// Statically reject a visibly deleted source; unknown producers are checked at
+// runtime before any insertion. A density assumption must never fabricate zero.
+func (l *lowerer) deletedSpreadSource(n *ast.Node) bool {
+	if n.Kind != ast.KindIdentifier {
+		return false
+	}
+	symbol := l.resolve(n)
+	if symbol == nil {
+		return false
+	}
+	deleted := false
+	walk(l.file.AsNode(), func(x *ast.Node) {
+		if x.Kind != ast.KindDeleteExpression {
+			return
+		}
+		operand := x.AsDeleteExpression().Expression
+		if operand.Kind == ast.KindElementAccessExpression && l.resolve(operand.Expression()) == symbol {
+			deleted = true
+		}
+	})
+	return deleted
+}
+
+func (l *lowerer) checkedDenseSpread(n *ast.Node, xs *hir.Expr) *hir.Expr {
+	snapshot := l.tempInit(n, xs.Type, l.rtOp("array.slice0", xs, xs.Type))
+	index := l.tempInit(n, hir.T(hir.I32), hir.L(hir.T(hir.I32), 0))
+	limit := l.tempInit(n, hir.T(hir.I32), l.rtOp("array.length", snapshot, hir.T(hir.I32)))
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n),
+		X: &hir.Expr{Kind: hir.Binary, Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit},
+		Body: hir.B(
+			&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: l.rtOp("array.has", snapshot, hir.T(hir.Bool), index)},
+				Body: hir.B(&hir.Stmt{Kind: hir.Trap, Node: l.node(n), Name: l.node(n).Source + ": push spread element storage cannot represent undefined from array holes"})},
+			&hir.Stmt{Kind: hir.Assign, X: index, Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})})
+	return snapshot
 }

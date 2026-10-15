@@ -99,7 +99,7 @@ func (l *lowerer) builtinError() string {
 				X: &hir.Expr{Kind: hir.FieldGet, Node: hir.Node{ID: l.nextID(), Source: name}, Name: "message", Type: msg,
 					X: &hir.Expr{Kind: hir.This, Node: hir.Node{ID: l.nextID(), Source: name}, Type: hir.Ref(name)}},
 				Y: &hir.Expr{Kind: hir.Conditional, Type: msg, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: hir.V("message", hir.T(hir.Optional, msg))}, Y: hir.L(msg, ""), Z: &hir.Expr{Kind: hir.Narrow, Type: msg, X: hir.V("message", hir.T(hir.Optional, msg))}}})}}
-	l.out.Classes = append(l.out.Classes, c)
+	l.out.Classes = append(l.out.Classes, c, &hir.Class{Node: c.Node, Name: "builtin.TypeError", Super: name})
 	if l.unprunedFeatures {
 		// Native parser failures retain their Error ancestry and distinct
 		// constructor identity; they are not host traps or plain Error values.

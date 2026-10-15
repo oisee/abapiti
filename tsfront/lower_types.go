@@ -190,10 +190,10 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	case "RegExp":
 		l.diagf(n, "note-regex-type", "RegExp lowered to the RegExp runtime type")
 		return hir.T(hir.RegExp)
-	case "SyntaxError":
+	case "SyntaxError", "TypeError":
 		if l.unprunedFeatures && l.librarySymbol(sym) {
 			l.builtinError()
-			return hir.Ref("builtin.SyntaxError")
+			return hir.Ref("builtin." + sym.Name)
 		}
 	case "Error":
 		l.diagf(n, "note-builtin-error-ref", "Error lowered to builtin.Error")
@@ -618,9 +618,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 				l.diagf(n, "note-regex-type", "RegExp lowered to the RegExp runtime type")
 				return hir.T(hir.RegExp)
 			}
-			if l.unprunedFeatures && t.Symbol().Name == "SyntaxError" && l.librarySymbol(t.Symbol()) && l.classOf(t.Symbol()) == nil {
+			if l.unprunedFeatures && (t.Symbol().Name == "SyntaxError" || t.Symbol().Name == "TypeError") && l.librarySymbol(t.Symbol()) && l.classOf(t.Symbol()) == nil {
 				l.builtinError()
-				return hir.Ref("builtin.SyntaxError")
+				return hir.Ref("builtin." + t.Symbol().Name)
 			}
 			if t.Symbol().Name == "Error" && l.classOf(t.Symbol()) == nil {
 				return hir.Ref(l.builtinError())

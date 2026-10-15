@@ -701,29 +701,6 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, 
 	return out, true
 }
 
-// spreadPush lowers arr.push(...xs) into a loop of pushes, as an expression
-// yielding the new length (which the callers ignore).
-func (l *lowerer) spreadPush(n *ast.Node, recv *hir.Expr, spread *ast.Node) *hir.Expr {
-	xs := l.expr(spread.Expression())
-	if xs != nil && xs.Type.Kind == hir.OrderedSet {
-		xs = l.rtOp("set.values", xs, hir.T(hir.Array, xs.Type.Args[0]))
-	}
-	if xs == nil || xs.Type.Kind != hir.Array || !l.acceptsType(recv.Type.Args[0], xs.Type.Args[0]) {
-		have := "nil"
-		if xs != nil {
-			have = xs.Type.String()
-		}
-		l.diagf(n, "unsupported-call", "push spread needs a matching array (%s <- %s)", recv.Type.String(), have)
-		return nil
-	}
-	l.serial++
-	v := "p" + itoa(l.serial)
-	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v, Type: xs.Type.Args[0], X: xs,
-		Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
-			X: l.rtOp("array.push", recv, hir.T(hir.I32), l.coerce(hir.V(v, xs.Type.Args[0]), recv.Type.Args[0]))})})
-	return l.rtOp("array.length", recv, hir.T(hir.I32))
-}
-
 // Finite tuple spreads provide a checked arity even across fixed parameters.
 // Evaluate each source once before distributing its elements to parameters.
 func (l *lowerer) tupleSpreadArgs(at *ast.Node, args []*ast.Node, params []hir.Param) ([]*hir.Expr, bool) {

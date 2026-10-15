@@ -13,7 +13,7 @@ import (
 	"github.com/oisee/abapiti/hir/abap"
 )
 
-func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMethod string) {
+func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMethod string, refusalException ...string) {
 	t.Helper()
 	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
@@ -24,7 +24,11 @@ func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMeth
 	fmt.Fprint(&unit, "CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE string.\nDATA refused TYPE abap_bool.\n")
 	fmt.Fprintf(&unit, "actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = `%s` ).\n", owner, names.Get("member.run"), strings.ReplaceAll(want, "`", "``"))
 	if refusedMethod != "" {
-		fmt.Fprintf(&unit, "TRY.\n%s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+refusedMethod), names.Get("view.refusal"))
+		exception := "view.refusal"
+		if len(refusalException) > 0 {
+			exception = refusalException[0]
+		}
+		fmt.Fprintf(&unit, "TRY.\n%s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+refusedMethod), names.Get(exception))
 	}
 	fmt.Fprint(&unit, "ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()

@@ -46,7 +46,7 @@ func (e *emitter) collectBoxedShapes() {
 				e.boxedShapes[x.X.Type.Name] = true
 				e.boxedFields[x.X.Type.Name] = true
 			}
-			e.usesArrayPresence = e.usesArrayPresence || x.Op == "array.has"
+			e.usesArrayPresence = e.usesArrayPresence || (x.Op == "array.has" || x.Op == "array.spread0")
 			e.usesArrayDeletion = e.usesArrayDeletion || x.Op == "array.delete"
 		}
 		expr(x.X)

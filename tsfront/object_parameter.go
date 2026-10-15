@@ -34,8 +34,19 @@ func (l *lowerer) bindObjectParameter(p *ast.Node, hp hir.Param) []*hir.Stmt {
 	}
 	var out []*hir.Stmt
 	receiver := hir.V(hp.Name, hp.Type)
+	l.builtinError()
+	errorType := hir.Ref("builtin.TypeError")
+	check := l.rtOp("dynamic.isNullish", l.rtOp("dynamic.of", receiver, hir.T(hir.Dynamic)), hir.T(hir.Bool))
+	check.Node = l.node(p)
+	out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p), X: check,
+		Body: hir.B(&hir.Stmt{Kind: hir.Throw, Node: l.node(p), X: &hir.Expr{Kind: hir.New, Node: l.node(p), Type: errorType,
+			Args: []*hir.Expr{l.coerce(hir.L(hir.T(hir.String), "Cannot destructure null or undefined"), hir.T(hir.Optional, hir.T(hir.String)))}}})})
 	if receiver.Type.Kind == hir.Optional {
 		receiver = &hir.Expr{Kind: hir.Narrow, Node: l.node(p), Type: receiver.Type.Args[0], X: receiver}
+	}
+	if receiver.Type.Kind == hir.Dynamic && len(p.Name().AsBindingPattern().Elements.Nodes) > 0 {
+		target := l.mapCheckerType(p, l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(p)))
+		receiver = l.coerce(receiver, target)
 	}
 	for _, el := range p.Name().AsBindingPattern().Elements.Nodes {
 		be := el.AsBindingElement()
@@ -48,6 +59,10 @@ func (l *lowerer) bindObjectParameter(p *ast.Node, hp hir.Param) []*hir.Stmt {
 		}
 		ft := l.patternFieldType(receiver.Type, field)
 		value := &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: receiver}
+		if receiver.Type.Kind == hir.Dynamic {
+			value = l.rtOp("dynamic.get", receiver, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), field))
+			value.Node = l.node(el)
+		}
 		if sym := l.ck.GetPropertyOfType(l.ck.GetTypeAtLocation(p), field); sym != nil {
 			for _, decl := range sym.Declarations {
 				if decl.Kind == ast.KindGetAccessor {

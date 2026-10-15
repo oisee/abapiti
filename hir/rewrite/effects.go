@@ -47,6 +47,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"array.push":                {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "None"},
 	"array.reverse":             {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "Receiver", Allocates: false, MayRaise: "None", Aliases: "Receiver"},
 	"array.shift":               {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "Receiver", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"array.spread0":             {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.slice0":              {Reads: OpReads{Receiver: true, Args: false, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.slice1":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"array.slice2":              {Reads: OpReads{Receiver: true, Args: true, Global: false}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
