@@ -21,34 +21,36 @@ func A4HTestSupport() (map[string]string, error) {
 	}
 	var fields strings.Builder
 	for _, f := range []struct {
-		name, typ, length, internal string
-		key                         bool
+		name, rollname string
+		key            bool
 	}{
-		{"MANDT", "CLNT", "000003", "000006", true},
-		{"RUN_ID", "CHAR", "000032", "000064", true},
-		{"SEQ", "INT4", "000010", "000004", true},
-		{"CHUNK_NO", "INT4", "000010", "000004", true},
-		{"SHARD", "CHAR", "000040", "000080", false},
-		{"NEXT_IDX", "INT4", "000010", "000004", false},
-		{"USED", "INT4", "000010", "000004", false},
-		{"PAYLOAD", "CHAR", "000255", "000510", false},
+		{"MANDT", "MANDT", true},
+		{"RUN_ID", "CHAR32", true},
+		{"SEQ", "INT4", true},
+		{"CHUNK_NO", "INT4", true},
+		{"SHARD", "CHAR40", false},
+		{"NEXT_IDX", "INT4", false},
+		{"USED", "INT4", false},
+		{"PAYLOAD", "CHAR255", false},
 	} {
-		key := ""
+		// Match the standard-data-element layout in zabapiti_corpus.tabl.xml.
+		fmt.Fprintf(&fields, "    <DD03P>\n     <FIELDNAME>%s</FIELDNAME>\n", f.name)
 		if f.key {
-			key = "X"
+			fields.WriteString("     <KEYFLAG>X</KEYFLAG>\n")
 		}
-		inttype := "C"
-		if f.typ == "INT4" {
-			inttype = "I"
+		fmt.Fprintf(&fields, "     <ROLLNAME>%s</ROLLNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n", f.rollname)
+		if f.key {
+			fields.WriteString("     <NOTNULL>X</NOTNULL>\n")
 		}
-		fmt.Fprintf(&fields, "<DD03P><FIELDNAME>%s</FIELDNAME><KEYFLAG>%s</KEYFLAG><NOTNULL>%s</NOTNULL><ADMINFIELD>0</ADMINFIELD><COMPTYPE>E</COMPTYPE><INTTYPE>%s</INTTYPE><INTLEN>%s</INTLEN><DATATYPE>%s</DATATYPE><LENG>%s</LENG><MASK>  %s</MASK></DD03P>\n", f.name, key, key, inttype, f.internal, f.typ, f.length, f.typ)
+		fields.WriteString("     <COMPTYPE>E</COMPTYPE>\n    </DD03P>\n")
 	}
 	files["zlnt_testrun.tabl.xml"] = `<?xml version="1.0" encoding="utf-8"?>
 <abapGit version="v1.0.0" serializer="LCL_OBJECT_TABL" serializer_version="v1.0.0">
 <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0"><asx:values>
 <DD02V><TABNAME>ZLNT_TESTRUN</TABNAME><DDLANGUAGE>E</DDLANGUAGE><TABCLASS>TRANSP</TABCLASS><CLIDEP>X</CLIDEP><DDTEXT>abaplint test checkpoints and chunked JSON</DDTEXT><MAINFLAG>X</MAINFLAG><CONTFLAG>A</CONTFLAG><EXCLASS>1</EXCLASS></DD02V>
 <DD09L><TABNAME>ZLNT_TESTRUN</TABNAME><AS4LOCAL>A</AS4LOCAL><TABKAT>0</TABKAT><TABART>APPL0</TABART><BUFALLOW>N</BUFALLOW></DD09L>
-<DD03P_TABLE>` + fields.String() + `</DD03P_TABLE>
+<DD03P_TABLE>
+` + fields.String() + `</DD03P_TABLE>
 </asx:values></asx:abap></abapGit>
 `
 	return files, nil

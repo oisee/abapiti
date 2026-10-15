@@ -91,6 +91,7 @@ Reuse the full build above; **do not re-emit or rename its objects**:
 ```sh
 node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS"
 node tools/a4h-tests-parts.mjs "$BUILD" "$PARTS" --verify
+node tools/a4h-tests-ddic-test.mjs "$BUILD" "$OSG"
 node tools/a4h-tests-parts-test.mjs
 ```
 
@@ -278,6 +279,13 @@ types or function modules. Optional BAL/SLG1 progress requires importing the
 `abaplint-577f875e-a4h-registry.zip` archive, which owns `ZCL_LNT_TEST_LOG_BAL`.
 The logger calls its `BEGIN` and `EVENT` methods dynamically and tolerates an
 absent adapter. SLG1 is a progress mirror and is never used for resume or collection.
+
+The checkpoint TABL uses the corpus tables' standard-data-element DD03P layout:
+`MANDT`, `CHAR32`, `INT4`, `CHAR40`, and `CHAR255`, with `COMPTYPE E`.
+The DDIC regression check resolves those elements with abaplint and compares
+all eight field types/lengths with the previous primitive definitions. Because
+the old `COMPTYPE E` had no `ROLLNAME`, the baseline parses its explicit
+`DATATYPE`/`LENG` as built-in fields. Field order, keys and nullability stay unchanged.
 
 Checkpoint commits are intended for these in-memory tests, not arbitrary
 transactional application code. Retain logs until collection is verified.
