@@ -473,6 +473,9 @@ type lowerer struct {
 	unexecuted         map[*ast.Node]string
 	overrides          map[*ast.Node]overrides.Entry
 	prog               *Program
+	// absentOnlyFields marks data members declared only as absent
+	// (class name + "." + field), see dataMemberFallback.
+	absentOnlyFields map[string]bool
 	// erasableTypeParams caches typeParamErasable per type parameter.
 	erasableTypeParams map[*ast.Symbol]bool
 	ck                 *checker.Checker

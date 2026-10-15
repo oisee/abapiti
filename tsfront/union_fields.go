@@ -150,13 +150,27 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		return nil, true
 	}
 	result := hir.T(hir.Void)
-	for _, candidate := range fields {
+	// A member declaring the field only as absent (`x?: never`) reads
+	// undefined: it joins any sibling type as its optional.
+	absentOnly := func(i int) bool { return l.absentOnlyFields[classes[i].Name+"."+name] }
+	someAbsentOnly, allAbsentOnly := false, true
+	for i := range fields {
+		someAbsentOnly = someAbsentOnly || absentOnly(i)
+		allAbsentOnly = allAbsentOnly && absentOnly(i)
+	}
+	for i, candidate := range fields {
+		if absentOnly(i) && !allAbsentOnly {
+			continue
+		}
 		compatible := true
-		for _, f := range fields {
-			compatible = compatible && l.unionFieldReadAccepts(candidate.Type, f.Type)
+		for j, f := range fields {
+			compatible = compatible && (absentOnly(j) || l.unionFieldReadAccepts(candidate.Type, f.Type))
 		}
 		if compatible {
 			result = candidate.Type
+			if someAbsentOnly && result.Kind != hir.Optional {
+				result = hir.T(hir.Optional, result)
+			}
 			break
 		}
 	}

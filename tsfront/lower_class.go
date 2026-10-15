@@ -153,6 +153,15 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 		}
 		if hasBlocking(l.diags[before:]) || ft.Kind == hir.Void {
 			l.diags = l.diags[:before]
+			if ms := m.Symbol(); ms != nil {
+				if fallback, ok := l.dataMemberFallback(m, l.ck.GetTypeOfSymbol(ms)); ok {
+					ft = fallback
+					l.markAbsentOnly(c.Name, name, l.ck.GetTypeOfSymbol(ms))
+				}
+			}
+		}
+		if hasBlocking(l.diags[before:]) || ft.Kind == hir.Void {
+			l.diags = l.diags[:before]
 			l.diagf(m, "skipped-interface-member", "data interface %s: member %s has unlowered types", i.Name, name)
 			continue
 		}

@@ -76,6 +76,13 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 		}
 		if ft.Kind == hir.Void || hasBlocking(l.diags[before:]) {
 			l.diags = l.diags[:before]
+			if fallback, ok := l.dataMemberFallback(at, pt); ok {
+				ft = fallback
+				l.markAbsentOnly(c.Name, p.Name, pt)
+			}
+		}
+		if ft.Kind == hir.Void || hasBlocking(l.diags[before:]) {
+			l.diags = l.diags[:before]
 			l.diagf(at, "skipped-interface-member", "data interface %s: member %s has unlowered types (%s)", c.Name, p.Name, l.ck.TypeToString(pt))
 			l.file = saved
 			continue
@@ -100,4 +107,52 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 	l.classesByName[l.file.FileName()+" "+node.Symbol().Name] = c
 	l.diagf(node, "note-data-interface", "interface %s with resolved data members lowered to a shape class", c.Name)
 	return true
+}
+
+// dataMemberFallback types optional data members the general mapping
+// cannot: a member that is only ever absent (`x?: never`, undefined) is an
+// always-absent tagged slot, and an optional method or function member
+// (`isDirty?(): boolean`) is an optional function value.
+func (l *lowerer) dataMemberFallback(at *ast.Node, pt *checker.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures || pt == nil {
+		return hir.Type{}, false
+	}
+	var present []*checker.Type
+	parts := []*checker.Type{pt}
+	if pt.IsUnion() {
+		parts = pt.AsUnionOrIntersectionType().Types()
+	}
+	absent := false
+	for _, part := range parts {
+		if part.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsVoid) != 0 {
+			absent = true
+			continue
+		}
+		if part.Flags()&checker.TypeFlagsNever != 0 {
+			continue
+		}
+		present = append(present, part)
+	}
+	if len(present) == 0 && (absent || pt.Flags()&checker.TypeFlagsNever != 0) {
+		return hir.T(hir.Optional, hir.T(hir.Dynamic)), true
+	}
+	if absent && len(present) == 1 && len(l.ck.GetSignaturesOfType(present[0], checker.SignatureKindCall)) > 0 {
+		before := len(l.diags)
+		fn := l.functionType(at, present[0])
+		if fn.Kind == hir.Void || hasBlocking(l.diags[before:]) {
+			l.diags = l.diags[:before]
+			return hir.Type{}, false
+		}
+		return hir.T(hir.Optional, fn), true
+	}
+	return hir.Type{}, false
+}
+
+func (l *lowerer) markAbsentOnly(class, field string, pt *checker.Type) {
+	if fb, ok := l.dataMemberFallback(nil, pt); ok && fb.Kind == hir.Optional && fb.Args[0].Kind == hir.Dynamic && len(l.ck.GetSignaturesOfType(pt, checker.SignatureKindCall)) == 0 {
+		if l.absentOnlyFields == nil {
+			l.absentOnlyFields = map[string]bool{}
+		}
+		l.absentOnlyFields[class+"."+field] = true
+	}
 }

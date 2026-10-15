@@ -357,16 +357,42 @@ func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
-	m := l.callableMethod(x.Type)
+	optional := false
+	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && l.callableMethod(x.Type.Args[0]) != nil {
+		// An optional function member: f?.() yields undefined when absent;
+		// a plain f() on an absent member is JavaScript's TypeError, here the
+		// checked narrowing that raises.
+		optional = n.AsCallExpression().QuestionDotToken != nil
+		x = l.tempInit(callee, x.Type, x)
+	}
+	slot := x
+	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 {
+		slot = &hir.Expr{Kind: hir.Narrow, Node: l.node(callee), Type: x.Type.Args[0], X: x}
+	}
+	m := l.callableMethod(slot.Type)
 	if m == nil {
 		return nil
 	}
-	x = l.callReceiver(n, x, nil)
+	recv := l.callReceiver(n, slot, nil)
 	args, ok := l.callArgsMethod(n, n.Arguments(), m, 0)
 	if !ok {
 		return nil
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: m.Result, X: x, Args: args}
+	call := &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: m.Result, X: recv, Args: args}
+	if !optional || m.Result.Kind == hir.Void {
+		if optional {
+			absent := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
+			l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: absent}, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: call})})
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(), Y: hir.L(hir.T(hir.Bool), false)}
+		}
+		return call
+	}
+	result := m.Result
+	if result.Kind != hir.Optional {
+		result = hir.T(hir.Optional, result)
+	}
+	return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x},
+		Y: &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: result}, Z: l.coerce(call, result)}
 }
 
 func (l *lowerer) bindingMutable(symbol *ast.Symbol) bool {

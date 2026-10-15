@@ -1067,7 +1067,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// function value, even when a structural shape lists it as a field.
 		// Interface/type-literal method signatures are stored functions.
 		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
-			if field, ok := l.fieldOf(sym); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
+			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
 				return l.functionValueCall(n, callee)
 			}
 		}
@@ -3354,4 +3354,11 @@ func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
 	recv := l.anyCallReceiver(n, l.expr(n))
 	l.hint = outputHint
 	return recv
+}
+
+func optionalBase(t hir.Type) hir.Type {
+	if t.Kind == hir.Optional && len(t.Args) == 1 {
+		return t.Args[0]
+	}
+	return t
 }
