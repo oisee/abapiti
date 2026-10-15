@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
-	"github.com/oisee/abapiti/hir/abap"
 	gohir "github.com/oisee/abapiti/hir/golang"
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
@@ -152,7 +151,7 @@ func TestExternDiagnostics(t *testing.T) {
 func TestExternABAPRefusal(t *testing.T) {
 	r, _, _ := externProject(t, `import {basename} from './host';class Probe {static run():string {return basename("a");}}`, `export function basename(x:string):string {return x;}`)
 	requireExternClean(t, r)
-	_, err := abap.Emit(r.Prog)
+	_, err := emitABAP(t, r.Prog)
 	if err == nil || !strings.Contains(err.Error(), "extern module call Basename is Go-only") || !strings.Contains(err.Error(), "probe.ts:") {
 		t.Fatal(err)
 	}
