@@ -96,7 +96,7 @@ abaplint 577f875e is built into the binary (every file checked against its recor
 | Directory | For | Run it |
 |---|---|---|
 | `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
-| `out/a4h/` | an **ABAP system** (the full core uses PCRE, requiring 7.55; kernel certification is in progress) | import `abaplint-577f875e-a4h.zip` into `$ZLNT` with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
+| `out/a4h/` | an **ABAP system** (the full core uses PCRE, requiring 7.55; kernel certification is in progress) | import `abaplint-577f875e-a4h.zip` into `$ZLNT`, then `abaplint-577f875e-a4h-registry.zip` into `$ZLNT_A4H` with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
 An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:
@@ -154,6 +154,8 @@ Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpile
 <summary><b>Legacy WASM: experimental, deprecated (2026-10-10). Before TypeScript: WebAssembly, LLVM IR and C → ABAP</b> (QuickJS, Lua, Monocypher, QR codes and a donut on the SAP kernel)</summary>
 
 ## News
+
+**2026-10-15 — v0.5.2: self-contained A4H packaging.** The a4h core zip no longer carries the A4H registry driver; new `-a4h-registry.zip` includes the driver, reports and corpus/log runtime. Import core first, then registry. `zlnt-system` gains layer `zlnt-registry-a4h`; fixes system self-containment found by the E.10 OSGO proof.
 
 **2026-10-14 — 🎉🎉 [v0.5.0](https://github.com/oisee/abapiti/releases/tag/v0.5.0): abaplint's whole test suite passes on a real SAP kernel.** TS-HA@A4H **11,060 / 11,060**, all 17 shards, run as background jobs on SAP 7.58 after an abapGit import of the readable `$ZLNT` core and the `$ZLNT_TESTS_*` packages. On OSGO, also 11,060 / 11,060. The default build now has all of core and all rules. The kernel taught two lessons: `WHEN` with `&&` keys, and conditional `super->constructor` plus empty `CASE` (#153, #154). The last 5 tests were an empty regex that the kernel refuses (#155).
 

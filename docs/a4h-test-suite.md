@@ -174,8 +174,24 @@ objects and zero independence violations**. Current sizes are recorded in
 [the release inventory](release-v0.5.0-assets.tsv) and `parts.json`.
 
 Choose **either** the monolith **or** the parts, never both. Import the release
-core `abaplint-577f875e-a4h.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
+core `abaplint-577f875e-a4h.zip`, then (from v0.5.2)
+`abaplint-577f875e-a4h-registry.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
 then the six remaining parts in parallel. Import all parts before running tests.
+
+From v0.5.2 the core archive contains only translated core. The registry archive
+has its own `$ZLNT_A4H` package: driver, run/clean reports (neg with `--negative`),
+`ZCL_ABAPITI_CORPUS`, `ZCL_ABAPITI_LOG`, their interface and tables, and the corpus
+loader/log setup reports. Runtime files are embedded in the standalone binary.
+Run `ZABAPITI_LOG_SETUP` once and load inputs with `ZABAPITI_CORPUS_LOAD` before
+using the registry reports. Test packages retain their independent logging service.
+The OCI import order is `zlnt-core` (lib), `zlnt-registry-a4h` (input), then
+`zlnt-tests-base` and the test parts. This fixes the system self-containment gap
+found by the E.10 OSGO proof (13 syntax issues in the registry driver).
+
+`tools/a4h-tests-lint.mjs` checks extracted core/tests sources with corpus runtime
+as repository dependencies. To verify release self-containment, extract the new
+registry archive too and check all layer sources together; do not let the
+repository corpus dependency mask a missing registry layer.
 
 Before generating `SHA256SUMS`, the release script runs
 `tools/release-path-gate.py` over **every asset**, all decompressed zip/tar entries
