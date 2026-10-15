@@ -12,6 +12,9 @@ func Dump(p *Program) string {
 		fmt.Fprintf(&b, "union %s tag %s complete %t\n", u.Name, u.Discriminant, u.Complete)
 		for _, a := range u.Alternatives {
 			fmt.Fprintf(&b, "  alternative %s tags %q payload %s\n", a.ID, a.Tags, a.Payload)
+			for _, f := range a.Literals {
+				fmt.Fprintf(&b, "    literals %s %q\n", f.Field, f.Values)
+			}
 		}
 	}
 	method := func(m *Method) {

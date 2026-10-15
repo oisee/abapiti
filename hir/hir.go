@@ -84,9 +84,10 @@ type UnionDecl struct {
 }
 
 type UnionAlternative struct {
-	ID      string
-	Tags    []string
-	Payload Type
+	ID       string
+	Tags     []string
+	Payload  Type
+	Literals []UnionLiteral `json:",omitempty"`
 }
 type Class struct {
 	Node
