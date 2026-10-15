@@ -32,6 +32,7 @@ node tools/a4h-tests-build.mjs "$upstream" "$work/a4h"
 fi
 node tools/a4h-tests-lint.mjs "$work/a4h" "$osg"
 cp "$work/a4h/zlnt.zip" "$assets/abaplint-577f875e-a4h.zip"
+cp "$work/default/a4h/abaplint-577f875e-a4h-registry.zip" "$assets/abaplint-577f875e-a4h-registry.zip"
 cp "$work/a4h/zlnt_tests.zip" "$assets/abaplint-577f875e-a4h-tests.zip"
 cp "$work/a4h/zlnt.manifest.json" "$assets/abaplint-577f875e-a4h.manifest.json"
 cp "$work/a4h/zlnt_tests.manifest.json" "$assets/abaplint-577f875e-a4h-tests.manifest.json"
