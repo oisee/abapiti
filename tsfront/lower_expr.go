@@ -1701,6 +1701,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return x, ok
 		}
 	case hir.Array:
+		if x, ok := l.gogenArrayCall(n, name, recv, args); ok {
+			return x, true
+		}
 		switch name {
 		case "fill":
 			if len(args) != 1 {
