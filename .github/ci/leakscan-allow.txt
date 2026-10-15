@@ -25,3 +25,4 @@ path  internal/tsgo/checker/grammarchecks.go  packed-private-ip  Vendored typesc
 path  internal/tsgo/transformers/estransforms/esdecorator.go  packed-private-ip  Vendored typescript-go (Apache-2.0, see internal/tsgo/README.md): words and Go identifiers decode as base64 to bytes that read as an address by chance.
 path  internal/tsgo/transformers/estransforms/esdecorator.go  private-ip  Vendored typescript-go: ECMAScript specification section numbers in upstream comments (four dotted numbers starting with ten).
 path  internal/tsgo/transformers/estransforms/namedevaluation.go  private-ip  Vendored typescript-go: ECMAScript specification section numbers in upstream comments (four dotted numbers starting with ten).
+path  .github/e10-leak-allow/*.json   private-ip  E.10 publish exceptions (osd-layer --leak-allow, open-steamgate #757): each entry is a reviewed public abaplint@577f875e test vector with its upstream file:line, checked by stoker.
