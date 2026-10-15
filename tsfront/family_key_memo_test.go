@@ -1,6 +1,7 @@
 package tsfront
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
 
 const familyKeyTree = `type Tree = {k:'leaf';value:number} | {k:'branch';left:Tree;right:Tree};
@@ -21,16 +25,7 @@ const familyKeyProbeClass = `class Probe {
 
 func lowerFamilyKeyProbe(t *testing.T, source string) []string {
 	t.Helper()
-	dir := t.TempDir()
-	for name, body := range map[string]string{"probe.ts": source, "tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	project, err := Load(filepath.Join(dir, "tsconfig.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	project := loadFamilyKeyProbe(t, source)
 	_, diags, err := project.Lower([]string{"probe.ts"})
 	if err != nil {
 		t.Fatal(err)
@@ -44,9 +39,24 @@ func lowerFamilyKeyProbe(t *testing.T, source string) []string {
 	return blocking
 }
 
+func loadFamilyKeyProbe(t *testing.T, source string) *Program {
+	t.Helper()
+	dir := t.TempDir()
+	for name, body := range map[string]string{"probe.ts": source, "tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	project, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return project
+}
+
 // familyKeyDAG builds a DAG of depth levels with fan-out 2. `T|undefined` is
 // an unaliased union, so each level's structural key spells the level below
-// on every path: without a bound the key grows as 3^depth.
+// on every path: the old structural text grew as 3^depth.
 func familyKeyDAG(depth int) string {
 	var b strings.Builder
 	b.WriteString(familyKeyTree)
@@ -70,22 +80,74 @@ func familyKeyLowerMeasured(t *testing.T, source string) ([]string, time.Duratio
 	return blocking, elapsed, after.TotalAlloc - before.TotalAlloc, familyKeyRawEvaluation.Load()
 }
 
+// Measure the key builder alone: ordinary anonymous-record lowering can
+// independently expand this nonrecursive DAG after key construction succeeds.
+func familyKeyDAGMeasured(t *testing.T, depth int) (time.Duration, uint64, int64) {
+	t.Helper()
+	project := loadFamilyKeyProbe(t, familyKeyDAG(depth))
+	file, ok := project.File("probe.ts")
+	if !ok {
+		t.Fatal("missing probe.ts")
+	}
+	ck, done := project.prog.GetTypeCheckerForFile(context.Background(), file)
+	defer done()
+	l := &lowerer{prog: project, ck: ck, file: file}
+	var typ *checker.Type
+	for _, stmt := range file.Statements.Nodes {
+		if stmt.Kind == ast.KindTypeAliasDeclaration && stmt.Name().Text() == fmt.Sprintf("T%d", depth) {
+			typ = ck.GetTypeFromTypeNode(stmt.AsTypeAliasDeclaration().Type)
+		}
+	}
+	if typ == nil {
+		t.Fatal("missing DAG root")
+	}
+	familyKeyRawEvaluation.Store(0)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	start := time.Now()
+	key := l.familyTypeKey(typ, false, map[*checker.Type]bool{})
+	elapsed := time.Since(start)
+	runtime.ReadMemStats(&after)
+	if len(key) != 32 || len(l.diags) != 0 {
+		t.Fatalf("key %q, diagnostics %v", key, l.diags)
+	}
+	return elapsed, after.TotalAlloc - before.TotalAlloc, familyKeyRawEvaluation.Load()
+}
+
 func TestFamilyKeyMemoDAG(t *testing.T) {
 	// Below the bound the memo keeps raw evaluations linear (unmemoized: 3^4 paths).
-	blocking, elapsed, alloc, evals := familyKeyLowerMeasured(t, familyKeyDAG(4))
-	if len(blocking) != 0 || evals > 200 {
-		t.Fatalf("depth 4: blocking %v, %d raw evaluations", blocking, evals)
+	elapsed, alloc, evals := familyKeyDAGMeasured(t, 4)
+	if evals > 200 {
+		t.Fatalf("depth 4: %d raw evaluations", evals)
 	}
 	t.Logf("depth 4: %v, %d MB, %d raw evaluations", elapsed, alloc>>20, evals)
-	// Depth 30 grew past 43 GB before; now the size bound refuses at the type node.
-	blocking, elapsed, alloc, evals = familyKeyLowerMeasured(t, familyKeyDAG(30))
+	// Depth 30 grew past 43 GB before; Merkle ids keep it bounded.
+	elapsed, alloc, evals = familyKeyDAGMeasured(t, 30)
 	t.Logf("depth 30: %v, %d MB, %d raw evaluations", elapsed, alloc>>20, evals)
 	if elapsed > 10*time.Second || alloc > 1<<30 {
 		t.Fatalf("depth 30 not bounded: %v, %d MB", elapsed, alloc>>20)
 	}
-	want := "probe.ts:35:16 recursive family structural key exceeds 65536 bytes for type "
-	if len(blocking) != 1 || !strings.HasPrefix(blocking[0], want) || !strings.HasSuffix(blocking[0], "; family lowering refused") {
-		t.Fatalf("depth 30 refusal %q", blocking)
+	if evals > 2000 {
+		t.Fatalf("depth 30: %d raw evaluations", evals)
+	}
+}
+
+// Flattening T0|undefined removes the alias and exposes an anonymous cyclic
+// union at every shared leaf. Contextual caching must bound this DAG too.
+func TestFamilyKeyMemoCyclicDAG(t *testing.T) {
+	source := strings.Replace(familyKeyDAG(30), "type T0 = {k:'a';x:number}", "type T0 = {k:'a';x:T0|undefined}", 1)
+	blocking, elapsed, alloc, evals := familyKeyLowerMeasured(t, source)
+	t.Logf("cyclic depth 30: %v, %d MB, %d raw evaluations", elapsed, alloc>>20, evals)
+	if len(blocking) != 0 || evals > 2000 || alloc > 1<<30 {
+		t.Fatalf("cyclic DAG not bounded: blocking %v, %d MB, %d evaluations", blocking, alloc>>20, evals)
+	}
+}
+
+func TestFamilyKeySizeGuard(t *testing.T) {
+	source := familyKeyTree + fmt.Sprintf(familyKeyProbeClass, "{"+strings.Repeat("p", familyKeyMaxLen)+":number}")
+	blocking := lowerFamilyKeyProbe(t, source)
+	if len(blocking) != 1 || !strings.Contains(blocking[0], "recursive family structural key exceeds 65536 bytes") {
+		t.Fatalf("size guard %q", blocking)
 	}
 }
 
@@ -116,12 +178,14 @@ func TestFamilyKeyMemoSharedRecursiveFixture(t *testing.T) {
 type U = {k:'u';a:V|undefined} | {k:'w'};
 type V = {k:'v';b:U|undefined} | {k:'z'};
 type Root = {k:'root';a:R|undefined;deep:{x:{y:{z:R|undefined}}}};
+type Box<T> = {k:'box';value:T};
 class Probe {
  static total(x:Tree):number {if(x.k==='leaf') return x.value; return Probe.total(x.left)+Probe.total(x.right);}
  static v(x:{p:{k:'v';b:U|undefined}}):number {return 0;}
  static u(x:{q:U|undefined}):number {return 0;}
  static w(x:{q:V|undefined}):number {return 0;}
  static root(x:{r:Root|undefined;s:R|undefined}):number {return 0;}
+ static boxes(x:{a:Box<R|undefined>;b:Box<V|undefined>}):number {return 0;}
  static r(x:R):number {if(x.k==='b') return x.v; return x.n;}
 }
 `
@@ -146,6 +210,9 @@ func TestFamilyKeyMemoMatchesPlain(t *testing.T) {
 		"SubsetsLivePayload":    TestRecursiveSubsetsLivePayloadRefusalNodeOracle,
 		"SubsetFeatureRefusals": TestRecursiveSubsetFeatureRefusalsNodeOracle,
 		"DAGBelowBound":         func(t *testing.T) { lowerFamilyKeyProbe(t, familyKeyDAG(4)) },
+		"CyclicDAG": func(t *testing.T) {
+			lowerFamilyKeyProbe(t, strings.Replace(familyKeyDAG(4), "type T0 = {k:'a';x:number}", "type T0 = {k:'a';x:T0|undefined}", 1))
+		},
 	} {
 		t.Run(name, func(t *testing.T) { familyKeyCrossCheckRun(t, run) })
 	}
@@ -168,4 +235,5 @@ func familyKeyCrossCheckRun(t *testing.T, run func(*testing.T)) {
 	if familyKeyCrossChecked.Load() == 0 {
 		t.Fatal("fixture computed no family keys")
 	}
+	t.Logf("%d memo/plain id comparisons", familyKeyCrossChecked.Load())
 }

@@ -2,6 +2,8 @@ package tsfront
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -10,12 +12,12 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
 
-// familyTypeKey expands shared subtypes of a type DAG on every path. The memo
-// only caches: a key is stored when its computation met no "back:" reference
-// at all, so it never depended on the visiting stack and is byte-identical in
-// any context. A subtree that produced a back-reference, even one to itself,
-// is recomputed: another member of its cycle may be on the stack later.
-// Back-references carry only a symbol key, no depth or position.
+// Keys are compositional Merkle ids. Context-free results retain the original
+// memo rule: cache only computations that encountered no back-reference.
+// Cyclic results additionally record the open back-reference symbols and the
+// type checks that observed the caller's stack. Reuse requires those checks to
+// agree, including negative checks: a newly open descendant can change an id.
+// Checker pointers are private validation data, never part of published ids.
 const (
 	familyKeyMaxLen   = 64 << 10
 	familyKeyMaxDepth = 256
@@ -31,7 +33,14 @@ type familyKeyRefusal struct {
 	reason string
 }
 
+type familyKeyContext struct {
+	key    string
+	checks map[*checker.Type]bool
+}
+
 type familyKeyMemo struct {
+	contexts  map[familyKeyID]map[string][]familyKeyContext
+	frames    []map[*checker.Type]bool
 	keys      map[familyKeyID]string
 	refused   map[familyKeyID]familyKeyRefusal
 	diagnosed map[familyKeyID]bool
@@ -55,7 +64,7 @@ var (
 
 func (l *lowerer) familyKeyState() *familyKeyMemo {
 	if l.familyKeys == nil {
-		l.familyKeys = &familyKeyMemo{keys: map[familyKeyID]string{}, refused: map[familyKeyID]familyKeyRefusal{}, diagnosed: map[familyKeyID]bool{}, sentinels: map[familyKeyID]string{}}
+		l.familyKeys = &familyKeyMemo{keys: map[familyKeyID]string{}, contexts: map[familyKeyID]map[string][]familyKeyContext{}, refused: map[familyKeyID]familyKeyRefusal{}, diagnosed: map[familyKeyID]bool{}, sentinels: map[familyKeyID]string{}}
 	}
 	return l.familyKeys
 }
@@ -66,16 +75,6 @@ func (l *lowerer) familyKeyCached(t *checker.Type, named bool, visiting map[*che
 		return l.familyTypeKeyRaw(t, named, visiting)
 	}
 	id := familyKeyID{t, named}
-	if visiting[t] {
-		m.backs++ // Either a back-reference or a named early return; never cached.
-		return l.familyTypeKeyRaw(t, named, visiting)
-	}
-	if key, ok := m.keys[id]; ok {
-		return key
-	}
-	if r, ok := m.refused[id]; ok && m.depth > 0 {
-		panic(r)
-	}
 	if m.depth == 0 {
 		if r, ok := m.refused[id]; ok {
 			return l.familyKeyRefuse(id, r)
@@ -83,6 +82,7 @@ func (l *lowerer) familyKeyCached(t *checker.Type, named bool, visiting map[*che
 		defer func() {
 			if p := recover(); p != nil {
 				m.depth = 0
+				m.frames = nil
 				r, ok := p.(familyKeyRefusal)
 				if !ok {
 					panic(p)
@@ -96,21 +96,88 @@ func (l *lowerer) familyKeyCached(t *checker.Type, named bool, visiting map[*che
 			}
 		}()
 	}
+	if visiting[t] {
+		m.observe(t, true)
+		m.backs++ // Either a back-reference or a named early return; never cached.
+		return l.familyTypeKeyRaw(t, named, visiting)
+	}
+	if key, ok := m.keys[id]; ok {
+		m.observe(t, false)
+		return key
+	}
+	for _, entries := range m.contexts[id] {
+		for _, c := range entries {
+			matches := true
+			for typ, open := range c.checks {
+				if visiting[typ] != open {
+					matches = false
+					break
+				}
+			}
+			if matches {
+				m.merge(c.checks)
+				m.observe(t, false)
+				m.backs++ // A contextual hit must never become context-free upstream.
+				return c.key
+			}
+		}
+	}
+	if r, ok := m.refused[id]; ok && m.depth > 0 {
+		panic(r)
+	}
+
 	if m.depth >= familyKeyMaxDepth {
 		panic(familyKeyRefusal{id, fmt.Sprintf("is nested deeper than %d levels", familyKeyMaxDepth)})
 	}
 	m.depth++
+	checks := map[*checker.Type]bool{}
+	m.frames = append(m.frames, checks)
 	before := m.backs
 	familyKeyRawEvaluation.Add(1)
 	key = l.familyTypeKeyRaw(t, named, visiting)
 	m.depth--
+	m.frames = m.frames[:len(m.frames)-1]
+	delete(checks, t) // References to this node were closed within this computation.
+	m.merge(checks)
+	m.observe(t, false)
 	if len(key) > familyKeyMaxLen {
 		panic(familyKeyRefusal{id, fmt.Sprintf("exceeds %d bytes", familyKeyMaxLen)})
 	}
 	if m.backs == before {
 		m.keys[id] = key
+	} else {
+		symbols := map[string]bool{}
+		for typ, open := range checks {
+			if open {
+				symbols[l.familySymbolKey(typ.Symbol())] = true
+			}
+		}
+		parts := make([]string, 0, len(symbols))
+		for symbol := range symbols {
+			parts = append(parts, symbol)
+		}
+		sort.Strings(parts)
+		if m.contexts[id] == nil {
+			m.contexts[id] = map[string][]familyKeyContext{}
+		}
+		open := strings.Join(parts, "\x00")
+		m.contexts[id][open] = append(m.contexts[id][open], familyKeyContext{key: key, checks: checks})
 	}
 	return key
+}
+
+func (m *familyKeyMemo) observe(t *checker.Type, open bool) {
+	if len(m.frames) > 0 {
+		m.frames[len(m.frames)-1][t] = open
+	}
+}
+
+func (m *familyKeyMemo) merge(checks map[*checker.Type]bool) {
+	if len(m.frames) > 0 {
+		for t, open := range checks {
+			m.observe(t, open)
+		}
+	}
 }
 
 // familyKeyRefuse returns a key that is stable per refused type, so cyclic
