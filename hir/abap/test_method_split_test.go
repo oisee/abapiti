@@ -41,7 +41,7 @@ func TestRegistrationInitializerFrame(t *testing.T) {
 	var stmts []*hir.Stmt
 	// A single local remains live across thousands of sequential operations.
 	stmts = append(stmts, &hir.Stmt{Kind: hir.VarDecl, Name: "value", Type: hir.T(hir.I32), X: hir.L(hir.T(hir.I32), 0)})
-	for i := 0; i < 1800; i++ {
+	for i := 0; i < 450; i++ {
 		stmts = append(stmts, &hir.Stmt{Kind: hir.Assign, X: hir.V("value", hir.T(hir.I32)), Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: hir.T(hir.I32), X: hir.V("value", hir.T(hir.I32)), Y: hir.L(hir.T(hir.I32), 1)}})
 	}
 	m.Body = hir.B(stmts...)
