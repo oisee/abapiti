@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/core"
 )
 
 // Static require bindings. JSDoc-typed .mjs (OSG's gogen) loads a package
@@ -19,8 +20,10 @@ import (
 //	const {X} = require("lib/x");
 //	const {A, B} = lib;
 //
-// A requirer call whose declaration is typed `typeof import("<literal>")`
-// with the same literal is the static import of that module: the bound
+// A requirer call whose declaration is typed `typeof import("<spec>")`,
+// where the program resolves the require literal (CommonJS mode) and the
+// import type to the same source file (".../x" and ".../x.js" may both name
+// x.ts), is the static import of that module: the bound
 // names resolve (l.resolve) to the module symbol or its resolved exports,
 // exactly as `import * as lib` / `import {X}` would. The requirers and the
 // bindings are plumbing: their statements are not lowered (statementNodes).
@@ -47,11 +50,21 @@ type requireBindings struct {
 }
 
 // requireTarget maps a static require binding to its module or export symbol.
+// An import or re-export of a binding (named, renamed, namespace member,
+// chains) is an alias that resolves to the binding itself.
 func (l *lowerer) requireTarget(sym *ast.Symbol) *ast.Symbol {
-	if l.require == nil || sym == nil {
+	if l.require == nil || sym == nil || len(l.require.targets) == 0 {
 		return nil
 	}
-	return l.require.targets[sym]
+	if target := l.require.targets[sym]; target != nil {
+		return target
+	}
+	if sym.Flags&ast.SymbolFlagsAlias != 0 && l.ck != nil {
+		if resolved, ok := l.ck.ResolveAlias(sym); ok {
+			return l.require.targets[resolved]
+		}
+	}
+	return nil
 }
 
 // dropRequirePlumbing removes plumbing statements from a statement list.
@@ -197,13 +210,26 @@ func (l *lowerer) requiredModule(d, call *ast.Node) *ast.Symbol {
 		return nil
 	}
 	literal := typ.AsImportTypeNode().Argument.AsLiteralTypeNode().Literal
-	if literal.Text() != spec {
-		l.diagf(call, "unsupported-require", "dynamic require(%q) is annotated typeof import(%q): the literals differ", spec, literal.Text())
-		return nil
-	}
 	mod := l.ck.GetSymbolAtLocation(literal)
 	if mod == nil || mod.Flags&ast.SymbolFlagsValueModule == 0 {
-		l.diagf(call, "unsupported-require", "require(%q): the module does not resolve in the program", spec)
+		l.diagf(call, "unsupported-require", "require(%q): typeof import(%q) does not resolve in the program", spec, literal.Text())
+		return nil
+	}
+	// The literals may differ in spelling (".../x" vs ".../x.js"); the
+	// program's own resolution of the require literal (CommonJS mode, from
+	// this file) must reach the same source file as the import type.
+	modFile := l.fileOfSymbol(mod)
+	resolved := l.prog.prog.ResolveModuleName(spec, l.file.FileName(), core.ResolutionModeCommonJS)
+	var reqFile *ast.SourceFile
+	if resolved.IsResolved() {
+		reqFile, _ = l.prog.File(resolved.ResolvedFileName)
+	}
+	if modFile == nil || reqFile == nil || reqFile != modFile {
+		target := "nothing in the program"
+		if reqFile != nil {
+			target = l.relFile(reqFile)
+		}
+		l.diagf(call, "unsupported-require", "require(%q) resolves to %s, but it is annotated typeof import(%q): different modules", spec, target, literal.Text())
 		return nil
 	}
 	return mod
@@ -272,4 +298,16 @@ func immutableExport(sym *ast.Symbol) bool {
 	}
 	d := sym.ValueDeclaration
 	return sym.Flags&ast.SymbolFlagsBlockScopedVariable != 0 && d != nil && d.Kind == ast.KindVariableDeclaration && ast.IsVarConst(d)
+}
+
+// requireNamespaceValue refuses a require-bound module (or an import of
+// one) used as a value: Node's object is the package's exports, which the
+// class-value export map does not model. Members and classes stay usable.
+func (l *lowerer) requireNamespaceValue(n *ast.Node) bool {
+	target := l.requireTarget(l.ck.GetSymbolAtLocation(n))
+	if target == nil || target.Flags&ast.SymbolFlagsValueModule == 0 {
+		return false
+	}
+	l.diagf(n, "unsupported-require", "namespace %s bound by require is not a value; use its members", n.Text())
+	return true
 }

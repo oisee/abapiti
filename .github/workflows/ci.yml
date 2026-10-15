@@ -211,6 +211,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Full core trapped-body baseline
+        run: go test -timeout 10m ./cmd/abapiti -run '^TestAbaplintCoreTrappedBodies$' -v
+
       - name: Grace on the full 1538-file closure
         run: go test -timeout 55m ./tsfront -run '^TestGraceFullRegistryClosure$' -v
 

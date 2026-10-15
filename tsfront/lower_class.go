@@ -46,7 +46,7 @@ func (l *lowerer) signaturesFile(f *ast.SourceFile) {
 // isDataInterface reports whether the interface has a property member: those
 // lower to synthesized shape classes (constructed like object literals).
 func (l *lowerer) isDataInterface(node *ast.Node) bool {
-	if l.gogenInheritedData(node) {
+	if l.gogenInheritedData(node) || l.gogenResolvedData(node) {
 		return true
 	}
 	for _, m := range node.Members() {
@@ -80,6 +80,9 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 	}
 	l.shapeLike[c.Name] = true
 	if c.Ctor != nil {
+		return
+	}
+	if l.gogenResolvedDataClass(node, c) {
 		return
 	}
 	ctor := &hir.Method{Node: i.Node, Name: "constructor", Result: hir.T(hir.Void)}

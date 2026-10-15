@@ -35,6 +35,10 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.recordString":      {Dynamic, 0, false},
 	"dynamic.typeofValue":       {Dynamic, 0, false},
 	"dynamic.keys":              {Dynamic, 0, false},
+	"dynamic.spread":            {Dynamic, 0, false},
+	"dynamic.isMap":             {Dynamic, 0, false},
+	"map.markJS":                {OrderedMap, 0, true},
+	"dynamic.isSet":             {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
 	"dynamic.call0":             {Dynamic, 1, true},
 	"dynamic.put":               {Dynamic, 2, true},
@@ -117,6 +121,9 @@ var SpecialOps = map[string]bool{
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
+	// JSON data graph, replacer (key, value) => value closure or absent,
+	// replacer key list or absent, gap -> optional String.
+	"json.stringifyReplacer": true,
 }
 
 // optionalOf wraps t as an Optional; an optional element stays as it is
@@ -142,6 +149,12 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Dynamic), true
 	case "dynamic.keys":
 		return nil, T(Array, T(String)), true
+	case "dynamic.spread":
+		return nil, T(Array, T(Dynamic)), true
+	case "dynamic.isMap", "dynamic.isSet":
+		return nil, T(Bool), true
+	case "map.markJS":
+		return nil, t, true
 	case "dynamic.delete":
 		return []Type{T(String)}, T(Bool), true
 	case "dynamic.get":

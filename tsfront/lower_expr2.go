@@ -37,6 +37,9 @@ func (l *lowerer) tempVar(at *ast.Node, t hir.Type) *hir.Expr {
 // elementAccess lowers m[k] and m["k"]: records and namespace maps are
 // OrderedMaps (map.get), arrays index.
 func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
+	if x, handled := l.gogenIndexRead(n); handled {
+		return x
+	}
 	e := n.AsElementAccessExpression()
 	recv := l.expr(e.Expression)
 	if recv == nil {
@@ -218,6 +221,9 @@ func (l *lowerer) classValueRef(n *ast.Node) (*hir.Expr, bool) {
 // namespaceRef lowers a namespace alias used as a value to the module's
 // export map.
 func (l *lowerer) namespaceRef(n *ast.Node) (*hir.Expr, bool) {
+	if l.requireNamespaceValue(n) {
+		return nil, true
+	}
 	sym := l.resolve(n)
 	if sym == nil || sym.Flags&ast.SymbolFlagsValueModule == 0 {
 		return nil, false
@@ -598,6 +604,9 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		x = l.presentValue(args[0], x, hir.Type{})
 		switch x.Type.Kind {
 		case hir.OrderedMap:
+			if keys := l.gogenRecordKeys(n, x); keys != nil {
+				return keys, true
+			}
 			return l.rtOp("map.keys", x, hir.T(hir.Array, x.Type.Args[0])), true
 		case hir.ClassRef:
 			// ES2022 public class fields are own properties, including fields
@@ -830,11 +839,15 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 			l.diagf(p, "note-object-spread", "record spread copies the entries")
 			l.serial++
 			k := "k" + itoa(l.serial)
+			value := l.rtOp("map.get", sv, hir.T(hir.Optional, sv.Type.Args[1]), hir.V(k, keyT))
+			if !value.Type.Equal(sv.Type.Args[1]) {
+				value = &hir.Expr{Kind: hir.Narrow, Type: sv.Type.Args[1], X: value}
+			}
 			l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(p), Name: k, Type: keyT,
 				X: l.rtOp("map.keys", sv, hir.T(hir.Array, keyT)),
 				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p),
 					X: l.rtOp("map.set", m, typ, hir.V(k, keyT),
-						l.coerce(&hir.Expr{Kind: hir.Narrow, Type: sv.Type.Args[1], X: l.rtOp("map.get", sv, hir.T(hir.Optional, sv.Type.Args[1]), hir.V(k, keyT))}, valT))})})
+						l.coerce(value, valT))})})
 		case ast.KindPropertyAssignment, ast.KindShorthandPropertyAssignment:
 			var keyExpr *hir.Expr
 			var value *ast.Node

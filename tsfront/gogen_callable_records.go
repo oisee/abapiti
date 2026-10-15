@@ -82,13 +82,13 @@ func (l *lowerer) scanGogenCallables(files []string) {
 		l.file, l.ck = f, ck
 		var visit func(*ast.Node) bool
 		visit = func(n *ast.Node) bool {
-			if n.Kind == ast.KindCallExpression && n.Expression().Kind == ast.KindIdentifier {
-				sym := l.resolve(n.Expression())
+			if n.Kind == ast.KindCallExpression && gogenCallee(n.Expression()).Kind == ast.KindIdentifier {
+				sym := l.resolve(gogenCallee(n.Expression()))
 				if sym != nil && sym.ValueDeclaration != nil {
 					d := sym.ValueDeclaration
 					extracted := d.Kind == ast.KindParameter || d.Kind == ast.KindBindingElement || d.Kind == ast.KindVariableDeclaration
 					if extracted {
-						for _, sig := range ck.GetSignaturesOfType(ck.GetTypeAtLocation(n.Expression()), checker.SignatureKindCall) {
+						for _, sig := range ck.GetSignaturesOfType(ck.GetTypeAtLocation(gogenCallee(n.Expression())), checker.SignatureKindCall) {
 							if sig.Declaration() != nil {
 								l.gogenCallables[sig.Declaration()] = true
 							}
