@@ -707,6 +707,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
+	if x, handled := l.gogenIndexRead(n); handled {
+		return x
+	}
 	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
 		if value := l.functionValue(n); value != nil {
 			return value
@@ -775,6 +778,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, handled := l.gogenValueProperty(n); handled {
+		return x
 	}
 	if x, handled := l.familyFieldAccess(n); handled {
 		return x
@@ -2974,6 +2980,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			return nil
 		}
 		return l.dynamicReference(record, hir.Ref(target.Name))
+	}
+	if l.gogenIndexedShape(l.ck.GetContextualType(n, checker.ContextFlagsNone)) {
+		return l.gogenIndexedLiteral(n, target)
 	}
 	ctor := target.Ctor
 	props := n.AsObjectLiteralExpression().Properties.Nodes

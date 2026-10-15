@@ -88,6 +88,9 @@ func (l *lowerer) inOperator(n *ast.Node, b *ast.BinaryExpression) *hir.Expr {
 		return nil
 	}
 	obj = l.tempInit(n, obj.Type, obj)
+	if l.unprunedFeatures && obj.Type.Kind == hir.Dynamic {
+		obj = &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: hir.Ref(hir.RootObject), X: obj}
+	}
 	if obj.Type.Kind == hir.OrderedMap {
 		// A TS index-signature record is represented by an ordered map;
 		// an actual JS Map's entries are NOT its object properties.

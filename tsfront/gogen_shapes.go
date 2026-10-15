@@ -37,7 +37,7 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 	if !l.unprunedFeatures {
 		return false
 	}
-	needed := node.AsInterfaceDeclaration().HeritageClauses != nil
+	needed := node.AsInterfaceDeclaration().HeritageClauses != nil || l.gogenResolvedMembers(node)
 	for _, m := range node.Members() {
 		needed = needed || m.Kind == ast.KindMethodSignature
 	}

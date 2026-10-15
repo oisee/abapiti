@@ -47,6 +47,9 @@ func (l *lowerer) objectEntries(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	recv = l.presentValue(args[0], recv, hir.Type{})
+	if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+		return l.viewEntries(n, recv)
+	}
 	if recv.Type.Kind != hir.OrderedMap || recv.Type.Args[0].Kind != hir.String {
 		l.diagf(n, "unsupported-call", "Object.entries receiver is not a lowered string-indexed record")
 		return nil

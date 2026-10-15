@@ -37,6 +37,9 @@ func (l *lowerer) tempVar(at *ast.Node, t hir.Type) *hir.Expr {
 // elementAccess lowers m[k] and m["k"]: records and namespace maps are
 // OrderedMaps (map.get), arrays index.
 func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
+	if x, handled := l.gogenIndexRead(n); handled {
+		return x
+	}
 	e := n.AsElementAccessExpression()
 	recv := l.expr(e.Expression)
 	if recv == nil {

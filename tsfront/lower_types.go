@@ -40,6 +40,9 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		l.diagf(n, "unsupported-type", "no checker type for annotation")
 		return hir.T(hir.Void)
 	}
+	if mapped, ok := l.gogenValueType(t); ok {
+		return mapped
+	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
 		return mapped
 	}
@@ -397,6 +400,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
 	if t == nil {
 		l.diagf(n, "unsupported-type", "no checker type")
 		return hir.T(hir.Void)
+	}
+	if mapped, ok := l.gogenValueType(t); ok {
+		return mapped
 	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
 		return mapped

@@ -543,6 +543,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 	if lhs == nil {
 		return nil
 	}
+	if l.gogenIndexWrite(lhs) {
+		return nil
+	}
 	switch lhs.Kind {
 	case ast.KindElementAccessExpression:
 		e := lhs.AsElementAccessExpression()
