@@ -515,7 +515,12 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 			value = p.Name()
 		case ast.KindSpreadAssignment:
 			l.hint = hir.Type{}
+			before := len(l.diags)
 			source := l.expr(p.Expression())
+			if source == nil && hasBlocking(l.diags[before:]) {
+				// Keep the operand's refusal; no storage type was produced.
+				return nil
+			}
 			base := hir.Type{}
 			if source != nil {
 				base = source.Type
@@ -523,7 +528,29 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 					base = base.Args[0]
 				}
 			}
-			if source == nil || base.Kind != hir.ClassRef && base.Kind != hir.Dynamic && !(l.unprunedFeatures && base.Kind == hir.UnionRef) {
+			checked := l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(p.Expression()))
+			isMap := checked != nil && checked.Symbol() != nil && (checked.Symbol().Name == "Map" || checked.Symbol().Name == "ReadonlyMap")
+			if l.unprunedFeatures && !isMap && base.Kind == hir.OrderedMap && len(base.Args) == 2 && base.Args[0].Kind == hir.String {
+				// Record maps store only present own entries. The lookup exposes
+				// the stored payload, including an explicitly undefined value.
+				saved := l.tempInit(p, source.Type, source)
+				source = saved
+				if source.Type.Kind == hir.Optional {
+					source = &hir.Expr{Kind: hir.Narrow, Node: l.node(p), Type: base, X: saved}
+				}
+				l.serial++
+				key := hir.V("spreadKey"+itoa(l.serial), base.Args[0])
+				value := l.rtOp("map.get", source, hir.T(hir.Optional, base.Args[1]), key)
+				if !value.Type.Equal(base.Args[1]) {
+					value = &hir.Expr{Kind: hir.Narrow, Node: l.node(p), Type: base.Args[1], X: value}
+				}
+				copy := &hir.Stmt{Kind: hir.ForEach, Node: l.node(p), Name: key.Name, Type: key.Type,
+					X:    l.rtOp("map.keys", source, hir.T(hir.Array, key.Type)),
+					Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p), X: l.rtOp("dynamic.put", record, hir.T(hir.Void), key, l.coerce(value, hir.T(hir.Dynamic)))})}
+				l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(p), X: &hir.Expr{Kind: hir.Unary, Type: hir.T(hir.Bool), Op: "!", X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved}}, Body: hir.B(copy)})
+				continue
+			}
+			if source == nil || base.Kind != hir.ClassRef && base.Kind != hir.Dynamic && !(l.unprunedFeatures && (base.Kind == hir.UnionRef || base.Kind == hir.InterfaceRef)) {
 				l.diagf(p, "unsupported-type", "tagged record spread needs object storage")
 				return nil
 			}

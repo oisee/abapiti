@@ -2917,6 +2917,14 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			}
 		}
 	}
+	if target == nil && l.unprunedFeatures && objectLiteralHasSpread(n) {
+		// A distributed spread can map to a union view rather than one
+		// constructor. Its common checker properties still define a data
+		// view; the snapshot below retains every variant's extra own keys.
+		if t := l.ck.GetTypeAtLocation(n); t != nil {
+			target = l.synthFromProperties(n, l.ck.GetPropertiesOfType(t))
+		}
+	}
 	if target == nil {
 		// An empty literal with a shape hint constructs the shape with
 		// absent optionals; a synthesized checker shape otherwise.

@@ -839,11 +839,15 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 			l.diagf(p, "note-object-spread", "record spread copies the entries")
 			l.serial++
 			k := "k" + itoa(l.serial)
+			value := l.rtOp("map.get", sv, hir.T(hir.Optional, sv.Type.Args[1]), hir.V(k, keyT))
+			if !value.Type.Equal(sv.Type.Args[1]) {
+				value = &hir.Expr{Kind: hir.Narrow, Type: sv.Type.Args[1], X: value}
+			}
 			l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(p), Name: k, Type: keyT,
 				X: l.rtOp("map.keys", sv, hir.T(hir.Array, keyT)),
 				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(p),
 					X: l.rtOp("map.set", m, typ, hir.V(k, keyT),
-						l.coerce(&hir.Expr{Kind: hir.Narrow, Type: sv.Type.Args[1], X: l.rtOp("map.get", sv, hir.T(hir.Optional, sv.Type.Args[1]), hir.V(k, keyT))}, valT))})})
+						l.coerce(value, valT))})})
 		case ast.KindPropertyAssignment, ast.KindShorthandPropertyAssignment:
 			var keyExpr *hir.Expr
 			var value *ast.Node
