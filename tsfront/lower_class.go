@@ -321,6 +321,7 @@ func (l *lowerer) classSignatures(node *ast.Node, c *hir.Class) {
 			l.diagf(m, "unsupported-member", "%s is not lowered", m.Kind.String())
 		}
 	}
+	l.jsThisProperties(node, c)
 	if c.Ctor == nil {
 		for _, m := range node.Members() {
 			if m.Kind == ast.KindPropertyDeclaration && m.Initializer() != nil && m.ModifierFlags()&ast.ModifierFlagsStatic == 0 {

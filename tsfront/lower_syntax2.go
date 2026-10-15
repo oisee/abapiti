@@ -128,7 +128,7 @@ func (l *lowerer) moduleStatementList(statements []*ast.Node) []*hir.Stmt {
 			}
 			l.diagf(stmt, "note-module-statement", "module-level statement lowered into the module initializer")
 			out = append(out, l.stmts(stmt)...)
-		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindVariableStatement, ast.KindEmptyStatement:
+		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindJSTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindVariableStatement, ast.KindEmptyStatement:
 			// Declarations have their own lowering/use-site fallback.
 		default:
 			if l.integerOptions.TrapOnFailure {
