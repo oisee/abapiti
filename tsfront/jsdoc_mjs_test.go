@@ -15,8 +15,14 @@ import (
 // types.ts and compares Probe.run() on Go with Node; abap also emits ABAP.
 func runMjsOracle(t *testing.T, mjs string, abap bool) {
 	t.Helper()
+	runMjsOracleTypes(t, "export type Item = {name: string, size: number};\n", mjs, abap)
+}
+
+// runMjsOracleTypes is runMjsOracle with its own type-only types.ts.
+func runMjsOracleTypes(t *testing.T, types, mjs string, abap bool) []LowerDiagnostic {
+	t.Helper()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "types.ts"), []byte("export type Item = {name: string, size: number};\n"), 0600)
+	os.WriteFile(filepath.Join(dir, "types.ts"), []byte(types), 0600)
 	os.WriteFile(filepath.Join(dir, "probe.mjs"), []byte(mjs), 0600)
 	os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true,"target":"ES2022","module":"nodenext","allowImportingTsExtensions":true,"noEmit":true,"allowJs":true},"include":["*.mjs","*.ts"]}`), 0600)
 	want, err := exec.Command("node", "--input-type=module", "-e", `import {Probe} from `+fmt.Sprintf("%q", filepath.Join(dir, "probe.mjs"))+`;console.log(Probe.run())`).CombinedOutput()
@@ -48,6 +54,7 @@ func runMjsOracle(t *testing.T, mjs string, abap bool) {
 			t.Fatal(err)
 		}
 	}
+	return diags
 }
 
 // gogen is typed in place with JSDoc: same-line annotations, @typedef and

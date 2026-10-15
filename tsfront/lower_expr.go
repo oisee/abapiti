@@ -273,6 +273,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.UnionRef && (typ.Kind == hir.UnionRef || typ.Kind == hir.ClassRef) {
+		// Flow proved an optional family value present (a?.k === 'm'):
+		// checked presence, then the family projection.
+		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
 		if typ.Equal(x.Type) {
 			return x
@@ -551,15 +556,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		arr := l.tempVar(n, typ)
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
-				sv := l.iterableValues(el.Expression())
-				if sv != nil && l.generatorABIFor(sv.Type) != nil {
-					sv = l.drainGenerator(sv)
-				}
-				if sv != nil && sv.Type.Kind == hir.OrderedSet {
-					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
-				}
-				if sv == nil || sv.Type.Kind != hir.Array {
-					l.diagf(el, "unsupported-array", "spread element needs an array")
+				sv := l.spreadValues(el, elem, true)
+				if sv == nil {
 					return nil
 				}
 				if elem.Kind == hir.Optional {

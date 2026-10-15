@@ -591,6 +591,11 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && (x.Type.Args[0].Kind == hir.UnionRef || x.Type.Args[0].Kind == hir.ClassRef) {
+		// A present-only use of an optional family value (a JavaScript partial
+		// field read the checker types as any): checked narrowing, absent raises.
+		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
 	}

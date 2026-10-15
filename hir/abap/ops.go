@@ -56,6 +56,8 @@ var unsupportedOps = map[string]bool{
 	// Recursive structural families use the Go oracle until the ABAP ABI exists.
 	"union.admit": true, "union.project": true, "union.read": true,
 	"union.tag": true, "union.widen": true,
+	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
+	"dynamic.spread": true,
 }
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.

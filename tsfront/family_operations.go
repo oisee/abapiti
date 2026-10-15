@@ -153,6 +153,13 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	if !ok {
 		mapped, ok = l.familySubsetType(t)
 	}
+	if !ok {
+		if present := l.optionalChainPresentParts(n, t); len(present) > 1 {
+			// a?.f on F | undefined: optionalChain already unwrapped the
+			// receiver; the read sees the present family members.
+			mapped, ok = l.familySubsetParts(present)
+		}
+	}
 	if !ok || mapped.Kind != hir.UnionRef {
 		return nil, false
 	}
@@ -162,38 +169,55 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	}
 	u := l.out.Union(mapped.Name)
 	result := hir.Type{}
-	joined := false
+	joined, partial := false, false
 	for _, a := range u.Alternatives {
-		if joined {
-			break
-		}
-		c := l.classByName(a.Payload.Name)
-		found := false
-		for _, f := range c.Fields {
+		var field *hir.Field
+		for i, f := range l.classByName(a.Payload.Name).Fields {
 			if f.Name == name {
-				if merged, ok := familyOptionalRead(result, f.Type); ok {
-					result = merged
-				} else if result.Kind != "" && !result.Equal(f.Type) {
-					if familyScalarRead(result) && familyScalarRead(f.Type) {
-						result = hir.T(hir.Dynamic)
-					} else if common, ok := l.familyCommonRead(n, t, name, u); ok {
-						result = common
-						joined = true
-					} else {
-						l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
-						return nil, true
-					}
-				}
-				if result.Kind == "" {
-					result = f.Type
-				}
-				found = true
+				field = &l.classByName(a.Payload.Name).Fields[i]
 			}
 		}
-		if !found {
-			l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
-			return nil, true
+		if field == nil {
+			if !ast.IsInJSFile(n) {
+				// TypeScript rejects the access; checkJs:false JavaScript reads
+				// undefined from the members without the field.
+				l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
+				return nil, true
+			}
+			partial = true
+			continue
 		}
+		if joined {
+			continue
+		}
+		f := *field
+		if merged, ok := familyOptionalRead(result, f.Type); ok {
+			result = merged
+		} else if result.Kind != "" && !result.Equal(f.Type) {
+			if familyScalarRead(result) && familyScalarRead(f.Type) {
+				result = hir.T(hir.Dynamic)
+			} else if common, ok := l.familyCommonRead(n, t, name, u); ok {
+				result = common
+				joined = true
+			} else {
+				l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
+				return nil, true
+			}
+		}
+		if result.Kind == "" {
+			result = f.Type
+		}
+	}
+	if result.Kind == "" {
+		l.diagf(n, "unsupported-expr", "recursive union field %s is not present in any member", name)
+		return nil, true
+	}
+	if partial {
+		// JavaScript reads undefined from the members without the field.
+		if result.Kind != hir.Optional {
+			result = hir.T(hir.Optional, result)
+		}
+		l.diagf(n, "note-partial-field-read", "recursive union field %s is absent in some members and reads undefined there", name)
 	}
 	saved := l.hint
 	l.hint = hir.Type{}
@@ -216,6 +240,20 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 // the read validates the stored value against it. Otherwise it refuses.
 func (l *lowerer) familyCommonRead(n *ast.Node, recv *checker.Type, name string, u *hir.UnionDecl) (hir.Type, bool) {
 	prop := l.ck.GetTypeOfPropertyOfType(recv, name)
+	if prop == nil || prop.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+		// A partial field has no property on the whole receiver: join the
+		// declared types of the members that have it.
+		var parts []*checker.Type
+		for _, a := range u.Alternatives {
+			if ct := l.familyChecks[a.Payload.Name]; ct != nil && l.ck.GetPropertyOfType(ct, name) != nil {
+				parts = append(parts, l.ck.GetTypeOfPropertyOfType(ct, name))
+			}
+		}
+		if len(parts) == 0 {
+			return hir.Type{}, false
+		}
+		prop = l.ck.GetUnionType(parts)
+	}
 	if prop == nil || prop.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return hir.Type{}, false
 	}
@@ -255,7 +293,10 @@ func (l *lowerer) familyCommonRead(n *ast.Node, recv *checker.Type, name string,
 				field = &l.classByName(a.Payload.Name).Fields[i]
 			}
 		}
-		if field == nil || !hir.UnionReadAccepts(l.out, hir.T(hir.Optional, base), field.Type) {
+		if field == nil {
+			continue
+		}
+		if !hir.UnionReadAccepts(l.out, hir.T(hir.Optional, base), field.Type) {
 			return hir.Type{}, false
 		}
 		optional = optional || field.Type.Kind == hir.Optional
@@ -264,6 +305,24 @@ func (l *lowerer) familyCommonRead(n *ast.Node, recv *checker.Type, name string,
 		return hir.T(hir.Optional, base), true
 	}
 	return base, true
+}
+
+// optionalChainPresentParts lists the receiver's non-nullish union members
+// when n is a link of an optional chain (a?.f, a?.[k], or a later link).
+func (l *lowerer) optionalChainPresentParts(n *ast.Node, t *checker.Type) []*checker.Type {
+	if n == nil || t == nil || !t.IsUnion() || n.Flags&ast.NodeFlagsOptionalChain == 0 {
+		return nil
+	}
+	var present []*checker.Type
+	for _, part := range t.AsUnionOrIntersectionType().Types() {
+		if part.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull|checker.TypeFlagsVoid) == 0 {
+			present = append(present, part)
+		}
+	}
+	if len(present) == len(t.AsUnionOrIntersectionType().Types()) {
+		return nil
+	}
+	return present
 }
 
 func familyScalarRead(t hir.Type) bool {
