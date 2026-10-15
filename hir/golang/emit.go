@@ -204,6 +204,17 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if source := e.externSource(pkg); source != "" {
 		files["extern.go"] = source
 	}
+	fastRuntime, err := fastCollectionRuntime(files["runtime.go"])
+	if err != nil {
+		return nil, nil, err
+	}
+	// Source sites refer to e.code, so generated method types are selected
+	// by typ() and their adapters directly. Only rewrite the runtime here.
+	runtimeFiles := map[string]string{"runtime.go": fastRuntime}
+	if err := directCollectionTypes(runtimeFiles); err != nil {
+		return nil, nil, err
+	}
+	files["runtime.go"] = runtimeFiles["runtime.go"]
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -363,9 +374,17 @@ func (e *emitter) typ(t hir.Type) string {
 	case hir.Array:
 		return "*array[" + e.typ(t.Args[0]) + "]"
 	case hir.OrderedMap:
-		return "*orderedMap[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
+		name := "orderedMap"
+		if e.directCollectionKey(t.Args[0]) {
+			name = "fastOrderedMap"
+		}
+		return "*" + name + "[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
 	case hir.OrderedSet:
-		return "*orderedSet[" + e.typ(t.Args[0]) + "]"
+		name := "orderedSet"
+		if e.directCollectionKey(t.Args[0]) {
+			name = "fastOrderedSet"
+		}
+		return "*" + name + "[" + e.typ(t.Args[0]) + "]"
 	default:
 		e.unsupported(hir.Node{}, "type "+t.String())
 		return "any"
@@ -416,7 +435,7 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("type %s struct {", e.obj(c.Name))
 	if e.recordDeletion && c.Super == "" {
 		e.line("deletedKeys map[jsString]bool")
-		e.line("deletionOrder *orderedMap[jsString,*dynamic]")
+		e.line("deletionOrder *fastOrderedMap[jsString,*dynamic]")
 	}
 	if c.Scoped {
 		e.line("lexicalDescriptor *classDescriptor")
@@ -428,7 +447,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
-		e.line("viewExtras *orderedMap[jsString,*dynamic]")
+		e.line("viewExtras *fastOrderedMap[jsString,*dynamic]")
 	}
 	if e.liveClasses[c.Name] {
 		e.line("viewSource *dynamic")

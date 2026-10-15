@@ -405,7 +405,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "referenceArray(" + code + ")"
 	}
 	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {
-		code = "referenceSetFromArray(" + a + "," + args[0] + ")"
+		helper := "referenceSetFromArray"
+		if b.e.directCollectionKey(x.X.Type.Args[0]) {
+			helper = "referenceFastSetFromArray"
+		}
+		code = helper + "(" + a + "," + args[0] + ")"
 	}
 	if x.Op == "set.has" && x.X.Kind == hir.StaticGet {
 		if classifier := b.e.classifiers[staticKey(x.X)]; classifier != "" {
