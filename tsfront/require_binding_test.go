@@ -152,6 +152,8 @@ const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`
 	cases := []struct {
 		name, old, new, loc, category string
 	}{
+		{"different modules", rearrangerDecl, `/** @type {typeof import("@fake/transpiler/build/src/rearranger.js")} */
+const {Rearranger} = require("@fake/transpiler/build/src/other");`, "probe.mjs:7:22", "unsupported-require"},
 		{"mismatched literal", coreDecl, `const core = transpilerRequire("@fake/transpiler/build/src/rearranger");`, "probe.mjs:5:14", "unsupported-require"},
 		{"missing annotation", rearrangerDecl, "\n" + `const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`, "probe.mjs:7:22", "unsupported-require"},
 		{"non-literal argument", coreDecl, `const core = transpilerRequire("@fake/" + "core");`, "probe.mjs:5:14", "unsupported-require"},
@@ -182,4 +184,18 @@ export class Probe {`, "probe.mjs:10:15", "unsupported-call"},
 			}
 		})
 	}
+}
+
+// The require literal and the import type may spell the module differently
+// (".js" extension or not) when the program resolves both to one file.
+func TestRequireBindingResolvedSpellingNodeOracle(t *testing.T) {
+	base, err := os.ReadFile(filepath.Join("testdata", "requirebinding", "probe.mjs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe := strings.Replace(string(base), `/** @type {typeof import("@fake/transpiler/build/src/rearranger")} */`, `/** @type {typeof import("@fake/transpiler/build/src/rearranger.js")} */`, 1)
+	if probe == string(base) {
+		t.Fatal("fixture lacks the rearranger annotation")
+	}
+	runRequireOracle(t, probe, "char:3|int|C3|'x'|I>C3\n")
 }

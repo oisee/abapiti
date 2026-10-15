@@ -9,7 +9,8 @@
     "paths": {
       "@fake/core": ["./fake-core/index.ts"],
       "@fake/values": ["./fake-values/index.ts"],
-      "@fake/transpiler/build/src/rearranger": ["./fake-transpiler/rearranger.ts"]
+      "@fake/transpiler/build/src/rearranger": ["./fake-transpiler/rearranger.ts"],
+      "@fake/transpiler/build/src/*": ["./fake-transpiler/*"]
     }
   },
   "include": ["*.mjs", "fake-core/*.ts", "fake-transpiler/*.ts", "fake-values/*.ts", "types/*.d.ts"]
