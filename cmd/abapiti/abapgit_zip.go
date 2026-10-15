@@ -65,6 +65,8 @@ func writeAbapGitZip(file, pkg, desc string, sources map[string]string) (int, er
 			objects++
 		case strings.HasSuffix(name, ".tabl.xml"):
 			objects++
+		case strings.HasSuffix(name, ".clas.xml"), strings.HasSuffix(name, ".intf.xml"), strings.HasSuffix(name, ".prog.xml"):
+			// Preserve supplied metadata for embedded runtime objects.
 		case strings.HasSuffix(name, ".clas.testclasses.abap"):
 		default:
 			return 0, fmt.Errorf("abapGit zip: unsupported file %s", name)
