@@ -155,8 +155,7 @@ func (e *emitter) externSource(pkg string) string {
 	}
 	imports := make([]string, len(e.externImports))
 	for path, alias := range e.externImports {
-		var i int
-		fmt.Sscanf(alias, "externPkg%d", &i)
+		i, _ := strconv.Atoi(strings.TrimPrefix(alias, "externPkg"))
 		imports[i] = alias + " " + strconv.Quote(path)
 	}
 	return "package " + pkg + "\nimport (" + strings.Join(imports, ";") + ")\n" + externStringArgumentSource + strings.Join(e.externAdapters, "\n")
