@@ -84,15 +84,23 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	}
 	var fields []hir.Field
 	var classes []*hir.Class
-	structural := 0
+	structural, absent := 0, 0
 	for _, part := range t.AsUnionOrIntersectionType().Types() {
 		prop := l.ck.GetPropertyOfType(part, name)
-		if prop == nil {
-			l.diagf(n, "unsupported-expr", "union field %s requires narrowing: not present in every member", name)
-			return nil, true
-		}
-		if prop.Flags&ast.SymbolFlagsMethod != 0 {
+		if prop != nil && prop.Flags&ast.SymbolFlagsMethod != 0 {
 			return nil, false
+		}
+		if prop == nil {
+			// A partial read is only a structural (dynamic-key) read: the
+			// member without the slot answers undefined, as in JavaScript.
+			typ := l.mapCheckerType(n, part)
+			c := l.classByName(typ.Name)
+			if typ.Kind != hir.ClassRef || c == nil || !(l.shapeLike[c.Name] || strings.HasPrefix(c.Name, "shape.")) || ast.IsAssignmentTarget(n) || !ast.IsInJSFile(n) {
+				l.diagf(n, "unsupported-expr", "union field %s requires narrowing: not present in every member", name)
+				return nil, true
+			}
+			absent++
+			continue
 		}
 		typ := l.mapCheckerType(n, part)
 		c := l.classByName(typ.Name)
@@ -122,7 +130,11 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		}
 		fields = append(fields, *field)
 	}
-	if len(fields) < 2 {
+	if len(fields) == 0 && absent > 0 {
+		l.diagf(n, "unsupported-expr", "union field %s is not present in any member", name)
+		return nil, true
+	}
+	if len(fields)+absent < 2 {
 		return nil, false
 	}
 	if ast.IsAssignmentTarget(n) {
@@ -144,7 +156,13 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		l.diagf(n, "unsupported-expr", "union field %s has incompatible member types", name)
 		return nil, true
 	}
-	if structural == 0 {
+	if absent > 0 {
+		if result.Kind != hir.Optional {
+			result = hir.T(hir.Optional, result)
+		}
+		l.diagf(n, "note-partial-field-read", "union field %s is absent in some members and reads undefined there", name)
+	}
+	if structural == 0 && absent == 0 {
 		return l.nativeUnionField(n, classes, fields, result), true
 	}
 	if structural != len(classes) {
