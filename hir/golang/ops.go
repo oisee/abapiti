@@ -360,6 +360,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "stringifyReplacer(" + a + "," + fn + "," + args[1] + "," + args[2] + ")"
 	case "map.markJS":
 		code = "markJSMap(" + a + ")"
+		if b.e.directCollectionKey(x.X.Type.Args[0]) {
+			code = "markJSFastMap(" + a + ")"
+		}
 		b.e.collectionProbe = true
 	case "dynamic.isMap", "dynamic.isSet":
 		kind := "orderedMap["
@@ -409,7 +412,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "referenceArray(" + code + ")"
 	}
 	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {
-		code = "referenceSetFromArray(" + a + "," + args[0] + ")"
+		helper := "referenceSetFromArray"
+		if b.e.directCollectionKey(x.X.Type.Args[0]) {
+			helper = "referenceFastSetFromArray"
+		}
+		code = helper + "(" + a + "," + args[0] + ")"
 	}
 	if x.Op == "set.has" && x.X.Kind == hir.StaticGet {
 		if classifier := b.e.classifiers[staticKey(x.X)]; classifier != "" {
@@ -442,7 +449,7 @@ func dynSpread(d *dynamic) *array[any] {
  }
  if d.Tag==2 || d.Tag==tagArray {
   if rv:=reflect.ValueOf(d.Value);rv.Kind()==reflect.Pointer && !rv.IsNil() && rv.Elem().Kind()==reflect.Struct {
-   e:=rv.Elem();name:=e.Type().Name()
+   e:=rv.Elem();name:=collectionTypeName(e.Type())
    if strings.HasPrefix(name,"orderedSet[") || strings.HasPrefix(name,"array[") {
     items,missing:=e.FieldByName("Items"),e.FieldByName("Missing")
     for i:=0;i<items.Len();i++ {
@@ -457,15 +464,24 @@ func dynSpread(d *dynamic) *array[any] {
 }
 `
 
+// collectionTypeNameSource maps the concrete-key fast collections onto the
+// orderedMap/orderedSet names the reflective probes recognise.
+const collectionTypeNameSource = `
+func collectionTypeName(t reflect.Type) string {
+ name:=t.Name();if rest,ok:=strings.CutPrefix(name,"fastO");ok {return "o"+rest};return name
+}
+`
+
 // dynIsCollection is instanceof Map / Set on a tagged value: the exact Go
 // collection type, and for a Map the jsMap marker that only the Map
 // constructor sets (records share the ordered-map storage).
 const dynIsCollectionSource = `
 func markJSMap[K comparable, V any](m *orderedMap[K, V]) *orderedMap[K, V] {if m!=nil {m.jsMap=true};return m}
+func markJSFastMap[K comparable, V any](m *fastOrderedMap[K, V]) *fastOrderedMap[K, V] {if m!=nil {m.jsMap=true};return m}
 func dynIsCollection(d *dynamic, kind string) bool {
  if d==nil || d.Tag!=2 {return false}
  rv:=reflect.ValueOf(d.Value)
- if rv.Kind()!=reflect.Pointer || rv.IsNil() || rv.Elem().Kind()!=reflect.Struct || !strings.HasPrefix(rv.Elem().Type().Name(),kind) {return false}
+ if rv.Kind()!=reflect.Pointer || rv.IsNil() || rv.Elem().Kind()!=reflect.Struct || !strings.HasPrefix(collectionTypeName(rv.Elem().Type()),kind) {return false}
  if kind=="orderedMap[" {f:=rv.Elem().FieldByName("jsMap");return f.IsValid() && f.Bool()}
  return true
 }
