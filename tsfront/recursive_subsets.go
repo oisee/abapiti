@@ -37,6 +37,10 @@ func (l *lowerer) familySubsetParts(parts []*checker.Type) (hir.Type, bool) {
 	if len(parts) == 0 || len(l.familyShapes) == 0 {
 		return hir.Type{}, false
 	}
+	parts = l.familyLiveParts(parts)
+	if len(parts) == 0 {
+		return hir.Type{}, false
+	}
 	// Only registered families supply membership; never infer one from tag text.
 	for _, u := range l.out.Unions {
 		var alternatives []hir.UnionAlternative
@@ -86,6 +90,27 @@ func (l *lowerer) familySubsetParts(parts []*checker.Type) (hir.Type, bool) {
 		return hir.Type{Kind: hir.UnionRef, Name: name}, true
 	}
 	return hir.Type{}, false
+}
+
+// familyNeverPart reports an unreduced intersection of members with
+// conflicting literal fields (Type & Extract<Type, ...> distributes into such
+// parts). The checker reduces it to never: it has no inhabitants or storage.
+func (l *lowerer) familyNeverPart(t *checker.Type) bool {
+	return t.Flags()&checker.TypeFlagsIntersection != 0 && len(l.ck.GetPropertiesOfType(t)) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetNeverType())
+}
+
+// familyLiveParts drops never-reduced intersections from union parts.
+func (l *lowerer) familyLiveParts(parts []*checker.Type) []*checker.Type {
+	var live []*checker.Type
+	for _, p := range parts {
+		if !l.familyNeverPart(p) {
+			live = append(live, p)
+		}
+	}
+	if len(live) == len(parts) {
+		return parts
+	}
+	return live
 }
 
 // Discover the retained family before mapping a utility's resolved result. In

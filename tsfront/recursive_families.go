@@ -343,17 +343,27 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 		optional, nullable := false, false
 		var parts []hir.Type
 		var present []*checker.Type
-		for _, p := range t.AsUnionOrIntersectionType().Types() {
+		members := l.familyLiveParts(t.AsUnionOrIntersectionType().Types())
+		for _, p := range members {
 			if p.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull) == 0 {
 				present = append(present, p)
 			}
 		}
-		if optional := len(present) < len(t.AsUnionOrIntersectionType().Types()); optional {
+		if optional := len(present) < len(members); optional {
 			if family, ok := r.familyMembers(present); ok && t.Flags()&checker.TypeFlagsUnion != 0 && !r.hasNull(t) {
 				return hir.T(hir.Optional, family)
 			}
+		} else if len(members) < len(t.AsUnionOrIntersectionType().Types()) {
+			// An intersection distributed over a family (Type & Type, or
+			// Extract<Type, ...> & Type) keeps only live members.
+			if len(present) == 1 {
+				return r.typ(n, present[0])
+			}
+			if family, ok := r.familyMembers(present); ok {
+				return family
+			}
 		}
-		for _, p := range t.AsUnionOrIntersectionType().Types() {
+		for _, p := range members {
 			if p.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
 				continue

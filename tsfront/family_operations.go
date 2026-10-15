@@ -162,7 +162,11 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	}
 	u := l.out.Union(mapped.Name)
 	result := hir.Type{}
+	joined := false
 	for _, a := range u.Alternatives {
+		if joined {
+			break
+		}
 		c := l.classByName(a.Payload.Name)
 		found := false
 		for _, f := range c.Fields {
@@ -172,6 +176,9 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 				} else if result.Kind != "" && !result.Equal(f.Type) {
 					if familyScalarRead(result) && familyScalarRead(f.Type) {
 						result = hir.T(hir.Dynamic)
+					} else if common, ok := l.familyCommonRead(n, t, name, u); ok {
+						result = common
+						joined = true
 					} else {
 						l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
 						return nil, true
@@ -200,6 +207,63 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		op = "union.tag"
 	}
 	return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: op, Name: name, Type: result, X: recv}, true
+}
+
+// familyCommonRead is the common-field view of a field that every member
+// declares with differing reference types (a narrower payload or subset in
+// some members). The checker's property type over the whole receiver names
+// the joined type; when it maps to a family accepting every member's storage,
+// the read validates the stored value against it. Otherwise it refuses.
+func (l *lowerer) familyCommonRead(n *ast.Node, recv *checker.Type, name string, u *hir.UnionDecl) (hir.Type, bool) {
+	prop := l.ck.GetTypeOfPropertyOfType(recv, name)
+	if prop == nil || prop.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+		return hir.Type{}, false
+	}
+	want, ok := l.familyTypes[l.familyAliasKey(prop)]
+	if !ok && prop.IsUnion() {
+		var present []*checker.Type
+		for _, part := range prop.AsUnionOrIntersectionType().Types() {
+			if part.Flags()&checker.TypeFlagsUndefined == 0 {
+				present = append(present, part)
+			}
+		}
+		if want, ok = l.familySubsetParts(present); ok && len(present) < len(prop.AsUnionOrIntersectionType().Types()) {
+			want = hir.T(hir.Optional, want)
+		}
+	}
+	if !ok {
+		before := len(l.diags)
+		want = l.mapCheckerType(n, prop)
+		blocked := hasBlocking(l.diags[before:])
+		l.diags = l.diags[:before]
+		if blocked {
+			return hir.Type{}, false
+		}
+	}
+	base := want
+	if base.Kind == hir.Optional && len(base.Args) == 1 {
+		base = base.Args[0]
+	}
+	if base.Kind != hir.UnionRef {
+		return hir.Type{}, false
+	}
+	optional := false
+	for _, a := range u.Alternatives {
+		var field *hir.Field
+		for i, f := range l.classByName(a.Payload.Name).Fields {
+			if f.Name == name {
+				field = &l.classByName(a.Payload.Name).Fields[i]
+			}
+		}
+		if field == nil || !hir.UnionReadAccepts(l.out, hir.T(hir.Optional, base), field.Type) {
+			return hir.Type{}, false
+		}
+		optional = optional || field.Type.Kind == hir.Optional
+	}
+	if optional {
+		return hir.T(hir.Optional, base), true
+	}
+	return base, true
 }
 
 func familyScalarRead(t hir.Type) bool {
