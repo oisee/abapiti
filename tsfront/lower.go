@@ -497,6 +497,7 @@ type lowerer struct {
 	familyFailed map[string]bool
 	familyShapes map[string]hir.Type
 	familyChecks map[string]*checker.Type
+	familyKeys   *familyKeyMemo // family_key_memo.go
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

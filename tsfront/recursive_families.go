@@ -38,6 +38,10 @@ func (l *lowerer) familyAliasKey(t *checker.Type) string {
 }
 
 func (l *lowerer) familyTypeKey(t *checker.Type, named bool, visiting map[*checker.Type]bool) string {
+	return l.familyKeyCached(t, named, visiting) // family_key_memo.go
+}
+
+func (l *lowerer) familyTypeKeyRaw(t *checker.Type, named bool, visiting map[*checker.Type]bool) string {
 	if t == nil {
 		return "missing"
 	}
@@ -185,10 +189,12 @@ type familyRegistration struct {
 	reason  string
 }
 
-func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, bool) {
+func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Type, handled bool) {
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	keys := l.familyKeyEnter(n)
+	defer keys.exit(&res, &handled)
 	l.familyUtilitySources(n, map[*ast.Node]bool{})
 	if t.Flags()&checker.TypeFlagsNever != 0 && n.Kind == ast.KindTypeReference && len(l.familyTypes) > 0 {
 		if n.Parent != nil && ast.IsFunctionLike(n.Parent) && n.Parent.Type() == n {
@@ -224,7 +230,7 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, b
 		l.familyShapes = map[string]hir.Type{}
 		l.familyChecks = map[string]*checker.Type{}
 	}
-	if r.failed || mapped.Kind == hir.Void {
+	if r.failed || mapped.Kind == hir.Void || keys.refused() {
 		for key := range r.unions {
 			l.familyFailed[key] = true
 		}
