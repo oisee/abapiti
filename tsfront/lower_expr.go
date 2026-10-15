@@ -467,6 +467,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		}
 		return l.propertyAccess(n)
 	case ast.KindCallExpression:
+		if callee := n.Expression(); callee != nil && callee.Kind == ast.KindIdentifier && n.AsCallExpression().QuestionDotToken != nil {
+			return l.optionalChain(n)
+		}
 		if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression && n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
 		}
@@ -1020,11 +1023,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
-		if t, ok := l.lookup(name); ok && l.isCallableValueType(t) {
-			if t.Name == thunkInterfaceName {
-				x, _ := l.thunkCall(n, callee)
-				return x
-			}
+		if t, ok := l.lookup(name); ok && l.storedCallableType(callee, t) {
 			return l.functionValueCall(n, callee)
 		}
 		if lf, ok := l.localFns[name]; ok {
@@ -1038,6 +1037,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		}
 		if _, isLocal := l.lookup(name); !isLocal {
 			if sym := l.resolve(callee); sym != nil {
+				if owner, field, ok := l.modvarOf(sym); ok {
+					for _, c := range l.out.Classes {
+						if c.Name == owner {
+							for _, f := range c.Fields {
+								if f.Name == field && l.storedCallableType(callee, f.Type) {
+									return l.functionValueCall(n, callee)
+								}
+							}
+						}
+					}
+				}
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
 						if check := l.moduleCallableCall(n, callee, hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {

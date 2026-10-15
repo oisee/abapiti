@@ -926,7 +926,7 @@ func propertyNameNode(p *ast.Node) *ast.Node {
 // undefined, otherwise the access proceeds on the unwrapped receiver.
 func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	base := n.Expression()
-	if n.Kind == ast.KindCallExpression {
+	if n.Kind == ast.KindCallExpression && base.Kind != ast.KindIdentifier {
 		base = base.Expression()
 	}
 	recv := l.anyCallReceiver(base, l.expr(base))

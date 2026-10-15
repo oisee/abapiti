@@ -339,12 +339,21 @@ func (l *lowerer) assignedInFunction(fn *ast.Node, symbol *ast.Symbol) bool {
 		}
 		if n.Kind == ast.KindBinaryExpression {
 			b := n.AsBinaryExpression()
-			if b.Left.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(b.Left) == symbol {
-				switch b.OperatorToken.Kind {
-				case ast.KindEqualsToken, ast.KindPlusEqualsToken, ast.KindMinusEqualsToken, ast.KindAsteriskEqualsToken:
-					found = true
-				}
+			if ast.IsAssignmentOperator(b.OperatorToken.Kind) && b.Left.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(b.Left) == symbol {
+				found = true
 			}
+		}
+		var updated *ast.Node
+		if n.Kind == ast.KindPostfixUnaryExpression {
+			updated = n.AsPostfixUnaryExpression().Operand
+		} else if n.Kind == ast.KindPrefixUnaryExpression {
+			u := n.AsPrefixUnaryExpression()
+			if u.Operator == ast.KindPlusPlusToken || u.Operator == ast.KindMinusMinusToken {
+				updated = u.Operand
+			}
+		}
+		if updated != nil && updated.Kind == ast.KindIdentifier && l.ck.GetSymbolAtLocation(updated) == symbol {
+			found = true
 		}
 		n.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
 	}
@@ -353,12 +362,20 @@ func (l *lowerer) assignedInFunction(fn *ast.Node, symbol *ast.Symbol) bool {
 }
 
 func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
-	x := l.expr(callee)
+	x := l.callReceiverExpr(callee)
 	if x == nil {
 		return nil
 	}
+	if x.Type.Kind == hir.Optional && l.callableMethod(x.Type.Args[0]) != nil {
+		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(callee), Type: x.Type.Args[0], X: x}
+	}
+	if (x.Type.Kind == hir.Dynamic || x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) && l.checkedStoredCallable(callee) != nil {
+		typ := l.functionType(callee, l.checkedStoredCallable(callee))
+		x = l.coerce(x, typ)
+	}
 	m := l.callableMethod(x.Type)
 	if m == nil {
+		l.diagf(n, "unsupported-call", "stored function has no lowered call signature")
 		return nil
 	}
 	x = l.callReceiver(n, x, nil)
@@ -366,7 +383,34 @@ func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
 	if !ok {
 		return nil
 	}
+	if x.Type.Name == thunkInterfaceName {
+		return l.invokeThunk(n, x)
+	}
 	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: "call", Type: m.Result, X: x, Args: args}
+}
+
+// Nullable callable unions retain tagged storage so null and undefined stay
+// distinct. Only a checked declaration can recover their callable ABI.
+func (l *lowerer) checkedStoredCallable(n *ast.Node) *checker.Type {
+	if !l.unprunedFeatures {
+		return nil
+	}
+	sym := l.resolve(n)
+	if sym == nil {
+		return nil
+	}
+	t := l.ck.GetNonNullableType(l.ck.GetTypeOfSymbol(sym))
+	if t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 || len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) != 1 {
+		return nil
+	}
+	return t
+}
+
+func (l *lowerer) storedCallableType(n *ast.Node, t hir.Type) bool {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	return l.isCallableValueType(t) || t.Kind == hir.Dynamic && l.checkedStoredCallable(n) != nil
 }
 
 func (l *lowerer) bindingMutable(symbol *ast.Symbol) bool {

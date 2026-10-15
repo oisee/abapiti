@@ -424,8 +424,8 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 			if declared[symbol] {
 				continue
 			}
-			typ, _ := l.checkedBindingType(symbol)
-			if typ.Kind == hir.Void {
+			typ, checked := l.checkedBindingType(symbol)
+			if !checked || typ.Kind == hir.Void {
 				typ, _ = l.lookup(name)
 			}
 			out = append(out, localCapture{name: name, typ: typ, symbol: symbol, node: node})
@@ -513,8 +513,8 @@ func (l *lowerer) legacyFreeLocals(fn *ast.Node) []localCapture {
 	for _, name := range names {
 		node := used[name][0]
 		symbol := l.ck.GetSymbolAtLocation(node)
-		typ, _ := l.checkedBindingType(symbol)
-		if typ.Kind == hir.Void {
+		typ, checked := l.checkedBindingType(symbol)
+		if !checked || typ.Kind == hir.Void {
 			if fallback, ok := l.lookup(name); ok {
 				typ = fallback
 			}

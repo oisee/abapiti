@@ -1,0 +1,50 @@
+class	file:line:col	callee	checker type	outcome	reason
+A	tools/gogen/emit-go.mjs:1323:9	movePair	MovePair | undefined	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/emit-go.mjs:877:39	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/emit-go.mjs:880:39	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/emit-go.mjs:936:3	SYMBOLS	SymbolCollector | null | undefined	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/emit-go.mjs:996:32	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend-artifact-digests.mjs:11:25	createHash	(algorithm: string, options?: HashOptions | undefined) => Hash	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/frontend-artifact-digests.mjs:9:65	basename	(path: string, suffix?: string | undefined) => string	remaining	typed external platform declaration; requires native ABI/implementation
+G	tools/gogen/frontend-bytes.mjs:31:20	lvalue	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:32:21	source	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:37:20	lvalue	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:38:21	source	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:44:18	lvalue	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:46:13	source	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-bytes.mjs:47:13	source	any	remaining	OSG checker type any; no typed call signature
+A	tools/gogen/frontend-expressions-calls.mjs:147:21	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+G	tools/gogen/frontend-hierarchy.mjs:18:11	step	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-hierarchy.mjs:27:20	step	any	remaining	OSG checker type any; no typed call signature
+A	tools/gogen/frontend-inventory.mjs:13:21	createHash	(algorithm: string, options?: HashOptions | undefined) => Hash	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/frontend-local-constants.mjs:45:49	isTok	(n: unknown, s?: string | undefined) => n is TokenNode	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:58:9	isStruct	(n: unknown, cls: NodeClass) => n is StructureNode	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:59:20	upper	(s: unknown) => string	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:66:23	upper	(s: unknown) => string	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:78:9	isStmt	(n: unknown, cls: NodeClass) => n is StatementNode	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:79:20	upper	(s: unknown) => string	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-local-constants.mjs:81:20	initialValue	(node: StatementNode, ctx: MethodContext) => { readonly s: "assign"; readonly target: { readonly conv?: boolean | undefined; readonly fromP?: { readonly qname?: string | undefined; ... 4 more ...; readonly calc?: boolean | undefined; } | undefined; readonly e: "field"; readonly base: ... | ... 69 more ... | { ...; }...	resolved	typed source callable dispatch/capture ABI
+A	tools/gogen/frontend-provenance-hooks.mjs:4:18	fileURLToPath	(url: string | URL, options?: FileUrlToPathOptions | undefined) => string	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/frontend-provenance.mjs:455:44	pathToFileURL	(path: string, options?: PathToFileUrlOptions | undefined) => URL	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/frontend-provenance.mjs:8:14	coreRequire	Require	remaining	typed external platform declaration; requires native ABI/implementation
+G	tools/gogen/frontend-queries.mjs:16:42	methodsOf	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-queries.mjs:42:19	run	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-queries.mjs:81:17	run	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-queries.mjs:88:28	project	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:17:16	registerConst	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:1:96	goName	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:27:23	ancestors	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:40:43	upper	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:42:39	ancestors	any	remaining	OSG checker type any; no typed call signature
+G	tools/gogen/frontend-static.mjs:9:16	clasDef	any	remaining	OSG checker type any; no typed call signature
+A	tools/gogen/frontend.mjs:3468:30	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:3672:49	param	(x: TypedIdentifier, dir: NonNullable<"importing" | "exporting" | "changing" | undefined>) => FrontendParam	newly exposed	lifted callback signature/body failed before invocation
+A	tools/gogen/frontend.mjs:5059:112	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:5062:69	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:5340:60	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:5341:34	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:5420:59	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/frontend.mjs:880:61	Number	NumberConstructor	remaining	typed builtin conversion; global Number lowering absent
+A	tools/gogen/host-io.ts:11:10	readFileSync	{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): NonSharedBuffer; (path: PathOrFileDescriptor, options: { ...; } | BufferEncoding): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | NonSharedB...	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/host-io.ts:36:10	readdirSync	{ (path: PathLike, options?: BufferEncoding | { encoding: BufferEncoding | null; withFileTypes?: false | undefined; recursive?: boolean | undefined; } | null | undefined): string[]; (path: PathLike, options: { ...; } | "buffer"): NonSharedBuffer[]; (path: PathLike, options?: BufferEncoding | ... 2 more ... | undefin...	remaining	typed external platform declaration; requires native ABI/implementation
+A	tools/gogen/sink-locals.ts:110:3	scanBody	(body: Body, path: readonly Body[], parentTop: Tops) => void	newly exposed	mutually recursive lifted functions lack completed capture ABI
