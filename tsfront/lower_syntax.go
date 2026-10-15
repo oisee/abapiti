@@ -281,7 +281,7 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 	return nil, false
 }
 
-// globalCall lowers calls of the global functions String, parseInt and isNaN.
+// globalCall lowers calls of the global functions String, Number, parseInt and isNaN.
 func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 	if callee.Kind != ast.KindIdentifier {
 		return nil, false
@@ -311,6 +311,11 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			return nil, true
 		}
 		return l.primitiveString(args[0], x), true
+	case "Number":
+		if !l.unprunedFeatures {
+			return nil, false
+		}
+		return l.numberConversion(n, args), true
 	case "parseFloat":
 		if !l.unprunedFeatures {
 			return nil, false

@@ -37,3 +37,61 @@ func parseIntNumber(s jsString) float64 {
  return sign*n
 }
 `
+
+// ECMAScript ToNumber, emitted only for programs that call Number(value).
+const toNumberSource = `
+func stringToNumber(s jsString) float64 {
+ text:=s.trim().String()
+ if text=="" {return 0}
+ if len(text)>2 && text[0]=='0' {
+  bits:=0
+  switch text[1] {
+  case 'x','X': bits=4
+  case 'o','O': bits=3
+  case 'b','B': bits=1
+  }
+  if bits>0 {
+   var raw strings.Builder
+   for _,c:=range text[2:] {
+    d:=int64(-1)
+    switch {
+    case c>='0' && c<='9': d=int64(c-'0')
+    case c>='a' && c<='f': d=int64(c-'a'+10)
+    case c>='A' && c<='F': d=int64(c-'A'+10)
+    }
+    if d<0 || d>=int64(1)<<bits {return math.NaN()}
+    raw.WriteString(strconv.FormatInt(d+int64(1)<<bits,2)[1:])
+   }
+   bin:=raw.String();pad:=(4-len(bin)%4)%4
+   bin=strings.Repeat("0",pad)+bin
+   var hexDigits strings.Builder
+   for i:=0;i<len(bin);i+=4 {v,_:=strconv.ParseUint(bin[i:i+4],2,8);hexDigits.WriteString(strconv.FormatUint(v,16))}
+   n,err:=strconv.ParseFloat("0x"+hexDigits.String()+"p0",64)
+   if err!=nil && !math.IsInf(n,0) {panic(newTrap("radix string conversion failed"))}
+   return n
+  }
+ }
+ switch text {
+ case "Infinity","+Infinity": return math.Inf(1)
+ case "-Infinity": return math.Inf(-1)
+ }
+ if !decimalString.MatchString(text) {return math.NaN()}
+ n,err:=strconv.ParseFloat(text,64)
+ if err!=nil && !math.IsInf(n,0) {panic(newTrap("decimal string conversion failed"))}
+ return n
+}
+// ToNumber of a boxed value. Objects and arrays go through their default
+// string ToPrimitive; own toString/valueOf hooks and other shapes trap.
+func dynToNumber(d *dynamic) float64 {
+ if d==nil {return math.NaN()}
+ switch d.Tag {
+ case tagNull: return 0
+ case 1: return stringToNumber(d.Value.(jsString))
+ case 3: if d.Value.(bool) {return 1};return 0
+ case 4,5,6: return dynNumber(d)
+ case tagArray,tagObject: return stringToNumber(dynStringCoercion(d,0))
+ }
+ panic(newTrap("ToNumber shape outside certified primitive conversion"))
+}
+var decimalString=regexp.MustCompile("^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$")
+`

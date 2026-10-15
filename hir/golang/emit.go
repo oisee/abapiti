@@ -50,6 +50,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
 					e.nonfiniteNumbers = true
 				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "string.toNumber" || x.Op == "dynamic.toNumber") {
+					e.nonfiniteNumbers = true
+					e.toNumber = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
@@ -147,6 +151,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.nonfiniteNumbers {
 		runtime = nonfiniteRuntime(runtime)
+	}
+	if e.toNumber {
+		runtime += toNumberSource
 	}
 	if e.regexSplit {
 		e.extendedRegex = true
@@ -268,6 +275,7 @@ type emitter struct {
 	usesArrayDeletion bool
 	recordString      bool
 	nonfiniteNumbers  bool
+	toNumber          bool
 	usesTypedCatch    bool
 }
 

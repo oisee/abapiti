@@ -2379,6 +2379,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>pad( text = " + a + " target = " + args[0] + " fill = " + args[1] + " ).")
 		case "string.parseFloatNumber":
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_prefix( " + a + " ).")
+		case "string.toNumber":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>to_number( " + a + " ).")
 		case "string.sha1Hex":
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>sha1( " + a + " ).")
 		case "string.splitRegex":
