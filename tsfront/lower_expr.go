@@ -1153,6 +1153,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// checked narrow raises where JavaScript would throw a TypeError.
 				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
 			}
+			if l.unprunedFeatures && ast.IsInJSFile(n) && recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// checkJs:false JavaScript calls the method on the value it
+				// has: an absent array throws, here the checked narrowing raises.
+				recvX = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recvX.Type.Args[0], X: recvX}
+			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
 					return x
@@ -1428,6 +1433,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
+		}
+		if x, handled := l.arrayIterationCall(n, name, recv); handled {
+			return x
 		}
 		x, handled := l.libraryCall(n, name, recv)
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
