@@ -89,6 +89,9 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	if body == nil {
 		return nil
 	}
+	if l.gogenRefuseReceiver(n) {
+		return nil
+	}
 	captures := l.testFixtureCaptures(n, l.freeLocals(n))
 	usesThis := touchesThis(body)
 	contextThis := l.integerOptions.TrapOnFailure && n.Kind == ast.KindFunctionExpression && usesThis && l.isTestCallback(n)

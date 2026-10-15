@@ -167,7 +167,9 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		found := false
 		for _, f := range c.Fields {
 			if f.Name == name {
-				if result.Kind != "" && !result.Equal(f.Type) {
+				if merged, ok := familyOptionalRead(result, f.Type); ok {
+					result = merged
+				} else if result.Kind != "" && !result.Equal(f.Type) {
 					if familyScalarRead(result) && familyScalarRead(f.Type) {
 						result = hir.T(hir.Dynamic)
 					} else {
@@ -175,7 +177,7 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 						return nil, true
 					}
 				}
-				if result.Kind != hir.Dynamic {
+				if result.Kind == "" {
 					result = f.Type
 				}
 				found = true
@@ -206,4 +208,20 @@ func familyScalarRead(t hir.Type) bool {
 		return true
 	}
 	return false
+}
+
+// familyOptionalRead joins T and Optional<T> (an exactly-undefined sibling
+// field) into Optional<T>. The read is a dynamic get, so an absent key and a
+// present undefined both yield the empty optional, as in JavaScript.
+func familyOptionalRead(a, b hir.Type) (hir.Type, bool) {
+	if a.Kind == "" || a.Equal(b) {
+		return hir.Type{}, false
+	}
+	if a.Kind == hir.Optional && len(a.Args) == 1 && a.Args[0].Equal(b) {
+		return a, true
+	}
+	if b.Kind == hir.Optional && len(b.Args) == 1 && b.Args[0].Equal(a) {
+		return b, true
+	}
+	return hir.Type{}, false
 }

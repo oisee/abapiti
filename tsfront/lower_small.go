@@ -98,6 +98,16 @@ func (l *lowerer) inOperator(n *ast.Node, b *ast.BinaryExpression) *hir.Expr {
 		}
 		return l.rtOp("map.has", obj, hir.T(hir.Bool), key)
 	}
+	if l.unprunedFeatures && key.Type.Kind == hir.String && (obj.Type.Kind == hir.UnionRef || l.familyPayloadOptional(obj.Type, b.Left)) {
+		// A recursive family value (or a narrowed payload whose optional
+		// field may be absent) keeps its original own keys: erase it to the
+		// object root so presence comes from those keys, not the layout.
+		if obj.Type.Kind == hir.UnionRef {
+			obj = l.rtOp("dynamic.asRef", l.coerce(obj, hir.T(hir.Dynamic)), hir.Ref(hir.RootObject))
+		} else {
+			obj = &hir.Expr{Kind: hir.Cast, Node: obj.Node, Type: hir.Ref(hir.RootObject), X: obj}
+		}
+	}
 	if l.unprunedFeatures && obj.Type.Kind == hir.ClassRef && obj.Type.Name == hir.RootObject && key.Type.Kind == hir.String {
 		// The erased object/union keeps its concrete storage. The existing
 		// property operation checks original presence, not declared fields.
@@ -128,4 +138,22 @@ func (l *lowerer) inOperator(n *ast.Node, b *ast.BinaryExpression) *hir.Expr {
 	}
 	l.diagf(n, "unsupported-expr", "in requires a record or a literal property on a lowered shape (got %s)", obj.Type.String())
 	return nil
+}
+
+// familyPayloadOptional reports a literal key naming an optional field of a
+// recursive family payload layout (family.payload.* or a family shape).
+func (l *lowerer) familyPayloadOptional(t hir.Type, key *ast.Node) bool {
+	if t.Kind != hir.ClassRef || key.Kind != ast.KindStringLiteral || l.familyChecks[t.Name] == nil {
+		return false
+	}
+	c := l.classByName(t.Name)
+	if c == nil || !c.Structural || c.Super != "" {
+		return false
+	}
+	for _, f := range c.Fields {
+		if f.Name == key.Text() && !f.Static {
+			return f.Type.Kind == hir.Optional
+		}
+	}
+	return false
 }

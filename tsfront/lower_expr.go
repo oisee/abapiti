@@ -956,6 +956,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.gogenCall(n); ok {
+		return x
+	}
 	if x, ok := l.externCall(n); ok {
 		return x
 	}
@@ -1430,6 +1433,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Expr, bool) {
+	if x, ok := l.gogenWeakCall(n, name, recv); ok {
+		return x, true
+	}
 	args := n.Arguments()
 	one := func() *hir.Expr {
 		if len(args) != 1 {
@@ -1989,6 +1995,9 @@ func (l *lowerer) callArgs(at *ast.Node, args []*ast.Node, params []hir.Param) (
 // newExpression lowers allocations of lowered classes; `new Set([..])` is
 // only allowed in statement contexts (see collectionInit).
 func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
+	if x, ok := l.gogenNew(n); ok {
+		return x
+	}
 	if sym := l.resolve(n.Expression()); sym != nil && sym.Name == "Promise" && l.librarySymbol(sym) {
 		l.diagf(n, "unsupported-async", "Promise constructors are refused: executor settlement and deferred resolve require a scheduler")
 		return nil
