@@ -537,6 +537,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		elem := hir.Type{}
 		if hint.Kind == hir.Array {
 			elem = hint.Args[0]
+		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic {
+			// A tagged destination still receives a real JavaScript array,
+			// even when the checker contextualizes this literal as a tuple.
+			elem = hir.T(hir.Dynamic)
 		} else {
 			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
 			if arr := l.singleArrayConstituent(t); arr != nil {

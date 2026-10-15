@@ -3,6 +3,7 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"strings"
 )
 
@@ -509,17 +510,51 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				}
 			}
 			l.declare(local, lt)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
-				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}})
+			decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
+				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}}
+			l.recordPatternBinding(el.Name(), decl)
+			l.pendStmt(decl)
 		}
 	case ast.KindArrayBindingPattern:
+		if x.Type.Kind == hir.Dynamic {
+			// A union of array storages is boxed rather than retagged as one
+			// generic array. Read each checked binding through that live box.
+			var arrays func(*checker.Type) bool
+			arrays = func(t *checker.Type) bool {
+				if t == nil {
+					return false
+				}
+				if t.IsUnion() {
+					for _, part := range t.AsUnionOrIntersectionType().Types() {
+						if !arrays(part) {
+							return false
+						}
+					}
+					return true
+				}
+				return l.ck.IsArrayType(t) || t.IsTupleType()
+			}
+			if pattern.Parent == nil || pattern.Parent.Initializer() == nil || !arrays(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
+				l.diagf(pattern, "unsupported-binding", "dynamic array destructuring requires checked array storage")
+				return
+			}
+		}
 		for i, el := range pattern.AsBindingPattern().Elements.Nodes {
 			if el.Kind != ast.KindBindingElement || el.Name() == nil || el.Name().Kind != ast.KindIdentifier {
 				continue
 			}
 			local := el.Name().Text()
 			var value *hir.Expr
-			if x.Type.Kind == hir.Array {
+			if x.Type.Kind == hir.Dynamic {
+				if el.AsBindingElement().DotDotDotToken != nil {
+					l.diagf(el, "unsupported-binding", "rest binding of boxed array storage")
+					return
+				}
+				typ := l.mapCheckerType(el, l.ck.GetTypeAtLocation(el.Name()))
+				view := l.rtOp("dynamic.arrayView", x, hir.T(hir.Array, hir.T(hir.Dynamic)))
+				view.Node = l.node(el)
+				value = l.coerce(&hir.Expr{Kind: hir.IndexGet, Node: l.node(el), Type: hir.T(hir.Dynamic), X: view, Y: hir.L(hir.T(hir.I32), i)}, typ)
+			} else if x.Type.Kind == hir.Array {
 				if el.AsBindingElement().DotDotDotToken != nil {
 					value = l.rtOp("array.slice1", x, x.Type, hir.L(hir.T(hir.I32), i))
 				} else {
@@ -542,7 +577,9 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				value = &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Type: l.patternFieldType(x.Type, field), Name: field, X: x}
 			}
 			l.declare(local, value.Type)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value})
+			decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value}
+			l.recordPatternBinding(el.Name(), decl)
+			l.pendStmt(decl)
 		}
 
 	}
@@ -966,4 +1003,15 @@ func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRe
 		call = &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: call.Type, Stmt: hir.B(l.pend...), Y: call}
 	}
 	return call, names, true
+}
+
+// Pattern bindings participate in the same cell rewrite as ordinary locals.
+func (l *lowerer) recordPatternBinding(name *ast.Node, decl *hir.Stmt) {
+	if !l.unprunedFeatures {
+		return
+	}
+	if l.declSymbols == nil {
+		l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+	}
+	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(name)
 }
