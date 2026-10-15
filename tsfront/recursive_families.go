@@ -180,6 +180,7 @@ type familyRegistration struct {
 	unions  map[string]*hir.UnionDecl
 	classes map[string]*hir.Class
 	shapes  map[string]hir.Type
+	checks  map[string]*checker.Type
 	failed  bool
 	reason  string
 }
@@ -187,6 +188,14 @@ type familyRegistration struct {
 func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, bool) {
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
+	}
+	l.familyUtilitySources(n, map[*ast.Node]bool{})
+	if t.Flags()&checker.TypeFlagsNever != 0 && n.Kind == ast.KindTypeReference && len(l.familyTypes) > 0 {
+		if n.Parent != nil && ast.IsFunctionLike(n.Parent) && n.Parent.Type() == n {
+			return hir.T(hir.Void), true
+		}
+		l.diagf(n, "unsupported-type", "empty recursive subset has no payload inhabitants")
+		return hir.T(hir.Void), true
 	}
 	alias := l.familyAliasKey(t)
 	if mapped, ok := l.familyTypes[alias]; ok {
@@ -207,12 +216,13 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, b
 	if alias == "" || l.familyDiscriminant(t) == "" || !l.familyIsRecursive(t, map[*checker.Type]bool{}, map[*checker.Type]bool{}) {
 		return hir.Type{}, false
 	}
-	r := &familyRegistration{l: l, unions: map[string]*hir.UnionDecl{}, classes: map[string]*hir.Class{}, shapes: map[string]hir.Type{}}
+	r := &familyRegistration{l: l, unions: map[string]*hir.UnionDecl{}, classes: map[string]*hir.Class{}, shapes: map[string]hir.Type{}, checks: map[string]*checker.Type{}}
 	mapped := r.typ(n, t)
 	if l.familyTypes == nil {
 		l.familyTypes = map[string]hir.Type{}
 		l.familyFailed = map[string]bool{}
 		l.familyShapes = map[string]hir.Type{}
+		l.familyChecks = map[string]*checker.Type{}
 	}
 	if r.failed || mapped.Kind == hir.Void {
 		for key := range r.unions {
@@ -240,6 +250,9 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, b
 		}
 		l.shapeLike[name] = true
 	}
+	for key, typ := range r.checks {
+		l.familyChecks[key] = typ
+	}
 	for key, typ := range r.shapes {
 		l.familyShapes[key] = typ
 	}
@@ -255,36 +268,6 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (hir.Type, b
 		l.familyTypes[name] = hir.Type{Kind: hir.UnionRef, Name: name}
 	}
 	return mapped, true
-}
-
-// Slice 1 widens a checker-selected multi-member subset back to its family.
-// Payload access still requires an individual unique-tag checked projection.
-func (l *lowerer) familySubsetType(t *checker.Type) (hir.Type, bool) {
-	if t == nil || !t.IsUnion() || len(l.familyShapes) == 0 {
-		return hir.Type{}, false
-	}
-	var parts []hir.Type
-	for _, part := range t.AsUnionOrIntersectionType().Types() {
-		mapped, ok := l.familyShapes[l.familyTypeKey(part, false, map[*checker.Type]bool{})]
-		if !ok {
-			return hir.Type{}, false
-		}
-		parts = append(parts, mapped)
-	}
-	for _, u := range l.out.Unions {
-		all := true
-		for _, part := range parts {
-			found := false
-			for _, a := range u.Alternatives {
-				found = found || a.Payload.Equal(part)
-			}
-			all = all && found
-		}
-		if all {
-			return hir.Type{Kind: hir.UnionRef, Name: u.Name}, true
-		}
-	}
-	return hir.Type{}, false
 }
 
 func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
@@ -310,7 +293,7 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 				key := l.familyTypeKey(part, false, map[*checker.Type]bool{})
 				id := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
 				payload := r.record(decl, part, "family.payload."+id)
-				u.Alternatives = append(u.Alternatives, hir.UnionAlternative{ID: id, Tags: l.familyTags(l.ck.GetTypeOfPropertyOfType(part, tag)), Payload: payload})
+				u.Alternatives = append(u.Alternatives, hir.UnionAlternative{ID: id, Tags: l.familyTags(l.ck.GetTypeOfPropertyOfType(part, tag)), Payload: payload, Literals: l.familyLiterals(part)})
 			}
 			sort.Slice(u.Alternatives, func(i, j int) bool { return u.Alternatives[i].ID < u.Alternatives[j].ID })
 			return hir.Type{Kind: hir.UnionRef, Name: alias}
@@ -431,6 +414,7 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 		return hir.T(hir.Void)
 	}
 	ref := hir.Ref(name)
+	r.checks[ref.Name] = t
 	r.shapes[key] = ref // Private provisional identity, never visible on failure.
 	c := &hir.Class{Node: l.familyNode(n), Name: name, Structural: true}
 	r.classes[name] = c

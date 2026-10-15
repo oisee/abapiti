@@ -1,6 +1,38 @@
 package hir
 
-import "strings"
+// UnionLiteral retains checker-proven string domains, including secondary tags.
+type UnionLiteral struct {
+	Field  string
+	Values []string
+}
+
+func unionDomainIncludes(dst, src []string) bool {
+	for _, s := range src {
+		found := false
+		for _, d := range dst {
+			found = found || s == d
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func unionLiteralsInclude(dst, src []UnionLiteral) bool {
+	for _, d := range dst {
+		found := false
+		for _, s := range src {
+			if s.Field == d.Field && unionDomainIncludes(d.Values, s.Values) {
+				found = true
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
 
 func (p *Program) Union(name string) *UnionDecl {
 	for _, u := range p.Unions {
@@ -47,6 +79,24 @@ func (v *verifier) unionDeclarations() {
 				}
 				tags[tag] = true
 			}
+			literalFields := map[string]bool{}
+			for _, f := range a.Literals {
+				slot := v.field(a.Payload.Name, f.Field)
+				if f.Field == "" || literalFields[f.Field] || len(f.Values) == 0 || slot == nil || !slot.Type.Equal(T(String)) {
+					v.fail(u.Node, "invalid union literal field")
+				}
+				literalFields[f.Field] = true
+				values := map[string]bool{}
+				for _, value := range f.Values {
+					if values[value] {
+						v.fail(u.Node, "duplicate union literal value")
+					}
+					values[value] = true
+				}
+				if f.Field == u.Discriminant && (!unionDomainIncludes(f.Values, a.Tags) || !unionDomainIncludes(a.Tags, f.Values)) {
+					v.fail(u.Node, "union tag literal domain mismatch")
+				}
+			}
 			v.typ(u.Node, a.Payload)
 			c := v.classes[a.Payload.Name]
 			if a.Payload.Kind != ClassRef || c == nil || c.Ctor == nil || !c.Structural || !DataClassView(v.p, c.Name) {
@@ -70,7 +120,7 @@ func UnionIncludes(dst, src *UnionDecl) bool {
 	for _, a := range src.Alternatives {
 		found := false
 		for _, b := range dst.Alternatives {
-			if a.Payload.Equal(b.Payload) && strings.Join(a.Tags, "\x00") == strings.Join(b.Tags, "\x00") {
+			if a.Payload.Equal(b.Payload) && unionDomainIncludes(b.Tags, a.Tags) && unionLiteralsInclude(b.Literals, a.Literals) {
 				found = true
 			}
 		}
@@ -87,6 +137,12 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 	}
 	switch e.Op {
 	case "union.admit", "union.project":
+		if e.Op == "union.project" && e.Type.Kind == UnionRef {
+			if recv.Kind != UnionRef || !UnionIncludes(v.p.Union(recv.Name), v.p.Union(e.Type.Name)) {
+				v.fail(e.Node, "invalid union subset projection")
+			}
+			return
+		}
 		family := v.p.Union(e.Owner)
 		a := family.Alternative(e.Name)
 		if family == nil || !family.Complete || a == nil {
@@ -103,6 +159,19 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 				ctor := v.p.Constructor(a.Payload.Name)
 				if ctor != nil {
 					for i, p := range ctor.Params {
+						if i < len(e.X.Args) && e.X.Args[i].Kind == Lit {
+							for _, field := range a.Literals {
+								if field.Field == p.Name {
+									ok := false
+									for _, value := range field.Values {
+										ok = ok || e.X.Args[i].Value == value
+									}
+									if !ok {
+										v.fail(e.Node, "union admission has wrong literal field")
+									}
+								}
+							}
+						}
 						if p.Name == family.Discriminant && i < len(e.X.Args) && e.X.Args[i].Kind == Lit {
 							ok := false
 							for _, tag := range a.Tags {
@@ -118,18 +187,6 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		} else {
 			if !recv.Equal(union) || !e.Type.Equal(a.Payload) {
 				v.fail(e.Node, "union projection payload mismatch")
-			}
-			for _, other := range family.Alternatives {
-				if other.ID == a.ID {
-					continue
-				}
-				for _, tag := range other.Tags {
-					for _, own := range a.Tags {
-						if tag == own {
-							v.fail(e.Node, "union projection requires a unique tag")
-						}
-					}
-				}
 			}
 		}
 	case "union.widen":
@@ -150,9 +207,17 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		}
 		for _, a := range u.Alternatives {
 			f := v.field(a.Payload.Name, e.Name)
-			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) {
+			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) && !(e.Type.Kind == Dynamic && unionScalarField(f.Type)) {
 				v.fail(e.Node, "union field is not compatible in every alternative")
 			}
 		}
 	}
+}
+
+func unionScalarField(t Type) bool {
+	switch t.Kind {
+	case String, Number, I32, I64, Bool, Dynamic:
+		return true
+	}
+	return false
 }
