@@ -517,6 +517,13 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 			}
 			return mapped
 		}
+		if l.typeParamErasable(t) {
+			// T only crosses the call boundary (a parameter, a result, or a
+			// callback's parameter/result): the tagged value converts at the
+			// call site to the checker's instantiated type, exactly.
+			l.diagf(n, "note-generic-dynamic", "type parameter %s erased to a tagged value", l.ck.TypeToString(t))
+			return hir.T(hir.Dynamic)
+		}
 		l.diagf(n, "unsupported-type", "unconstrained type parameter %s", l.ck.TypeToString(t))
 		return hir.T(hir.Void)
 	case flags&checker.TypeFlagsNumberLiteral != 0 || flags&checker.TypeFlagsNumber != 0:

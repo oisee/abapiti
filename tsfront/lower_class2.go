@@ -4,6 +4,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"strings"
 )
 
 // Phase-2 class lowering: module functions, interface variants (partial
@@ -590,6 +591,11 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	}
 	if x == nil {
 		return nil
+	}
+	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
+		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
+			return adapted
+		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && (x.Type.Args[0].Kind == hir.UnionRef || x.Type.Args[0].Kind == hir.ClassRef) {
 		// A present-only use of an optional family value (a JavaScript partial

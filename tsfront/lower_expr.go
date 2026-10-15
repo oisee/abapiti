@@ -273,6 +273,11 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if x.Type.Kind == hir.InterfaceRef && typ.Kind == hir.InterfaceRef {
+		if adapted := l.closureAdapter(n, x, typ); adapted != nil {
+			return adapted
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.UnionRef && (typ.Kind == hir.UnionRef || typ.Kind == hir.ClassRef) {
 		// Flow proved an optional family value present (a?.k === 'm'):
 		// checked presence, then the family projection.
@@ -1072,7 +1077,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// function value, even when a structural shape lists it as a field.
 		// Interface/type-literal method signatures are stored functions.
 		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
-			if field, ok := l.fieldOf(sym); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
+			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
 				return l.functionValueCall(n, callee)
 			}
 		}
@@ -3359,4 +3364,11 @@ func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
 	recv := l.anyCallReceiver(n, l.expr(n))
 	l.hint = outputHint
 	return recv
+}
+
+func optionalBase(t hir.Type) hir.Type {
+	if t.Kind == hir.Optional && len(t.Args) == 1 {
+		return t.Args[0]
+	}
+	return t
 }
