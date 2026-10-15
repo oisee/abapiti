@@ -109,6 +109,20 @@ func (l *lowerer) builtinError() string {
 	return name
 }
 
+// builtinTypeError returns the HIR name of builtin.TypeError, creating it on
+// first use so programs that never raise or name it keep their class set.
+func (l *lowerer) builtinTypeError() string {
+	const name = "builtin.TypeError"
+	super := l.builtinError()
+	for _, c := range l.out.Classes {
+		if c.Name == name {
+			return name
+		}
+	}
+	l.out.Classes = append(l.out.Classes, &hir.Class{Node: hir.Node{ID: l.nextID(), Source: name}, Name: name, Super: super})
+	return name
+}
+
 // switchStatement lowers terminated clauses to an if/else chain. Empty labels
 // fall through even with noFallthroughCasesInSwitch enabled. Nonempty
 // fallthrough and nested switch-targeting breaks refuse rather than silently

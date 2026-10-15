@@ -97,6 +97,7 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
 			}
 		}
+		out = append(out, l.bindObjectParameter(p, hm.Params[i])...)
 		i++
 	}
 	return out

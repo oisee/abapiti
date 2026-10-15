@@ -562,6 +562,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 					l.diagf(el, "unsupported-array", "spread element needs an array")
 					return nil
 				}
+				if elem.Kind == hir.Optional {
+					sv = l.coerce(l.spreadSnapshot(el, sv), typ)
+				}
 				nxt := l.rtOp("array.concat", arr, typ, sv)
 				l.serial++
 				name := "a" + itoa(l.serial)
@@ -1713,6 +1716,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return x, ok
 		}
 	case hir.Array:
+		if x, ok := l.gogenArrayCall(n, name, recv, args); ok {
+			return x, true
+		}
 		switch name {
 		case "fill":
 			if len(args) != 1 {
@@ -1727,10 +1733,6 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("array.reverse", recv, recv.Type), true
 		case "push", "unshift":
-			if name == "push" && len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
-				l.diagf(n, "note-spread-push", "push(...x) inlined into a loop")
-				return l.spreadPush(n, recv, args[0]), true
-			}
 			if len(args) != 1 {
 				return nil, false
 			}

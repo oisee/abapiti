@@ -215,6 +215,9 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 // `x => { return expr; }` with exactly one return, a plain identifier naming
 // a module function, and destructured first parameters.
 func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
+	if body, params, ok := l.booleanCallback(n, cb, elem); ok {
+		return body, params, true
+	}
 	// Preparing a method reference (especially bind's receiver) belongs
 	// outside the loop. The callee adapter itself runs once per visit.
 	if cb.Kind == ast.KindPropertyAccessExpression || cb.Kind == ast.KindCallExpression {
