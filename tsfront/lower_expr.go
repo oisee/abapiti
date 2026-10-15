@@ -162,7 +162,7 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if l.unprunedFeatures && (n.Kind == ast.KindArrowFunction || n.Kind == ast.KindFunctionExpression) {
 		return x
 	}
-	if l.isGeneratorABIValue(x) || l.erasedCalls[x] {
+	if l.isGeneratorABIValue(x) || l.erasedCalls[x] || l.matchGroupValue(n, x) {
 		return x
 	}
 	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
@@ -888,6 +888,10 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 	}
 	switch n.Name().Text() {
+	case "groups":
+		if l.isMatchArrayType(l.ck.GetTypeAtLocation(p.Expression)) {
+			return l.rtOp("array.matchGroups", recv, hir.T(hir.Dynamic))
+		}
 	case "index":
 		if l.isMatchArrayType(l.ck.GetTypeAtLocation(p.Expression)) {
 			return l.rtOp("array.matchIndex", recv, hir.T(hir.I32))
@@ -1523,36 +1527,38 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return nil, true
 			}
 			return l.rtOp("string.repeat", recv, str, l.coerce(count, hir.T(hir.Number))), true
-		case "padStart":
+		case "padStart", "padEnd":
 			if len(args) > 2 {
-				l.diagf(n, "unsupported-call", "string.padStart accepts at most two arguments")
+				l.diagf(n, "unsupported-call", "string.%s accepts at most two arguments", name)
 				return nil, true
 			}
 			recv = l.tempInit(n, recv.Type, recv)
 			count := hir.L(hir.T(hir.Number), 0)
-			if len(args) > 0 {
+			if len(args) > 0 && !isUndefinedKeyword(args[0]) {
 				count = l.expr(args[0])
 			}
 			if count == nil {
 				return nil, true
 			}
 			if !numberType(count.Type) {
-				l.diagf(n, "unsupported-call", "string.padStart requires a numeric target length")
+				l.diagf(n, "unsupported-call", "string.%s requires a numeric target length", name)
 				return nil, true
 			}
 			count = l.tempInit(n, hir.T(hir.Number), l.coerce(count, hir.T(hir.Number)))
 			fill := hir.L(str, " ")
-			if len(args) > 1 {
+			if len(args) > 1 && !isUndefinedKeyword(args[1]) {
 				fill = l.expr(args[1])
 			}
 			if fill == nil {
 				return nil, true
 			}
 			if fill.Type.Kind != hir.String {
-				l.diagf(n, "unsupported-call", "string.padStart requires a string fill value")
+				l.diagf(n, "unsupported-call", "string.%s requires a string fill value", name)
 				return nil, true
 			}
-			return l.rtOp("string.padStart", recv, str, count, fill), true
+			x := l.rtOp("string."+name, recv, str, count, fill)
+			x.Node = l.node(n)
+			return x, true
 		case "includes":
 			if len(args) != 1 {
 				l.diagf(n, "unsupported-call", "string.includes currently requires one search string")
@@ -1568,6 +1574,28 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			index := l.rtOp("string.indexOf", recv, i32, search)
 			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: boolT, Op: ">=", X: index, Y: hir.L(hir.T(hir.Number), float64(0))}, true
+		case "matchAll":
+			return l.matchAllIterator(n, recv), true
+		case "at":
+			if len(args) > 1 {
+				l.diagf(n, "unsupported-call", "string.at accepts at most one index")
+				return nil, true
+			}
+			recv = l.tempInit(n, recv.Type, recv)
+			index := hir.L(hir.T(hir.Number), 0)
+			if len(args) == 1 && !isUndefinedKeyword(args[0]) {
+				index = l.expr(args[0])
+			}
+			if index == nil {
+				return nil, true
+			}
+			if !numberType(index.Type) {
+				l.diagf(n, "unsupported-call", "string.at requires a numeric index")
+				return nil, true
+			}
+			x := l.rtOp("string.relativeAt", recv, hir.T(hir.Optional, str), l.coerce(index, hir.T(hir.Number)))
+			x.Node = l.node(n)
+			return x, true
 		case "charAt":
 			return l.rtOp("string.charAt", recv, str, one()), true
 		case "charCodeAt":

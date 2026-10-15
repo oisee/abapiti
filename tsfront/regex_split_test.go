@@ -62,7 +62,7 @@ func TestGoDynamicRegExpCheckedSubsetNodeOracle(t *testing.T) {
 func TestGoDynamicRegExpOutsideSubsetTraps(t *testing.T) {
 	source := `class Probe {static run(pattern:string,flags:string):string { return new RegExp(pattern,flags).source; }}`
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	main := `for _,spec:=range [][2]string{{"(a)\\1",""},{"(?=a)",""},{"a","u"},{"a","gg"},{"[",""},{"(a)*",""}} {func(){defer func(){v:=recover();if _,ok:=v.(trap);!ok {panic(fmt.Sprintf("expected typed trap, got %T",v))}}();` + goEntry("probe.ts.Probe", "run") + `(str(spec[0]),str(spec[1]));panic("accepted") }()};fmt.Println("refused")`
+	main := `for _,spec:=range [][2]string{{"(a)\\1",""},{"(?=a)",""},{"a","ui"},{"a","gg"},{"[",""},{"(a)*",""}} {func(){defer func(){v:=recover();if _,ok:=v.(trap);!ok {panic(fmt.Sprintf("expected typed trap, got %T",v))}}();` + goEntry("probe.ts.Probe", "run") + `(str(spec[0]),str(spec[1]));panic("accepted") }()};fmt.Println("refused")`
 	if got := runGoHIR(t, p, main); got != "refused\n" {
 		t.Fatal(got)
 	}

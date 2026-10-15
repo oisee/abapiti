@@ -23,7 +23,7 @@ var supportedOps = map[string]bool{
 	"chai.members": true, "chai.deepEqual": true, "chai.deepInclude": true, "chai.box": true, "chai.arrayInclude": true, "chai.throwMatch": true,
 	"string.sha1Hex":          true,
 	"string.parseFloatNumber": true, "string.parseIntNumber": true, "number.isNaN": true,
-	"string.repeat": true, "string.padStart": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
+	"string.repeat": true, "string.padStart": true, "string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true, "array.matchGroups": true, "string.parseFloat": true, "string.match": true, "array.matchIndex": true,
 	"json.stringifySubset": true,
 	"json.stringifyConfig": true,
 	"string.replaceRegex":  true,
@@ -120,8 +120,14 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "numberIsNaN(" + a + ")"
 	case "string.parseFloat":
 		code = a + ".parseFloat()"
-	case "string.padStart":
-		code = a + ".padStart(" + strings.Join(args, ",") + ")"
+	case "string.padStart", "string.padEnd", "string.relativeAt", "regexp.matchAllNext":
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
+	case "regexp.clone":
+		code = "cloneRegexp(" + a + ")"
+	case "regexp.flags":
+		code = a + ".Flags"
+	case "array.matchGroups":
+		code = a + ".MatchGroups"
 	case "string.repeat", "string.match":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
 	case "array.matchIndex":

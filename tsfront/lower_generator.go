@@ -67,7 +67,7 @@ func (l *lowerer) generatorResultCheckerType(n *ast.Node, t *checker.Type) (hir.
 	}
 	if alias := t.Alias(); alias != nil && alias.Symbol() != nil && alias.Symbol().Name == "IteratorResult" && l.librarySymbol(alias.Symbol()) {
 		args := alias.TypeArguments()
-		if len(args) == 2 && args[1].Flags()&checker.TypeFlagsVoid != 0 {
+		if len(args) == 2 && args[1].Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsUndefined) != 0 {
 			return l.ensureGeneratorABI(l.mapCheckerType(n, args[0])).result, true
 		}
 	}
@@ -78,7 +78,7 @@ func (l *lowerer) generatorCheckerType(n *ast.Node, t *checker.Type) (hir.Type, 
 	if !l.generatorEnabled {
 		return hir.Type{}, false
 	}
-	if t.Symbol() != nil && t.Symbol().Name == "Iterable" && l.librarySymbol(t.Symbol()) {
+	if t.Symbol() != nil && (t.Symbol().Name == "Iterable" || t.Symbol().Name == "RegExpStringIterator") && l.librarySymbol(t.Symbol()) {
 		args := l.ck.GetTypeArguments(t)
 		if len(args) > 0 {
 			return l.ensureGeneratorABI(l.mapCheckerType(n, args[0])).iterator, true
@@ -151,7 +151,7 @@ func (l *lowerer) generatorNextCall(n *ast.Node) (*hir.Expr, bool) {
 	p := callee.AsPropertyAccessExpression()
 	// Consult the checker first so unrelated calls do not allocate preludes.
 	t := l.ck.GetTypeAtLocation(p.Expression)
-	if t == nil || t.Symbol() == nil || t.Symbol().Name != "Generator" || !l.librarySymbol(t.Symbol()) {
+	if t == nil || t.Symbol() == nil || (t.Symbol().Name != "Generator" && t.Symbol().Name != "RegExpStringIterator") || !l.librarySymbol(t.Symbol()) {
 		return nil, false
 	}
 	recv := l.expr(p.Expression)

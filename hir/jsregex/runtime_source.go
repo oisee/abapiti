@@ -7,3 +7,8 @@ import _ "embed"
 //
 //go:embed subset.go
 var RuntimeSource string
+
+// IteratorRuntimeSource extends the same checked grammar for unpruned programs.
+//
+//go:embed iterator_subset.go
+var IteratorRuntimeSource string

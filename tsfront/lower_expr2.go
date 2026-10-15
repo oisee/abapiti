@@ -479,7 +479,7 @@ func (l *lowerer) regexLiteral(n *ast.Node) *hir.Expr {
 func (l *lowerer) regexFlags(n *ast.Node, flags string) bool {
 	seen := map[rune]bool{}
 	for _, flag := range flags {
-		if !strings.ContainsRune("igyms", flag) || seen[flag] {
+		if !strings.ContainsRune("igymsu", flag) || seen[flag] {
 			l.diagf(n, "unsupported-regex", "RegExp flags %q are not lowered: unique i/g/y/s flags and reviewed m patterns only", flags)
 			return false
 		}
@@ -545,7 +545,13 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 		return nil, true
 	}
 	l.diagf(n, "note-regex", "new RegExp(...) lowered to the RegExp runtime (dynamic pattern)")
-	return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp), Args: argv}, true
+	x := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp), Args: argv}
+	// Dynamic full-closure construction opts into the extended checked grammar;
+	// the source-pinned pruned runtime retains its original grammar and bytes.
+	if l.unprunedFeatures {
+		x.Name = "iteratorGrammar"
+	}
+	return x, true
 }
 
 // objectStatic lowers the Object.* helpers the closure uses.
