@@ -393,7 +393,10 @@ func (e *emitter) class(c *hir.Class) {
 		e.line("lexicalDescriptor *classDescriptor")
 	}
 	if e.tracksOwnKeys(c) {
-		e.line("ownKeys *orderedMap[jsString,*dynamic]")
+		e.line("ownKeys *ownKeyState")
+		if e.nativeJSON && !c.Structural && e.classBy(c.Super) == nil {
+			e.line("ownKeyStore ownKeyState")
+		}
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
 		e.line("viewExtras *orderedMap[jsString,*dynamic]")
@@ -504,10 +507,7 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("%s()", e.name("init."+c.Name))
 	e.line("self:=&%s{}", e.obj(c.Name))
 	if e.nativeJSON && !c.Structural {
-		e.line("keys:=&orderedMap[jsString,*dynamic]{}")
-		for base := c; base != nil; base = e.classBy(base.Super) {
-			e.line("self.%s().ownKeys=keys", e.getter(base.Name))
-		}
+		e.newOwnKeys(c)
 	}
 	if ctor != nil {
 		e.line("%s(self%s)", e.body(owner.Name, "constructor"), comma(args))
@@ -803,7 +803,7 @@ func (b *body) expr(x *hir.Expr) string {
 			code = e.name("new."+t.Name) + "(" + strings.Join(a, ",") + ")"
 			if e.extraRuntimeKeys && e.classBy(t.Name).Structural && x.OwnKeys != nil {
 				result := b.temp(t, code)
-				b.line("%s.ownKeys=&orderedMap[jsString,*dynamic]{}", result)
+				b.line("%s.ownKeys=&ownKeyState{}", result)
 				for _, key := range *x.OwnKeys {
 					b.line("%s.ownKeys.set(str(%q),nil)", result, key)
 				}
