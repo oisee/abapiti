@@ -979,6 +979,14 @@ func (l *lowerer) collectionInit(n *ast.Node) ([]*hir.Stmt, *hir.Expr) {
 	stmts := []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(n), Name: tmp, Type: typ,
 		X: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ}}}
 	for _, el := range args[0].AsArrayLiteralExpression().Elements.Nodes {
+		if el.Kind == ast.KindSpreadElement {
+			loop := l.spreadInto(el, name, hir.V(tmp, typ), elemType)
+			if loop == nil {
+				return nil, nil
+			}
+			stmts = append(stmts, loop)
+			continue
+		}
 		v := l.expr(el)
 		if v == nil {
 			return nil, nil

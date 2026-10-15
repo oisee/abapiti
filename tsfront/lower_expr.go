@@ -545,7 +545,7 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		arr := l.tempVar(n, typ)
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
-				sv := l.expr(el.Expression())
+				sv := l.iterableValues(el.Expression())
 				if sv != nil && l.generatorABIFor(sv.Type) != nil {
 					sv = l.drainGenerator(sv)
 				}
@@ -2083,6 +2083,9 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	if x, handled := l.newMapFromIterable(n); handled {
+		return x
+	}
 	// new Set(existingSet): a copy.
 	if t := n.Expression(); t != nil && t.Kind == ast.KindIdentifier && t.Text() == "Set" {
 		args := n.Arguments()
@@ -2092,7 +2095,7 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			// must not become a Set while its map arm stays an Array.
 			savedHint := l.hint
 			l.hint = hir.Type{}
-			a := l.expr(args[0])
+			a := l.iterableValues(args[0])
 			l.hint = savedHint
 			if a != nil && a.Type.Kind == hir.Array && a.Type.Args[0].Kind != hir.Dynamic && a.Type.Args[0].Kind != hir.Optional {
 				typ := hir.T(hir.OrderedSet, a.Type.Args[0])
