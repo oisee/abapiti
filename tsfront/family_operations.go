@@ -68,15 +68,44 @@ func (l *lowerer) familyLiteral(n *ast.Node, hint hir.Type) *hir.Expr {
 			match = match && found
 		}
 		if match {
+			for _, field := range a.Literals {
+				actual := l.familyTags(l.ck.GetTypeOfPropertyOfType(t, field.Field))
+				if len(actual) == 0 {
+					match = false
+					break
+				}
+				for _, value := range actual {
+					found := false
+					for _, allowed := range field.Values {
+						found = found || allowed == value
+					}
+					if !found {
+						match = false
+					}
+				}
+			}
+		}
+		if match && l.familyChecks[a.Payload.Name] != nil {
+			match = l.ck.IsTypeAssignableTo(t, l.familyChecks[a.Payload.Name])
+			if !match {
+				for _, f := range l.classByName(a.Payload.Name).Fields {
+					if f.Type.Kind != hir.Optional && l.ck.GetPropertyOfType(t, f.Name) == nil {
+						l.diagf(n, "unsupported-type", "object literal misses field %s", f.Name)
+						return nil
+					}
+				}
+			}
+		}
+		if match {
 			if chosen != nil {
-				l.diagf(n, "unsupported-type", "shared-tag recursive construction requires a payload proof")
+				l.diagf(n, "unsupported-type", "recursive union literal has ambiguous payload membership")
 				return nil
 			}
 			chosen = a
 		}
 	}
 	if chosen == nil {
-		l.diagf(n, "unsupported-type", "recursive union literal has no admitted tag")
+		l.diagf(n, "unsupported-type", "recursive union literal has no admitted tag or compatible payload")
 		return nil
 	}
 	saved := l.hint
@@ -96,7 +125,26 @@ func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	p := n.AsPropertyAccessExpression()
-	t := l.ck.GetTypeAtLocation(p.Expression)
+	return l.familyFieldRead(n, p.Expression, n.Name().Text())
+}
+
+func (l *lowerer) familyIndexedAccess(n *ast.Node) (*hir.Expr, bool) {
+	if !l.unprunedFeatures {
+		return nil, false
+	}
+	p := n.AsElementAccessExpression()
+	if ast.IsAssignmentTarget(n) && l.familyWriteDestination(l.ck.GetTypeAtLocation(p.Expression)) {
+		l.diagf(n, "unsupported-assignment", "recursive union payload write requires narrowing and a proven alias-invalidation policy")
+		return nil, true
+	}
+	if p.ArgumentExpression == nil || p.ArgumentExpression.Kind != ast.KindStringLiteral {
+		return nil, false
+	}
+	return l.familyFieldRead(n, p.Expression, p.ArgumentExpression.Text())
+}
+
+func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Expr, bool) {
+	t := l.ck.GetTypeAtLocation(expression)
 	if t == nil {
 		return nil, false
 	}
@@ -112,7 +160,6 @@ func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		l.diagf(n, "unsupported-assignment", "recursive union field writes require a narrowed destination")
 		return nil, true
 	}
-	name := n.Name().Text()
 	u := l.out.Union(mapped.Name)
 	result := hir.Type{}
 	for _, a := range u.Alternatives {
@@ -121,10 +168,17 @@ func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		for _, f := range c.Fields {
 			if f.Name == name {
 				if result.Kind != "" && !result.Equal(f.Type) {
-					l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
-					return nil, true
+					if familyScalarRead(result) && familyScalarRead(f.Type) {
+						result = hir.T(hir.Dynamic)
+					} else {
+						l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
+						return nil, true
+					}
 				}
-				result, found = f.Type, true
+				if result.Kind != hir.Dynamic {
+					result = f.Type
+				}
+				found = true
 			}
 		}
 		if !found {
@@ -134,7 +188,7 @@ func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	}
 	saved := l.hint
 	l.hint = hir.Type{}
-	recv := l.expr(p.Expression)
+	recv := l.expr(expression)
 	l.hint = saved
 	if recv == nil {
 		return nil, true
@@ -144,4 +198,12 @@ func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 		op = "union.tag"
 	}
 	return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: op, Name: name, Type: result, X: recv}, true
+}
+
+func familyScalarRead(t hir.Type) bool {
+	switch t.Kind {
+	case hir.String, hir.Number, hir.I32, hir.I64, hir.Bool, hir.Dynamic:
+		return true
+	}
+	return false
 }
