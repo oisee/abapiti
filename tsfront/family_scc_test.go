@@ -341,3 +341,27 @@ func TestFamilySCCRelationOracleFile(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// The alias A is reached twice inside one SCC, through two distinct but
+// bisimilar anonymous records with the same symbol key: both get one id.
+func TestFamilySCCBisimilarMembersShareID(t *testing.T) {
+	p := loadFamilySCCProbe(t, map[string]string{"probe.ts": `type A = {k:'a';x:{n:A|undefined};y:{n:A|undefined}} | {k:'b'};
+`})
+	alt := p.types["A"].AsUnionOrIntersectionType().Types()[0]
+	x, y := p.ck.GetTypeOfPropertyOfType(alt, "x"), p.ck.GetTypeOfPropertyOfType(alt, "y")
+	if x == y {
+		t.Fatal("fixture needs two distinct record types")
+	}
+	backs := 0
+	p.lowerer().familyTypeKeyMerkle186(x, false, map[*checker.Type]bool{}, time.Now().Add(time.Minute), &backs)
+	if backs == 0 {
+		t.Fatal("fixture is not cyclic")
+	}
+	for _, first := range []*checker.Type{x, y, alt} {
+		l := p.lowerer()
+		l.familyTypeKey(first, false, nil)
+		if kx, ky := l.familyTypeKey(x, true, nil), l.familyTypeKey(y, true, nil); kx != ky || len(l.diags) != 0 {
+			t.Fatalf("bisimilar members: %q %q %v", kx, ky, l.diags)
+		}
+	}
+}

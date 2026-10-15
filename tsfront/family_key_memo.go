@@ -356,6 +356,10 @@ func (s *familySCC) assign(members []familyNode) {
 		}
 		return len(seen)
 	}
+	// Members with equal symbol keys (type arguments included, via their ids)
+	// whose structure is bisimilar get one signature and so one id: they are
+	// the same type. #186 could split them only by the entry context, and a
+	// positional discriminator would bring that entry dependence back.
 	sig := round(nil)
 	for n := classes(sig); ; {
 		next := round(sig)
