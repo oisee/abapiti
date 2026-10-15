@@ -15,7 +15,8 @@ import (
 // copyRequireFixture copies testdata/requirebinding to a temporary directory;
 // the prebuilt CommonJS packages under cjs/ become node_modules/ there (the
 // repository ignores node_modules directories).
-func copyRequireFixture(t *testing.T, probe string) string {
+// Extra files (name -> content) are added next to probe.mjs.
+func copyRequireFixture(t *testing.T, probe string, extra ...map[string]string) string {
 	t.Helper()
 	src := filepath.Join("testdata", "requirebinding")
 	dir := t.TempDir()
@@ -42,6 +43,13 @@ func copyRequireFixture(t *testing.T, probe string) string {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, files := range extra {
+		for name, content := range files {
+			if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	return dir
 }
@@ -94,9 +102,9 @@ export class Probe {
 
 // runRequireOracle lowers the fixture (probe replaced unless empty), runs
 // Probe.run() on Go against want, emits ABAP, and compares with Node.
-func runRequireOracle(t *testing.T, probe, want string) {
+func runRequireOracle(t *testing.T, probe, want string, extra ...map[string]string) {
 	t.Helper()
-	dir := copyRequireFixture(t, probe)
+	dir := copyRequireFixture(t, probe, extra...)
 	prog, diags := lowerRequireFixture(t, dir)
 	for _, d := range diags {
 		if !strings.HasPrefix(d.Category, "note-") {

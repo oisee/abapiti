@@ -12,5 +12,5 @@
       "@fake/transpiler/build/src/rearranger": ["./fake-transpiler/rearranger.ts"]
     }
   },
-  "include": ["probe.mjs", "fake-core/*.ts", "fake-transpiler/*.ts", "fake-values/*.ts", "types/*.d.ts"]
+  "include": ["*.mjs", "fake-core/*.ts", "fake-transpiler/*.ts", "fake-values/*.ts", "types/*.d.ts"]
 }

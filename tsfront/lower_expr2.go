@@ -218,6 +218,9 @@ func (l *lowerer) classValueRef(n *ast.Node) (*hir.Expr, bool) {
 // namespaceRef lowers a namespace alias used as a value to the module's
 // export map.
 func (l *lowerer) namespaceRef(n *ast.Node) (*hir.Expr, bool) {
+	if l.requireNamespaceValue(n) {
+		return nil, true
+	}
 	sym := l.resolve(n)
 	if sym == nil || sym.Flags&ast.SymbolFlagsValueModule == 0 {
 		return nil, false

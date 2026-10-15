@@ -47,11 +47,21 @@ type requireBindings struct {
 }
 
 // requireTarget maps a static require binding to its module or export symbol.
+// An import or re-export of a binding (named, renamed, namespace member,
+// chains) is an alias that resolves to the binding itself.
 func (l *lowerer) requireTarget(sym *ast.Symbol) *ast.Symbol {
-	if l.require == nil || sym == nil {
+	if l.require == nil || sym == nil || len(l.require.targets) == 0 {
 		return nil
 	}
-	return l.require.targets[sym]
+	if target := l.require.targets[sym]; target != nil {
+		return target
+	}
+	if sym.Flags&ast.SymbolFlagsAlias != 0 && l.ck != nil {
+		if resolved, ok := l.ck.ResolveAlias(sym); ok {
+			return l.require.targets[resolved]
+		}
+	}
+	return nil
 }
 
 // dropRequirePlumbing removes plumbing statements from a statement list.
@@ -272,4 +282,16 @@ func immutableExport(sym *ast.Symbol) bool {
 	}
 	d := sym.ValueDeclaration
 	return sym.Flags&ast.SymbolFlagsBlockScopedVariable != 0 && d != nil && d.Kind == ast.KindVariableDeclaration && ast.IsVarConst(d)
+}
+
+// requireNamespaceValue refuses a require-bound module (or an import of
+// one) used as a value: Node's object is the package's exports, which the
+// class-value export map does not model. Members and classes stay usable.
+func (l *lowerer) requireNamespaceValue(n *ast.Node) bool {
+	target := l.requireTarget(l.ck.GetSymbolAtLocation(n))
+	if target == nil || target.Flags&ast.SymbolFlagsValueModule == 0 {
+		return false
+	}
+	l.diagf(n, "unsupported-require", "namespace %s bound by require is not a value; use its members", n.Text())
+	return true
 }
