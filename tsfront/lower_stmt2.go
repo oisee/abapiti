@@ -13,6 +13,12 @@ import (
 // `instanceof` then narrows exactly like the original.
 func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 	t := n.AsTryStatement()
+	// Staging a finalizer's return inside an enclosing try/finally loses
+	// its ability to replace a pending exception. Refuse before any staging.
+	if t.FinallyBlock != nil && l.containsReturn(t.FinallyBlock) {
+		l.diagf(t.FinallyBlock, "unsupported-statement", "return in finally requires completion replacement; not lowered")
+		return nil
+	}
 	if t.FinallyBlock != nil && t.CatchClause == nil && l.containsReturn(t.TryBlock) {
 		return l.returningFinally(n)
 	}

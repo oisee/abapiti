@@ -216,6 +216,11 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 // a module function, and destructured first parameters.
 func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
 	if cb.Kind == ast.KindIdentifier {
+		if sym := l.resolve(cb); sym != nil && l.refuseUndefinedThis(sym.ValueDeclaration) {
+			return nil, nil, false
+		}
+	}
+	if cb.Kind == ast.KindIdentifier {
 		if x, names, ok := l.localValueCallback(n, cb, elem); ok {
 			return x, names, x != nil
 		}

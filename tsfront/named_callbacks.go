@@ -5,6 +5,19 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
+// Ordinary functions have a dynamic this binding. The lifted receiver ABI
+// cannot supply strict-mode undefined; arrows retain their lexical binding.
+func (l *lowerer) refuseUndefinedThis(fn *ast.Node) bool {
+	if fn != nil && fn.Kind == ast.KindVariableDeclaration {
+		fn = fn.Initializer()
+	}
+	if fn != nil && (fn.Kind == ast.KindFunctionExpression || fn.Kind == ast.KindFunctionDeclaration) && callbackUsesThis(fn.Body()) {
+		l.diagf(fn, "unsupported-callback", "ordinary function has undefined this when called unbound; receiver ABI is not lowered")
+		return true
+	}
+	return false
+}
+
 // Function-valued locals are captured once before iteration. The callback ABI
 // supplies exactly value, index and array; excess declarations fail explicitly.
 func (l *lowerer) localValueCallback(n, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
