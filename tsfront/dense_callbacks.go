@@ -104,8 +104,8 @@ func (l *lowerer) arrayCallbackLoop(n *ast.Node, operation string, receiver *hir
 }
 
 func (l *lowerer) denseCallbackStatements(n, callback *ast.Node, elem hir.Type) (*hir.Stmt, []string, bool) {
-	if callback.Kind == ast.KindPropertyAccessExpression || callback.Kind == ast.KindCallExpression {
-		value, names, ok := l.methodCallbackBody(n, callback, elem)
+	if callback.Kind == ast.KindIdentifier || callback.Kind == ast.KindPropertyAccessExpression || callback.Kind == ast.KindCallExpression {
+		value, names, ok := l.callbackBody(n, callback, elem)
 		if !ok {
 			return nil, nil, false
 		}

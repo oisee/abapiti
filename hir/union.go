@@ -207,11 +207,45 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		}
 		for _, a := range u.Alternatives {
 			f := v.field(a.Payload.Name, e.Name)
-			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) && !(e.Type.Kind == Dynamic && unionScalarField(f.Type)) {
+			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) && !(e.Type.Kind == Dynamic && unionScalarField(f.Type)) && !(e.Type.Kind == Optional && len(e.Type.Args) == 1 && f.Type.Equal(e.Type.Args[0])) && !UnionReadAccepts(v.p, e.Type, f.Type) {
 				v.fail(e.Node, "union field is not compatible in every alternative")
 			}
 		}
 	}
+}
+
+// UnionReadAccepts reports whether a family field stored as have may be read
+// through the common view want: the same type, a completed subset of the
+// family want names, or one of its alternative payloads. The read validates
+// the stored value against want, so membership is checked, never assumed.
+func UnionReadAccepts(p *Program, want, have Type) bool {
+	if want.Equal(have) {
+		return true
+	}
+	if want.Kind == Optional && len(want.Args) == 1 {
+		if have.Kind == Optional && len(have.Args) == 1 {
+			have = have.Args[0]
+		}
+		return UnionReadAccepts(p, want.Args[0], have)
+	}
+	if want.Kind != UnionRef || p == nil {
+		return false
+	}
+	u := p.Union(want.Name)
+	if u == nil || !u.Complete {
+		return false
+	}
+	switch have.Kind {
+	case UnionRef:
+		return UnionIncludes(u, p.Union(have.Name))
+	case ClassRef:
+		for _, a := range u.Alternatives {
+			if a.Payload.Equal(have) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func unionScalarField(t Type) bool {

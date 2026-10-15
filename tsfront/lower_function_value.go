@@ -178,6 +178,9 @@ func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 		return nil
 	}
 	symbol := l.resolve(n)
+	if symbol != nil && l.refuseUndefinedThis(symbol.ValueDeclaration) {
+		return nil
+	}
 	if binding := l.functionBindings[symbol]; binding != nil && binding.Kind == hir.VarDecl {
 		return l.functionBindingRead(n, binding, symbol)
 	}

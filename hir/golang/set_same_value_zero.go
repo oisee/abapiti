@@ -8,7 +8,7 @@ func sameValueZeroRuntime(source string) string {
 	start := strings.Index(source, "type orderedSet[")
 	end := strings.Index(source[start:], "func (a *array[T]) reverse") + start
 	block := source[start:end]
-	block = strings.ReplaceAll(block, "map[T]int", "map[any]int")
+	block = strings.ReplaceAll(block, "map[collectionIndexKey[T]]int", "map[any]int")
 	block = strings.ReplaceAll(block, "collectionKey(", "setKey(")
 	block = strings.ReplaceAll(block, "if x==v", "if setKey(x)==setKey(v)")
 	block = strings.Replace(block, "func (s *orderedSet[T]) add(v T) *orderedSet[T] {", "func (s *orderedSet[T]) add(v T) *orderedSet[T] {v=normalizeSetValue(v);", 1)

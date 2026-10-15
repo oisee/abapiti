@@ -46,6 +46,9 @@ func (l *lowerer) signaturesFile(f *ast.SourceFile) {
 // isDataInterface reports whether the interface has a property member: those
 // lower to synthesized shape classes (constructed like object literals).
 func (l *lowerer) isDataInterface(node *ast.Node) bool {
+	if l.gogenInheritedData(node) {
+		return true
+	}
 	for _, m := range node.Members() {
 		if m.Kind == ast.KindPropertySignature || m.Kind == ast.KindPropertyDeclaration {
 			return true
@@ -123,6 +126,9 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 		}
 	}
 	for _, m := range node.Members() {
+		if l.gogenDataCallable(m, c, ctor, &list) {
+			continue
+		}
 		if m.Kind != ast.KindPropertySignature && m.Kind != ast.KindPropertyDeclaration {
 			l.diagf(m, "skipped-interface-member", "data interface %s: member %s is skipped", i.Name, m.Kind.String())
 			continue
@@ -543,6 +549,7 @@ func (l *lowerer) signature(node *ast.Node, hm *hir.Method) {
 			typ = hir.T(hir.Optional, typ)
 			l.diagf(p, "note-default-param", "parameter %s with a default lowered as Optional", name)
 		}
+		typ = bindingDefaultParameterType(p, typ)
 		if t, ok := l.paramTypeOverride(node, hm.Name, name); ok {
 			typ = t
 		}

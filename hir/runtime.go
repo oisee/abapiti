@@ -134,6 +134,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, Type{}, false
 	}
 	i, b := T(I32), T(Bool)
+	if ps, r, ok := gogenRuntimeSignature(op); ok {
+		return ps, r, true
+	}
 	switch op {
 	case "xml.validate", "xml.parseSubset", "xml.parseWithErrors", "json.parseSubset", "json5.parse", "dynamic.null":
 		return nil, T(Dynamic), true
