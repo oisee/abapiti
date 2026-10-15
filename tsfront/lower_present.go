@@ -523,7 +523,7 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 					base = base.Args[0]
 				}
 			}
-			if source == nil || base.Kind != hir.ClassRef && base.Kind != hir.Dynamic {
+			if source == nil || base.Kind != hir.ClassRef && base.Kind != hir.Dynamic && !(l.unprunedFeatures && base.Kind == hir.UnionRef) {
 				l.diagf(p, "unsupported-type", "tagged record spread needs object storage")
 				return nil
 			}

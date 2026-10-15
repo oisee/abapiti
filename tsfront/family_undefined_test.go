@@ -108,17 +108,24 @@ func lowerFamilyDiagnostics(t *testing.T, source string) []LowerDiagnostic {
 	return diags
 }
 
-// A union spread over an exactly-undefined field has no exact payload choice:
-// the refusal must be located, never a silent copy.
-func TestFamilyUndefinedUnionSpreadRefusal(t *testing.T) {
+// A union spread over an exactly-undefined field copies the JavaScript own
+// keys (absent and present-undefined apart) into a snapshot record, and a
+// family-typed spread result is admitted by its tag.
+func TestFamilyUndefinedUnionSpreadNodeOracle(t *testing.T) {
 	source := `type A = {k:'s'; unsupported?: undefined; v: number} | {k:'u'; unsupported: string; kids: A[]};
-class Probe {static copy(a:A):number {const c = {...a}; return Object.keys(c).length;}}`
-	for _, d := range lowerFamilyDiagnostics(t, source) {
-		if !strings.HasPrefix(d.Category, "note-") && strings.HasPrefix(d.Loc, "probe.ts:2:") {
-			return
-		}
+class Probe {static copy(a:A):string {const c = {...a}; return Object.keys(c).join(',')+'='+JSON.stringify(c);}
+ static typed(a:A):A {return {...a};}
+ static run():string {const x:A={k:'s',v:1};const y:A={k:'s',unsupported:undefined,v:2};const z:A={k:'u',unsupported:'w',kids:[x,y]};
+  return [Probe.copy(x),Probe.copy(y),Probe.copy(z),Object.keys(Probe.typed(y)).join(',')].join(';');}}`
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
 	}
-	t.Fatal("union spread was not refused at its location")
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != string(want) {
+		t.Fatalf("Go %q\nNode %q", got, want)
+	}
 }
 
 func TestFamilyFailedComponentCascadeDiagnostic(t *testing.T) {

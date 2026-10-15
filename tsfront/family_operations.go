@@ -55,6 +55,9 @@ func (l *lowerer) familyLiteral(n *ast.Node, hint hir.Type) *hir.Expr {
 		return nil
 	}
 	t := l.ck.GetTypeAtLocation(n)
+	if l.unprunedFeatures && objectLiteralHasSpread(n) {
+		return l.familySpreadLiteral(n, hint, u, t)
+	}
 	tags := l.familyTags(l.ck.GetTypeOfPropertyOfType(t, u.Discriminant))
 	var chosen *hir.UnionAlternative
 	for i := range u.Alternatives {
@@ -347,4 +350,85 @@ func familyOptionalRead(a, b hir.Type) (hir.Type, bool) {
 		return b, true
 	}
 	return hir.Type{}, false
+}
+
+func objectLiteralHasSpread(n *ast.Node) bool {
+	for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
+		if p.Kind == ast.KindSpreadAssignment {
+			return true
+		}
+	}
+	return false
+}
+
+// familySpreadLiteral lowers {...u, x: v} (and {...value, ...metadata}) into
+// a family: the JavaScript snapshot (own keys in insertion order, then the
+// overrides, absent and present-undefined kept apart) is built once; a
+// runtime switch on its tag admits it as the target member with that tag,
+// whose admission validates the payload. Statically every member of the
+// checker's (distributed) result type must fit a target member.
+func (l *lowerer) familySpreadLiteral(n *ast.Node, hint hir.Type, u *hir.UnionDecl, t *checker.Type) *hir.Expr {
+	parts := []*checker.Type{t}
+	if t != nil && t.IsUnion() {
+		parts = t.AsUnionOrIntersectionType().Types()
+	}
+	var targets []*hir.UnionAlternative
+	seen := map[string]bool{}
+	for _, part := range parts {
+		tags := l.familyTags(l.ck.GetTypeOfPropertyOfType(part, u.Discriminant))
+		var fit *hir.UnionAlternative
+		for i := range u.Alternatives {
+			a := &u.Alternatives[i]
+			match := len(tags) > 0
+			for _, tag := range tags {
+				found := false
+				for _, own := range a.Tags {
+					found = found || own == tag
+				}
+				match = match && found
+			}
+			if match && l.familyChecks[a.Payload.Name] != nil && !l.ck.IsTypeAssignableTo(part, l.familyChecks[a.Payload.Name]) {
+				match = false
+			}
+			if match {
+				fit = a
+				break
+			}
+		}
+		if fit == nil {
+			l.diagf(n, "unsupported-type", "spread result %s fits no member of %s", l.ck.TypeToString(part), u.Name)
+			return nil
+		}
+		if !seen[fit.ID] {
+			seen[fit.ID] = true
+			targets = append(targets, fit)
+		}
+	}
+	record := l.dynamicRecordLiteral(n)
+	if record == nil {
+		return nil
+	}
+	str, b := hir.T(hir.String), hir.T(hir.Bool)
+	tag := l.tempInit(n, str, l.rtOp("dynamic.asString", l.rtOp("dynamic.get", record, hir.T(hir.Dynamic), hir.L(str, u.Discriminant)), str))
+	admit := func(a *hir.UnionAlternative) *hir.Expr {
+		view := l.dynamicReference(record, a.Payload)
+		return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: "union.admit", Owner: u.Name, Name: a.ID, Type: hint, X: view}
+	}
+	// The last member's admission validates the tag too: a value fitting no
+	// member raises there rather than being admitted under a wrong tag.
+	result := admit(targets[len(targets)-1])
+	for i := len(targets) - 2; i >= 0; i-- {
+		a := targets[i]
+		var test *hir.Expr
+		for _, own := range a.Tags {
+			eq := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: b, X: tag, Y: hir.L(str, own)}
+			if test == nil {
+				test = eq
+			} else {
+				test = &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "||", Type: b, X: test, Y: eq}
+			}
+		}
+		result = &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hint, X: test, Y: admit(a), Z: result}
+	}
+	return result
 }
