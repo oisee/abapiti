@@ -63,13 +63,8 @@ func TestSpreadSourcesTypedNodeOracle(t *testing.T) {
 	}
 }
 
-// A non-global RegExp makes matchAll throw; it is refused at its location.
-func TestSpreadMatchAllNonGlobalRefusal(t *testing.T) {
-	source := `class Probe {static bad(s:string):number {return [...s.matchAll(/a/)].length;}}`
-	for _, d := range lowerFamilyDiagnostics(t, source) {
-		if !strings.HasPrefix(d.Category, "note-") && strings.Contains(d.Message, "global RegExp") && strings.HasPrefix(d.Loc, "probe.ts:1:") {
-			return
-		}
-	}
-	t.Fatal("non-global matchAll was not refused")
+// Non-global regexes now throw the same catchable TypeError as JavaScript.
+func TestSpreadMatchAllNonGlobalTypeError(t *testing.T) {
+	source := `class Probe {static run():string {try {const a=[..."a".matchAll(/a/)];return String(a.length);}catch(e){return e instanceof TypeError?"TypeError":"other";}}}`
+	gogenOracle(t, source, "TypeError", "regexp.clone")
 }

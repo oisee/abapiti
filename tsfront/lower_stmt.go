@@ -400,6 +400,13 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			if x == nil {
 				return nil
 			}
+			if d.Type() == nil && l.matchGroupValue(init, x) {
+				typ = x.Type
+				if l.matchGroupBindings == nil {
+					l.matchGroupBindings = map[*ast.Symbol]bool{}
+				}
+				l.matchGroupBindings[sym] = true
+			}
 			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
 				typ = x.Type
 			}

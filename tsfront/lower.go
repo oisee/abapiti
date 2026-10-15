@@ -535,6 +535,7 @@ type lowerer struct {
 	// widenedLets: let symbols whose HIR type is the common base of their
 	// assignments; the checker's narrower view of them is not applied.
 	widenedLets        map[*ast.Symbol]bool
+	matchGroupBindings map[*ast.Symbol]bool
 	collectionShapes   map[string]bool
 	collectionElements map[string]bool
 	// guards: locals proven present by an enclosing definedness guard

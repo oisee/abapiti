@@ -143,7 +143,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		}
 		jsonWriter += configJSONReplacerSource
 	}
-	runtime := runtimeSource
+	runtime := e.stringA16Runtime(runtimeSource)
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
 	if e.recordString {
@@ -158,6 +158,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.regexSplit {
 		e.extendedRegex = true
 		runtime += regexSplitRuntimeSource
+		if e.regexA16 {
+			runtime = strings.Replace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
+ if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, 1)
+		}
 	}
 	if e.extraRuntimeKeys {
 		runtime += ownKeysSource
@@ -171,8 +175,14 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.extendedRegex {
 		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
+		if e.regexA16 {
+			runtime += strings.TrimPrefix(jsregex.IteratorRuntimeSource, "package jsregex")
+		}
 		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+	}
+	if e.regexA16 {
+		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateSubset(p,f);accepted", "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", 1)
 	}
 	if e.constructorArgs {
 		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
@@ -256,6 +266,7 @@ type emitter struct {
 	propertyLookups   map[string]bool
 	typeofUsed        bool
 	extendedRegex     bool
+	regexA16          bool
 	regexSplit        bool
 	constructorArgs   bool
 	configJSON        bool
