@@ -153,6 +153,13 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	if !ok {
 		mapped, ok = l.familySubsetType(t)
 	}
+	if !ok {
+		if present := l.optionalChainPresentParts(n, t); len(present) > 1 {
+			// a?.f on F | undefined: optionalChain already unwrapped the
+			// receiver; the read sees the present family members.
+			mapped, ok = l.familySubsetParts(present)
+		}
+	}
 	if !ok || mapped.Kind != hir.UnionRef {
 		return nil, false
 	}
@@ -298,6 +305,24 @@ func (l *lowerer) familyCommonRead(n *ast.Node, recv *checker.Type, name string,
 		return hir.T(hir.Optional, base), true
 	}
 	return base, true
+}
+
+// optionalChainPresentParts lists the receiver's non-nullish union members
+// when n is a link of an optional chain (a?.f, a?.[k], or a later link).
+func (l *lowerer) optionalChainPresentParts(n *ast.Node, t *checker.Type) []*checker.Type {
+	if n == nil || t == nil || !t.IsUnion() || n.Flags&ast.NodeFlagsOptionalChain == 0 {
+		return nil
+	}
+	var present []*checker.Type
+	for _, part := range t.AsUnionOrIntersectionType().Types() {
+		if part.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull|checker.TypeFlagsVoid) == 0 {
+			present = append(present, part)
+		}
+	}
+	if len(present) == len(t.AsUnionOrIntersectionType().Types()) {
+		return nil
+	}
+	return present
 }
 
 func familyScalarRead(t hir.Type) bool {

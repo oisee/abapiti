@@ -27,7 +27,15 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	if t == nil || !t.IsUnion() {
 		return nil, false
 	}
-	for _, part := range t.AsUnionOrIntersectionType().Types() {
+	parts := t.AsUnionOrIntersectionType().Types()
+	if present := l.optionalChainPresentParts(n, t); present != nil {
+		// a?.f: optionalChain already unwrapped the receiver.
+		if len(present) < 2 {
+			return nil, false
+		}
+		parts = present
+	}
+	for _, part := range parts {
 		if part.Flags()&checker.TypeFlagsObject == 0 {
 			return nil, false
 		}
@@ -42,7 +50,7 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	if name == "constructor" {
 		// Native constructor metadata is inherited, not a common data slot.
 		native := true
-		for _, part := range t.AsUnionOrIntersectionType().Types() {
+		for _, part := range parts {
 			typ := l.mapCheckerType(n, part)
 			c := l.classByName(typ.Name)
 			if typ.Kind == hir.InterfaceRef {
@@ -85,7 +93,7 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	var fields []hir.Field
 	var classes []*hir.Class
 	structural, absent := 0, 0
-	for _, part := range t.AsUnionOrIntersectionType().Types() {
+	for _, part := range parts {
 		prop := l.ck.GetPropertyOfType(part, name)
 		if prop != nil && prop.Flags&ast.SymbolFlagsMethod != 0 {
 			return nil, false
