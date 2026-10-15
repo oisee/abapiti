@@ -27,6 +27,18 @@ import (
 // Any other use of createRequire or a requirer keeps today's lowering and
 // its blocking diagnostics; a requirer call that cannot be proven static
 // gets an unsupported-require diagnostic instead of a guess.
+//
+// Destructuring copies values in Node, so it may only name exports that
+// cannot change after module initialization (classes, functions, enums,
+// namespaces, const variables); a plain binding reads members live.
+//
+// Contract: the binding is resolved at build time through the program's TS
+// resolution of `typeof import("<literal>")` (tsconfig paths included). It
+// does not model Node's runtime resolution relative to the requirer's base
+// (import.meta.url or the require.resolve result), nor load errors thrown by
+// createRequire, require.resolve or the require call. The build's closure
+// must contain exactly the module Node loads; for gogen this is checked by
+// byte comparison of the generated outputs.
 
 // requireBindings holds the facts of all lowered files.
 type requireBindings struct {
