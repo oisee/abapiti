@@ -27,6 +27,7 @@ func newLowerCmd() *cobra.Command {
 	f.String("overrides", "none", "Source-pinned overrides: none or registry")
 	f.Bool("assume-int", true, "Assume only integer calculations, as in abaplint --full")
 	f.String("scope", "", "Report only diagnostics beneath this tsconfig-relative source directory")
+	f.String("reachability", "", "Coverage manifest (schema 1, from tools/coverage-manifest.mjs): unexecuted bodies become traps")
 	return cmd
 }
 
@@ -95,7 +96,22 @@ func runLower(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	assumeInt, _ := f.GetBool("assume-int")
-	r, err := tsfront.LowerProjectWithOptions(config, args, registry, nil, tsfront.LowerOptions{AssumeOnlyIntegerCalculations: assumeInt})
+	var coverage *tsfront.Reachability
+	if path, _ := f.GetString("reachability"); path != "" {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if coverage, err = tsfront.ParseReachability(data, nil); err != nil {
+			return err
+		}
+		// ParseReachability(nil) trusts recorded inputs; lower cannot rehash
+		// them, so only workload manifests without inputs are accepted here.
+		if len(coverage.Inputs) > 0 || coverage.UpstreamPin != "" {
+			return fmt.Errorf("--reachability takes a generic workload manifest (no upstreamPin, no inputs)")
+		}
+	}
+	r, err := tsfront.LowerProjectWithOptions(config, args, registry, coverage, tsfront.LowerOptions{AssumeOnlyIntegerCalculations: assumeInt})
 	if err != nil {
 		return err
 	}
