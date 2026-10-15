@@ -158,3 +158,15 @@ class Probe {
 		t.Fatalf("repeated root diagnostic lost its reason: %q", rootAgain)
 	}
 }
+
+// A bigint field has no HIR representation: the refusal names the member.
+func TestFamilyBigintMemberNamed(t *testing.T) {
+	source := `type Sql = {k:'lit'; value:bigint} | {k:'or'; l:Sql; r:Sql};
+class Probe {static first(s:Sql):string {return s.k;}}`
+	for _, d := range lowerFamilyDiagnostics(t, source) {
+		if strings.Contains(d.Message, "unsupported checker type bigint for member") && strings.Contains(d.Message, ".value at probe.ts:1:") {
+			return
+		}
+	}
+	t.Fatalf("bigint member not named: %v", lowerFamilyDiagnostics(t, source))
+}
