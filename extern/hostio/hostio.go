@@ -27,7 +27,7 @@ func ListDir(dir string) ([]string, error) {
 	}
 	names := make([]string, len(es))
 	for i, e := range es {
-		names[i] = e.Name()
+		names[i] = decodeUTF8([]byte(e.Name()))
 	}
 	return names, nil
 }
@@ -44,7 +44,7 @@ func ListEntries(dir string) ([]struct {
 		F1 bool
 	}, len(es))
 	for i, e := range es {
-		out[i].F0 = e.Name()
+		out[i].F0 = decodeUTF8([]byte(e.Name()))
 		out[i].F1 = e.IsDir()
 	}
 	return out, nil

@@ -2,6 +2,7 @@ package hostio
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -112,5 +113,69 @@ func TestGitHead(t *testing.T) {
 	}
 	if v, ok := GitHead(dir); !ok || len(v) != 40 {
 		t.Fatal(v, ok)
+	}
+}
+
+func TestDirectoryNamesNodeUTF8(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("Node absent")
+	}
+	for _, nameHex := range []string{"e282", "f09f", "eda080", "ff", "e18041", "e08080", "f4908080", "f09f9880"} {
+		t.Run(nameHex, func(t *testing.T) {
+			dir := t.TempDir()
+			name, err := hex.DecodeString(nameHex)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, string(name)), nil, 0600); err != nil {
+				t.Skipf("filesystem refuses filename %x: %v", name, err)
+			}
+			cmd := exec.Command("nice", node, "-e", `const fs=require('node:fs');const d=process.argv[1];console.log(JSON.stringify([fs.readdirSync(d),fs.readdirSync(d,{withFileTypes:true}).map(e=>[e.name,e.isDirectory()])]));`, dir)
+			b, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("Node: %v %s", err, b)
+			}
+			var want []json.RawMessage
+			if err := json.Unmarshal(b, &want); err != nil {
+				t.Fatal(err)
+			}
+			names, err := ListDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var wantNames []string
+			if err := json.Unmarshal(want[0], &wantNames); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(names, wantNames) {
+				t.Errorf("ListDir: %q, Node: %q", names, wantNames)
+			}
+			entries, err := ListEntries(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Compare before JSON encoding, which itself replaces malformed UTF-8.
+			var wantEntries [][2]json.RawMessage
+			if err := json.Unmarshal(want[1], &wantEntries); err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != len(wantEntries) {
+				t.Fatalf("ListEntries length: %d, Node: %d", len(entries), len(wantEntries))
+			}
+			for i, e := range entries {
+				var name string
+				var isDir bool
+				if err := json.Unmarshal(wantEntries[i][0], &name); err != nil {
+					t.Fatal(err)
+				}
+				if err := json.Unmarshal(wantEntries[i][1], &isDir); err != nil {
+					t.Fatal(err)
+				}
+				if e.F0 != name || e.F1 != isDir {
+					t.Errorf("ListEntries: %q/%v, Node: %q/%v", e.F0, e.F1, name, isDir)
+				}
+			}
+		})
 	}
 }
