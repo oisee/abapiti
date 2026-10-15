@@ -1,0 +1,96 @@
+name: e10-publish
+
+# Publishes a release's eight A4H abapGit archives (readable core, tests base
+# and six tests parts) as open-steamgate E.10 OSD layers, built by OSG's own
+# tools/osd-layer.mjs (deterministic zip, leak gate), plus one ordered system
+# index ghcr.io/<owner>/abapiti/zlnt-system:<tag> (core -> base -> parts).
+# Manual only; digests go to the job summary.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: abapiti release tag (e.g. v0.5.1)
+        required: true
+      osg_ref:
+        description: open-steamgate main commit with tools/osd-layer.mjs (E.10, #738)
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OSD_LEAK_REDACT: '1'
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: oisee/open-steamgate
+          ref: ${{ inputs.osg_ref }}
+          path: osg
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install OSG tools
+        working-directory: osg
+        run: npm ci --no-audit --no-fund
+      - name: install the identifier list
+        working-directory: osg
+        env:
+          LEAK_IDENTIFIERS: '${{ secrets.OSD_LEAK_IDENTIFIERS }}'
+        run: |
+          test -n "$LEAK_IDENTIFIERS" || { echo '::error::OSD_LEAK_IDENTIFIERS is required for publishing'; exit 1; }
+          umask 077
+          mkdir -p .local
+          printf '%s' "$LEAK_IDENTIFIERS" > .local/leak-identifiers.json
+          node tools/osd-leak-scan.mjs --print-masks
+      - name: download and verify the release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p assets layers
+          gh release download "$TAG" --repo "${{ github.repository }}" --dir assets \
+            --pattern 'abaplint-*-a4h.zip' --pattern 'abaplint-*-a4h-tests-*.zip' --pattern SHA256SUMS
+          (cd assets && grep -E '  abaplint-[0-9a-f]+-a4h(-tests-(base|statements|rules_1|rules_2|syntax|objects|rest))?\.zip$' SHA256SUMS | sha256sum -c -)
+          for z in assets/abaplint-*-a4h.zip assets/abaplint-*-a4h-tests-{base,statements,rules_1,rules_2,syntax,objects,rest}.zip; do
+            name=$(basename "$z" .zip | sed 's/^abaplint-[0-9a-f]*-a4h/zlnt-core/; s/^zlnt-core-tests-/zlnt-tests-/; s/_/-/g')
+            mkdir -p "layers/$name" && (cd "layers/$name" && unzip -q "../../$z")
+          done
+          ls layers
+      - name: push the layers and the system
+        working-directory: osg
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          GITHUB_ACTOR: '${{ github.actor }}'
+          OWNER: '${{ github.repository_owner }}'
+        run: |
+          set -euo pipefail
+          commit=$(gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" -q .object.sha 2>/dev/null || true)
+          repo="ghcr.io/${OWNER,,}/abapiti"
+          refs=()
+          printf '| order | layer | ref |\n|---:|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
+          n=0
+          for name in zlnt-core zlnt-tests-base zlnt-tests-statements zlnt-tests-rules-1 zlnt-tests-rules-2 zlnt-tests-syntax zlnt-tests-objects zlnt-tests-rest; do
+            kind=input; [ "$name" = zlnt-core ] && kind=lib
+            source=(); [ -n "$commit" ] && source=(--source "https://github.com/${{ github.repository }}@$commit:src")
+            ref=$(node tools/osd-layer.mjs push "$repo/$name:$TAG" "$GITHUB_WORKSPACE/layers/$name" --name "$name" --kind "$kind" "${source[@]}")
+            refs+=("$ref")
+            printf '| %s | %s | `%s` |\n' "$n" "$name" "$ref" >> "$GITHUB_STEP_SUMMARY"
+            n=$((n + 1))
+          done
+          system=$(node tools/osd-layer.mjs system push "$repo/zlnt-system:$TAG" "${refs[@]}")
+          node tools/osd-layer.mjs inspect "$system"
+          printf '\nsystem: `%s`\n' "$system" >> "$GITHUB_STEP_SUMMARY"
+      - name: remove the identifier list
+        if: always()
+        run: rm -f osg/.local/leak-identifiers.json
