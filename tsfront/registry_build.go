@@ -234,7 +234,9 @@ func LowerRegistryWithOptions(dir string, files []string, registry *overrides.Re
 // LowerProjectWithOptions measures any tsconfig project using the same lowering
 // and verification policy as the registry build. A nil coverage lowers all bodies.
 func LowerProjectWithOptions(tsconfig string, files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*RegistryLowering, error) {
-	if coverage != nil && coverage.UpstreamPin != RegistryUpstreamPin {
+	// A generic workload manifest (no upstream pin, no recorded inputs) prunes
+	// any project; an abaplint manifest stays pinned to the registry closure.
+	if coverage != nil && coverage.UpstreamPin != "" && coverage.UpstreamPin != RegistryUpstreamPin {
 		return nil, fmt.Errorf("coverage upstream pin mismatch")
 	}
 	p, err := Load(tsconfig)
