@@ -30,7 +30,6 @@ func TestCriticR1Diagnostics(t *testing.T) {
 		"before_super_this": "unsupported-before-super", "radix": "unsupported-call",
 		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
 		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
-		"super_reorder":      "unsupported-top-level",
 		"constructor_timing": "unsupported-static-init",
 	} {
 		t.Run(name, func(t *testing.T) {

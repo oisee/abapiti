@@ -16,7 +16,7 @@ const testReadyPrefix = "test.ready."
 func (l *lowerer) testModuleActions(f *ast.SourceFile, mod *hir.Class) {
 	for i, stmt := range l.statementNodes(f) {
 		switch stmt.Kind {
-		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
+		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindJSTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindEmptyStatement:
 			continue
 		}
 		action := &hir.Method{Node: l.node(stmt), Name: testInitializationPrefix + itoa(i), Static: true, Result: hir.T(hir.Void)}

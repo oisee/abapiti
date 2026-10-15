@@ -314,3 +314,33 @@ export function run(): number { const all = NS; return all.Wanted.value(); }`
 		})
 	}
 }
+
+func TestGenericWorkloadManifestPrunesAnyProject(t *testing.T) {
+	dir := t.TempDir()
+	config := filepath.Join(dir, "tsconfig.json")
+	body := "dead(): number { return new Date().getTime(); }"
+	source := "export class Probe { live(): number { return 7; } " + body + " }"
+	for name, text := range map[string]string{config: `{"compilerOptions":{"strict":true},"files":["probe.ts"]}`, filepath.Join(dir, "probe.ts"): source} {
+		if err := os.WriteFile(name, []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	start := strings.Index(source, body)
+	raw := fmt.Sprintf(`{"schema":1,"upstreamPin":"","workloads":["unit"],"inputs":[],"spans":[{"file":"probe.ts","start":%d,"end":%d,"kind":"MethodDeclaration","symbol":"Probe.dead","line":1,"sha256":%q,"executed":false}]}`, start, start+len(body), overrides.Fingerprint(body))
+	coverage, err := ParseReachability([]byte(raw), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry, err := overrides.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := LowerProjectWithOptions(config, []string{"probe.ts"}, registry, coverage, LowerOptions{})
+	if err != nil || len(r.Blocking) > 0 || r.TrapCount() != 1 {
+		t.Fatal(err, r)
+	}
+	coverage.UpstreamPin = "other"
+	if _, err := LowerProjectWithOptions(config, []string{"probe.ts"}, registry, coverage, LowerOptions{}); err == nil || !strings.Contains(err.Error(), "pin mismatch") {
+		t.Fatal("foreign pin accepted", err)
+	}
+}
