@@ -134,6 +134,10 @@ func (l *lowerer) familyIsRecursive(t *checker.Type, visiting, seen map[*checker
 	return false
 }
 
+// familyFailure names the root whose component registration failed, so later
+// references to any member family can repeat the original reason.
+type familyFailure struct{ root, reason string }
+
 type familyRegistration struct {
 	l       *lowerer
 	unions  map[string]*hir.UnionDecl
@@ -142,6 +146,9 @@ type familyRegistration struct {
 	checks  map[string]*checker.Type
 	failed  bool
 	reason  string
+	// siblings are the union members around the layout being recorded; an
+	// exactly-undefined property takes the field type its siblings declare.
+	siblings []*checker.Type
 }
 
 func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Type, handled bool) {
@@ -162,8 +169,12 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 	if mapped, ok := l.familyTypes[alias]; ok {
 		return mapped, true
 	}
-	if l.familyFailed[alias] {
-		l.diagf(n, "unsupported-type", "recursive family %s has an unsupported member", alias)
+	if failure, ok := l.familyFailed[alias]; ok {
+		if failure.root == alias {
+			l.diagf(n, "unsupported-type", "recursive family %s has an unsupported member (%s)", alias, failure.reason)
+		} else {
+			l.diagf(n, "unsupported-type", "recursive family %s has an unsupported member (member of failed component of %s: %s)", alias, failure.root, failure.reason)
+		}
 		return hir.T(hir.Void), true
 	}
 	if len(l.familyShapes) > 0 && (t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0) {
@@ -181,15 +192,16 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 	mapped := r.typ(n, t)
 	if l.familyTypes == nil {
 		l.familyTypes = map[string]hir.Type{}
-		l.familyFailed = map[string]bool{}
+		l.familyFailed = map[string]familyFailure{}
 		l.familyShapes = map[string]hir.Type{}
 		l.familyChecks = map[string]*checker.Type{}
 	}
 	if r.failed || mapped.Kind == hir.Void || keys.refused() {
+		failure := familyFailure{root: alias, reason: r.reason}
 		for key := range r.unions {
-			l.familyFailed[key] = true
+			l.familyFailed[key] = failure
 		}
-		l.familyFailed[alias] = true
+		l.familyFailed[alias] = failure
 		l.diagf(n, "unsupported-type", "recursive family %s has an unsupported member (%s); component not published", alias, r.reason)
 		return hir.T(hir.Void), true
 	}
@@ -253,6 +265,7 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 			for _, part := range t.AsUnionOrIntersectionType().Types() {
 				key := l.familyTypeKey(part, false, map[*checker.Type]bool{})
 				id := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+				r.siblings = t.AsUnionOrIntersectionType().Types()
 				payload := r.record(decl, part, "family.payload."+id)
 				u.Alternatives = append(u.Alternatives, hir.UnionAlternative{ID: id, Tags: l.familyTags(l.ck.GetTypeOfPropertyOfType(part, tag)), Payload: payload, Literals: l.familyLiterals(part)})
 			}
@@ -270,7 +283,9 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 				nullable = true
 				continue
 			}
+			r.siblings = t.AsUnionOrIntersectionType().Types()
 			parts = append(parts, r.typ(n, p))
+			r.siblings = nil
 		}
 		if nullable {
 			return hir.T(hir.Dynamic)
@@ -360,6 +375,8 @@ func (l *lowerer) familyNode(n *ast.Node) hir.Node {
 
 func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) hir.Type {
 	l := r.l
+	siblings := r.siblings
+	r.siblings = nil
 	key := l.familyTypeKey(t, false, map[*checker.Type]bool{})
 	if typ, ok := r.shapes[key]; ok {
 		return typ
@@ -398,7 +415,13 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 			}
 			continue
 		}
-		ft := r.typ(n, l.ck.GetTypeOfPropertyOfType(t, p.Name))
+		pt := l.ck.GetTypeOfPropertyOfType(t, p.Name)
+		var ft hir.Type
+		if pt != nil && pt.Flags()&checker.TypeFlagsUndefined != 0 {
+			ft = r.undefinedField(n, t, siblings, p.Name)
+		} else {
+			ft = r.typ(n, pt)
+		}
 		if ft.Kind == hir.Void {
 			r.failed = true
 		}
@@ -412,6 +435,40 @@ func (r *familyRegistration) record(n *ast.Node, t *checker.Type, name string) h
 	}
 	c.Ctor = ctor
 	return ref
+}
+
+// undefinedField lays out a property whose checker type is exactly undefined
+// (x?: undefined or x: undefined) as an absent optional. The payload type is
+// the one sibling members declare for the same key, so union reads share one
+// field type; key presence stays with the instance's own keys, never the value.
+func (r *familyRegistration) undefinedField(n *ast.Node, self *checker.Type, siblings []*checker.Type, name string) hir.Type {
+	l := r.l
+	inner := hir.Type{}
+	for _, s := range siblings {
+		if s == self || l.ck.GetPropertyOfType(s, name) == nil {
+			continue
+		}
+		st := l.ck.GetTypeOfPropertyOfType(s, name)
+		if st == nil || st.Flags()&checker.TypeFlagsUndefined != 0 {
+			continue
+		}
+		typ := r.typ(n, st)
+		if typ.Kind == hir.Optional && len(typ.Args) == 1 {
+			typ = typ.Args[0]
+		}
+		if typ.Kind == hir.Void {
+			continue // The sibling's own layout reports the failure.
+		}
+		if inner.Kind == "" {
+			inner = typ
+		} else if !inner.Equal(typ) {
+			inner = hir.T(hir.Dynamic)
+		}
+	}
+	if inner.Kind == "" {
+		inner = hir.T(hir.Dynamic)
+	}
+	return hir.T(hir.Optional, inner)
 }
 
 func (l *lowerer) familyArguments(t *checker.Type) []*checker.Type {

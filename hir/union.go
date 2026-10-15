@@ -207,7 +207,7 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		}
 		for _, a := range u.Alternatives {
 			f := v.field(a.Payload.Name, e.Name)
-			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) && !(e.Type.Kind == Dynamic && unionScalarField(f.Type)) {
+			if f == nil || f.Static || f.Private || !f.Type.Equal(e.Type) && !(e.Type.Kind == Dynamic && unionScalarField(f.Type)) && !(e.Type.Kind == Optional && len(e.Type.Args) == 1 && f.Type.Equal(e.Type.Args[0])) {
 				v.fail(e.Node, "union field is not compatible in every alternative")
 			}
 		}

@@ -494,7 +494,7 @@ type lowerer struct {
 	// Closed recursive structural families are published only after registration
 	// of the entire reachable component succeeds.
 	familyTypes  map[string]hir.Type
-	familyFailed map[string]bool
+	familyFailed map[string]familyFailure
 	familyShapes map[string]hir.Type
 	familyChecks map[string]*checker.Type
 	familyKeys   *familyKeyMemo // family_key_memo.go
