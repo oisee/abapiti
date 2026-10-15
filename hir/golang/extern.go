@@ -119,13 +119,13 @@ func (b *body) externToGo(x *hir.Expr) string {
 	value := b.expr(x)
 	switch x.Type.Kind {
 	case hir.String:
-		return value + ".String()"
+		return "externStringArgument(" + value + ")"
 	case hir.Array:
 		t := x.Type
 		el := t.Args[0]
-		convert := "v.String()"
+		convert := "externStringArgument(v)"
 		if el.Kind != hir.String {
-			convert = "struct{F0 string;F1 bool}{v.(" + b.e.typ(el) + ")." + b.e.member("f0") + ".String(),v.(" + b.e.typ(el) + ")." + b.e.member("f1") + "}"
+			convert = "struct{F0 string;F1 bool}{externStringArgument(v.(" + b.e.typ(el) + ")." + b.e.member("f0") + "),v.(" + b.e.typ(el) + ")." + b.e.member("f1") + "}"
 		}
 		return fmt.Sprintf("func(a %s) %s { out:=make(%s,0,len(a.Items));for _,v:=range a.Items {out=append(out,%s)};return out }(%s)", b.e.typ(t), externGoType(t), externGoType(t), convert, value)
 	}
@@ -159,5 +159,23 @@ func (e *emitter) externSource(pkg string) string {
 		fmt.Sscanf(alias, "externPkg%d", &i)
 		imports[i] = alias + " " + strconv.Quote(path)
 	}
-	return "package " + pkg + "\nimport (" + strings.Join(imports, ";") + ")\n" + strings.Join(e.externAdapters, "\n")
+	return "package " + pkg + "\nimport (" + strings.Join(imports, ";") + ")\n" + externStringArgumentSource + strings.Join(e.externAdapters, "\n")
 }
+
+// Check UTF-16 before the runtime conversion can replace isolated surrogates.
+const externStringArgumentSource = `
+func externStringArgument(s jsString) string {
+ for i:=int32(0);i<s.length();i++ {
+  c:=s.charCodeAt(i)
+  if c>=0xd800 && c<=0xdbff {
+   if i+1>=s.length() || s.charCodeAt(i+1)<0xdc00 || s.charCodeAt(i+1)>0xdfff {
+    panic(newTrap("extern string argument has a lone surrogate"))
+   }
+   i++
+  } else if c>=0xdc00 && c<=0xdfff {
+   panic(newTrap("extern string argument has a lone surrogate"))
+  }
+ }
+ return s.String()
+}
+`

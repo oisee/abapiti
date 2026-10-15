@@ -185,7 +185,7 @@ func buildExternProbe(t *testing.T, r *RegistryLowering, modules []ExternModule)
 func TestExternTypedABI(t *testing.T) {
 	source := `import * as host from './host';class Probe {
  static run():string {
-  let out=host.text("😀")+"|"+host.text("😀".slice(0,1))+"|"+host.flip(true)+"|"+host.add(40,2)+"|"+host.strings(["a","😀"]).join(",");
+  let out=host.text("😀")+"|"+host.flip(true)+"|"+host.add(40,2)+"|"+host.strings(["a","😀"]).join(",");
   out+="|"+host.join("a",...["b"])+"|"+host.maybe(true)+"|"+(host.maybe(false)===undefined);
   out+="|"+host.tuples(host.entries());
   try {host.fail();} catch(e) {out+="|"+e.message;}
@@ -237,7 +237,7 @@ func TestExternTypedABI(t *testing.T) {
 			if err != nil {
 				t.Fatalf("run %v %s", err, b)
 			}
-			if string(b) != "😀|�|false|42|a,😀|a/b||true|entry|host failed\n" {
+			if string(b) != "😀|false|42|a,😀|a/b||true|entry|host failed\n" {
 				t.Fatalf("output %q", b)
 			}
 			for _, bad := range []string{strings.Replace(goHost, "Text(x string) string {return x}", "Text(x bool) string {return \"bad\"}", 1), strings.Replace(goHost, "Flip(x bool) (bool,error) {return !x,nil}", "Flip(x bool) (bool,bool) {return x,x}", 1)} {
@@ -267,5 +267,33 @@ func TestExternArrayInputContract(t *testing.T) {
 				t.Errorf("%s does not document %q", file, contract)
 			}
 		}
+	}
+}
+
+func TestExternLoneSurrogateArguments(t *testing.T) {
+	host := `export function text(x:string):string{return x;}
+ export function strings(x:string[]):string{return "";}
+ export function tuples(x:[string,boolean][]):string{return "";}
+ export function join(...x:string[]):string{return "";}`
+	for _, call := range []string{`host.text("😀".slice(0,1))`, `host.text("😀".slice(1))`, `host.strings(["😀".slice(0,1)])`, `host.tuples([["😀".slice(1),true]])`, `host.join("😀".slice(0,1))`, `host.join(...["😀".slice(1)])`} {
+		t.Run(call, func(t *testing.T) {
+			r, modules, _ := externProject(t, `import * as host from './host';class Probe {static run():string {try {return `+call+`;} catch(e) {return "caught";}}}`, host)
+			pkg := t.TempDir()
+			modules[0].GoDir = pkg
+			for n, s := range map[string]string{"go.mod": "module " + modules[0].GoImport + "\n\ngo 1.26.0\n", "host.go": `package hostio
+func Text(x string) string {return x}
+func Strings(x []string) string {return "called"}
+func Tuples(x []struct{F0 string;F1 bool}) string {return "called"}
+func Join(x ...string) string {return "called"}`} {
+				if err := os.WriteFile(filepath.Join(pkg, n), []byte(s), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			bin, _ := buildExternProbe(t, r, modules)
+			b, err := exec.Command("nice", bin).CombinedOutput()
+			if err == nil || !strings.Contains(string(b), "probe.ts:") || !strings.Contains(string(b), "extern string argument has a lone surrogate") {
+				t.Fatalf("expected located extern string trap, got %v: %s", err, b)
+			}
+		})
 	}
 }

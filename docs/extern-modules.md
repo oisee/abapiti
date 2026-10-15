@@ -21,7 +21,7 @@ The Go ABI uses `string`, `bool`, `float64`, `[]string`, and `[]struct{ F0 strin
 
 Extern array parameters (`string[]`, `[string, boolean][]`, and rest arrays) are read-only inputs. Go receives a copy, including tuple fields; host mutations are not written back to the TypeScript array. Host implementations must treat these parameters as read-only and return any changed data explicitly.
 
-Strings cross through the runtime's UTF-16/UTF-8 conversions: non-BMP characters round-trip, and isolated UTF-16 surrogates become U+FFFD when passed to Go. The reference `extern/hostio` module implements filesystem, POSIX path, Git HEAD and environment operations. Its directory results use byte order; directory symlinks report false in `listEntries`.
+Strings cross through the runtime's UTF-16/UTF-8 conversions: non-BMP characters round-trip, and a string argument containing an isolated UTF-16 surrogate raises a located trap (`extern string argument has a lone surrogate`) before the host call, including strings in arrays, tuples, and rest arguments. The reference `extern/hostio` module implements filesystem, POSIX path, Git HEAD and environment operations. Its directory results use byte order; directory symlinks report false in `listEntries`.
 
 ABAP emission refuses extern calls with their source location. Host calls conservatively read arguments and global state, may write global state, allocate, and raise.
 
