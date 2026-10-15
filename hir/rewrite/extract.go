@@ -93,6 +93,11 @@ func extractDemanded(p *hir.Program, demanded map[string]bool) *DB {
 			x.add("union", u.Name, u.Discriminant, strconv.FormatBool(u.Complete))
 			for _, a := range u.Alternatives {
 				x.add("union_alternative", u.Name, a.ID, a.Payload.String())
+				for _, f := range a.Literals {
+					for _, value := range f.Values {
+						x.add("union_literal", u.Name, a.ID, f.Field, value)
+					}
+				}
 				for _, tag := range a.Tags {
 					x.add("union_tag", u.Name, a.ID, tag)
 				}
@@ -298,6 +303,8 @@ func (x *extractor) expr(e *hir.Expr, path string, env scope) string {
 			}
 		}
 		x.add("argument", path, "this", ids[0])
+	case hir.ExternCall:
+		x.externCall(e, path)
 	case hir.DirectCall, hir.SuperCall:
 		if e.Kind == hir.SuperCall {
 			owner = x.classes[x.owner].Super

@@ -97,7 +97,13 @@ export class Probe {
 		t.Fatal(err, string(want))
 	}
 	p := lowerStatementsProbe(t, sources, []string{"types.ts", "probe.ts"})
-	if len(p.Unions) != 3 {
+	families := 0
+	for _, u := range p.Unions {
+		if !strings.HasPrefix(u.Name, "family.subset.") {
+			families++
+		}
+	}
+	if families != 3 {
 		t.Fatalf("families: %d", len(p.Unions))
 	}
 	for _, u := range p.Unions {

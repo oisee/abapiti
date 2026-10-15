@@ -14,7 +14,7 @@ import (
 // intact, including declarations which only participate in type checking.
 func (l *lowerer) statementNodes(f *ast.SourceFile) []*ast.Node {
 	if l.retained == nil {
-		return f.Statements.Nodes
+		return l.dropRequirePlumbing(f.Statements.Nodes)
 	}
 	var nodes []*ast.Node
 	for _, n := range f.Statements.Nodes {
@@ -22,7 +22,7 @@ func (l *lowerer) statementNodes(f *ast.SourceFile) []*ast.Node {
 			nodes = append(nodes, n)
 		}
 	}
-	return nodes
+	return l.dropRequirePlumbing(nodes)
 }
 
 // pruneDeclarations follows checker-resolved references rather than import

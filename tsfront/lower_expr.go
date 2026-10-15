@@ -277,6 +277,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 		if typ.Equal(x.Type) {
 			return x
 		}
+		if typ.Kind == hir.UnionRef && hir.UnionIncludes(l.out.Union(x.Type.Name), l.out.Union(typ.Name)) {
+			return l.rtOp("union.project", x, typ)
+		}
 		if typ.Kind == hir.ClassRef {
 			if u := l.out.Union(x.Type.Name); u != nil {
 				for _, a := range u.Alternatives {
@@ -286,7 +289,7 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 				}
 			}
 		}
-		// Other checker-selected subsets are implemented in Slice 2. Do not
+		// Unrelated checker types cannot
 		// erase the family's membership to an unrelated root or Dynamic view.
 		return x
 	}
@@ -344,6 +347,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 
 func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	if n == nil {
+		return nil
+	}
+	if l.externValue(n) {
 		return nil
 	}
 	if matched, ok := l.pinnedMatchTest(n); ok {
@@ -582,6 +588,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindElementAccessExpression:
 		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil || n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
+		}
+		if x, handled := l.familyIndexedAccess(n); handled {
+			return x
 		}
 		return l.elementAccess(n)
 	case ast.KindArrowFunction, ast.KindFunctionExpression:
@@ -947,6 +956,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.externCall(n); ok {
+		return x
+	}
 	if x, handled := l.mathCeilCall(n); handled {
 		return x
 	}

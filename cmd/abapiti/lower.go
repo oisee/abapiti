@@ -26,6 +26,7 @@ func newLowerCmd() *cobra.Command {
 	f.StringP("output", "o", "out", "Evidence output directory")
 	f.String("overrides", "none", "Source-pinned overrides: none or registry")
 	f.Bool("assume-int", true, "Assume only integer calculations, as in abaplint --full")
+	f.String("externs", "", "Extern module JSON configuration")
 	f.String("scope", "", "Report only diagnostics beneath this tsconfig-relative source directory")
 	f.String("reachability", "", "Coverage manifest (schema 1, from tools/coverage-manifest.mjs): unexecuted bodies become traps")
 	return cmd
@@ -95,6 +96,11 @@ func runLower(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	externFile, _ := f.GetString("externs")
+	externs, err := tsfront.ReadExterns(externFile)
+	if err != nil {
+		return err
+	}
 	assumeInt, _ := f.GetBool("assume-int")
 	var coverage *tsfront.Reachability
 	if path, _ := f.GetString("reachability"); path != "" {
@@ -111,7 +117,7 @@ func runLower(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("--reachability takes a generic workload manifest (no upstreamPin, no inputs)")
 		}
 	}
-	r, err := tsfront.LowerProjectWithOptions(config, args, registry, coverage, tsfront.LowerOptions{AssumeOnlyIntegerCalculations: assumeInt})
+	r, err := tsfront.LowerProjectWithOptions(config, args, registry, coverage, tsfront.LowerOptions{AssumeOnlyIntegerCalculations: assumeInt, Externs: externs})
 	if err != nil {
 		return err
 	}

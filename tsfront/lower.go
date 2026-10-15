@@ -47,6 +47,7 @@ func (p *Program) LowerWithOverrides(files []string, registry *overrides.Registr
 // LowerOptions makes numeric contracts and partial-lowering policy explicit.
 // Integer exceptions are source pinned.
 type LowerOptions struct {
+	Externs                       []ExternModule
 	AssumeOnlyIntegerCalculations bool
 	IntegerExceptions             []IntegerException
 	// TrapOnFailure is the fail-closed policy used by the suite and full-core
@@ -63,9 +64,13 @@ func (p *Program) lowerWithPolicy(files []string, registry *overrides.Registry, 
 }
 
 func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry, coverage *Reachability, options LowerOptions) (*hir.Program, []LowerDiagnostic, error) {
+	// A pinned or declaration-graph (schema 2) manifest selects the pruned
+	// build; a generic schema 1 workload manifest (no pin, from
+	// tools/coverage-manifest.mjs) only traps unexecuted bodies.
+	pruned := coverage != nil && (coverage.UpstreamPin != "" || coverage.Schema == 2)
 	l := &lowerer{
-		unprunedFeatures:   coverage == nil,
-		settledEnabled:     coverage == nil,
+		unprunedFeatures:   !pruned,
+		settledEnabled:     !pruned,
 		generatorEnabled:   true,
 		asyncMethods:       map[*hir.Method]bool{},
 		settlementWorld:    map[*ast.Node]string{},
@@ -100,6 +105,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		funcsBy:            map[string]funcRef{},
 		covariants:         map[string]map[string]bool{},
 	}
+	files, err := l.prepareExterns(files, options.Externs)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, name := range files {
 		if f, ok := p.File(name); ok {
 			l.settlementFiles[f] = true
@@ -111,10 +120,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if err := l.validateReachability(files, coverage); err != nil {
 		return nil, nil, err
 	}
-	if err := l.validateOverrides(files, registry.WithReachability(coverage != nil)); err != nil {
+	if err := l.validateOverrides(files, registry.WithReachability(pruned)); err != nil {
 		return nil, nil, err
 	}
-	if coverage == nil {
+	if !pruned {
 		l.useResumableGenerators()
 	} else {
 		for _, entry := range l.overrides {
@@ -124,16 +133,17 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			}
 		}
 	}
-	if coverage != nil && coverage.Schema == 2 {
+	if pruned && coverage.Schema == 2 {
 		var err error
 		files, err = l.pruneDeclarations(files)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
+	l.scanRequireBindings(files)
 	// Only expand the external LSP ABI when a callable constructor needs it.
 	// Coverage-trapped signatures retain their existing opaque/structural ABI.
-	l.lspConstructors = coverage == nil
+	l.lspConstructors = !pruned
 	if !l.lspConstructors {
 		for _, name := range files {
 			f, ok := p.File(name)
@@ -417,7 +427,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		hir.SealLiveClassViewBoundary(l.out)
 	}
 	hir.AssignSiteIDsWithSource(l.out, p.siteSource)
-	if coverage == nil {
+	if !pruned {
 		l.classifyCascades()
 	}
 	return l.out, l.diags, nil
@@ -426,6 +436,8 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
+	externs         map[string]ExternModule
+	externFunctions map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	unprunedFeatures   bool
@@ -484,6 +496,7 @@ type lowerer struct {
 	familyTypes  map[string]hir.Type
 	familyFailed map[string]bool
 	familyShapes map[string]hir.Type
+	familyChecks map[string]*checker.Type
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt
@@ -493,6 +506,7 @@ type lowerer struct {
 	// nsNeeded marks module files that are imported as a namespace and used
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool
+	require  *requireBindings // static createRequire bindings (require_binding.go)
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
 	views    map[string]*hir.Interface
 	unions   map[string]*unionView
@@ -757,6 +771,9 @@ func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
+	}
+	if target := l.requireTarget(sym); target != nil {
+		return target
 	}
 	if sym.Parent == nil && n != nil && n.Kind == ast.KindPropertyAccessExpression {
 		if name := n.Name(); name != nil {

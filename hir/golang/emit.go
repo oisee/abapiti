@@ -181,6 +181,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
 	}
+	if source := e.externSource(pkg); source != "" {
+		files["extern.go"] = source
+	}
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -203,6 +206,8 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	externAdapters    []string
+	externImports     map[string]string
 	chaiDeep          bool
 	chaiThrow         bool
 	chaiActionUsed    bool
@@ -727,6 +732,8 @@ func (b *body) expr(x *hir.Expr) string {
 	t := x.Type
 	code := ""
 	switch x.Kind {
+	case hir.ExternCall:
+		return b.externCall(x)
 	case hir.PromiseFulfill:
 		value := "struct{}{}"
 		if x.X != nil && t.Args[0].Kind == hir.Void {

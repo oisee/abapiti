@@ -133,6 +133,8 @@ func (m *SiteMap) Add(n Node, kind, backend string, location SiteLocation) {
 }
 func SiteKind(k ExprKind) string {
 	switch k {
+	case ExternCall:
+		return "extern_call"
 	case DirectCall, SuperCall:
 		return "call"
 	case VirtualCall:

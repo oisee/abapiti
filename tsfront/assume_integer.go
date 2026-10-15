@@ -214,6 +214,9 @@ func (l *lowerer) assumeIntegerTypes() {
 			e.Args[i] = expr(e.Args[i])
 		}
 		stmt(e.Stmt)
+		if e.Kind == hir.ExternCall {
+			return l.assumeExtern(e)
+		}
 		e.Type = integerType(e.Type)
 		e.CheckIntegerOverflow = e.Type.Kind == hir.I64 && (e.Kind == hir.Binary && (e.Op == "+" || e.Op == "-" || e.Op == "*") || e.Kind == hir.Unary && e.Op == "-")
 		if (e.Kind == hir.NumericConvert || e.Kind == hir.CheckedNumericConvert) && e.X != nil {

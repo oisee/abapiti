@@ -1,0 +1,1593 @@
+{
+  "schema": "union-abi-s2/1",
+  "date": "2026-10-15",
+  "backend": "Go",
+  "baseCommit": "fa2ffc9f51b046985cb32b2ebaec2399a28e0fd5",
+  "compilerBuildRevision": "ee044b7e4a96083456c3602c45e59a73bb47be6e",
+  "equivalentCompilerCommitWithRequestedIdentity": "3f3350144842021162f336317ce3f34ca25f795c",
+  "compilerBuildSourceTree": "4c61c63034280563e290428409eccec20ceb55e1",
+  "compilerFiles": {
+    "hir/dump.go": "bf321b74af6d078b183a0d771895892b474ce539d1239976a068feaafe8c42b6",
+    "hir/golang/union.go": "8eaae85309f695ca668c357114e178ab2405de8be1f860ae77d46bd602449984",
+    "hir/hir.go": "5fa44cb73a92638d6e232b76c2f204308b79966f69b8123f24711f68bb9eebcc",
+    "hir/rewrite/extract.go": "c0bd80fbb8bda38e45e10340711fd9efbd9e32374387ae5026638736639417c7",
+    "hir/union.go": "fc9a9eb2bf63928fc3c762eaddcd4882829d8188a0adfcf127ee5f76a66cfeff",
+    "tsfront/family_operations.go": "e436a8ea764802190b3526dc827d108d962475525e7708938c0b2d564138d1ee",
+    "tsfront/lower.go": "bd8c23b516d9cbc214df99fdf2045706a9dbd33702642929d285e932142faea6",
+    "tsfront/lower_expr.go": "ef30ac51a8789c875d1b2c25ab24986cef3f79fee920071417815d6322a4962b",
+    "tsfront/lower_stmt2.go": "5245be7a2fff0462a64c406f5ab47ef8bda288417fdf354b7cc3903747081be2",
+    "tsfront/recursive_families.go": "65aa80da0ae65d63adba8b27415ded2bd96b6d2979d911dc8ab43e6070dbe52a",
+    "tsfront/recursive_subsets.go": "fa775f99627c057717145398ddd982a2193361b783dd18480284deeb024488b8",
+    "tsfront/recursive_switch.go": "191ea57ead49b66cafcfc368a95b32726477f385ba728cc7ff485c474fe903d4"
+  },
+  "osg": {
+    "repository": "https://github.com/oisee/open-steamgate",
+    "mainSHA": "4fa08e8e4b156b5022081ffcd20e13d3fbc8120d",
+    "clean": true,
+    "pilotSources": {
+      "tools/gogen/emit-constructors.ts": "ab71438870ca2697c61c8dd3a56c6d936a7f4cf3746d99ca894b818e439fd631",
+      "tools/gogen/frontend-find-results.ts": "a7d0de91efe247669d60845b9269c8860295cd1f9e63864ccb162ca7a15c0a66",
+      "tools/gogen/ir.ts": "6b4ab1f6f9e992692c4772f614870e3a12bfc3f5f9acf0a99a0670f0c24508ce",
+      "tools/gogen/symbols.ts": "d3021c2c494e0302a9ec75e6243a0637950ed60ae4d55f2ca2a9902990fbada4"
+    }
+  },
+  "environment": {
+    "go": "1.26.9",
+    "node": "26.9.0",
+    "pilotTypescript": "5.9.3",
+    "nodeTypes": "22.20.2",
+    "pilotCore": "2.120.73",
+    "shardOracleTypescript": "6.0.3",
+    "shardGoToolchain": "1.26.0",
+    "golangciLint": "2.13.2"
+  },
+  "pilotCommand": [
+    ".tmp/union-abi-s2/abapiti-accepted",
+    "lower",
+    "--full",
+    "--tsconfig",
+    ".tmp/union-abi-s2/pilot/tsconfig.gogen.json",
+    "--scope",
+    "tools/gogen",
+    "--assume-int=false",
+    "-o",
+    ".tmp/union-abi-s2/pilot/cli-final",
+    "tools/gogen/ir.ts",
+    "tools/gogen/symbols.ts",
+    "tools/gogen/emit-constructors.ts",
+    "tools/gogen/frontend-find-results.ts"
+  ],
+  "pilot": {
+    "checkerErrors": 0,
+    "before": {
+      "blocking": 59,
+      "rootBlocking": 53,
+      "cascadeBlocking": 6,
+      "hirErrors": 29,
+      "byCategory": {
+        "skipped-interface-member": 30,
+        "unsupported-array": 2,
+        "unsupported-call": 7,
+        "unsupported-expr": 11,
+        "unsupported-new": 3,
+        "unsupported-shortcircuit": 1,
+        "unsupported-type": 5
+      },
+      "byArea": {
+        "tools": 59
+      },
+      "byRootMessage": [
+        {
+          "message": "data interface X: member X has unlowered types",
+          "count": 29,
+          "example": "tools/gogen/frontend-find-results.ts:71:25"
+        },
+        {
+          "message": "call to KindIdentifier is not lowered",
+          "count": 7,
+          "example": "tools/gogen/emit-constructors.ts:20:49"
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 4,
+          "example": "tools/gogen/emit-constructors.ts:20:22"
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 3,
+          "example": "tools/gogen/emit-constructors.ts:9:19"
+        },
+        {
+          "message": "spread element needs an array",
+          "count": 2,
+          "example": "tools/gogen/symbols.ts:71:32"
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/symbols.ts:91:14"
+        },
+        {
+          "message": "data interface X: member 8 has unlowered types",
+          "count": 1,
+          "example": "tools/gogen/ir.ts:302:69"
+        },
+        {
+          "message": "instanceof needs a lowered class X",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:24:15"
+        },
+        {
+          "message": "mixed tagged operands require value-preserving truthiness",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:17:43"
+        },
+        {
+          "message": "type reference ExpressionNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:142"
+        },
+        {
+          "message": "type reference Extract is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:203"
+        },
+        {
+          "message": "type reference StatementNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:40"
+        },
+        {
+          "message": "type reference StructureNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:5:45"
+        }
+      ],
+      "files": 4
+    },
+    "after": {
+      "blocking": 60,
+      "rootBlocking": 54,
+      "cascadeBlocking": 6,
+      "hirErrors": 29,
+      "byCategory": {
+        "skipped-interface-member": 30,
+        "unsupported-array": 2,
+        "unsupported-call": 7,
+        "unsupported-expr": 11,
+        "unsupported-new": 3,
+        "unsupported-shortcircuit": 1,
+        "unsupported-type": 6
+      },
+      "byArea": {
+        "tools": 60
+      },
+      "byRootMessage": [
+        {
+          "message": "data interface X: member X has unlowered types",
+          "count": 29,
+          "example": "tools/gogen/frontend-find-results.ts:71:25"
+        },
+        {
+          "message": "call to KindIdentifier is not lowered",
+          "count": 7,
+          "example": "tools/gogen/emit-constructors.ts:20:49"
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 4,
+          "example": "tools/gogen/emit-constructors.ts:20:22"
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 3,
+          "example": "tools/gogen/emit-constructors.ts:9:19"
+        },
+        {
+          "message": "spread element needs an array",
+          "count": 2,
+          "example": "tools/gogen/symbols.ts:71:32"
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/symbols.ts:91:14"
+        },
+        {
+          "message": "data interface X: member 8 has unlowered types",
+          "count": 1,
+          "example": "tools/gogen/ir.ts:302:69"
+        },
+        {
+          "message": "instanceof needs a lowered class X",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:24:15"
+        },
+        {
+          "message": "mixed tagged operands require value-preserving truthiness",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:17:43"
+        },
+        {
+          "message": "recursive family tools/gogen/ir.ts.Stmt has an unsupported member",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:211"
+        },
+        {
+          "message": "type reference ExpressionNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:142"
+        },
+        {
+          "message": "type reference Extract is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:203"
+        },
+        {
+          "message": "type reference StatementNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:40"
+        },
+        {
+          "message": "type reference StructureNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:5:45"
+        }
+      ],
+      "files": 4
+    },
+    "wholeBefore": {
+      "blocking": 70,
+      "rootBlocking": 64,
+      "cascadeBlocking": 6,
+      "hirErrors": 32,
+      "byCategory": {
+        "skipped-interface-member": 30,
+        "unsupported-array": 2,
+        "unsupported-call": 7,
+        "unsupported-expr": 11,
+        "unsupported-new": 3,
+        "unsupported-shortcircuit": 1,
+        "unsupported-top-level": 11,
+        "unsupported-type": 5
+      },
+      "byArea": {
+        "node_modules/@abaplint/core": 11,
+        "tools": 59
+      },
+      "byRootMessage": [
+        {
+          "message": "data interface X: member X has unlowered types",
+          "count": 29,
+          "example": "tools/gogen/frontend-find-results.ts:71:25"
+        },
+        {
+          "message": "top-level KindModuleDeclaration is not lowered",
+          "count": 11,
+          "example": "node_modules/@abaplint/core/build/abaplint.d.ts:2446:1"
+        },
+        {
+          "message": "call to KindIdentifier is not lowered",
+          "count": 7,
+          "example": "tools/gogen/emit-constructors.ts:20:49"
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 4,
+          "example": "tools/gogen/emit-constructors.ts:20:22"
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 3,
+          "example": "tools/gogen/emit-constructors.ts:9:19"
+        },
+        {
+          "message": "spread element needs an array",
+          "count": 2,
+          "example": "tools/gogen/symbols.ts:71:32"
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/symbols.ts:91:14"
+        },
+        {
+          "message": "data interface X: member 8 has unlowered types",
+          "count": 1,
+          "example": "tools/gogen/ir.ts:302:69"
+        },
+        {
+          "message": "instanceof needs a lowered class X",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:24:15"
+        },
+        {
+          "message": "mixed tagged operands require value-preserving truthiness",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:17:43"
+        },
+        {
+          "message": "type reference ExpressionNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:142"
+        },
+        {
+          "message": "type reference Extract is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:203"
+        },
+        {
+          "message": "type reference StatementNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:40"
+        },
+        {
+          "message": "type reference StructureNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:5:45"
+        }
+      ],
+      "files": 5
+    },
+    "wholeAfter": {
+      "blocking": 71,
+      "rootBlocking": 65,
+      "cascadeBlocking": 6,
+      "hirErrors": 32,
+      "byCategory": {
+        "skipped-interface-member": 30,
+        "unsupported-array": 2,
+        "unsupported-call": 7,
+        "unsupported-expr": 11,
+        "unsupported-new": 3,
+        "unsupported-shortcircuit": 1,
+        "unsupported-top-level": 11,
+        "unsupported-type": 6
+      },
+      "byArea": {
+        "node_modules/@abaplint/core": 11,
+        "tools": 60
+      },
+      "byRootMessage": [
+        {
+          "message": "data interface X: member X has unlowered types",
+          "count": 29,
+          "example": "tools/gogen/frontend-find-results.ts:71:25"
+        },
+        {
+          "message": "top-level KindModuleDeclaration is not lowered",
+          "count": 11,
+          "example": "node_modules/@abaplint/core/build/abaplint.d.ts:2446:1"
+        },
+        {
+          "message": "call to KindIdentifier is not lowered",
+          "count": 7,
+          "example": "tools/gogen/emit-constructors.ts:20:49"
+        },
+        {
+          "message": "identifier X is not a lowered local or module value",
+          "count": 4,
+          "example": "tools/gogen/emit-constructors.ts:20:22"
+        },
+        {
+          "message": "new X is not a lowered class",
+          "count": 3,
+          "example": "tools/gogen/emit-constructors.ts:9:19"
+        },
+        {
+          "message": "spread element needs an array",
+          "count": 2,
+          "example": "tools/gogen/symbols.ts:71:32"
+        },
+        {
+          "message": "checker type X is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/symbols.ts:91:14"
+        },
+        {
+          "message": "data interface X: member 8 has unlowered types",
+          "count": 1,
+          "example": "tools/gogen/ir.ts:302:69"
+        },
+        {
+          "message": "instanceof needs a lowered class X",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:24:15"
+        },
+        {
+          "message": "mixed tagged operands require value-preserving truthiness",
+          "count": 1,
+          "example": "tools/gogen/emit-constructors.ts:17:43"
+        },
+        {
+          "message": "recursive family tools/gogen/ir.ts.Stmt has an unsupported member",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:211"
+        },
+        {
+          "message": "type reference ExpressionNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:142"
+        },
+        {
+          "message": "type reference Extract is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:203"
+        },
+        {
+          "message": "type reference StatementNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:30:40"
+        },
+        {
+          "message": "type reference StructureNode is not a lowered declaration",
+          "count": 1,
+          "example": "tools/gogen/frontend-find-results.ts:5:45"
+        }
+      ],
+      "files": 5
+    },
+    "beforeDiagnostics": [
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:9:158",
+        "message": "data interface tools/gogen/ir.ts.Argument: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:11:5",
+        "message": "data interface tools/gogen/ir.ts.Argument: member place has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:11:35",
+        "message": "data interface tools/gogen/ir.ts.Argument: member wrap has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:13:50",
+        "message": "data interface tools/gogen/ir.ts.Where: member fx has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:13:114",
+        "message": "data interface tools/gogen/ir.ts.Where: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:15:78",
+        "message": "data interface tools/gogen/ir.ts.TableKey: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:267:3",
+        "message": "data interface tools/gogen/ir.ts.Method: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:270:99",
+        "message": "data interface tools/gogen/ir.ts.Attribute: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:279:147",
+        "message": "data interface tools/gogen/ir.ts.TableColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:283:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:290:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member anonStructs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:39",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member I has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:69",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member 8 has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:101",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member P has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:131",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member F has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:312:93",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoPlace has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:312:262",
+        "message": "data interface tools/gogen/ir.ts.Catch: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:316:148",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member range has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:322:27",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member group has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:323:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member module has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:325:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member spaghetti has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:326:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member top has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:331:33",
+        "message": "data interface tools/gogen/ir.ts.EventHandler: member call has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:331:76",
+        "message": "data interface tools/gogen/ir.ts.EventHandler: member obj has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:336:78",
+        "message": "data interface tools/gogen/ir.ts.WriteColumn: member ir has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/symbols.ts:101:256",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member consts has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:71:25",
+        "message": "data interface tools/gogen/frontend-find-results.ts.FindContext: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:76:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member source has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:79:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member lvalue has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:81:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member convert has unlowered types"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:5:45",
+        "message": "type reference StructureNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:40",
+        "message": "type reference StatementNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:142",
+        "message": "type reference ExpressionNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:203",
+        "message": "type reference Extract is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:13:12",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:34:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:41:16",
+        "message": "identifier emitGo is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:42:18",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:43:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:44:16",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:45:10",
+        "message": "identifier source is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/symbols.ts:51:46",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:57:22",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:65:23",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:71:40",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "tools/gogen/symbols.ts:71:36",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "tools/gogen/symbols.ts:71:32",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/symbols.ts:71:23",
+        "message": "new Set is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:81:25",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/symbols.ts:91:14",
+        "message": "checker type Dirent<string> is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:91:23",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/emit-constructors.ts:9:19",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:15:71",
+        "message": "identifier classes is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-shortcircuit",
+        "loc": "tools/gogen/emit-constructors.ts:17:43",
+        "message": "mixed tagged operands require value-preserving truthiness"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:20:22",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/emit-constructors.ts:20:49",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:22:31",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:24:28",
+        "message": "identifier Unsupported is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:24:15",
+        "message": "instanceof needs a lowered class operand"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:496:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:2446:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:2728:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:3778:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:4489:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:5154:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:5238:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:7242:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:7659:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:8025:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:8250:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      }
+    ],
+    "afterDiagnostics": [
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:9:158",
+        "message": "data interface tools/gogen/ir.ts.Argument: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:11:5",
+        "message": "data interface tools/gogen/ir.ts.Argument: member place has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:11:35",
+        "message": "data interface tools/gogen/ir.ts.Argument: member wrap has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:13:50",
+        "message": "data interface tools/gogen/ir.ts.Where: member fx has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:13:114",
+        "message": "data interface tools/gogen/ir.ts.Where: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:15:78",
+        "message": "data interface tools/gogen/ir.ts.TableKey: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:267:3",
+        "message": "data interface tools/gogen/ir.ts.Method: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:270:99",
+        "message": "data interface tools/gogen/ir.ts.Attribute: member value has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:279:147",
+        "message": "data interface tools/gogen/ir.ts.TableColumn: member type has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:283:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:290:3",
+        "message": "data interface tools/gogen/ir.ts.Program: member anonStructs has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:39",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member I has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:69",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member 8 has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:101",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member P has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:302:131",
+        "message": "data interface tools/gogen/ir.ts.ArithmeticBranches: member F has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:312:93",
+        "message": "data interface tools/gogen/ir.ts.Catch: member intoPlace has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:312:262",
+        "message": "data interface tools/gogen/ir.ts.Catch: member body has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:316:148",
+        "message": "data interface tools/gogen/ir.ts.SqlPredicate: member range has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:322:27",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member group has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:323:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member module has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:325:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member spaghetti has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:326:3",
+        "message": "data interface tools/gogen/ir.ts.FunctionModule: member top has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:331:33",
+        "message": "data interface tools/gogen/ir.ts.EventHandler: member call has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:331:76",
+        "message": "data interface tools/gogen/ir.ts.EventHandler: member obj has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/ir.ts:336:78",
+        "message": "data interface tools/gogen/ir.ts.WriteColumn: member ir has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/symbols.ts:101:256",
+        "message": "data interface tools/gogen/symbols.ts.Layers: member consts has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:71:25",
+        "message": "data interface tools/gogen/frontend-find-results.ts.FindContext: member reg has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:76:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member source has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:79:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member lvalue has unlowered types"
+      },
+      {
+        "category": "skipped-interface-member",
+        "loc": "tools/gogen/frontend-find-results.ts:81:3",
+        "message": "data interface tools/gogen/frontend-find-results.ts.LowerHelpers: member convert has unlowered types"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:5:45",
+        "message": "type reference StructureNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:40",
+        "message": "type reference StatementNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:142",
+        "message": "type reference ExpressionNode is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:211",
+        "message": "recursive family tools/gogen/ir.ts.Stmt has an unsupported member"
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/frontend-find-results.ts:30:203",
+        "message": "type reference Extract is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:13:12",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:34:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:41:16",
+        "message": "identifier emitGo is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:42:18",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:43:3",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:44:16",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:45:10",
+        "message": "identifier source is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/symbols.ts:51:46",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:57:22",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:65:23",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:71:40",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "tools/gogen/symbols.ts:71:36",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-array",
+        "loc": "tools/gogen/symbols.ts:71:32",
+        "message": "spread element needs an array"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/symbols.ts:71:23",
+        "message": "new Set is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/symbols.ts:81:25",
+        "message": "identifier ir is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-type",
+        "loc": "tools/gogen/symbols.ts:91:14",
+        "message": "checker type Dirent<string> is not a lowered declaration"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/symbols.ts:91:23",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-new",
+        "loc": "tools/gogen/emit-constructors.ts:9:19",
+        "message": "new Map is not a lowered class"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:15:71",
+        "message": "identifier classes is not a lowered local or module value",
+        "cascade": true
+      },
+      {
+        "category": "unsupported-shortcircuit",
+        "loc": "tools/gogen/emit-constructors.ts:17:43",
+        "message": "mixed tagged operands require value-preserving truthiness"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:20:22",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-call",
+        "loc": "tools/gogen/emit-constructors.ts:20:49",
+        "message": "call to KindIdentifier is not lowered"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:22:31",
+        "message": "identifier canOmit is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:24:28",
+        "message": "identifier Unsupported is not a lowered local or module value"
+      },
+      {
+        "category": "unsupported-expr",
+        "loc": "tools/gogen/emit-constructors.ts:24:15",
+        "message": "instanceof needs a lowered class operand"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:496:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:2446:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:2728:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:3778:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:4489:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:5154:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:5238:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:7242:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:7659:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:8025:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      },
+      {
+        "category": "unsupported-top-level",
+        "loc": "node_modules/@abaplint/core/build/abaplint.d.ts:8250:1",
+        "message": "top-level KindModuleDeclaration is not lowered"
+      }
+    ],
+    "afterHIRErrors": [
+      "node 69 (tools/gogen/ir.ts:7:49): duplicate or empty member",
+      "node 281 (tools/gogen/ir.ts:256:1): duplicate or empty member",
+      "node 9 (tools/gogen/ir.ts:256:1): invalid parameter type",
+      "node 631 (tools/gogen/ir.ts:270:1): duplicate or empty member",
+      "node 11 (tools/gogen/ir.ts:270:1): invalid parameter type",
+      "node 821 (tools/gogen/ir.ts:285:47): void type argument",
+      "node 836 (tools/gogen/ir.ts:288:3): void type argument",
+      "node 16 (tools/gogen/ir.ts:281:1): void type argument",
+      "node 16 (tools/gogen/ir.ts:281:1): void type argument",
+      "node 823 (tools/gogen/ir.ts:285:47): void type argument",
+      "node 0 (): void type argument",
+      "node 838 (tools/gogen/ir.ts:288:3): void type argument",
+      "node 0 (): void type argument",
+      "node 1087 (tools/gogen/ir.ts:307:108): void type argument",
+      "node 21 (tools/gogen/ir.ts:307:1): void type argument",
+      "node 1089 (tools/gogen/ir.ts:307:108): void type argument",
+      "node 0 (): void type argument",
+      "node 7327 (tools/gogen/symbols.ts:11:1): method may fall through without return",
+      "node 7332 (tools/gogen/symbols.ts:39:1): method may fall through without return",
+      "node 7707 (tools/gogen/symbols.ts:53:9): unsupported collection key dynamic",
+      "node 7707 (tools/gogen/symbols.ts:53:9): assignment type mismatch",
+      "node 7793 (tools/gogen/emit-constructors.ts:16:22): field on non-class",
+      "node 7793 (tools/gogen/emit-constructors.ts:16:22): unresolved field params",
+      "node 7336 (tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 7851 (tools/gogen/emit-constructors.ts:22:9): call argument type mismatch: classref<tools/gogen/emit-constructors.ts.ConstructorFactory> <- void in runtime .",
+      "node 7336 (tools/gogen/emit-constructors.ts:8:1): missing expression",
+      "node 7872 (tools/gogen/emit-constructors.ts:24:9): condition must be bool",
+      "node 7338 (tools/gogen/frontend-find-results.ts:5:1): invalid parameter body",
+      "node 7338 (tools/gogen/frontend-find-results.ts:5:1): missing method body",
+      "node 7340 (tools/gogen/frontend-find-results.ts:30:1): invalid parameter node",
+      "node 7340 (tools/gogen/frontend-find-results.ts:30:1): invalid parameter resultNode",
+      "node 7340 (tools/gogen/frontend-find-results.ts:30:1): missing method body"
+    ],
+    "deltaExplanation": "One additional explicit unsupported Stmt-family refusal is reached at the Extract source argument. No previous pilot blockers disappear; unsupported recursive layouts are not truncated."
+  },
+  "fullClosure": {
+    "files": [
+      "tools/gogen/append.ts",
+      "tools/gogen/emit-builtins.mjs",
+      "tools/gogen/emit-bytes.mjs",
+      "tools/gogen/emit-constructors.ts",
+      "tools/gogen/emit-exception.mjs",
+      "tools/gogen/emit-go.mjs",
+      "tools/gogen/emit-int8.mjs",
+      "tools/gogen/emit-local-constants.mjs",
+      "tools/gogen/emit-owned.mjs",
+      "tools/gogen/emit-packedint.mjs",
+      "tools/gogen/emit-table-move.mjs",
+      "tools/gogen/fold-scalars.ts",
+      "tools/gogen/frontend-analysis.mjs",
+      "tools/gogen/frontend-boolx.ts",
+      "tools/gogen/frontend-builtins.mjs",
+      "tools/gogen/frontend-bytes.mjs",
+      "tools/gogen/frontend-diagnostics.ts",
+      "tools/gogen/frontend-find-results.ts",
+      "tools/gogen/frontend-hierarchy.mjs",
+      "tools/gogen/frontend-literals.ts",
+      "tools/gogen/frontend-local-constants.mjs",
+      "tools/gogen/frontend-object-cache.mjs",
+      "tools/gogen/frontend-owned.mjs",
+      "tools/gogen/frontend-provenance-hooks.mjs",
+      "tools/gogen/frontend-provenance.mjs",
+      "tools/gogen/frontend-replay.mjs",
+      "tools/gogen/frontend-session.mjs",
+      "tools/gogen/frontend-source-key.mjs",
+      "tools/gogen/frontend-static.mjs",
+      "tools/gogen/frontend.mjs",
+      "tools/gogen/go-symbols.ts",
+      "tools/gogen/ir.ts",
+      "tools/gogen/sink-locals.mjs",
+      "tools/gogen/symbols.ts",
+      "tools/ir-ranges.mjs",
+      "tools/ir-writes.mjs",
+      "tools/osd-narrow-submit.mjs",
+      "tools/osd-samc.ts",
+      "tools/osd-source-identity.mjs",
+      "tools/sqlscript-ir.mjs",
+      "tools/sqlscript-lower.mjs"
+    ],
+    "checkerErrors": 0,
+    "publicRawExitCode": 2,
+    "basePublicRawExitCode": 2,
+    "publicPanicFrame": "tsfront.(*RegistryLowering).Evidence at tsfront/registry_build.go:308",
+    "samePublicPanicOnBase": true,
+    "publicDiagnosticInventoryComplete": false,
+    "supplementalRawError": "",
+    "supplementalRawInventoryComplete": true,
+    "supplementalRawBlockers": 5423,
+    "supplementalRawHIRErrors": 4663,
+    "supplementalRawCategories": {
+      "note-any-dynamic": 5297,
+      "note-builtin-error": 1,
+      "note-callback-inline": 52,
+      "note-cast": 1,
+      "note-cast-view": 1,
+      "note-class-value": 1,
+      "note-class-value-type": 867,
+      "note-closure": 42,
+      "note-data-interface": 48,
+      "note-default-param": 55,
+      "note-dynamic-record": 202,
+      "note-dynamic-string": 58,
+      "note-dynamic-union": 137,
+      "note-empty-map": 11,
+      "note-empty-set": 8,
+      "note-finally": 5,
+      "note-generic-erased": 1,
+      "note-instanceof-dynamic": 3,
+      "note-is-array": 27,
+      "note-locale-compare": 2,
+      "note-module-const-unread": 7,
+      "note-module-statement": 1,
+      "note-namespace-export-unread": 1,
+      "note-number-binary64": 27,
+      "note-number-ranges": 587,
+      "note-optional-chain": 4,
+      "note-optional-param": 10,
+      "note-record-map": 11,
+      "note-regex": 286,
+      "note-regex-mapped": 2,
+      "note-regex-type": 9,
+      "note-replace-all": 1,
+      "note-set-copy": 1,
+      "note-shape-subset": 81,
+      "note-sort-inline": 3,
+      "note-spread-push": 1,
+      "note-thunk-type": 3,
+      "note-union-root": 65,
+      "note-variadic": 1,
+      "skipped-cast-view": 6,
+      "skipped-interface-member": 34,
+      "unsupported-array": 125,
+      "unsupported-assignment": 94,
+      "unsupported-async": 1,
+      "unsupported-binding": 2,
+      "unsupported-call": 1300,
+      "unsupported-callback": 13,
+      "unsupported-closure": 10,
+      "unsupported-conditional-join": 5,
+      "unsupported-dynamic-comparison": 1,
+      "unsupported-expr": 3545,
+      "unsupported-generator": 1,
+      "unsupported-json": 5,
+      "unsupported-new": 84,
+      "unsupported-number": 1,
+      "unsupported-param": 9,
+      "unsupported-shortcircuit": 20,
+      "unsupported-statement": 8,
+      "unsupported-top-level": 29,
+      "unsupported-type": 130
+    },
+    "rawHIRErrorExamples": [
+      "node 31540 (tools/gogen/emit-table-move.mjs:69:70): unsupported collection key dynamic",
+      "node 7336 (tools/gogen/frontend-provenance.mjs:27:3): missing expression",
+      "node 75202 (tools/gogen/frontend-provenance.mjs:29:5): condition must be bool",
+      "node 7336 (tools/gogen/frontend-provenance.mjs:27:3): method may fall through without return",
+      "node 7337 (tools/gogen/frontend-provenance.mjs:36:3): missing expression",
+      "node 75209 (tools/gogen/frontend-provenance.mjs:38:5): condition must be bool",
+      "node 7337 (tools/gogen/frontend-provenance.mjs:36:3): method may fall through without return",
+      "node 7338 (tools/gogen/frontend-provenance.mjs:41:3): method may fall through without return",
+      "node 0 (): unresolved local t75226",
+      "node 0 (): unresolved local t75226",
+      "node 7339 (tools/gogen/frontend-provenance.mjs:44:3): missing expression",
+      "node 75277 (tools/gogen/frontend-provenance.mjs:49:7): condition must be bool",
+      "node 7341 (tools/gogen/frontend-provenance.mjs:60:3): missing expression",
+      "node 75325 (tools/gogen/frontend-provenance.mjs:61:5): condition must be bool",
+      "node 7341 (tools/gogen/frontend-provenance.mjs:60:3): missing expression"
+    ],
+    "repairRefusalRecords": 5424,
+    "repairRefusalCategories": {
+      "note-dropped-declaration": 134,
+      "note-trap-failure": 5290
+    },
+    "repairedHIRErrors": 0,
+    "goFiles": 0,
+    "goEmissionRefusal": "node 32553 (tools/gogen/frontend-analysis.mjs:45:17): not supported in the Go prototype: JavaScript regexp /\\bdefine\\s+(?:root\\s+)?view\\s+(?!entity\\b)([\\w\\/]+)/i",
+    "abapFiles": 0,
+    "abapEmissionRefusal": "node 4987 (tools/gogen/ir.ts:19:1): runtime operation union.declarations has no emitter for selected target ABAP",
+    "executionAccepted": false,
+    "measurementDriverRevision": "11b3a55ecd97e3138307791dace0dd9914e226e1:cmd/gogen-spike/main.go"
+  },
+  "acceptedFixtures": {
+    "test": "TestRecursiveSubsetsNodeOracle",
+    "cases": [
+      "shared-secondary-negative",
+      "multi-literal-fallthrough",
+      "extract-one-many-indexed",
+      "extract-none",
+      "utility-first",
+      "shared-typeof",
+      "typed-expr-intersection"
+    ],
+    "blockingDiagnostics": 0,
+    "hirErrors": 0,
+    "bodyTraps": 0,
+    "runtimeTraps": 0,
+    "nodeStdoutEqual": true,
+    "serializedDeclarationsAndDumpEqual": true,
+    "abapOrdinaryAndTestEmittersRefuseBeforeBodyTraps": true
+  },
+  "negativeProof": {
+    "membershipTest": "TestRecursiveSubsetsInvalidPayloadRefusal",
+    "membershipCases": [
+      "shared-number",
+      "shared-string",
+      "secondary",
+      "extract-one",
+      "extract-many",
+      "extract-none",
+      "wrong-array",
+      "missing-field"
+    ],
+    "featureTest": "TestRecursiveSubsetFeatureRefusalsNodeOracle",
+    "featureCases": [
+      "multi-literal-payload",
+      "multi-literal-tag",
+      "negative-guard",
+      "fallthrough-payload",
+      "indexed-field",
+      "typed-expr-required-field"
+    ],
+    "liveTest": "TestRecursiveSubsetsLivePayloadRefusalNodeOracle",
+    "liveCases": [
+      "scalar",
+      "secondary"
+    ],
+    "hirTests": [
+      "TestUnionSubsetContracts",
+      "TestUnionLiteralContractRefusals"
+    ],
+    "existingSlice1TestsAlsoPass": true
+  },
+  "mutant": {
+    "source": "tsfront/recursive_subsets.go",
+    "function": "familySubsetType",
+    "original": "return hir.Type{Kind: hir.UnionRef, Name: name}, true",
+    "mutated": "return hir.Type{Kind: hir.UnionRef, Name: u.Name}, true",
+    "test": "TestRecursiveSubsetsNodeOracle/extract-one-many-indexed",
+    "exitCode": 1,
+    "killed": true,
+    "unmutatedTestPasses": true,
+    "failure": "recursive union field value requires narrowing; method may fall through without return",
+    "isolatedWorktree": true,
+    "compilerBuildRevision": "ee044b7e4a96083456c3602c45e59a73bb47be6e"
+  },
+  "shards": {
+    "pin": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+    "results": [
+      {
+        "name": "abap/nodes",
+        "nodeActivePassedBefore": 2,
+        "nodeActivePassedAfter": 2,
+        "registered": 2,
+        "nodePending": 0,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 2,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "cccb30aa9ed469f9c927d8e9a6c2d637350039f0b792189f06619f09ac2af786"
+      },
+      {
+        "name": "abap/statements",
+        "nodeActivePassedBefore": 4962,
+        "nodeActivePassedAfter": 4962,
+        "registered": 4962,
+        "nodePending": 0,
+        "originalNodeAfterFailures": 1,
+        "originalNodeAfterFailureTitles": [
+          "ADD statement type \"add 2 to lv_foo.\" should be ADD"
+        ],
+        "freshOriginalNodePassed": 4962,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "152c86e971c6ee5f1add764b1c341dfdc9d8cb1af418c32208a6f3aa95aef79c"
+      },
+      {
+        "name": "abap/syntax",
+        "nodeActivePassedBefore": 1363,
+        "nodeActivePassedAfter": 1363,
+        "registered": 1373,
+        "nodePending": 10,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 1363,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "8d83938a8dee35c1427741dfb751daa14040559ca26e8f5211178e44e3a8decb"
+      },
+      {
+        "name": "abap/types",
+        "nodeActivePassedBefore": 29,
+        "nodeActivePassedAfter": 29,
+        "registered": 29,
+        "nodePending": 0,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 29,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "32778c7b35c0b9d8838895ff84eda852657a6026d5dc595500b4d5659575874c"
+      },
+      {
+        "name": "lsp",
+        "nodeActivePassedBefore": 188,
+        "nodeActivePassedAfter": 188,
+        "registered": 193,
+        "nodePending": 5,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 188,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "5ebbd9ad316fca36de0505abdbcd44fe87b8310b5818c1337068a3167eb94ab2"
+      },
+      {
+        "name": "objects",
+        "nodeActivePassedBefore": 144,
+        "nodeActivePassedAfter": 144,
+        "registered": 145,
+        "nodePending": 1,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 144,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "9a7adc583972b997e6f1133bc73d5e4993270ff2b1b38202eaee7c434ae48dbf"
+      },
+      {
+        "name": "rules",
+        "nodeActivePassedBefore": 3149,
+        "nodeActivePassedAfter": 3149,
+        "registered": 3159,
+        "nodePending": 10,
+        "originalNodeAfterFailures": 0,
+        "originalNodeAfterFailureTitles": [],
+        "freshOriginalNodePassed": 3149,
+        "freshOriginalNodeFailed": 0,
+        "failures": 0,
+        "traps": 0,
+        "unregistered": 0,
+        "titleRegistrationPassTrapMultisetEqual": true,
+        "titleStatusMessageMultisetSHA256": "98d26273ce345b3266596d44f653898890aebba11a7e1bf1dcf6866deedea4ae"
+      }
+    ],
+    "totals": {
+      "passed": 9837,
+      "failed": 0,
+      "trapped": 0,
+      "asyncPending": 0,
+      "notRun": 26,
+      "registered": 9863,
+      "total": 9863,
+      "asyncOrDone": 0,
+      "skippedOrFocused": 26,
+      "unregistered": 0
+    },
+    "all17ShardsCertifiedByThisRun": false,
+    "freshOriginalNodeCertification": {
+      "separateFreshPinnedBuild": true,
+      "sameTimeoutsAndSource": true,
+      "command": "node .tmp/union-abi-s2/certify-node-shards.mjs",
+      "failed": 0,
+      "passed": 9837,
+      "initialTimeoutNotCreditedAsPass": "One after-run original Node ADD test exceeded 250ms under compiler load; original failure is retained separately and final certification reruns every original selected shard after heavy work."
+    }
+  },
+  "gates": {
+    "vet": "pass",
+    "short": "pass (go test -short -p 2 -timeout 40m ./...)",
+    "graceGolden": "pass; unchanged",
+    "backendGuard": "pass",
+    "lintVsOriginSelfhost": "pass; 0 new issues, canary 5/5",
+    "hirUnit": "pass; HIR_RUNTIMES=\" \"; exact OSG/transpiler/runtime/library pins; 0 lint issues",
+    "hirUnitOSGPin": "f83dc5c3e05bfaea71268fd6ad0e9ff88532cce6",
+    "zabapgitGoSourceModuleDiff": "empty; executable excluded; both compilers --scope zabapgit --target go",
+    "zabapgitGoSourceModules": {
+      "go.mod": "1e0591999faff09d57e9f1743365dcde5bfb8ca9633e871ce0263614b061e905",
+      "hir.go": "4cd471fa39256c5f75b312053be080208cc07092332a5cf83e59ce0d7bb60e2d",
+      "hir_profile.go": "80a759c8d628939782e3eea6f10e543a363388ec96ed0c329aac030eea4d9216",
+      "literals.go": "ec9f367ed89432ed2410638bf083b50eee814c9f85aa59c302337d0da2076ec7",
+      "main.go": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+      "runtime.go": "c2361673b30a4093de9fd5e170b670f3ebc2cba97cdc4900052228c6cb31c1f5",
+      "site_profile.go": "5c1f3b715f2bbad37f13a174d0db81bc2d43184973bde44a5aff9b1c3abb0803",
+      "site_profile_off.go": "4f07dc8fd8b26ff04fb5ee339e0a081aa7d5aa728025ca2e86bea99fbedff2fc"
+    },
+    "freshOriginalNodeKit": {
+      "clean": {
+        "issues": 0,
+        "byteIdentical": true
+      },
+      "seeded": {
+        "issues": 5,
+        "byteIdentical": true
+      }
+    },
+    "goKit": {
+      "clean": {
+        "seconds": [
+          37.704438265413046
+        ],
+        "median_seconds": 37.704438265413046,
+        "byte_identical": true,
+        "issues": 0
+      },
+      "seeded": {
+        "seconds": [
+          44.788465317338705
+        ],
+        "median_seconds": 44.788465317338705,
+        "byte_identical": true,
+        "issues": 5
+      }
+    },
+    "trackedGoldenChanges": false,
+    "pushPerformed": false
+  },
+  "setupAndSupersededRunsNotCredited": [
+    "missing core npm declarations before locked package install",
+    "relative package-local HIR fixture output before resolved-directory rerun",
+    "superseded compiler snapshots and short runs before final refusal test file"
+  ],
+  "compilerImplementationFilesEqualBuildRevision": true
+}

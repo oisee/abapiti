@@ -136,6 +136,7 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 	if subject == nil {
 		return nil
 	}
+	allowFallthrough := l.unprunedFeatures && subject.Kind == hir.RuntimeOp && subject.Op == "union.tag"
 	var clauses []*ast.Node
 	for _, c := range sw.CaseBlock.AsCaseBlock().Clauses.Nodes {
 		clauses = append(clauses, c)
@@ -168,7 +169,7 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 					break
 				}
 			}
-			if i+1 < len(clauses) && !terminated {
+			if i+1 < len(clauses) && !terminated && !allowFallthrough {
 				l.diagf(c, "unsupported-statement", "nonempty switch fallthrough is not lowered")
 				return nil
 			}
@@ -207,6 +208,9 @@ func (l *lowerer) switchStatement(n *ast.Node) *hir.Stmt {
 		}
 		l.push()
 		defer l.pop()
+		if allowFallthrough {
+			return l.familySwitchBody(c, clauses)
+		}
 		return hir.B(l.stmtList(clauseStatements(c))...)
 	}
 	// Default is the fallback after *all* case tests, wherever it appears.

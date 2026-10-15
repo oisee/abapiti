@@ -12,6 +12,9 @@ func Dump(p *Program) string {
 		fmt.Fprintf(&b, "union %s tag %s complete %t\n", u.Name, u.Discriminant, u.Complete)
 		for _, a := range u.Alternatives {
 			fmt.Fprintf(&b, "  alternative %s tags %q payload %s\n", a.ID, a.Tags, a.Payload)
+			for _, f := range a.Literals {
+				fmt.Fprintf(&b, "    literals %s %q\n", f.Field, f.Values)
+			}
 		}
 	}
 	method := func(m *Method) {
@@ -194,6 +197,8 @@ func dumpExpr(e *Expr) string {
 		s = string(e.Kind) + " " + e.Owner
 	case Seq:
 		s = "seq " + dumpExpr(e.Y)
+	case ExternCall:
+		s = "extern " + e.Owner + "." + e.Name + "(" + a + ")"
 	case RuntimeOp:
 		s = e.Op + "(" + dumpExpr(e.X)
 		if strings.HasPrefix(e.Op, "union.") {

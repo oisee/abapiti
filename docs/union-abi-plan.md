@@ -11,7 +11,7 @@ a recursive Node differential. Estimated scope is 2–4 engineering days, includ
 review and the requested gates. This exceeds the approximately one-day limit.
 A placeholder alias or a trap-only Go build would not establish the ABI.
 The reconnaissance commit changed no compiler, runtime, fixture, golden, or OSG
-source. Slice 1 implementation and measured acceptance are recorded in PROGRESS
+source. Slices 1 and 2 implementation and measured acceptance are recorded in PROGRESS
 below; the remaining slices are still separate work.
 
 ## Inputs and current typing
@@ -635,3 +635,239 @@ the later slices and are not counted as Slice 1 passes. No OSG source rewrites,
 body traps or partial layouts were used to establish acceptance. Work is
 committed on `feat/union-abi-s1` with Alice's identity and the requested trailers;
 no push was performed.
+
+## PROGRESS — Slice 2 (Alice, 2026-10-15)
+
+Started `feat/union-abi-s2` from `origin/selfhost`. Read the Slice 1 acceptance
+and evidence. Work is limited to recursive/union code and new files, with small
+integration hooks if required so concurrent collection-iterable work can proceed.
+The implementation will retain checker-selected subset membership and original
+recursive layouts, normalize utility/indexed types, and validate shared-tag
+payloads against secondary literal domains and field types. Go execution and
+explicit ABAP refusal remain the boundary. Node oracles, invalid-payload proofs,
+a named core-line mutant, pilot remeasurement and every requested gate are
+pending; no Slice 2 acceptance claim is made at this checkpoint.
+
+### Slice 2 checkpoint 1 — retained subsets and executable guards
+
+Implemented checker-selected subsets sharing retained payload layouts, including
+utility-first Extract registration, indexed aliases, distributed TypedExpr
+intersections, secondary string domains and multi-literal tags. Common scalar
+reads preserve Dynamic storage for checker-proven `typeof` refinements. Shared-tag
+construction requires checker assignability; Go payload validation checks required
+own fields, scalar types and secondary literal domains on every access, including
+retained views. ABAP ordinary/test emission still refuses before body traps.
+Nonempty fallthrough is enabled only for recursive-union tag switches, retaining
+the original checker flow for each executed clause. The integration changes are
+one lowerer catalogue field, a subset-narrowing hook, and a small switch hook.
+
+The complete recursive positive/refusal suite passes, including the new seven
+Node differential fixtures, seven static invalid-membership cases and two live
+shared-payload corruption oracles. Accepted fixtures have zero blockers/HIR
+errors. All final gates, the core-line mutant and pilot counts remain pending.
+The baseline shard attempt first lacked core-package npm declarations; it was
+restarted after installing the locked dependencies and that setup failure is
+not credited as a pass. OSG main fetched for remeasurement is
+`4fa08e8e4b156b5022081ffcd20e13d3fbc8120d`.
+
+### Slice 2 checkpoint 2 — layout/refinement audit and gate progress
+
+Fixed registration-order-dependent intersection loss: subset reuse now requires
+matching retained field layouts; intersections adding fields register their own
+complete layouts. The TypedExpr oracle first registers Expr, then checks the
+additional required type field. Indexed subset reads use the same verified
+common-read operation; indexed writes refuse under the existing alias policy.
+Constructor admission validates secondary/subset literal domains as well as
+payload assignability. HIR tests cover directional inclusion, invalid subset
+projection, malformed/empty/duplicate domains and incompatible literal storage.
+Go validation also checks array/reference categories without expanding cycles.
+
+Vet, unchanged Grace golden, backend guard and lint against `origin/selfhost`
+passed (0 new issues; canary 5/5). Hir-unit's first invocation used package-local
+relative fixture output and failed setup; its resolved-directory rerun is in
+progress, with zero issues in completed lint groups. The full short suite,
+baseline/after shard comparison and default Go diff remain in progress. The
+interim pilot was 60 scoped blockers (54 root / 6 cascade), 29 scoped HIR errors;
+71 whole-report blockers and 32 HIR errors. These counts precede the final layout
+audit and will be superseded by the final measurement. The isolated one-line
+subset-widening mutant is building/running; it is not yet credited as killed.
+
+### Slice 2 checkpoint 3 — execution/refusal proof and final measurements
+
+All seven positive Node fixtures pass with zero blockers/HIR errors and no
+body/runtime traps. Invalid-payload proof now covers eight membership cases,
+six additional per-feature Node contract/refusal cases (multi-literal payload/tag,
+negative guard, fallthrough payload, indexed field, required TypedExpr field),
+and two live shared-payload corruption cases. ABAP ordinary/test emission refuses.
+The isolated core-line mutant replaces the retained subset result with its full
+family in `familySubsetType`; it fails
+`TestRecursiveSubsetsNodeOracle/extract-one-many-indexed` with a payload-read
+narrowing refusal and missing return. The unmutated oracle passes.
+
+Final vet, lint against `origin/selfhost` (0 new issues, canary 5/5), Grace and
+backend guards pass. Complete hir-unit passes with zero lint issues and exact
+OSG/transpiler/runtime/library pins, with `HIR_RUNTIMES=" "`. The default zabapgit
+Go source/module diff versus `origin/selfhost` is empty. Fresh original pinned
+Node and Go both equal the frozen release-kit issue bytes: clean 0, seeded 5.
+The complete short suite and seven-shard title comparison are still in progress.
+
+The final four-root public pilot against OSG main
+`4fa08e8e4b156b5022081ffcd20e13d3fbc8120d` measures 60 scoped blockers
+(54 root / 6 cascade), 29 scoped HIR errors; whole report 71 blockers
+(65 root / 6 cascade), 32 HIR errors. Original tsc reports zero errors. A new
+same-source `origin/selfhost` measurement is 59 scoped blockers (53 / 6),
+29 scoped HIR errors; Slice 2 adds one explicit already-unsupported Stmt-family
+refusal at the Extract source argument, with no removed blockers. This is
+separate from the historical Slice 1 61 / 27 measurement. Recursive Stmt still
+contains unsupported members; normalized utilities cannot publish truncated
+layouts. Full-closure supplemental remeasurement remains in progress. These
+pilot refusals do not establish executable gogen.
+
+### Slice 2 checkpoint 4 — complete short gate and raw closure evidence
+
+The complete `go test -short -p 2 -timeout 40m ./...` run now passes, including
+all final refusal tests. Vet and lint were refreshed on that complete test tree
+and pass. All other non-shard gates above are complete. Original per-title
+artifacts are retained independently of the harness's successful-run cleanup.
+Completed nodes/statements/syntax before/after Go title/status/message multisets
+are equal, with zero Go failures/traps. Remaining shard comparisons are running.
+One original Node after-run ADD test timed out at its existing 250 ms limit under
+concurrent compiler load (baseline Node passed). This Node run is not credited as
+FAIL 0; an independent fresh-original Node retry with the same timeout and source
+will run after heavy jobs finish. The original failure evidence is retained.
+
+The supplemental full closure now resolves 41 implementation files at current
+OSG main, with zero checker errors, 5,423 raw blockers and 4,663 raw HIR errors.
+Its original API diagnostic inventory is complete. Repair records are 5,424
+(134 dropped declarations / 5,290 trapped failures), with zero repaired HIR errors;
+Go still refuses emission at the unimplemented lookahead regexp in
+`tools/gogen/frontend-analysis.mjs:45:17`, and ABAP explicitly refuses union
+family declarations. No Go/ABAP files or executable-generator pass result.
+The public full-closure command exits 2 while writing evidence at
+`RegistryLowering.Evidence`, `tsfront/registry_build.go:308`, on both the unchanged
+base and Slice 2. This differs from the historical Slice 1 number-pass panic;
+the API inventory and public-command failure are recorded separately. Neither
+repair-mode verifier success nor the changed main closure size is credited as
+Slice 2 execution proof.
+
+### Slice 2 acceptance — complete, Go backend only
+
+Slice 2 satisfies its row: checker-selected subsets retain the original recursive
+payload layouts; Extract and indexed-access annotations normalize through their
+resolved checker types, including utility-first registration. Shared primary tags
+retain secondary literal domains and different payload types. Multi-literal tags,
+negative/secondary/typeof guards, nonempty switch fallthrough, Extract selecting
+one/many/none, indexed field reads and TypedExpr intersections execute correctly.
+Intersections adding required fields retain their own completed layouts even when
+Expr was registered first. Subset projection and widening keep the original live
+object storage. Mutable payload writes remain explicit refusals. ABAP ordinary
+and test emission explicitly refuse the ABI before body traps.
+
+Implementation checkpoint `3f3350144842021162f336317ce3f34ca25f795c` has the same
+compiler source tree as the measured artifact; later checkpoints add refusal
+tests and evidence. [Normalized evidence](evidence/union-abi-s2.json) records the
+build revision, equivalent exact-identity commit, implementation/source hashes,
+full pilot diagnostics, closure histograms, per-title hashes and gate results.
+All compiler implementation files remain byte-identical to the measured build.
+
+`TestRecursiveSubsetsNodeOracle` passes all seven original Node differentials:
+`shared-secondary-negative`, `multi-literal-fallthrough`,
+`extract-one-many-indexed`, `extract-none`, `utility-first`, `shared-typeof`, and
+`typed-expr-intersection`. Every accepted fixture has zero blocking diagnostics,
+zero HIR errors, zero body/runtime traps and equal Go/Node stdout. Serialization
+retains declarations, refinements and equal dumps. The complete Slice 1 recursive
+suite also passes. Fourteen source-level invalid contract cases, two live
+shared-payload corruption cases and the HIR subset/literal-domain negative tests
+refuse invalid payloads, illegal reads or malformed membership. No assertion
+mismatch is credited as a refusal.
+
+The core-line mutant widens `familySubsetType`'s retained result back to its full
+family (`Name: name` → `Name: u.Name`). It is killed by
+`TestRecursiveSubsetsNodeOracle/extract-one-many-indexed`: the payload read
+requires narrowing and the resulting method lacks a return. The same unmutated
+test passes. The mutation ran in an isolated worktree and is absent from this
+branch's implementation.
+
+#### Slice 2 pilot remeasurement
+
+The recorded public command was rerun with `--full --scope tools/gogen
+--assume-int=false` on the four original typed roots, without pruning, overrides,
+repair traps or OSG source edits. OSG main is
+`4fa08e8e4b156b5022081ffcd20e13d3fbc8120d`, clean; dependencies and the explicit
+Node-types config adjustment live only in scratch. Original TypeScript 5.9.3 and
+the compiler checker both report zero errors. The comparison below uses the same
+OSG main inputs for `origin/selfhost` (`fa2ffc9`) and Slice 2.
+
+| Measurement, current OSG main | Before Slice 2 | After Slice 2 |
+| --- | ---: | ---: |
+| Scoped pilot blockers | 59 | 60 |
+| Scoped compiler root / cascade | 53 / 6 | 54 / 6 |
+| Scoped untrapped HIR errors | 29 | 29 |
+| Whole pilot report blockers | 70 | 71 |
+| Whole pilot report root / cascade | 64 / 6 | 65 / 6 |
+| Whole pilot report HIR errors | 32 | 32 |
+| Checker errors | 0 | 0 |
+| Resolved TS/JS implementation files | 41 | 41 |
+| Public full-closure raw command | evidence panic, exit 2 | same evidence panic, exit 2 |
+
+Slice 2 exposes one additional explicit refusal for the already-unsupported Stmt
+family at the Extract source argument; no previous pilot blocker disappears.
+Utilities depending on unsupported recursive members still refuse rather than
+publish truncated layouts. The historical Slice 1 61-blocker / 27-HIR-error pilot
+uses an older compiler/main snapshot and is not this same-source baseline.
+These measurements do not establish executable gogen.
+
+The supplemental original API run returns a complete raw closure inventory:
+5,423 blockers and 4,663 HIR errors. The public command instead panics in
+`RegistryLowering.Evidence`, `tsfront/registry_build.go:308`, on both compilers;
+its missing diagnostic inventory is not reported as zero. Supplemental repair
+has 5,424 refusal records (134 dropped declarations, 5,290 trapped failures),
+zero repaired HIR errors and zero emitted Go/ABAP files. Go emission refuses the
+unsupported lookahead regexp at `tools/gogen/frontend-analysis.mjs:45:17`; ABAP
+refuses union declarations. Repaired verification is not execution acceptance.
+
+#### Slice 2 regression gates
+
+| Gate | Result |
+| --- | --- |
+| `go vet ./...` | Pass |
+| `go test -short -p 2 -timeout 40m ./...` | Pass, complete final tree including all new refusal tests |
+| Grace lexer facts golden | Pass, tracked golden unchanged |
+| Default/selected-target backend guard | Pass |
+| Lint against `origin/selfhost` | 0 new issues, canary 5/5, golangci-lint 2.13.2 |
+| Complete hir-unit, `HIR_RUNTIMES=" "` | Pass, 0 lint issues, exact OSG/transpiler/runtime/library pins |
+| Frozen zabapgit Go source/module comparison | Empty recursive diff; executable excluded |
+| Fresh original Node / Go clean and seeded release kit | Both byte-identical: 0 / 5 issues |
+
+The default deployment comparison uses `--scope zabapgit --target go` on both
+compilers because `origin/selfhost`'s unqualified CLI default is full core.
+Hir-unit uses a separate clean writable OSG copy at
+`f83dc5c3e05bfaea71268fd6ad0e9ff88532cce6` and the exact
+`f34e9bf4947daaf6464566b42b1e3ef1eaeb369c` transpiler/runtime build. The main OSG
+source clone remains clean and read only. Setup failures and superseded runs are
+not credited as passed gates.
+
+All seven targeted shards at `577f875ebec44cfaf64841cfe71c8ab8dc32622e` have
+identical before/after title/registration/pass/trap/message multisets. Go has
+zero failures, zero traps and zero unregistered tests. A separate fresh original
+Node build certifies every selected shard with zero failures and unchanged
+source/timeouts after compiler jobs finish.
+
+| Shard | Node-active passes before / after | Registered | Node-pending |
+| --- | ---: | ---: | ---: |
+| `abap/nodes` | 2 / 2 | 2 | 0 |
+| `abap/statements` | 4,962 / 4,962 | 4,962 | 0 |
+| `abap/syntax` | 1,363 / 1,363 | 1,373 | 10 |
+| `abap/types` | 29 / 29 | 29 | 0 |
+| `lsp` | 188 / 188 | 193 | 5 |
+| `objects` | 144 / 144 | 145 | 1 |
+| `rules` | 3,149 / 3,149 | 3,159 | 10 |
+| **Total** | **9,837 / 9,837** | **9,863** | **26** |
+
+The initial after-run original Node statements oracle had one ADD timeout at its
+existing 250 ms limit during concurrent compilation. That failure is retained
+and not credited as FAIL 0. Fresh original Node certification reran all seven
+shards with the same source and timeouts: 9,837 passes, 0 failures, 26 pending.
+No test source or timeout was changed, and no failure was relabeled a refusal.
+This targeted run does not certify all 17 shards or the full 11,060 denominator.
+All changes are committed locally with the requested identity/trailers; no push.
