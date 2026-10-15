@@ -220,7 +220,13 @@ func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 			}
 		} else if method != nil {
 			sym := l.resolve(n)
-			if sym.ValueDeclaration == nil || sym.ValueDeclaration.Body() == nil || touchesThis(sym.ValueDeclaration.Body()) {
+			if sym.ValueDeclaration == nil || sym.ValueDeclaration.Body() == nil {
+				// An interface or abstract method: the implementation that
+				// would run without its receiver is not known statically.
+				l.diagf(n, "unsupported-closure", "unbound method value has no known implementation to check for this")
+				return nil
+			}
+			if touchesThis(sym.ValueDeclaration.Body()) {
 				l.diagf(n, "unsupported-closure", "unbound method value uses this")
 				return nil
 			}

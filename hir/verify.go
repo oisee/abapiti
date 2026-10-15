@@ -979,6 +979,19 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		}
 		eq(t, T(String))
 		args(nil)
+	case "json.stringifyReplacer":
+		if a.Kind == Void || len(e.Args) != 3 {
+			v.fail(e.Node, "JSON replacer writer needs a value, a replacer, a key list and a gap")
+			return
+		}
+		fn, keys, gap := check(e.Args[0]), check(e.Args[1]), check(e.Args[2])
+		if !(fn.Equal(T(Optional, T(Dynamic))) && e.Args[0].Kind == Lit) && !v.replacerCallable(fn) {
+			v.fail(e.Node, "JSON replacer must be a (key: string, value: any) => any closure")
+		}
+		if !keys.Equal(T(Optional, T(Array, T(String)))) || !gap.Equal(T(String)) {
+			v.fail(e.Node, "JSON replacer key list or gap has the wrong type")
+		}
+		eq(t, T(Optional, T(String)))
 	case "json.stringifyConfig":
 		if a.Kind != ClassRef || a.Name != "src/_config.ts.IConfig" {
 			v.fail(e.Node, "json.stringifyConfig needs the pinned IConfig data class reference")
@@ -1063,6 +1076,20 @@ func (v *verifier) sharedClassBase(a, b string) bool {
 			if x.Name == y.Name {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// replacerCallable: a closure interface whose single method takes (String,
+// Dynamic) and returns Dynamic, the JSON.stringify replacer ABI.
+func (v *verifier) replacerCallable(t Type) bool {
+	if t.Kind != InterfaceRef {
+		return false
+	}
+	for _, in := range v.p.Interfaces {
+		if in.Name == t.Name {
+			return len(in.Methods) == 1 && len(in.Methods[0].Params) == 2 && in.Methods[0].Params[0].Type.Equal(T(String)) && in.Methods[0].Params[1].Type.Equal(T(Dynamic)) && in.Methods[0].Result.Equal(T(Dynamic))
 		}
 	}
 	return false

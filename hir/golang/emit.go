@@ -130,6 +130,15 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.configJSON {
 		jsonWriter = configJSONRuntimeSource
 	}
+	if e.jsonReplacer {
+		for _, patch := range configJSONReplacerPatches {
+			if !strings.Contains(jsonWriter, patch[0]) {
+				panic("JSON replacer runtime patch target moved: " + patch[0])
+			}
+			jsonWriter = strings.Replace(jsonWriter, patch[0], patch[1], 1)
+		}
+		jsonWriter += configJSONReplacerSource
+	}
 	runtime := runtimeSource
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
@@ -247,6 +256,7 @@ type emitter struct {
 	usesLiveArrays    bool
 	spreadRuntime     bool
 	collectionProbe   bool
+	jsonReplacer      bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool
@@ -1359,9 +1369,10 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x.Kind == hir.RuntimeOp && x.Op == "classvalue.newArgs" {
 		e.constructorArgs = true
 	}
-	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
+	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset" || x.Op == "json.stringifyReplacer") {
 		e.configJSON = true
-		e.nativeJSON = e.nativeJSON || x.Op == "json.stringifySubset"
+		e.nativeJSON = e.nativeJSON || x.Op != "json.stringifyConfig"
+		e.jsonReplacer = e.jsonReplacer || x.Op == "json.stringifyReplacer"
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

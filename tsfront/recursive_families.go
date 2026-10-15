@@ -453,7 +453,7 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 	}
 	r.failed = true
 	if r.reason == "" {
-		r.reason = "unsupported checker type " + l.ck.TypeToString(t)
+		r.reason = "unsupported checker type " + l.ck.TypeToString(t) + r.memberReason(t)
 	}
 	return hir.T(hir.Void)
 }

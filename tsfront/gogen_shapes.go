@@ -79,7 +79,12 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 		}
 		field := hir.Field{Node: l.node(at), Name: p.Name, Type: ft, Readonly: shapePropertyReadonly(p)}
 		c.Fields = append(c.Fields, field)
-		l.fields[p] = field
+		if p.ValueDeclaration == nil || p.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+			// A class method inherited into the data view stays a method of
+			// its class: registering it as a field would turn every call of
+			// that method into a stored-function call.
+			l.fields[p] = field
+		}
 		c.PrimitiveReads = c.PrimitiveReads || l.checkedFields[at] && (ft.Kind == hir.String || ft.Kind == hir.Number || ft.Kind == hir.Bool)
 		ctor.Params = append(ctor.Params, hir.Param{Name: p.Name, Type: ft})
 		body = append(body, &hir.Stmt{Kind: hir.Assign, Node: l.node(at), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(at), Name: p.Name, Type: ft, X: &hir.Expr{Kind: hir.This, Node: c.Node, Type: hir.Ref(c.Name)}}, Y: hir.V(p.Name, ft)})
