@@ -297,3 +297,13 @@ func Join(x ...string) string {return "called"}`} {
 		})
 	}
 }
+
+func TestExternShadowedNamespaceStaysExcluded(t *testing.T) {
+	r, _, _ := externProject(t,
+		`import * as io from "./host"; class Probe { static run():string { const io="ok"; return io; } }`,
+		`const marker=new Date(); export function f():string{return "";}`)
+	requireExternClean(t, r)
+	if dump := hir.Dump(r.Prog); strings.Contains(dump, "marker") {
+		t.Fatalf("extern initializer entered HIR:\n%s", dump)
+	}
+}
