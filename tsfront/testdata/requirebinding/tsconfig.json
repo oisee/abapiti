@@ -8,8 +8,9 @@
     "allowJs": true,
     "paths": {
       "@fake/core": ["./fake-core/index.ts"],
+      "@fake/values": ["./fake-values/index.ts"],
       "@fake/transpiler/build/src/rearranger": ["./fake-transpiler/rearranger.ts"]
     }
   },
-  "include": ["probe.mjs", "fake-core/*.ts", "fake-transpiler/*.ts", "types/*.d.ts"]
+  "include": ["probe.mjs", "fake-core/*.ts", "fake-transpiler/*.ts", "fake-values/*.ts", "types/*.d.ts"]
 }

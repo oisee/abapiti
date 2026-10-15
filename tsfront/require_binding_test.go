@@ -71,7 +71,32 @@ func lowerRequireFixture(t *testing.T, dir string) (*hir.Program, []LowerDiagnos
 // (namespace member instanceof, new of a destructured class, static method,
 // instance call). Go always runs; Node compares when present.
 func TestRequireBindingNodeOracle(t *testing.T) {
-	dir := copyRequireFixture(t, "")
+	runRequireOracle(t, "", "char:3|int|C3|'x'|I>C3\n")
+}
+
+// Destructured const exports keep their initialized value; functions bind
+// too. (A plain binding's member read of a mutable export, values.count, is
+// refused like the same read through an ES namespace import.)
+func TestRequireBindingValuesNodeOracle(t *testing.T) {
+	runRequireOracle(t, `import {createRequire} from "node:module";
+const require = createRequire(import.meta.url);
+/** @type {typeof import("@fake/values")} */
+const {answer, bump} = require("@fake/values");
+export class Probe {
+  /** @returns {string} */
+  static run() {
+    bump();
+    return answer + "|" + (answer + 1);
+  }
+}
+`, "42|43\n")
+}
+
+// runRequireOracle lowers the fixture (probe replaced unless empty), runs
+// Probe.run() on Go against want, emits ABAP, and compares with Node.
+func runRequireOracle(t *testing.T, probe, want string) {
+	t.Helper()
+	dir := copyRequireFixture(t, probe)
 	prog, diags := lowerRequireFixture(t, dir)
 	for _, d := range diags {
 		if !strings.HasPrefix(d.Category, "note-") {
@@ -85,7 +110,6 @@ func TestRequireBindingNodeOracle(t *testing.T) {
 		t.Fatal(errs[0])
 	}
 	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.mjs.Probe", "run")))
-	const want = "char:3|int|C3|'x'|I>C3\n"
 	if got != want {
 		t.Fatalf("Go %q, want %q", got, want)
 	}
