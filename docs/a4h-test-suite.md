@@ -4,7 +4,7 @@ This is **phase 2, stage 1: build only**. None of these tools connect to SAP,
 activate objects, create jobs, or fetch database rows. Deployment, activation,
 background jobs and ST22 inspection belong to the coordinator.
 
-## Build the two packages
+## Build the core, registry and tests packages
 
 Use the pinned abaplint checkout (commit `577f875e`, core 2.120.56, `npm ci`
 already completed), Go 1.26.0 and the project's normal Node dependencies:
@@ -28,14 +28,19 @@ go run ./cmd/abapiti abaplint-tests "$BUILD/closure" -o "$BUILD" --target a4h
 
 `--target a4h` is build-only, forces readable names, adds the zabapgit deployment
 harness, and refuses partial/duplicate shard plans. There is no trace-based
-pruning or assume-integer contract. A single emission/name table serves both
+pruning or assume-integer contract. A single emission/name table serves all three
 packages; shared structural shapes may originate at either a core or test site.
 
-Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`**:
+Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_registry.zip` to
+`$ZLNT_A4H`**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`**:
 
 * `$ZLNT`: the full translated core and its shared runtime, including the
   deployment harness used by the zabapgit client. No executable test
   registrations, test lambdas or mocha/chai classes belong here.
+* `$ZLNT_A4H`: the readable `ZCL_LNT_REGISTRY_A4H` driver and
+  `ZLNT_REGISTRY_RUN`/`CLEAN` reports (plus `NEG` when emitted), corpus/log
+  runtime and setup reports, and optional `ZCL_LNT_TEST_LOG_BAL`. These objects
+  belong only to the registry archive.
 * `$ZLNT_TESTS`: original test registrations/bodies, mocha/chai, test-only
   runtime helpers, `ZCL_LNT_TEST_RUNNER`, `ZCL_LNT_TEST_LOG`,
   `ZLNT_TESTS_RUN`, and the transparent table `ZLNT_TESTRUN`.
@@ -57,13 +62,22 @@ Deploy **`zlnt.zip` to `$ZLNT` first**, then **`zlnt_tests.zip` to `$ZLNT_TESTS`
 
 `core/` is the exact shared source set. `native/zabaplint.prog.abap` is an OSGO
 client for that set, not another translated core. `native/lib/` contains the
-same translated core bytes, excluding only the generated SAP corpus driver
-and its two reports. The SAP corpus driver in `$ZLNT` expects the existing
+same translated core bytes. The SAP corpus driver and its
 `ZCL_ABAPITI_CORPUS`, `ZIF_ABAPITI_CORPUS`, `ZABAPITI_CORPUS` and
-`ZCL_ABAPITI_LOG` services from `tools/allbackends/corpus-abap`; these services
-are not copied into either new package. `abap/` is the combined test
-fixture before replacing the empty OSG checkpoint hook with durable A4H logging.
+`ZCL_ABAPITI_LOG` services are packaged together in `$ZLNT_A4H`.
+`abap/` is the combined test fixture before replacing the empty OSG checkpoint hook with durable A4H logging.
 Do not deploy `abap/` separately or overwrite the old hashed-name package.
+
+`tools/release-build.sh` copies this build's `zlnt.zip`, `zlnt_registry.zip`
+and test archives to the release assets. It checks object ownership and scans
+core for driver/corpus-log references, once with the monolithic tests and again
+with the seven test parts. The monolith and parts are alternative installs.
+The standalone corpus archive is retired because registry owns those objects.
+Set `RELEASE_PACKAGES_ONLY=1` to run the real release packaging path offline
+without building native clients/bundles; supply the usual five arguments and
+a fresh WORK/ASSETS pair. This mode builds the full readable union, lints
+core/tests and the matching registry driver, splits/verifies the tests, and
+checks both archive install sets. SAP BAL adapter activation still requires SAP.
 
 The generated ABAP uses the project's 7.50-style syntax and 255-byte line
 formatter. **FIND/REPLACE PCRE itself requires 7.55**; A4H 7.58 supports it. The

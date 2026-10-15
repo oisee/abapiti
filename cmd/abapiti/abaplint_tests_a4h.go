@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/oisee/abapiti/hir/abap"
+	corpusabap "github.com/oisee/abapiti/tools/allbackends/corpus-abap"
 	"github.com/oisee/abapiti/tsfront"
 )
 
@@ -33,7 +34,7 @@ func splitTestPackages(files map[string]string) (map[string]string, map[string]s
 	core := map[string]string{}
 	tests := map[string]string{}
 	queue := []string{}
-	for _, file := range []string{"zcl_lnt_registry_a4h.clas.abap", "zlnt_registry_run.prog.abap", "zlnt_registry_clean.prog.abap"} {
+	for _, file := range []string{"zcl_lnt_registry_a4h.clas.abap", "zlnt_registry_run.prog.abap", "zlnt_registry_clean.prog.abap", "zlnt_registry_neg.prog.abap"} {
 		if source, ok := files[file]; ok {
 			core[file] = source
 			queue = append(queue, strings.ToUpper(strings.Split(file, ".")[0]))
@@ -73,18 +74,61 @@ func splitTestPackages(files map[string]string) (map[string]string, map[string]s
 	return core, tests, nil
 }
 
+// Keep the driver emitted with the union's name/shape table. A separately
+// emitted plain CLI driver may use different names or method signatures.
+func splitA4HRegistry(core map[string]string) (map[string]string, error) {
+	registry := map[string]string{}
+	for file, source := range core {
+		name := strings.ToLower(strings.Split(file, ".")[0])
+		switch name {
+		case "zcl_lnt_registry_a4h", "zlnt_registry_run", "zlnt_registry_clean", "zlnt_registry_neg":
+			registry[file] = source
+			delete(core, file)
+		}
+	}
+	for file, source := range core {
+		text := strings.ToLower(file + "\n" + source)
+		for _, forbidden := range []string{"zcl_lnt_registry_a4h", "zlnt_registry_run", "zlnt_registry_clean", "zlnt_registry_neg", "zcl_abapiti_"} {
+			if strings.Contains(text, forbidden) {
+				return nil, fmt.Errorf("release core %s references %s", file, forbidden)
+			}
+		}
+	}
+	entries, err := corpusabap.Runtime.ReadDir("src")
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		raw, err := corpusabap.Runtime.ReadFile("src/" + entry.Name())
+		if err != nil {
+			return nil, err
+		}
+		if entry.Name() != "package.devc.xml" {
+			registry[entry.Name()] = string(raw)
+		}
+	}
+	bal, err := tsfront.A4HTestLogBAL()
+	if err != nil {
+		return nil, err
+	}
+	registry["zcl_lnt_test_log_bal.clas.abap"] = bal
+	return registry, nil
+}
+
 func validateA4HSources(packages ...map[string]string) error {
 	seen := map[string]bool{}
 	for _, sources := range packages {
+		local := map[string]bool{}
 		for file, source := range sources {
 			name := strings.Split(file, ".")[0]
 			if !a4hObjectName.MatchString(name) {
 				return fmt.Errorf("invalid A4H object name %s", name)
 			}
-			if seen[name] {
+			if seen[name] && !local[name] {
 				return fmt.Errorf("duplicate A4H object across packages: %s", name)
 			}
 			seen[name] = true
+			local[name] = true
 			if strings.HasSuffix(file, ".abap") {
 				for i, line := range strings.Split(source, "\n") {
 					if len(line) > 255 {
@@ -155,14 +199,17 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	if err != nil {
 		return err
 	}
+	registry, err := splitA4HRegistry(core)
+	if err != nil {
+		return err
+	}
+	if err := writeSources(filepath.Join(out, "registry"), registry); err != nil {
+		return err
+	}
 	if err := writeSources(filepath.Join(out, "core"), core); err != nil {
 		return err
 	}
-	nativeCore := copyMap(core)
-	delete(nativeCore, "zcl_lnt_registry_a4h.clas.abap")
-	delete(nativeCore, "zlnt_registry_run.prog.abap")
-	delete(nativeCore, "zlnt_registry_clean.prog.abap")
-	if err := writeSources(filepath.Join(out, "native", "lib"), nativeCore); err != nil {
+	if err := writeSources(filepath.Join(out, "native", "lib"), core); err != nil {
 		return err
 	}
 	if err := writeSources(filepath.Join(out, "tests-osg"), tests); err != nil {
@@ -186,7 +233,7 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	if err := validateA4HTestSources(tests); err != nil {
 		return err
 	}
-	if err := validateA4HSources(core, tests); err != nil {
+	if err := validateA4HSources(core, tests, registry); err != nil {
 		return err
 	}
 	if err := writeSources(filepath.Join(out, "tests"), tests); err != nil {
@@ -195,7 +242,7 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	for _, part := range []struct {
 		name, pkg string
 		files     map[string]string
-	}{{"zlnt", "$ZLNT", core}, {"zlnt_tests", "$ZLNT_TESTS", tests}} {
+	}{{"zlnt", "$ZLNT", core}, {"zlnt_tests", "$ZLNT_TESTS", tests}, {"zlnt_registry", "$ZLNT_A4H", registry}} {
 		zip := filepath.Join(out, part.name+".zip")
 		count, err := writeAbapGitZip(zip, part.pkg, "abaplint full test closure", part.files)
 		if err != nil {
@@ -210,7 +257,19 @@ func buildAbaplintTestsA4H(dir, out string, lowering *tsfront.RegistryLowering) 
 	if err := json.Unmarshal([]byte(files["names.json"]), &entries); err != nil {
 		return err
 	}
-	for _, name := range []string{"ZCL_LNT_REGISTRY_A4H", "ZLNT_REGISTRY_RUN", "ZLNT_REGISTRY_CLEAN", "ZCL_LNT_TEST_RUNNER", "ZCL_LNT_TEST_LOG", "ZLNT_TESTS_RUN", "ZLNT_TESTRUN"} {
+	for _, name := range []string{"ZCL_LNT_REGISTRY_A4H", "ZLNT_REGISTRY_RUN", "ZLNT_REGISTRY_CLEAN", "ZLNT_REGISTRY_NEG", "ZCL_LNT_TEST_LOG_BAL", "ZCL_LNT_TEST_RUNNER", "ZCL_LNT_TEST_LOG", "ZLNT_TESTS_RUN", "ZLNT_TESTRUN"} {
+		filePrefix := strings.ToLower(name) + "."
+		present := false
+		for _, sources := range []map[string]string{core, tests, registry} {
+			for file := range sources {
+				if strings.HasPrefix(file, filePrefix) {
+					present = true
+				}
+			}
+		}
+		if !present {
+			continue
+		}
 		entries[name] = abap.SourceEntry{ID: "generated." + name, Kind: "generated", Source: "tsfront/abaplint_tests_a4h.go"}
 	}
 	data, err := json.MarshalIndent(entries, "", " ")

@@ -150,3 +150,35 @@ func TestA4HTestsArchivePortable(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestReleaseReadableRegistryOwnership(t *testing.T) {
+	core := map[string]string{
+		"zcl_lnt_core.clas.abap":         "CLASS zcl_lnt_core DEFINITION. ENDCLASS.",
+		"zcl_lnt_registry_a4h.clas.abap": "CLASS zcl_lnt_registry_a4h DEFINITION. DATA h TYPE REF TO zcl_lnt_core. ENDCLASS.",
+		"zlnt_registry_run.prog.abap":    "REPORT zlnt_registry_run.",
+		"zlnt_registry_clean.prog.abap":  "REPORT zlnt_registry_clean.",
+		"zlnt_registry_neg.prog.abap":    "REPORT zlnt_registry_neg.",
+	}
+	registry, err := splitA4HRegistry(core)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(core) != 1 {
+		t.Fatalf("driver retained in core: %v", core)
+	}
+	for _, file := range []string{"zcl_lnt_registry_a4h.clas.abap", "zlnt_registry_run.prog.abap", "zlnt_registry_clean.prog.abap", "zlnt_registry_neg.prog.abap", "zcl_abapiti_corpus.clas.abap", "zcl_abapiti_log.clas.abap", "zcl_lnt_test_log_bal.clas.abap", "zabapiti_corpus.tabl.xml", "zabapiti_runlog.tabl.xml"} {
+		if registry[file] == "" {
+			t.Errorf("registry missing %s", file)
+		}
+	}
+	if !strings.Contains(registry["zcl_lnt_registry_a4h.clas.abap"], "zcl_lnt_core") {
+		t.Fatal("driver must preserve union names")
+	}
+	if err := validateA4HSources(core, registry); err != nil {
+		t.Fatal(err)
+	}
+	core["zcl_lnt_core.clas.abap"] += " zcl_abapiti_log=>create( )."
+	if _, err := splitA4HRegistry(core); err == nil {
+		t.Fatal("accepted corpus/log dependency in core")
+	}
+}
