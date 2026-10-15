@@ -687,6 +687,9 @@ func (l *lowerer) moduleConstRead(d *ast.Node) bool {
 								sym = target
 							}
 						}
+						if target := l.requireTarget(sym); target != nil {
+							sym = target
+						}
 						l.constReads[sym] = true
 					}
 				}

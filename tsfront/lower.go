@@ -140,6 +140,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			return nil, nil, err
 		}
 	}
+	l.scanRequireBindings(files)
 	// Only expand the external LSP ABI when a callable constructor needs it.
 	// Coverage-trapped signatures retain their existing opaque/structural ABI.
 	l.lspConstructors = !pruned
@@ -505,6 +506,7 @@ type lowerer struct {
 	// nsNeeded marks module files that are imported as a namespace and used
 	// as a value; they get an export map in their module class.
 	nsNeeded map[string]bool
+	require  *requireBindings // static createRequire bindings (require_binding.go)
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
 	views    map[string]*hir.Interface
 	unions   map[string]*unionView
@@ -769,6 +771,9 @@ func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
+	}
+	if target := l.requireTarget(sym); target != nil {
+		return target
 	}
 	if sym.Parent == nil && n != nil && n.Kind == ast.KindPropertyAccessExpression {
 		if name := n.Name(); name != nil {
