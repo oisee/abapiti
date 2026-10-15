@@ -19,6 +19,8 @@ Supported annotations are `string`, `boolean`, `number`, `void` (result), `strin
 
 The Go ABI uses `string`, `bool`, `float64`, `[]string`, and `[]struct{ F0 string; F1 bool }`. An optional string result uses `(string, bool)`. A host function may append an `error` result; a non-nil error throws a catchable TS `Error` whose message is `err.Error()`. Generated adapters constrain the host function to exactly the two permitted signatures, so parameter or result mismatches fail `go build`. Type switching inside that constraint selects the error convention; arguments never pass through an untyped function call.
 
+Extern array parameters (`string[]`, `[string, boolean][]`, and rest arrays) are read-only inputs. Go receives a copy, including tuple fields; host mutations are not written back to the TypeScript array. Host implementations must treat these parameters as read-only and return any changed data explicitly.
+
 Strings cross through the runtime's UTF-16/UTF-8 conversions: non-BMP characters round-trip, and isolated UTF-16 surrogates become U+FFFD when passed to Go. The reference `extern/hostio` module implements filesystem, POSIX path, Git HEAD and environment operations. Its directory results use byte order; directory symlinks report false in `listEntries`.
 
 ABAP emission refuses extern calls with their source location. Host calls conservatively read arguments and global state, may write global state, allocate, and raise.

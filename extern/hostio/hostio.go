@@ -1,3 +1,7 @@
+// Package hostio implements the reference extern host operations.
+// Extern array parameters, including tuple and rest arrays, are read-only inputs.
+// Go receives copies; host mutations are not written back to TypeScript arrays.
+// Host implementations must return changed data explicitly.
 package hostio
 
 import (

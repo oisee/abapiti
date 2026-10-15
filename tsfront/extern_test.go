@@ -255,3 +255,17 @@ func TestExternTypedABI(t *testing.T) {
 		})
 	}
 }
+
+func TestExternArrayInputContract(t *testing.T) {
+	for _, file := range []string{"../docs/extern-modules.md", "../extern/hostio/hostio.go"} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, contract := range []string{"read-only inputs", "not written back"} {
+			if !strings.Contains(string(b), contract) {
+				t.Errorf("%s does not document %q", file, contract)
+			}
+		}
+	}
+}
