@@ -32,16 +32,38 @@ func (l *lowerer) familyAliasKey(t *checker.Type) string {
 		return ""
 	}
 	for _, a := range t.Alias().TypeArguments() {
-		name += "[" + l.familyTypeKey(a, true, map[*checker.Type]bool{}) + "]"
+		name += "[" + l.familyTypeKeyIndependent(a) + "]"
 	}
 	return name
+}
+
+// Alias arguments start their own cycle traversal. Their stack observations
+// cannot constrain a caller using a different visiting map.
+func (l *lowerer) familyTypeKeyIndependent(t *checker.Type) string {
+	m := l.familyKeyState()
+	saved := m.frames
+	m.frames = nil
+	defer func() { m.frames = saved }()
+	return l.familyTypeKey(t, true, map[*checker.Type]bool{})
 }
 
 func (l *lowerer) familyTypeKey(t *checker.Type, named bool, visiting map[*checker.Type]bool) string {
 	return l.familyKeyCached(t, named, visiting) // family_key_memo.go
 }
 
-func (l *lowerer) familyTypeKeyRaw(t *checker.Type, named bool, visiting map[*checker.Type]bool) string {
+// familyTypeKeyRaw hashes one node's canonical description. Child keys are
+// already Merkle ids, so shared descendants never expand into structural text.
+// Keep back-references literal: their identity has no stack depth or position.
+func (l *lowerer) familyTypeKeyRaw(t *checker.Type, named bool, visiting map[*checker.Type]bool) (key string) {
+	defer func() {
+		if len(key) > familyKeyMaxLen {
+			panic(familyKeyRefusal{familyKeyID{t, named}, fmt.Sprintf("exceeds %d bytes", familyKeyMaxLen)})
+		}
+		if !strings.HasPrefix(key, "back:") {
+			sum := sha256.Sum256([]byte(key))
+			key = fmt.Sprintf("%x", sum[:16])
+		}
+	}()
 	if t == nil {
 		return "missing"
 	}
