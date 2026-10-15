@@ -362,8 +362,14 @@ func (l *lowerer) shapeAliasOf(declared, actual hir.Type) bool {
 	if a == nil || b == nil || b.Ctor == nil || len(a.Fields) != len(b.Fields) {
 		return false
 	}
-	for i := range a.Fields {
-		if a.Fields[i].Name != b.Fields[i].Name {
+	// Anonymous layouts use canonical order; named data classes retain
+	// declaration order. Both describe the same structural property set.
+	for _, field := range a.Fields {
+		found := false
+		for _, actualField := range b.Fields {
+			found = found || field.Name == actualField.Name
+		}
+		if !found {
 			return false
 		}
 	}

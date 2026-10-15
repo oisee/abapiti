@@ -22,7 +22,9 @@ func (l *lowerer) gogenResolvedData(node *ast.Node) bool {
 	t := l.ck.GetApparentType(l.ck.GetDeclaredTypeOfSymbol(node.Symbol()))
 	for _, p := range l.ck.GetPropertiesOfType(t) {
 		for _, d := range p.Declarations {
-			if d.Kind == ast.KindPropertySignature || d.Kind == ast.KindPropertyDeclaration {
+			// Class storage (including private/protected brands) does not
+			// turn a method interface extending that class into a data row.
+			if d.Kind == ast.KindPropertySignature {
 				return true
 			}
 		}
@@ -65,6 +67,10 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 			ft = l.functionType(at, pt)
 		} else if annotated, ok := l.propertyAnnotationOverride(p); ok {
 			ft = annotated
+		} else if at.Kind == ast.KindPropertySignature && at.Type() != nil && l.ck.GetTypeFromTypeNode(at.Type()) == pt {
+			// Preserve the annotation ABI unless generic instantiation has
+			// actually changed the property type.
+			ft = l.mapTypeNode(at.Type())
 		} else {
 			ft = l.mapCheckerType(at, pt)
 		}

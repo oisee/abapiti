@@ -68,3 +68,7 @@ func TestGogenInheritedShapeLocations(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"base.ts": base, "probe.ts": source}, []string{"base.ts", "probe.ts"})
 	gogenCheck(t, p, "probe.ts", base+source, "n:v")
 }
+
+func TestGogenMethodInterfaceClassBrand(t *testing.T) {
+	gogenOracle(t, `class Identifier {private name:string;constructor(name:string){this.name=name;}getName():string{return this.name;}} interface Definition extends Identifier {value():string;} class Concrete extends Identifier implements Definition {value():string{return "v";}} function read(d:Definition):string{return d.getName()+":"+d.value();} class Probe {static run():string{return read(new Concrete("n"));}}`, "n:v")
+}
