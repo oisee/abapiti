@@ -751,7 +751,12 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 	}
 	switch t.Kind {
 	case hir.BigInt:
-		return "jsBigInt(" + strconv.Quote(v.(string)) + ")"
+		digits, ok := v.(string)
+		if !ok {
+			b.e.unsupported(node, "bigint literal has non-string value")
+			return `jsBigInt("0")`
+		}
+		return "jsBigInt(" + strconv.Quote(digits) + ")"
 	case hir.String:
 		text, ok := v.(string)
 		if !ok {

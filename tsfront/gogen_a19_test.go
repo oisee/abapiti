@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oisee/abapiti/hir"
 	gohir "github.com/oisee/abapiti/hir/golang"
 )
 
@@ -241,37 +240,6 @@ func TestGogenA19ConditionalPayloadJoinNodeOracle(t *testing.T) {
   return out.join(",");
  }
 }`})
-}
-
-// a19Diagnostics lowers a probe and returns its blocking diagnostics and
-// verifier errors (both as text).
-func a19Diagnostics(t *testing.T, source string) (string, string) {
-	t.Helper()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "probe.ts"), []byte(source), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	p, err := Load(filepath.Join(dir, "tsconfig.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	prog, diags, err := p.Lower([]string{"probe.ts"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var d, v strings.Builder
-	for _, x := range diags {
-		if !strings.HasPrefix(x.Category, "note-") {
-			fmt.Fprintln(&d, x)
-		}
-	}
-	for _, e := range hir.Verify(prog) {
-		fmt.Fprintln(&v, e)
-	}
-	return d.String(), v.String()
 }
 
 func TestGogenA19ConditionalSubsetContextNodeOracle(t *testing.T) {

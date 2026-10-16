@@ -243,7 +243,8 @@ func (l *lowerer) direntMember(access *ast.Node, call bool, args int) (*hir.Expr
 		return nil, false
 	}
 	name := access.Name().Text()
-	field, t := "", hir.Type{}
+	var field string
+	var t hir.Type
 	switch {
 	case !call && name == "name":
 		field, t = "name", hir.T(hir.String)
