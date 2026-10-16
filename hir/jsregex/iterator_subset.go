@@ -4,12 +4,33 @@ package jsregex
 // The final assertion observes one following unit without consuming it.
 const IteratorLabelPattern = `\b([A-Za-z_][A-Za-z_0-9]*)\s*:(?!=)`
 
+// BindingScannerPattern masks comments and quoted literals before binding scans.
+// Its alternatives have no captures; the lazy block-comment repeat stops at the
+// first closing delimiter. This exact language is reviewed independently of the
+// legacy grammar, which intentionally rejects general lazy repetition.
+const BindingScannerPattern = `\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|` + "`[^`]*`"
+
+// BindingMaskPattern preserves line breaks while masking UTF-16 units.
+const BindingMaskPattern = `[^\n]`
+
 // TranslateIteratorSubset extends the existing certified grammar. Unicode
 // mode changes the input alphabet to code points; it does not enable Unicode
 // case folding or escapes. Named captures are certified as ordinary captures
 // first, then their names are restored in the translated expression. Keeping
 // the legacy translator separate preserves frozen deployment runtime bytes.
 func TranslateIteratorSubset(pattern, flags string) (string, bool) {
+	if pattern == BindingMaskPattern {
+		return `[^\n]`, flags == "g"
+	}
+	if pattern == BindingScannerPattern {
+		if flags != "g" {
+			return "", false
+		}
+		// Matching runs over UTF-16 units. Dot-all implements [\s\S], including
+		// line terminators; RE2 and JS choose the same leftmost-first alternatives.
+		return `//[^\n]*|/\*(?s:.)*?\*/|"(?:\\(?s:.)|[^"\\])*"|'(?:\\(?s:.)|[^'\\])*'|` + "`[^`]*`", true
+	}
+
 	plainFlags := ""
 	unicodeMode, insensitive := false, false
 	for i := 0; i < len(flags); i++ {

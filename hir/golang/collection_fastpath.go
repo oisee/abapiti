@@ -15,6 +15,9 @@ import (
 // may bypass normalization. Interfaces retain typed-nil handling; dynamic and
 // optional Set values retain their unboxing and numeric canonicalization.
 func (e *emitter) directCollectionKey(t hir.Type) bool {
+	if t.IsRef() && e.usesStorageIdentity() {
+		return false
+	}
 	switch t.Kind {
 	case hir.String, hir.Bool, hir.I32, hir.I64, hir.ClassValue, hir.RegExp, hir.Array, hir.OrderedMap, hir.OrderedSet:
 		return true
@@ -34,6 +37,10 @@ func directCollectionTypes(files map[string]string) error {
 		source    string
 		tree      *ast.File
 		positions *token.FileSet
+	}
+	mapViews := false
+	for _, source := range files {
+		mapViews = mapViews || strings.Contains(source, "Identity any")
 	}
 	parsedFiles := map[string]parsed{}
 	aliases := map[string]ast.Expr{}
@@ -61,6 +68,9 @@ func directCollectionTypes(files map[string]string) error {
 		}
 		switch x := x.(type) {
 		case *ast.StarExpr:
+			if mapViews {
+				return false
+			}
 			id, ok := x.X.(*ast.Ident)
 			return !ok || id.Name != "dynamic"
 		case *ast.Ident:
@@ -166,7 +176,11 @@ func fastCollectionRuntime(source string) (string, error) {
 		}
 		extra.WriteString("\n" + rename.Replace(source[positions.Position(fn.Pos()).Offset:positions.Position(fn.End()).Offset]) + "\n")
 	}
-	return source + extra.String(), nil
+	result := source + extra.String()
+	if strings.Contains(source, "proxy *mapProxy[K,V]") {
+		result = fastMapViewRuntime(result)
+	}
+	return result, nil
 }
 
 const fastCollectionSource = `

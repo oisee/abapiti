@@ -136,6 +136,11 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		v.fail(e.Node, "union operation takes no arguments")
 	}
 	switch e.Op {
+	case "union.check":
+		u := v.p.Union(e.Type.Name)
+		if recv.Kind != Dynamic || e.Type.Kind != UnionRef || u == nil || !u.Complete {
+			v.fail(e.Node, "checked union admission needs Dynamic and a complete family")
+		}
 	case "union.admit", "union.project":
 		if e.Op == "union.project" && e.Type.Kind == UnionRef {
 			if recv.Kind != UnionRef || !UnionIncludes(v.p.Union(recv.Name), v.p.Union(e.Type.Name)) {
@@ -222,6 +227,9 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 // family want names, or one of its alternative payloads. The read validates
 // the stored value against want, so membership is checked, never assumed.
 func UnionReadAccepts(p *Program, want, have Type) bool {
+	if want.Kind == Dynamic && have.Kind != Void && have.Kind != "" {
+		return true // a read boxes the actual value, including absence
+	}
 	if want.Equal(have) {
 		return true
 	}

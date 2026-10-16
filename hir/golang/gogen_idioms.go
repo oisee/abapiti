@@ -21,6 +21,9 @@ func (b *body) gogenRuntime(x *hir.Expr) (string, bool) {
 	case "clock.epochMilliseconds":
 		return "epochMilliseconds()", true
 	case "map.insertions":
+		if b.e.usesMapViews() {
+			return b.expr(x.X) + ".mapInsertions()", true
+		}
 		return b.expr(x.X) + ".inserts", true
 	case "weak.lookupKey", "weak.writeKey":
 		fail := "func() {}"

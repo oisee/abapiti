@@ -463,7 +463,7 @@ func staticTypeofTag(k hir.Kind) string {
 		return "boolean"
 	case hir.ClassValue:
 		return "function"
-	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
+	case hir.ClassRef, hir.InterfaceRef, hir.UnionRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
 		return "object"
 	}
 	return ""

@@ -8,8 +8,8 @@ import (
 )
 
 // Default Array.sort compares ToString results by UTF-16 units, never locale
-// order or the backend's native string representation. Only primitive values
-// lowered tuples, and checked flat primitive arrays have a certified ToString.
+// order or the backend's native string representation. Primitive values,
+// tuples, and checked arrays/data records have certified string conversions.
 func (l *lowerer) defaultSortKey(at *ast.Node, x *hir.Expr, tupleElement bool) *hir.Expr {
 	str := hir.T(hir.String)
 	if tupleElement && x.Type.Kind == hir.Optional {
@@ -32,6 +32,9 @@ func (l *lowerer) defaultSortKey(at *ast.Node, x *hir.Expr, tupleElement bool) *
 		if x.Type.Args[0].Kind == hir.String {
 			return l.rtOp("array.join", x, str, hir.L(str, ","))
 		}
+		if l.unprunedFeatures && x.Type.Args[0].Kind == hir.ClassRef && l.shapeLike[x.Type.Args[0].Name] {
+			return l.rtOp("dynamic.recordString", l.coerce(x, hir.T(hir.Dynamic)), str)
+		}
 	case hir.ClassRef:
 		if strings.HasPrefix(x.Type.Name, "tuple.") {
 			c := l.classByName(x.Type.Name)
@@ -47,6 +50,11 @@ func (l *lowerer) defaultSortKey(at *ast.Node, x *hir.Expr, tupleElement bool) *
 				key = l.rtOp("string.concat", key, str, part)
 			}
 			return key
+		}
+		if l.unprunedFeatures && l.shapeLike[x.Type.Name] {
+			// Ordinary records compare their Object string, regardless of their
+			// nested fields. The existing coercion boundary checks custom hooks.
+			return l.rtOp("dynamic.recordString", l.coerce(x, hir.T(hir.Dynamic)), str)
 		}
 	}
 	l.diagf(at, "unsupported-call", "default sort requires primitive elements or tuples of primitives; %s has no certified sort string conversion", x.Type.String())

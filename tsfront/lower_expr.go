@@ -353,6 +353,14 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, typ)
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Dynamic && (typ.Kind == hir.UnionRef || typ.Kind == hir.Optional && len(typ.Args) == 1 && typ.Args[0].Kind == hir.UnionRef) {
+		return l.coerce(x, typ)
+	}
+	if x.Type.Kind == hir.Dynamic && l.gogenObjectUnion(typ) {
+		// The checked object flow may still carry a recursive family's tagged
+		// record. Retain its property ABI rather than unboxing a nominal ref.
+		return x
+	}
 	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || typ.Kind == hir.Array || typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
 		return l.dynamicReference(x, typ)
 	}
@@ -1010,7 +1018,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	}
 	// A structural copy of a family member (RuntimeFields<Type> narrowed by
 	// flow) maps to the member's payload: read its field by name.
-	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && strings.HasPrefix(recv.Type.Name, "family.") && !ast.IsAssignmentTarget(n) {
+	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && (strings.HasPrefix(recv.Type.Name, "family.") || l.shapeLike[recv.Type.Name]) && !ast.IsAssignmentTarget(n) {
 		if c := l.classByName(recv.Type.Name); c != nil {
 			for _, f := range c.Fields {
 				if f.Name == n.Name().Text() && !f.Static {
@@ -1040,7 +1048,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			_ = ns
 		}
 	}
-	l.diagf(n, "unsupported-expr", "property %s is not lowered", n.Name().Text())
+	l.diagf(n, "unsupported-expr", "property %s is not lowered on %s", n.Name().Text(), recv.Type)
 	return nil
 }
 
@@ -1984,11 +1992,18 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("array.join", recv, str, sep), true
 		}
 	case hir.OrderedSet:
+		value := func() *hir.Expr {
+			x := one()
+			if l.unprunedFeatures && x != nil {
+				x = l.coerce(x, recv.Type.Args[0])
+			}
+			return x
+		}
 		switch name {
 		case "has":
-			return l.rtOp("set.has", recv, boolT, one()), true
+			return l.rtOp("set.has", recv, boolT, value()), true
 		case "add":
-			return l.rtOp("set.add", recv, recv.Type, one()), true
+			return l.rtOp("set.add", recv, recv.Type, value()), true
 		case "size":
 			return l.rtOp("set.size", recv, i32), true
 		case "copy":
@@ -2008,6 +2023,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				l.hint = saved
 			} else {
 				a, b = two()
+			}
+			if l.unprunedFeatures && a != nil && b != nil {
+				a, b = l.coerce(a, recv.Type.Args[0]), l.coerce(b, recv.Type.Args[1])
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
@@ -2094,8 +2112,20 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if t := l.ck.GetTypeAtLocation(args[1]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
 		with = l.coerce(with, hir.T(hir.String))
 	}
+	if l.unprunedFeatures {
+		if t := l.ck.GetTypeAtLocation(args[1]); t != nil && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 {
+			typ := l.functionType(args[1], t)
+			with = l.coerce(with, typ)
+			if with != nil && l.acceptsType(typ, with.Type) && !with.Type.Equal(typ) {
+				with = &hir.Expr{Kind: hir.Cast, Node: l.node(args[1]), Type: typ, X: with}
+			}
+			if with != nil && l.callableMethod(with.Type) != nil {
+				return l.replaceCallback(n, recv, pat, with)
+			}
+		}
+	}
 	if with.Type.Kind != hir.String {
-		l.diagf(args[1], "unsupported-regex", "replace requires a string replacement; callable and coercing replacements are not lowered")
+		l.diagf(args[1], "unsupported-regex", "replace requires a string replacement or a lowered callable")
 		return nil
 	}
 	if pat.Type.Kind == hir.RegExp {
@@ -2911,7 +2941,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return test
 		}
 	}
-	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
+	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || l.structuralEqualityTypes(x.Type, y.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")

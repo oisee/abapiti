@@ -1,11 +1,15 @@
 package tsfront
 
-import "github.com/oisee/abapiti/hir"
+import (
+	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/internal/tsgo/ast"
+)
 
 // Property-only structural compatibility. Container storage remains invariant;
 // a present primitive or reference may widen to its optional slot through the live
 // adapter. Absent writes into required backing storage still explicitly refuse.
-// Native classes/configs and nested row/array covariance are not admitted.
+// Native classes/configs remain nominal. Readonly nested slots may use an
+// equivalent structural layout through the existing live array/data views.
 func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 	if dst.Kind != hir.ClassRef || src.Kind != hir.ClassRef || dst.Equal(src) || !l.shapeLike[dst.Name] || !l.shapeLike[src.Name] {
 		return false
@@ -21,6 +25,12 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 		found := false
 		for _, g := range s.Fields {
 			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
+			if g.Type.Kind == hir.Optional && len(g.Type.Args) == 1 && f.Type.Equal(g.Type.Args[0]) && l.widenedRequiredProperty(s, g.Name) {
+				compatible = true
+			}
+			if f.Readonly && g.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike)) {
+				compatible = true
+			}
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
 				if f.Type.Kind == hir.Optional && g.Type.IsRef() {
 					compatible = true
@@ -40,4 +50,35 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 		}
 	}
 	return true
+}
+
+func (l *lowerer) mapStorageView(dst, src hir.Type) bool {
+	if !l.unprunedFeatures || dst.Kind != hir.OrderedMap || src.Kind != hir.OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 || dst.Args[1].Kind != hir.ClassRef || src.Args[1].Kind != hir.ClassRef || !dst.Args[0].Equal(src.Args[0]) || dst.Args[1].Equal(src.Args[1]) {
+		return false
+	}
+	return hir.StructuralStorageEquivalent(l.out, dst.Args[1], src.Args[1], l.shapeLike)
+}
+
+func (l *lowerer) structuralEqualityTypes(a, b hir.Type) bool {
+	if a.Kind == hir.Optional {
+		a = a.Args[0]
+	}
+	if b.Kind == hir.Optional {
+		b = b.Args[0]
+	}
+	return l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a)
+}
+
+// Required checker properties may carry optional primitive storage because an
+// erased initializer can supply undefined. A live required view checks the
+// primitive when read, without copying or inventing a value for that slot.
+func (l *lowerer) widenedRequiredProperty(c *hir.Class, name string) bool {
+	for sym, cls := range l.classes {
+		if cls != c {
+			continue
+		}
+		prop := l.ck.GetPropertyOfType(l.ck.GetDeclaredTypeOfSymbol(sym), name)
+		return prop != nil && prop.Flags&ast.SymbolFlagsOptional == 0 && l.literalPropertyAbsent(prop)
+	}
+	return false
 }

@@ -666,12 +666,23 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
 	}
+	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
+		saved := l.tempInit(nil, x.Type, x)
+		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.familyAdmission(saved, dst.Args[0])}
+	}
 	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef {
 		// A flow-narrowed payload stored into `F | undefined` is admitted to
 		// F first; the optional wrapping is the ordinary present value.
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
 			return l.coerce(admitted, dst)
 		}
+	}
+	if l.mapStorageView(dst, x.Type) {
+		view := l.rtOp("map.view", x, dst)
+		if view.Source == "" && l.method != nil {
+			view.Node = l.method.Node
+		}
+		return view
 	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not

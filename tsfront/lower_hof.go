@@ -432,7 +432,11 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		l.hint = keep
 		value = stmts[last].AsReturnStatement().Expression
 	}
-	if l.hint.Kind == hir.Array {
+	if l.unprunedFeatures && cb.Type() != nil {
+		// A tuple-valued map callback and an array-valued flatMap callback
+		// have different construction contexts. Honor the declared result.
+		l.hint = l.mapTypeNode(cb.Type())
+	} else if l.hint.Kind == hir.Array {
 		l.hint = l.hint.Args[0]
 	} else {
 		l.hint = hir.Type{}

@@ -47,6 +47,16 @@ func (l *lowerer) conditionalExpression(n *ast.Node) *hir.Expr {
 	if x == nil || y == nil || z == nil {
 		return nil
 	}
+	// A fresh unparameterized Map has no existing storage to adapt. Give
+	// it the other branch's exact ABI before considering invariant joins.
+	if l.unprunedFeatures && y.Type.Kind == hir.OrderedMap && z.Type.Kind == hir.OrderedMap {
+		if l.freshConditionalMap(c.WhenTrue, y) {
+			y = l.freshConditionalMapValue(c.WhenTrue, z.Type)
+		}
+		if l.freshConditionalMap(c.WhenFalse, z) {
+			z = l.freshConditionalMapValue(c.WhenFalse, y.Type)
+		}
+	}
 	// An already exact join needs no conversion; the enclosing assignment
 	// performs any widening. Preserve the default closure's HIR spelling.
 	if y.Type.Kind != "" && y.Type.Kind != hir.Void && y.Type.Equal(z.Type) {
@@ -159,6 +169,9 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 	if dst.Kind == hir.Dynamic {
 		return true
 	}
+	if l.mapStorageView(dst, src) {
+		return true
+	}
 	if src.Kind == hir.Array && dst.Kind == hir.Array {
 		if emptyConditionalArray(n, x) {
 			return true
@@ -168,6 +181,10 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		return src.Args[0].IsRef() && dst.Args[0].IsRef() && l.acceptsType(dst, src)
 	}
 	if src.Kind == hir.Dynamic {
+		if dst.Kind == hir.UnionRef && l.unprunedFeatures {
+			u := l.out.Union(dst.Name)
+			return u != nil && u.Complete
+		}
 		switch dst.Kind {
 		case hir.String, hir.Number, hir.Bool, hir.ClassValue, hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
 			return true // existing checked unboxing, never an unchecked retag
@@ -332,4 +349,18 @@ func (l *lowerer) conditionalRepeatedRead(condition, branch *ast.Node) bool {
 	}
 	a, b := condition.AsElementAccessExpression(), branch.AsElementAccessExpression()
 	return a.Expression.Kind == ast.KindIdentifier && b.Expression.Kind == ast.KindIdentifier && a.ArgumentExpression.Kind == ast.KindStringLiteral && b.ArgumentExpression.Kind == ast.KindStringLiteral && a.ArgumentExpression.Text() == b.ArgumentExpression.Text() && l.resolve(a.Expression) != nil && l.resolve(a.Expression) == l.resolve(b.Expression)
+}
+
+func (l *lowerer) freshConditionalMap(n *ast.Node, x *hir.Expr) bool {
+	for n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	return n.Kind == ast.KindNewExpression && l.globalBuiltin(n.Expression(), "Map") && len(n.Arguments()) == 0 && len(n.TypeArguments()) == 0 && x.Type.Kind == hir.OrderedMap
+}
+
+func (l *lowerer) freshConditionalMapValue(n *ast.Node, t hir.Type) *hir.Expr {
+	for n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	return l.sealJSMap(n, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: t})
 }

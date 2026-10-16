@@ -143,7 +143,7 @@ func (b *body) unionOperation(x *hir.Expr, receiver string) string {
 	switch x.Op {
 	case "union.admit":
 		return e.unionValidator(x.Owner, x.Name) + "(box(" + receiver + "))"
-	case "union.widen":
+	case "union.check", "union.widen":
 		return e.unionValidator(x.Type.Name, "") + "(" + receiver + ")"
 	case "union.project":
 		if x.Type.Kind == hir.UnionRef {
