@@ -21,6 +21,14 @@ test('ordered chunk rows and dump resume retain every executed test',()=>{
  assert.throws(()=>collectResults(rows.slice(1),{shard:'utils'}),/chunk|JSON/);
  assert.throws(()=>collectResults(rows,{shard:'rules'}),/mixed shard/);
 });
+test('OSGO CHAR payloads that lost trailing blanks are padded only with --char-tail',()=>{
+ const events=[{kind:'test',index:1,title:'a'+' '.repeat(12)+'b'},{kind:'result',index:1,record:{...pass,title:'a'+' '.repeat(12)+'b',message:'x '}},{kind:'complete',report:{results:[]}}];
+ const rows=events.flatMap((e,i)=>{const text=JSON.stringify(e);return Array.from({length:Math.ceil(text.length/10)},(_,j)=>{const chunk=text.slice(j*10,j*10+10);return {RUN_ID:'run',SEQ:i+1,CHUNK_NO:j+1,USED:chunk.length,SHARD:'utils',PAYLOAD:chunk.trimEnd()}})});
+ assert.ok(rows.some(r=>r.PAYLOAD.length<r.USED));
+ assert.throws(()=>collectResults(rows,{shard:'utils'}),/short log chunk/);
+ const r=collectResults(rows,{shard:'utils',charTail:true});
+ assert.equal(r.passed,1);assert.deepEqual(r.results.map(r=>[r.title,r.message]),[['a'+' '.repeat(12)+'b','x ']]);
+});
 test('incomplete, duplicate and malformed verdicts fail closed',()=>{
  assert.throws(()=>collectResults([{kind:'test',index:1,title:'a'}]),/incomplete/);
  assert.throws(()=>collectResults({results:[{...pass,passed:false}]}),/invalid/);
