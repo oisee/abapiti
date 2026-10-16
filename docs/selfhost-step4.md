@@ -63,32 +63,49 @@ requires a successful run and equal output; every other outcome exits 1.
 
 Boundary tests: `PYTHONDONTWRITEBYTECODE=1 python3 tools/selfhost-step4-test.py`.
 
-Measured on base `396217c2` (OSG `1638d1cb`), the reference matched the pinned
-SHA256 and emission completed with 440 refusal bodies, including nine Go
-backend refusals. The 74 MiB `hir.go` reached `go build` under the 24G cap.
-The run stopped there:
+After merging s9 (`778644a9`, integration tip `dc8eec38`), the baseline
+still matched the reference and stopped at Go compilation: an unused `d` in
+a refused live-field getter and an extra receiver passed to the static module
+function `constructor` (`tools/gogen/frontend.mjs:3523:216`).
+
+Getter emission now consumes the dynamic value in unsupported conversion
+fallbacks before trapping; shared record-setter conversions retain their
+original emitted bytes. Native getters retain their original values and
+structural reads still refuse. Allocator emission supplies a receiver only for
+instance constructors; module functions named `constructor` retain their
+static ABI. Focused emission tests reproduced both Go build errors before the
+fixes and then passed, alongside the existing instance-constructor fixtures.
+
+With these fixes (OSG `1638d1cb`), the emitted 76 MiB `hir.go` builds under
+the 24G cap. The harness reports:
 
 ```text
-step4: build=fail run=not-run cmp=not-run ref=a13702d55b1eecdb out=none
-# generated
-./hir.go:1048574: declared and not used: d
-./hir.go:1048574: too many arguments in call to z_body_tools_g_a86aa652d13344
+step4: build=ok run=trap at tools/gogen/frontend-inventory.mjs:47:1: top-level KindForOfStatement is not lowered cmp=differs at line 1 byte 1 (column 1; ref=2f, out=EOF) ref=a13702d55b1eecdb out=e3b0c44298fc1c14
 ```
 
-The live-field getter's unsupported conversion returns a trap without using
-its local `d` (example generated lines 1823536–1823537). The emitted module
-allocator passes `self` to the static module function named `constructor`
-(generated line 2209027), whose body accepts only the three actual function
-parameters (line 2212397). Its TS source is
-`tools/gogen/frontend.mjs:3523:216`. These build defects remain as the measured
-stop; no generated executable or `gogen.go` was produced, so no runtime trap
-or output comparison was reached. Logs and small source excerpts are retained
-under the scratch run directory; large generated outputs are removed after
-validation.
+The first execution blocker is the preserved top-level `for (const method of
+["parse", "parseAsync"])` in `tools/gogen/frontend-inventory.mjs:47:1`.
+Its module initializer traps before gogen writes output, so the comparison
+sees EOF at the first reference byte. The 438 refusal entries (including nine
+Go backend refusals) and blocking-diagnostic evidence are byte-identical to
+the merged baseline. This measurement identifies the next execution blocker;
+its lowering remains assigned to the other workstreams.
 
-Validation passed: gofmt; `go vet ./...`;
+Logs, generated sources, executable, exact summary and reference are retained
+under `/mnt/ssd-510/osg/abapiti/tmp/step4-e2e/run8-final/`; the baseline is
+in `run6-s9/`. Focused red/green logs and the serialized validation script are
+in the same scratch root.
+
+Validation passed on the final implementation: gofmt; `go vet ./...`;
 `go test ./tsfront/ ./hir/... ./cmd/abapiti/ ./internal/abapfixture/ -short -p 2 -timeout 40m`;
 the full abaplint Go traps gate (exactly two assignment-mismatch lines);
 and M1's multifile build, run and byte comparison with `expected-clean.txt`.
-Python boundary tests also passed, covering success and each stopping stage,
-source restoration, memory scopes, driver drift and byte/EOF differences.
+The full suite used the 24G cap; other gates used 16G.
+
+All eight default Go source files are byte-identical to the merged s9 baseline
+when generated at the same absolute output path with default scope and integer
+policy. This comparison ran before installing M1's main; the original main is
+retained as `validation-s9-fixes/default-main.go.txt` under the scratch root.
+Final gate results are in `validation-final.log` and `validation-s9-fixes/`
+(`vet-final.log`, `tests-final.log`, `traps-local.log`,
+`traps-count-final.txt`, `default-source-final.txt` and the M1 logs/output).

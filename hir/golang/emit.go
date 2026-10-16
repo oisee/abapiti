@@ -621,7 +621,11 @@ func (e *emitter) class(c *hir.Class) {
 		e.newOwnKeys(c)
 	}
 	if ctor != nil {
-		e.line("%s(self%s)", e.body(owner.Name, "constructor"), comma(args))
+		// Module functions named constructor retain their static calling convention.
+		if !ctor.Static {
+			args = append([]string{"self"}, args...)
+		}
+		e.line("%s(%s)", e.body(owner.Name, "constructor"), strings.Join(args, ","))
 	}
 	e.line("return self }")
 	for _, n := range e.effective(c) {
