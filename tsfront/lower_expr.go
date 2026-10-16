@@ -3290,6 +3290,16 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 				// explicit property (or the shape's optionals) fills them.
 			}
 			continue
+		case ast.KindMethodDeclaration:
+			// Shorthand methods are function values. Without this, super or
+			// arguments they behave as the equivalent function expression.
+			nameNode := propertyNameNode(p)
+			if nameNode == nil || nameNode.Kind == ast.KindComputedPropertyName || !plainObjectLiteralMethod(p) {
+				l.diagf(p, "unsupported-type", "object literal method needs a plain name and no this, super, arguments, generator or async body")
+				return nil
+			}
+			value = p
+			field = nameNode.Text()
 		default:
 			l.diagf(p, "unsupported-type", "object literal property %s is not lowered", p.Kind.String())
 			return nil
@@ -3306,7 +3316,12 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			return nil
 		}
 		l.hint = ctor.Params[idx].Type
-		a := l.expr(value)
+		var a *hir.Expr
+		if value.Kind == ast.KindMethodDeclaration {
+			a = l.closureValue(value)
+		} else {
+			a = l.expr(value)
+		}
 		l.hint = hint
 		if a == nil {
 			return nil
@@ -3587,4 +3602,22 @@ func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.
 		return l.coerce(recv, typ)
 	}
 	return recv
+}
+
+// plainObjectLiteralMethod reports a shorthand method whose body cannot
+// observe its receiver or arguments object: no this, super or arguments
+// anywhere inside (nested functions included), not a generator, not async.
+func plainObjectLiteralMethod(n *ast.Node) bool {
+	m := n.AsMethodDeclaration()
+	if m.AsteriskToken != nil || m.Body == nil || ast.HasSyntacticModifier(n, ast.ModifierFlagsAsync) {
+		return false
+	}
+	var observes func(*ast.Node) bool
+	observes = func(x *ast.Node) bool {
+		if x.Kind == ast.KindThisKeyword || x.Kind == ast.KindSuperKeyword || x.Kind == ast.KindIdentifier && x.Text() == "arguments" {
+			return true
+		}
+		return x.ForEachChild(observes)
+	}
+	return !observes(m.Body)
 }

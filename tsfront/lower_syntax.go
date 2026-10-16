@@ -234,6 +234,11 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 				return nil, true
 			}
 			return l.rtOp("set.delete", recv, hir.T(hir.Bool), key), true
+		case "clear":
+			if len(args) != 0 {
+				return nil, false
+			}
+			return l.rtOp("set.clear", recv, hir.T(hir.Void)), true
 		case "values":
 			if len(args) != 0 {
 				return nil, false
