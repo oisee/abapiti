@@ -95,6 +95,21 @@ func (l *lowerer) nodePlatformCall(n *ast.Node) (*hir.Expr, bool) {
 	if l.nodeBuiltinCallee(callee, "path", "join") {
 		return l.nodePathJoin(n, args), true
 	}
+	if callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "error" {
+		recv := callee.Expression()
+		if recv != nil && recv.Kind == ast.KindIdentifier && recv.Text() == "console" && l.globalNodeConsole(recv) {
+			if len(args) != 1 || args[0].Kind == ast.KindSpreadElement {
+				l.diagf(n, "unsupported-node-platform", "console.error requires exactly one string argument")
+				return nil, true
+			}
+			value := l.nodeStringArg(n, args[0], "console.error")
+			if value == nil {
+				return nil, true
+			}
+			value = l.rtOp("string.concat", value, hir.T(hir.String), hir.L(hir.T(hir.String), "\n"))
+			return l.rtOp("host.stderrWrite", value, hir.T(hir.Void)), true
+		}
+	}
 	for _, a := range args {
 		if a.Kind == ast.KindSpreadElement {
 			for _, f := range [][2]string{{"path", "basename"}, {"fs", "readFileSync"}, {"fs", "readdirSync"}, {"util", "isDeepStrictEqual"}} {
@@ -333,4 +348,18 @@ func (l *lowerer) direntMember(access *ast.Node, call bool, args int) (*hir.Expr
 		return nil, true
 	}
 	return &hir.Expr{Kind: hir.FieldGet, Node: l.node(access), Name: field, Type: t, X: recv}, true
+}
+
+// A local console binding is an ordinary application value.
+func (l *lowerer) globalNodeConsole(n *ast.Node) bool {
+	sym := l.resolve(n)
+	if sym == nil {
+		return true
+	}
+	for _, d := range sym.Declarations {
+		if f := ast.GetSourceFileOfNode(d); f != nil && !strings.HasSuffix(f.FileName(), ".d.ts") {
+			return false
+		}
+	}
+	return true
 }

@@ -84,3 +84,54 @@ func (l *lowerer) mapForOf(n, decl *ast.Node, m *hir.Expr) (*hir.Stmt, bool) {
 	loop := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: keyT, X: keys, Body: hir.B(append(head, body)...)}
 	return hir.B(loop, guard()), true
 }
+
+// The empty-array arm is only observed by iteration here. An internal empty
+// Map has the same empty sequence and lets the present arm keep live Map
+// iteration, including its located append refusal.
+func (l *lowerer) emptyMapFallbackForOf(n, decl *ast.Node) (*hir.Stmt, bool) {
+	if !l.unprunedFeatures || decl.Name().Kind != ast.KindArrayBindingPattern {
+		return nil, false
+	}
+	expr := n.AsForInOrOfStatement().Expression
+	for expr.Kind == ast.KindParenthesizedExpression {
+		expr = expr.Expression()
+	}
+	if expr.Kind != ast.KindBinaryExpression {
+		return nil, false
+	}
+	b := expr.AsBinaryExpression()
+	if b.OperatorToken.Kind != ast.KindQuestionQuestionToken {
+		return nil, false
+	}
+	right := b.Right
+	for right.Kind == ast.KindParenthesizedExpression {
+		right = right.Expression()
+	}
+	if right.Kind != ast.KindArrayLiteralExpression || len(right.AsArrayLiteralExpression().Elements.Nodes) != 0 {
+		return nil, false
+	}
+	typ := l.conditionalCheckerType(b.Left, l.ck.GetTypeAtLocation(b.Left))
+	if typ.Kind == hir.Optional {
+		typ = typ.Args[0]
+	}
+	if typ.Kind != hir.OrderedMap {
+		return nil, false
+	}
+	m := l.expr(b.Left)
+	if m == nil {
+		return nil, true
+	}
+	if m.Type.Kind == hir.Dynamic || m.Type.Kind == hir.Optional && m.Type.Args[0].Kind == hir.Dynamic {
+		m = l.coerce(m, hir.T(hir.Optional, typ))
+	}
+	if m.Type.Kind == hir.Optional {
+		m = l.tempInit(b.Left, m.Type, m)
+		typ = m.Type.Args[0]
+		m = &hir.Expr{Kind: hir.Conditional, Node: l.node(expr), Type: typ, X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(expr), Type: hir.T(hir.Bool), X: m}, Y: &hir.Expr{Kind: hir.New, Node: l.node(expr), Type: typ}, Z: &hir.Expr{Kind: hir.Narrow, Node: l.node(expr), Type: typ, X: m}}
+	}
+	if m.Type.Kind != hir.OrderedMap {
+		l.diagf(expr, "unsupported-statement", "Map fallback loop needs typed Map storage")
+		return nil, true
+	}
+	return l.mapForOf(n, decl, m)
+}

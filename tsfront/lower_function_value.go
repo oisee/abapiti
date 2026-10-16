@@ -386,6 +386,15 @@ func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
 		typ := l.functionType(callee, l.checkedStoredCallable(callee))
 		x = l.coerce(x, typ)
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.") {
+		if t := l.ck.GetTypeAtLocation(callee); t != nil && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 {
+			typ := l.functionType(callee, t)
+			converted := l.coerce(x, typ)
+			if l.callableMethod(typ) != nil && l.acceptsType(typ, converted.Type) {
+				x = &hir.Expr{Kind: hir.Cast, Node: l.node(callee), Type: typ, X: converted}
+			}
+		}
+	}
 	optional := false
 	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && l.callableMethod(x.Type.Args[0]) != nil {
 		// An optional function member: f?.() yields undefined when absent;

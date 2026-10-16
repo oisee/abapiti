@@ -2,7 +2,7 @@ package hir
 
 // Typed Node platform operations (tsfront/lower_node_platform.go). The
 // receiver is the path or hashed text; results are fresh values.
-var nodePlatformOps = []string{"string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries"}
+var nodePlatformOps = []string{"host.stderrWrite", "string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries"}
 
 func init() {
 	for _, op := range nodePlatformOps {
@@ -16,6 +16,8 @@ func init() {
 
 func nodePlatformSignature(op string) ([]Type, Type, bool) {
 	switch op {
+	case "host.stderrWrite":
+		return nil, T(Void), true
 	case "string.sha256Hex", "path.basename", "fs.readText":
 		return nil, T(String), true
 	case "path.join":

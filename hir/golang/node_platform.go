@@ -7,7 +7,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-var nodePlatformGoOps = []string{"string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries", "util.isDeepStrictEqual", "path.join"}
+var nodePlatformGoOps = []string{"host.stderrWrite", "string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries", "util.isDeepStrictEqual", "path.join"}
 
 func init() {
 	for _, op := range nodePlatformGoOps {
@@ -17,6 +17,9 @@ func init() {
 
 func (b *body) nodePlatformRuntime(x *hir.Expr) (string, bool) {
 	switch x.Op {
+	case "host.stderrWrite":
+		b.line("nodeStderrWrite(%s)", b.expr(x.X))
+		return "", true
 	case "string.sha256Hex":
 		return "sha256Hex(" + b.expr(x.X) + ")", true
 	case "path.basename":
@@ -59,6 +62,10 @@ func (e *emitter) nodePlatformSource(pkg string) string {
 	}
 	imports := map[string]bool{}
 	var parts []string
+	if used["host.stderrWrite"] {
+		imports["os"] = true
+		parts = append(parts, "func nodeStderrWrite(s jsString) { _, _ = os.Stderr.WriteString(s.String()) }\n")
+	}
 	if used["string.sha256Hex"] {
 		imports["crypto/sha256"], imports["encoding/hex"] = true, true
 		parts = append(parts, nodeSHA256Source)

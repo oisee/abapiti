@@ -163,6 +163,12 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
 	runtime = e.mapInsertionsRuntime(runtime)
+	if e.usesStorageIdentity() {
+		runtime = storageIdentityRuntime(runtime)
+	}
+	if e.usesMapViews() {
+		runtime = mapViewRuntime(runtime)
+	}
 	if e.recordString {
 		runtime += recordStringSource
 	}
@@ -324,6 +330,8 @@ type emitter struct {
 	usesArrayPresence bool
 	usesArrayDeletion bool
 	recordString      bool
+	mapViews          bool
+	mapViewsKnown     bool
 	nonfiniteNumbers  bool
 	toNumber          bool
 	usesTypedCatch    bool

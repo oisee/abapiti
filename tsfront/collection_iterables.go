@@ -100,6 +100,9 @@ func (l *lowerer) iterableValues(n *ast.Node) *hir.Expr {
 	for n != nil && n.Kind == ast.KindParenthesizedExpression {
 		n = n.Expression()
 	}
+	if x, ok := l.emptyCollectionFallback(n); ok {
+		return x
+	}
 	if x, ok := l.optionalIterable(n); ok {
 		return x
 	}
@@ -249,4 +252,66 @@ func (l *lowerer) optionalIterable(n *ast.Node) (*hir.Expr, bool) {
 		Body: hir.B(append(inner, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: l.coerce(fallback, arr)})...),
 		Else: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: l.rtOp(op, present, arr)})})
 	return result, true
+}
+
+// An immediately drained Map/Set ?? [] joins iterator elements, rather than
+// pretending that an array and a Map have the same storage. Snapshot only
+// the selected present branch; an absent collection yields a fresh empty array.
+func (l *lowerer) emptyCollectionFallback(n *ast.Node) (*hir.Expr, bool) {
+	if !l.unprunedFeatures || n == nil || n.Kind != ast.KindBinaryExpression {
+		return nil, false
+	}
+	b := n.AsBinaryExpression()
+	if b.OperatorToken.Kind != ast.KindQuestionQuestionToken {
+		return nil, false
+	}
+	right := b.Right
+	for right.Kind == ast.KindParenthesizedExpression {
+		right = right.Expression()
+	}
+	if right.Kind != ast.KindArrayLiteralExpression || len(right.AsArrayLiteralExpression().Elements.Nodes) != 0 {
+		return nil, false
+	}
+	typ := l.conditionalCheckerType(b.Left, l.ck.GetTypeAtLocation(b.Left))
+	if typ.Kind == hir.Optional {
+		typ = typ.Args[0]
+	}
+	if typ.Kind != hir.OrderedMap && typ.Kind != hir.OrderedSet {
+		return nil, false
+	}
+	recv := l.expr(b.Left)
+	if recv == nil {
+		return nil, true
+	}
+	recv = l.tempInit(b.Left, recv.Type, recv)
+	present := recv
+	optional := recv.Type.Kind == hir.Optional
+	if optional {
+		present = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+	}
+	saved := l.pend
+	l.pend = nil
+	var snapshot *hir.Expr
+	if present.Type.Kind == hir.OrderedMap {
+		elem := hir.Type{}
+		if l.hint.Kind == hir.Array {
+			elem = l.hint.Args[0]
+		}
+		snapshot = l.mapEntryRows(n, present, elem)
+	} else if present.Type.Kind == hir.OrderedSet {
+		snapshot = l.rtOp("set.values", present, hir.T(hir.Array, present.Type.Args[0]))
+	}
+	inner := l.pend
+	l.pend = saved
+	if snapshot == nil {
+		l.diagf(n, "unsupported-array", "empty iterable fallback requires a typed collection")
+		return nil, true
+	}
+	if len(inner) > 0 {
+		snapshot = &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: snapshot.Type, Stmt: hir.B(inner...), Y: snapshot}
+	}
+	if !optional {
+		return snapshot, true
+	}
+	return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: snapshot.Type, X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: recv}, Y: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: snapshot.Type}, Z: snapshot}, true
 }

@@ -10,8 +10,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"union.declarations":     true,
-	"union.admit":            true,
+	"union.declarations": true,
+	"map.view":           true, "union.check": true, "union.admit": true,
 	"union.widen":            true,
 	"union.project":          true,
 	"union.tag":              true,
@@ -80,6 +80,9 @@ func RuntimeOps() (supported, unsupported []string) {
 }
 
 func (b *body) runtime(x *hir.Expr) string {
+	if x.Op == "map.view" {
+		return b.temp(x.Type, b.mapView(x))
+	}
 	if code, ok := b.builtinRuntime(x); ok {
 		return code
 	}
@@ -157,6 +160,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		}
 	case "map.size":
 		code = "int32(len(" + a + ".Entries))"
+		if b.e.usesMapViews() {
+			code = a + ".mapSize()"
+		}
 	case "string.startsWith", "string.endsWith", "string.indexOf", "string.at", "string.replaceFirst", "string.repeatIndent", "string.parseInt10", "string.parseInt10i64", "string.substr", "string.slice", "string.charAt", "string.replaceAll", "string.split":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.compareRegistryKey":
@@ -393,7 +399,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "dynamic.keys":
 		code = "dynamicKeys(" + a + ")"
 		b.e.extraRuntimeKeys = true
-	case "union.admit", "union.widen", "union.project", "union.tag", "union.read":
+	case "union.check", "union.admit", "union.widen", "union.project", "union.tag", "union.read":
 		code = b.unionOperation(x, a)
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
