@@ -38,8 +38,9 @@ class Step4Test(unittest.TestCase):
     def test_pipeline_summary_and_restore_on_failures(self):
         main = TOOL['main']
         source = "import {readFileSync} from 'node:fs';\nconst inputs=JSON.parse(readFileSync(new URL('./step4-inputs.json', import.meta.url), 'utf8'));\nprocess.stdout.write(emitGo(program));\n"
-        for failure in [None, 'emit', 'build', 'run']:
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+        cases = [(f, False, None) for f in [None, 'emit', 'build', 'run']] + [(None, True, None), (None, False, 'deadbeef')]
+        for failure, nosystemd, expect in cases:
+            with self.subTest(failure=failure, nosystemd=nosystemd, expect=expect), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 osg, out = root / 'osg', root / 'out'
                 driver = osg / '.local/step4/step4-driver.mjs'
@@ -52,10 +53,13 @@ class Step4Test(unittest.TestCase):
                     calls.append(command)
                     if command[0] == 'cmp':
                         return SimpleNamespace(returncode=int(Path(command[-2]).read_bytes() != Path(command[-1]).read_bytes()))
-                    self.assertEqual(command[:5], ['systemd-run', '--user', '--scope', '-q', '-p'])
-                    self.assertEqual(command[6], 'nice')
                     name = Path(kwargs['stderr'].name).stem
-                    self.assertEqual(command[5], 'MemoryMax=' + ('24G' if name == 'build' else '16G'))
+                    if nosystemd:
+                        self.assertEqual(command[0], 'nice')
+                    else:
+                        self.assertEqual(command[:5], ['systemd-run', '--user', '--scope', '-q', '-p'])
+                        self.assertEqual(command[6], 'nice')
+                        self.assertEqual(command[5], 'MemoryMax=' + ('24G' if name == 'build' else '16G'))
                     if name == failure:
                         kwargs['stderr'].write(b'panic: tools/gogen/example.mjs:12:3: unsupported site\n' if name == 'run' else b'failure\n')
                         return SimpleNamespace(returncode=1)
@@ -69,15 +73,18 @@ class Step4Test(unittest.TestCase):
                     return SimpleNamespace(returncode=0)
 
                 capture = io.StringIO()
-                with patch.dict(main.__globals__, REFERENCE=hashlib.sha256(b'package main\n').hexdigest()), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
-                    status = main([str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
-                self.assertEqual(status, int(failure is not None))
+                args = ['--expect-ref', expect] if expect else []
+                with patch.dict(TOOL['os'].environ, {'STEP4_NO_SYSTEMD': '1' if nosystemd else '0'}), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
+                    status = main([*args, str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
+                self.assertEqual(status, int(failure is not None or expect is not None))
                 self.assertEqual(driver.read_text(), source)
                 self.assertFalse(driver.with_name('step4-host.ts').exists())
                 self.assertFalse((osg / 'tsconfig.selfhost-step4.json').exists())
                 summary = (out / 'summary.txt').read_text()
                 self.assertEqual(capture.getvalue(), summary)
-                if failure is None:
+                if expect is not None:
+                    self.assertIn('build=fail run=not-run cmp=not-run', summary)
+                elif failure is None:
                     self.assertIn('build=ok run=ok cmp=equal', summary)
                 elif failure == 'run':
                     self.assertIn('run=trap at tools/gogen/example.mjs:12:3: unsupported site', summary)
