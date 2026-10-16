@@ -490,6 +490,7 @@ type lowerer struct {
 	modules            map[*ast.SourceFile]*hir.Class
 	modvars            map[*ast.Symbol]string // module variable symbol -> field name
 	scope              []map[string]hir.Type
+	fnShadows          map[int][]fnShadow
 	class              *hir.Class  // class whose member is being lowered
 	method             *hir.Method // method being lowered
 	serial             int
@@ -601,6 +602,17 @@ type localFn struct {
 	method   *hir.Method
 	captures []localCapture
 	owner    *hir.Class
+	fn       *ast.Node
+}
+
+// fnShadow restores a local function name when the block that redeclared it
+// ends (sibling or nested blocks may reuse one name for different arrows).
+type fnShadow struct {
+	name       string
+	pending    *ast.Node
+	hadPending bool
+	local      *localFn
+	hadLocal   bool
 }
 
 type localCapture struct {

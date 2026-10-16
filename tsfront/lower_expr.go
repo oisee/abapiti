@@ -681,7 +681,7 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if value := l.functionValue(n); value != nil {
 		return value
 	}
-	sym := l.resolve(n)
+	sym := l.valueSymbol(n)
 	if sym == nil {
 		l.diagf(n, "unsupported-expr", "unresolved identifier %s", name)
 		return nil

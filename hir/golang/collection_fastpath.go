@@ -119,7 +119,14 @@ func fastCollectionRuntime(source string) (string, error) {
 		return "", err
 	}
 	var extra strings.Builder
-	extra.WriteString(fastCollectionSource)
+	fast := fastCollectionSource
+	if strings.Contains(source, " inserts int32;") {
+		if !strings.Contains(fast, " m.index[k]=len(m.Entries);") {
+			panic("map insertion fast-path patch target moved")
+		}
+		fast = strings.Replace(fast, " m.index[k]=len(m.Entries);", " m.inserts++;m.index[k]=len(m.Entries);", 1)
+	}
+	extra.WriteString(fast)
 	rename := strings.NewReplacer("orderedMap[", "fastOrderedMap[", "orderedSet[", "fastOrderedSet[")
 	for _, decl := range tree.Decls {
 		if group, ok := decl.(*ast.GenDecl); ok {

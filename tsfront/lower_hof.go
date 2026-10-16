@@ -534,6 +534,13 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				}
 				return l.ck.IsArrayType(t) || t.IsTupleType()
 			}
+			// An any initializer (untyped JavaScript) reads through the same
+			// checked view: array storage is required at run time instead,
+			// anything else traps rather than running another iterator.
+			untyped := func(t *checker.Type) bool { return t != nil && t.Flags()&checker.TypeFlagsAny != 0 }
+			if pattern.Parent != nil && pattern.Parent.Initializer() != nil && untyped(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
+				arrays = untyped
+			}
 			if pattern.Parent == nil || pattern.Parent.Initializer() == nil || !arrays(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
 				l.diagf(pattern, "unsupported-binding", "dynamic array destructuring requires checked array storage")
 				return
