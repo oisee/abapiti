@@ -123,6 +123,9 @@ func (l *lowerer) iterableValues(n *ast.Node) *hir.Expr {
 				if recv == nil {
 					return nil
 				}
+				if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+					recv = l.checkedContainerReceiver(callee.Expression(), recv)
+				}
 				switch {
 				case recv.Type.Kind == hir.OrderedMap && len(recv.Type.Args) == 2:
 					elem := recv.Type.Args[0]
@@ -212,6 +215,10 @@ func (l *lowerer) optionalIterable(n *ast.Node) (*hir.Expr, bool) {
 	recv := l.expr(callee.Expression())
 	if recv == nil {
 		return nil, true
+	}
+	if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+		// A member of a receiver lowered as a tagged value: checked view.
+		recv = l.coerce(recv, recvType)
 	}
 	if recv.Type.Kind != hir.Optional {
 		return l.rtOp(op, recv, arr), true

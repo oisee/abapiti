@@ -34,6 +34,19 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 			return nil, false
 		}
 		parts = present
+	} else if !ast.IsAssignmentTarget(n) {
+		// a.f on A | B | undefined: the read narrows the receiver first
+		// (absent throws, as the plain member read on a nullable receiver).
+		var present []*checker.Type
+		for _, part := range parts {
+			if part.Flags()&(checker.TypeFlagsUndefined|checker.TypeFlagsNull|checker.TypeFlagsVoid) == 0 {
+				present = append(present, part)
+			}
+		}
+		if len(present) < 2 {
+			return nil, false
+		}
+		parts = present
 	}
 	for _, part := range parts {
 		if part.Flags()&checker.TypeFlagsObject == 0 {
@@ -211,7 +224,7 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	if recv == nil {
 		return nil, true
 	}
-	recv = l.dynamicReference(l.coerce(recv, hir.T(hir.Dynamic)), hir.Ref(key))
+	recv = l.dynamicReference(l.coerce(narrowPresent(n, recv), hir.T(hir.Dynamic)), hir.Ref(key))
 	return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: name, Type: result, X: recv}, true
 }
 
@@ -276,5 +289,14 @@ func (l *lowerer) nativeUnionField(n *ast.Node, classes []*hir.Class, fields []h
 	if recv == nil {
 		return nil
 	}
-	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: method, Type: result, X: &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: recv}}
+	return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Name: method, Type: result, X: &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: view, X: narrowPresent(n, recv)}}
+}
+
+// narrowPresent unwraps an optional receiver of a plain (non-chained) member
+// read; an absent receiver fails the read as in JavaScript.
+func narrowPresent(n *ast.Node, recv *hir.Expr) *hir.Expr {
+	if recv.Type.Kind != hir.Optional || n.Flags&ast.NodeFlagsOptionalChain != 0 {
+		return recv
+	}
+	return &hir.Expr{Kind: hir.Narrow, Type: recv.Type.Args[0], X: recv}
 }

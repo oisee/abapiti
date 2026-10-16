@@ -1538,6 +1538,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
 		}
+		if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+			recv = l.checkedContainerReceiver(p.Expression, recv)
+		}
 		if x, handled := l.arrayIterationCall(n, name, recv); handled {
 			return x
 		}
@@ -3561,4 +3564,27 @@ func alwaysTruthyObject(t hir.Type) bool {
 		return true
 	}
 	return false
+}
+
+// checkedContainerReceiver views a tagged receiver as the Map, Set or array
+// its checked type names (a member read through a union lowered as a tagged
+// value). The reference view checks the stored value; nothing is converted.
+func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
+	t := l.ck.GetTypeAtLocation(expr)
+	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 {
+		return recv
+	}
+	t = l.ck.GetNonNullableType(t)
+	before := len(l.diags)
+	typ := l.mapCheckerType(expr, t)
+	if hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return recv
+	}
+	l.diags = l.diags[:before]
+	switch typ.Kind {
+	case hir.OrderedMap, hir.OrderedSet, hir.Array:
+		return l.coerce(recv, typ)
+	}
+	return recv
 }
