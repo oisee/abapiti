@@ -1924,69 +1924,73 @@ func (l *lowerer) concatArrays(n *ast.Node, recv *hir.Expr, args []*ast.Node) *h
 	return result
 }
 
-// replaceCall lowers s.replace(pattern, with): a RegExp (literal or
-// constructed) maps to the regex-aware replace; a single-character literal
-// pattern with the global flag keeps the phase-1 string.replaceAll mapping.
+// replaceCall preserves source evaluation order and GetSubstitution semantics.
 func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hir.Expr {
 	if len(args) != 2 {
 		l.diagf(n, "unsupported-regex", "replace needs a pattern and a replacement")
 		return nil
 	}
-	if (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && strings.Contains(args[1].Text(), "$") {
-		l.diagf(args[1], "unsupported-regex", "replace requires a literal replacement without dollar substitutions")
+	if args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/^/g` || args[0].Text() == `/$/g` || strings.Contains(args[0].Text(), `\0`)) {
+		l.diagf(args[0], "unsupported-regex", "anchor-only or octal replacement semantics are not lowered")
 		return nil
 	}
+	// Save values in source evaluation order, before subsequent arguments can
+	// mutate the receiver or the pattern binding.
+	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
+	var pat *hir.Expr
+	if lineBreak {
+		l.diagf(n, "note-regex-mapped", "literal global line-break replacement")
+		needle := "\r"
+		if args[0].Text() == `/\n/g` {
+			needle = "\n"
+		}
+		pat = hir.L(hir.T(hir.String), needle)
+	} else {
+		pat = l.expr(args[0])
+	}
+	if pat == nil {
+		return nil
+	}
+	if t := l.ck.GetTypeAtLocation(args[0]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
+		pat = l.coerce(pat, hir.T(hir.String))
+	}
+	pat = l.tempInit(args[0], pat.Type, pat)
 	with := l.expr(args[1])
 	if with == nil {
 		return nil
 	}
-	if args[0].Kind == ast.KindRegularExpressionLiteral {
-		if (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`) && args[1].Kind == ast.KindStringLiteral && !strings.Contains(args[1].Text(), "$") {
-			needle := "\r"
-			if args[0].Text() == `/\n/g` {
-				needle = "\n"
-			}
-			l.diagf(n, "note-regex-mapped", "literal global line-break replacement")
-			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
-		}
-		if (args[0].Text() == `/^/g` || args[0].Text() == `/$/g`) || strings.Contains(args[0].Text(), `\0`) {
-			l.diagf(n, "unsupported-regex", "anchor or octal replacement semantics are not lowered")
-			return nil
-		}
-		pattern := l.regexLiteral(args[0])
-		if pattern == nil {
-			return nil
-		}
-		return l.rtOp("string.replaceRegex", recv, hir.T(hir.String), pattern, with)
+	if t := l.ck.GetTypeAtLocation(args[1]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
+		with = l.coerce(with, hir.T(hir.String))
 	}
-	// A dynamic pattern (new RegExp(...)): map through the runtime replace.
-	pat := l.expr(args[0])
-	if pat != nil && pat.Type.Kind == hir.RegExp {
+	if with.Type.Kind != hir.String {
+		l.diagf(args[1], "unsupported-regex", "replace requires a string replacement; callable and coercing replacements are not lowered")
+		return nil
+	}
+	if pat.Type.Kind == hir.RegExp {
+		if n.Expression().Name().Text() == "replaceAll" {
+			if args[0].Kind != ast.KindRegularExpressionLiteral {
+				l.diagf(args[0], "unsupported-regex", "replaceAll requires a literal global RegExp or a string pattern")
+				return nil
+			}
+			text := args[0].Text()
+			slash := strings.LastIndex(text, "/")
+			if !strings.Contains(text[slash+1:], "g") {
+				l.diagf(args[0], "unsupported-regex", "replaceAll requires a global RegExp")
+				return nil
+			}
+		}
 		return l.rtOp("string.replaceRegex", recv, hir.T(hir.String), pat, with)
 	}
-	if args[0].Kind == ast.KindStringLiteral {
-		needle, ok := l.simpleRegexText(args[0].Text())
-		if ok {
-			l.diagf(n, "note-regex-mapped", "string replace with literal %q mapped to replaceAll", needle)
-			return l.rtOp("string.replaceAll", recv, hir.T(hir.String), hir.L(hir.T(hir.String), needle), with)
+	if pat.Type.Kind == hir.String {
+		op := "string.replaceFirst"
+		if lineBreak || n.Expression().Name().Text() == "replaceAll" {
+			op = "string.replaceAll"
 		}
+		return l.rtOp(op, recv, hir.T(hir.String), pat, with)
 	}
-	if pat != nil && pat.Type.Kind == hir.String {
-		if n.Expression().Name().Text() == "replace" {
-			l.diagf(n, "note-replace-first", "string replace with a dynamic string pattern replaces the first occurrence")
-			return l.rtOp("string.replaceFirst", recv, hir.T(hir.String), pat, with)
-		}
-		l.diagf(n, "note-replace-all", "replaceAll with a dynamic string pattern")
-		return l.rtOp("string.replaceAll", recv, hir.T(hir.String), pat, with)
-	}
-	l.diagf(n, "unsupported-regex", "replace with a non-literal pattern is not lowered")
+	l.diagf(args[0], "unsupported-regex", "replace requires a string or RegExp pattern")
 	return nil
-}
-
-// simpleRegexText accepts a plain string pattern (any characters, used as a
-// literal needle).
-func (l *lowerer) simpleRegexText(text string) (string, bool) {
-	return text, true
 }
 
 // simpleRegex accepts literal patterns with the global flag and decodes escapes.

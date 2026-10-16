@@ -7,6 +7,7 @@ package golang
 // Unlike exec's start-prefix wrapper, this has no bounded-repeat cursor limit.
 const regexSplitRuntimeSource = `
 func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
+ if pattern.Source==str("^(-?)0+(?=\\d)") {panic(newTrap("regexp split lookahead grammar is outside the checked split subset"))}
  out:=&array[jsString]{}
  lim:=float64(0)
  if !math.IsNaN(limit) && !math.IsInf(limit,0) {

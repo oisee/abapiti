@@ -28,8 +28,8 @@ func lowerProbe(t *testing.T, dir string) (*hir.Program, []LowerDiagnostic) {
 func TestCriticR1Diagnostics(t *testing.T) {
 	for name, category := range map[string]string{
 		"before_super_this": "unsupported-before-super", "radix": "unsupported-call",
-		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
-		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
+		"regex_anchor":       "unsupported-regex",
+		"top_level":          "unsupported-top-level",
 		"constructor_timing": "unsupported-static-init",
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -221,11 +221,10 @@ func TestStringBuildModeLiteral(t *testing.T) {
 
 func TestCriticR1RejectVariants(t *testing.T) {
 	for name, body := range map[string]string{
-		"anchor_end":          `return "abc".replace(/$/g, "X");`,
-		"replacement_capture": `return "abc".replace(/a/g, "$1");`,
-		"radix_side_effect":   `let n = 0; return (16).toString(n = n + 1);`,
-		"regex_octal":         `return "abc".replace(/\01/g, "X");`,
-		"number_remainder":    `return 5.5 % 3;`,
+		"anchor_end":        `return "abc".replace(/$/g, "X");`,
+		"radix_side_effect": `let n = 0; return (16).toString(n = n + 1);`,
+		"regex_octal":       `return "abc".replace(/\01/g, "X");`,
+		"number_remainder":  `return 5.5 % 3;`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()

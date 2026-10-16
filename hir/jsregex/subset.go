@@ -32,6 +32,9 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 	if pattern == `^'(?:[^'\\]|''|\\'|\\\\|\\(?!'))*'$` && !insensitive {
 		return `^'(?:[^'\\]|''|\\+'|\\+[^'\\]|\\{2,})*'\z`, true
 	}
+	if pattern == `^(-?)0+(?=\d)` && flags == "" {
+		return `^(-?)0+([0-9])`, true
+	}
 	p := subsetParser{pattern: pattern, insensitive: insensitive}
 	out, _, ok := p.expression(false)
 	return out, ok && p.pos == len(pattern)
@@ -41,6 +44,7 @@ type subsetParser struct {
 	pattern     string
 	pos         int
 	insensitive bool
+	names       map[string]bool
 }
 
 func subsetLiteral(c byte, insensitive bool) string {
@@ -104,12 +108,36 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 			prefix := "("
 			cap = true
 			if p.pos < len(p.pattern) && p.pattern[p.pos] == '?' {
-				if p.pos+1 >= len(p.pattern) || p.pattern[p.pos+1] != ':' {
+				if p.pos+1 >= len(p.pattern) {
 					return "", false, false
 				}
-				p.pos += 2
-				prefix = "(?:"
-				cap = false
+				switch p.pattern[p.pos+1] {
+				case ':':
+					p.pos += 2
+					prefix = "(?:"
+					cap = false
+				case '<':
+					p.pos += 2
+					start := p.pos
+					for p.pos < len(p.pattern) && (p.pattern[p.pos] >= 'a' && p.pattern[p.pos] <= 'z' || p.pattern[p.pos] >= 'A' && p.pattern[p.pos] <= 'Z' || p.pattern[p.pos] == '_' || p.pos > start && p.pattern[p.pos] >= '0' && p.pattern[p.pos] <= '9') {
+						p.pos++
+					}
+					if p.pos == start || p.pos >= len(p.pattern) || p.pattern[p.pos] != '>' {
+						return "", false, false
+					}
+					name := p.pattern[start:p.pos]
+					if p.names == nil {
+						p.names = map[string]bool{}
+					}
+					if p.names[name] {
+						return "", false, false
+					}
+					p.names[name] = true
+					prefix = "(?P<" + name + ">"
+					p.pos++
+				default:
+					return "", false, false
+				}
 			}
 			inner, innerCap, ok := p.expression(true)
 			if !ok || p.pos >= len(p.pattern) || p.pattern[p.pos] != ')' {

@@ -139,25 +139,46 @@ func (s jsString) indexOf(needle jsString) int32 {
 	}
 	return -1
 }
-func (s jsString) replaceAll(needle, with jsString) jsString {
- if with.indexOf(str("$")) >= 0 {panic(newTrap("replacement dollar substitutions are unsupported"))}
-	if needle == "" {
-		out := with
-		for i := int32(0); i < s.length(); i++ {
-			out += s.charAt(i) + with
-		}
-		return out
-	}
-	out := jsString("")
-	for {
-		i := s.indexOf(needle)
-		if i < 0 {
-			return out + s
-		}
-		out += s[:2*i] + with
-		s = s[2*i+int32(len(needle)):]
-	}
+// GetSubstitution operates on UTF-16 code units and the original input.
+// captures includes the whole match at index zero; missing captures are empty.
+func getSubstitution(s, replacement jsString, start, end int32, captures []jsString, names map[string]int) jsString {
+ out:=jsString("")
+ for i:=int32(0);i<replacement.length();i++ {
+  ch:=replacement.charAt(i)
+  if ch!=str("$") || i+1==replacement.length() {out+=ch;continue}
+  next:=replacement.charAt(i+1)
+  switch next {
+  case str("$"):out+=str("$");i++
+  case str("&"):out+=s[2*start:2*end];i++
+  case str("\x60"):out+=s[:2*start];i++
+  case str("'"):out+=s[2*end:];i++
+  case str("<"):
+   if names==nil {out+=ch;continue}
+   tail:=replacement[2*(i+2):];close:=tail.indexOf(str(">"))
+   if close<0 {out+=ch;continue}
+   if k,ok:=names[tail[:2*close].String()];ok {out+=captures[k]}
+   i+=close+2
+  default:
+   digit:=replacement.charCodeAt(i+1)-48
+   if digit<0 || digit>9 {out+=ch;continue}
+   count:=int32(1);number:=digit
+   if i+2<replacement.length() {d:=replacement.charCodeAt(i+2)-48;if d>=0 && d<=9 && int(digit*10+d)<len(captures) {number=digit*10+d;count=2}}
+   if number>0 && int(number)<len(captures) {out+=captures[number];i+=count} else {out+=ch}
+  }
+ }
+ return out
 }
+func (s jsString) replaceAll(needle, with jsString) jsString {
+ out:=jsString("");last:=int32(0);at:=int32(0)
+ for at<=s.length() {
+  relative:=s[2*at:].indexOf(needle);if relative<0 {break}
+  start:=at+relative;end:=start+needle.length()
+  out+=s[2*last:2*start]+getSubstitution(s,with,start,end,nil,nil)
+  last=end;at=end;if needle=="" {at++}
+ }
+ return out+s[2*last:]
+}
+
 func (s jsString) split(sep jsString) *array[jsString] {
 	a := &array[jsString]{}
 	if sep == "" {
@@ -830,13 +851,11 @@ func (s jsString) at(i int32) optional[jsString] {
 	return present(s.charAt(i))
 }
 func (s jsString) replaceFirst(n, v jsString) jsString {
- if v.indexOf(str("$")) >= 0 {panic(newTrap("replacement dollar substitutions are unsupported"))}
-	i := s.indexOf(n)
-	if i < 0 {
-		return s
-	}
-	return s[:2*i] + v + s[2*i+int32(len(n)):]
+ i:=s.indexOf(n);if i<0 {return s}
+ end:=i+n.length()
+ return s[:2*i]+getSubstitution(s,v,i,end,nil,nil)+s[2*end:]
 }
+
 func (s jsString) repeat(n float64) jsString {
  n = math.Trunc(n)
  if math.IsNaN(n) {n=0}
@@ -991,13 +1010,23 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if r.denied!=nil && r.denied.MatchString(input) {if stateful {r.LastIndex=0};return nil}
  re:=r.compiled
  wrapped:=start>0 || r.Flags.indexOf(str("y"))>=0
+ searchInput:=input;byteBase:=0
  if wrapped {
+  // Keep one preceding UTF-16 unit for word boundaries. A mandatory unit
+  // prevents non-m start anchors from matching at a sliced-subject boundary.
+  // This avoids RE2's 1000-repeat limit for arbitrarily large lastIndex.
+  prefix:="\\A"
+  if start>0 {
+   for unit:=int32(0);unit<start-1;unit++ {_,size:=utf8.DecodeRuneInString(input[byteBase:]);byteBase+=size}
+   searchInput=input[byteBase:];prefix+="(?s:.)"
+  }
   scan:="(?s:.*?)";if r.Flags.indexOf(str("y"))>=0 {scan=""}
-  re=regexp.MustCompile("\\A(?s:.{"+strconv.Itoa(int(start))+"})"+scan+"("+re.String()+")")
+  re=regexp.MustCompile(prefix+scan+"("+re.String()+")")
  }
- m:=re.FindStringSubmatchIndex(input)
+ m:=re.FindStringSubmatchIndex(searchInput)
  if m==nil {if stateful {r.LastIndex=0};return nil}
- if wrapped {m=m[2:]}
+ if wrapped {m=m[2:];for i:=range m {if m[i]>=0 {m[i]+=byteBase}}}
+ if r.Source==str("^(-?)0+(?=\\d)") {m[1]--;m=m[:len(m)-2]}
  out:=&array[jsString]{HasMatchIndex:true,MatchIndex:int32(utf8.RuneCountInString(input[:m[0]]))}
  if stateful {r.LastIndex=int32(utf8.RuneCountInString(input[:m[1]]))}
  for i:=0;i<len(m);i+=2 {
@@ -1018,28 +1047,22 @@ func (r *jsRegExp) match_test(s jsString) bool {
 	return found
 }
 func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
-	if v.indexOf(str("$")) >= 0 {
-		panic(newTrap("regexp replacement dollar substitutions are unsupported"))
-	}
-	input := unitText(s)
- if r.denied!=nil && r.denied.MatchString(input) {return s}
-	global := r.Flags.indexOf(str("g")) >= 0
-	limit := 1
-	if global {
-		limit = -1
-		r.LastIndex = 0
-	}
-	matches := r.compiled.FindAllStringIndex(input, limit)
-	out := jsString("")
-	last := int32(0)
-	for _, m := range matches {
-		a := int32(utf8.RuneCountInString(input[:m[0]]))
-		b := int32(utf8.RuneCountInString(input[:m[1]]))
-		out += s[2*last:2*a] + v
-		last = b
-	}
-	return out + s[2*last:]
+ global:=r.Flags.indexOf(str("g"))>=0
+ if global {r.LastIndex=0}
+ var names map[string]int
+ for i,name:=range r.compiled.SubexpNames() {if name!="" {if names==nil {names=map[string]int{}};names[name]=i}}
+ out:=jsString("");last:=int32(0)
+ for {
+  match:=r.exec(s);if match==nil {break}
+  start:=match.MatchIndex;end:=start+match.Items[0].length()
+  out+=s[2*last:2*start]+getSubstitution(s,v,start,end,match.Items,names)
+  last=end
+  if !global {break}
+  if end==start {r.LastIndex++}
+ }
+ return out+s[2*last:]
 }
+
 func (s jsString) match(r *jsRegExp) *array[jsString] {
  if r.Flags.indexOf(str("g"))<0 {return r.exec(s)}
  r.LastIndex=0
