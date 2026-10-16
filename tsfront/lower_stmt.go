@@ -93,6 +93,9 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 // stmtsOwn lowers the statement; preludes its lowering leaves at statement
 // level (a checked conversion of a returned or assigned value) precede it.
 func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
+	if n != nil && l.require != nil && l.require.skip[n] {
+		return nil
+	}
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {

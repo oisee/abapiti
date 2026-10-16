@@ -14,3 +14,6 @@ class Token {
 }
 exports.Kinds = {Kind, CharKind, IntKind};
 exports.Token = Token;
+exports.Level = {Low: "L", High: "H"};
+exports.LIMIT = 3;
+exports.twice = (n) => n * 2;
