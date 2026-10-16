@@ -362,6 +362,8 @@ func (e *emitter) typ(t hir.Type) string {
 		return "int64"
 	case hir.Number:
 		return "float64"
+	case hir.BigInt:
+		return "jsBigInt"
 	case hir.String:
 		return "jsString"
 	case hir.ClassValue:
@@ -715,6 +717,8 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 		return "present(" + s + ")"
 	}
 	switch t.Kind {
+	case hir.BigInt:
+		return "jsBigInt(" + strconv.Quote(v.(string)) + ")"
 	case hir.String:
 		text, ok := v.(string)
 		if !ok {
@@ -740,6 +744,8 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 }
 func (b *body) truth(v string, t hir.Type) string {
 	switch t.Kind {
+	case hir.BigInt:
+		return v + "!=jsBigInt(\"0\")"
 	case hir.Optional:
 		if t.Args[0].IsRef() {
 			return "!nilRef(" + v + ")"

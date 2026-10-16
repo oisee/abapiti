@@ -349,7 +349,9 @@ func box(v any) *dynamic {
 	switch v.(type) {
 	case *classDescriptor:
 		tag = 10
-	case jsString:
+	case jsBigInt:
+ tag=11
+ case jsString:
 		tag = 1
 	case bool:
 		tag = 3
@@ -786,7 +788,9 @@ func stringCoercion(v any,depth int) jsString {
 	if depth>64 {panic(newTrap("cyclic/deep ToPrimitive is unsupported"))}
 	if nilRef(v) {return str("undefined")}
 	switch x := v.(type) {
-	case jsString:
+	case jsBigInt:
+ return str(string(x))
+ case jsString:
 		return x
 	case bool:
 		return str(strconv.FormatBool(x))
@@ -935,6 +939,22 @@ func (s jsString) parseInt10i64() optional[int64] {
 	}
 	return present(int64(v.Value))
 }
+
+// jsBigInt is canonical signed decimal, distinct from String and Number.
+type jsBigInt string
+func parseBigInt(s jsString) jsBigInt {
+ p:=s.trim().String();negative:=false
+ if len(p)>0 && (p[0]=='-'||p[0]=='+') {negative=p[0]=='-';p=p[1:];if p=="" {panic(newTrap("BigInt requires a decimal integer string"))}}
+ for _,c:=range p {if c<'0'||c>'9' {panic(newTrap("BigInt supports decimal integer strings only"))}}
+ p=strings.TrimLeft(p,"0");if p=="" {return jsBigInt("0")};if negative {p="-"+p};return jsBigInt(p)
+}
+func negBigInt(x jsBigInt) jsBigInt {if x=="0" {return x};if x[0]=='-' {return x[1:]};return "-"+x}
+func compareBigInt(x,y jsBigInt) float64 {
+ a,b:=string(x),string(y);an,bn:=a[0]=='-',b[0]=='-'
+ if an!=bn {if an{return -1};return 1};sign:=float64(1);if an {a=a[1:];b=b[1:];sign=-1}
+ if len(a)<len(b)||len(a)==len(b)&&a<b {return -sign};if a==b{return 0};return sign
+}
+func dynBigInt(d *dynamic) jsBigInt {if d==nil||d.Tag!=11 {panic(newTrap("expected bigint"))};return d.Value.(jsBigInt)}
 
 type jsRegExp struct {
 	Source, Flags jsString
@@ -1138,6 +1158,7 @@ func dynBoolean(d *dynamic) bool {
 	return d.Value.(bool)
 }
 func dynTypeof(d *dynamic) jsString {
+ if d!=nil && d.Tag==11 {return str("bigint")}
 	if d == nil {
 		return str("undefined")
 	}
@@ -1160,6 +1181,7 @@ func dynStringCoercion(d *dynamic,depth int) jsString {
 		return str("undefined")
 	}
 	switch d.Tag {
+ case 11:return str(string(d.Value.(jsBigInt)))
 	case tagNull:
 		return str("null")
 	case 4, 5, 6:
@@ -1177,6 +1199,7 @@ func dynStringCoercion(d *dynamic,depth int) jsString {
 	}
 }
 func dynTruth(d *dynamic) bool {
+ if d!=nil && d.Tag==11 {return d.Value.(jsBigInt)!="0"}
 	if d == nil || d.Tag == tagNull {
 		return false
 	}

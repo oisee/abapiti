@@ -47,6 +47,8 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return mapped
 	}
 	switch n.Kind {
+	case ast.KindBigIntKeyword:
+		return hir.T(hir.BigInt)
 	case ast.KindNumberKeyword:
 		l.diagf(n, "note-number-binary64", "number defaults to binary64 pending integer range inference")
 		return hir.T(hir.Number)
@@ -526,6 +528,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		}
 		l.diagf(n, "unsupported-type", "unconstrained type parameter %s", l.ck.TypeToString(t))
 		return hir.T(hir.Void)
+	case flags&checker.TypeFlagsBigIntLike != 0:
+		return hir.T(hir.BigInt)
 	case flags&checker.TypeFlagsNumberLiteral != 0 || flags&checker.TypeFlagsNumber != 0:
 		if flags&checker.TypeFlagsNumberLiteral != 0 {
 			l.checkNumberLiteral(n, t.AsLiteralType().Value())

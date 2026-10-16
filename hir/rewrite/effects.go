@@ -27,6 +27,11 @@ type OpEffect struct {
 
 // Explicit records: adding a HIR catalogue operation requires a reviewed entry.
 var RuntimeEffects = map[string]OpEffect{
+	"bigint.decimal":            {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Nondecimal conversion strings remain outside the checked subset."},
+	"bigint.neg":                {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"bigint.toString":           {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"bigint.compare":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"dynamic.asBigInt":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "None", Conservative: "Go uses a located refusal for a wrong tag; ABAP raises a cast exception."},
 	"union.admit":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
 	"union.widen":               {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "Receiver"},
 	"union.project":             {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},

@@ -118,6 +118,8 @@ METHOD truth.
 CASE tag.
 WHEN tag_null.
 result = abap_false.
+WHEN tag_bigint.
+result = xsdbool( sval <> '0' ).
 WHEN tag_string.
 result = xsdbool( strlen( sval ) > 0 ).
 WHEN tag_number.
@@ -143,7 +145,7 @@ IF p0 IS NOT BOUND OR tag <> p0->tag.
 RETURN.
 ENDIF.
 CASE tag.
-WHEN tag_string.
+WHEN tag_string OR tag_bigint.
 result = xsdbool( sval = p0->sval ).
 WHEN tag_number.
 IF number_special <> 0 OR p0->number_special <> 0.

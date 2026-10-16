@@ -83,6 +83,9 @@ func (l *lowerer) condition(n *ast.Node) *hir.Expr {
 }
 
 func (l *lowerer) expr(n *ast.Node) *hir.Expr {
+	if x, ok := l.bigintExpr(n); ok {
+		return x
+	}
 	if l.integerOptions.AssumeOnlyIntegerCalculations {
 		if arg := l.integerNumberIdentity(n); arg != nil {
 			return l.expr(arg)
@@ -319,6 +322,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	}
 	if x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && typ.Kind != hir.Optional {
 		x = &hir.Expr{Kind: hir.Narrow, Type: hir.T(hir.Dynamic), X: x}
+	}
+	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.BigInt {
+		return l.rtOp("dynamic.asBigInt", x, typ)
 	}
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.Bool {
 		return l.rtOp("dynamic.asBoolean", x, typ)
@@ -1505,6 +1511,12 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 	}
 	i32, str, boolT := hir.T(hir.I32), hir.T(hir.String), hir.T(hir.Bool)
 	switch recv.Type.Kind {
+	case hir.BigInt:
+		if name == "toString" && len(args) == 0 {
+			return l.rtOp("bigint.toString", recv, str), true
+		}
+		l.diagf(n, "unsupported-bigint", "bigint method %s is not lowered", name)
+		return nil, true
 	case hir.String:
 		switch name {
 		case "repeat":
@@ -2820,6 +2832,9 @@ func (l *lowerer) prefixUnary(n *ast.Node) *hir.Expr {
 		if x == nil {
 			return nil
 		}
+		if x.Type.Kind == hir.BigInt {
+			return l.rtOp("bigint.neg", x, x.Type)
+		}
 		return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "-", Type: x.Type, X: x}
 	}
 	l.diagf(n, "unsupported-expr", "unary %s is not lowered", u.Operator.String())
@@ -3207,6 +3222,8 @@ func (l *lowerer) templateExpr(n *ast.Node) *hir.Expr {
 func (l *lowerer) primitiveString(at *ast.Node, x *hir.Expr) *hir.Expr {
 	s := hir.T(hir.String)
 	switch x.Type.Kind {
+	case hir.BigInt:
+		return l.rtOp("bigint.toString", x, s)
 	case hir.String:
 		return x
 	case hir.Number:

@@ -11,6 +11,7 @@ const (
 	I32      Kind = "i32"
 	I64      Kind = "i64"
 	String   Kind = "string"
+	BigInt   Kind = "bigint"
 	Optional Kind = "optional"
 	// Promise is an already-settled value, never a scheduler or a thenable.
 	Promise      Kind = "promise"

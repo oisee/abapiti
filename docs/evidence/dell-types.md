@@ -33,3 +33,17 @@ at direct calls, independent of identifier names, retaining native element
 storage and evaluating all arguments before mutation. Primitive, object and
 nested-array aliases and late argument mutation match Node. Other generic
 bodies and indirect function values retain located refusals.
+
+## Bigint (three checker-type root sites)
+
+A: emit-int8.ts:11:7, :11:27, :13:30. TypeScript bigint is correctly typed;
+changing it to number or int64 would lose precision or overflow at the bounds.
+The RED oracle reproduces the checker/annotation failures and BigInt conversion
+refusal. HIR now has a distinct bigint primitive, canonical arbitrary-length
+signed decimal storage, decimal-string construction, constant +/−/multiply/left
+shift, runtime negation, comparisons, formatting and truthiness. Tagged storage
+preserves bigint versus Number/String/null. Runtime arithmetic beyond negation,
+nondecimal conversion strings and numeric/boolean conversion arguments stay
+outside the checked subset. Shift folding caps allocation at 1,048,576 bits.
+Go matches Node across both int64 boundaries and 40-digit integers; ABAP emits
+string-based sign/length/digit comparisons without fixed-width conversion.

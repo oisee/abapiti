@@ -441,6 +441,8 @@ func (l *lowerer) isHIRThunk(t hir.Type) bool {
 // staticTypeofTag describes present values; null is not currently a HIR type.
 func staticTypeofTag(k hir.Kind) string {
 	switch k {
+	case hir.BigInt:
+		return "bigint"
 	case hir.String:
 		return "string"
 	case hir.Number, hir.I32, hir.I64:

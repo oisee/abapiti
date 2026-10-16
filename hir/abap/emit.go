@@ -326,7 +326,7 @@ func (e *emitter) typ(t hir.Type) string {
 		return "i"
 	case hir.I64:
 		return "int8"
-	case hir.String:
+	case hir.String, hir.BigInt:
 		return "string"
 	case hir.ClassRef:
 		if t.Name == hir.RootObject {
@@ -1121,7 +1121,7 @@ func (b *body) expr(x *hir.Expr) string {
 			target = n + "->value"
 		}
 		switch lt.Kind {
-		case hir.String:
+		case hir.String, hir.BigInt:
 			value, ok := b.literalString(x)
 			if ok {
 				b.stringLit(target, value)
@@ -1854,6 +1854,9 @@ func (b *body) truth(n, a string, t hir.Type) {
 		b.line("ENDIF.")
 		return
 	}
+	if t.Kind == hir.BigInt {
+		test = a + " <> '0'"
+	}
 	if t.Kind == hir.String {
 		test = "strlen( " + a + " ) > 0"
 	}
@@ -2067,6 +2070,9 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.bigintRuntime(x, n) {
+		return
+	}
 	if x.Op == "array.spread0" {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP array spread with undefined values is unsupported", x.ID, x.Source))
 		return
@@ -3196,6 +3202,8 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	tag := "tag_ref"
 	field := "oval"
 	switch t.Kind {
+	case hir.BigInt:
+		tag, field = "tag_bigint", "sval"
 	case hir.String:
 		tag, field = "tag_string", "sval"
 	case hir.I64:

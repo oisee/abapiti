@@ -100,8 +100,22 @@ func (l *lowerer) gogenCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	if callee.Kind == ast.KindIdentifier && callee.Text() == "BigInt" && l.librarySymbol(l.resolve(callee)) {
-		l.diagf(n, "unsupported-bigint", "BigInt conversion requires bigint values, which have no HIR representation")
-		return nil, true
+		if len(n.Arguments()) != 1 {
+			l.diagf(n, "unsupported-bigint", "BigInt requires one decimal string argument")
+			return nil, true
+		}
+		x := l.expr(n.Arguments()[0])
+		if x == nil {
+			return nil, true
+		}
+		if t := l.ck.GetTypeAtLocation(n.Arguments()[0]); t != nil && t.Flags()&checker.TypeFlagsStringLike != 0 {
+			x = l.coerce(x, hir.T(hir.String))
+		}
+		if x.Type.Kind != hir.String {
+			l.diagf(n, "unsupported-bigint", "BigInt requires a decimal string; number/boolean coercion is not lowered (got %s)", x.Type)
+			return nil, true
+		}
+		return l.rtOp("bigint.decimal", x, hir.T(hir.BigInt)), true
 	}
 	if callee.Kind != ast.KindPropertyAccessExpression || callee.Name().Text() != "now" {
 		return nil, false

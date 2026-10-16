@@ -200,7 +200,7 @@ func (v *verifier) typ(n Node, t Type) {
 		if u := v.p.Union(t.Name); u == nil || !u.Complete {
 			v.fail(n, "unresolved or incomplete union "+t.Name)
 		}
-	case Bool, Number, I32, I64, String, Void:
+	case Bool, Number, I32, I64, String, BigInt, Void:
 	case ClassRef:
 		if t.Name != RootObject && v.classes[t.Name] == nil {
 			v.fail(n, "unresolved class "+t.Name)
@@ -604,6 +604,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 				_, valid = e.Value.(bool)
 			case String:
 				_, valid = e.Value.(string)
+			case BigInt:
+				text, ok := e.Value.(string)
+				valid = ok && CanonicalBigInt(text)
 			case Number, I32, I64:
 				r := reflect.ValueOf(e.Value)
 				valid = r.Kind() >= reflect.Int && r.Kind() <= reflect.Float64
