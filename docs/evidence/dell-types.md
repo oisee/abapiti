@@ -69,3 +69,15 @@ object storage and Object.keys snapshots. Tuples containing erased values use
 real tagged arrays, preserving entry arrays and explicit undefined elements.
 The RED oracle reproduced both conditional failures and key intersections;
 children and entries now match Node, including JSON array shape, and emit ABAP.
+
+## ProgramInput (three type-reference root sites)
+
+A: emit-exception.ts:58:44, emit-table-move.ts:12:44,
+frontend-owned.ts:42:43. Program | (Class[] & Partial<Program>) is a valid
+legacy-input contract, not a generator type error. Optional-data intersections
+retain native array identity; record-or-array unions use tagged storage.
+Original array references survive wrapping and fallback selection. Missing
+named metadata reads return undefined. Named writes on native array
+intersections remain a located frontend refusal; metadata on record inputs is
+supported. The RED oracle reproduced ProgramInput/ClassList refusal, and the
+final record/legacy-array oracle matches Node and exports ABAP.

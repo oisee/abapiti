@@ -14,6 +14,9 @@ func (l *lowerer) gogenValueType(t *checker.Type) (hir.Type, bool) {
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if l.arrayRecordUnion(t) {
+		return hir.T(hir.Dynamic), true
+	}
 	if l.gogenRecursiveArrayValue(t) {
 		return hir.T(hir.Dynamic), true
 	}
@@ -87,7 +90,7 @@ func (l *lowerer) gogenIndexWrite(n *ast.Node) bool {
 }
 
 func (l *lowerer) gogenValueProperty(n *ast.Node) (*hir.Expr, bool) {
-	if _, ok := l.gogenValueType(l.ck.GetTypeAtLocation(n.Expression())); !ok {
+	if _, ok := l.gogenValueType(l.ck.GetTypeAtLocation(n.Expression())); !ok && !l.arrayRecordProperty(n) {
 		return nil, false
 	}
 	recv := l.expr(n.Expression())

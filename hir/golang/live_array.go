@@ -71,7 +71,7 @@ func liveArrayElement[T any](d *dynamic) T {
  return unboxValue[T](d)
 }
 func liveArrayIndex(k jsString) int32 {s:=k.String();i,err:=strconv.ParseUint(s,10,31);if err!=nil || s=="" || strconv.FormatUint(i,10)!=s {panic(newTrap("live array property is not a supported index"))};return int32(i)}
-func (a *array[T]) dynamicGet(k jsString) *dynamic {if k==str("length") {return box(float64(a.length()))};v:=a.get(liveArrayIndex(k));if !v.Has {return nil};return box(v.Value)}
+func (a *array[T]) dynamicGet(k jsString) *dynamic {if k==str("length") {return box(float64(a.length()))};s:=k.String();i,err:=strconv.ParseUint(s,10,31);if err!=nil || s=="" || strconv.FormatUint(i,10)!=s {return nil};v:=a.get(int32(i));if !v.Has {return nil};return box(v.Value)}
 func (a *array[T]) dynamicPut(k jsString,v *dynamic) {a.livePut(liveArrayIndex(k),v)}
 
 type liveArrayStorage interface {

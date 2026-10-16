@@ -14,6 +14,9 @@ func (l *lowerer) gogenCheckerType(n *ast.Node, t *checker.Type) (hir.Type, bool
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if mapped, ok := l.arrayRecordType(n, t); ok {
+		return mapped, true
+	}
 	if mapped, ok := l.genericPropertyType(t); ok {
 		return mapped, true
 	}

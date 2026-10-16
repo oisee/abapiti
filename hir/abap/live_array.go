@@ -68,7 +68,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	idx = b.temp(hir.T(hir.I32))
 	node = b.temp(hir.T(hir.Dynamic))
 	v = b.temp(t.Args[0])
-	b.line("load( ).\nIF p0 = `length`.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_number.\nresult->nval = lines( items ).\nRETURN.\nENDIF.\nCREATE OBJECT " + node + ".\n" + idx + " = " + node + "->array_index( p0 ).\nIF has( " + idx + " ) = abap_false.\nRETURN.\nENDIF.\nREAD TABLE items INDEX " + idx + " + 1 INTO " + v + ".")
+	b.line("load( ).\nIF p0 = `length`.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_number.\nresult->nval = lines( items ).\nRETURN.\nENDIF.\nCREATE OBJECT " + node + ".\nTRY.\n" + idx + " = " + node + "->array_index( p0 ).\nCATCH cx_sy_range_out_of_bounds.\nRETURN.\nENDTRY.\nIF has( " + idx + " ) = abap_false.\nRETURN.\nENDIF.\nREAD TABLE items INDEX " + idx + " + 1 INTO " + v + ".")
 	if wideInteger {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: get: i64 element boxing unavailable`.")
 	} else {
