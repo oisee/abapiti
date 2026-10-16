@@ -35,5 +35,5 @@ export class Probe {
     return [compile(ctx, obj, lower, s), compile(ctx, obj, lower, null), compile(ctx, obj, lower, undefined), String(s.hits)].join(" ");
   }
 }
-`, false)
+`, true)
 }
