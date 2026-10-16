@@ -463,14 +463,17 @@ func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Clas
 				}
 				before := len(l.diags)
 				values := l.moduleVar(d, mod)
-				if l.integerOptions.TrapOnFailure && hasBlocking(l.diags[before:]) {
+				if trap := l.moduleFailure(d, before); trap != nil {
 					// Do not expose a zero-initialized value for a declaration
-					// whose initializer was dropped. Retained uses fail verification.
+					// whose initializer was dropped. Retained uses fail
+					// verification; the initializer itself refuses where
+					// JavaScript would evaluate it.
 					for i := len(mod.Fields) - 1; i >= 0; i-- {
 						if mod.Fields[i].Name == d.Name().Text() {
 							mod.Fields = append(mod.Fields[:i], mod.Fields[i+1:]...)
 						}
 					}
+					*body = append(*body, trap)
 					continue
 				}
 				*body = append(*body, values...)
