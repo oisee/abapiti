@@ -200,7 +200,10 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 			}
 			return l.rtOp("array.shift", recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "sort":
-			if len(args) != 1 || (args[0].Kind != ast.KindArrowFunction && args[0].Kind != ast.KindFunctionExpression && args[0].Kind != ast.KindIdentifier) {
+			if len(args) == 0 {
+				return l.sortWithComparator(n, recv, nil), true
+			}
+			if len(args) != 1 || (args[0].Kind != ast.KindArrowFunction && args[0].Kind != ast.KindFunctionExpression && args[0].Kind != ast.KindIdentifier && args[0].Kind != ast.KindPropertyAccessExpression && args[0].Kind != ast.KindCallExpression) {
 				l.diagf(n, "unsupported-call", "sort needs an inline or lowered module comparator")
 				return nil, true
 			}

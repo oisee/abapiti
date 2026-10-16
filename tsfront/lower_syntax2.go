@@ -50,15 +50,31 @@ func (l *lowerer) errorToString(n *ast.Node, recv *hir.Expr) *hir.Expr {
 }
 
 // sortWithComparator lowers arr.sort((a, b) => cmp) as an in-place stable
-// insertion sort. The comparator is inlined; it must be pure, since the
+// insertion sort. The comparator is inlined or adapted; it must be pure, since the
 // sequence of comparisons differs from V8's TimSort.
 func (l *lowerer) sortWithComparator(n *ast.Node, recv *hir.Expr, cb *ast.Node) *hir.Expr {
 	elem := recv.Type.Args[0]
-	arr := l.tempInit(n, recv.Type, recv)
+	target := l.tempInit(n, recv.Type, recv)
+	// SortIndexedProperties gathers values before comparing and writes the
+	// receiver only after all comparisons succeed. Comparators can observe
+	// the original receiver, and a thrown comparator must not expose swaps.
+	arr := l.tempInit(n, recv.Type, l.rtOp("array.slice0", target, recv.Type))
 	num := hir.T(hir.Number)
-	body, params, ok := l.callbackBody(n, cb, elem)
-	if !ok {
-		return nil
+	var body *hir.Expr
+	var params []string
+	if cb == nil {
+		l.serial++
+		params = []string{"sortLeft" + itoa(l.serial), "sortRight" + itoa(l.serial)}
+		body = l.defaultSortCompare(n, hir.V(params[0], elem), hir.V(params[1], elem))
+		if body == nil {
+			return nil
+		}
+	} else {
+		var ok bool
+		body, params, ok = l.callbackBody(n, cb, elem)
+		if !ok {
+			return nil
+		}
 	}
 	if len(params) > 2 {
 		l.diagf(n, "unsupported-call", "sort comparator optional tails need an absence-preserving binding")
@@ -104,7 +120,13 @@ func (l *lowerer) sortWithComparator(n *ast.Node, recv *hir.Expr, cb *ast.Node) 
 	)
 	l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: i.Name, Type: num, X: hir.L(num, 1)})
 	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: i, Y: length}, Body: outer})
-	return arr
+	l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: i, Y: hir.L(num, 0)})
+	put := &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: elem, X: target, Y: l.indexValue(i)}
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: i, Y: length}, Body: hir.B(
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: put, Y: at(i)},
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: i, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: num, X: i, Y: hir.L(num, 1)}},
+	)})
+	return target
 }
 
 // moduleStatements lowers module-level if and expression statements, in
