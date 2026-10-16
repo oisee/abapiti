@@ -152,6 +152,18 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return ps, r, true
 	}
 	switch op {
+	case "number.hex16":
+		return nil, T(String), true
+	case "host.getenv":
+		return nil, T(Optional, T(String)), true
+	case "string.codePoints":
+		return nil, T(Array, T(String)), true
+	case "dynamic.values":
+		return nil, T(Array, T(Dynamic)), true
+	case "number.isInteger", "number.isSafeInteger", "number.isFinite", "number.strictIsNaN":
+		return nil, T(Bool), true
+	case "number.abs", "arrayLike.length":
+		return nil, T(Number), true
 	case "xml.validate", "xml.parseSubset", "xml.parseWithErrors", "json.parseSubset", "json5.parse", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.keys":

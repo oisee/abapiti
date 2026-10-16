@@ -100,21 +100,8 @@ func TestStructuresCorpusIntegrity(t *testing.T) {
 	}
 }
 
-func TestStructuresMixedShortCircuitIsDiagnostic(t *testing.T) {
-	dir := t.TempDir()
-	for name, source := range map[string]string{
-		"tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`,
-		"input.ts":      `export class Probe { static run(flag: boolean): string | boolean { return flag && "selected"; } }`,
-	} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	_, diags := lowerProbe(t, dir)
-	for _, d := range diags {
-		if d.Category == "unsupported-shortcircuit" && strings.Contains(d.Loc, "input.ts:") {
-			return
-		}
-	}
-	t.Fatalf("mixed short-circuit operands were silently lowered: %v", diags)
+func TestStructuresMixedShortCircuitNodeOracle(t *testing.T) {
+	source := `class Probe {static choose(flag:boolean):string|boolean{return flag && "selected";}static run():string{return JSON.stringify([Probe.choose(false),Probe.choose(true)]);}}`
+	want := conversionOracle(t, source)
+	gogenOracle(t, source, strings.TrimSuffix(want, "\n"))
 }

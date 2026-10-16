@@ -148,6 +148,11 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x.Type.Kind == hir.Dynamic && n.Kind == ast.KindCallExpression && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().Name().Text() == "fromEntries" && l.globalBuiltin(n.Expression().Expression(), "Object") {
+		// A tagged destination already preserves the ordinary object. The
+		// checker's index signature is not proof that every entry is present.
+		return x
+	}
 	if l.unprunedFeatures && n.Kind == ast.KindIdentifier && x.Type.Kind == hir.Optional && l.parameterMayBeAbsent(l.resolve(n)) {
 		return x
 	}
@@ -596,6 +601,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
+		if x, ok := l.processRead(n); ok {
+			return x
+		}
 		if e := n.AsElementAccessExpression(); e.QuestionDotToken != nil || n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
 		}
@@ -638,6 +646,13 @@ func (l *lowerer) numericLiteral(n *ast.Node, typ hir.Type, sign float64) *hir.E
 // parameters first, then module values, then `undefined`.
 func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	name := n.Text()
+	if l.globalBuiltin(n, "process") {
+		l.diagf(n, "unsupported-process", "process value requires a reviewed host ABI; only process.env string reads are lowered")
+		return nil
+	}
+	if l.globalBuiltin(n, "Infinity") || l.globalBuiltin(n, "NaN") {
+		return l.rtOp("string.parseFloatNumber", hir.L(hir.T(hir.String), name), hir.T(hir.Number))
+	}
 	for i := len(l.replacements) - 1; i >= 0; i-- {
 		if node, ok := l.replacements[i][0].(*ast.Node); ok && node == n {
 			x, ok := l.replacements[i][1].(*hir.Expr)
@@ -719,6 +734,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
+	if x, ok := l.processRead(n); ok {
+		return x
+	}
 	if x, handled := l.gogenIndexRead(n); handled {
 		return x
 	}
@@ -987,6 +1005,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.numericBuiltin(n); ok {
+		return x
+	}
 	if x, ok := l.gogenCall(n); ok {
 		return x
 	}
@@ -1188,8 +1209,8 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 
 		}
-		// Object.keys and friends (no lowered class is ever named Object).
-		if isGlobalObjectExpr(p.Expression) {
+		// Resolve the library global so a local Object keeps its own methods.
+		if l.globalBuiltin(p.Expression, "Object") {
 			if x, ok := l.objectStatic(n, name); ok {
 				return x
 			}
@@ -1739,6 +1760,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 	case hir.Number:
 		if name == "toString" {
+			if len(args) == 1 && args[0].Kind == ast.KindNumericLiteral && args[0].Text() == "16" {
+				out := l.rtOp("number.hex16", recv, str)
+				out.Node = l.node(n)
+				return out, true
+			}
 			if len(args) != 0 {
 				l.diagf(n, "unsupported-call", "number.toString arguments are not lowered")
 				return nil, true
@@ -2323,12 +2349,14 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				// another payload).
 				typ = hint
 			}
-			if typ.Kind == hir.Dynamic {
-				l.diagf(n, "unsupported-shortcircuit", "mixed tagged operands require value-preserving truthiness")
-				return nil
-			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
-			left, right := l.taggedOperand(x, typ), l.coerce(y, typ)
+			var left, right *hir.Expr
+			if typ.Kind == hir.Dynamic || typ.Kind == hir.Optional && typ.Args[0].Kind == hir.Dynamic {
+				left = l.convertConditionalBranch(b.Left, x, typ, false)
+				right = l.convertConditionalBranch(b.Right, y, typ, false)
+			} else {
+				left, right = l.taggedOperand(x, typ), l.convertConditionalBranch(b.Right, y, typ, false)
+			}
 			// Reference types use an initial reference for undefined. A TS
 			// assertion can erase absence from the checker type without making
 			// the runtime object present (`value as Class || undefined`). Keep
@@ -2457,7 +2485,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if base.Kind == hir.Dynamic {
 			test = l.rtOp("dynamic.isNullish", left, hir.T(hir.Bool))
 		}
-		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.coerce(y, result), Z: l.coerce(left, result)}
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
 
 	case ast.KindEqualsToken:
 		// Evaluate a property reference before the RHS, once, and return the

@@ -51,6 +51,9 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
+	"number.hex16":     true,
+	"arrayLike.length": true,
+	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
 	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true, "array.matchGroups": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,

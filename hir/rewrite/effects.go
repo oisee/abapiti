@@ -27,6 +27,16 @@ type OpEffect struct {
 
 // Explicit records: adding a HIR catalogue operation requires a reviewed entry.
 var RuntimeEffects = map[string]OpEffect{
+	"number.isInteger":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"number.isSafeInteger":      {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"number.isFinite":           {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"number.strictIsNaN":        {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"number.abs":                {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
+	"number.hex16":              {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "None", Conservative: "Checked safe-integer radix domain; ABAP refuses."},
+	"host.getenv":               {Reads: OpReads{Receiver: true, Global: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"string.codePoints":         {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
+	"dynamic.values":            {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None", Conservative: "Values retain element references; unreviewed own-property storage traps."},
+	"arrayLike.length":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "None", Conservative: "Property read and ToNumber may refuse unreviewed coercion hooks."},
 	"union.admit":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
 	"union.widen":               {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "Receiver"},
 	"union.project":             {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},

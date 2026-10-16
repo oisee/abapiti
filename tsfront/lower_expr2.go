@@ -557,6 +557,12 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 // objectStatic lowers the Object.* helpers the closure uses.
 func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	switch name {
+	case "create", "getPrototypeOf", "setPrototypeOf":
+		if l.globalBuiltin(n.Expression().Expression(), "Object") {
+			l.diagf(n, "unsupported-prototype", "Object.%s requires a prototype-preserving object ABI", name)
+			return nil, true
+		}
+		return nil, false
 	case "assign":
 		if _, local := l.lookup("Object"); local || !l.librarySymbol(l.resolve(n.Expression().Expression())) {
 			return nil, false
@@ -670,6 +676,10 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		}
 
 		x := l.expr(args[0])
+		if x != nil && x.Type.Kind != hir.OrderedMap {
+			x = l.convertConditionalBranch(args[0], x, hir.T(hir.Dynamic), false)
+			return l.rtOp("dynamic.values", x, hir.T(hir.Array, hir.T(hir.Dynamic))), true
+		}
 		if x != nil && x.Type.Kind == hir.OrderedMap {
 			typ := hir.T(hir.Array, x.Type.Args[1])
 			// Snapshot keys once and read each value in insertion order.
@@ -691,6 +701,10 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		hint := l.hint
 		if hint.Kind == hir.OrderedMap {
 			l.hint = hir.T(hir.Array, l.tupleShape(n, []hir.Type{hint.Args[0], hint.Args[1]}))
+		} else if l.unprunedFeatures && hint.Kind != "" && hint.Kind != hir.Void {
+			// A surrounding tagged value/shape is not the pair's element
+			// context. Preserve each heterogeneous row as key and tagged value.
+			l.hint = hir.T(hir.Array, l.tupleShape(n, []hir.Type{hir.T(hir.String), hir.T(hir.Dynamic)}))
 		}
 		x := l.expr(args[0])
 		l.hint = hint
@@ -720,11 +734,16 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		typ := hir.T(hir.OrderedMap, keyT, valT)
 		m := l.tempVar(n, typ)
 		v := hir.V("v", row)
+		key := &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f0", Type: keyT, X: v}
+		value := &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f1", Type: valT, X: v}
+		put := l.rtOp("map.set", m, typ, key, value)
+		if l.unprunedFeatures && (hint.Kind == hir.Dynamic || hint.Kind == hir.Optional && hint.Args[0].Kind == hir.Dynamic) {
+			m = l.tempInit(n, hir.T(hir.Dynamic), l.rtOp("json.parseSubset", hir.L(hir.T(hir.String), "{}"), hir.T(hir.Dynamic)))
+			put = l.rtOp("dynamic.put", m, hir.T(hir.Void), key, l.convertConditionalBranch(n, value, hir.T(hir.Dynamic), false))
+		}
 		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: "v", Type: row, X: x,
 			Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
-				X: l.rtOp("map.set", m, typ,
-					&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f0", Type: keyT, X: v},
-					&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f1", Type: valT, X: v})})})
+				X: put})})
 		return m, true
 	}
 	return nil, false
@@ -836,7 +855,10 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 	for _, p := range n.AsObjectLiteralExpression().Properties.Nodes {
 		switch p.Kind {
 		case ast.KindSpreadAssignment:
+			hint := l.hint
+			l.hint = typ
 			sv := l.expr(p.Expression())
+			l.hint = hint
 			if sv == nil || sv.Type.Kind != hir.OrderedMap {
 				l.diagf(p, "unsupported-type", "record spread needs a map")
 				return nil

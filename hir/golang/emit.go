@@ -47,6 +47,17 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && x.Op == "arrayLike.length" {
+					e.nonfiniteNumbers = true
+					e.toNumber = true
+				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "number.isInteger" || x.Op == "number.isSafeInteger" || x.Op == "number.isFinite" || x.Op == "number.strictIsNaN" || x.Op == "number.abs") {
+					e.nonfiniteNumbers = true
+				}
+				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.values" {
+					e.extraRuntimeKeys = true
+					e.usesLiveArrays = true
+				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
 					e.nonfiniteNumbers = true
 				}
@@ -212,6 +223,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
 	generated := e.code.String() + e.extra.String()
+	if e.hirStrconv {
+		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"strconv\"\n", 1)
+	}
 	if e.hirMath {
 		// Checked integer field views may emit math.Trunc in this file;
 		// runtime.go's imports are not package-wide Go imports.
@@ -259,6 +273,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	externAdapters    []string
 	externImports     map[string]string
+	hirStrconv        bool
 	chaiDeep          bool
 	chaiThrow         bool
 	chaiActionUsed    bool
