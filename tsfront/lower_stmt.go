@@ -780,13 +780,15 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		// pattern's fields from it.
 		l.serial++
 		name := "f" + itoa(l.serial)
+		saved := l.pend
+		l.pend = nil
 		l.destructurePattern(decls[0].Name(), hir.V(name, elem))
+		pre := l.pend
+		l.pend = saved
 		body := l.scopeBlock(f.Statement)
 		l.pop()
 		// The pattern's field declarations were appended to the prelude;
 		// splice them into the loop body head.
-		pre := l.pend
-		l.pend = nil
 		return &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: name, Type: elem, X: x,
 			Body: hir.B(append(pre, body)...)}
 	}

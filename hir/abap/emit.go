@@ -2532,10 +2532,6 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		if x.Type.Args[0].Kind == hir.Dynamic {
-			b.e.refuse(fmt.Errorf("node %d (%s): ABAP dynamic array view across native element storages is unsupported", x.ID, x.Source))
-			return
-		}
 		b.arrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
