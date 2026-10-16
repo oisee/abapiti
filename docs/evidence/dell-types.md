@@ -23,3 +23,13 @@ Baseline pilot (local writable mirror of the supplied OSG checkout):
 reference a13702d55b1eecdb; files 56, loaded 51, bodies 422, executed 226,
 unmatched 3; 304 blocking (206 root, 98 cascade), 1691 HIR errors in 37 files;
 118.40 seconds, 1397244 KB. /logs/pilotsetup is used read-only.
+
+## Generic nested append (two type-reference root sites)
+
+A: append.ts:2:35 and :2:70. Both are correctly typed uses of T in native
+array storage, not missing generator annotations. The RED oracle reproduces
+both declaration failures. The supported complete two-loop body specializes
+at direct calls, independent of identifier names, retaining native element
+storage and evaluating all arguments before mutation. Primitive, object and
+nested-array aliases and late argument mutation match Node. Other generic
+bodies and indirect function values retain located refusals.

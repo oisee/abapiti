@@ -984,6 +984,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 }
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
+	if x, ok := l.genericAppendCall(n); ok {
+		return x
+	}
 	if x, ok := l.gogenCall(n); ok {
 		return x
 	}
