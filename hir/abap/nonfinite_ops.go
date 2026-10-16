@@ -14,8 +14,12 @@ func (b *body) numberStorageExpr(x *hir.Expr, n string) bool {
 		b.line(n + " = " + b.expr(x.X) + ".")
 		return true
 	}
-	if x.Kind == hir.RuntimeOp && x.Op == "string.parseFloatNumber" && taggedNumber(x.Type) {
-		b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_optional( " + b.expr(x.X) + " ).")
+	if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber") && taggedNumber(x.Type) {
+		parser := "float_optional"
+		if x.Op == "string.parseIntNumber" {
+			parser = "int_optional"
+		}
+		b.line(n + " = " + b.e.stringOpsRuntime() + "=>" + parser + "( " + b.expr(x.X) + " ).")
 		return true
 	}
 	if x.Kind == hir.Binary && (b.e.numberExprs[x.X] || b.e.numberExprs[x.Y]) {

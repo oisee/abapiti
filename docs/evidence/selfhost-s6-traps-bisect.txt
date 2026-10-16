@@ -1,0 +1,31 @@
+UTILS
+# bad: [70e4baf73e4303a66d9edb16aece1d5df233079c] Merge remote-tracking branch 'origin/integ/gogen-stack3' into integ/selfhost-s6
+# good: [9b7aef51cf7846249021cc502f558bed251253bb] Merge pull request #198 from oisee/integ/selfhost-s4
+git bisect start 'origin/integ/selfhost-s6' 'origin/selfhost'
+# good: [7d41594dd6f8721c2a108d50a3196935bdd39ef6] feat(tsfront): homomorphic mapped copies of recursive families
+git bisect good 7d41594dd6f8721c2a108d50a3196935bdd39ef6
+# bad: [2f2fcaff5da2e5e43f15c7804184d53b3d878f4d] fix(tsfront): complete cyclic captures and boxed array bindings
+git bisect bad 2f2fcaff5da2e5e43f15c7804184d53b3d878f4d
+# good: [8b625f19131f7b446ac1d57d29bc77a0ed5bafd9] Merge origin/feat/gogen-a10 (A7+A10) into the trap-fixed gogen stack
+git bisect good 8b625f19131f7b446ac1d57d29bc77a0ed5bafd9
+# good: [2403393bcfa644fdff1d0aa3b2a7dff335bc42ae] feat(tsfront): optional and always-absent data interface members
+git bisect good 2403393bcfa644fdff1d0aa3b2a7dff335bc42ae
+# good: [8e636dfb3b8985c62def9df8309b8b5779d0f670] Merge feat/gogen-a12 into the A13 stack
+git bisect good 8e636dfb3b8985c62def9df8309b8b5779d0f670
+# first bad commit: [2f2fcaff5da2e5e43f15c7804184d53b3d878f4d] fix(tsfront): complete cyclic captures and boxed array bindings
+
+OBJECTS
+# bad: [70e4baf73e4303a66d9edb16aece1d5df233079c] Merge remote-tracking branch 'origin/integ/gogen-stack3' into integ/selfhost-s6
+# good: [9b7aef51cf7846249021cc502f558bed251253bb] Merge pull request #198 from oisee/integ/selfhost-s4
+git bisect start 'origin/integ/selfhost-s6' 'origin/selfhost'
+# good: [7d41594dd6f8721c2a108d50a3196935bdd39ef6] feat(tsfront): homomorphic mapped copies of recursive families
+git bisect good 7d41594dd6f8721c2a108d50a3196935bdd39ef6
+# bad: [2f2fcaff5da2e5e43f15c7804184d53b3d878f4d] fix(tsfront): complete cyclic captures and boxed array bindings
+git bisect bad 2f2fcaff5da2e5e43f15c7804184d53b3d878f4d
+# bad: [8b625f19131f7b446ac1d57d29bc77a0ed5bafd9] Merge origin/feat/gogen-a10 (A7+A10) into the trap-fixed gogen stack
+git bisect bad 8b625f19131f7b446ac1d57d29bc77a0ed5bafd9
+# bad: [fcecfd5e51a8599c0940939a06cd0883c9c307c0] feat(tsfront): lower plain record and inferred shape spreads
+git bisect bad fcecfd5e51a8599c0940939a06cd0883c9c307c0
+# bad: [6bd1fa72b4d40414377875a0db51820934e718ab] feat(tsfront): lower resolved aliases and anonymous data shapes
+git bisect bad 6bd1fa72b4d40414377875a0db51820934e718ab
+# first bad commit: [6bd1fa72b4d40414377875a0db51820934e718ab] feat(tsfront): lower resolved aliases and anonymous data shapes

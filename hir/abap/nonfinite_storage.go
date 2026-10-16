@@ -67,6 +67,10 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool, m
 			break
 		}
 	}
+	// Preserve audit/body identity when no storage actually needs lowering.
+	if len(a.tagged) == 0 && len(a.exprs) == 0 {
+		return p, nil, nil
+	}
 	// Keep the required-field proof separate from the optional numeric box.
 	// Only fields widened by this pass qualify; source optional fields do not.
 	fields := map[string]map[string]bool{}
@@ -91,8 +95,8 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool, m
 }
 
 // The frontend's absent numeric operand uses this checked NaN producer.
-// Dynamic parseFloat and other nonfinite boundaries keep their existing
-// explicit domain checks until their complete storage paths are certified.
+// Other parser results acquire tagged storage only when a destination needs
+// it; a finite scalar destination keeps its explicit domain checks.
 func nanStorageBoundary(x *hir.Expr) bool {
 	return x.Kind == hir.RuntimeOp && x.Op == "string.parseFloatNumber" && x.X != nil && x.X.Kind == hir.Lit && x.X.Value == "NaN"
 }
@@ -104,7 +108,9 @@ func hasNaNBoundary(p *hir.Program) bool {
 		if x == nil || found {
 			return
 		}
-		found = nanStorageBoundary(x)
+		// Existing Optional<Number> destinations need capture propagation even
+		// without an explicit NaN seed elsewhere in the program.
+		found = x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber")
 		expr(x.X)
 		expr(x.Y)
 		expr(x.Z)
@@ -234,6 +240,34 @@ func (a *numberStorage) linkMethods(m, n *hir.Method) {
 		}
 	}
 }
+
+func (a *numberStorage) taggedSlot(t *hir.Type) bool {
+	return t != nil && (a.tagged[t] || taggedNumber(*t))
+}
+
+// A destination already using tagged storage also constrains parser captures.
+// Keep that requirement across local temporaries introduced for evaluation order;
+// evaluating a parser into a native f first would reject NaN before boxing it.
+func (a *numberStorage) retainParserStorage(m *hir.Method, x *hir.Expr) {
+	if x == nil || x.Type.Kind != hir.Number && !taggedNumber(x.Type) {
+		return
+	}
+	switch x.Kind {
+	case hir.Local:
+		a.mark(a.slot(m, x))
+	case hir.RuntimeOp:
+		if x.Type.Kind == hir.Number && (x.Op == "string.parseIntNumber" || x.Op == "string.parseFloatNumber") && !a.exprs[x] {
+			a.exprs[x] = true
+			a.changed = true
+		}
+	case hir.Conditional:
+		a.retainParserStorage(m, x.Y)
+		a.retainParserStorage(m, x.Z)
+	case hir.Seq:
+		a.retainParserStorage(m, x.Y)
+	}
+}
+
 func (a *numberStorage) stmt(m *hir.Method, s *hir.Stmt) {
 	if s == nil {
 		return
@@ -241,14 +275,23 @@ func (a *numberStorage) stmt(m *hir.Method, s *hir.Stmt) {
 	x, y := a.expr(m, s.X), a.expr(m, s.Y)
 	switch s.Kind {
 	case hir.VarDecl:
+		if a.taggedSlot(a.locals[m][s.Name]) {
+			a.retainParserStorage(m, s.X)
+		}
 		if x {
 			a.mark(a.locals[m][s.Name])
 		}
 	case hir.Assign:
+		if a.taggedSlot(a.slot(m, s.X)) {
+			a.retainParserStorage(m, s.Y)
+		}
 		if y {
 			a.mark(a.slot(m, s.X))
 		}
 	case hir.Return:
+		if a.taggedSlot(&m.Result) {
+			a.retainParserStorage(m, s.X)
+		}
 		if x {
 			a.mark(&m.Result)
 		}
@@ -306,6 +349,9 @@ func (a *numberStorage) expr(m *hir.Method, x *hir.Expr) bool {
 		callee := a.lookupMethod(owner, name)
 		if callee != nil {
 			for i, v := range x.Args {
+				if i < len(callee.Params) && a.taggedSlot(&callee.Params[i].Type) {
+					a.retainParserStorage(m, v)
+				}
 				if i < len(callee.Params) && a.exprs[v] {
 					a.mark(&callee.Params[i].Type)
 				}
