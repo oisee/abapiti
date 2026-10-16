@@ -533,8 +533,8 @@ type lowerer struct {
 	gogenMappedTypes map[*checker.Type]hir.Type
 	// thisOverride replaces `this` while a closure body is lowered.
 	thisOverride *hir.Expr
-	// widenedLets: let symbols whose HIR type is the common base of their
-	// assignments; the checker's narrower view of them is not applied.
+	// widenedLets marks bindings whose physical storage is wider than the
+	// checker view: common assignment bases or inferred optional array elements.
 	widenedLets        map[*ast.Symbol]bool
 	matchGroupBindings map[*ast.Symbol]bool
 	collectionShapes   map[string]bool

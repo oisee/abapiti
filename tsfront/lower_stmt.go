@@ -407,7 +407,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 			return []*hir.Stmt{l.localDeclaration(d, name, typ, value)}
 		}
-		if l.comparisonScalar(d, typ) {
+		if l.comparisonScalar(d, typ) || l.arrayAssignmentScalar(d, typ) {
 			typ = hir.T(hir.Optional, typ)
 			if l.erasedScalars == nil {
 				l.erasedScalars = map[*ast.Symbol]bool{}
@@ -438,6 +438,15 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			l.hint = hir.Type{}
 			if x == nil {
 				return nil
+			}
+			if d.Type() == nil && isArrayAssignment(init) && x.Type.Kind == hir.Array {
+				if !typ.Equal(x.Type) {
+					if l.widenedLets == nil {
+						l.widenedLets = map[*ast.Symbol]bool{}
+					}
+					l.widenedLets[sym] = true
+				}
+				typ = x.Type
 			}
 			if d.Type() == nil && l.matchGroupValue(init, x) {
 				typ = x.Type
@@ -551,6 +560,13 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 }
 
 func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
+	if lhs.Kind == ast.KindArrayLiteralExpression {
+		value := l.arrayAssignment(at, lhs, rhs)
+		if value == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: value}
+	}
 	target := l.assignTarget(lhs)
 	if target == nil {
 		return nil

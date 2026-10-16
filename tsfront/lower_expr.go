@@ -148,6 +148,11 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && (isArrayAssignment(n) || l.hint.Kind == hir.Array && l.hint.Args[0].Kind == hir.Optional && x.Type.Equal(l.hint)) {
+		// Array assignment preserves the actual RHS storage, including values
+		// that unchecked TypeScript array annotations fail to mark optional.
+		return x
+	}
 	if x.Type.Kind == hir.Dynamic && n.Kind == ast.KindCallExpression && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().Name().Text() == "fromEntries" && l.globalBuiltin(n.Expression().Expression(), "Object") {
 		// A tagged destination already preserves the ordinary object. The
 		// checker's index signature is not proof that every entry is present.
@@ -171,8 +176,8 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 		return x
 	}
 	if n.Kind == ast.KindIdentifier && len(l.widenedLets) > 0 && l.widenedLets[l.resolve(n)] {
-		// The checker sees the declared sibling class; the local holds the
-		// common base and may carry any of the assigned classes.
+		// Preserve the binding's wider storage: a common class base or array
+		// elements that can be undefined despite an unchecked checker view.
 		return x
 	}
 	if n.Parent != nil && n.Parent.Kind == ast.KindBinaryExpression {
@@ -218,9 +223,14 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
 	}
+	if base.Kind == hir.UnionRef {
+		if projected := l.familyReceiverProjection(n, x, t); projected != nil {
+			return projected
+		}
+	}
 	if l.collectionShapes[base.Name] ||
 		(base.Kind == hir.Array && len(base.Args) == 1 && (l.collectionShapes[base.Args[0].Name] || l.collectionElements[base.Args[0].String()])) ||
-		(x.Kind == hir.FieldGet && x.X != nil && l.collectionShapes[x.X.Type.Name]) {
+		(x.Kind == hir.FieldGet && x.X != nil && base.Kind != hir.UnionRef && l.collectionShapes[x.X.Type.Name]) {
 		// Structural inference may name only the first sibling. The collection
 		// owns the physical base slot; that inferred name is not a downcast proof.
 		return x
@@ -371,6 +381,20 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		return matched
 	}
 	switch n.Kind {
+	case ast.KindVoidExpression:
+		keep := l.hint
+		l.hint = hir.Type{}
+		x := l.expr(n.Expression())
+		l.hint = keep
+		if x == nil {
+			return nil
+		}
+		typ := hir.T(hir.Optional, hir.T(hir.Dynamic))
+		if keep.Kind == hir.Optional {
+			typ = keep
+		}
+		return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: typ,
+			Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: x}), Y: &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: typ}}
 	case ast.KindAwaitExpression:
 		return l.awaitSettled(n)
 	case ast.KindStringLiteral, ast.KindNoSubstitutionTemplateLiteral:
@@ -888,11 +912,11 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
 	}
-	if base.Kind == hir.Dynamic {
+	if base.Kind == hir.Dynamic || base.Kind == hir.ClassRef && base.Name == hir.RootObject && n.Name().Text() != "constructor" {
 		if recv.Type.Kind == hir.Optional {
 			recv = &hir.Expr{Kind: hir.Narrow, Type: base, X: recv}
 		}
-		return l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), n.Name().Text()))
+		return l.rtOp("dynamic.get", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), n.Name().Text()))
 	}
 	if recv.Type.Kind == hir.Optional && (base.Kind == hir.Array || base.Kind == hir.OrderedMap || base.Kind == hir.OrderedSet || base.Kind == hir.String) {
 		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: recv}
@@ -1506,6 +1530,15 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
 		return x
+	}
+	if l.unprunedFeatures && callee.Kind == ast.KindCallExpression {
+		t := l.ck.GetTypeAtLocation(callee)
+		if t != nil && t.Flags()&checker.TypeFlagsAnyOrUnknown == 0 {
+			sigs := l.ck.GetSignaturesOfType(l.ck.GetNonNullableType(t), checker.SignatureKindCall)
+			if len(sigs) == 1 && l.ck.GetReturnTypeOfSignature(sigs[0]).Flags()&checker.TypeFlagsAnyOrUnknown == 0 {
+				return l.functionValueCall(n, callee)
+			}
+		}
 	}
 	if x, ok := l.globalCall(n, callee); ok {
 		return x
@@ -2315,6 +2348,17 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 	b := n.AsBinaryExpression()
 	op := b.OperatorToken.Kind
 	switch op {
+	case ast.KindCommaToken:
+		keep := l.hint
+		l.hint = hir.Type{}
+		left := l.expr(b.Left)
+		l.hint = keep
+		right := l.expr(b.Right)
+		if left == nil || right == nil {
+			return nil
+		}
+		return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: right.Type,
+			Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(b.Left), X: left}), Y: right}
 	case ast.KindEqualsEqualsEqualsToken, ast.KindEqualsEqualsToken:
 		return l.equality(n, b, false)
 	case ast.KindExclamationEqualsEqualsToken, ast.KindExclamationEqualsToken:
@@ -2495,6 +2539,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
 
 	case ast.KindEqualsToken:
+		if b.Left.Kind == ast.KindArrayLiteralExpression {
+			return l.arrayAssignment(n, b.Left, b.Right)
+		}
 		// Evaluate a property reference before the RHS, once, and return the
 		// assigned value (not the receiver). Keep other expression targets
 		// fail-closed until their reference evaluation ABI is available.
@@ -2988,6 +3035,18 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 	}
 	if hint.Kind == hir.Dynamic {
 		return l.dynamicRecordLiteral(n)
+	}
+	if l.unprunedFeatures && hint.Kind == hir.ClassRef && hint.Name == hir.RootObject {
+		// A plain literal retained as object still owns mutable JS properties.
+		// Give its structural view the same live backing record as assertions.
+		record := l.dynamicRecordLiteral(n)
+		if record == nil {
+			return nil
+		}
+		if c := l.synthFromProperties(n, l.ck.GetPropertiesOfType(l.ck.GetTypeAtLocation(n))); c != nil {
+			return l.dynamicReference(record, hir.Ref(c.Name))
+		}
+		return nil
 	}
 	// A record hint builds a map: spreads copy entries, keys set.
 	if hint.Kind == hir.OrderedMap {
