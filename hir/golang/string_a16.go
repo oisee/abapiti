@@ -95,6 +95,7 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if m==nil{if stateful{r.LastIndex=0};return nil}
  if wrapped{m=m[2:]}
  if r.labelGuard{m=m[2:]}
+ if r.Source==str("^(-?)0+(?=\\d)"){m[1]--;m=m[:len(m)-2]}
  out:=&array[jsString]{HasMatchIndex:true,MatchIndex:offsets[m[0]]}
  if stateful{r.LastIndex=offsets[m[1]]}
  names:=r.compiled.SubexpNames()
@@ -135,14 +136,16 @@ func (s jsString) match(r *jsRegExp) *array[jsString] {
 `
 const regexpReplaceA16Source = `
 func (s jsString) replaceRegex(r *jsRegExp,v jsString) jsString {
- if v.indexOf(str("$"))>=0{panic(newTrap("regexp replacement dollar substitutions are unsupported"))}
  global:=r.Flags.indexOf(str("g"))>=0
  if global{r.LastIndex=0}
+ var names map[string]int
+ for i,name:=range r.compiled.SubexpNames(){if name!=""{if names==nil{names=map[string]int{}};names[name]=i}}
  out:=jsString("");last:=int32(0)
  for {
   var m *array[jsString];if global{m=r.matchAllNext(s)}else{m=r.exec(s)}
   if m==nil{break}
-  out+=s[2*last:2*m.MatchIndex]+v;last=m.MatchIndex+m.Items[0].length()
+  start:=m.MatchIndex;end:=start+m.Items[0].length()
+  out+=s[2*last:2*start]+getSubstitution(s,v,start,end,m.Items,names);last=end
   if !global{break}
  }
  return out+s[2*last:]
