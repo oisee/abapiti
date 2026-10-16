@@ -66,3 +66,28 @@ The same system is published as one OCI index
 `ghcr.io/oisee/abapiti/zlnt-system:v0.5.2` (digest
 `sha256:f33816c89e5e23d305a952a1e0524d7dedc688e281387fe85015626ea62e1ebd`),
 which open-steamgate installs with `osd-fetch --system`.
+
+## OCI digest → OSGO (2026-10-16)
+
+The published image itself was then run end to end on open-steamgate's Go
+runtime, with no abapiti checkout involved:
+
+| | |
+|---|---|
+| System | `ghcr.io/oisee/abapiti/zlnt-system@sha256:f33816c89e5e23d305a952a1e0524d7dedc688e281387fe85015626ea62e1ebd` (v0.5.2), installed with `osd-fetch --system`; the digest in `.osd-system.json` matches |
+| Runtime | open-steamgate main `5bced9f8b98dea9c2f256ca4347146f8dd50c611` (OSGO) |
+| Run | report `ZLNT_TESTS_RUN` once per shard, all 17 shards in one run, one shard at a time, no restarts |
+| Oracle | the Node run of abaplint `577f875e` (11,092 registered, 32 `it.skip`) |
+| Result | **11,060 passed, 0 failed, 0 trapped**; the 32 not-run tests are exactly the Node-pending ones |
+
+Results are read back from table `ZLNT_TESTRUN` with
+`tools/a4h-tests-collect.mjs --char-tail` and reconciled with
+`tools/abaplint-tests-report.mjs`. On OSGO the table lives in SQLite, whose
+CHAR column drops trailing blanks, so `--char-tail` pads each log chunk back
+to its `USED` length (blanks are insignificant in ABAP CHAR); A4H fetches keep
+the strict default.
+
+An earlier run on OSG `f83dc5c3` from the same image left 28 tests trapped,
+from two missing runtime features (`GET_SUPER_CLASS_TYPE` in RTTI, then RECEIVING
+on dynamic static calls); open-steamgate added both, so the image did not
+change between the two runs.
