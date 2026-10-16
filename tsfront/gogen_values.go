@@ -73,13 +73,20 @@ func (l *lowerer) gogenIndexedLiteral(n *ast.Node, target *hir.Class) *hir.Expr 
 	return l.dynamicReference(record, hir.Ref(target.Name))
 }
 
-// A dynamic key can alias a named slot and invalidate its typed view. Until
-// that alias policy is proven, all writes through a mixed index are refused.
+// A dynamic key can alias a named slot and invalidate its typed view, so
+// computed-key writes through a mixed index are refused. A write to a
+// declared member is exact: classes cannot carry index signatures, so every
+// value of such a type is a record (or a live view over one) whose typed
+// slots and dynamic keys share one property store.
 func (l *lowerer) gogenIndexWrite(n *ast.Node) bool {
 	if n.Kind != ast.KindElementAccessExpression && n.Kind != ast.KindPropertyAccessExpression {
 		return false
 	}
-	if !l.gogenIndexedShape(l.ck.GetTypeAtLocation(n.Expression())) {
+	t := l.ck.GetTypeAtLocation(n.Expression())
+	if !l.gogenIndexedShape(t) {
+		return false
+	}
+	if n.Kind == ast.KindPropertyAccessExpression && l.ck.GetPropertyOfType(t, n.Name().Text()) != nil {
 		return false
 	}
 	l.diagf(n, "unsupported-assignment", "writes through a mixed index signature require an exact named-slot alias policy")
