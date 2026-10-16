@@ -2083,9 +2083,13 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		l.diagf(args[0], "unsupported-regex", "anchor-only or octal replacement semantics are not lowered")
 		return nil
 	}
-	// Save values in source evaluation order, before subsequent arguments can
-	// mutate the receiver or the pattern binding.
-	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	// A dollar-free literal cannot mutate earlier values or require
+	// GetSubstitution. Preserve the original native HIR without temporaries.
+	literalReplacement := (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$")
+	if !literalReplacement {
+		// Save values before subsequent arguments can mutate their bindings.
+		recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr
 	if lineBreak {
@@ -2104,7 +2108,9 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if t := l.ck.GetTypeAtLocation(args[0]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
 		pat = l.coerce(pat, hir.T(hir.String))
 	}
-	pat = l.tempInit(args[0], pat.Type, pat)
+	if !literalReplacement {
+		pat = l.tempInit(args[0], pat.Type, pat)
+	}
 	with := l.expr(args[1])
 	if with == nil {
 		return nil

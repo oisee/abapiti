@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 func TestReplaceGetSubstitutionNodeOracle(t *testing.T) {
@@ -92,6 +94,47 @@ func TestCriticReplacementSubstitutionNodeOracles(t *testing.T) {
 			}
 			if _, err := emitABAP(t, p); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestReplaceLiteralNativeLowering(t *testing.T) {
+	for _, tc := range []struct{ call, op, statement string }{
+		{`raw.replace(/\r/g, "")`, "string.replaceAll", "REPLACE ALL OCCURRENCES OF"},
+		{`raw.replaceAll("a", "_")`, "string.replaceAll", "REPLACE ALL OCCURRENCES OF"},
+		{"raw.replaceAll(\"a\", `_`)", "string.replaceAll", "REPLACE ALL OCCURRENCES OF"},
+		{`raw.replace("a", "_")`, "string.replaceFirst", "REPLACE FIRST OCCURRENCE OF"},
+	} {
+		t.Run(tc.call, func(t *testing.T) {
+			p := lowerStatementsProbe(t, map[string]string{"probe.ts": `class Probe {static run(raw:string):string {return ` + tc.call + `;}}`}, []string{"probe.ts"})
+			var method *hir.Method
+			for _, c := range p.Classes {
+				if c.Name == "probe.ts.Probe" {
+					for _, m := range c.Methods {
+						if m.Name == "run" {
+							method = m
+						}
+					}
+				}
+			}
+			if method == nil || len(method.Body.List) != 1 {
+				t.Fatalf("expected a single native return: %s", hir.Dump(p))
+			}
+			ret := method.Body.List[0]
+			if ret.Kind != hir.Return || ret.X == nil || ret.X.Kind != hir.RuntimeOp || ret.X.Op != tc.op || ret.X.X.Kind != hir.Local || ret.X.Args[0].Kind != hir.Lit || ret.X.Args[1].Kind != hir.Lit {
+				t.Fatalf("expected native op without temporaries: %s", hir.Dump(p))
+			}
+			files, err := emitABAP(t, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var code strings.Builder
+			for _, contents := range files {
+				code.WriteString(contents)
+			}
+			if !strings.Contains(code.String(), tc.statement) || strings.Contains(code.String(), "=>literal(") {
+				t.Fatalf("expected native ABAP replacement: %s", code.String())
 			}
 		})
 	}
