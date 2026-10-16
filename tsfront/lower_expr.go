@@ -2591,6 +2591,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
 
 	case ast.KindEqualsToken:
+		if value, handled := l.arrayLengthAssignment(n, b.Left, b.Right); handled {
+			return value
+		}
 		if b.Left.Kind == ast.KindArrayLiteralExpression {
 			return l.arrayAssignment(n, b.Left, b.Right)
 		}
