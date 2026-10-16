@@ -13,6 +13,16 @@ func replacementNeedsSubstitution(x *hir.Expr) bool {
 	return !ok || strings.Contains(s, "$")
 }
 
+// Empty needles need the UTF-16 insertion path for replaceAll even when
+// the replacement itself does not need GetSubstitution.
+func literalReplacementNeedsRuntime(x *hir.Expr) bool {
+	if replacementNeedsSubstitution(x.Args[1]) {
+		return true
+	}
+	needle, ok := x.Args[0].Value.(string)
+	return x.Op == "string.replaceAll" && (x.Args[0].Kind != hir.Lit || !ok || needle == "")
+}
+
 // Shared GetSubstitution for string and checked-RegExp replacement. All
 // offsets and slices are UTF-16 units; captures include the whole match.
 func (e *emitter) replacementRuntime() string {
@@ -30,6 +40,8 @@ PUBLIC SECTION.
 CLASS-METHODS substitute IMPORTING text TYPE string replacement TYPE string start TYPE i finish TYPE i captures TYPE $A OPTIONAL source TYPE string OPTIONAL RETURNING VALUE(result) TYPE string.
 CLASS-METHODS literal IMPORTING text TYPE string needle TYPE string replacement TYPE string all_matches TYPE abap_bool RETURNING VALUE(result) TYPE string.
 CLASS-METHODS regex IMPORTING text TYPE string pattern TYPE REF TO $R replacement TYPE string RETURNING VALUE(result) TYPE string.
+PROTECTED SECTION.
+PRIVATE SECTION.
 ENDCLASS.
 CLASS $P IMPLEMENTATION.
 METHOD substitute.
@@ -172,8 +184,8 @@ WHILE at <= strlen( text ).
  ELSE.
   n = strlen( text ) - at.
   rest = text+at(n).
-  FIND FIRST OCCURRENCE OF SUBSTRING needle IN rest MATCH OFFSET rel.
-  IF sy-subrc <> 0.
+  rel = find( val = rest sub = needle ).
+  IF rel < 0.
    EXIT.
   ENDIF.
  ENDIF.

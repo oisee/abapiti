@@ -663,6 +663,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// field read the checker types as any): checked narrowing, absent raises.
 		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
+		// A boxed value (a flow-narrowed `F | null` local) stored into a
+		// family slot: the family shares the boxed storage and the projection
+		// validates membership; a mismatch raises, never retags.
+		if u := l.out.Union(dst.Name); u != nil && u.Complete {
+			return l.rtOp("union.project", x, dst)
+		}
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
 	}

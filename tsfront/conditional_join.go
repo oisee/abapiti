@@ -188,6 +188,9 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		switch dst.Kind {
 		case hir.String, hir.Number, hir.Bool, hir.ClassValue, hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
 			return true // existing checked unboxing, never an unchecked retag
+		case hir.UnionRef:
+			u := l.out.Union(dst.Name)
+			return l.unprunedFeatures && u != nil && u.Complete // checked union.project
 		}
 	}
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef && dst.Name != hir.RootObject {

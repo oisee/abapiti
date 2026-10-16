@@ -143,6 +143,12 @@ func (v *verifier) unionOp(e *Expr, recv Type) {
 		}
 	case "union.admit", "union.project":
 		if e.Op == "union.project" && e.Type.Kind == UnionRef {
+			if recv.Kind == Dynamic {
+				if u := v.p.Union(e.Type.Name); u == nil || !u.Complete {
+					v.fail(e.Node, "invalid union projection of a boxed value")
+				}
+				return
+			}
 			if recv.Kind != UnionRef || !UnionIncludes(v.p.Union(recv.Name), v.p.Union(e.Type.Name)) {
 				v.fail(e.Node, "invalid union subset projection")
 			}

@@ -13,9 +13,11 @@ import (
 // refusal rather than an approximation:
 //
 //	path.basename(p)                          POSIX final component
+//	path.join(a, b, ...) / path.join(...xs)   POSIX join and normalize
 //	fs.readFileSync(p, "utf8")                whole file as UTF-8 text
 //	fs.readdirSync(p)                         entry names, native order
 //	fs.readdirSync(p, {withFileTypes: true})  Dirent name/isDirectory()
+//	util.isDeepStrictEqual(a, b)              Node strict deep equality
 //
 // Filesystem failures throw a catchable Error with Node's message
 // (`ENOENT: no such file or directory, open '<p>'`); the code property is
@@ -90,6 +92,9 @@ func (l *lowerer) nodePlatformCall(n *ast.Node) (*hir.Expr, bool) {
 	}
 	callee := n.Expression()
 	args := n.Arguments()
+	if l.nodeBuiltinCallee(callee, "path", "join") {
+		return l.nodePathJoin(n, args), true
+	}
 	if callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "error" {
 		recv := callee.Expression()
 		if recv != nil && recv.Kind == ast.KindIdentifier && recv.Text() == "console" && l.globalNodeConsole(recv) {
@@ -107,7 +112,7 @@ func (l *lowerer) nodePlatformCall(n *ast.Node) (*hir.Expr, bool) {
 	}
 	for _, a := range args {
 		if a.Kind == ast.KindSpreadElement {
-			for _, f := range [][2]string{{"path", "basename"}, {"fs", "readFileSync"}, {"fs", "readdirSync"}} {
+			for _, f := range [][2]string{{"path", "basename"}, {"fs", "readFileSync"}, {"fs", "readdirSync"}, {"util", "isDeepStrictEqual"}} {
 				if l.nodeBuiltinCallee(callee, f[0], f[1]) {
 					l.diagf(a, "unsupported-node-platform", "%s.%s spread arguments are not lowered", f[0], f[1])
 					return nil, true
@@ -122,6 +127,26 @@ func (l *lowerer) nodePlatformCall(n *ast.Node) (*hir.Expr, bool) {
 		// process.argv entry check); a compiled program has neither.
 		l.diagf(n, "unsupported-node-platform", "node:url file URL conversion is not lowered: module locations (import.meta.url, process.argv entry) have no compiled equivalent")
 		return nil, true
+	case l.nodeBuiltinCallee(callee, "util", "isDeepStrictEqual"):
+		// Both operands are boxed through the ordinary unknown-parameter
+		// conversion; the runtime compares the boxed graphs (primitives by
+		// SameValue, arrays by length and own indices, plain records by
+		// own enumerable keys) and refuses kinds it cannot certify.
+		if len(args) != 2 {
+			l.diagf(n, "unsupported-node-platform", "util.isDeepStrictEqual is lowered only with exactly two operands")
+			return nil, true
+		}
+		old := l.hint
+		l.hint = hir.Type{}
+		a := l.expr(args[0])
+		b := l.expr(args[1])
+		l.hint = old
+		if a == nil || b == nil {
+			return nil, true
+		}
+		x := l.rtOp("util.isDeepStrictEqual", l.coerce(a, hir.T(hir.Dynamic)), hir.T(hir.Bool), l.coerce(b, hir.T(hir.Dynamic)))
+		x.Node = l.node(n)
+		return x, true
 	case l.nodeBuiltinCallee(callee, "path", "basename"):
 		if len(args) != 1 {
 			l.diagf(n, "unsupported-node-platform", "path.basename with a suffix argument is not lowered")
@@ -162,6 +187,44 @@ func (l *lowerer) nodePlatformCall(n *ast.Node) (*hir.Expr, bool) {
 		return x, true
 	}
 	return nil, false
+}
+
+// nodePathJoin lowers path.join over string arguments, or over exactly one
+// spread of a string array (host-io.ts join(...parts)). The runtime joins
+// the non-empty segments with "/" and applies Node's posix.normalize.
+func (l *lowerer) nodePathJoin(n *ast.Node, args []*ast.Node) *hir.Expr {
+	strs := hir.T(hir.Array, hir.T(hir.String))
+	if len(args) == 1 && args[0].Kind == ast.KindSpreadElement {
+		old := l.hint
+		l.hint = hir.Type{}
+		parts := l.expr(args[0].Expression())
+		l.hint = old
+		if parts == nil {
+			return nil
+		}
+		if !parts.Type.Equal(strs) {
+			l.diagf(n, "unsupported-node-platform", "path.join spread is lowered only over a string array")
+			return nil
+		}
+		x := l.rtOp("path.join", parts, hir.T(hir.String))
+		x.Node = l.node(n)
+		return x
+	}
+	arr := l.tempVar(n, strs)
+	for _, a := range args {
+		if a.Kind == ast.KindSpreadElement {
+			l.diagf(n, "unsupported-node-platform", "path.join mixes spread and plain segments")
+			return nil
+		}
+		s := l.nodeStringArg(n, a, "path.join")
+		if s == nil {
+			return nil
+		}
+		l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(a), X: l.rtOp("array.push", arr, hir.T(hir.I32), s)})
+	}
+	x := l.rtOp("path.join", arr, hir.T(hir.String))
+	x.Node = l.node(n)
+	return x
 }
 
 // withFileTypesOnly matches the literal options object {withFileTypes: true}.

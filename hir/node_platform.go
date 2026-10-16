@@ -8,6 +8,10 @@ func init() {
 	for _, op := range nodePlatformOps {
 		RuntimeSpecs[op] = RuntimeSpec{String, 0, false}
 	}
+	// path.join over a string array (the segments, already evaluated).
+	RuntimeSpecs["path.join"] = RuntimeSpec{Array, 0, false}
+	// util.isDeepStrictEqual(a, b): both operands boxed, a fresh boolean.
+	RuntimeSpecs["util.isDeepStrictEqual"] = RuntimeSpec{Dynamic, 1, false}
 }
 
 func nodePlatformSignature(op string) ([]Type, Type, bool) {
@@ -16,6 +20,10 @@ func nodePlatformSignature(op string) ([]Type, Type, bool) {
 		return nil, T(Void), true
 	case "string.sha256Hex", "path.basename", "fs.readText":
 		return nil, T(String), true
+	case "path.join":
+		return nil, T(String), true
+	case "util.isDeepStrictEqual":
+		return []Type{T(Dynamic)}, T(Bool), true
 	case "fs.readdirNames":
 		return nil, T(Array, T(String)), true
 	case "fs.readdirEntries":

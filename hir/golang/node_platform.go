@@ -7,7 +7,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-var nodePlatformGoOps = []string{"host.stderrWrite", "string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries"}
+var nodePlatformGoOps = []string{"host.stderrWrite", "string.sha256Hex", "path.basename", "fs.readText", "fs.readdirNames", "fs.readdirEntries", "util.isDeepStrictEqual", "path.join"}
 
 func init() {
 	for _, op := range nodePlatformGoOps {
@@ -26,6 +26,10 @@ func (b *body) nodePlatformRuntime(x *hir.Expr) (string, bool) {
 		return "posixBasename(" + b.expr(x.X) + ")", true
 	case "fs.readText":
 		return "fsReadText(" + b.expr(x.X) + "," + b.nodeErrorThrower() + ")", true
+	case "path.join":
+		return "posixJoin(" + b.expr(x.X) + ")", true
+	case "util.isDeepStrictEqual":
+		return "nodeIsDeepStrictEqual(" + b.expr(x.X) + "," + b.expr(x.Args[0]) + ")", true
 	case "fs.readdirNames":
 		return "fsReaddirNames(" + b.expr(x.X) + "," + b.nodeErrorThrower() + ")", true
 	case "fs.readdirEntries":
@@ -69,6 +73,21 @@ func (e *emitter) nodePlatformSource(pkg string) string {
 	if used["path.basename"] {
 		parts = append(parts, nodeBasenameSource)
 	}
+	if used["path.join"] {
+		length := "int32(len(parts.Items))"
+		if e.liveStorage() {
+			length = "parts.length()"
+		}
+		parts = append(parts, strings.Replace(nodeJoinSource, "{joinLength}", length, 1))
+	}
+	if used["util.isDeepStrictEqual"] {
+		imports["math"] = true
+		length := "return int32(len(a.Items))"
+		if e.liveStorage() {
+			length = "return a.length()"
+		}
+		parts = append(parts, strings.Replace(nodeDeepStrictEqualSource, "{deepStrictLength}", length, 1))
+	}
 	if used["fs.readText"] || used["fs.readdirNames"] || used["fs.readdirEntries"] {
 		for _, i := range []string{"errors", "os", "strings", "syscall", "unicode/utf8"} {
 			imports[i] = true
@@ -76,7 +95,7 @@ func (e *emitter) nodePlatformSource(pkg string) string {
 		parts = append(parts, nodeFSSource)
 	}
 	var list []string
-	for _, i := range []string{"crypto/sha256", "encoding/hex", "errors", "os", "strings", "syscall", "unicode/utf8"} {
+	for _, i := range []string{"crypto/sha256", "encoding/hex", "errors", "math", "os", "strings", "syscall", "unicode/utf8"} {
 		if imports[i] {
 			list = append(list, strconv.Quote(i))
 		}
@@ -104,6 +123,71 @@ func posixBasename(p jsString) jsString {
  }
  if end == -1 { return str("") }
  return p[2*start : 2*end]
+}
+`
+
+// Node's posix.join: non-empty segments joined with "/", then
+// posix.normalize (normalizeString with allowAboveRoot for relative paths),
+// on UTF-16 units.
+const nodeJoinSource = `
+func posixLastSlash(s jsString) int32 {for i:=s.length()-1;i>=0;i-- {if s.charCodeAt(i)=='/' {return i}};return -1}
+func posixNormalizeString(p jsString, allowAboveRoot bool) jsString {
+ res, lastSegmentLength, lastSlash, dots, code := jsString(""), int32(0), int32(-1), 0, int32(0)
+ n := p.length()
+ for i := int32(0); i <= n; i++ {
+  if i < n { code = p.charCodeAt(i) } else if code == '/' { break } else { code = '/' }
+  if code == '/' {
+   if lastSlash == i-1 || dots == 1 {
+   } else if dots == 2 {
+    rl := res.length()
+    if rl < 2 || lastSegmentLength != 2 || res.charCodeAt(rl-1) != '.' || res.charCodeAt(rl-2) != '.' {
+     if rl > 2 {
+      if k := posixLastSlash(res); k == -1 { res, lastSegmentLength = "", 0 } else { res = res[:2*k]; lastSegmentLength = res.length() - 1 - posixLastSlash(res) }
+      lastSlash, dots = i, 0
+      continue
+     } else if rl != 0 {
+      res, lastSegmentLength, lastSlash, dots = "", 0, i, 0
+      continue
+     }
+    }
+    if allowAboveRoot {
+     if res.length() > 0 { res += str("/..") } else { res = str("..") }
+     lastSegmentLength = 2
+    }
+   } else {
+    if res.length() > 0 { res += str("/") + p[2*(lastSlash+1):2*i] } else { res = p[2*(lastSlash+1) : 2*i] }
+    lastSegmentLength = i - lastSlash - 1
+   }
+   lastSlash, dots = i, 0
+  } else if code == '.' && dots != -1 {
+   dots++
+  } else {
+   dots = -1
+  }
+ }
+ return res
+}
+func posixJoin(parts *array[jsString]) jsString {
+ joined := jsString("")
+ for i := int32(0); i < {joinLength}; i++ {
+  v := parts.get(i)
+  if !v.Has { panic(newTrap("path.join segment is not a string")) }
+  s := v.Value
+  if s.length() == 0 { continue }
+  if joined.length() > 0 { joined += str("/") }
+  joined += s
+ }
+ if joined.length() == 0 { return str(".") }
+ absolute, trailing := joined.charCodeAt(0) == '/', joined.charCodeAt(joined.length()-1) == '/'
+ out := posixNormalizeString(joined, !absolute)
+ if out.length() == 0 {
+  if absolute { return str("/") }
+  if trailing { return str("./") }
+  return str(".")
+ }
+ if trailing { out += str("/") }
+ if absolute { return str("/") + out }
+ return out
 }
 `
 
@@ -179,5 +263,78 @@ func fsReaddirEntries[T any](dir jsString, mk func(jsString, bool) T, fail func(
  a := &array[T]{}
  for _, e := range fsReadDir(dir, fail) { a.Items = append(a.Items, mk(nodeDecodeUTF8([]byte(e.Name())), e.IsDir())) }
  return a
+}
+`
+
+// Node util.isDeepStrictEqual on boxed values. Primitives compare by
+// SameValue (NaN equals NaN, -0 differs from +0); objects need the same
+// prototype: plain records (parsed objects and structural literals) compare
+// their own enumerable key sets and values, arrays their length and own
+// indices (a hole differs from undefined). Class instances, collections,
+// functions and cyclic graphs trap rather than approximate Node.
+const nodeDeepStrictEqualSource = `
+func (a *array[T]) deepStrictLength() int32 {{deepStrictLength}}
+func (a *array[T]) deepStrictAt(i int32) (*dynamic, bool) {v:=a.get(i);if !v.Has {return nil,false};return box(v.Value),true}
+// Typed optional storage (an element or field of T | undefined) boxes as its
+// present value or undefined.
+func (o optional[T]) deepStrictBox() *dynamic {if !o.Has {return nil};return box(o.Value)}
+func nodeDeepStrictUnwrap(d *dynamic) *dynamic {
+ for d!=nil && d.Tag==2 {o,ok:=d.Value.(interface{deepStrictBox() *dynamic});if !ok {break};d=o.deepStrictBox()}
+ return d
+}
+type deepStrictArray interface {deepStrictLength() int32;deepStrictAt(int32) (*dynamic,bool)}
+// 0 primitive, 1 array, 2 plain record.
+func nodeDeepStrictKind(d *dynamic) int {
+ switch d.Tag {
+ case tagObject:return 2
+ case tagArray:return 1
+ case 2:
+  if _,ok:=d.Value.(deepStrictArray);ok {if _,ok:=d.Value.(interface{arrayMarker()});ok {return 1}}
+  if _,ok:=d.Value.(interface{deepStrictPlain()});ok {return 2}
+  panic(newTrap("util.isDeepStrictEqual supports primitives, arrays and plain records only"))
+ case 10:panic(newTrap("util.isDeepStrictEqual on functions is not lowered"))
+ }
+ return 0
+}
+func nodeIsDeepStrictEqual(a,b *dynamic) bool {return nodeDeepStrict(a,b,map[any]bool{})}
+func nodeDeepStrict(a,b *dynamic,active map[any]bool) bool {
+ a,b=nodeDeepStrictUnwrap(a),nodeDeepStrictUnwrap(b)
+ if a==nil || b==nil {return a==nil && b==nil}
+ an,bn:=a.Tag>=4&&a.Tag<=6,b.Tag>=4&&b.Tag<=6
+ if an || bn {
+  if !an || !bn {return false}
+  x,y:=dynNumber(a),dynNumber(b)
+  return math.IsNaN(x)&&math.IsNaN(y) || x==y && math.Signbit(x)==math.Signbit(y)
+ }
+ ak,bk:=nodeDeepStrictKind(a),nodeDeepStrictKind(b)
+ if ak==0 || bk==0 {
+  if ak!=bk || a.Tag!=b.Tag {return false}
+  if a.Tag==tagNull {return true}
+  return a.Value==b.Value
+ }
+ if ak!=bk {return false}
+ if a.Value==b.Value {return true}
+ if active[a.Value] || active[b.Value] {panic(newTrap("util.isDeepStrictEqual on cyclic graphs is not lowered"))}
+ active[a.Value],active[b.Value]=true,true
+ defer delete(active,a.Value)
+ defer delete(active,b.Value)
+ if ak==1 {
+  x,xok:=a.Value.(deepStrictArray);y,yok:=b.Value.(deepStrictArray)
+  if !xok || !yok {panic(newTrap("util.isDeepStrictEqual array storage is not certified"))}
+  n:=x.deepStrictLength()
+  if n!=y.deepStrictLength() {return false}
+  for i:=int32(0);i<n;i++ {
+   u,uh:=x.deepStrictAt(i);v,vh:=y.deepStrictAt(i)
+   if uh!=vh || uh && !nodeDeepStrict(u,v,active) {return false}
+  }
+  return true
+ }
+ xk,yk:=dynamicKeys(a).Items,dynamicKeys(b).Items
+ if len(xk)!=len(yk) {return false}
+ own:=make(map[jsString]bool,len(yk))
+ for _,k:=range yk {own[k]=true}
+ for _,k:=range xk {if !own[k] {return false}}
+ for _,k:=range xk {if !nodeDeepStrict(a.get(k),b.get(k),active) {return false}}
+ return true
 }
 `

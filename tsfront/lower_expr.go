@@ -2083,9 +2083,13 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		l.diagf(args[0], "unsupported-regex", "anchor-only or octal replacement semantics are not lowered")
 		return nil
 	}
-	// Save values in source evaluation order, before subsequent arguments can
-	// mutate the receiver or the pattern binding.
-	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	// A dollar-free literal cannot mutate earlier values or require
+	// GetSubstitution. Preserve the original native HIR without temporaries.
+	literalReplacement := (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$")
+	if !literalReplacement {
+		// Save values before subsequent arguments can mutate their bindings.
+		recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr
 	if lineBreak {
@@ -2104,7 +2108,9 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if t := l.ck.GetTypeAtLocation(args[0]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
 		pat = l.coerce(pat, hir.T(hir.String))
 	}
-	pat = l.tempInit(args[0], pat.Type, pat)
+	if !literalReplacement {
+		pat = l.tempInit(args[0], pat.Type, pat)
+	}
 	with := l.expr(args[1])
 	if with == nil {
 		return nil
@@ -3323,6 +3329,16 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 				// explicit property (or the shape's optionals) fills them.
 			}
 			continue
+		case ast.KindMethodDeclaration:
+			// Shorthand methods are function values. Without this, super or
+			// arguments they behave as the equivalent function expression.
+			nameNode := propertyNameNode(p)
+			if nameNode == nil || nameNode.Kind == ast.KindComputedPropertyName || !plainObjectLiteralMethod(p) {
+				l.diagf(p, "unsupported-type", "object literal method needs a plain name and no this, super, arguments, generator or async body")
+				return nil
+			}
+			value = p
+			field = nameNode.Text()
 		default:
 			l.diagf(p, "unsupported-type", "object literal property %s is not lowered", p.Kind.String())
 			return nil
@@ -3339,7 +3355,12 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			return nil
 		}
 		l.hint = ctor.Params[idx].Type
-		a := l.expr(value)
+		var a *hir.Expr
+		if value.Kind == ast.KindMethodDeclaration {
+			a = l.closureValue(value)
+		} else {
+			a = l.expr(value)
+		}
 		l.hint = hint
 		if a == nil {
 			return nil
@@ -3620,4 +3641,22 @@ func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.
 		return l.coerce(recv, typ)
 	}
 	return recv
+}
+
+// plainObjectLiteralMethod reports a shorthand method whose body cannot
+// observe its receiver or arguments object: no this, super or arguments
+// anywhere inside (nested functions included), not a generator, not async.
+func plainObjectLiteralMethod(n *ast.Node) bool {
+	m := n.AsMethodDeclaration()
+	if m.AsteriskToken != nil || m.Body == nil || ast.HasSyntacticModifier(n, ast.ModifierFlagsAsync) {
+		return false
+	}
+	var observes func(*ast.Node) bool
+	observes = func(x *ast.Node) bool {
+		if x.Kind == ast.KindThisKeyword || x.Kind == ast.KindSuperKeyword || x.Kind == ast.KindIdentifier && x.Text() == "arguments" {
+			return true
+		}
+		return x.ForEachChild(observes)
+	}
+	return !observes(m.Body)
 }
