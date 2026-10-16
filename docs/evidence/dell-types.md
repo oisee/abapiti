@@ -57,3 +57,15 @@ signatures and uses the existing optional-data-member fallback. The RED oracle
 reproduced the alias refusal; absent and present callable slots now match Node
 and export ABAP. Behavior-bearing native class conversion remains subject to
 the existing checked class-view ABI, rather than copying method values.
+
+## Generic property values and string keys
+
+A: ir-children.ts:10:110 and :53:81 (PropertyValue<T>), plus the two
+keyof-T-and-string diagnostics at :55:28. T is constrained to object. The
+supported conditional is structurally T extends object ? T[keyof T] : never;
+it maps to tagged values, and keyof T & string maps to string keys. Arbitrary
+conditional types retain their refusals. Generic indexed reads use original
+object storage and Object.keys snapshots. Tuples containing erased values use
+real tagged arrays, preserving entry arrays and explicit undefined elements.
+The RED oracle reproduced both conditional failures and key intersections;
+children and entries now match Node, including JSON array shape, and emit ABAP.

@@ -1023,4 +1023,10 @@ func (e *emitter) markArrays() {
 		}
 		e.files[file] = strings.Replace(src, "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
 	}
+	for _, c := range e.p.Classes {
+		if strings.HasPrefix(c.Name, "tuple.") {
+			file := e.name(c.Name) + ".clas.abap"
+			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
+		}
+	}
 }

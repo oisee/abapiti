@@ -28,7 +28,7 @@ func (e *emitter) collectBoxedShapes() {
 			dynamicRows = true
 		}
 		if x.Kind == hir.RuntimeOp {
-			guardRows = guardRows || x.Op == "lsp.isTextDocumentEdit" || x.Op == "lsp.isRenameFile" || x.Op == "lsp.isCreateFile" || x.Op == "lsp.isDeleteFile"
+			guardRows = guardRows || x.Op == "dynamic.get" && x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" && x.X.X != nil && x.X.X.Type.Name == hir.RootObject || x.Op == "lsp.isTextDocumentEdit" || x.Op == "lsp.isRenameFile" || x.Op == "lsp.isCreateFile" || x.Op == "lsp.isDeleteFile"
 			if x.Op == "chai.throwMatch" {
 				e.chaiThrow = true
 				e.chaiDeep = true

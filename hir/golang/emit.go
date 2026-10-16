@@ -486,6 +486,9 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	if strings.HasPrefix(c.Name, "tuple.") {
+		e.line("func (self *%s) arrayMarker() {}", e.obj(c.Name))
+	}
 	if e.chaiDeep {
 		e.chaiDeepShape(c, source)
 	}

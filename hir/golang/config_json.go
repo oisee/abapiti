@@ -22,6 +22,16 @@ func (e *emitter) configJSONClass(c *hir.Class) {
 	if e.liveClasses[c.Name] {
 		e.line("if self!=nil && self.viewSource!=nil {s,ok:=w.value(self.viewSource);if !ok {panic(newRangeFault())};return s}")
 	}
+	if strings.HasPrefix(c.Name, "tuple.") {
+		e.line("w.enter(self);defer w.leave(self);out:=str(\"[\");comma:=str(\"\")")
+		for _, f := range c.Fields {
+			if !f.Static {
+				e.line("{text,ok:=w.value(self.%s);if !ok {text=str(\"null\")};out+=comma+text;comma=str(\",\")}", e.member(f.Name))
+			}
+		}
+		e.line("return out+str(\"]\")} ")
+		return
+	}
 	order, pinned := configJSONOrders[c.Name]
 	// The only anonymous nested object in the pinned default graph is the
 	// PreferPragmasConf.check row; each literal writes pseudo before pragma.
