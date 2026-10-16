@@ -1,7 +1,7 @@
 fact counts
   alias 115
   argument 420
-  assign 100
+  assign 102
   calls 200
   class 59
   concrete 58
@@ -9,20 +9,20 @@ fact counts
   defined 135
   dispatch 414
   ensure_init 8
-  escapes 784
+  escapes 787
   exact_receiver 13
-  expr 1368
+  expr 1369
   extends 48
   field_origin 730
   final 57
-  flow 1521
+  flow 1524
   fresh 69
   implements 1
   implicit_init 2
   impure 65
   interface_subtype 1
   lazy_init 2
-  local 170
+  local 172
   may_throw 20
   memo_store 0
   method 135
@@ -30,12 +30,12 @@ fact counts
   narrowed 13
   new 58
   noncounter_write 32
-  op_aliases 173
-  op_allocates 173
-  op_conservative 31
-  op_may_raise 173
-  op_reads 253
-  op_writes 173
+  op_aliases 178
+  op_allocates 178
+  op_conservative 33
+  op_may_raise 178
+  op_reads 259
+  op_writes 178
   param 216
   pure 70
   raises 36
