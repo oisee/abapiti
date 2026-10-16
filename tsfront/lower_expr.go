@@ -1053,6 +1053,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.numericBuiltin(n); ok {
 		return x
 	}
+	if x, ok := l.containerGenericCall(n); ok {
+		return x
+	}
 	if x, ok := l.genericAppendCall(n); ok {
 		return x
 	}
