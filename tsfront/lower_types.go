@@ -157,7 +157,7 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		}
 		return l.mapTypeNode(targs[i])
 	}
-	if l.generatorEnabled && name == "Iterable" && l.librarySymbol(sym) {
+	if l.generatorEnabled && (name == "Iterable" || name == "RegExpStringIterator") && l.librarySymbol(sym) {
 		return l.ensureGeneratorABI(arg(0)).iterator
 	}
 	if l.generatorEnabled && name == "Generator" && l.librarySymbol(sym) {

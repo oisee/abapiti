@@ -27,8 +27,8 @@ func lowerProbe(t *testing.T, dir string) (*hir.Program, []LowerDiagnostic) {
 // regression coverage rather than rebuilt from the implementation.
 func TestCriticR1Diagnostics(t *testing.T) {
 	for name, category := range map[string]string{
-		"before_super_this": "unsupported-before-super", "radix": "unsupported-call",
-		"regex_anchor": "unsupported-regex", "regex_replacement": "unsupported-regex",
+		"before_super_this": "unsupported-before-super",
+		"regex_anchor":      "unsupported-regex", "regex_replacement": "unsupported-regex",
 		"regex_sideeffect": "unsupported-regex", "top_level": "unsupported-top-level",
 		"constructor_timing": "unsupported-static-init",
 	} {
@@ -44,6 +44,24 @@ func TestCriticR1Diagnostics(t *testing.T) {
 			}
 			t.Fatalf("missing %s: %v", category, diags)
 		})
+	}
+}
+
+func TestCriticR1RadixCheckedDomain(t *testing.T) {
+	p, diags := lowerProbe(t, filepath.Join("testdata", "critic-r1", "radix"))
+	for _, d := range diags {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Fatal(d)
+		}
+	}
+	ctor := hir.NewNames().Get("new.input.ts.Probe")
+	entry := goEntry("input.ts.Probe", "run")
+	main := fmt.Sprintf(`fmt.Println(%s(%s(),255));defer func(){if _,ok:=recover().(trap);!ok{panic("missing radix domain trap")};fmt.Println("refused")}();%s(%s(),1.5)`, entry, ctor, entry, ctor)
+	if got := runGoHIR(t, p, main); got != "ff\nrefused\n" {
+		t.Fatal(got)
+	}
+	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "number.hex16") || !strings.Contains(err.Error(), "input.ts:") {
+		t.Fatalf("missing located ABAP radix refusal: %v", err)
 	}
 }
 

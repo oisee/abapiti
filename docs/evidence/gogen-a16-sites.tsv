@@ -1,0 +1,9 @@
+location	base	A16
+tools/gogen/fold-scalars.ts:94:66	method padEnd on string is not lowered	resolved
+tools/gogen/frontend-classes-native.mjs:256:31	method padEnd on string is not lowered	resolved
+tools/gogen/frontend-literals.ts:18:115	method at on string is not lowered	resolved
+tools/gogen/frontend-provenance.mjs:328:29	method matchAll on string is not lowered	resolved
+tools/gogen/frontend-provenance.mjs:336:29	method matchAll on string is not lowered	resolved
+tools/gogen/frontend.mjs:894:19	method matchAll on string is not lowered	resolved
+tools/gogen/sink-locals.ts:142:25	method matchAll on string is not lowered	resolved
+tools/gogen/sink-locals.ts:151:25	method matchAll on string is not lowered	resolved

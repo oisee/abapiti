@@ -386,6 +386,15 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			}
 			l.widenedLets[params[i].Symbol()] = true
 		}
+		if i == 0 && n.Expression() != nil && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().Name().Text() == "from" && l.isGlobalArrayExpr(n.Expression().Expression()) {
+			// Array-like holes supply undefined even when TS inferred a
+			// non-optional index signature. Bind the actual iteration value.
+			t = elem
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[params[i].Symbol()] = true
+		}
 		l.declare(p, t)
 	}
 	if len(names) == 0 {
