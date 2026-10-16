@@ -3,6 +3,7 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"strings"
 )
 
 // Lowerings added for the abaplint syntax closure (abap/5_syntax, abap/types,
@@ -423,6 +424,9 @@ func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 		x := l.expr(args[0])
 		if x == nil {
 			return nil, true
+		}
+		if x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "tuple.") {
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: x}), Y: hir.L(hir.T(hir.Bool), true)}, true
 		}
 		switch x.Type.Kind {
 		case hir.Array:

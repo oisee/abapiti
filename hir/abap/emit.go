@@ -326,7 +326,7 @@ func (e *emitter) typ(t hir.Type) string {
 		return "i"
 	case hir.I64:
 		return "int8"
-	case hir.String:
+	case hir.String, hir.BigInt:
 		return "string"
 	case hir.ClassRef:
 		if t.Name == hir.RootObject {
@@ -452,6 +452,15 @@ func (e *emitter) scanUsage() {
 			e.materializer(x.Type)
 		}
 		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex") {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "string.replaceAll" || x.Op == "string.replaceFirst") {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+			e.regexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "string.replaceRegex" && len(x.Args) == 2 && replacementNeedsSubstitution(x.Args[1]) {
 			e.execUsed = true
 			e.jsRegexpUsed = true
 		}
@@ -1114,7 +1123,7 @@ func (b *body) expr(x *hir.Expr) string {
 			target = n + "->value"
 		}
 		switch lt.Kind {
-		case hir.String:
+		case hir.String, hir.BigInt:
 			value, ok := b.literalString(x)
 			if ok {
 				b.stringLit(target, value)
@@ -1847,6 +1856,9 @@ func (b *body) truth(n, a string, t hir.Type) {
 		b.line("ENDIF.")
 		return
 	}
+	if t.Kind == hir.BigInt {
+		test = a + " <> '0'"
+	}
 	if t.Kind == hir.String {
 		test = "strlen( " + a + " ) > 0"
 	}
@@ -2060,6 +2072,9 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.bigintRuntime(x, n) {
+		return
+	}
 	if x.Op == "array.spread0" {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP array spread with undefined values is unsupported", x.ID, x.Source))
 		return
@@ -2412,29 +2427,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
-			if x.Args[1].Kind != hir.Lit {
-				b.line("IF " + args[1] + " CS '$'.")
-				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-				b.line("ENDIF.")
+			if replacementNeedsSubstitution(x.Args[1]) {
+				b.line(n + " = " + b.e.replacementRuntime() + "=>regex( text = " + a + " pattern = " + args[0] + " replacement = " + args[1] + " ).")
+			} else {
+				b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 			}
-			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
-		case "string.replaceAll":
-			b.line(n + " = " + a + ".")
-			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
-		case "string.replaceFirst":
-			if x.Args[1].Kind != hir.Lit {
-				b.line("IF " + args[1] + " CS '$'.")
-				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-				b.line("ENDIF.")
+		case "string.replaceAll", "string.replaceFirst":
+			all := "abap_false"
+			if x.Op == "string.replaceAll" {
+				all = "abap_true"
 			}
-			// JavaScript replace with a string pattern: the first occurrence
-			// only; an empty needle inserts before the first code unit.
-			b.line(n + " = " + a + ".")
-			b.line("IF " + args[0] + " = ``.")
-			b.line(n + " = |{ " + args[1] + " }{ " + a + " }|.")
-			b.line("ELSE.")
-			b.line("REPLACE FIRST OCCURRENCE OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
-			b.line("ENDIF.")
+			b.line(n + " = " + b.e.replacementRuntime() + "=>literal( text = " + a + " needle = " + args[0] + " replacement = " + args[1] + " all_matches = " + all + " ).")
 		case "string.at":
 			// s[i]: absent outside [0, length), otherwise one UTF-16 unit.
 			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
@@ -3190,6 +3193,8 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	tag := "tag_ref"
 	field := "oval"
 	switch t.Kind {
+	case hir.BigInt:
+		tag, field = "tag_bigint", "sval"
 	case hir.String:
 		tag, field = "tag_string", "sval"
 	case hir.I64:

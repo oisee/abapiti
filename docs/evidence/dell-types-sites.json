@@ -1,0 +1,129 @@
+{
+  "baselineCompiler": "683d0e3036a2358946c4b84873ab89bf1d616b7e",
+  "osg": "1638d1cbc2549003b5ad2c4384b749c34beb034b",
+  "sites": [
+    {
+      "site": "tools/gogen/append.ts:2:35",
+      "message": "type reference T is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid generic nested-array storage; erasing to a copied array would lose aliases.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/append.ts:2:70",
+      "message": "type reference T is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid generic nested-array storage; erasing to a copied array would lose aliases.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/emit-exception.ts:58:44",
+      "message": "type reference ProgramInput is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid union of a program record and an array intersected with optional metadata.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/emit-table-move.ts:12:44",
+      "message": "type reference ProgramInput is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid union of a program record and an array intersected with optional metadata.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/frontend-owned.ts:42:43",
+      "message": "type reference ProgramInput is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid union of a program record and an array intersected with optional metadata.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/ir-children.ts:10:110",
+      "message": "checker type PropertyValue<T> is not lowered",
+      "root": "A",
+      "reason": "Valid conditional/indexed value type for object-constrained T.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/ir-children.ts:53:81",
+      "message": "checker type PropertyValue<T> is not lowered",
+      "root": "A",
+      "reason": "Valid conditional/indexed value type for object-constrained T.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/emit-int8.ts:13:30",
+      "message": "checker type bigint is not lowered",
+      "root": "A",
+      "reason": "Valid arbitrary-precision integer type; number/int64 substitution would lose precision.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/emit-int8.ts:11:7",
+      "message": "checker type bigint is not lowered",
+      "root": "A",
+      "reason": "Valid arbitrary-precision integer type; number/int64 substitution would lose precision.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/emit-int8.ts:11:27",
+      "message": "checker type bigint is not lowered",
+      "root": "A",
+      "reason": "Valid arbitrary-precision integer type; number/int64 substitution would lose precision.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/frontend-expressions-calls.mjs:151:87",
+      "message": "replace requires a literal replacement without dollar substitutions",
+      "root": "A",
+      "reason": "Valid string replacement; ECMAScript GetSubstitution tokens need compiler support.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/frontend-owned.ts:14:27",
+      "message": "type reference OwnershipObject is not a lowered declaration",
+      "root": "A",
+      "reason": "Valid intersection of method contracts with an optional selected method.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/frontend-owned.ts:15:14",
+      "message": "checker type OwnershipObject is not lowered",
+      "root": "A",
+      "reason": "Valid intersection of method contracts with an optional selected method.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/frontend.mjs:1540:42",
+      "message": "replace requires a literal replacement without dollar substitutions",
+      "root": "A",
+      "reason": "Valid string replacement; ECMAScript GetSubstitution tokens need compiler support.",
+      "before": 1,
+      "after": 0
+    },
+    {
+      "site": "tools/gogen/ir-children.ts:55:28",
+      "message": "checker type keyof T & string is not lowered",
+      "root": "A",
+      "reason": "Valid string-key intersection; the same location is reported twice.",
+      "before": 2,
+      "after": 0
+    }
+  ],
+  "selectedOccurrencesBefore": 16,
+  "selectedOccurrencesAfter": 0,
+  "newDiagnosticsAtOriginalLocations": []
+}

@@ -65,6 +65,31 @@ func (l *lowerer) gogenGenericShape(n *ast.Node, t *checker.Type) (hir.Type, boo
 	} else if !resolvedGenericAlias(t) || t.Flags()&checker.TypeFlagsObject == 0 {
 		return hir.Type{}, false
 	}
+	props := l.ck.GetPropertiesOfType(t)
+	if t.Flags()&checker.TypeFlagsIntersection != 0 {
+		props = append([]*ast.Symbol(nil), props...)
+		sort.Slice(props, func(i, j int) bool { return props[i].Name < props[j].Name })
+		slots := map[string]hir.Type{}
+		for _, p := range props {
+			method := false
+			for _, d := range p.Declarations {
+				method = method || d.Kind == ast.KindMethodSignature || d.Kind == ast.KindMethodDeclaration
+			}
+			if !method {
+				continue
+			}
+			pt := l.ck.GetTypeOfSymbol(p)
+			if fallback, ok := l.dataMemberFallback(n, pt); ok {
+				slots[p.Name] = fallback
+			} else if len(l.ck.GetSignaturesOfType(pt, checker.SignatureKindCall)) > 0 && len(l.ck.GetSignaturesOfType(pt, checker.SignatureKindConstruct)) == 0 {
+				slots[p.Name] = l.functionType(n, pt)
+			}
+		}
+		if c := l.synthFromPropertyTypes(n, props, slots); c != nil {
+			return hir.Ref(c.Name), true
+		}
+		return hir.Type{}, false
+	}
 	if c := l.synthFromProperties(n, l.ck.GetPropertiesOfType(t)); c != nil {
 		return hir.Ref(c.Name), true
 	}

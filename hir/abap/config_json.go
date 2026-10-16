@@ -280,6 +280,20 @@ ENDMETHOD.
 			line("ENDIF.\ndescriptor = descriptor->parent.\nENDWHILE.\nCLEAR result.")
 		case hir.ClassRef:
 			c := e.classBy(t.Name)
+			if c != nil && strings.HasPrefix(c.Name, "tuple.") {
+				line("DATA text TYPE string.\nenter( p0 ).\nresult = `[`. ")
+				for i, f := range c.Fields {
+					if f.Static {
+						continue
+					}
+					if i > 0 {
+						line("result = result && `,`.")
+					}
+					line("text = %s.\nIF text IS INITIAL.\ntext = `null`.\nENDIF.\nresult = result && text.", call(f.Type, "p0->"+e.member(f.Name)))
+				}
+				line("result = result && `]`.\nleave( p0 ).")
+				break
+			}
 			if subset {
 				_, nominalProven := e.lspTokenJSONOrder(c)
 				if c == nil || c.CoercionUnsafe || c.ViewUnsafe && !nominalProven || !jsonKeyNamesSafe(c) {

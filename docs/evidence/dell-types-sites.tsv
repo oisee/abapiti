@@ -1,0 +1,17 @@
+site	message	root	reason
+tools/gogen/append.ts:2:35	type reference T is not a lowered declaration	A	Valid generic nested-array storage; erasing to a copied array would lose aliases.
+tools/gogen/append.ts:2:70	type reference T is not a lowered declaration	A	Valid generic nested-array storage; erasing to a copied array would lose aliases.
+tools/gogen/emit-exception.ts:58:44	type reference ProgramInput is not a lowered declaration	A	Valid union of a program record and an array intersected with optional metadata.
+tools/gogen/emit-table-move.ts:12:44	type reference ProgramInput is not a lowered declaration	A	Valid union of a program record and an array intersected with optional metadata.
+tools/gogen/frontend-owned.ts:42:43	type reference ProgramInput is not a lowered declaration	A	Valid union of a program record and an array intersected with optional metadata.
+tools/gogen/ir-children.ts:10:110	checker type PropertyValue<T> is not lowered	A	Valid conditional/indexed value type for object-constrained T.
+tools/gogen/ir-children.ts:53:81	checker type PropertyValue<T> is not lowered	A	Valid conditional/indexed value type for object-constrained T.
+tools/gogen/emit-int8.ts:13:30	checker type bigint is not lowered	A	Valid arbitrary-precision integer type; number/int64 substitution would lose precision.
+tools/gogen/emit-int8.ts:11:7	checker type bigint is not lowered	A	Valid arbitrary-precision integer type; number/int64 substitution would lose precision.
+tools/gogen/emit-int8.ts:11:27	checker type bigint is not lowered	A	Valid arbitrary-precision integer type; number/int64 substitution would lose precision.
+tools/gogen/frontend-expressions-calls.mjs:151:87	replace requires a literal replacement without dollar substitutions	A	Valid string replacement; ECMAScript GetSubstitution tokens need compiler support.
+tools/gogen/frontend-owned.ts:14:27	type reference OwnershipObject is not a lowered declaration	A	Valid intersection of method contracts with an optional selected method.
+tools/gogen/frontend-owned.ts:15:14	checker type OwnershipObject is not lowered	A	Valid intersection of method contracts with an optional selected method.
+tools/gogen/frontend.mjs:1540:42	replace requires a literal replacement without dollar substitutions	A	Valid string replacement; ECMAScript GetSubstitution tokens need compiler support.
+tools/gogen/ir-children.ts:55:28	checker type keyof T & string is not lowered	A	Valid string-key intersection; the same location is reported twice.
+tools/gogen/ir-children.ts:55:28	checker type keyof T & string is not lowered	A	Valid string-key intersection; the same location is reported twice.

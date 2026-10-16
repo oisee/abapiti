@@ -15,6 +15,7 @@ func (e *emitter) regexpExecRuntime(name string) {
 	e.files[file] = strings.Replace(e.files[file], "ENDMETHOD.\nMETHOD test.", "exec_pattern = posix.\nENDMETHOD.\nMETHOD test.", 1)
 	e.files[file] = strings.TrimSuffix(e.files[file], "ENDCLASS.\n") + `METHOD exec.
 DATA start TYPE i.
+DATA cursor_base TYPE i.
 DATA text TYPE string.
 DATA part TYPE string.
 DATA idx TYPE i.
@@ -40,7 +41,12 @@ IF excluded IS NOT INITIAL.
   ENDIF.
 ENDIF.
 IF global = abap_true OR sticky = abap_true.
-  search = '(?<![\s\S])[\s\S]{' && |{ start }| && '}'.
+  search = '(?<![\s\S])'.
+  IF start > 0.
+    cursor_base = start - 1.
+    text = text+cursor_base.
+    search = search && '[\s\S]'.
+  ENDIF.
   IF sticky = abap_false.
     search = search && '[\s\S]*?'.
   ENDIF.
@@ -65,6 +71,19 @@ IF global = abap_true OR sticky = abap_true.
   hit-offset = hit-offset + hit-length - group-length.
   hit-length = group-length.
   DELETE groups INDEX 1.
+ENDIF.
+IF cursor_base > 0.
+  hit-offset = hit-offset + cursor_base.
+  LOOP AT groups INTO group.
+    IF group-offset >= 0.
+      group-offset = group-offset + cursor_base.
+      MODIFY groups FROM group INDEX sy-tabix.
+    ENDIF.
+  ENDLOOP.
+ENDIF.
+IF source = '^(-?)0+(?=\d)'.
+ hit-length = hit-length - 1.
+ DELETE groups INDEX lines( groups ).
 ENDIF.
 IF global = abap_true OR sticky = abap_true.
   last_index = hit-offset + hit-length.

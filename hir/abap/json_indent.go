@@ -17,6 +17,14 @@ func (e *emitter) jsonSubsetType(t hir.Type) bool {
 		return e.jsonSubsetType(t.Args[0])
 	case hir.ClassRef:
 		c := e.classBy(t.Name)
+		if c != nil && strings.HasPrefix(c.Name, "tuple.") {
+			for _, f := range c.Fields {
+				if !f.Static && !e.jsonSubsetType(f.Type) {
+					return false
+				}
+			}
+			return true
+		}
 		_, native := e.lspTokenJSONOrder(c)
 		return native || e.materialized[t.Name] || e.liveClasses[t.Name] || e.jsonOwnKeys && c != nil && c.Structural && c.Super == "" && jsonKeyNamesSafe(c)
 	}

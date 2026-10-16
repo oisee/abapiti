@@ -617,6 +617,9 @@ func (l *lowerer) assignTarget(lhs *ast.Node) *hir.Expr {
 	if lhs == nil {
 		return nil
 	}
+	if l.arrayRecordWrite(lhs) {
+		return nil
+	}
 	if l.gogenIndexWrite(lhs) {
 		return nil
 	}

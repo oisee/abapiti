@@ -148,6 +148,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, Type{}, false
 	}
 	i, b := T(I32), T(Bool)
+	if ps, r, ok := bigintRuntimeSignature(op); ok {
+		return ps, r, true
+	}
 	if ps, r, ok := gogenRuntimeSignature(op); ok {
 		return ps, r, true
 	}

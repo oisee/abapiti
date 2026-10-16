@@ -843,7 +843,7 @@ func (e *emitter) dynamicRuntime() {
 	name := e.name(id)
 	e.files[name+".clas.abap"] = "CLASS " + name + ` DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
-CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3, tag_number TYPE i VALUE 4.
+CONSTANTS: tag_string TYPE i VALUE 1, tag_class TYPE i VALUE 2, tag_ref TYPE i VALUE 3, tag_number TYPE i VALUE 4, tag_bigint TYPE i VALUE 11.
 DATA tag TYPE i.
 DATA sval TYPE string.
 DATA nval TYPE f.
@@ -878,6 +878,8 @@ result = nval.
 ENDMETHOD.
 METHOD type_of.
 CASE tag.
+WHEN tag_bigint.
+result = 'bigint'.
 WHEN tag_string.
 result = ` + "`string`" + `.
 WHEN tag_number.
@@ -894,7 +896,7 @@ ENDCASE.
 ENDMETHOD.
 METHOD to_string.
 DATA integer TYPE int8.
-IF tag = tag_string.
+IF tag = tag_string OR tag = tag_bigint.
 result = sval.
 ELSEIF tag = tag_boolean.
 IF bval = abap_true.
@@ -1020,5 +1022,11 @@ func (e *emitter) markArrays() {
 			continue
 		}
 		e.files[file] = strings.Replace(src, "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
+	}
+	for _, c := range e.p.Classes {
+		if strings.HasPrefix(c.Name, "tuple.") {
+			file := e.name(c.Name) + ".clas.abap"
+			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+mark+".\n", 1)
+		}
 	}
 }

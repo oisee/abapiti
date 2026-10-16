@@ -83,6 +83,9 @@ func (b *body) runtime(x *hir.Expr) string {
 	if code, ok := b.builtinRuntime(x); ok {
 		return code
 	}
+	if code, ok := b.bigintRuntime(x); ok {
+		return code
+	}
 	if code, ok := b.gogenRuntime(x); ok {
 		return code
 	}

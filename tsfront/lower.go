@@ -297,6 +297,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				l.node(fn)
 				continue
 			}
+			if l.genericAppendDeclaration(fn) {
+				continue
+			}
 			mod := l.moduleClassOf(f)
 			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm

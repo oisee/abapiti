@@ -62,8 +62,10 @@ The dynamic grammar admits macro placeholders (`&` plus a positive decimal
 integer) and anchored ASCII literal alternatives used for SQL names.
 Patterns outside these reviewed languages fail emission when literal and
 construction when dynamic. Matching uses one rune per UTF-16 unit. Global
-state and replacement preserve UTF-16 sections; dollar substitutions remain
-explicitly unsupported. The Node oracle checks 117 patterns against 1,033
+state and replacement preserve UTF-16 sections. String replacements implement
+GetSubstitution using original-input prefix/suffix text, whole matches, literal
+dollars, numbered captures through 99 and admitted named captures. Callback
+replacements remain outside the checked subset. The Node oracle checks 117 patterns against 1,033
 inputs, including Unicode and line terminators.
 
 The frontend packs variadic arguments into trailing arrays. Super calls resolve

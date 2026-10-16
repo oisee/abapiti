@@ -30,7 +30,7 @@ export class Probe {
 // T inside a container (T[]) has no exact tagged view of typed storage: the
 // generic stays refused at its location.
 func TestGenericContainerParameterRefused(t *testing.T) {
-	source := `function append<T>(target: T[], ...arrays: readonly (readonly T[])[]): void { for (const a of arrays) for (const v of a) target.push(v); }
+	source := `function append<T>(target: T[], ...arrays: readonly (readonly T[])[]): void { for (const a of arrays) for (const v of a) { target.push(v); target.push(v); } }
 class Probe {static run():number {const xs:number[] = [1]; append(xs, [2]); return xs.length;}}`
 	for _, d := range lowerFamilyDiagnostics(t, source) {
 		if d.Category == "unsupported-type" && d.Message == "unconstrained type parameter T" {

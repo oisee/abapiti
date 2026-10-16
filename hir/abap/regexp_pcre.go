@@ -187,6 +187,9 @@ ELSE.
   ENDIF.
 ENDIF.
 LOOP AT matches INTO hit.
+  IF source = '^(-?)0+(?=\d)'.
+    hit-length = hit-length - 1.
+  ENDIF.
   n = hit-offset - last.
   result = result && p0+last(n) && p1.
   last = hit-offset + hit-length.
