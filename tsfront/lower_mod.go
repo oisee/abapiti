@@ -486,7 +486,9 @@ func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 		if stmt.Kind == ast.KindVariableStatement {
 			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
 				if l.moduleCallable(d) && d.Initializer().Kind == ast.KindArrowFunction {
-					l.functionBodyToMethod(d.Initializer(), mod, d.Name().Text())
+					if l.containerFunctions[d] == nil {
+						l.functionBodyToMethod(d.Initializer(), mod, d.Name().Text())
+					}
 				}
 			}
 		}

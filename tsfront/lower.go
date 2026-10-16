@@ -283,6 +283,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.covariantImplements()
 	l.eraseGenericOverrides()
 	l.completeInterfaceValueSlots()
+	l.containerFunctions = map[*ast.Node]*ast.Node{}
 	// Register all module function signatures before lowering any function body.
 	for _, name := range files {
 		f, _ := p.File(name)
@@ -295,6 +296,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 			if isOverloadSignature(fn) {
 				// Keep source declaration IDs stable without emitting a duplicate.
 				l.node(fn)
+				continue
+			}
+			if l.containerGeneric(fn) {
+				l.containerFunctions[fn] = fn
 				continue
 			}
 			if l.genericAppendDeclaration(fn) {
@@ -398,6 +403,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 		l.bodiesFile(f)
 		done()
 	}
+	l.lowerContainerSpecializations()
 	if len(l.captureCells) > 0 {
 		l.distinguishNumberLocals()
 	}
@@ -498,6 +504,12 @@ type lowerer struct {
 	method             *hir.Method // method being lowered
 	serial             int
 	hint               hir.Type // contextual type for undefined literals
+
+	// Concrete module helper instantiations and the active checker substitution.
+	containerFunctions             map[*ast.Node]*ast.Node
+	containerQueue                 []containerSpecialization
+	containerParams, containerArgs []*checker.Type
+
 	// Anonymous checker graphs may contain cycles without a nominal reference
 	// to stop structural expansion. Reject those instead of overflowing the
 	// Go stack. Entries live only for the current recursive mapping call.

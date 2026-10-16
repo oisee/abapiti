@@ -353,3 +353,21 @@ func (c *Checker) GetWidenedType(t *Type) *Type {
 func (c *Checker) CompareSymbols(s1, s2 *ast.Symbol) int {
 	return c.compareSymbols(s1, s2)
 }
+
+// SubstituteTypes resolves a lowering specialization using the checker's own
+// instantiation rules, including anonymous records and nested call signatures.
+func (c *Checker) SubstituteTypes(t *Type, parameters, arguments []*Type) *Type {
+	return c.instantiateType(t, newTypeMapper(parameters, arguments))
+}
+
+// ResolvedTypeArguments returns the inferred arguments of a generic call.
+func (c *Checker) ResolvedTypeArguments(s *Signature) []*Type {
+	if s == nil || s.target == nil || s.mapper == nil {
+		return nil
+	}
+	result := make([]*Type, len(s.target.typeParameters))
+	for i, t := range s.target.typeParameters {
+		result[i] = c.instantiateType(t, s.mapper)
+	}
+	return result
+}
