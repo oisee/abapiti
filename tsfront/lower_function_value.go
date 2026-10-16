@@ -173,6 +173,22 @@ func (l *lowerer) finishCaptureCells() {
 
 // functionValue wraps a lifted local function or module function. Receiver
 // and lexical inputs are evaluated once when the value is formed.
+// valueSymbol resolves a value reference; in a shorthand property `{f}` the
+// identifier names the property, and the value is the binding it reads.
+func (l *lowerer) valueSymbol(n *ast.Node) *ast.Symbol {
+	if n != nil && n.Kind == ast.KindIdentifier && n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment {
+		if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+			if value.Flags&ast.SymbolFlagsAlias != 0 {
+				if target, ok := l.ck.ResolveAlias(value); ok {
+					return target
+				}
+			}
+			return value
+		}
+	}
+	return l.resolve(n)
+}
+
 func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 	if !l.unprunedFeatures {
 		return nil
@@ -201,7 +217,7 @@ func (l *lowerer) functionValue(n *ast.Node) *hir.Expr {
 			if !method.Static {
 				receiver = l.localFnReceiver(lf)
 			}
-		} else if sym := l.resolve(n); sym != nil {
+		} else if sym := l.valueSymbol(n); sym != nil {
 			if f := l.fileOfSymbol(sym); f != nil {
 				if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
 					owner = ref.owner

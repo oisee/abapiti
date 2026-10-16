@@ -151,6 +151,11 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	if t == nil {
 		return nil, false
 	}
+	// Ordinary property access also unwraps optional families. Unlike ?. it
+	// must raise on an absent receiver, rather than skipping the read.
+	if t.IsUnion() {
+		t = l.ck.GetNonNullableType(t)
+	}
 	alias := l.familyAliasKey(t)
 	mapped, ok := l.familyTypes[alias]
 	if !ok {
@@ -164,9 +169,10 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		}
 	}
 	var lowered *hir.Expr
-	if !ok && l.unprunedFeatures && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 && ast.IsInJSFile(n) && !ast.IsAssignmentTarget(n) {
+	if !ok && l.unprunedFeatures && (t.Flags()&checker.TypeFlagsNever != 0 || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 && ast.IsInJSFile(n)) && !ast.IsAssignmentTarget(n) {
 		// checkJs:false JavaScript: the checker has no type for the receiver
-		// (a partial read upstream), but its lowered value is a family.
+		// (a partial read upstream), or flow exhausted every variant. The
+		// original lowered value still carries its family membership.
 		savedPend, savedDiags, savedHint := l.pend, len(l.diags), l.hint
 		l.pend, l.hint = nil, hir.Type{}
 		recv := l.expr(expression)
@@ -254,6 +260,24 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	}
 	if recv == nil {
 		return nil, true
+	}
+	if recv.Type.Kind == hir.Optional && len(recv.Type.Args) == 1 && recv.Type.Args[0].Kind == hir.UnionRef {
+		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+	}
+	// A checker family can already have projected to its concrete payload.
+	// Read that storage directly; union.read requires an actual family value.
+	if recv.Type.Kind == hir.ClassRef {
+		if c := l.classByName(recv.Type.Name); c != nil {
+			for _, f := range c.Fields {
+				if f.Name == name && !f.Static {
+					return l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Type: f.Type, X: recv, Name: name}, result), true
+				}
+			}
+		}
+	}
+	if recv.Type.Kind == hir.Dynamic {
+		// An upstream erased value keeps its existing tagged property ABI.
+		return l.rtOp("dynamic.get", recv, hir.T(hir.Dynamic), hir.L(hir.T(hir.String), name)), true
 	}
 	op := "union.read"
 	if name == u.Discriminant {
@@ -457,4 +481,46 @@ func (l *lowerer) familySpreadLiteral(n *ast.Node, hint hir.Type, u *hir.UnionDe
 		result = &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hint, X: test, Y: admit(a), Z: result}
 	}
 	return result
+}
+
+// Flow must project within the receiver's own family. A structurally identical
+// leaf may also belong to another registered family with a different payload ID.
+func (l *lowerer) familyReceiverProjection(n *ast.Node, x *hir.Expr, t *checker.Type) *hir.Expr {
+	if !l.unprunedFeatures || t == nil || t.IsUnion() || t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) == 0 {
+		return nil
+	}
+	base := x.Type
+	if base.Kind == hir.Optional {
+		base = base.Args[0]
+	}
+	u := l.out.Union(base.Name)
+	if u == nil || !u.Complete {
+		return nil
+	}
+	tags := l.familyTags(l.ck.GetTypeOfPropertyOfType(t, u.Discriminant))
+	if len(tags) == 0 {
+		return nil
+	}
+	for _, a := range u.Alternatives {
+		original := l.familyChecks[a.Payload.Name]
+		if original == nil || !(l.familyRefinesLayout(t, original) && l.ck.IsTypeAssignableTo(t, original) || l.familyCopyShape(t, original)) {
+			continue
+		}
+		match := true
+		for _, tag := range tags {
+			present := false
+			for _, own := range a.Tags {
+				present = present || tag == own
+			}
+			match = match && present
+		}
+		if !match {
+			continue
+		}
+		if x.Type.Kind == hir.Optional {
+			x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: base, X: x}
+		}
+		return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: "union.project", Owner: u.Name, Name: a.ID, Type: a.Payload, X: x}
+	}
+	return nil
 }

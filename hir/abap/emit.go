@@ -326,7 +326,7 @@ func (e *emitter) typ(t hir.Type) string {
 		return "i"
 	case hir.I64:
 		return "int8"
-	case hir.String:
+	case hir.String, hir.BigInt:
 		return "string"
 	case hir.ClassRef:
 		if t.Name == hir.RootObject {
@@ -452,6 +452,15 @@ func (e *emitter) scanUsage() {
 			e.materializer(x.Type)
 		}
 		if x.Kind == hir.RuntimeOp && (x.Op == "regexp.exec" || x.Op == "regexp.lastIndex" || x.Op == "regexp.setLastIndex") {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && (x.Op == "string.replaceAll" || x.Op == "string.replaceFirst") {
+			e.execUsed = true
+			e.jsRegexpUsed = true
+			e.regexpUsed = true
+		}
+		if x.Kind == hir.RuntimeOp && x.Op == "string.replaceRegex" && len(x.Args) == 2 && replacementNeedsSubstitution(x.Args[1]) {
 			e.execUsed = true
 			e.jsRegexpUsed = true
 		}
@@ -808,6 +817,8 @@ type body struct {
 	code                         strings.Builder
 	locals                       map[string]string
 	serial                       int
+	loopDepth                    int
+	finalizers                   []int
 	lastInit, lastName, lastType string
 	constants                    map[string]string
 }
@@ -1112,7 +1123,7 @@ func (b *body) expr(x *hir.Expr) string {
 			target = n + "->value"
 		}
 		switch lt.Kind {
-		case hir.String:
+		case hir.String, hir.BigInt:
 			value, ok := b.literalString(x)
 			if ok {
 				b.stringLit(target, value)
@@ -1845,6 +1856,9 @@ func (b *body) truth(n, a string, t hir.Type) {
 		b.line("ENDIF.")
 		return
 	}
+	if t.Kind == hir.BigInt {
+		test = a + " <> '0'"
+	}
 	if t.Kind == hir.String {
 		test = "strlen( " + a + " ) > 0"
 	}
@@ -2058,6 +2072,9 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if b.bigintRuntime(x, n) {
+		return
+	}
 	if x.Op == "array.spread0" {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP array spread with undefined values is unsupported", x.ID, x.Source))
 		return
@@ -2410,29 +2427,17 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.split":
 			b.stringSplit(n, a, args[0], length)
 		case "string.replaceRegex":
-			if x.Args[1].Kind != hir.Lit {
-				b.line("IF " + args[1] + " CS '$'.")
-				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-				b.line("ENDIF.")
+			if replacementNeedsSubstitution(x.Args[1]) {
+				b.line(n + " = " + b.e.replacementRuntime() + "=>regex( text = " + a + " pattern = " + args[0] + " replacement = " + args[1] + " ).")
+			} else {
+				b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 			}
-			b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
-		case "string.replaceAll":
-			b.line(n + " = " + a + ".")
-			b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
-		case "string.replaceFirst":
-			if x.Args[1].Kind != hir.Lit {
-				b.line("IF " + args[1] + " CS '$'.")
-				b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-				b.line("ENDIF.")
+		case "string.replaceAll", "string.replaceFirst":
+			all := "abap_false"
+			if x.Op == "string.replaceAll" {
+				all = "abap_true"
 			}
-			// JavaScript replace with a string pattern: the first occurrence
-			// only; an empty needle inserts before the first code unit.
-			b.line(n + " = " + a + ".")
-			b.line("IF " + args[0] + " = ``.")
-			b.line(n + " = |{ " + args[1] + " }{ " + a + " }|.")
-			b.line("ELSE.")
-			b.line("REPLACE FIRST OCCURRENCE OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
-			b.line("ENDIF.")
+			b.line(n + " = " + b.e.replacementRuntime() + "=>literal( text = " + a + " needle = " + args[0] + " replacement = " + args[1] + " all_matches = " + all + " ).")
 		case "string.at":
 			// s[i]: absent outside [0, length), otherwise one UTF-16 unit.
 			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
@@ -2532,10 +2537,6 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		if x.Type.Args[0].Kind == hir.Dynamic {
-			b.e.refuse(fmt.Errorf("node %d (%s): ABAP dynamic array view across native element storages is unsupported", x.ID, x.Source))
-			return
-		}
 		b.arrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
@@ -2993,7 +2994,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("IF " + a + " = abap_false.")
 		b.line("EXIT.")
 		b.line("ENDIF.")
+		b.loopDepth++
 		b.stmt(s.Body)
+		b.loopDepth--
 		b.line("ENDDO.")
 	case hir.ForEach:
 		a := b.expr(s.X)
@@ -3011,6 +3014,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
 			b.line(a + "->dense( ).")
 		}
+		b.loopDepth++
 		if e.arrayViews {
 			idx := b.temp(hir.T(hir.I32))
 			b.line("DO.\n" + a + "->load( ).\nIF " + idx + " >= lines( " + a + "->items ).\nEXIT.\nENDIF.")
@@ -3034,22 +3038,22 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.stmt(s.Body)
 			b.line("ENDLOOP.")
 		}
+		b.loopDepth--
 		if ok {
 			b.locals[s.Name] = old
 		} else {
 			delete(b.locals, s.Name)
 		}
-	case hir.Break:
-		b.line("EXIT.")
-	case hir.Continue:
-		b.line("CONTINUE.")
+	case hir.Break, hir.Continue:
+		b.complete(s.Kind, "")
 	case hir.Return:
+		value := ""
 		if s.X != nil && (b.m.Result.Kind == hir.Void || s.X.Type.Kind == hir.Void) {
 			b.expr(s.X)
 		} else if s.X != nil {
-			b.line("result = " + b.value(s.X, b.m.Result) + ".")
+			value = b.value(s.X, b.m.Result)
 		}
-		b.line("RETURN.")
+		b.complete(hir.Return, value)
 	case hir.Trap:
 		name := e.name("exception.unexecuted")
 		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA source_location TYPE string.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
@@ -3082,17 +3086,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("RAISE EXCEPTION " + n + ".")
 	case hir.Finally:
-		// Normal completion runs the finally block after the TRY; anything
-		// leaving the body is caught, the block runs, and the same exception
-		// object is raised again.
-		n := b.rawTemp("REF TO cx_root")
-		b.line("TRY.")
-		b.stmt(s.Body)
-		b.line("CATCH cx_root INTO " + n + ".")
-		b.stmt(s.Else)
-		b.line("RAISE EXCEPTION " + n + ".")
-		b.line("ENDTRY.")
-		b.stmt(s.Else)
+		b.finally(s)
 	case hir.Try:
 		name := e.exception(s.Type)
 		value := "payload"
@@ -3199,6 +3193,8 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 	tag := "tag_ref"
 	field := "oval"
 	switch t.Kind {
+	case hir.BigInt:
+		tag, field = "tag_bigint", "sval"
 	case hir.String:
 		tag, field = "tag_string", "sval"
 	case hir.I64:

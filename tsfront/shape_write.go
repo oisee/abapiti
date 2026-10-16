@@ -27,7 +27,7 @@ func (l *lowerer) shapeWriteTarget(at *ast.Node, recv *hir.Expr, name string) *h
 			}
 		}
 		c := l.classByName(recv.Type.Name)
-		if c == nil {
+		if c == nil && recv.Type.Name != hir.RootObject {
 			return nil
 		}
 	} else if recv.Type.Kind != hir.Dynamic {

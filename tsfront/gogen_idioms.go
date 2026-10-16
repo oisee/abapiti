@@ -14,6 +14,15 @@ func (l *lowerer) gogenCheckerType(n *ast.Node, t *checker.Type) (hir.Type, bool
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if l.nodeDirentType(t) {
+		return hir.Ref(l.builtinDirent()), true
+	}
+	if mapped, ok := l.arrayRecordType(n, t); ok {
+		return mapped, true
+	}
+	if mapped, ok := l.genericPropertyType(t); ok {
+		return mapped, true
+	}
 	if mapped, ok := l.gogenResolvedArray(n, t); ok {
 		return mapped, true
 	}
@@ -100,8 +109,25 @@ func (l *lowerer) gogenCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	if callee.Kind == ast.KindIdentifier && callee.Text() == "BigInt" && l.librarySymbol(l.resolve(callee)) {
-		l.diagf(n, "unsupported-bigint", "BigInt conversion requires bigint values, which have no HIR representation")
-		return nil, true
+		if len(n.Arguments()) != 1 {
+			l.diagf(n, "unsupported-bigint", "BigInt requires one decimal string argument")
+			return nil, true
+		}
+		x := l.expr(n.Arguments()[0])
+		if x == nil {
+			return nil, true
+		}
+		if t := l.ck.GetTypeAtLocation(n.Arguments()[0]); t != nil && t.Flags()&checker.TypeFlagsStringLike != 0 {
+			x = l.coerce(x, hir.T(hir.String))
+		}
+		if x.Type.Kind != hir.String {
+			l.diagf(n, "unsupported-bigint", "BigInt requires a decimal string; number/boolean coercion is not lowered (got %s)", x.Type)
+			return nil, true
+		}
+		return l.rtOp("bigint.decimal", x, hir.T(hir.BigInt)), true
+	}
+	if x, handled := l.direntMember(callee, true, len(n.Arguments())); handled {
+		return x, true
 	}
 	if callee.Kind != ast.KindPropertyAccessExpression || callee.Name().Text() != "now" {
 		return nil, false

@@ -146,6 +146,29 @@ func (l *lowerer) mentionsType(x, t *checker.Type, depth int) bool {
 	return false
 }
 
+// trailingOptional returns how many trailing inner parameters an outer
+// signature omits, or -1 when it is not a plain prefix: no rest parameters
+// on either side when the arity differs, and every omitted one optional.
+func trailingOptional(inner, outer *hir.Method) int {
+	if len(outer.Params) == len(inner.Params) {
+		return 0
+	}
+	if len(outer.Params) > len(inner.Params) {
+		return -1
+	}
+	for _, p := range outer.Params {
+		if p.Variadic {
+			return -1
+		}
+	}
+	for i, p := range inner.Params {
+		if p.Variadic || i >= len(outer.Params) && p.Type.Kind != hir.Optional {
+			return -1
+		}
+	}
+	return len(inner.Params) - len(outer.Params)
+}
+
 // closureAdapter converts a function value between closure interfaces that
 // differ only where one side erased a type parameter to a tagged value
 // ((ctx: Dynamic) => Dynamic used as (ctx: string) => string): a wrapper
@@ -166,11 +189,17 @@ func (l *lowerer) closureAdapter(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Ex
 		x = &hir.Expr{Kind: hir.Cast, Node: x.Node, Type: hir.Type{Kind: hir.InterfaceRef, Name: c.Implements[0]}, X: x}
 	}
 	inner, outer := l.callableMethod(x.Type), l.callableMethod(dst)
-	if inner == nil || outer == nil || len(inner.Params) != len(outer.Params) || dst.Name == thunkInterfaceName {
+	if inner == nil || outer == nil || dst.Name == thunkInterfaceName {
 		return nil
 	}
-	tagged := false
-	for i := range inner.Params {
+	// A function with trailing optional parameters is also a value of a
+	// shorter function type: JavaScript binds the omitted ones to undefined.
+	omitted := trailingOptional(inner, outer)
+	if omitted < 0 {
+		return nil
+	}
+	tagged := omitted > 0
+	for i := range outer.Params {
 		tagged = tagged || inner.Params[i].Type.Kind == hir.Dynamic || outer.Params[i].Type.Kind == hir.Dynamic
 	}
 	tagged = tagged || inner.Result.Kind == hir.Dynamic || outer.Result.Kind == hir.Dynamic
@@ -193,6 +222,9 @@ func (l *lowerer) closureAdapter(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Ex
 			return nil
 		}
 		args = append(args, a)
+	}
+	for _, p := range inner.Params[len(outer.Params):] {
+		args = append(args, &hir.Expr{Kind: hir.Lit, Type: p.Type})
 	}
 	call := &hir.Expr{Kind: hir.VirtualCall, Name: inner.Name, Type: inner.Result, X: field, Args: args}
 	var body *hir.Stmt
@@ -224,6 +256,6 @@ func (l *lowerer) closureAdapter(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Ex
 	}
 	c.Methods = []*hir.Method{{Name: outer.Name, Params: params, Result: outer.Result, Body: body}}
 	l.out.Classes = append(l.out.Classes, c)
-	l.diagf(n, "note-closure-adapter", "function value converted between tagged and typed signatures")
+	l.diagf(n, "note-closure-adapter", "function value converted between tagged, typed or shorter signatures")
 	return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: dst, X: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.Ref(name), Args: []*hir.Expr{x}}}
 }

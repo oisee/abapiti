@@ -30,6 +30,16 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	makeBody := func() *body { return &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}} }
 	b := makeBody()
 	b.line("IF source IS NOT BOUND.\nRETURN.\nENDIF.\nCLEAR items.\nmissing = source->missing.")
+	if t.Args[0].Kind == hir.Dynamic || t.Args[0].Name == hir.RootObject {
+		// An erased view can also read a native scalar/reference array through
+		// its storage adapter. Do not downcast incompatible table classes.
+		adapter := b.rawTemp("REF TO " + storage)
+		length := b.temp(hir.T(hir.Dynamic))
+		index := b.temp(hir.T(hir.I32))
+		key := b.temp(hir.T(hir.String))
+		item := b.temp(hir.T(hir.Dynamic))
+		b.line("IF source->tag = " + d + "=>tag_ref.\n" + adapter + " ?= source->oval.\n" + length + " = " + adapter + "->get( `length` ).\n" + index + " = 0.\nWHILE " + index + " < " + length + "->nval.\n" + key + " = |{ " + index + " }|.\n" + item + " = " + adapter + "->get( " + key + " ).\nAPPEND " + item + " TO items.\n" + index + " = " + index + " + 1.\nENDWHILE.\nRETURN.\nENDIF.")
+	}
 	idx := b.temp(hir.T(hir.I32))
 	node := b.temp(hir.T(hir.Dynamic))
 	v := b.temp(t.Args[0])
@@ -68,7 +78,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	idx = b.temp(hir.T(hir.I32))
 	node = b.temp(hir.T(hir.Dynamic))
 	v = b.temp(t.Args[0])
-	b.line("load( ).\nIF p0 = `length`.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_number.\nresult->nval = lines( items ).\nRETURN.\nENDIF.\nCREATE OBJECT " + node + ".\n" + idx + " = " + node + "->array_index( p0 ).\nIF has( " + idx + " ) = abap_false.\nRETURN.\nENDIF.\nREAD TABLE items INDEX " + idx + " + 1 INTO " + v + ".")
+	b.line("load( ).\nIF p0 = `length`.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_number.\nresult->nval = lines( items ).\nRETURN.\nENDIF.\nCREATE OBJECT " + node + ".\nTRY.\n" + idx + " = " + node + "->array_index( p0 ).\nCATCH cx_sy_range_out_of_bounds.\nRETURN.\nENDTRY.\nIF has( " + idx + " ) = abap_false.\nRETURN.\nENDIF.\nREAD TABLE items INDEX " + idx + " + 1 INTO " + v + ".")
 	if wideInteger {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: get: i64 element boxing unavailable`.")
 	} else {
@@ -123,6 +133,13 @@ func (b *body) arrayView(t hir.Type, n, a string) {
 	e := b.e
 	e.liveRuntime()
 	trap, d := e.name("view.refusal"), e.name("runtime.dynamic")
+	if t.Args[0].Kind == hir.Dynamic {
+		e.isArrayUsed = true
+		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `" + "arrayView: undefined is not array storage" + "`.\nENDIF.")
+		b.line("IF " + a + "->tag <> " + d + "=>tag_array.\nIF " + a + "->tag <> " + d + "=>tag_ref OR " + a + "->oval IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `arrayView: source is not array storage`.\nENDIF.\nENDIF.")
+		b.line("CREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\n" + n + "->load( ).")
+		return
+	}
 	b.line("CLEAR " + n + ".")
 	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: incompatible native array reference`.\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
 	// Validate every present element at publication and again on subsequent reads.

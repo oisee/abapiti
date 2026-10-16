@@ -53,8 +53,9 @@ anchor context, suppressed leading/trailing empty matches, numbered capture
 splicing, and numeric ToUint32 limit (including truncation, wraparound and
 nonfinite values). The original RegExp's lastIndex is ignored and preserved.
 Enumeration suppresses empty matches at the preceding separator end and does
-not attempt a match at the final input boundary. It does not reuse exec's
-bounded-repeat start-prefix wrapper, so split cursors above 1000 are supported.
+not attempt a match at the final input boundary. Exec now retains one preceding
+UTF-16 unit for anchor/boundary context instead of a bounded-repeat prefix, so
+both exec and split cursors above 1000 are supported.
 Empty input returns `[]` if the separator matches empty, otherwise `[""]`.
 Leading/trailing **nonempty** separators preserve empty result elements.
 
@@ -73,8 +74,11 @@ and assert the typed refusal for unmatched/repeated capture domains.
 
 String.replace accepts RegExp objects and string pattern/replacement variables.
 A variable string pattern replaces the first literal occurrence, including the
-empty needle. Replacement callbacks and dollar substitutions remain unsupported;
-dynamic replacement strings are checked at execution.
+empty needle. String replacements implement GetSubstitution over the original
+UTF-16 input, including literal dollars, whole matches, prefix/suffix text,
+numbered captures and admitted named captures. replaceAll accepts string
+patterns or literal global RegExp patterns; callbacks and coercing replacements
+retain located refusals. See [the step-4 evidence](../docs/evidence/dell-types.md).
 
 ABAP reuses the shared translations with **PCRE, requiring ABAP 7.55+**,
 only in the separately emitted `runtime.regexp_js` subclass. Legacy FIND REGEX

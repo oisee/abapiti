@@ -1,0 +1,27 @@
+location	baseline	final at location
+tools/gogen/emit-constructors.ts:17:43	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/emit-go.mjs:964:25	identifier Object is not a lowered local or module value	removed
+tools/gogen/emit-go.mjs:990:43	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/emit-go.mjs:2225:26	identifier Number is not a lowered local or module value	removed
+tools/gogen/emit-table-move.ts:111:86	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/fold-scalars.ts:89:67	identifier Math is not a lowered local or module value	removed
+tools/gogen/frontend-expressions-calls.mjs:33:82	identifier Infinity is not a lowered local or module value	removed
+tools/gogen/frontend-expressions-calls.mjs:150:11	identifier Math is not a lowered local or module value	removed
+tools/gogen/frontend-expressions-calls.mjs:155:12	identifier Number is not a lowered local or module value	removed
+tools/gogen/frontend-inventory.mjs:139:49	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend-local-constants.mjs:36:39	identifier Array is not a lowered local or module value	removed
+tools/gogen/frontend-provenance.mjs:18:43	identifier process is not a lowered local or module value	removed
+tools/gogen/frontend-replay.mjs:8:27	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend-session.mjs:93:63	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend.mjs:344:14	identifier Number is not a lowered local or module value	removed
+tools/gogen/frontend.mjs:1018:26	identifier Object is not a lowered local or module value	Object.create requires a prototype-preserving object ABI
+tools/gogen/frontend.mjs:1255:61	identifier Number is not a lowered local or module value	removed
+tools/gogen/frontend.mjs:1282:46	identifier Object is not a lowered local or module value	removed
+tools/gogen/frontend.mjs:1916:22	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend.mjs:2334:30	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend.mjs:5673:67	identifier Number is not a lowered local or module value	removed
+tools/gogen/frontend.mjs:5680:67	identifier Number is not a lowered local or module value	removed
+tools/gogen/frontend.mjs:5756:81	mixed tagged operands require value-preserving truthiness	removed
+tools/gogen/frontend.mjs:3218:6	identifier Object is not a lowered local or module value	removed
+tools/gogen/host-io.ts:70:10	identifier process is not a lowered local or module value	removed
+tools/gogen/sink-locals.ts:62:58	identifier process is not a lowered local or module value	removed

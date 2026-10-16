@@ -3,6 +3,7 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"strings"
 )
 
 // Lowerings added for the abaplint syntax closure (abap/5_syntax, abap/types,
@@ -200,7 +201,10 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 			}
 			return l.rtOp("array.shift", recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "sort":
-			if len(args) != 1 || (args[0].Kind != ast.KindArrowFunction && args[0].Kind != ast.KindFunctionExpression && args[0].Kind != ast.KindIdentifier) {
+			if len(args) == 0 {
+				return l.sortWithComparator(n, recv, nil), true
+			}
+			if len(args) != 1 || (args[0].Kind != ast.KindArrowFunction && args[0].Kind != ast.KindFunctionExpression && args[0].Kind != ast.KindIdentifier && args[0].Kind != ast.KindPropertyAccessExpression && args[0].Kind != ast.KindCallExpression) {
 				l.diagf(n, "unsupported-call", "sort needs an inline or lowered module comparator")
 				return nil, true
 			}
@@ -409,30 +413,20 @@ func (l *lowerer) isGlobalArrayExpr(e *ast.Node) bool {
 // arrayStatic lowers Array.from(x) and Array.isArray(x).
 func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	args := n.Arguments()
+	if name == "from" && len(args) >= 1 {
+		return l.arrayFrom(n), true
+	}
 	if len(args) != 1 {
 		return nil, false
 	}
 	switch name {
-	case "from":
-		x := l.expr(args[0])
-		if x == nil {
-			return nil, true
-		}
-		if l.generatorABIFor(x.Type) != nil {
-			return l.drainGenerator(x), true
-		}
-		switch x.Type.Kind {
-		case hir.Array:
-			return l.rtOp("array.slice0", x, x.Type), true
-		case hir.OrderedSet:
-			return l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0])), true
-		}
-		l.diagf(n, "unsupported-call", "Array.from on %s is not lowered", x.Type.Kind)
-		return nil, true
 	case "isArray":
 		x := l.expr(args[0])
 		if x == nil {
 			return nil, true
+		}
+		if x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "tuple.") {
+			return &hir.Expr{Kind: hir.Seq, Node: l.node(n), Type: hir.T(hir.Bool), Stmt: hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: x}), Y: hir.L(hir.T(hir.Bool), true)}, true
 		}
 		switch x.Type.Kind {
 		case hir.Array:

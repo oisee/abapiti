@@ -17,6 +17,12 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"string.sha1Hex":            {String, 0, false},
 	"string.repeat":             {String, 1, false},
 	"string.padStart":           {String, 2, false},
+	"string.padEnd":             {String, 2, false},
+	"string.relativeAt":         {String, 1, false},
+	"regexp.clone":              {RegExp, 0, false},
+	"regexp.flags":              {RegExp, 0, false},
+	"regexp.matchAllNext":       {RegExp, 1, true},
+	"array.matchGroups":         {Array, 0, false},
 	"string.parseFloatNumber":   {String, 0, false},
 	"string.parseIntNumber":     {String, 0, false},
 	"string.toNumber":           {String, 0, false},
@@ -142,10 +148,25 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, Type{}, false
 	}
 	i, b := T(I32), T(Bool)
+	if ps, r, ok := bigintRuntimeSignature(op); ok {
+		return ps, r, true
+	}
 	if ps, r, ok := gogenRuntimeSignature(op); ok {
 		return ps, r, true
 	}
 	switch op {
+	case "number.hex16":
+		return nil, T(String), true
+	case "host.getenv":
+		return nil, T(Optional, T(String)), true
+	case "string.codePoints":
+		return nil, T(Array, T(String)), true
+	case "dynamic.values":
+		return nil, T(Array, T(Dynamic)), true
+	case "number.isInteger", "number.isSafeInteger", "number.isFinite", "number.strictIsNaN":
+		return nil, T(Bool), true
+	case "number.abs", "arrayLike.length":
+		return nil, T(Number), true
 	case "xml.validate", "xml.parseSubset", "xml.parseWithErrors", "json.parseSubset", "json5.parse", "dynamic.null":
 		return nil, T(Dynamic), true
 	case "dynamic.keys":
@@ -184,7 +205,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, T(Bool), true
 	case "string.parseFloat":
 		return nil, T(Optional, T(Number)), true
-	case "string.padStart":
+	case "string.padStart", "string.padEnd":
 		return []Type{T(Number), T(String)}, T(String), true
 	case "string.repeat", "string.repeatIndent":
 		return []Type{T(Number)}, T(String), true
@@ -316,7 +337,15 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, i, true
 	case "regexp.setLastIndex":
 		return []Type{T(Number)}, T(Void), true
-	case "regexp.exec":
+	case "regexp.clone":
+		return nil, T(RegExp), true
+	case "regexp.flags":
+		return nil, T(String), true
+	case "array.matchGroups":
+		return nil, T(Dynamic), t.Args[0].Kind == String
+	case "string.relativeAt":
+		return []Type{T(Number)}, T(Optional, T(String)), true
+	case "regexp.exec", "regexp.matchAllNext":
 		return []Type{T(String)}, T(Optional, T(Array, T(String))), true
 	case "regexp.test", "regexp.match_test":
 		return []Type{T(String)}, b, true

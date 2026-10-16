@@ -262,13 +262,13 @@ func TestGogenEpochABAPRefusal(t *testing.T) {
 }
 
 func TestGogenBigIntLocatedRefusalNodeOracle(t *testing.T) {
-	out, err := exec.Command("node", "-e", `console.log(typeof BigInt("123456789012345678901234567890"))`).CombinedOutput()
+	out, err := exec.Command("node", "-e", `console.log(typeof BigInt(123))`).CombinedOutput()
 	if err != nil || string(out) != "bigint\n" {
 		t.Fatal(err, string(out))
 	}
-	_, diags := lowerProbe(t, sourceProbe(t, `export class Probe { static run() { return BigInt("123456789012345678901234567890"); } }`))
+	_, diags := lowerProbe(t, sourceProbe(t, `export class Probe { static run() { return BigInt(123); } }`))
 	for _, d := range diags {
-		if d.Category == "unsupported-bigint" && strings.Contains(d.Loc, "input.ts:") && strings.Contains(d.Message, "no HIR representation") {
+		if d.Category == "unsupported-bigint" && strings.Contains(d.Loc, "input.ts:") && strings.Contains(d.Message, "decimal string") {
 			return
 		}
 	}

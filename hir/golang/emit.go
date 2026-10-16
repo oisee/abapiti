@@ -47,6 +47,17 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && x.Op == "arrayLike.length" {
+					e.nonfiniteNumbers = true
+					e.toNumber = true
+				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "number.isInteger" || x.Op == "number.isSafeInteger" || x.Op == "number.isFinite" || x.Op == "number.strictIsNaN" || x.Op == "number.abs") {
+					e.nonfiniteNumbers = true
+				}
+				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.values" {
+					e.extraRuntimeKeys = true
+					e.usesLiveArrays = true
+				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
 					e.nonfiniteNumbers = true
 				}
@@ -143,9 +154,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		}
 		jsonWriter += configJSONReplacerSource
 	}
-	runtime := runtimeSource
+	runtime := e.stringA16Runtime(runtimeSource)
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
+	runtime = e.mapInsertionsRuntime(runtime)
 	if e.recordString {
 		runtime += recordStringSource
 	}
@@ -158,6 +170,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.regexSplit {
 		e.extendedRegex = true
 		runtime += regexSplitRuntimeSource
+		if e.regexA16 {
+			runtime = strings.Replace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
+ if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, 1)
+		}
 	}
 	if e.extraRuntimeKeys {
 		runtime += ownKeysSource
@@ -171,8 +187,14 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.extendedRegex {
 		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
+		if e.regexA16 {
+			runtime += strings.TrimPrefix(jsregex.IteratorRuntimeSource, "package jsregex")
+		}
 		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+	}
+	if e.regexA16 {
+		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateSubset(p,f);accepted", "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", 1)
 	}
 	if e.constructorArgs {
 		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
@@ -202,6 +224,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
 	generated := e.code.String() + e.extra.String()
+	if e.hirStrconv {
+		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"strconv\"\n", 1)
+	}
 	if e.hirMath {
 		// Checked integer field views may emit math.Trunc in this file;
 		// runtime.go's imports are not package-wide Go imports.
@@ -210,6 +235,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	files := map[string]string{"hir.go": generated, "runtime.go": strings.Replace(runtime+spreadArraySource+unicodeUpperSource+jsonRuntimeSource+json5RuntimeSource+json5UnicodeSource+xmlRuntimeSource+validation+regexTable+jsonWriter, "package main", "package "+pkg, 1)}
 	if e.promiseUsed {
 		files["promise.go"] = strings.Replace(promiseRuntimeSource, "package main", "package "+pkg, 1)
+	}
+	if source := e.nodePlatformSource(pkg); source != "" {
+		files["nodeplatform.go"] = source
 	}
 	if source := e.externSource(pkg); source != "" {
 		files["extern.go"] = source
@@ -249,6 +277,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	externAdapters    []string
 	externImports     map[string]string
+	hirStrconv        bool
 	chaiDeep          bool
 	chaiThrow         bool
 	chaiActionUsed    bool
@@ -256,6 +285,7 @@ type emitter struct {
 	propertyLookups   map[string]bool
 	typeofUsed        bool
 	extendedRegex     bool
+	regexA16          bool
 	regexSplit        bool
 	constructorArgs   bool
 	configJSON        bool
@@ -362,6 +392,8 @@ func (e *emitter) typ(t hir.Type) string {
 		return "int64"
 	case hir.Number:
 		return "float64"
+	case hir.BigInt:
+		return "jsBigInt"
 	case hir.String:
 		return "jsString"
 	case hir.ClassValue:
@@ -484,6 +516,9 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.line("}")
+	if strings.HasPrefix(c.Name, "tuple.") {
+		e.line("func (self *%s) arrayMarker() {}", e.obj(c.Name))
+	}
 	if e.chaiDeep {
 		e.chaiDeepShape(c, source)
 	}
@@ -715,6 +750,13 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 		return "present(" + s + ")"
 	}
 	switch t.Kind {
+	case hir.BigInt:
+		digits, ok := v.(string)
+		if !ok {
+			b.e.unsupported(node, "bigint literal has non-string value")
+			return `jsBigInt("0")`
+		}
+		return "jsBigInt(" + strconv.Quote(digits) + ")"
 	case hir.String:
 		text, ok := v.(string)
 		if !ok {
@@ -740,6 +782,8 @@ func (b *body) literal(t hir.Type, v any, node hir.Node) string {
 }
 func (b *body) truth(v string, t hir.Type) string {
 	switch t.Kind {
+	case hir.BigInt:
+		return v + "!=jsBigInt(\"0\")"
 	case hir.Optional:
 		if t.Args[0].IsRef() {
 			return "!nilRef(" + v + ")"

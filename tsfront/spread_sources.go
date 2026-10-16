@@ -168,61 +168,17 @@ func isMatchAllCall(n *ast.Node) bool {
 	return callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "matchAll"
 }
 
-// matchAllValues lowers s.matchAll(re) consumed at once by a spread: the
-// match arrays (with index) of repeated exec on a fresh global RegExp, a
-// zero-length match advancing lastIndex by one code unit (no u flag is
-// admitted). The RegExp must be fresh (a literal or new RegExp), so the
-// iterator's internal clone is unobservable.
+// matchAllValues consumes the same lazy iterator as direct calls and for-of.
 func (l *lowerer) matchAllValues(n *ast.Node) *hir.Expr {
-	arg := n.Arguments()[0]
-	for arg.Kind == ast.KindParenthesizedExpression {
-		arg = arg.Expression()
-	}
-	if arg.Kind != ast.KindRegularExpressionLiteral && arg.Kind != ast.KindNewExpression {
-		l.diagf(n, "unsupported-regex", "matchAll needs a fresh RegExp (a literal or new RegExp)")
-		return nil
-	}
-	recvNode := n.Expression().Expression()
-	recv := l.expr(recvNode)
+	recv := l.expr(n.Expression().Expression())
 	if recv == nil {
 		return nil
 	}
-	if recv.Type.Kind != hir.String {
-		l.diagf(n, "unsupported-call", "matchAll receiver is not a string")
+	x := l.matchAllIterator(n, recv)
+	if x == nil {
 		return nil
 	}
-	str, i := hir.T(hir.String), hir.T(hir.I32)
-	s := l.tempInit(n, str, recv)
-	re := l.expr(arg)
-	if re == nil {
-		return nil
-	}
-	if re.Type.Kind != hir.RegExp || re.Kind != hir.New || len(re.Args) != 2 || re.Args[1].Kind != hir.Lit {
-		l.diagf(n, "unsupported-regex", "matchAll needs a fresh RegExp with literal flags")
-		return nil
-	}
-	if flags, _ := re.Args[1].Value.(string); !strings.Contains(flags, "g") {
-		// String.prototype.matchAll throws a TypeError for a non-global RegExp.
-		l.diagf(n, "unsupported-regex", "matchAll needs a global RegExp")
-		return nil
-	}
-	re = l.tempInit(n, re.Type, re)
-	row := hir.T(hir.Array, str)
-	result := l.tempVar(n, hir.T(hir.Array, row))
-	m := l.tempInit(n, hir.T(hir.Optional, row), l.rtOp("regexp.exec", re, hir.T(hir.Optional, row), s))
-	present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: row, X: m}
-	empty := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: hir.T(hir.Bool),
-		X: l.rtOp("string.length", &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: str, X: present, Y: hir.L(i, 0)}, i), Y: hir.L(i, 0)}
-	advance := l.rtOp("regexp.setLastIndex", re, hir.T(hir.Void), l.rtOp("number.fromI32",
-		&hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: l.rtOp("regexp.lastIndex", re, i), Y: hir.L(i, 1)}, hir.T(hir.Number)))
-	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n),
-		X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: m}},
-		Body: hir.B(
-			&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, i, present)},
-			&hir.Stmt{Kind: hir.If, Node: l.node(n), X: empty, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: advance})},
-			&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: m, Y: l.rtOp("regexp.exec", re, hir.T(hir.Optional, row), s)},
-		)})
-	return result
+	return l.drainGenerator(x)
 }
 
 // convertedElements copies a tagged-element snapshot into the context's

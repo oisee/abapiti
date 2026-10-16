@@ -1,0 +1,177 @@
+{
+  "baselineSha": "683d0e3036a2358946c4b84873ab89bf1d616b7e",
+  "implementationSha": "b2c73228840bf6ab41583ad0f9300b562e56d8eb",
+  "branch": "dell/types",
+  "authorAndCommitter": "Alice V. <ooisee@gmail.com>",
+  "pushed": false,
+  "environment": {
+    "go": "go1.26.9 linux/amd64",
+    "node": "v26.9.0",
+    "osgTypeScript": "5.9.3",
+    "heavyVirtualMemoryLimitKiB": 16777216,
+    "maxGoPackageParallelism": 2
+  },
+  "classification": {
+    "A": 16,
+    "G": 0,
+    "originalTypecheckExit": 0,
+    "note": "Counts use the supplied TSV occurrences: two replacements, six type references, eight checker types (including two identical keyof diagnostics at one location)."
+  },
+  "gates": [
+    {
+      "gate": "build",
+      "exit": 0,
+      "seconds": 21
+    },
+    {
+      "gate": "vet",
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "gate": "short",
+      "exit": 0,
+      "seconds": 404
+    },
+    {
+      "gate": "hostio",
+      "exit": 0,
+      "seconds": 0
+    }
+  ],
+  "kit": {
+    "kitZipSha256": "2be51f82cfc1947416faef522c21b52c485e94f43bc6ea65d40fb8e9fb421de8",
+    "rows": [
+      {
+        "revision": "baseline",
+        "variant": "clean",
+        "exit": 0,
+        "seconds": 14.031,
+        "bytes": 2,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "expectedEqual": true
+      },
+      {
+        "revision": "baseline",
+        "variant": "seeded",
+        "exit": 0,
+        "seconds": 14.301,
+        "bytes": 601,
+        "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+        "expectedEqual": true
+      },
+      {
+        "revision": "final",
+        "variant": "clean",
+        "exit": 0,
+        "seconds": 22.837,
+        "bytes": 2,
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "expectedEqual": true
+      },
+      {
+        "revision": "final",
+        "variant": "seeded",
+        "exit": 0,
+        "seconds": 19.84,
+        "bytes": 601,
+        "sha256": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+        "expectedEqual": true
+      }
+    ],
+    "assignmentTypeMismatch": {
+      "baseline": {
+        "lines": 2,
+        "occurrences": 2
+      },
+      "final": {
+        "lines": 2,
+        "occurrences": 2
+      }
+    }
+  },
+  "M1": {
+    "target": "TS-HG Go",
+    "documentation": "docs/evidence/gogen-a15.md:86",
+    "osgWorkloadCommit": "3ee404ca1260464221f5eba7d86a06a38eabc6c4",
+    "workloadFiles": 2785,
+    "frozenWorkloadHashMismatches": 0,
+    "issues": 80,
+    "lines": 81,
+    "cmpEqual": true,
+    "sha256": "95d37bc666403557ceecbb6f0e12e31867c18d3c2870e105e3ceafb5b9267428",
+    "measurement": "31.26 s 2057336 KB",
+    "driverSha256": "ec537151662bda6855f3e4295be047fb4d966cb852add67002c99e68588a160a"
+  },
+  "pilot": {
+    "osg": "1638d1cbc2549003b5ad2c4384b749c34beb034b",
+    "script": "/logs/pilotsetup/.ext/measure-step4.sh",
+    "readOnlyInputs": true,
+    "osgWritableMirror": "/work/.local/types/osg",
+    "baseline": {
+      "blocking": 304,
+      "rootBlocking": 206,
+      "cascadeBlocking": 98,
+      "hirErrors": 1691,
+      "files": 37,
+      "coverage": {
+        "files": 56,
+        "loaded": 51,
+        "bodies": 422,
+        "executed": 226,
+        "unmatched": 3
+      },
+      "referenceSha256": "a13702d55b1eecdb200078205da5909961b4b49ce0f6c3fe3bdbf08e802d6227",
+      "resourceMeasurement": "118.40 s 1397244 KB"
+    },
+    "final": {
+      "blocking": 362,
+      "rootBlocking": 249,
+      "cascadeBlocking": 113,
+      "hirErrors": 1717,
+      "files": 36,
+      "coverage": {
+        "files": 56,
+        "loaded": 51,
+        "bodies": 422,
+        "executed": 226,
+        "unmatched": 3
+      },
+      "referenceSha256": "a13702d55b1eecdb200078205da5909961b4b49ce0f6c3fe3bdbf08e802d6227",
+      "resourceMeasurement": "161.73 s 1725960 KB"
+    },
+    "selectedOccurrencesBefore": 16,
+    "selectedOccurrencesAfter": 0,
+    "diagnosticsAtOriginalSelectedLocations": [],
+    "compilerBinarySha256": "629170903e1813e3828161a698c39c1bcc872bd22784b63650f6672c9941c038",
+    "wholePilotStillBlocked": true
+  },
+  "baselineProvenance": {
+    "sha": "683d0e3036a2358946c4b84873ab89bf1d616b7e",
+    "detachedWorktree": "/work/.local/types/base-src",
+    "initialAndCleanBaselineGeneratedGoIdentical": true,
+    "goFiles": 8,
+    "sha256ByGoFile": {
+      "hir_profile.go": "c3b41e8be10ee11e76522942283c0d8279c31ffee4fb6d7ba55fa9f31e30e485",
+      "site_profile_off.go": "4f07dc8fd8b26ff04fb5ee339e0a081aa7d5aa728025ca2e86bea99fbedff2fc",
+      "literals.go": "4cb0cb0c1c009639651ca03fabe2f50ee8868e441c41e5d2948b00f8b0424b76",
+      "main.go": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+      "promise.go": "ee8b201aeef05a11f8f1122325ce1589538aa8cac087d14440827d63b4766309",
+      "hir.go": "4b9474d436a2cc7029519fa94b64d2b694db0a54d971dde4ea10a136df7811d0",
+      "site_profile.go": "7ea6fe1dd6151b6f71a074abd879699d69622e2f3a3068d634bde10ab39cafc1",
+      "runtime.go": "77c9456986a857356a2ee151b5f1dd4543fda48993bb096f2bcbd618bde7f468"
+    },
+    "kit": [
+      {
+        "variant": "clean",
+        "seconds": 13.241,
+        "expectedAndFinalEqual": true
+      },
+      {
+        "variant": "seeded",
+        "seconds": 13.113,
+        "expectedAndFinalEqual": true
+      }
+    ]
+  }
+}

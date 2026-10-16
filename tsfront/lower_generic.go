@@ -173,6 +173,8 @@ func (l *lowerer) propagateBridgeTraps() {
 // unboxOp names the checked unboxing of a tagged value into t.
 func unboxOp(t hir.Type) string {
 	switch t.Kind {
+	case hir.BigInt:
+		return "dynamic.asBigInt"
 	case hir.String:
 		return "dynamic.asString"
 	case hir.Number:
