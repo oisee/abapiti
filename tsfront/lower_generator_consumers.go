@@ -41,14 +41,21 @@ func (l *lowerer) closeGeneratorConsumer(s *hir.Stmt, iter *hir.Expr, depth int)
 		return nil
 	}
 	if s.Kind == hir.Try || s.Kind == hir.Finally {
-		if generatorConsumerExits(s) {
-			l.diags = append(l.diags, LowerDiagnostic{Category: "unsupported-generator", Loc: s.Source, Message: "generator consumer exception regions with return/break/continue need structured iterator closing"})
-			return s
-		}
 		// Protect the entire region: a caught body exception must not close the
 		// iterator. Only an exception escaping the catch/finally closes it.
 		l.serial++
 		done := hir.V("generatorRegionDone"+itoa(l.serial), hir.T(hir.Bool))
+		if generatorConsumerExits(s) {
+			// A return/break/continue leaving the region marks it done; one
+			// leaving the generator loop closes the iterator first. Exits that
+			// cross a nested exception region would close before its handler.
+			exits, ok := l.markGeneratorRegionExits(s, done, iter, depth, 0, false, s)
+			if !ok {
+				l.diags = append(l.diags, LowerDiagnostic{Category: "unsupported-generator", Loc: s.Source, Message: "generator consumer exception regions with return/break/continue need structured iterator closing"})
+				return s
+			}
+			s = exits
+		}
 		return hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: done.Name, Type: done.Type, X: hir.L(done.Type, false)}, &hir.Stmt{Kind: hir.Finally, Body: hir.B(s, &hir.Stmt{Kind: hir.Assign, X: done, Y: hir.L(done.Type, true)}), Else: hir.B(&hir.Stmt{Kind: hir.If, X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: done.Type, X: done}, Body: l.generatorClose(iter)})})
 	}
 	y := *s
@@ -241,6 +248,66 @@ func (l *lowerer) generatorArrayAdapter(x *hir.Expr, dst hir.Type) *hir.Expr {
 		l.out.Classes = append(l.out.Classes, c)
 	}
 	return &hir.Expr{Kind: hir.Cast, Type: dst, X: &hir.Expr{Kind: hir.New, Type: a.arrayClass, Args: []*hir.Expr{x}}}
+}
+
+// markGeneratorRegionExits rewrites the exits of a protected consumer region s
+// (at generator loop depth depth): every return, and every break/continue not
+// owned by a loop inside s, sets done; return and a depth-0 break close iter.
+func (l *lowerer) markGeneratorRegionExits(s *hir.Stmt, done, iter *hir.Expr, depth, loops int, nested bool, region *hir.Stmt) (*hir.Stmt, bool) {
+	if s == nil {
+		return nil, true
+	}
+	mark := &hir.Stmt{Kind: hir.Assign, X: done, Y: hir.L(done.Type, true)}
+	switch {
+	case s.Kind == hir.Return:
+		if nested {
+			return s, false
+		}
+		if s.X == nil {
+			return hir.B(mark, l.generatorClose(iter), s), true
+		}
+		l.serial++
+		value := hir.V("generatorExit"+itoa(l.serial), s.X.Type)
+		y := *s
+		y.X = value
+		return hir.B(&hir.Stmt{Kind: hir.VarDecl, Name: value.Name, Type: value.Type, X: s.X}, mark, l.generatorClose(iter), &y), true
+	case (s.Kind == hir.Break || s.Kind == hir.Continue) && loops == 0:
+		if nested {
+			return s, false
+		}
+		if s.Kind == hir.Break && depth == 0 {
+			return hir.B(mark, l.generatorClose(iter), s), true
+		}
+		return hir.B(mark, s), true
+	}
+	y := *s
+	innerLoops, innerNested := loops, nested
+	if s.Kind == hir.ForEach || s.Kind == hir.While {
+		innerLoops++
+	}
+	if s != region && (s.Kind == hir.Try || s.Kind == hir.Finally || s.Kind == hir.Async) {
+		innerNested = true
+	}
+	var ok bool
+	if y.Body, ok = l.markGeneratorRegionExits(s.Body, done, iter, depth, innerLoops, innerNested, region); !ok {
+		return s, false
+	}
+	elseLoops := loops
+	if s.Kind == hir.ForEach || s.Kind == hir.While {
+		elseLoops = innerLoops
+	}
+	if y.Else, ok = l.markGeneratorRegionExits(s.Else, done, iter, depth, elseLoops, innerNested, region); !ok {
+		return s, false
+	}
+	y.List = nil
+	for _, b := range s.List {
+		m, ok := l.markGeneratorRegionExits(b, done, iter, depth, loops, nested, region)
+		if !ok {
+			return s, false
+		}
+		y.List = append(y.List, m)
+	}
+	return &y, true
 }
 
 func generatorConsumerExits(s *hir.Stmt) bool {

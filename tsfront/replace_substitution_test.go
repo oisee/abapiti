@@ -53,7 +53,9 @@ func TestReplaceGetSubstitutionNodeOracle(t *testing.T) {
 
 func TestReplaceSubsetLocatedRefusals(t *testing.T) {
 	for _, tc := range []struct{ body, reason string }{
-		{`return 'a'.replace(/a/,()=> 'x');`, "string replacement"},
+		{`const r:RegExp=/a/;return 'a'.replace(r,()=> 'x');`, "literal RegExp pattern"},
+		{`return 'a'.replace(/a/,(m: string, o: number)=> 'x' + o);`, "offset, input and groups parameters"},
+		{`return 'ab'.replace(/(a)|b/g,(m: string, c: string)=> c);`, "may not participate"},
 		{`return 'a'.replaceAll(/a/,'x');`, "global RegExp"},
 		{`const r:RegExp=/a/g;return 'a'.replaceAll(r,'x');`, "literal global RegExp"},
 	} {

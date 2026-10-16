@@ -2068,6 +2068,9 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	// Save values in source evaluation order, before subsequent arguments can
 	// mutate the receiver or the pattern binding.
 	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	if args[1].Kind == ast.KindArrowFunction || args[1].Kind == ast.KindFunctionExpression {
+		return l.callableReplace(n, recv, args)
+	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr
 	if lineBreak {
