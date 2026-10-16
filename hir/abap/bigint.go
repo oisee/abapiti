@@ -80,14 +80,14 @@ DATA n TYPE i.
 DATA c TYPE string.
 text = p0.
 WHILE strlen( text ) > 0.
- IF whitespace( text(1) ) = abap_false.
+ IF whitespace( substring( val = text off = 0 len = 1 ) ) = abap_false.
   EXIT.
  ENDIF.
  text = text+1.
 ENDWHILE.
 WHILE strlen( text ) > 0.
  n = strlen( text ) - 1.
- IF whitespace( text+n(1) ) = abap_false.
+ IF whitespace( substring( val = text off = n len = 1 ) ) = abap_false.
   EXIT.
  ENDIF.
  text = text(n).
