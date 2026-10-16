@@ -43,12 +43,13 @@ func (e *emitter) bigintRuntime() string {
 	}
 	e.types[id] = true
 	refusal := e.name("exception.BigIntRefusal")
-	e.files[refusal+".clas.abap"] = "CLASS " + refusal + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA reason TYPE string.\nMETHODS constructor IMPORTING reason TYPE string.\nMETHODS get_text REDEFINITION.\nENDCLASS.\nCLASS " + refusal + " IMPLEMENTATION.\nMETHOD constructor.\nsuper->constructor( ).\nme->reason = reason.\nENDMETHOD.\nMETHOD get_text.\nresult = reason.\nENDMETHOD.\nENDCLASS.\n"
+	e.files[refusal+".clas.abap"] = "CLASS " + refusal + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA reason TYPE string.\nMETHODS constructor IMPORTING reason TYPE string.\nMETHODS get_text REDEFINITION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + refusal + " IMPLEMENTATION.\nMETHOD constructor.\nsuper->constructor( ).\nme->reason = reason.\nENDMETHOD.\nMETHOD get_text.\nresult = reason.\nENDMETHOD.\nENDCLASS.\n"
 	code := `CLASS $P DEFINITION PUBLIC CREATE PRIVATE.
 PUBLIC SECTION.
 CLASS-METHODS decimal IMPORTING p0 TYPE string origin TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS neg IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE string.
 CLASS-METHODS compare IMPORTING p0 TYPE string p1 TYPE string RETURNING VALUE(result) TYPE f.
+PROTECTED SECTION.
 PRIVATE SECTION.
 CLASS-METHODS whitespace IMPORTING ch TYPE string RETURNING VALUE(result) TYPE abap_bool.
 ENDCLASS.

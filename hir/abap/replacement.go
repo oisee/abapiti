@@ -30,6 +30,8 @@ PUBLIC SECTION.
 CLASS-METHODS substitute IMPORTING text TYPE string replacement TYPE string start TYPE i finish TYPE i captures TYPE $A OPTIONAL source TYPE string OPTIONAL RETURNING VALUE(result) TYPE string.
 CLASS-METHODS literal IMPORTING text TYPE string needle TYPE string replacement TYPE string all_matches TYPE abap_bool RETURNING VALUE(result) TYPE string.
 CLASS-METHODS regex IMPORTING text TYPE string pattern TYPE REF TO $R replacement TYPE string RETURNING VALUE(result) TYPE string.
+PROTECTED SECTION.
+PRIVATE SECTION.
 ENDCLASS.
 CLASS $P IMPLEMENTATION.
 METHOD substitute.
