@@ -110,7 +110,7 @@ type dumper struct {
 }
 
 func (d *dumper) walkFile(f *ast.SourceFile) {
-	d.result = FileDump{File: relativeSource(d.program.configDir, f.FileName())}
+	d.result = FileDump{File: d.program.sourceName(f.FileName())}
 	walk(f.AsNode(), d.visit)
 }
 

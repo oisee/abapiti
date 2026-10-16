@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
@@ -153,8 +152,7 @@ func (l *lowerer) progressSettlementWorld(iface *ast.Node, seen map[*ast.Node]bo
 			name = n.Parent.Name().Text() + " (object literal)"
 		}
 		f := ast.GetSourceFileOfNode(n)
-		path, _ := filepath.Rel(l.prog.configDir, f.FileName())
-		return fmt.Sprintf("%s at %s", name, filepath.ToSlash(path))
+		return fmt.Sprintf("%s at %s", name, l.prog.sourceName(f.FileName()))
 	}
 	var implementations []string
 	suspends := false

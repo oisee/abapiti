@@ -133,7 +133,7 @@ func (l *lowerer) familyLiteral(n *ast.Node, hint hir.Type) *hir.Expr {
 // Common reads retain the family. Unique narrowed reads use union.project in
 // narrowed(), then the same live field ABI as other structural records.
 func (l *lowerer) familyFieldAccess(n *ast.Node) (*hir.Expr, bool) {
-	if !l.unprunedFeatures || len(l.out.Unions) == 0 {
+	if !l.unprunedFeatures {
 		return nil, false
 	}
 	p := n.AsPropertyAccessExpression()
@@ -171,6 +171,18 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	mapped, ok := l.familySubsetType(t)
 	if !ok {
 		mapped, ok = l.familyTypes[alias]
+	}
+	if !ok && alias != "" && t.IsUnion() {
+		// The first use of a family can be this read of a flow-narrowed
+		// receiver (a type predicate naming the family): publish its layout
+		// now, as lowering the receiver would. A refused family keeps its
+		// diagnostic at the receiver.
+		before := len(l.diags)
+		if m, handled := l.recursiveFamilyType(expression, t); handled && m.Kind == hir.UnionRef {
+			mapped, ok = m, true
+		} else {
+			l.diags = l.diags[:before]
+		}
 	}
 	if !ok {
 		if present := l.optionalChainPresentParts(n, t); len(present) > 1 {

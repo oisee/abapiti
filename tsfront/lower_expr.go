@@ -781,6 +781,10 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
+	if l.prototypeAlias(sym) != nil {
+		l.diagf(n, "unsupported-call", "unbound prototype method %s is lowered only as %s.call(receiver, ...); JavaScript binds this to undefined otherwise", name, name)
+		return nil
+	}
 	l.diagf(n, "unsupported-expr", "identifier %s is not a lowered local or module value", name)
 	return nil
 }
