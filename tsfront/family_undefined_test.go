@@ -159,14 +159,15 @@ class Probe {
 	}
 }
 
-// A bigint field has no HIR representation: the refusal names the member.
-func TestFamilyBigintMemberNamed(t *testing.T) {
-	source := `type Sql = {k:'lit'; value:bigint} | {k:'or'; l:Sql; r:Sql};
+// A symbol field has no HIR representation: the refusal names the member.
+// (bigint members lower to HIR BigInt since A25.)
+func TestFamilyUnsupportedMemberNamed(t *testing.T) {
+	source := `type Sql = {k:'lit'; value:symbol} | {k:'or'; l:Sql; r:Sql};
 class Probe {static first(s:Sql):string {return s.k;}}`
 	for _, d := range lowerFamilyDiagnostics(t, source) {
-		if strings.Contains(d.Message, "unsupported checker type bigint for member") && strings.Contains(d.Message, ".value at probe.ts:1:") {
+		if strings.Contains(d.Message, "unsupported checker type symbol for member") && strings.Contains(d.Message, ".value at probe.ts:1:") {
 			return
 		}
 	}
-	t.Fatalf("bigint member not named: %v", lowerFamilyDiagnostics(t, source))
+	t.Fatalf("symbol member not named: %v", lowerFamilyDiagnostics(t, source))
 }

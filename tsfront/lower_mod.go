@@ -486,7 +486,9 @@ func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 		if stmt.Kind == ast.KindVariableStatement {
 			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
 				if l.moduleCallable(d) && d.Initializer().Kind == ast.KindArrowFunction {
-					l.functionBodyToMethod(d.Initializer(), mod, d.Name().Text())
+					if l.containerFunctions[d] == nil {
+						l.functionBodyToMethod(d.Initializer(), mod, d.Name().Text())
+					}
 				}
 			}
 		}
@@ -517,6 +519,11 @@ func (l *lowerer) enumNamespace(n *ast.Node) (*hir.Expr, bool) {
 	if sym == nil {
 		return nil, false
 	}
+	return l.enumNamespaceOf(n, sym)
+}
+
+// enumNamespaceOf reads the namespace object of the enum sym (n locates it).
+func (l *lowerer) enumNamespaceOf(n *ast.Node, sym *ast.Symbol) (*hir.Expr, bool) {
 	f := l.fileOfSymbol(sym)
 	if l.unprunedFeatures && f != nil && f.IsDeclarationFile && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindEnumDeclaration {
 		if l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil {

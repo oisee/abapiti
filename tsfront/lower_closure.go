@@ -84,6 +84,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		if l.callableMethod(typ) == nil {
 			return nil
 		}
+		typ = l.widenClosureArity(typ)
 	}
 	body := n.Body()
 	if body == nil {
@@ -382,4 +383,21 @@ func (l *lowerer) testMayThenable(t *checker.Type) bool {
 		return false
 	}
 	return t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 || l.ck.GetPropertyOfType(t, "then") != nil
+}
+
+// widenClosureArity adopts the contextual function type when the arrow
+// declares only a prefix of its parameters (`predicate = () => true` for
+// `(obj) => boolean`): JavaScript ignores the extra arguments, so the
+// closure implements the wider signature and leaves the tail unread.
+func (l *lowerer) widenClosureArity(typ hir.Type) hir.Type {
+	own, want := l.callableMethod(typ), l.callableMethod(l.hint)
+	if own == nil || want == nil || typ.Equal(l.hint) || len(want.Params) <= len(own.Params) || !own.Result.Equal(want.Result) {
+		return typ
+	}
+	for i, p := range own.Params {
+		if !p.Type.Equal(want.Params[i].Type) {
+			return typ
+		}
+	}
+	return l.hint
 }

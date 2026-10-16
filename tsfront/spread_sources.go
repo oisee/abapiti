@@ -57,7 +57,11 @@ func (l *lowerer) spreadValues(el *ast.Node, elem hir.Type, generators bool) *hi
 	}
 	if sv == nil || sv.Type.Kind != hir.Array || len(sv.Type.Args) != 1 {
 		if sv != nil || !hasBlocking(l.diags[before:]) {
-			l.diagf(el, "unsupported-array", "spread element needs an array")
+			if sv != nil {
+				l.diagf(el, "unsupported-array", "spread element needs an array (got %s)", sv.Type)
+			} else {
+				l.diagf(el, "unsupported-array", "spread element needs an array")
+			}
 		}
 		return nil
 	}

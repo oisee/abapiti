@@ -11,9 +11,45 @@ func (l *lowerer) arrayFrom(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-call", "Array.from thisArg requires a callback this ABI")
 		return nil
 	}
-	x := l.expr(args[0])
+	if l.unprunedFeatures && len(args) == 2 {
+		input := args[0]
+		for input.Kind == ast.KindParenthesizedExpression {
+			input = input.Expression()
+		}
+		if input.Kind == ast.KindBinaryExpression {
+			b := input.AsBinaryExpression()
+			typ := l.conditionalCheckerType(b.Left, l.ck.GetTypeAtLocation(b.Left))
+			if typ.Kind == hir.Optional {
+				typ = typ.Args[0]
+			}
+			if b.OperatorToken.Kind == ast.KindQuestionQuestionToken && (typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
+				l.diagf(n, "unsupported-call", "Array.from collection fallback mapFn requires a live collection iterator")
+				return nil
+			}
+		}
+	}
+	var x *hir.Expr
+	if l.unprunedFeatures {
+		var handled bool
+		x, handled = l.emptyCollectionFallback(args[0])
+		if !handled {
+			x = l.expr(args[0])
+		}
+	} else {
+		x = l.expr(args[0])
+	}
 	if x == nil {
 		return nil
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.OrderedMap {
+		if len(args) == 2 {
+			l.diagf(n, "unsupported-call", "Array.from Map mapFn requires a live collection iterator")
+			return nil
+		}
+		x = l.mapEntryRows(n, x, hir.Type{})
+		if x == nil {
+			return nil
+		}
 	}
 	if x.Type.Kind == hir.Dynamic {
 		// Unannotated JS helpers erase their string input to any. Keep the

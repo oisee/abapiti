@@ -18,6 +18,8 @@ func (e *emitter) stringA16Runtime(runtime string) string {
 		runtime += relativeAtSource
 	}
 	_, iterator := ops["regexp.clone"]
+	_, replaceNext := ops["regexp.matchAllNext"]
+	iterator = iterator || replaceNext
 	_, groups := ops["array.matchGroups"]
 	if iterator || groups || e.regexA16 {
 		runtime = strings.Replace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", 1)

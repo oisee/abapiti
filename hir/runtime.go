@@ -83,7 +83,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"array.splice3": {Array, 3, true}, "array.splice1_view": {Array, 1, true}, "array.pop": {Array, 0, true}, "array.shift": {Array, 0, true},
 	"array.indexOf": {Array, 1, false}, "array.includes": {Array, 1, false},
 	"array.join": {Array, 1, false},
-	"set.delete": {OrderedSet, 1, true}, "map.values": {OrderedMap, 0, false},
+	"set.delete": {OrderedSet, 1, true}, "set.clear": {OrderedSet, 0, true}, "map.values": {OrderedMap, 0, false},
 	"string.at": {String, 1, false}, "string.parseInt10": {String, 0, false}, "string.parseInt10i64": {String, 0, false},
 	"string.replaceFirst":       {String, 2, false},
 	"string.localeCompareNames": {String, 1, false},
@@ -105,6 +105,8 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
+	"map.view":                true,
+	"union.check":             true, // Dynamic -> validated complete family
 	"union.admit":             true,
 	"union.widen":             true,
 	"union.project":           true,
@@ -323,6 +325,8 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t.Args[0]}, b, true
 	case "set.add":
 		return []Type{t.Args[0]}, t, true
+	case "set.clear":
+		return nil, T(Void), true
 	case "set.copy":
 		return []Type{t}, t, true
 	case "set.fromArray":

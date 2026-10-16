@@ -169,6 +169,19 @@ func getSubstitution(s, replacement jsString, start, end int32, captures []jsStr
  return out
 }
 func (s jsString) replaceAll(needle, with jsString) jsString {
+ if with.indexOf(str("$")) < 0 {
+  if needle == "" {
+   out := with
+   for i := int32(0); i < s.length(); i++ {out += s.charAt(i) + with}
+   return out
+  }
+  out := jsString("")
+  for {
+   i := s.indexOf(needle); if i < 0 {return out + s}
+   out += s[:2*i] + with
+   s = s[2*i+int32(len(needle)):]
+  }
+ }
  out:=jsString("");last:=int32(0);at:=int32(0)
  for at<=s.length() {
   relative:=s[2*at:].indexOf(needle);if relative<0 {break}
@@ -857,6 +870,7 @@ func (s jsString) at(i int32) optional[jsString] {
 func (s jsString) replaceFirst(n, v jsString) jsString {
  i:=s.indexOf(n);if i<0 {return s}
  end:=i+n.length()
+ if v.indexOf(str("$")) < 0 {return s[:2*i]+v+s[2*end:]}
  return s[:2*i]+getSubstitution(s,v,i,end,nil,nil)+s[2*end:]
 }
 

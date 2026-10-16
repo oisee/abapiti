@@ -169,7 +169,9 @@ func (l *lowerer) inOperator(n *ast.Node, b *ast.BinaryExpression) *hir.Expr {
 		// field may be absent) keeps its original own keys: erase it to the
 		// object root so presence comes from those keys, not the layout.
 		if obj.Type.Kind == hir.UnionRef {
-			obj = l.rtOp("dynamic.asRef", l.coerce(obj, hir.T(hir.Dynamic)), hir.Ref(hir.RootObject))
+			// A family can be backed by a tagged record as well as a native
+			// structural class. The property ABI accepts both directly.
+			obj = &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: hir.Ref(hir.RootObject), X: l.coerce(obj, hir.T(hir.Dynamic))}
 		} else {
 			obj = &hir.Expr{Kind: hir.Cast, Node: obj.Node, Type: hir.Ref(hir.RootObject), X: obj}
 		}

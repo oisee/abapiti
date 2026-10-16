@@ -463,7 +463,7 @@ func staticTypeofTag(k hir.Kind) string {
 		return "boolean"
 	case hir.ClassValue:
 		return "function"
-	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
+	case hir.ClassRef, hir.InterfaceRef, hir.UnionRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp:
 		return "object"
 	}
 	return ""
@@ -574,6 +574,14 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	case "create", "getPrototypeOf", "setPrototypeOf":
 		if l.globalBuiltin(n.Expression().Expression(), "Object") {
 			l.diagf(n, "unsupported-prototype", "Object.%s requires a prototype-preserving object ABI", name)
+			return nil, true
+		}
+		return nil, false
+	case "defineProperty", "defineProperties":
+		// Accessor descriptors need a getter ABI on the object, non-enumerable
+		// own keys and lazily added data slots; no exact lowering exists.
+		if l.globalBuiltin(n.Expression().Expression(), "Object") {
+			l.diagf(n, "unsupported-property-descriptor", "Object.%s requires a property-descriptor object ABI (accessors, enumerability)", name)
 			return nil, true
 		}
 		return nil, false

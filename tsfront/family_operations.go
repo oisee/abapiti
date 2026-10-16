@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -10,6 +12,13 @@ func (l *lowerer) familyAdmission(x *hir.Expr, dst hir.Type) *hir.Expr {
 	u := l.out.Union(dst.Name)
 	if u == nil {
 		return x
+	}
+	if x.Type.Kind == hir.Dynamic && u.Complete {
+		checked := l.rtOp("union.check", x, dst)
+		if checked.Source == "" && l.method != nil {
+			checked.Node = l.method.Node
+		}
+		return checked
 	}
 	if x.Type.Kind == hir.UnionRef && hir.UnionIncludes(u, l.out.Union(x.Type.Name)) {
 		return l.rtOp("union.widen", x, dst)
@@ -157,9 +166,11 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		t = l.ck.GetNonNullableType(t)
 	}
 	alias := l.familyAliasKey(t)
-	mapped, ok := l.familyTypes[alias]
+	// Flow can retain the alias of the full family after an in-guard.
+	// Prefer its actual members over the alias's declared membership.
+	mapped, ok := l.familySubsetType(t)
 	if !ok {
-		mapped, ok = l.familySubsetType(t)
+		mapped, ok = l.familyTypes[alias]
 	}
 	if !ok {
 		if present := l.optionalChainPresentParts(n, t); len(present) > 1 {
@@ -200,6 +211,18 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 		return nil, true
 	}
 	u := l.out.Union(mapped.Name)
+	// Only a checker-certified partial/subset read may cross heterogeneous
+	// layouts. An unrefined family keeps the existing narrowing refusal.
+	allowTaggedRead := strings.HasPrefix(u.Name, "family.subset.")
+	if l.ck.GetPropertyOfType(t, name) != nil {
+		for _, a := range u.Alternatives {
+			found := false
+			for _, f := range l.classByName(a.Payload.Name).Fields {
+				found = found || f.Name == name
+			}
+			allowTaggedRead = allowTaggedRead || !found || l.absentOnlyFields[a.Payload.Name+"."+name]
+		}
+	}
 	result := hir.Type{}
 	joined, partial := false, false
 	for _, a := range u.Alternatives {
@@ -210,7 +233,7 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 			}
 		}
 		if field == nil {
-			if !ast.IsInJSFile(n) {
+			if !ast.IsInJSFile(n) && l.ck.GetPropertyOfType(t, name) == nil {
 				// TypeScript rejects the access; checkJs:false JavaScript reads
 				// undefined from the members without the field.
 				l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)
@@ -230,6 +253,12 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 				result = hir.T(hir.Dynamic)
 			} else if common, ok := l.familyCommonRead(n, t, name, u); ok {
 				result = common
+				joined = true
+			} else if allowTaggedRead {
+				// A common property may have heterogeneous storage (for example
+				// an Expr, a string or a boolean). Read the live tagged value;
+				// the use site applies its own checked projection, never a retag.
+				result = hir.T(hir.Dynamic)
 				joined = true
 			} else {
 				l.diagf(n, "unsupported-expr", "recursive union field %s requires narrowing", name)

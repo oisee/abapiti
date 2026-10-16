@@ -455,7 +455,7 @@ func (e *emitter) scanUsage() {
 			e.execUsed = true
 			e.jsRegexpUsed = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "string.replaceAll" || x.Op == "string.replaceFirst") {
+		if x.Kind == hir.RuntimeOp && (x.Op == "string.replaceAll" || x.Op == "string.replaceFirst") && len(x.Args) == 2 && literalReplacementNeedsRuntime(x) {
 			e.execUsed = true
 			e.jsRegexpUsed = true
 			e.regexpUsed = true
@@ -2433,11 +2433,31 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 				b.line(n + " = " + args[0] + "->replace( p0 = " + a + " p1 = " + args[1] + " ).")
 			}
 		case "string.replaceAll", "string.replaceFirst":
-			all := "abap_false"
-			if x.Op == "string.replaceAll" {
-				all = "abap_true"
+			if replacementNeedsSubstitution(x.Args[1]) {
+				all := "abap_false"
+				if x.Op == "string.replaceAll" {
+					all = "abap_true"
+				}
+				b.line(n + " = " + b.e.replacementRuntime() + "=>literal( text = " + a + " needle = " + args[0] + " replacement = " + args[1] + " all_matches = " + all + " ).")
+			} else if x.Op == "string.replaceAll" {
+				if literalReplacementNeedsRuntime(x) {
+					b.line("IF " + args[0] + " = ``.")
+					b.line(n + " = " + b.e.replacementRuntime() + "=>literal( text = " + a + " needle = " + args[0] + " replacement = " + args[1] + " all_matches = abap_true ).")
+					b.line("ELSE.")
+				}
+				b.line(n + " = " + a + ".")
+				b.line("REPLACE ALL OCCURRENCES OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+				if literalReplacementNeedsRuntime(x) {
+					b.line("ENDIF.")
+				}
+			} else {
+				b.line(n + " = " + a + ".")
+				b.line("IF " + args[0] + " = ``.")
+				b.line(n + " = |{ " + args[1] + " }{ " + a + " }|.")
+				b.line("ELSE.")
+				b.line("REPLACE FIRST OCCURRENCE OF " + args[0] + " IN " + n + " WITH " + args[1] + ".")
+				b.line("ENDIF.")
 			}
-			b.line(n + " = " + b.e.replacementRuntime() + "=>literal( text = " + a + " needle = " + args[0] + " replacement = " + args[1] + " all_matches = " + all + " ).")
 		case "string.at":
 			// s[i]: absent outside [0, length), otherwise one UTF-16 unit.
 			b.line("IF " + args[0] + " < 0 OR " + args[0] + " >= " + length + ".")
@@ -2878,6 +2898,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "map.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
 		b.line(n + " = xsdbool( sy-subrc = 0 ).")
+		return
+	}
+	if x.Op == "set.clear" {
+		b.line("CLEAR " + a + "->entries.")
 		return
 	}
 	if x.Op == "record.delete" {

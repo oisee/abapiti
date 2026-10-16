@@ -93,6 +93,9 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 // stmtsOwn lowers the statement; preludes its lowering leaves at statement
 // level (a checked conversion of a returned or assigned value) precede it.
 func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
+	if n != nil && l.require != nil && l.require.skip[n] {
+		return nil
+	}
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
@@ -448,6 +451,13 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 				}
 				typ = x.Type
 			}
+			if l.unprunedFeatures && ast.IsInJSFile(d) && d.Type() == nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst != 0 && typ.Equal(hir.T(hir.OrderedMap, hir.T(hir.Dynamic), hir.T(hir.Dynamic))) && x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind != hir.Dynamic {
+				// JS can infer Map<any,any> from a fresh empty branch even
+				// after its lowered initializer has an exact joined storage.
+				// Keep that storage for this inferred const; later accesses
+				// and writes still pass through ordinary checked coercions.
+				typ = x.Type
+			}
 			if d.Type() == nil && l.matchGroupValue(init, x) {
 				typ = x.Type
 				if l.matchGroupBindings == nil {
@@ -560,6 +570,12 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 }
 
 func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
+	if value, handled := l.arrayLengthAssignment(at, lhs, rhs); handled {
+		if value == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: value}
+	}
 	if lhs.Kind == ast.KindArrayLiteralExpression {
 		value := l.arrayAssignment(at, lhs, rhs)
 		if value == nil {
@@ -816,6 +832,9 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	}
 	elem := l.mapCheckerType(decls[0], elemT)
 	if loop, ok := l.optionalGeneratorForOf(n, decls[0]); ok {
+		return loop
+	}
+	if loop, handled := l.emptyMapFallbackForOf(n, decls[0]); handled {
 		return loop
 	}
 	x := l.expr(f.Expression)

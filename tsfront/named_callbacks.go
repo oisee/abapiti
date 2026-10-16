@@ -26,6 +26,12 @@ func (l *lowerer) localValueCallback(n, cb *ast.Node, elem hir.Type) (*hir.Expr,
 		return nil, nil, false
 	}
 	typ, ok := l.lookup(cb.Text())
+	// An optional function value (a defaulted or optional parameter) is
+	// called after a narrowing read: an absent callback fails, as in JS.
+	optional := ok && typ.Kind == hir.Optional && l.callableMethod(typ.Args[0]) != nil
+	if optional {
+		typ = typ.Args[0]
+	}
 	if !ok || l.callableMethod(typ) == nil {
 		lf := l.localFns[cb.Text()]
 		if pending := l.pendingFns[cb.Text()]; lf == nil && pending != nil {
@@ -54,6 +60,9 @@ func (l *lowerer) localValueCallback(n, cb *ast.Node, elem hir.Type) (*hir.Expr,
 	recv := l.expr(cb)
 	if recv == nil {
 		return nil, nil, true
+	}
+	if optional {
+		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(cb), Type: typ, X: recv}
 	}
 	recv = l.tempInit(cb, typ, recv)
 	types := []hir.Type{elem, hir.T(hir.Number), hir.T(hir.Array, elem)}

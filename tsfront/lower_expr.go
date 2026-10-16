@@ -353,6 +353,14 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 	if x.Type.Kind == hir.Dynamic && typ.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, typ)
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Dynamic && (typ.Kind == hir.UnionRef || typ.Kind == hir.Optional && len(typ.Args) == 1 && typ.Args[0].Kind == hir.UnionRef) {
+		return l.coerce(x, typ)
+	}
+	if x.Type.Kind == hir.Dynamic && l.gogenObjectUnion(typ) {
+		// The checked object flow may still carry a recursive family's tagged
+		// record. Retain its property ABI rather than unboxing a nominal ref.
+		return x
+	}
 	if x.Type.Kind == hir.Dynamic && (typ.Kind == hir.ClassRef || typ.Kind == hir.InterfaceRef || typ.Kind == hir.Array || typ.Kind == hir.OrderedMap || typ.Kind == hir.OrderedSet) {
 		return l.dynamicReference(x, typ)
 	}
@@ -767,6 +775,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.classValueRef(n); ok {
 		return x
 	}
+	if x, ok := l.namespaceRecord(n); ok {
+		return x
+	}
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
@@ -1007,7 +1018,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	}
 	// A structural copy of a family member (RuntimeFields<Type> narrowed by
 	// flow) maps to the member's payload: read its field by name.
-	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && strings.HasPrefix(recv.Type.Name, "family.") && !ast.IsAssignmentTarget(n) {
+	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && (strings.HasPrefix(recv.Type.Name, "family.") || l.shapeLike[recv.Type.Name]) && !ast.IsAssignmentTarget(n) {
 		if c := l.classByName(recv.Type.Name); c != nil {
 			for _, f := range c.Fields {
 				if f.Name == n.Name().Text() && !f.Static {
@@ -1037,7 +1048,7 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			_ = ns
 		}
 	}
-	l.diagf(n, "unsupported-expr", "property %s is not lowered", n.Name().Text())
+	l.diagf(n, "unsupported-expr", "property %s is not lowered on %s", n.Name().Text(), recv.Type)
 	return nil
 }
 
@@ -1051,6 +1062,9 @@ func isGlobalObjectExpr(e *ast.Node) bool {
 
 func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.numericBuiltin(n); ok {
+		return x
+	}
+	if x, ok := l.containerGenericCall(n); ok {
 		return x
 	}
 	if x, ok := l.genericAppendCall(n); ok {
@@ -1087,6 +1101,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.nodePlatformCall(n); ok {
+		return x
+	}
+	if x, ok := l.prototypeCall(n); ok {
 		return x
 	}
 	callee := gogenCallee(n.Expression())
@@ -1528,6 +1545,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
+		}
+		if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+			recv = l.checkedContainerReceiver(p.Expression, recv)
 		}
 		if x, handled := l.arrayIterationCall(n, name, recv); handled {
 			return x
@@ -1972,11 +1992,18 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("array.join", recv, str, sep), true
 		}
 	case hir.OrderedSet:
+		value := func() *hir.Expr {
+			x := one()
+			if l.unprunedFeatures && x != nil {
+				x = l.coerce(x, recv.Type.Args[0])
+			}
+			return x
+		}
 		switch name {
 		case "has":
-			return l.rtOp("set.has", recv, boolT, one()), true
+			return l.rtOp("set.has", recv, boolT, value()), true
 		case "add":
-			return l.rtOp("set.add", recv, recv.Type, one()), true
+			return l.rtOp("set.add", recv, recv.Type, value()), true
 		case "size":
 			return l.rtOp("set.size", recv, i32), true
 		case "copy":
@@ -1996,6 +2023,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				l.hint = saved
 			} else {
 				a, b = two()
+			}
+			if l.unprunedFeatures && a != nil && b != nil {
+				a, b = l.coerce(a, recv.Type.Args[0]), l.coerce(b, recv.Type.Args[1])
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
@@ -2053,9 +2083,13 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 		l.diagf(args[0], "unsupported-regex", "anchor-only or octal replacement semantics are not lowered")
 		return nil
 	}
-	// Save values in source evaluation order, before subsequent arguments can
-	// mutate the receiver or the pattern binding.
-	recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	// A dollar-free literal cannot mutate earlier values or require
+	// GetSubstitution. Preserve the original native HIR without temporaries.
+	literalReplacement := (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$")
+	if !literalReplacement {
+		// Save values before subsequent arguments can mutate their bindings.
+		recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr
 	if lineBreak {
@@ -2074,7 +2108,9 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if t := l.ck.GetTypeAtLocation(args[0]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
 		pat = l.coerce(pat, hir.T(hir.String))
 	}
-	pat = l.tempInit(args[0], pat.Type, pat)
+	if !literalReplacement {
+		pat = l.tempInit(args[0], pat.Type, pat)
+	}
 	with := l.expr(args[1])
 	if with == nil {
 		return nil
@@ -2082,8 +2118,20 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	if t := l.ck.GetTypeAtLocation(args[1]); t != nil && t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) == 0 && l.ck.IsTypeAssignableTo(t, l.ck.GetStringType()) {
 		with = l.coerce(with, hir.T(hir.String))
 	}
+	if l.unprunedFeatures {
+		if t := l.ck.GetTypeAtLocation(args[1]); t != nil && len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) == 1 {
+			typ := l.functionType(args[1], t)
+			with = l.coerce(with, typ)
+			if with != nil && l.acceptsType(typ, with.Type) && !with.Type.Equal(typ) {
+				with = &hir.Expr{Kind: hir.Cast, Node: l.node(args[1]), Type: typ, X: with}
+			}
+			if with != nil && l.callableMethod(with.Type) != nil {
+				return l.replaceCallback(n, recv, pat, with)
+			}
+		}
+	}
 	if with.Type.Kind != hir.String {
-		l.diagf(args[1], "unsupported-regex", "replace requires a string replacement; callable and coercing replacements are not lowered")
+		l.diagf(args[1], "unsupported-regex", "replace requires a string replacement or a lowered callable")
 		return nil
 	}
 	if pat.Type.Kind == hir.RegExp {
@@ -2454,6 +2502,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
+			if op == ast.KindAmpersandAmpersandToken && typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && alwaysTruthyObject(x.Type.Args[0]) && !l.acceptsType(typ, left.Type) {
+				// `xs && xs.find(...)`: an object is always truthy, so the
+				// left operand is the result only when it is undefined.
+				left = l.conditionalAbsent(l.node(b.Left), typ)
+			}
 			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
 				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s (left %s, right %s)", typ.String(), left.Type.String(), right.Type.String())
 				return nil
@@ -2574,6 +2627,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
 
 	case ast.KindEqualsToken:
+		if value, handled := l.arrayLengthAssignment(n, b.Left, b.Right); handled {
+			return value
+		}
 		if b.Left.Kind == ast.KindArrayLiteralExpression {
 			return l.arrayAssignment(n, b.Left, b.Right)
 		}
@@ -2891,7 +2947,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 			return test
 		}
 	}
-	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || l.dataShapeSubtype(x.Type, y.Type) || l.dataShapeSubtype(y.Type, x.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
+	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || l.structuralEqualityTypes(x.Type, y.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
@@ -3273,6 +3329,16 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 				// explicit property (or the shape's optionals) fills them.
 			}
 			continue
+		case ast.KindMethodDeclaration:
+			// Shorthand methods are function values. Without this, super or
+			// arguments they behave as the equivalent function expression.
+			nameNode := propertyNameNode(p)
+			if nameNode == nil || nameNode.Kind == ast.KindComputedPropertyName || !plainObjectLiteralMethod(p) {
+				l.diagf(p, "unsupported-type", "object literal method needs a plain name and no this, super, arguments, generator or async body")
+				return nil
+			}
+			value = p
+			field = nameNode.Text()
 		default:
 			l.diagf(p, "unsupported-type", "object literal property %s is not lowered", p.Kind.String())
 			return nil
@@ -3289,7 +3355,12 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			return nil
 		}
 		l.hint = ctor.Params[idx].Type
-		a := l.expr(value)
+		var a *hir.Expr
+		if value.Kind == ast.KindMethodDeclaration {
+			a = l.closureValue(value)
+		} else {
+			a = l.expr(value)
+		}
 		l.hint = hint
 		if a == nil {
 			return nil
@@ -3537,4 +3608,55 @@ func optionalBase(t hir.Type) hir.Type {
 		return t.Args[0]
 	}
 	return t
+}
+
+// alwaysTruthyObject: storage that only ever holds JS objects (never a
+// primitive, null or a tagged value), so ToBoolean of a present value is true.
+func alwaysTruthyObject(t hir.Type) bool {
+	switch t.Kind {
+	case hir.Array, hir.ClassRef, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet, hir.RegExp, hir.ClassValue, hir.Promise:
+		return true
+	}
+	return false
+}
+
+// checkedContainerReceiver views a tagged receiver as the Map, Set or array
+// its checked type names (a member read through a union lowered as a tagged
+// value). The reference view checks the stored value; nothing is converted.
+func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
+	t := l.ck.GetTypeAtLocation(expr)
+	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 {
+		return recv
+	}
+	t = l.ck.GetNonNullableType(t)
+	before := len(l.diags)
+	typ := l.mapCheckerType(expr, t)
+	if hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return recv
+	}
+	l.diags = l.diags[:before]
+	switch typ.Kind {
+	case hir.OrderedMap, hir.OrderedSet, hir.Array:
+		return l.coerce(recv, typ)
+	}
+	return recv
+}
+
+// plainObjectLiteralMethod reports a shorthand method whose body cannot
+// observe its receiver or arguments object: no this, super or arguments
+// anywhere inside (nested functions included), not a generator, not async.
+func plainObjectLiteralMethod(n *ast.Node) bool {
+	m := n.AsMethodDeclaration()
+	if m.AsteriskToken != nil || m.Body == nil || ast.HasSyntacticModifier(n, ast.ModifierFlagsAsync) {
+		return false
+	}
+	var observes func(*ast.Node) bool
+	observes = func(x *ast.Node) bool {
+		if x.Kind == ast.KindThisKeyword || x.Kind == ast.KindSuperKeyword || x.Kind == ast.KindIdentifier && x.Text() == "arguments" {
+			return true
+		}
+		return x.ForEachChild(observes)
+	}
+	return !observes(m.Body)
 }

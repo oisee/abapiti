@@ -132,9 +132,16 @@ func (l *lowerer) gogenStructuralArguments(target *hir.Class) bool {
 }
 
 func (l *lowerer) gogenStructuralPresence(n *ast.Node, obj, key *hir.Expr) *hir.Expr {
-	if !l.unprunedFeatures || obj.Type.Kind != hir.ClassRef || !strings.HasPrefix(obj.Type.Name, "shape.") || key.Type.Kind != hir.String {
+	if !l.unprunedFeatures || key.Type.Kind != hir.String {
 		return nil
 	}
+	shape := obj.Type.Kind == hir.ClassRef && strings.HasPrefix(obj.Type.Name, "shape.")
+	shape = shape || l.gogenObjectUnion(obj.Type)
+	if !shape {
+		return nil
+	}
+	// Heterogeneous union interfaces retain the original object and its own
+	// keys. A presence test must inspect that storage, not the common layout.
 	return l.rtOp("object.has", &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: hir.Ref(hir.RootObject), X: obj}, hir.T(hir.Bool), key)
 }
 
@@ -276,4 +283,24 @@ func (l *lowerer) gogenStructuralProperty(n *ast.Node, t *checker.Type) (hir.Typ
 		}
 	}
 	return l.functionType(n, t), true
+}
+
+// Union interfaces with no callable slots are object storage views. Recursive
+// members may already be tagged records, so they must not be dynRef-unboxed.
+func (l *lowerer) gogenObjectUnion(t hir.Type) bool {
+	if !l.unprunedFeatures || t.Kind != hir.InterfaceRef {
+		return false
+	}
+	for _, u := range l.unions {
+		if u.iface.Name != t.Name || len(u.parts) == 0 || len(u.iface.Methods) != 0 {
+			continue
+		}
+		for _, part := range u.parts {
+			if part.Kind != hir.ClassRef && part.Kind != hir.InterfaceRef && part.Kind != hir.UnionRef {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

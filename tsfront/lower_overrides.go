@@ -41,8 +41,19 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 					}
 				}
 			}
+			// Synthesized nodes (for example types reparsed from JSDoc or
+			// built by the checker) carry no source span; only their
+			// positioned children can be override targets.
+			if n.Pos() < 0 || n.End() < 0 || n.End() > len(f.Text()) {
+				n.ForEachChild(func(c *ast.Node) bool { walk(c, symbol); return false })
+				return
+			}
 			key := overrides.Key{File: rel, Symbol: symbol, Kind: n.Kind.String()}
 			start := scanner.GetTokenPosOfNode(n, f, false)
+			if start < 0 || start > n.End() {
+				n.ForEachChild(func(c *ast.Node) bool { walk(c, symbol); return false })
+				return
+			}
 			entry, ok, err := registry.Lookup(key, f.Text()[start:n.End()], l.prog.locString(f, start))
 			if err != nil {
 				failure = err

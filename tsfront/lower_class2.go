@@ -663,8 +663,20 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// field read the checker types as any): checked narrowing, absent raises.
 		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
+		// A boxed value (a flow-narrowed `F | null` local) stored into a
+		// family slot: the family shares the boxed storage and the projection
+		// validates membership; a mismatch raises, never retags.
+		if u := l.out.Union(dst.Name); u != nil && u.Complete {
+			return l.rtOp("union.project", x, dst)
+		}
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
+	}
+	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
+		saved := l.tempInit(nil, x.Type, x)
+		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.familyAdmission(saved, dst.Args[0])}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef {
 		// A flow-narrowed payload stored into `F | undefined` is admitted to
@@ -672,6 +684,13 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
 			return l.coerce(admitted, dst)
 		}
+	}
+	if l.mapStorageView(dst, x.Type) {
+		view := l.rtOp("map.view", x, dst)
+		if view.Source == "" && l.method != nil {
+			view.Node = l.method.Node
+		}
+		return view
 	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not

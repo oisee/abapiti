@@ -49,6 +49,10 @@ func classViewTargets(p *Program) map[string]bool {
 		if x == nil {
 			return
 		}
+		if x.Kind == RuntimeOp && x.Op == "map.view" {
+			out[x.Type.Args[1].Name] = true
+			out[x.X.Type.Args[1].Name] = true
+		}
 		if x.Kind == RuntimeOp && x.Op == "dynamic.classView" {
 			out[x.Type.Name] = true
 		}

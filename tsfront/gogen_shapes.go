@@ -67,6 +67,8 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 			ft = l.functionType(at, pt)
 		} else if annotated, ok := l.propertyAnnotationOverride(p); ok {
 			ft = annotated
+		} else if family, ok := l.optionalFamilyMember(p, at); ok {
+			ft = family
 		} else if at.Kind == ast.KindPropertySignature && at.Type() != nil && l.ck.GetTypeFromTypeNode(at.Type()) == pt {
 			// Preserve the annotation ABI unless generic instantiation has
 			// actually changed the property type.
@@ -80,6 +82,11 @@ func (l *lowerer) gogenResolvedDataClass(node *ast.Node, c *hir.Class) bool {
 				ft = fallback
 				l.markAbsentOnly(c.Name, p.Name, pt)
 			}
+		}
+		if ft.Kind == hir.Optional && ft.Args[0].Kind == hir.Dynamic && !hasBlocking(l.diags[before:]) {
+			// `x?: undefined` maps directly but, like `x?: never`, only
+			// ever reads undefined.
+			l.markAbsentOnly(c.Name, p.Name, pt)
 		}
 		if ft.Kind == hir.Void || hasBlocking(l.diags[before:]) {
 			l.diags = l.diags[:before]
@@ -155,4 +162,25 @@ func (l *lowerer) markAbsentOnly(class, field string, pt *checker.Type) {
 		}
 		l.absentOnlyFields[class+"."+field] = true
 	}
+}
+
+// optionalFamilyMember maps `x?: F` for a recursive family alias F to
+// Optional<F>. The checker's F | undefined spreads F's members into a fresh
+// union that no longer names the alias (F = Meta & (A | B) distributes), so
+// mapping that union would lose the family to the object root.
+func (l *lowerer) optionalFamilyMember(p *ast.Symbol, at *ast.Node) (hir.Type, bool) {
+	if !l.unprunedFeatures || p.Flags&ast.SymbolFlagsOptional == 0 || at.Kind != ast.KindPropertySignature || at.Type() == nil || at.Type().Kind != ast.KindTypeReference {
+		return hir.Type{}, false
+	}
+	tt := l.ck.GetTypeFromTypeNode(at.Type())
+	if tt == nil || !tt.IsUnion() && tt.Flags()&checker.TypeFlagsIntersection == 0 || l.familyAliasKey(tt) == "" {
+		return hir.Type{}, false
+	}
+	before := len(l.diags)
+	mapped, ok := l.recursiveFamilyType(at.Type(), tt)
+	if !ok || mapped.Kind != hir.UnionRef || hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return hir.Type{}, false
+	}
+	return hir.T(hir.Optional, mapped), true
 }

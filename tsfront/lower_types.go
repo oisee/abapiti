@@ -23,6 +23,9 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	if len(l.containerParams) > 0 {
+		return l.mapCheckerType(n, l.ck.GetTypeFromTypeNode(n))
+	}
 	if t, ok := l.gogenAnnotationType(n); ok {
 		return t
 	}
@@ -396,6 +399,7 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
 func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type) {
+	t = l.specializedType(t)
 	if cached, ok := l.gogenCachedType(t); ok {
 		return cached
 	}
@@ -494,6 +498,13 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return l.union(n, parts, optional)
 	}
 	flags := t.Flags()
+	if flags&checker.TypeFlagsIntersection != 0 && l.unprunedFeatures {
+		// `obj instanceof C` on a generic T narrows to T & C. T erases to its
+		// constraint; the proven class view is the narrower storage.
+		if c, ok := l.genericClassIntersection(t); ok {
+			return c
+		}
+	}
 	if flags&checker.TypeFlagsIntersection != 0 {
 		// Object.assign's inferred result can intersect identical record views.
 		// Only the pure index-signature layout shares the ordered-record ABI.
@@ -1358,4 +1369,29 @@ func isNullLiteralType(u *ast.Node) bool {
 	}
 	lt := u.AsLiteralTypeNode()
 	return lt != nil && lt.Literal != nil && lt.Literal.Kind == ast.KindNullKeyword
+}
+
+// genericClassIntersection maps T & C (type parameters intersected with one
+// lowered class C) to the class reference: a value of the intersection is a C.
+func (l *lowerer) genericClassIntersection(t *checker.Type) (hir.Type, bool) {
+	var class *checker.Type
+	params := 0
+	for _, part := range t.AsUnionOrIntersectionType().Types() {
+		switch {
+		case part.Flags()&checker.TypeFlagsTypeParameter != 0:
+			params++
+		case class == nil && part.Flags()&checker.TypeFlagsObject != 0 && part.Symbol() != nil && part.Symbol().Flags&ast.SymbolFlagsClass != 0:
+			class = part
+		default:
+			return hir.Type{}, false
+		}
+	}
+	if params == 0 || class == nil {
+		return hir.Type{}, false
+	}
+	c := l.classOf(class.Symbol())
+	if c == nil || c.Structural {
+		return hir.Type{}, false
+	}
+	return hir.Ref(c.Name), true
 }

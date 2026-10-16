@@ -127,11 +127,17 @@ func (l *lowerer) registerModuleCallables(files []string) {
 			savedFile, savedCK, savedClass, savedMethod := l.file, l.ck, l.class, l.method
 			ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
 			l.file, l.ck, l.class, l.method = f, ck, mod, m
-			l.signature(init, m)
+			if l.containerGeneric(init) {
+				l.containerFunctions[d] = init
+			} else {
+				l.signature(init, m)
+			}
 			l.file, l.ck, l.class, l.method = savedFile, savedCK, savedClass, savedMethod
 			done()
-			mod.Methods = append(mod.Methods, m)
-			l.methodsBy[mod.Name+"."+m.Name] = m
+			if l.containerFunctions[d] == nil {
+				mod.Methods = append(mod.Methods, m)
+				l.methodsBy[mod.Name+"."+m.Name] = m
+			}
 			r := funcRef{owner: mod.Name, method: m.Name}
 			l.funcsBy[key] = r
 			return r, true

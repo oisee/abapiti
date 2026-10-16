@@ -65,6 +65,11 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.nonfiniteNumbers = true
 					e.toNumber = true
 				}
+				if x.Kind == hir.RuntimeOp && x.Op == "util.isDeepStrictEqual" {
+					// Record comparison enumerates own keys of plain records.
+					e.extraRuntimeKeys = true
+					e.deepStrict = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
@@ -158,6 +163,12 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
 	runtime = e.mapInsertionsRuntime(runtime)
+	if e.usesStorageIdentity() {
+		runtime = storageIdentityRuntime(runtime)
+	}
+	if e.usesMapViews() {
+		runtime = mapViewRuntime(runtime)
+	}
 	if e.recordString {
 		runtime += recordStringSource
 	}
@@ -280,6 +291,7 @@ type emitter struct {
 	hirStrconv        bool
 	chaiDeep          bool
 	chaiThrow         bool
+	deepStrict        bool
 	chaiActionUsed    bool
 	xmlValidation     bool
 	propertyLookups   map[string]bool
@@ -318,6 +330,8 @@ type emitter struct {
 	usesArrayPresence bool
 	usesArrayDeletion bool
 	recordString      bool
+	mapViews          bool
+	mapViewsKnown     bool
 	nonfiniteNumbers  bool
 	toNumber          bool
 	usesTypedCatch    bool
@@ -527,6 +541,9 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
 		e.line("func (self *%s) structuralRecord() {}", e.obj(c.Name))
+	}
+	if e.deepStrict && c.Structural {
+		e.line("func (self *%s) deepStrictPlain() {}", e.obj(c.Name))
 	}
 	e.line("func (self *%s) nilReference() bool {return self==nil}", e.obj(c.Name))
 	if e.recordDeletion && c.Super == "" {

@@ -234,6 +234,11 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 				return nil, true
 			}
 			return l.rtOp("set.delete", recv, hir.T(hir.Bool), key), true
+		case "clear":
+			if len(args) != 0 {
+				return nil, false
+			}
+			return l.rtOp("set.clear", recv, hir.T(hir.Void)), true
 		case "values":
 			if len(args) != 0 {
 				return nil, false
@@ -315,6 +320,22 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			return nil, true
 		}
 		return l.primitiveString(args[0], x), true
+	case "Boolean":
+		if !l.unprunedFeatures {
+			return nil, false
+		}
+		if len(args) == 0 {
+			return hir.L(hir.T(hir.Bool), false), true
+		}
+		if len(args) != 1 || args[0].Kind == ast.KindSpreadElement {
+			l.diagf(n, "unsupported-call", "Boolean accepts one non-spread argument")
+			return nil, true
+		}
+		x := l.expr(args[0])
+		if x == nil {
+			return nil, true
+		}
+		return l.toBool(n, x), true
 	case "Number":
 		if !l.unprunedFeatures {
 			return nil, false

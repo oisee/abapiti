@@ -237,7 +237,7 @@ func (v *verifier) typ(n Node, t Type) {
 		if t.Kind == OrderedSet && k.Kind == Optional {
 			k = k.Args[0]
 		}
-		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue {
+		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
 			v.fail(n, "unsupported collection key "+k.String())
 		}
 	}
@@ -967,7 +967,11 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
-	case "union.admit", "union.widen", "union.project", "union.tag", "union.read":
+	case "map.view":
+		if len(e.Args) != 0 || !MapViewCompatible(v.p, t, a) {
+			v.fail(e.Node, "map view needs identical structural value layouts and invariant keys")
+		}
+	case "union.check", "union.admit", "union.widen", "union.project", "union.tag", "union.read":
 		v.unionOp(e, a)
 	case "chai.throwMatch":
 		if a.Kind != Dynamic && !(a.Kind == InterfaceRef && a.Name == "closure.thunk") {

@@ -36,7 +36,7 @@ var supportedOps = map[string]bool{
 
 	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
-	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.copy": true,
+	"array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.clear": true, "set.copy": true,
 
 	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.toUpperCase": true, "set.fromArray": true,
 	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
@@ -51,6 +51,7 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
+	"union.check": true, "map.view": true, "host.stderrWrite": true,
 	"number.hex16":     true,
 	"arrayLike.length": true,
 	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
