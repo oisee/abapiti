@@ -93,6 +93,9 @@ func (l *lowerer) stmts(n *ast.Node) []*hir.Stmt {
 // stmtsOwn lowers the statement; preludes its lowering leaves at statement
 // level (a checked conversion of a returned or assigned value) precede it.
 func (l *lowerer) stmtsOwn(n *ast.Node) []*hir.Stmt {
+	if n != nil && l.require != nil && l.require.skip[n] {
+		return nil
+	}
 	if n != nil && n.Kind == ast.KindVariableStatement {
 		list := n.AsVariableStatement().DeclarationList
 		if list == nil || list.Kind != ast.KindVariableDeclarationList {
@@ -560,6 +563,12 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 }
 
 func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
+	if value, handled := l.arrayLengthAssignment(at, lhs, rhs); handled {
+		if value == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: value}
+	}
 	if lhs.Kind == ast.KindArrayLiteralExpression {
 		value := l.arrayAssignment(at, lhs, rhs)
 		if value == nil {

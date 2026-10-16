@@ -577,6 +577,14 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 			return nil, true
 		}
 		return nil, false
+	case "defineProperty", "defineProperties":
+		// Accessor descriptors need a getter ABI on the object, non-enumerable
+		// own keys and lazily added data slots; no exact lowering exists.
+		if l.globalBuiltin(n.Expression().Expression(), "Object") {
+			l.diagf(n, "unsupported-property-descriptor", "Object.%s requires a property-descriptor object ABI (accessors, enumerability)", name)
+			return nil, true
+		}
+		return nil, false
 	case "assign":
 		if _, local := l.lookup("Object"); local || !l.librarySymbol(l.resolve(n.Expression().Expression())) {
 			return nil, false

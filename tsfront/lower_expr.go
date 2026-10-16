@@ -767,6 +767,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.classValueRef(n); ok {
 		return x
 	}
+	if x, ok := l.namespaceRecord(n); ok {
+		return x
+	}
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
@@ -1053,6 +1056,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.numericBuiltin(n); ok {
 		return x
 	}
+	if x, ok := l.containerGenericCall(n); ok {
+		return x
+	}
 	if x, ok := l.genericAppendCall(n); ok {
 		return x
 	}
@@ -1087,6 +1093,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.nodePlatformCall(n); ok {
+		return x
+	}
+	if x, ok := l.prototypeCall(n); ok {
 		return x
 	}
 	callee := gogenCallee(n.Expression())
@@ -1528,6 +1537,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				}
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
+		}
+		if l.unprunedFeatures && recv.Type.Kind == hir.Dynamic {
+			recv = l.checkedContainerReceiver(p.Expression, recv)
 		}
 		if x, handled := l.arrayIterationCall(n, name, recv); handled {
 			return x
@@ -2454,6 +2466,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
+			if op == ast.KindAmpersandAmpersandToken && typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && alwaysTruthyObject(x.Type.Args[0]) && !l.acceptsType(typ, left.Type) {
+				// `xs && xs.find(...)`: an object is always truthy, so the
+				// left operand is the result only when it is undefined.
+				left = l.conditionalAbsent(l.node(b.Left), typ)
+			}
 			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
 				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s (left %s, right %s)", typ.String(), left.Type.String(), right.Type.String())
 				return nil
@@ -2574,6 +2591,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
 
 	case ast.KindEqualsToken:
+		if value, handled := l.arrayLengthAssignment(n, b.Left, b.Right); handled {
+			return value
+		}
 		if b.Left.Kind == ast.KindArrayLiteralExpression {
 			return l.arrayAssignment(n, b.Left, b.Right)
 		}
@@ -3537,4 +3557,37 @@ func optionalBase(t hir.Type) hir.Type {
 		return t.Args[0]
 	}
 	return t
+}
+
+// alwaysTruthyObject: storage that only ever holds JS objects (never a
+// primitive, null or a tagged value), so ToBoolean of a present value is true.
+func alwaysTruthyObject(t hir.Type) bool {
+	switch t.Kind {
+	case hir.Array, hir.ClassRef, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet, hir.RegExp, hir.ClassValue, hir.Promise:
+		return true
+	}
+	return false
+}
+
+// checkedContainerReceiver views a tagged receiver as the Map, Set or array
+// its checked type names (a member read through a union lowered as a tagged
+// value). The reference view checks the stored value; nothing is converted.
+func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
+	t := l.ck.GetTypeAtLocation(expr)
+	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 {
+		return recv
+	}
+	t = l.ck.GetNonNullableType(t)
+	before := len(l.diags)
+	typ := l.mapCheckerType(expr, t)
+	if hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return recv
+	}
+	l.diags = l.diags[:before]
+	switch typ.Kind {
+	case hir.OrderedMap, hir.OrderedSet, hir.Array:
+		return l.coerce(recv, typ)
+	}
+	return recv
 }

@@ -12,7 +12,8 @@ import (
 // parameter or result (run: () => T, returning T). Such values pass through
 // untouched, so a tagged (Dynamic) representation converted at each call
 // site is exact. Inside containers (T[], Map<K, T>, {v: T}) a tagged view of
-// typed storage is not exact; those stay refused.
+// typed storage is not exact; module helpers with supported containers use
+// checker specializations instead (generic_containers.go).
 func (l *lowerer) typeParamErasable(t *checker.Type) bool {
 	if !l.unprunedFeatures || t.Symbol() == nil {
 		return false

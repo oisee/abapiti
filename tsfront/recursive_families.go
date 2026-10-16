@@ -413,6 +413,8 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 		}
 	}
 	switch {
+	case t.Flags()&checker.TypeFlagsBigIntLike != 0:
+		return hir.T(hir.BigInt)
 	case t.Flags()&checker.TypeFlagsNumberLike != 0:
 		return hir.T(hir.Number)
 	case t.Flags()&checker.TypeFlagsStringLike != 0:
