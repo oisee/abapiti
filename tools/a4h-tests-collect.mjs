@@ -14,7 +14,7 @@ export function classifyFailure(record) {
  return record;
 }
 
-function eventsFromRows(rows, shard) {
+function eventsFromRows(rows, shard, charTail) {
  const runs=new Set(rows.map(r=>r.RUN_ID ?? r.run_id));
  if(runs.size!==1) throw new Error('fetch exactly one RUN_ID');
  const groups=new Map();
@@ -23,7 +23,10 @@ function eventsFromRows(rows, shard) {
   if(shard && get('SHARD')?.trim()!==shard) throw new Error('mixed shard log');
   const seq=Number(get('SEQ')),part=Number(get('CHUNK_NO')),used=Number(get('USED'));
   if(!Number.isSafeInteger(seq)||seq<1||!Number.isSafeInteger(part)||part<1||!Number.isInteger(used)||used<1||used>255) throw new Error('invalid log chunk');
-  const payload=get('PAYLOAD');
+  let payload=get('PAYLOAD');
+  // OSGO keeps the CHAR column in SQLite, which drops trailing blanks; in ABAP
+  // CHAR semantics they are insignificant, so padding restores the chunk.
+  if(charTail && typeof payload==='string' && payload.length<used) payload=payload.padEnd(used,' ');
   if(typeof payload!=='string'||payload.length<used) throw new Error('short log chunk (fetch must preserve spaces)');
   const pieces=groups.get(seq) ?? new Map();
   if(pieces.has(part)) throw new Error('duplicate log chunk');
@@ -37,13 +40,13 @@ function eventsFromRows(rows, shard) {
  });
 }
 
-export function collectResults(input,{shard,dumps={}}={}) {
+export function collectResults(input,{shard,dumps={},charTail=false}={}) {
  let report;
  if(!Array.isArray(input)) {
   if(!Array.isArray(input.results)) throw new Error('missing runner results');
   report={...input};
  } else {
-  const events=input[0] && ('SEQ' in input[0] || 'seq' in input[0]) ? eventsFromRows(input,shard) : input;
+  const events=input[0] && ('SEQ' in input[0] || 'seq' in input[0]) ? eventsFromRows(input,shard,charTail) : input;
   const records=new Map(), tests=new Map(), initialization=[];
   let complete=false;
   for(const event of events) {
@@ -73,9 +76,10 @@ export function collectResults(input,{shard,dumps={}}={}) {
 }
 
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
- const [input,output,shard,dumpFile]=process.argv.slice(2);
- if(!output) throw new Error('usage: a4h-tests-collect.mjs FETCHED.json go-<shard-id>.json [shard] [ST22-index-message-map.json]');
- const report=collectResults(JSON.parse(readFileSync(input,'utf8')),{shard,dumps:dumpFile?JSON.parse(readFileSync(dumpFile,'utf8')):{}});
+ const args=process.argv.slice(2),charTail=args.includes('--char-tail');
+ const [input,output,shard,dumpFile]=args.filter(a=>a!=='--char-tail');
+ if(!output) throw new Error('usage: a4h-tests-collect.mjs [--char-tail] FETCHED.json go-<shard-id>.json [shard] [ST22-index-message-map.json]');
+ const report=collectResults(JSON.parse(readFileSync(input,'utf8')),{shard,charTail,dumps:dumpFile?JSON.parse(readFileSync(dumpFile,'utf8')):{}});
  writeFileSync(output,JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify({...report,results:undefined,initialization:undefined}));
 }
