@@ -21,7 +21,7 @@ func (l *lowerer) unionInterface(n *ast.Node, parts []hir.Type) (hir.Type, bool)
 		if p.Kind != hir.ClassRef && p.Kind != hir.InterfaceRef {
 			return hir.Type{}, false
 		}
-		if strings.HasPrefix(p.Name, "shape.") || strings.HasPrefix(p.Name, "tuple.") {
+		if strings.HasPrefix(p.Name, "shape.") || isTupleShape(p.Name) {
 			return hir.Type{}, false
 		}
 		names = append(names, p.Name)

@@ -552,6 +552,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 			// property list also carries the apparent array members, so
 			// iterate while the numeric properties exist.
 			var elems []hir.Type
+			optional := false
 			for i := 0; ; i++ {
 				sym := l.ck.GetPropertyOfType(t, itoa(i))
 				if sym == nil {
@@ -561,10 +562,19 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 				if et.Kind == hir.Void {
 					return hir.T(hir.Void)
 				}
+				if sym.Flags&ast.SymbolFlagsOptional != 0 && l.unprunedFeatures {
+					if et.Kind != hir.Optional {
+						et = hir.T(hir.Optional, et)
+					}
+					optional = true
+				}
 				elems = append(elems, et)
 			}
 			if len(elems) == 0 {
 				return hir.T(hir.Void)
+			}
+			if optional {
+				return l.optionalTupleShape(n, elems)
 			}
 			same := true
 			for _, e := range elems[1:] {
@@ -1123,12 +1133,29 @@ func (l *lowerer) tupleType(n *ast.Node) hir.Type {
 		return hir.T(hir.Void)
 	}
 	var elems []hir.Type
+	optional := false
 	for _, el := range tt.Elements.Nodes {
+		if el.Kind == ast.KindOptionalType && l.unprunedFeatures {
+			// `[A, B?]`: an omitted trailing element reads as undefined.
+			et := l.mapTypeNode(el.AsOptionalTypeNode().Type)
+			if et.Kind == hir.Void {
+				return hir.T(hir.Void)
+			}
+			if et.Kind != hir.Optional {
+				et = hir.T(hir.Optional, et)
+			}
+			optional = true
+			elems = append(elems, et)
+			continue
+		}
 		et := l.mapTypeNode(el)
 		if et.Kind == hir.Void {
 			return hir.T(hir.Void)
 		}
 		elems = append(elems, et)
+	}
+	if optional {
+		return l.optionalTupleShape(n, elems)
 	}
 	if len(elems) > 0 {
 		same := true
@@ -1151,7 +1178,23 @@ func typeSig(t hir.Type) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(
 // tupleShape returns (creating once) the shape class for an element-type
 // list.
 func (l *lowerer) tupleShape(n *ast.Node, elems []hir.Type) hir.Type {
-	key := "tuple"
+	return l.tupleShapeNamed(n, "tuple", elems)
+}
+
+// optionalTupleShape is the positional shape of a tuple with optional
+// trailing elements ([A, B?]). Its omitted elements are absent fields, so
+// the shape has no fixed length: the "otuple." prefix keeps it out of the
+// paths that enumerate every "tuple." field (spreads, Map rows), which
+// would turn an omitted element into an explicit undefined.
+func (l *lowerer) optionalTupleShape(n *ast.Node, elems []hir.Type) hir.Type {
+	return l.tupleShapeNamed(n, "otuple", elems)
+}
+
+func isTupleShape(name string) bool {
+	return strings.HasPrefix(name, "tuple.") || strings.HasPrefix(name, "otuple.")
+}
+
+func (l *lowerer) tupleShapeNamed(n *ast.Node, key string, elems []hir.Type) hir.Type {
 	for _, e := range elems {
 		key += "." + typeSig(e)
 	}

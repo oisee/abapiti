@@ -59,7 +59,7 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return l.rtOp("classvalue.name", recv, hir.T(hir.String))
 		}
 	case hir.ClassRef:
-		if l.unprunedFeatures && strings.HasPrefix(recv.Type.Name, "tuple.") &&
+		if l.unprunedFeatures && isTupleShape(recv.Type.Name) &&
 			(arg.Kind == ast.KindNumericLiteral || arg.Kind == ast.KindStringLiteral) {
 			if index, err := strconv.Atoi(arg.Text()); err == nil && index >= 0 {
 				if c := l.classByName(recv.Type.Name); c != nil && index < len(c.Fields) {
@@ -191,6 +191,18 @@ func (l *lowerer) enumMember(n *ast.Node, p *ast.PropertyAccessExpression) (*hir
 // Ns.member) to the class descriptor.
 func (l *lowerer) classValueRef(n *ast.Node) (*hir.Expr, bool) {
 	sym := l.resolve(n)
+	if n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment && l.unprunedFeatures {
+		// {Unsupported}: the property's value is the class the name binds,
+		// through its import alias.
+		if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+			sym = value
+			if sym.Flags&ast.SymbolFlagsAlias != 0 {
+				if target, ok := l.ck.ResolveAlias(sym); ok {
+					sym = target
+				}
+			}
+		}
+	}
 	if sym == nil {
 		return nil, false
 	}

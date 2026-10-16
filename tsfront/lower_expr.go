@@ -515,11 +515,15 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		if len(els) == 0 {
 			return l.emptyArrayLiteral(n)
 		}
-		if l.hint.Kind == hir.ClassRef && strings.HasPrefix(l.hint.Name, "tuple.") {
+		if l.hint.Kind == hir.ClassRef && isTupleShape(l.hint.Name) {
 			// Construct positional fields in their individual contexts.
 			tuple := l.hint
 			c := shapeClassOf(l.out.Classes, tuple)
-			if c == nil || c.Ctor == nil || len(c.Ctor.Params) != len(els) {
+			omitted := c != nil && c.Ctor != nil && strings.HasPrefix(tuple.Name, "otuple.") && len(els) < len(c.Ctor.Params)
+			for i := len(els); omitted && i < len(c.Ctor.Params); i++ {
+				omitted = c.Ctor.Params[i].Type.Kind == hir.Optional
+			}
+			if c == nil || c.Ctor == nil || len(c.Ctor.Params) != len(els) && !omitted {
 				l.diagf(n, "unsupported-array", "tuple arity does not match its context")
 				return nil
 			}
@@ -532,6 +536,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 					return nil
 				}
 				elems = append(elems, l.coerce(x, c.Ctor.Params[i].Type))
+			}
+			for _, p := range c.Ctor.Params[len(els):] {
+				// An omitted optional element is absent, as undefined reads it.
+				elems = append(elems, &hir.Expr{Kind: hir.Lit, Node: l.node(n), Type: p.Type})
 			}
 			l.hint = tuple
 			return &hir.Expr{Kind: hir.New, Node: l.node(n), Type: tuple, Args: elems}
