@@ -2880,6 +2880,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = xsdbool( sy-subrc = 0 ).")
 		return
 	}
+	if x.Op == "set.clear" {
+		b.line("CLEAR " + a + "->entries.")
+		return
+	}
 	if x.Op == "record.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
 		b.line(n + " = abap_true.")

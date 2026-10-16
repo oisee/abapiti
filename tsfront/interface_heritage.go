@@ -5,6 +5,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
 
 // HIR method interfaces are flat. Preserve the public inherited slots before
@@ -28,6 +29,13 @@ func (l *lowerer) completeInterfaceHeritage() {
 					bases[name] = append(bases[name], hir.Ref(c.Name))
 				} else if i := l.ifaceOf(sym); i != nil {
 					bases[name] = append(bases[name], hir.Type{Kind: hir.InterfaceRef, Name: i.Name})
+				} else if t := l.ck.GetTypeAtLocation(base); t != nil && t.ObjectFlags()&checker.ObjectFlagsMapped != 0 {
+					// A mapped base (Partial<Pick<C, K>>) maps public keys only: it
+					// carries no nominal brand. Its members are not flattened
+					// (interfaceHeritage notes this): a use of them is a member
+					// read outside the interface, which refuses (a located
+					// lowering diagnostic or a run-time trap), never a guess.
+					continue
 				} else {
 					l.diagf(base, "unsupported-interface-heritage", "interface base is not a lowered class or method interface")
 				}
