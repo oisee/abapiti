@@ -71,3 +71,65 @@ class Probe {
  }
 }`})
 }
+
+// frontend-session.mjs: named-slot writes through types that mix a string
+// index signature with declared members (CacheSession, SessionProgram).
+func TestGogenA21MixedIndexWriteNodeOracle(t *testing.T) {
+	a19Check(t, map[string]string{"probe.ts": `interface Session { [key: string]: unknown; registry: string; files: string[]; classes: Map<string, number> }
+type SessionInput = Partial<Session> | null | undefined;
+interface SessionProgram { [key: string]: unknown; reg: string; currentClass?: string; count: number }
+interface Program { reg: string; currentClass?: string; count: number; extra: string }
+function prepare(session: SessionInput, registry: string, files: string[]): void {
+  if (!session) return;
+  if (session.registry !== registry || files.length !== session.files?.length) {
+    for (const key of Object.keys(session)) delete session[key];
+    session.registry = registry;
+    session.files = files;
+    session.classes = new Map();
+  }
+}
+function lower(program: SessionProgram, name: string): void {
+  program.currentClass = name;
+  program.count = program.count + 1;
+}
+class Probe {
+ static run(): string {
+  const out: string[] = [];
+  const s: Partial<Session> = {other: 1, registry: "r0"};
+  prepare(s, "r1", ["a"]);
+  out.push(Object.keys(s).join("|"), String(s.registry), String(s.files?.length), String(s.other));
+  prepare(s, "r1", ["b"]);
+  out.push(String(s.files?.[0]));
+  prepare(null, "x", []);
+  const p: Program = {reg: "g", count: 0, extra: "e"};
+  lower(p, "ZCL_A");
+  lower(p, "ZCL_B");
+  out.push(String(p.currentClass), String(p.count), p.extra, Object.keys(p).join("|"));
+  return out.join(",");
+ }
+}`})
+}
+
+// A dynamic delete of a named slot, then typed writes and reads of it, and an
+// untyped new Map() stored into an optional slot through Partial<T>.
+func TestGogenA21MixedIndexDeleteNodeOracle(t *testing.T) {
+	a19Check(t, map[string]string{"probe.ts": `interface Session { [key: string]: unknown; registry: string; n: number; m?: Map<string, number> }
+function reset(s: Session, k: string): void { delete s[k]; s.n = 5; }
+class Probe {
+ static run(): string {
+  const out: string[] = [];
+  const s: Session = {registry: "a", n: 1, x: 2};
+  reset(s, "registry");
+  out.push(Object.keys(s).join("|"), String(s.n));
+  s.registry = "b";
+  out.push(Object.keys(s).join("|"), s.registry);
+  reset(s, "registry");
+  out.push(String(s.registry === undefined));
+  const ps: Partial<Session> | null = s;
+  if (ps) ps.m = new Map();
+  s.m.set("q", 1);
+  out.push(String(s.m.size));
+  return out.join(",");
+ }
+}`})
+}

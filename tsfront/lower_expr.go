@@ -2199,6 +2199,11 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if typ.Kind != kind {
 				if context := l.ck.GetContextualType(n, 0); context != nil {
 					typ = l.mapCheckerType(n, context)
+					if typ.Kind == hir.Optional && l.unprunedFeatures {
+						// An optional slot (`m?: Map<K, V>`) still types the
+						// present collection it receives.
+						typ = typ.Args[0]
+					}
 				}
 			}
 			if typ.Kind == kind {
