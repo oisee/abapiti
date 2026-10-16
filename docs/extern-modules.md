@@ -26,3 +26,20 @@ Strings cross through the runtime's UTF-16/UTF-8 conversions: non-BMP characters
 ABAP emission refuses extern calls with their source location. Host calls conservatively read arguments and global state, may write global state, allocate, and raise.
 
 The host module has its own `go.mod`. To run root and nested-module tests together, use a temporary Go workspace containing the repository root and `extern/hostio`, or test the two modules separately.
+
+For a complete module that retains unsupported functions as located runtime
+traps, use `emit-go --trap-on-failure`. This applies the same fail-closed body
+repair as the full abaplint Go pipeline and writes lowering evidence under
+`<output>/evidence`. Default emission still rejects lowering failures.
+`--overrides registry` selects the source-pinned registry overrides;
+`--reachability <manifest>` accepts a generic workload manifest (no upstream
+pin or recorded inputs). See [selfhost-step4.md](selfhost-step4.md) for the
+end-to-end gogen reference harness.
+
+`--initialize order.json` takes a JSON array of source files from the selected
+closure. It calls their generated module initializers in that order, once,
+before the optional static entry. Files with no module state (including
+extern declarations) need no call. This is required for top-level program
+code and imported side effects that no later static read would trigger.
+The step-4 harness records runtime import postorder after TypeScript erases
+type-only imports, with the reviewed package roots initialized first.

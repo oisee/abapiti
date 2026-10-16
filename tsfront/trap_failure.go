@@ -177,6 +177,7 @@ func (l *lowerer) repairFailedBodies() {
 			break
 		}
 	}
+	l.repairInterfaceClaims()
 	for _, e := range entries {
 		e.m.Body = e.body
 	}
@@ -221,4 +222,62 @@ func (l *lowerer) repairFailedBodies() {
 }
 func isFailureBody(s *hir.Stmt) bool {
 	return s != nil && s.Kind == hir.Block && len(s.List) == 1 && s.List[0].Kind == hir.Trap
+}
+
+// Signature repair can drop an implementation while retaining its valid
+// interface contract. Missing members become located refusals. Incompatible
+// existing ABIs are never changed: drop that interface claim so VerifyBody
+// below traps dependent conversions instead of emitting invalid Go.
+func (l *lowerer) repairInterfaceClaims() {
+	interfaces := map[string]*hir.Interface{}
+	for _, i := range l.out.Interfaces {
+		interfaces[i.Name] = i
+	}
+	for _, c := range l.out.Classes {
+		methods := map[string]*hir.Method{}
+		fields := map[string]bool{}
+		for b := c; b != nil; b = l.classByName(b.Super) {
+			for _, m := range b.Methods {
+				if methods[m.Name] == nil {
+					methods[m.Name] = m
+				}
+			}
+			for _, f := range b.Fields {
+				fields[f.Name] = true
+			}
+		}
+		var retained []string
+		for _, name := range c.Implements {
+			i := interfaces[name]
+			if i == nil {
+				retained = append(retained, name)
+				continue
+			}
+			valid := true
+			for _, contract := range i.Methods {
+				m := methods[contract.Name]
+				if m == nil && !fields[contract.Name] {
+					node := hir.Node{ID: l.nextID(), Source: c.Source}
+					m = &hir.Method{Node: node, Name: contract.Name, Params: append([]hir.Param(nil), contract.Params...), Result: contract.Result, Virtual: true,
+						Body: failureBody(node, c.Source+": missing interface implementation "+contract.Name)}
+					c.Methods = append(c.Methods, m)
+					methods[m.Name] = m
+				}
+				compatible := m != nil && !m.Static && (!m.Abstract || c.Abstract) && m.Result.Equal(contract.Result) && len(m.Params) == len(contract.Params)
+				if compatible {
+					for j, p := range m.Params {
+						if p.Name != contract.Params[j].Name || !p.Type.Equal(contract.Params[j].Type) {
+							compatible = false
+							break
+						}
+					}
+				}
+				valid = valid && compatible
+			}
+			if valid {
+				retained = append(retained, name)
+			}
+		}
+		c.Implements = retained
+	}
 }
