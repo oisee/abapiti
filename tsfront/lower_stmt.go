@@ -694,10 +694,21 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	}
 	if f.Incrementor != nil {
 		update := l.expressionStatement(f.Incrementor)
-		for i, statement := range body {
-			body[i] = continueWithUpdate(statement, update)
+		if continueCrossesFinally(hir.B(body...), false) {
+			// Put the update at the next iteration's entry. An intervening
+			// finalizer runs first and may replace continue with break/return.
+			first := l.tempInit(n, hir.T(hir.Bool), hir.L(hir.T(hir.Bool), true))
+			head := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: first,
+				Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: first, Y: hir.L(first.Type, false)}), Else: update}
+			check := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: cond}, Body: hir.B(&hir.Stmt{Kind: hir.Break, Node: l.node(n)})}
+			body = append([]*hir.Stmt{head, check}, body...)
+			cond = hir.L(hir.T(hir.Bool), true)
+		} else {
+			for i, statement := range body {
+				body[i] = continueWithUpdate(statement, update)
+			}
+			body = append(body, update)
 		}
-		body = append(body, update)
 	}
 	l.pop()
 	out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)})
@@ -857,4 +868,25 @@ func (l *lowerer) isHostProcessCall(n *ast.Node) bool {
 		}
 	}
 	return true
+}
+
+// Nested loops own their continues; only the current loop's finalizers matter.
+func continueCrossesFinally(s *hir.Stmt, protected bool) bool {
+	if s == nil {
+		return false
+	}
+	switch s.Kind {
+	case hir.While, hir.ForEach:
+		return false
+	case hir.Continue:
+		return protected
+	case hir.Finally:
+		protected = true
+	}
+	for _, child := range s.List {
+		if continueCrossesFinally(child, protected) {
+			return true
+		}
+	}
+	return continueCrossesFinally(s.Body, protected) || continueCrossesFinally(s.Else, protected)
 }

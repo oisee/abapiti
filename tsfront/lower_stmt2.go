@@ -13,27 +13,23 @@ import (
 // `instanceof` then narrows exactly like the original.
 func (l *lowerer) tryStatement(n *ast.Node) *hir.Stmt {
 	t := n.AsTryStatement()
-	// Staging a finalizer's return inside an enclosing try/finally loses
-	// its ability to replace a pending exception. Refuse before any staging.
-	if t.FinallyBlock != nil && l.containsReturn(t.FinallyBlock) {
-		l.diagf(t.FinallyBlock, "unsupported-statement", "return in finally requires completion replacement; not lowered")
-		return nil
-	}
-	if t.FinallyBlock != nil && t.CatchClause == nil && l.containsReturn(t.TryBlock) {
-		return l.returningFinally(n)
-	}
-	if t.FinallyBlock != nil && t.CatchClause == nil {
-		if l.containsReturn(t.TryBlock) || l.containsLoopControl(t.TryBlock) {
-			l.diagf(t.FinallyBlock, "unsupported-statement", "finally with return, break or continue in the try block is not lowered")
+	if t.FinallyBlock != nil {
+		if l.refuseFinallyLabels(n) {
 			return nil
 		}
-		l.diagf(n, "note-finally", "try/finally lowered as catch-all, finally block, re-raise")
-		return &hir.Stmt{Kind: hir.Finally, Node: l.node(n), Body: l.scopeBlock(t.TryBlock), Else: l.scopeBlock(t.FinallyBlock)}
+		var body *hir.Stmt
+		if t.CatchClause == nil {
+			body = l.scopeBlock(t.TryBlock)
+		} else {
+			body = l.tryCatchStatement(n)
+		}
+		return &hir.Stmt{Kind: hir.Finally, Node: l.node(n), Body: body, Else: l.scopeBlock(t.FinallyBlock)}
 	}
-	if t.FinallyBlock != nil {
-		l.diagf(t.FinallyBlock, "unsupported-statement", "finally with catch is not lowered")
-		return nil
-	}
+	return l.tryCatchStatement(n)
+}
+
+func (l *lowerer) tryCatchStatement(n *ast.Node) *hir.Stmt {
+	t := n.AsTryStatement()
 	if t.CatchClause == nil {
 		l.diagf(n, "unsupported-statement", "try without catch is not lowered")
 		return nil
@@ -387,4 +383,25 @@ func (l *lowerer) stmtList(nodes []*ast.Node) []*hir.Stmt {
 		out = append(out, l.stmts(s)...)
 	}
 	return out
+}
+
+// Label propagation uses flags outside nested loops. Replacing a labelled
+// completion in finally would need target-aware flag rollback as well.
+func (l *lowerer) refuseFinallyLabels(n *ast.Node) bool {
+	refused := false
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil || ast.IsFunctionLike(x) {
+			return
+		}
+		labelled := x.Kind == ast.KindBreakStatement && x.AsBreakStatement().Label != nil || x.Kind == ast.KindContinueStatement && x.AsContinueStatement().Label != nil
+		if labelled {
+			l.diagf(x, "unsupported-statement", "labelled completion in try/finally requires target-aware propagation")
+			refused = true
+			return
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return false })
+	}
+	walk(n)
+	return refused
 }
