@@ -21,6 +21,18 @@ func (l *lowerer) functionType(n *ast.Node, t *checker.Type) hir.Type {
 	sig := sigs[0]
 	m := &hir.Method{Name: "call", Virtual: true, Result: l.mapCheckerType(n, l.ck.GetReturnTypeOfSignature(sig))}
 	for _, p := range sig.Parameters() {
+		if elems := l.fixedRestTuple(p); elems != nil {
+			// ...args: [a: X, b: Y] (a variadic tuple type parameter
+			// instantiated at the call site) is the fixed list (a: X, b: Y).
+			for _, et := range elems {
+				typ := l.mapCheckerType(n, et)
+				if typ.Kind == hir.Void {
+					return hir.T(hir.Void)
+				}
+				m.Params = append(m.Params, hir.Param{Name: "arg" + itoa(len(m.Params)), Type: typ})
+			}
+			continue
+		}
 		typ := l.mapCheckerType(n, l.ck.GetTypeOfSymbol(p))
 		if typ.Kind == hir.Void {
 			return hir.T(hir.Void)
