@@ -174,8 +174,8 @@ WHILE at <= strlen( text ).
  ELSE.
   n = strlen( text ) - at.
   rest = text+at(n).
-  FIND FIRST OCCURRENCE OF SUBSTRING needle IN rest MATCH OFFSET rel.
-  IF sy-subrc <> 0.
+  rel = find( val = rest sub = needle ).
+  IF rel < 0.
    EXIT.
   ENDIF.
  ENDIF.
