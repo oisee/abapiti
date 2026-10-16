@@ -3,6 +3,8 @@ package tsfront
 import (
 	"fmt"
 	"testing"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 func TestRecursiveTupleLiteralNodeOracle(t *testing.T) {
@@ -29,4 +31,28 @@ func TestRecursiveTupleLiteralNodeOracle(t *testing.T) {
 	if got != want {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
+}
+
+func TestBoxedCanonicalArrayLiteralStorage(t *testing.T) {
+	source := `class Config { names:string[]=[]; }
+ function read(c:Config):string {return c.names.join(",");}
+ class Probe {static run():string {return read({names:["one","two"]});}}`
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	arrays := 0
+	for _, c := range p.Classes {
+		for _, m := range c.Methods {
+			walkNumberStmt(m.Body, func(*hir.Stmt) {}, func(e *hir.Expr) {
+				if e.Kind == hir.New && e.Type.Kind == hir.Array {
+					arrays++
+					if !e.Type.Equal(hir.T(hir.Array, hir.T(hir.String))) {
+						t.Errorf("boxed canonical literal changed storage: %s", e.Type)
+					}
+				}
+			})
+		}
+	}
+	if arrays == 0 {
+		t.Fatal("no literal array storage found")
+	}
+	gogenCheck(t, p, "probe.ts", source, "one,two")
 }

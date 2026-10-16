@@ -537,9 +537,10 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		elem := hir.Type{}
 		if hint.Kind == hir.Array {
 			elem = hint.Args[0]
-		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic {
-			// A tagged destination still receives a real JavaScript array,
-			// even when the checker contextualizes this literal as a tuple.
+		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic && !l.ck.IsArrayType(l.ck.GetTypeAtLocation(n)) {
+			// A contextual tuple still needs real array storage when boxed.
+			// Preserve canonical arrays: their element ABI must survive boxing
+			// so a typed live view can recover the same native storage.
 			elem = hir.T(hir.Dynamic)
 		} else {
 			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
