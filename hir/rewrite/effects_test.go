@@ -28,7 +28,7 @@ func TestRuntimeEffectsCoverage(t *testing.T) {
 		default:
 			t.Errorf("%s aliases %q", op, e.Aliases)
 		}
-		if e.Reads.Global != (op == "host.getenv" || op == "clock.telemetry" || op == "clock.epochMilliseconds" || op == "chai.throwMatch" || op == "dynamic.call0" || op == "dynamic.toString") {
+		if e.Reads.Global != (op == "host.getenv" || op == "clock.telemetry" || op == "clock.epochMilliseconds" || op == "chai.throwMatch" || op == "dynamic.call0" || op == "dynamic.toString" || strings.HasPrefix(op, "fs.")) {
 			t.Errorf("%s global read", op)
 		}
 	}

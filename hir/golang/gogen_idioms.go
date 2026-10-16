@@ -13,6 +13,9 @@ func init() {
 }
 
 func (b *body) gogenRuntime(x *hir.Expr) (string, bool) {
+	if code, ok := b.nodePlatformRuntime(x); ok {
+		return code, true
+	}
 	switch x.Op {
 	case "clock.epochMilliseconds":
 		return "epochMilliseconds()", true

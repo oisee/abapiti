@@ -7,6 +7,9 @@ func init() {
 }
 
 func gogenRuntimeSignature(op string) ([]Type, Type, bool) {
+	if ps, r, ok := nodePlatformSignature(op); ok {
+		return ps, r, true
+	}
 	switch op {
 	case "clock.epochMilliseconds":
 		return nil, T(Number), true
