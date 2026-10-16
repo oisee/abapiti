@@ -14,6 +14,15 @@ func (l *lowerer) gogenCheckerType(n *ast.Node, t *checker.Type) (hir.Type, bool
 	if !l.unprunedFeatures || t == nil {
 		return hir.Type{}, false
 	}
+	if mapped, ok := l.gogenResolvedArray(n, t); ok {
+		return mapped, true
+	}
+	if mapped, ok := l.gogenGenericShape(n, t); ok {
+		return mapped, true
+	}
+	if mapped, ok := l.gogenIndexedType(t); ok {
+		return mapped, true
+	}
 	if t.Flags()&checker.TypeFlagsIntersection != 0 && l.gogenMapValue(n, t) {
 		if c := l.synthFromProperties(n, l.ck.GetPropertiesOfType(t)); c != nil {
 			return hir.Ref(c.Name), true
@@ -195,7 +204,13 @@ func (l *lowerer) gogenAnnotationType(n *ast.Node) (hir.Type, bool) {
 	if !l.unprunedFeatures {
 		return hir.Type{}, false
 	}
+	if mapped, ok := l.gogenResolvedAnnotation(n); ok {
+		return mapped, true
+	}
 	t := l.ck.GetTypeFromTypeNode(n)
+	if mapped, ok := l.gogenValueType(t); ok {
+		return mapped, true
+	}
 	if l.gogenExtractedCallable(t) {
 		return l.mapCheckerType(n, t), true
 	}
@@ -216,6 +231,9 @@ func (l *lowerer) gogenAnnotationType(n *ast.Node) (hir.Type, bool) {
 // Only flatten an intersection that is the declared Map value. Other
 // intersections retain the existing family and narrowing policies.
 func (l *lowerer) gogenMapValue(n *ast.Node, t *checker.Type) bool {
+	if l.gogenActiveMapValue(t) {
+		return true
+	}
 	source := l.ck.GetTypeAtLocation(n)
 	if ast.IsTypeNode(n) {
 		source = l.ck.GetTypeFromTypeNode(n)

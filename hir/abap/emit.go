@@ -159,6 +159,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Type.Kind == hir.Dynamic && x.X != nil && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
 			mapViews = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+			e.ownKeysUsed = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
@@ -179,6 +182,25 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		}
 		for _, m := range c.Methods {
 			e.walkStmt(m.Body, findStorage)
+		}
+	}
+	// Own-property adapters synthesize setters that unbox structural array
+	// slots as live views, even without an explicit arrayView in the HIR.
+	// Select the array ABI before any runtime or field declaration is emitted.
+	if e.ownKeysUsed {
+		for _, c := range p.Classes {
+			if !c.Structural {
+				continue
+			}
+			for _, f := range c.Fields {
+				t := f.Type
+				if t.Kind == hir.Optional {
+					t = t.Args[0]
+				}
+				if !f.Static && t.Kind == hir.Array {
+					e.arrayViews = true
+				}
+			}
 		}
 	}
 	if e.arrayViews || mapViews {
@@ -2379,6 +2401,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>pad( text = " + a + " target = " + args[0] + " fill = " + args[1] + " ).")
 		case "string.parseFloatNumber":
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>float_prefix( " + a + " ).")
+		case "string.toNumber":
+			b.line(n + " = " + b.e.stringOpsRuntime() + "=>to_number( " + a + " ).")
 		case "string.sha1Hex":
 			b.line(n + " = " + b.e.stringOpsRuntime() + "=>sha1( " + a + " ).")
 		case "string.splitRegex":
@@ -2508,6 +2532,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
+		if x.Type.Args[0].Kind == hir.Dynamic {
+			b.e.refuse(fmt.Errorf("node %d (%s): ABAP dynamic array view across native element storages is unsupported", x.ID, x.Source))
+			return
+		}
 		b.arrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":

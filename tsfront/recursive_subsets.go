@@ -49,7 +49,7 @@ func (l *lowerer) familySubsetParts(parts []*checker.Type) (hir.Type, bool) {
 			found := false
 			for _, a := range u.Alternatives {
 				original := l.familyChecks[a.Payload.Name]
-				if original == nil || !l.familyRefinesLayout(part, original) || !l.ck.IsTypeAssignableTo(part, original) {
+				if original == nil || !(l.familyRefinesLayout(part, original) && l.ck.IsTypeAssignableTo(part, original) || l.unprunedFeatures && l.familyCopyShape(part, original)) {
 					continue
 				}
 				tags := l.familyTags(l.ck.GetTypeOfPropertyOfType(part, u.Discriminant))

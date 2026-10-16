@@ -3,6 +3,7 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"strings"
 )
 
@@ -45,6 +46,9 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		if check := l.moduleCallableCall(n, args[0], hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
 			l.pendStmt(check.Stmt)
 		}
+	}
+	if name == "reduce" && len(args) == 1 && l.unprunedFeatures {
+		return l.reduceNoInitial(n, recv, elem, args[0])
 	}
 	if name == "reduce" {
 		if len(args) != 2 {
@@ -207,6 +211,67 @@ func (l *lowerer) reduceLoop(n *ast.Node, recv *hir.Expr, elem hir.Type, cb, ini
 	pre = append(pre, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: accT, X: acc},
 		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: acc, Y: body})
 	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: params[1], Type: elem, X: recv, Body: hir.B(pre...)})
+	return acc, true
+}
+
+// reduceNoInitial lowers arr.reduce(cb) as ECMAScript does: the length is
+// read once, holes are skipped, the first present element is the initial
+// accumulator, and an array without one throws a TypeError.
+func (l *lowerer) reduceNoInitial(n *ast.Node, recv *hir.Expr, elem hir.Type, cb *ast.Node) (*hir.Expr, bool) {
+	if recv.Type.Kind != hir.Array {
+		l.diagf(n, "unsupported-call", "reduce without an initial value needs an array")
+		return nil, true
+	}
+	arr := l.tempInit(n, recv.Type, recv)
+	body, params, ok := l.callbackBody(n, cb, elem)
+	if !ok || len(params) < 1 || len(params) > 4 {
+		l.diagf(n, "unsupported-call", "reduce callback needs at most four parameters")
+		return nil, true
+	}
+	if len(params) == 1 {
+		l.serial++
+		params = append(params, "e"+itoa(l.serial))
+	}
+	i, b := hir.T(hir.I32), hir.T(hir.Bool)
+	bin := func(op string, x, y *hir.Expr, t hir.Type) *hir.Expr {
+		return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: t, X: x, Y: y}
+	}
+	has := func(k *hir.Expr) *hir.Expr { return l.rtOp("array.has", arr, b, k) }
+	at := func(k *hir.Expr) *hir.Expr {
+		return &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: elem, X: l.rtOp("array.get", arr, hir.T(hir.Optional, elem), k)}
+	}
+	step := func(k *hir.Expr) *hir.Stmt {
+		return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: k, Y: bin("+", k, hir.L(i, 1), i)}
+	}
+	length := l.tempInit(n, i, l.rtOp("array.length", arr, i))
+	k := l.tempInit(n, i, hir.L(i, 0))
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: bin("&&", bin("<", k, length, b), &hir.Expr{Kind: hir.Unary, Op: "!", Type: b, X: has(k)}, b), Body: hir.B(step(k))})
+	errorType := hir.Ref(l.builtinTypeError())
+	l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: bin(">=", k, length, b), Body: hir.B(&hir.Stmt{Kind: hir.Throw, Node: l.node(n),
+		X: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: errorType, Args: []*hir.Expr{l.coerce(hir.L(hir.T(hir.String), "Reduce of empty array with no initial value"), hir.T(hir.Optional, hir.T(hir.String)))}}})})
+	acc := l.tempInit(n, elem, at(k))
+	l.pendStmt(step(k))
+	l.declare(params[0], elem)
+	l.declare(params[1], elem)
+	inner := []*hir.Stmt{
+		{Kind: hir.VarDecl, Node: l.node(n), Name: params[0], Type: elem, X: acc},
+		{Kind: hir.VarDecl, Node: l.node(n), Name: params[1], Type: elem, X: at(k)},
+	}
+	if len(params) >= 3 {
+		inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[2], Type: hir.T(hir.Number), X: l.rtOp("number.fromI32", k, hir.T(hir.Number))})
+	}
+	if len(params) >= 4 {
+		inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[3], Type: arr.Type, X: arr})
+	}
+	value := l.coerce(body, elem)
+	if !value.Type.Equal(elem) {
+		l.diagf(n, "unsupported-call", "reduce without an initial value needs a callback returning the element type")
+		return nil, true
+	}
+	inner = append(inner, &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: acc, Y: value})
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: bin("<", k, length, b), Body: hir.B(
+		&hir.Stmt{Kind: hir.If, Node: l.node(n), X: has(k), Body: hir.B(inner...)},
+		step(k))})
 	return acc, true
 }
 
@@ -445,17 +510,51 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				}
 			}
 			l.declare(local, lt)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
-				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}})
+			decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: lt,
+				X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Name: field, Type: ft, X: x}}
+			l.recordPatternBinding(el.Name(), decl)
+			l.pendStmt(decl)
 		}
 	case ast.KindArrayBindingPattern:
+		if x.Type.Kind == hir.Dynamic {
+			// A union of array storages is boxed rather than retagged as one
+			// generic array. Read each checked binding through that live box.
+			var arrays func(*checker.Type) bool
+			arrays = func(t *checker.Type) bool {
+				if t == nil {
+					return false
+				}
+				if t.IsUnion() {
+					for _, part := range t.AsUnionOrIntersectionType().Types() {
+						if !arrays(part) {
+							return false
+						}
+					}
+					return true
+				}
+				return l.ck.IsArrayType(t) || t.IsTupleType()
+			}
+			if pattern.Parent == nil || pattern.Parent.Initializer() == nil || !arrays(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
+				l.diagf(pattern, "unsupported-binding", "dynamic array destructuring requires checked array storage")
+				return
+			}
+		}
 		for i, el := range pattern.AsBindingPattern().Elements.Nodes {
 			if el.Kind != ast.KindBindingElement || el.Name() == nil || el.Name().Kind != ast.KindIdentifier {
 				continue
 			}
 			local := el.Name().Text()
 			var value *hir.Expr
-			if x.Type.Kind == hir.Array {
+			if x.Type.Kind == hir.Dynamic {
+				if el.AsBindingElement().DotDotDotToken != nil {
+					l.diagf(el, "unsupported-binding", "rest binding of boxed array storage")
+					return
+				}
+				typ := l.mapCheckerType(el, l.ck.GetTypeAtLocation(el.Name()))
+				view := l.rtOp("dynamic.arrayView", x, hir.T(hir.Array, hir.T(hir.Dynamic)))
+				view.Node = l.node(el)
+				value = l.coerce(&hir.Expr{Kind: hir.IndexGet, Node: l.node(el), Type: hir.T(hir.Dynamic), X: view, Y: hir.L(hir.T(hir.I32), i)}, typ)
+			} else if x.Type.Kind == hir.Array {
 				if el.AsBindingElement().DotDotDotToken != nil {
 					value = l.rtOp("array.slice1", x, x.Type, hir.L(hir.T(hir.I32), i))
 				} else {
@@ -478,7 +577,9 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 				value = &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Type: l.patternFieldType(x.Type, field), Name: field, X: x}
 			}
 			l.declare(local, value.Type)
-			l.pendStmt(&hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value})
+			decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value}
+			l.recordPatternBinding(el.Name(), decl)
+			l.pendStmt(decl)
 		}
 
 	}
@@ -902,4 +1003,15 @@ func (l *lowerer) callbackInvocation(at, cb *ast.Node, elem hir.Type, ref funcRe
 		call = &hir.Expr{Kind: hir.Seq, Node: l.node(cb), Type: call.Type, Stmt: hir.B(l.pend...), Y: call}
 	}
 	return call, names, true
+}
+
+// Pattern bindings participate in the same cell rewrite as ordinary locals.
+func (l *lowerer) recordPatternBinding(name *ast.Node, decl *hir.Stmt) {
+	if !l.unprunedFeatures {
+		return
+	}
+	if l.declSymbols == nil {
+		l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+	}
+	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(name)
 }

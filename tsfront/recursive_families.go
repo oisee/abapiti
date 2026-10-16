@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
@@ -239,12 +240,17 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 		}
 		return hir.T(hir.Void), true
 	}
-	if len(l.familyShapes) > 0 && (t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0) {
+	if len(l.familyShapes) > 0 && (t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0) && !l.ck.TypeHasCallOrConstructSignatures(t) {
+		// A constructor or function type is never a data record, even when
+		// its (empty) property key matches a family shape.
 		if mapped, ok := l.familyShapes[l.familyTypeKey(t, false, map[*checker.Type]bool{})]; ok {
 			return mapped, true
 		}
 	}
 	if mapped, ok := l.familySubsetType(t); ok {
+		return mapped, true
+	}
+	if mapped, ok := l.familyCopyMember(t); ok {
 		return mapped, true
 	}
 	if alias == "" || l.familyDiscriminant(t) == "" || !l.familyIsRecursive(t, map[*checker.Type]bool{}, map[*checker.Type]bool{}) {
@@ -363,6 +369,17 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 				return family
 			}
 		}
+		if len(present) > 1 && !r.hasNull(t) {
+			// A homomorphic mapped copy of a family (RuntimeFields<Type>
+			// re-creates every member) is that family: same members, checked
+			// property by property, not a new record per copy.
+			if family, ok := r.familyCopy(present); ok {
+				if len(present) < len(members) {
+					return hir.T(hir.Optional, family)
+				}
+				return family
+			}
+		}
 		for _, p := range members {
 			if p.Flags()&checker.TypeFlagsUndefined != 0 {
 				optional = true
@@ -451,7 +468,7 @@ func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
 	}
 	r.failed = true
 	if r.reason == "" {
-		r.reason = "unsupported checker type " + l.ck.TypeToString(t)
+		r.reason = "unsupported checker type " + l.ck.TypeToString(t) + r.memberReason(t)
 	}
 	return hir.T(hir.Void)
 }
@@ -612,4 +629,111 @@ func (l *lowerer) familyArguments(t *checker.Type) []*checker.Type {
 		return l.ck.GetTypeArguments(t)
 	}
 	return nil
+}
+
+// familyCopy maps union parts that are structural copies of every member of
+// one registered (or in-progress) family to that family. A copy has the
+// member's discriminant tags, property names and optionality, and each
+// property type is mutually assignable with the member's.
+func (r *familyRegistration) familyCopy(parts []*checker.Type) (hir.Type, bool) {
+	l := r.l
+	type family struct {
+		name, tag string
+		members   []*checker.Type
+	}
+	var families []family
+	byAlias := map[string][]*checker.Type{}
+	for member, alias := range r.memberOf {
+		byAlias[alias] = append(byAlias[alias], member)
+	}
+	for alias, members := range byAlias {
+		if u := r.unions[alias]; u != nil {
+			families = append(families, family{alias, u.Discriminant, members})
+		}
+	}
+	for _, u := range l.out.Unions {
+		if !u.Complete || strings.HasPrefix(u.Name, "family.subset.") {
+			continue
+		}
+		var members []*checker.Type
+		for _, a := range u.Alternatives {
+			if c := l.familyChecks[a.Payload.Name]; c != nil {
+				members = append(members, c)
+			}
+		}
+		if len(members) == len(u.Alternatives) {
+			families = append(families, family{u.Name, u.Discriminant, members})
+		}
+	}
+	sort.Slice(families, func(i, j int) bool { return families[i].name < families[j].name })
+	for _, f := range families {
+		if len(f.members) != len(parts) {
+			continue
+		}
+		used := map[*checker.Type]bool{}
+		complete := true
+		for _, part := range parts {
+			tags := strings.Join(l.familyTags(l.ck.GetTypeOfPropertyOfType(part, f.tag)), ",")
+			found := false
+			for _, m := range f.members {
+				if used[m] || tags == "" || tags != strings.Join(l.familyTags(l.ck.GetTypeOfPropertyOfType(m, f.tag)), ",") {
+					continue
+				}
+				if l.familyCopyShape(part, m) {
+					used[m], found = true, true
+					break
+				}
+			}
+			if !found {
+				complete = false
+				break
+			}
+		}
+		if complete {
+			return hir.Type{Kind: hir.UnionRef, Name: f.name}, true
+		}
+	}
+	return hir.Type{}, false
+}
+
+func (l *lowerer) familyCopyShape(part, member *checker.Type) bool {
+	a, b := l.ck.GetPropertiesOfType(part), l.ck.GetPropertiesOfType(member)
+	if len(a) != len(b) {
+		return false
+	}
+	for _, p := range b {
+		q := l.ck.GetPropertyOfType(part, p.Name)
+		if q == nil || (q.Flags&ast.SymbolFlagsOptional != 0) != (p.Flags&ast.SymbolFlagsOptional != 0) {
+			return false
+		}
+		x, y := l.ck.GetTypeOfPropertyOfType(part, p.Name), l.ck.GetTypeOfPropertyOfType(member, p.Name)
+		if x != y && (!l.ck.IsTypeAssignableTo(x, y) || !l.ck.IsTypeAssignableTo(y, x)) {
+			return false
+		}
+	}
+	return true
+}
+
+// familyCopyMember maps a structural copy of one published family member (a
+// flow-narrowed RuntimeFields<Type> member) to that member's payload.
+func (l *lowerer) familyCopyMember(t *checker.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures || t == nil || t.IsUnion() || t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) == 0 || l.ck.TypeHasCallOrConstructSignatures(t) {
+		return hir.Type{}, false
+	}
+	for _, u := range l.out.Unions {
+		if !u.Complete || strings.HasPrefix(u.Name, "family.subset.") {
+			continue
+		}
+		tags := strings.Join(l.familyTags(l.ck.GetTypeOfPropertyOfType(t, u.Discriminant)), ",")
+		if tags == "" {
+			continue
+		}
+		for _, a := range u.Alternatives {
+			c := l.familyChecks[a.Payload.Name]
+			if c != nil && c != t && tags == strings.Join(a.Tags, ",") && l.familyCopyShape(t, c) {
+				return a.Payload, true
+			}
+		}
+	}
+	return hir.Type{}, false
 }

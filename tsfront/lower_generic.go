@@ -127,6 +127,12 @@ func (l *lowerer) eraseGenericOverrides() {
 			}
 			if slot.Result.Kind == hir.Void {
 				bridge.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: call})
+			} else if slot.Result.Kind == hir.Dynamic && m.Result.Kind == hir.Void {
+				// A tagged result slot implemented without a return value
+				// (a throwing or void callback): the call yields undefined.
+				bridge.Body = hir.B(&hir.Stmt{Kind: hir.ExprStmt, X: call}, &hir.Stmt{Kind: hir.Return, X: l.rtOp("dynamic.of", &hir.Expr{Kind: hir.Lit, Type: hir.T(hir.Optional, hir.T(hir.Dynamic))}, hir.T(hir.Dynamic))})
+			} else if slot.Result.Kind == hir.Dynamic && m.Result.Kind != hir.Dynamic && l.unprunedFeatures {
+				bridge.Body = hir.B(&hir.Stmt{Kind: hir.Return, X: l.coerce(call, hir.T(hir.Dynamic))})
 			} else {
 				bridge.Body = hir.B(&hir.Stmt{Kind: hir.Return, X: call})
 			}

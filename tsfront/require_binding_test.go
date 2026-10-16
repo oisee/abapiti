@@ -15,7 +15,8 @@ import (
 // copyRequireFixture copies testdata/requirebinding to a temporary directory;
 // the prebuilt CommonJS packages under cjs/ become node_modules/ there (the
 // repository ignores node_modules directories).
-func copyRequireFixture(t *testing.T, probe string) string {
+// Extra files (name -> content) are added next to probe.mjs.
+func copyRequireFixture(t *testing.T, probe string, extra ...map[string]string) string {
 	t.Helper()
 	src := filepath.Join("testdata", "requirebinding")
 	dir := t.TempDir()
@@ -42,6 +43,13 @@ func copyRequireFixture(t *testing.T, probe string) string {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, files := range extra {
+		for name, content := range files {
+			if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	return dir
 }
@@ -94,9 +102,9 @@ export class Probe {
 
 // runRequireOracle lowers the fixture (probe replaced unless empty), runs
 // Probe.run() on Go against want, emits ABAP, and compares with Node.
-func runRequireOracle(t *testing.T, probe, want string) {
+func runRequireOracle(t *testing.T, probe, want string, extra ...map[string]string) {
 	t.Helper()
-	dir := copyRequireFixture(t, probe)
+	dir := copyRequireFixture(t, probe, extra...)
 	prog, diags := lowerRequireFixture(t, dir)
 	for _, d := range diags {
 		if !strings.HasPrefix(d.Category, "note-") {
@@ -144,6 +152,8 @@ const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`
 	cases := []struct {
 		name, old, new, loc, category string
 	}{
+		{"different modules", rearrangerDecl, `/** @type {typeof import("@fake/transpiler/build/src/rearranger.js")} */
+const {Rearranger} = require("@fake/transpiler/build/src/other");`, "probe.mjs:7:22", "unsupported-require"},
 		{"mismatched literal", coreDecl, `const core = transpilerRequire("@fake/transpiler/build/src/rearranger");`, "probe.mjs:5:14", "unsupported-require"},
 		{"missing annotation", rearrangerDecl, "\n" + `const {Rearranger} = require("@fake/transpiler/build/src/rearranger");`, "probe.mjs:7:22", "unsupported-require"},
 		{"non-literal argument", coreDecl, `const core = transpilerRequire("@fake/" + "core");`, "probe.mjs:5:14", "unsupported-require"},
@@ -174,4 +184,18 @@ export class Probe {`, "probe.mjs:10:15", "unsupported-call"},
 			}
 		})
 	}
+}
+
+// The require literal and the import type may spell the module differently
+// (".js" extension or not) when the program resolves both to one file.
+func TestRequireBindingResolvedSpellingNodeOracle(t *testing.T) {
+	base, err := os.ReadFile(filepath.Join("testdata", "requirebinding", "probe.mjs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe := strings.Replace(string(base), `/** @type {typeof import("@fake/transpiler/build/src/rearranger")} */`, `/** @type {typeof import("@fake/transpiler/build/src/rearranger.js")} */`, 1)
+	if probe == string(base) {
+		t.Fatal("fixture lacks the rearranger annotation")
+	}
+	runRequireOracle(t, probe, "char:3|int|C3|'x'|I>C3\n")
 }

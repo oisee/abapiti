@@ -4,6 +4,7 @@ import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
+	"strings"
 )
 
 // Phase-2 class lowering: module functions, interface variants (partial
@@ -200,8 +201,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	if lf, ok := l.localFns[name]; ok {
 		return lf
 	}
-	// Captures: free identifiers that resolve to locals of the enclosing
-	// method and are never assigned.
+	// Captures are lexical inputs; mutable bindings travel in shared cells.
 	captures := []localCapture{}
 	receiverFree := !touchesThis(fn.Body())
 	seen := map[*ast.Symbol]bool{}
@@ -211,7 +211,13 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	} else if fn.Name() != nil {
 		selfSymbol = l.ck.GetSymbolAtLocation(fn.Name())
 	}
-	for _, capture := range l.freeLocals(fn) {
+	var free []localCapture
+	if l.unprunedFeatures {
+		free = l.recursiveFreeLocals(fn)
+	} else {
+		free = l.freeLocals(fn)
+	}
+	for _, capture := range free {
 		if l.unprunedFeatures && selfSymbol != nil && capture.symbol == selfSymbol {
 			continue
 		}
@@ -223,7 +229,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		if l.isCallableValueType(capture.typ) {
 			lf = nil
 		}
-		if pending := l.pendingFns[capture.name]; lf == nil && pending != nil && !l.isCallableValueType(capture.typ) {
+		if pending := l.pendingFns[capture.name]; !l.unprunedFeatures && lf == nil && pending != nil && !l.isCallableValueType(capture.typ) {
 			delete(l.pendingFns, capture.name)
 			lf = l.liftLocalFn(capture.name, pending)
 		}
@@ -382,6 +388,56 @@ func (l *lowerer) functionBody(body *ast.Node) *hir.Stmt {
 	return hir.B(append(l.pend, stmt)...)
 }
 
+// recursiveFreeLocals completes the lexical inputs of every reachable local
+// callee before publishing any signature. Walking checked bindings with a visited
+// set handles cycles without consuming a half-built callee ABI. Bodies are still
+// lowered lazily, after the caller has published its complete signature.
+func (l *lowerer) recursiveFreeLocals(fn *ast.Node) []localCapture {
+	visited := map[*ast.Node]bool{}
+	seen := map[*ast.Symbol]bool{}
+	var out []localCapture
+	var walk func(*ast.Node)
+	walk = func(current *ast.Node) {
+		if visited[current] {
+			return
+		}
+		visited[current] = true
+		for _, c := range l.freeLocals(current) {
+			if pending := l.pendingFns[c.name]; pending != nil && !l.isCallableValueType(c.typ) {
+				var symbol *ast.Symbol
+				if pending.Name() != nil {
+					symbol = l.ck.GetSymbolAtLocation(pending.Name())
+				} else if pending.Parent != nil && pending.Parent.Kind == ast.KindVariableDeclaration {
+					symbol = l.ck.GetSymbolAtLocation(pending.Parent.Name())
+				}
+				if symbol == c.symbol {
+					walk(pending)
+					continue
+				}
+			}
+			if lf := l.localFns[c.name]; lf != nil && !l.isCallableValueType(c.typ) {
+				for _, input := range lf.captures {
+					if !seen[input.symbol] {
+						seen[input.symbol] = true
+						out = append(out, input)
+					}
+				}
+				continue
+			}
+			// Self recursion is represented by a direct call, never a captured value.
+			if current == fn && c.symbol != nil && (c.symbol.ValueDeclaration == fn || c.symbol.ValueDeclaration == fn.Parent) {
+				continue
+			}
+			if !seen[c.symbol] {
+				seen[c.symbol] = true
+				out = append(out, c)
+			}
+		}
+	}
+	walk(fn)
+	return out
+}
+
 // freeLocals lists the enclosing-method local names an arrow function reads
 // including writes, resolved by checked binding identity across nested scopes.
 func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
@@ -404,7 +460,7 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 				declared[l.ck.GetSymbolAtLocation(x.Name())] = true
 			}
 		case ast.KindIdentifier:
-			if _, isLocal := l.lookup(x.Text()); isLocal {
+			if _, isLocal := l.lookup(x.Text()); isLocal || l.pendingFns[x.Text()] != nil {
 				used[x.Text()] = append(used[x.Text()], x)
 			}
 			return
@@ -424,8 +480,8 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 			if declared[symbol] {
 				continue
 			}
-			typ, _ := l.checkedBindingType(symbol)
-			if typ.Kind == hir.Void {
+			typ, checked := l.checkedBindingType(symbol)
+			if !checked || typ.Kind == hir.Void {
 				typ, _ = l.lookup(name)
 			}
 			out = append(out, localCapture{name: name, typ: typ, symbol: symbol, node: node})
@@ -513,8 +569,8 @@ func (l *lowerer) legacyFreeLocals(fn *ast.Node) []localCapture {
 	for _, name := range names {
 		node := used[name][0]
 		symbol := l.ck.GetSymbolAtLocation(node)
-		typ, _ := l.checkedBindingType(symbol)
-		if typ.Kind == hir.Void {
+		typ, checked := l.checkedBindingType(symbol)
+		if !checked || typ.Kind == hir.Void {
 			if fallback, ok := l.lookup(name); ok {
 				typ = fallback
 			}
@@ -590,6 +646,16 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	}
 	if x == nil {
 		return nil
+	}
+	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
+		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
+			return adapted
+		}
+	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && (x.Type.Args[0].Kind == hir.UnionRef || x.Type.Args[0].Kind == hir.ClassRef) {
+		// A present-only use of an optional family value (a JavaScript partial
+		// field read the checker types as any): checked narrowing, absent raises.
+		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)

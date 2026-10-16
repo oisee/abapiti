@@ -50,12 +50,19 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 				if x.Kind == hir.RuntimeOp && (x.Op == "string.parseFloatNumber" || x.Op == "string.parseIntNumber" || x.Op == "number.isNaN") {
 					e.nonfiniteNumbers = true
 				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "string.toNumber" || x.Op == "dynamic.toNumber") {
+					e.nonfiniteNumbers = true
+					e.toNumber = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
 				}
 				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
 					e.usesLiveArrays = true
+				}
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS") {
+					e.collectionProbe = true // before record allocations are emitted
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
 					(x.Op == "object.has" || x.Op == "object.hasOwn" || x.Op == "object.get") && (x.X.Type.Name == hir.RootObject || len(e.liveClasses) > 0)) {
@@ -127,6 +134,15 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.configJSON {
 		jsonWriter = configJSONRuntimeSource
 	}
+	if e.jsonReplacer {
+		for _, patch := range configJSONReplacerPatches {
+			if !strings.Contains(jsonWriter, patch[0]) {
+				panic("JSON replacer runtime patch target moved: " + patch[0])
+			}
+			jsonWriter = strings.Replace(jsonWriter, patch[0], patch[1], 1)
+		}
+		jsonWriter += configJSONReplacerSource
+	}
 	runtime := runtimeSource
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
@@ -135,6 +151,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.nonfiniteNumbers {
 		runtime = nonfiniteRuntime(runtime)
+	}
+	if e.toNumber {
+		runtime += toNumberSource
 	}
 	if e.regexSplit {
 		e.extendedRegex = true
@@ -168,6 +187,16 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", 1)
 		runtime += chaiDeepRuntimeSource
 	}
+	if e.spreadRuntime {
+		runtime += dynSpreadSource
+	}
+	if e.spreadRuntime || e.collectionProbe {
+		runtime += collectionTypeNameSource
+	}
+	if e.collectionProbe {
+		runtime += dynIsCollectionSource
+		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { jsMap bool;", 1)
+	}
 	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
@@ -185,6 +214,17 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if source := e.externSource(pkg); source != "" {
 		files["extern.go"] = source
 	}
+	fastRuntime, err := fastCollectionRuntime(files["runtime.go"])
+	if err != nil {
+		return nil, nil, err
+	}
+	// Source sites refer to e.code, so generated method types are selected
+	// by typ() and their adapters directly. Only rewrite the runtime here.
+	runtimeFiles := map[string]string{"runtime.go": fastRuntime}
+	if err := directCollectionTypes(runtimeFiles); err != nil {
+		return nil, nil, err
+	}
+	files["runtime.go"] = runtimeFiles["runtime.go"]
 	for n, s := range files {
 		b, err := format.Source([]byte(s))
 		if err != nil {
@@ -235,6 +275,9 @@ type emitter struct {
 	extraRuntimeKeys  bool
 	recordDeletion    bool
 	usesLiveArrays    bool
+	spreadRuntime     bool
+	collectionProbe   bool
+	jsonReplacer      bool
 	liveClasses       map[string]bool
 	liveViews         map[string]bool
 	materializers     map[string]bool
@@ -246,6 +289,7 @@ type emitter struct {
 	usesArrayDeletion bool
 	recordString      bool
 	nonfiniteNumbers  bool
+	toNumber          bool
 	usesTypedCatch    bool
 }
 
@@ -341,9 +385,17 @@ func (e *emitter) typ(t hir.Type) string {
 	case hir.Array:
 		return "*array[" + e.typ(t.Args[0]) + "]"
 	case hir.OrderedMap:
-		return "*orderedMap[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
+		name := "orderedMap"
+		if e.directCollectionKey(t.Args[0]) {
+			name = "fastOrderedMap"
+		}
+		return "*" + name + "[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
 	case hir.OrderedSet:
-		return "*orderedSet[" + e.typ(t.Args[0]) + "]"
+		name := "orderedSet"
+		if e.directCollectionKey(t.Args[0]) {
+			name = "fastOrderedSet"
+		}
+		return "*" + name + "[" + e.typ(t.Args[0]) + "]"
 	default:
 		e.unsupported(hir.Node{}, "type "+t.String())
 		return "any"
@@ -394,7 +446,7 @@ func (e *emitter) class(c *hir.Class) {
 	e.line("type %s struct {", e.obj(c.Name))
 	if e.recordDeletion && c.Super == "" {
 		e.line("deletedKeys map[jsString]bool")
-		e.line("deletionOrder *orderedMap[jsString,*dynamic]")
+		e.line("deletionOrder *fastOrderedMap[jsString,*dynamic]")
 	}
 	if c.Scoped {
 		e.line("lexicalDescriptor *classDescriptor")
@@ -406,7 +458,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
-		e.line("viewExtras *orderedMap[jsString,*dynamic]")
+		e.line("viewExtras *fastOrderedMap[jsString,*dynamic]")
 	}
 	if e.liveClasses[c.Name] {
 		e.line("viewSource *dynamic")
@@ -1347,9 +1399,10 @@ func (e *emitter) checkExprOps(x *hir.Expr) {
 	if x.Kind == hir.RuntimeOp && x.Op == "classvalue.newArgs" {
 		e.constructorArgs = true
 	}
-	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset") {
+	if x.Kind == hir.RuntimeOp && (x.Op == "json.stringifyConfig" || x.Op == "json.stringifySubset" || x.Op == "json.stringifyReplacer") {
 		e.configJSON = true
-		e.nativeJSON = e.nativeJSON || x.Op == "json.stringifySubset"
+		e.nativeJSON = e.nativeJSON || x.Op != "json.stringifyConfig"
+		e.jsonReplacer = e.jsonReplacer || x.Op == "json.stringifyReplacer"
 	}
 	if x.Kind == hir.RuntimeOp && !supportedOps[x.Op] {
 		e.unsupported(x.Node, x.Op)

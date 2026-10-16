@@ -273,6 +273,16 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if x.Type.Kind == hir.InterfaceRef && typ.Kind == hir.InterfaceRef {
+		if adapted := l.closureAdapter(n, x, typ); adapted != nil {
+			return adapted
+		}
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.UnionRef && (typ.Kind == hir.UnionRef || typ.Kind == hir.ClassRef) {
+		// Flow proved an optional family value present (a?.k === 'm'):
+		// checked presence, then the family projection.
+		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
 		if typ.Equal(x.Type) {
 			return x
@@ -462,12 +472,15 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		}
 		return l.propertyAccess(n)
 	case ast.KindCallExpression:
+		if callee := n.Expression(); callee != nil && callee.Kind == ast.KindIdentifier && n.AsCallExpression().QuestionDotToken != nil {
+			return l.optionalChain(n)
+		}
 		if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression && n.Flags&ast.NodeFlagsOptionalChain != 0 {
 			return l.optionalChain(n)
 		}
 		return l.call(n)
 	case ast.KindNewExpression:
-		return l.newExpression(n)
+		return l.sealJSMap(n, l.newExpression(n))
 	case ast.KindBinaryExpression:
 		return l.binary(n)
 	case ast.KindPrefixUnaryExpression:
@@ -524,6 +537,11 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		elem := hir.Type{}
 		if hint.Kind == hir.Array {
 			elem = hint.Args[0]
+		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic && !l.ck.IsArrayType(l.ck.GetTypeAtLocation(n)) {
+			// A contextual tuple still needs real array storage when boxed.
+			// Preserve canonical arrays: their element ABI must survive boxing
+			// so a typed live view can recover the same native storage.
+			elem = hir.T(hir.Dynamic)
 		} else {
 			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
 			if arr := l.singleArrayConstituent(t); arr != nil {
@@ -551,15 +569,8 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 		arr := l.tempVar(n, typ)
 		for _, el := range els {
 			if el.Kind == ast.KindSpreadElement {
-				sv := l.iterableValues(el.Expression())
-				if sv != nil && l.generatorABIFor(sv.Type) != nil {
-					sv = l.drainGenerator(sv)
-				}
-				if sv != nil && sv.Type.Kind == hir.OrderedSet {
-					sv = l.rtOp("set.values", sv, hir.T(hir.Array, sv.Type.Args[0]))
-				}
-				if sv == nil || sv.Type.Kind != hir.Array {
-					l.diagf(el, "unsupported-array", "spread element needs an array")
+				sv := l.spreadValues(el, elem, true)
+				if sv == nil {
 					return nil
 				}
 				if elem.Kind == hir.Optional {
@@ -709,7 +720,10 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
-	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 {
+	if x, handled := l.gogenIndexRead(n); handled {
+		return x
+	}
+	if sym := l.resolve(n); sym != nil && sym.Flags&ast.SymbolFlagsMethod != 0 && !l.storedFunctionField(sym) {
 		if value := l.functionValue(n); value != nil {
 			return value
 		}
@@ -777,6 +791,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if x, handled := l.gogenValueProperty(n); handled {
+		return x
 	}
 	if x, handled := l.familyFieldAccess(n); handled {
 		return x
@@ -922,6 +939,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	// A structural copy of a family member (RuntimeFields<Type> narrowed by
+	// flow) maps to the member's payload: read its field by name.
+	if l.unprunedFeatures && recv.Type.Kind == hir.ClassRef && n.Name() != nil && strings.HasPrefix(recv.Type.Name, "family.") && !ast.IsAssignmentTarget(n) {
+		if c := l.classByName(recv.Type.Name); c != nil {
+			for _, f := range c.Fields {
+				if f.Name == n.Name().Text() && !f.Static {
+					return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: f.Name, Type: f.Type, X: recv}
+				}
+			}
+		}
+	}
 	// A record member with a literal name reads the map.
 	if recv.Type.Kind == hir.OrderedMap && n.Name() != nil {
 		key := n.Name().Text()
@@ -986,7 +1014,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if x, ok := l.cryptoHashCall(n); ok {
 		return x
 	}
-	callee := n.Expression()
+	callee := gogenCallee(n.Expression())
 	if callee == nil {
 		l.diagf(n, "unsupported-call", "call without a callee")
 		return nil
@@ -1005,11 +1033,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 	if callee.Kind == ast.KindIdentifier {
 		// Module-level functions and lifted local functions.
 		name := callee.Text()
-		if t, ok := l.lookup(name); ok && l.isCallableValueType(t) {
-			if t.Name == thunkInterfaceName {
-				x, _ := l.thunkCall(n, callee)
-				return x
-			}
+		if t, ok := l.lookup(name); ok && l.storedCallableType(callee, t) {
 			return l.functionValueCall(n, callee)
 		}
 		if lf, ok := l.localFns[name]; ok {
@@ -1023,6 +1047,17 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		}
 		if _, isLocal := l.lookup(name); !isLocal {
 			if sym := l.resolve(callee); sym != nil {
+				if owner, field, ok := l.modvarOf(sym); ok {
+					for _, c := range l.out.Classes {
+						if c.Name == owner {
+							for _, f := range c.Fields {
+								if f.Name == field && l.storedCallableType(callee, f.Type) {
+									return l.functionValueCall(n, callee)
+								}
+							}
+						}
+					}
+				}
 				if f := l.fileOfSymbol(sym); f != nil {
 					if ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]; ok {
 						if check := l.moduleCallableCall(n, callee, hir.L(hir.T(hir.Bool), true)); check.Kind == hir.Seq {
@@ -1043,8 +1078,13 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if l.unprunedFeatures && callee.Kind == ast.KindPropertyAccessExpression {
-		if field, ok := l.fieldOf(l.resolve(callee)); ok && l.callableMethod(field.Type) != nil && field.Type.Name != thunkInterfaceName {
-			return l.functionValueCall(n, callee)
+		// A class method is called through its class, never as a stored
+		// function value, even when a structural shape lists it as a field.
+		// Interface/type-literal method signatures are stored functions.
+		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
+				return l.functionValueCall(n, callee)
+			}
 		}
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
@@ -1132,6 +1172,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// An index-signature read the checker types as present: a
 				// checked narrow raises where JavaScript would throw a TypeError.
 				recvX = l.presentValue(p.Expression, recvX, hir.Type{})
+			}
+			if l.unprunedFeatures && ast.IsInJSFile(n) && recvX != nil && recvX.Type.Kind == hir.Optional && recvX.Type.Args[0].Kind == hir.Array {
+				// checkJs:false JavaScript calls the method on the value it
+				// has: an absent array throws, here the checked narrowing raises.
+				recvX = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recvX.Type.Args[0], X: recvX}
 			}
 			if recvX != nil && recvX.Type.Kind == hir.Array {
 				if x, ok := l.hofCall(n, name, recvX, n.Arguments()); ok {
@@ -1409,6 +1454,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				return &hir.Expr{Kind: hir.VirtualCall, Node: l.node(n), Type: m.Result, Name: name, X: cast, Args: args}
 			}
 		}
+		if x, handled := l.arrayIterationCall(n, name, recv); handled {
+			return x
+		}
 		x, handled := l.libraryCall(n, name, recv)
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
 			for _, c := range l.out.Classes {
@@ -1421,6 +1469,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 		if x == nil && !handled {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
 			l.diagf(n, "unsupported-call", "method %s on %s is not lowered", name, recv.Type.Kind)
 		}
 		return x
@@ -2488,6 +2539,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if probe, ok := l.collectionInstanceOf(n, b, x); ok {
+		return probe
+	}
 	if c := l.classOf(l.resolve(b.Right)); c != nil && !c.Scoped {
 		if x.Type.Kind == hir.Dynamic || (x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
 			// A box holding a string, number or class value is never an
@@ -2520,6 +2574,79 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	}
 	l.diagf(n, "unsupported-expr", "instanceof needs a lowered class operand")
 	return nil
+}
+
+// usesMapProbe reports (syntactically, once per program) whether a source
+// file contains `x instanceof Map`.
+func (l *lowerer) usesMapProbe() bool {
+	p := l.prog
+	p.mapProbeOnce.Do(func() {
+		var visit func(*ast.Node) bool
+		visit = func(n *ast.Node) bool {
+			if n.Kind == ast.KindBinaryExpression {
+				b := n.AsBinaryExpression()
+				if b.OperatorToken.Kind == ast.KindInstanceOfKeyword && b.Right.Kind == ast.KindIdentifier && b.Right.Text() == "Map" {
+					p.mapProbe = true
+					return true
+				}
+			}
+			return n.ForEachChild(visit)
+		}
+		for _, f := range p.prog.SourceFiles() {
+			if !f.IsDeclarationFile && visit(f.AsNode()) {
+				return
+			}
+		}
+	})
+	return p.mapProbe
+}
+
+// sealJSMap marks the value of a `new Map(...)` expression as a JavaScript
+// Map. Records share the ordered-map storage; only this marker, set by the
+// Map constructor and nothing else, makes `instanceof Map` true at run time.
+func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures || x.Type.Kind != hir.OrderedMap {
+		return x
+	}
+	callee := n.AsNewExpression().Expression
+	if callee == nil || callee.Kind != ast.KindIdentifier || callee.Text() != "Map" {
+		return x
+	}
+	if sym := l.resolve(callee); sym == nil || !l.librarySymbol(sym) || !l.usesMapProbe() {
+		return x
+	}
+	return l.rtOp("map.markJS", x, x.Type)
+}
+
+// storedFunctionField: an interface method signature that a data shape
+// stores as a function-typed field. Reading it yields the stored function
+// value itself, exactly as JavaScript does (no receiver is bound).
+func (l *lowerer) storedFunctionField(sym *ast.Symbol) bool {
+	if !l.unprunedFeatures || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodSignature {
+		return false
+	}
+	field, ok := l.fieldOf(sym)
+	return ok && l.callableMethod(field.Type) != nil
+}
+
+// collectionInstanceOf lowers `v instanceof Map` / `v instanceof Set` for a
+// tagged (any/unknown) v: a runtime test of the boxed collection; absent or
+// non-collection values answer false.
+func (l *lowerer) collectionInstanceOf(n *ast.Node, b *ast.BinaryExpression, x *hir.Expr) (*hir.Expr, bool) {
+	if !l.unprunedFeatures || b.Right.Kind != ast.KindIdentifier {
+		return nil, false
+	}
+	name := b.Right.Text()
+	if name != "Map" && name != "Set" {
+		return nil, false
+	}
+	if sym := l.resolve(b.Right); sym == nil || !l.librarySymbol(sym) {
+		return nil, false
+	}
+	if x.Type.Kind != hir.Dynamic && !(x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) {
+		return nil, false
+	}
+	return l.rtOp("dynamic.is"+name, l.coerce(x, hir.T(hir.Dynamic)), hir.T(hir.Bool)), true
 }
 
 // equality lowers === and !==, mapping comparisons with undefined to the
@@ -2848,6 +2975,14 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			}
 		}
 	}
+	if target == nil && l.unprunedFeatures && objectLiteralHasSpread(n) {
+		// A distributed spread can map to a union view rather than one
+		// constructor. Its common checker properties still define a data
+		// view; the snapshot below retains every variant's extra own keys.
+		if t := l.ck.GetTypeAtLocation(n); t != nil {
+			target = l.synthFromProperties(n, l.ck.GetPropertiesOfType(t))
+		}
+	}
 	if target == nil {
 		// An empty literal with a shape hint constructs the shape with
 		// absent optionals; a synthesized checker shape otherwise.
@@ -2911,6 +3046,9 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 			return nil
 		}
 		return l.dynamicReference(record, hir.Ref(target.Name))
+	}
+	if l.gogenIndexedShape(l.ck.GetContextualType(n, checker.ContextFlagsNone)) {
+		return l.gogenIndexedLiteral(n, target)
 	}
 	ctor := target.Ctor
 	props := n.AsObjectLiteralExpression().Properties.Nodes
@@ -3000,7 +3138,7 @@ func (l *lowerer) objectLiteral(n *ast.Node) (out *hir.Expr) {
 		if l.unprunedFeatures {
 			a = l.presentValue(value, a, ctor.Params[idx].Type)
 		}
-		if strings.HasPrefix(target.Name, "family.payload.") || strings.HasPrefix(target.Name, "family.shape.") {
+		if l.gogenStructuralArguments(target) || strings.HasPrefix(target.Name, "family.payload.") || strings.HasPrefix(target.Name, "family.shape.") {
 			a = l.tempInit(value, a.Type, a)
 		}
 		args[idx] = l.coerce(a, ctor.Params[idx].Type)
@@ -3231,4 +3369,11 @@ func (l *lowerer) callReceiverExpr(n *ast.Node) *hir.Expr {
 	recv := l.anyCallReceiver(n, l.expr(n))
 	l.hint = outputHint
 	return recv
+}
+
+func optionalBase(t hir.Type) hir.Type {
+	if t.Kind == hir.Optional && len(t.Args) == 1 {
+		return t.Args[0]
+	}
+	return t
 }

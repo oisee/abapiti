@@ -27,6 +27,18 @@ func execute(t *testing.T, p *hir.Program, main string) string {
 	dir := t.TempDir()
 	files["go.mod"] = "module fixture\n\ngo 1.26.0\n"
 	files["main.go"] = "package main\nimport \"fmt\"\nfunc main(){" + main + "}\n"
+	goFiles := map[string]string{}
+	for n, s := range files {
+		if strings.HasSuffix(n, ".go") {
+			goFiles[n] = s
+		}
+	}
+	if err := directCollectionTypes(goFiles); err != nil {
+		t.Fatal(err)
+	}
+	for n, s := range goFiles {
+		files[n] = s
+	}
 	for n, s := range files {
 		if err := os.WriteFile(filepath.Join(dir, n), []byte(s), 0600); err != nil {
 			t.Fatal(err)
