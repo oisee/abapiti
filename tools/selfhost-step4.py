@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Emit, build and compare TS-HG gogen against the pinned Node step-4 driver.
 
-Usage: tools/selfhost-step4.py <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+Usage: tools/selfhost-step4.py [--expect-ref <sha256-prefix>] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+
+Environment: STEP4_NO_SYSTEMD=1 (or no systemd-run on PATH) runs steps directly under the
+caller's memory cap; GOCACHE defaults to <out-dir>/go-build when unset.
 Requires prepared OSG node_modules, osd-libs and .local/step4 inputs. OUT must
-be empty. Each compiler, Node and Go process runs in a memory-limited scope.
-Only the checkout's driver is temporarily adapted for the primitive host ABI;
+be empty.
+Each compiler, Node and Go process runs in a memory-limited scope when systemd-run
+is available. Only the checkout's driver is temporarily adapted for the primitive host ABI;
 its exact original bytes are restored, including on failure. No gogen edits.
 """
 import hashlib
@@ -16,7 +20,9 @@ import shutil
 import subprocess
 import sys
 
-REFERENCE = 'a13702d55b1eecdb200078205da5909961b4b49ce0f6c3fe3bdbf08e802d6227'
+# The Node reference depends on the OSG commit's testdata, so it is computed
+# from the driver on the same checkout; --expect-ref pins it for a final run.
+EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 REPO = Path(__file__).resolve().parent.parent
 # Match the pilot kit's syntactic relative-import closure. Package imports are
 # supplied explicitly by the abaplint and rearranger roots and tsconfig paths.
@@ -94,6 +100,14 @@ def adapt_driver(source):
 
 
 def main(args):
+    expect = None
+    if '--expect-ref' in args:
+        i = args.index('--expect-ref')
+        if i + 1 >= len(args):
+            print(__doc__, file=sys.stderr)
+            return 2
+        expect = args[i + 1].lower()
+        args = args[:i] + args[i + 2:]
     if len(args) != 5:
         print(__doc__, file=sys.stderr)
         return 2
@@ -103,7 +117,8 @@ def main(args):
     out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, GOTOOLCHAIN='go1.26.0', GOFLAGS='-buildvcs=false', GOWORK='off')
     env.pop('NODE_V8_COVERAGE', None)
-    env.setdefault('GOCACHE', '/mnt/ssd-510/osg/go-build')
+    if not env.get('GOCACHE'):
+        env['GOCACHE'] = str(out / 'go-build')
     env.setdefault('TMPDIR', str(out))
     build, run, comparison = 'fail', 'not-run', 'not-run'
     ref, actual = out / 'ref.go', out / 'gogen.go'
@@ -120,8 +135,11 @@ def main(args):
         if usage.free < 40 * 1024**3:
             raise RuntimeError('disk free below 40G; stopping')
         with (out / f'{name}.log').open('wb') as log:
+            # Containers without systemd rely on their own memory cap.
+            wrap = ['nice'] if os.environ.get('STEP4_NO_SYSTEMD') == '1' or not shutil.which('systemd-run') else \
+                ['systemd-run', '--user', '--scope', '-q', '-p', f'MemoryMax={memory}', 'nice']
             result = subprocess.run(
-                ['systemd-run', '--user', '--scope', '-q', '-p', f'MemoryMax={memory}', 'nice', *map(str, command)],
+                [*wrap, *map(str, command)],
                 cwd=cwd, env=dict(env, **(extra or {})), stdout=stdout or log, stderr=log)
         if result.returncode:
             raise RuntimeError(f'{name} failed (exit {result.returncode}); see {out / (name + ".log")}')
@@ -131,8 +149,10 @@ def main(args):
         # exact execution. Validate before adapting any source.
         with ref.open('wb') as f:
             heavy(['node', driver], 'reference', stdout=f, extra={'NODE_V8_COVERAGE': str(out / 'v8')})
-        if digest(ref) != REFERENCE:
-            raise RuntimeError(f'reference SHA256 mismatch: {digest(ref)}; expected {REFERENCE}')
+        if digest(ref) == EMPTY_SHA256:
+            raise RuntimeError('Node reference is empty; see reference.log')
+        if expect and not digest(ref).startswith(expect):
+            raise RuntimeError(f'reference SHA256 mismatch: {digest(ref)}; expected {expect}')
         (out / 'closure.mjs').write_text(CLOSURE)
         lists = []
         for name, roots in [('pilot', [driver]), ('core', [lint / 'packages/core/src/index.ts', transpiler / 'packages/transpiler/src/rearranger.ts'])]:
