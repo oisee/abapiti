@@ -150,10 +150,13 @@ Static blocks and every unknown class member kind are blocking
 Pre-super statements retain their order;
 those touching this are rejected. Parameter defaults are blocking diagnostics.
 Executable module statements other than const initializers are rejected.
-Regex replace mapping accepts nonempty literal needles (including decoded
-literal escapes), the global flag only, and literal replacements without `$`.
-Anchors, metacharacters, substitution strings and dynamic replacements are
-blocking source diagnostics.
+String replace and replaceAll preserve first/all occurrence semantics and
+source evaluation order. String replacements implement ECMAScript
+GetSubstitution over the original UTF-16 input: dollars, whole matches,
+prefix/suffix text, numbered captures and admitted named captures. RegExp
+patterns retain their checked grammar. Callbacks, coercing replacements and
+unadmitted pattern forms receive located diagnostics. See
+[step-4 evidence](../docs/evidence/dell-types.md) for the supported subset.
 
 The lexer differential is part of `.github/ci/hir-unit.sh`: sequential case
 blocks check full dumps and each token count, with teardown requiring the corpus

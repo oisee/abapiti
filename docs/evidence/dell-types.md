@@ -32,7 +32,9 @@ both declaration failures. The supported complete two-loop body specializes
 at direct calls, independent of identifier names, retaining native element
 storage and evaluating all arguments before mutation. Primitive, object and
 nested-array aliases and late argument mutation match Node. Other generic
-bodies and indirect function values retain located refusals.
+bodies and indirect function values retain located refusals. Sparse arrays retain
+undefined when the element ABI permits it; required primitive slots use a located
+runtime refusal instead of fabricating a zero value.
 
 ## Bigint (three checker-type root sites)
 
@@ -65,8 +67,9 @@ keyof-T-and-string diagnostics at :55:28. T is constrained to object. The
 supported conditional is structurally T extends object ? T[keyof T] : never;
 it maps to tagged values, and keyof T & string maps to string keys. Arbitrary
 conditional types retain their refusals. Generic indexed reads use original
-object storage and Object.keys snapshots. Tuples containing erased values use
-real tagged arrays, preserving entry arrays and explicit undefined elements.
+object storage and Object.keys snapshots. Heterogeneous tuples keep their
+existing positional layout; their JSON writers emit arrays, preserving undefined
+as null in array slots, and their array identity is retained.
 The RED oracle reproduced both conditional failures and key intersections;
 children and entries now match Node, including JSON array shape, and emit ABAP.
 
@@ -81,3 +84,108 @@ named metadata reads return undefined. Named writes on native array
 intersections remain a located frontend refusal; metadata on record inputs is
 supported. The RED oracle reproduced ProgramInput/ClassList refusal, and the
 final record/legacy-array oracle matches Node and exports ABAP.
+
+## Classification and final pilot
+
+The supplied TSV contains **16 selected occurrences**: two replacement sites,
+six type-reference sites, and eight checker-type occurrences (including the
+same keyof location twice). This differs from the task's headline checker
+count. Every selected construct is valid TypeScript and classified **A**;
+there are **no G sites** in this set. The original OSG `tsconfig.gogen.json`
+also passes its installed TypeScript 5.9.3 checker (exit 0). Exact locations and
+reasons are in `dell-types-sites.tsv`; before/after occurrence counts are in
+`dell-types-sites.json`.
+
+| Construct | Before | After |
+| --- | ---: | ---: |
+| Replacement substitutions | 2 | 0 |
+| Generic append T[] declarations | 2 | 0 |
+| ProgramInput | 3 | 0 |
+| OwnershipObject reference/checker type | 2 | 0 |
+| PropertyValue<T> | 2 | 0 |
+| bigint checker types | 3 | 0 |
+| keyof T & string (one location, two reports) | 2 | 0 |
+| **Total** | **16** | **0** |
+
+No final diagnostic remains at any of those original locations.
+
+| Step-4 pilot | S7 baseline | Final |
+| --- | ---: | ---: |
+| Blocking diagnostics | 304 | 362 |
+| Root / cascade | 206 / 98 | 249 / 113 |
+| HIR errors | 1691 | 1717 |
+| Files with blocking diagnostics | 37 | 36 |
+| Lower wall seconds | 118.40 | 161.73 |
+| Peak RSS, KB | 1397244 | 1725960 |
+
+The whole pilot remains blocked: lowering the selected signatures exposes
+additional downstream blockers. This is not a claim that step 4 is executable.
+Both runs have identical Node reference bytes, SHA-256
+`a13702d55b1eecdb200078205da5909961b4b49ce0f6c3fe3bdbf08e802d6227`,
+and identical coverage: 56 files, 51 loaded, 422 bodies, 226 executed,
+3 unmatched. The supplied measurement script writes a temporary tsconfig into
+OSG, so it ran unchanged against a writable mirror of the pinned checkout.
+All supplied `/logs/pilotsetup` material was read-only. Full local evidence is
+under `/work/.local/m-base` and `/work/.local/m-final`.
+
+## Final gates
+
+All heavy commands ran with `ulimit -v 16777216`; Go package concurrency was
+at most `-p 2`. The final short suite used `-timeout 60m`.
+
+| Gate | Result | Wall seconds |
+| --- | --- | ---: |
+| `go build -p 2 ./...` | PASS | 21 |
+| `go vet -p 2 ./...` | PASS | 2 |
+| Required `go test -short -p 2` package set | PASS | 404 |
+| `extern/hostio` tests | PASS | cached |
+| Assignment-mismatch matching-line sum | PASS: baseline 2, final 2 | |
+| v0.5.2 kit, clean + seeded | PASS: raw bytes equal across revisions and expected files | |
+| M1 TS-HG, OSG's own ABAP | PASS: 80 issues, cmp-equal | 31.26 |
+
+The short suite includes hir, tsfront, cmd/abapiti and internal/abapfixture;
+tsfront completed in 385.817 s. The six new construct oracles pass against Node.
+All 96 ABAP files exported from their final fixtures parse with zero unknown
+statements. Initial broad-suite failures were fixed before this final run;
+constructor-signature and tuple ABIs are retained, obsolete dollar-rejection
+probes are now executable Node oracles, and bigint effect records are complete.
+
+The pinned abaplint checkout is
+`577f875ebec44cfaf64841cfe71c8ab8dc32622e`; `npm ci` ran at its root and in
+packages/core. Baseline generation/build took 98.498 / 59.8 s; final generation/
+build took 96.798 / 63.4 s. Both have 2052 classes, 77 interfaces, zero blocking
+frontend diagnostics and zero HIR verification errors. The v0.5.2 release kit
+ZIP has SHA-256
+`2be51f82cfc1947416faef522c21b52c485e94f43bc6ea65d40fb8e9fb421de8`.
+
+| Raw kit output | Baseline seconds | Final seconds | Expected issues |
+| --- | ---: | ---: | ---: |
+| Clean | 14.031 | 22.837 | 0 |
+| Seeded | 14.301 | 19.840 | 5 |
+
+Comparison uses raw stdout, without the kit script's trailing-whitespace
+normalization. Clean output is 2 bytes; seeded output is 601 bytes.
+Matching-line and occurrence counts for `assignment type mismatch` are both
+exactly 2 for both generated Go directories.
+
+The runnable M1 command is documented in `docs/evidence/gogen-a15.md:86`:
+copy the multifile host driver into the generated Go module, build it, run
+`--file files.txt --config abaplint.json`, then `cmp expected-clean.txt`.
+The available frozen driver/workload were copied locally from `/logs/m1wl`.
+All 2785 workload file hashes match the manifest. Final output has 81 lines,
+80 issues, and SHA-256
+`95d37bc666403557ceecbb6f0e12e31867c18d3c2870e105e3ceafb5b9267428`,
+exactly the documented Node reference. M1 used TS-HG; this does not claim a
+new TS-HA@OSGO runtime certification.
+
+The compiler binaries used for the final pilot and final abaplint generation
+are byte-identical (SHA-256
+`629170903e1813e3828161a698c39c1bcc872bd22784b63650f6672c9941c038`).
+Author and committer periods, requested trailers, and a clean diff were checked.
+No push was made. Machine-readable results are in `dell-types-validation.json`.
+
+
+An additional detached checkout of the recorded S7 SHA is source-clean and
+reproduces all eight initial baseline Go source files byte-for-byte. Its clean
+and seeded raw outputs also equal the final outputs and expected files
+(13.241 / 13.113 s). Its generation/build took 66.000 / 46.4 s.
