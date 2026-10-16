@@ -47,3 +47,13 @@ nondecimal conversion strings and numeric/boolean conversion arguments stay
 outside the checked subset. Shift folding caps allocation at 1,048,576 bits.
 Go matches Node across both int64 boundaries and 40-digit integers; ABAP emits
 string-based sign/length/digit comparisons without fixed-width conversion.
+
+## Optional callable intersections (OwnershipObject)
+
+A: frontend-owned.ts:14:27 and :15:14. ArtifactObject intersected with
+Partial<Pick<ABAPObject, 'getABAPFiles'>> is correctly typed TypeScript.
+Structural intersection synthesis now maps callable slots by their checker
+signatures and uses the existing optional-data-member fallback. The RED oracle
+reproduced the alias refusal; absent and present callable slots now match Node
+and export ABAP. Behavior-bearing native class conversion remains subject to
+the existing checked class-view ABI, rather than copying method values.
