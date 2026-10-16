@@ -19,6 +19,8 @@ import (
 //	/** @type {typeof import("lib/x")} */
 //	const {X} = require("lib/x");
 //	const {A, B} = lib;
+//	/** @type {typeof import("lib")} */
+//	const direct = createRequire(import.meta.url)("lib");
 //
 // A requirer call whose declaration is typed `typeof import("<spec>")`,
 // where the program resolves the require literal (CommonJS mode) and the
@@ -176,7 +178,8 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 			case d.Name().Kind == ast.KindIdentifier && isRequirer(init):
 				requirers[d.Symbol()] = true
 				plumbing++
-			case init != nil && init.Kind == ast.KindCallExpression && symbolIn(init.Expression(), requirers):
+			case init != nil && init.Kind == ast.KindCallExpression && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression())):
+				// req("<spec>") or the direct createRequire(base)("<spec>").
 				if mod := l.requiredModule(d, init); mod != nil && l.bindRequired(d, mod) {
 					plumbing++
 				}
@@ -192,6 +195,41 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 			l.diagf(stmt, "unsupported-require", "require bindings must not share a declaration statement with other values")
 		}
 	}
+	// A function may require lazily (an import cycle broken at call time):
+	// `const {f} = require("./m.mjs")` in a body binds like the top-level
+	// form. Destructuring is limited to unchangeable exports, so the values
+	// Node copies at the call are the module's own.
+	var nested func(*ast.Node, bool)
+	nested = func(n *ast.Node, top bool) {
+		if n == nil {
+			return
+		}
+		if !top && n.Kind == ast.KindVariableStatement {
+			decls := n.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes
+			if len(decls) == 1 {
+				d := decls[0]
+				init := d.Initializer()
+				if init != nil && init.Kind == ast.KindCallExpression && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression())) {
+					if mod := l.requiredModule(d, init); mod != nil && l.bindRequired(d, mod) {
+						l.require.skip[n] = true
+					}
+					return
+				}
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool { nested(c, false); return false })
+	}
+	for _, stmt := range f.Statements.Nodes {
+		if stmt.Kind == ast.KindVariableStatement {
+			for _, d := range stmt.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+				if d.Initializer() != nil {
+					nested(d.Initializer(), false)
+				}
+			}
+			continue
+		}
+		nested(stmt, true)
+	}
 }
 
 // requiredModule proves `req("<literal>")` static: the declaration carries
@@ -204,7 +242,7 @@ func (l *lowerer) requiredModule(d, call *ast.Node) *ast.Symbol {
 		return nil
 	}
 	spec := args[0].Text()
-	typ := d.Type()
+	typ := l.pickedImportType(d.Type())
 	if typ == nil || !ast.IsLiteralImportTypeNode(typ) || !typ.AsImportTypeNode().IsTypeOf || typ.AsImportTypeNode().Qualifier != nil || typ.AsImportTypeNode().TypeArguments != nil {
 		l.diagf(call, "unsupported-require", "dynamic require(%q): the declaration needs a JSDoc @type {typeof import(%q)}", spec, spec)
 		return nil
@@ -233,6 +271,22 @@ func (l *lowerer) requiredModule(d, call *ast.Node) *ast.Symbol {
 		return nil
 	}
 	return mod
+}
+
+// pickedImportType unwraps `Pick<typeof import("<spec>"), K>`: destructuring
+// such a binding names only members of K, each the module's own export.
+func (l *lowerer) pickedImportType(typ *ast.Node) *ast.Node {
+	if typ == nil || typ.Kind != ast.KindTypeReference {
+		return typ
+	}
+	ref := typ.AsTypeReferenceNode()
+	if ref.TypeName.Kind != ast.KindIdentifier || ref.TypeName.Text() != "Pick" || ref.TypeArguments == nil || len(ref.TypeArguments.Nodes) != 2 {
+		return typ
+	}
+	if sym := l.ck.GetSymbolAtLocation(ref.TypeName); sym == nil || !l.librarySymbol(sym) {
+		return typ
+	}
+	return ref.TypeArguments.Nodes[0]
 }
 
 // bindRequired maps the declared names of d to the module (identifier) or to

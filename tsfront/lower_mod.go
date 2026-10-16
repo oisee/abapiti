@@ -517,6 +517,11 @@ func (l *lowerer) enumNamespace(n *ast.Node) (*hir.Expr, bool) {
 	if sym == nil {
 		return nil, false
 	}
+	return l.enumNamespaceOf(n, sym)
+}
+
+// enumNamespaceOf reads the namespace object of the enum sym (n locates it).
+func (l *lowerer) enumNamespaceOf(n *ast.Node, sym *ast.Symbol) (*hir.Expr, bool) {
 	f := l.fileOfSymbol(sym)
 	if l.unprunedFeatures && f != nil && f.IsDeclarationFile && sym.ValueDeclaration != nil && sym.ValueDeclaration.Kind == ast.KindEnumDeclaration {
 		if l.enumOf(sym) == nil && l.numericEnumOf(sym) == nil {

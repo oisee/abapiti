@@ -734,6 +734,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.classValueRef(n); ok {
 		return x
 	}
+	if x, ok := l.namespaceRecord(n); ok {
+		return x
+	}
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
@@ -1051,6 +1054,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		return x
 	}
 	if x, ok := l.nodePlatformCall(n); ok {
+		return x
+	}
+	if x, ok := l.prototypeCall(n); ok {
 		return x
 	}
 	callee := gogenCallee(n.Expression())
@@ -2388,6 +2394,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(typ) && op == ast.KindBarBarToken {
 				left = &hir.Expr{Kind: hir.Narrow, Type: typ, X: x}
 			}
+			if op == ast.KindAmpersandAmpersandToken && typ.Kind == hir.Optional && x.Type.Kind == hir.Optional && alwaysTruthyObject(x.Type.Args[0]) && !l.acceptsType(typ, left.Type) {
+				// `xs && xs.find(...)`: an object is always truthy, so the
+				// left operand is the result only when it is undefined.
+				left = l.conditionalAbsent(l.node(b.Left), typ)
+			}
 			if !l.acceptsType(typ, left.Type) || !l.acceptsType(typ, right.Type) {
 				l.diagf(n, "unsupported-shortcircuit", "operands cannot preserve the result type %s (left %s, right %s)", typ.String(), left.Type.String(), right.Type.String())
 				return nil
@@ -3451,4 +3462,14 @@ func optionalBase(t hir.Type) hir.Type {
 		return t.Args[0]
 	}
 	return t
+}
+
+// alwaysTruthyObject: storage that only ever holds JS objects (never a
+// primitive, null or a tagged value), so ToBoolean of a present value is true.
+func alwaysTruthyObject(t hir.Type) bool {
+	switch t.Kind {
+	case hir.Array, hir.ClassRef, hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet, hir.RegExp, hir.ClassValue, hir.Promise:
+		return true
+	}
+	return false
 }
