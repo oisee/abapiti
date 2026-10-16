@@ -346,7 +346,7 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 	}
 	// Publish the complete signature before lowering the body. Recursive
 	// calls must target this same lexical method, not an absent/stale member.
-	lf := &localFn{method: m, captures: captures, owner: l.class}
+	lf := &localFn{method: m, captures: captures, owner: l.class, fn: fn}
 	if l.unprunedFeatures {
 		l.localFns[name] = lf
 		l.class.Methods = append(l.class.Methods, m)
@@ -650,6 +650,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
 			return adapted
+		}
+	}
+	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.InterfaceRef {
+		// A present function value stored into an optional function slot.
+		if adapted := l.closureAdapter(nil, x, dst.Args[0]); adapted != nil {
+			return l.coerce(adapted, dst)
 		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && (x.Type.Args[0].Kind == hir.UnionRef || x.Type.Args[0].Kind == hir.ClassRef) {

@@ -19,6 +19,36 @@ func (l *lowerer) updateExpression(n, operand *ast.Node, operator ast.Kind, pref
 	if target == nil {
 		return nil
 	}
+	return l.updateTarget(n, target, op, prefix)
+}
+
+// optionalNumber reports `number | undefined` storage (an optional property).
+func optionalNumber(t hir.Type) bool {
+	return t.Kind == hir.Optional && len(t.Args) == 1 && t.Args[0].Kind == hir.Number
+}
+
+// updateTarget applies ++/-- to an already lowered reference. An optional
+// number reads through ToNumeric (undefined is NaN); the postfix result is
+// that numeric old value, never undefined, and the stored value is present.
+func (l *lowerer) updateTarget(n *ast.Node, target *hir.Expr, op string, prefix bool) *hir.Expr {
+	if optionalNumber(target.Type) {
+		number := hir.T(hir.Number)
+		switch target.Kind {
+		case hir.FieldGet:
+			target.X = l.tempInit(n, target.X.Type, target.X)
+		case hir.Local, hir.StaticGet:
+		default:
+			l.diagf(n, "unsupported-expr", "update target is not lowered")
+			return nil
+		}
+		old := l.tempInit(n, number, l.toNumber(n, l.tempInit(n, target.Type, target)))
+		next := l.tempInit(n, number, &hir.Expr{Kind: hir.Binary, Type: number, Op: op, X: old, Y: hir.L(number, 1)})
+		l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: l.coerce(next, target.Type)})
+		if prefix {
+			return next
+		}
+		return old
+	}
 	if target.Type.Kind != hir.Number && target.Type.Kind != hir.I32 && target.Type.Kind != hir.I64 {
 		l.diagf(n, "unsupported-expr", "update needs a native numeric operand")
 		return nil
@@ -44,6 +74,36 @@ func (l *lowerer) updateExpression(n, operand *ast.Node, operator ast.Kind, pref
 		return next
 	}
 	return previous
+}
+
+// optionalNumberCompound lowers `o.n op= v` for `n?: number`: the receiver
+// and the old value are read once before v is evaluated, undefined reads as
+// NaN, and the result is stored present.
+func (l *lowerer) optionalNumberCompound(n *ast.Node, target *hir.Expr, op string, rhs *ast.Node) *hir.Stmt {
+	number := hir.T(hir.Number)
+	switch target.Kind {
+	case hir.FieldGet:
+		target.X = l.tempInit(n, target.X.Type, target.X)
+	case hir.Local, hir.StaticGet:
+	default:
+		l.diagf(n, "unsupported-assignment", "compound assignment target is not lowered")
+		return nil
+	}
+	old := l.tempInit(n, target.Type, target)
+	y := l.expr(rhs)
+	if y == nil {
+		return nil
+	}
+	if y.Type.Kind != hir.Number && y.Type.Kind != hir.I32 && y.Type.Kind != hir.I64 {
+		l.diagf(n, "unsupported-assignment", "compound assignment to an optional number needs a numeric operand")
+		return nil
+	}
+	y = l.tempInit(n, number, l.coerce(y, number))
+	next := &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: number, Op: op, X: l.toNumber(n, old), Y: y}
+	l.pendStmt(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: l.coerce(l.tempInit(n, number, next), target.Type)})
+	pre := l.pend
+	l.pend = nil
+	return hir.B(pre...)
 }
 
 // flatArray implements depth one with ordinary HIR iteration and pushes: the

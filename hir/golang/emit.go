@@ -157,6 +157,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	runtime := e.stringA16Runtime(runtimeSource)
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
+	runtime = e.mapInsertionsRuntime(runtime)
 	if e.recordString {
 		runtime += recordStringSource
 	}
