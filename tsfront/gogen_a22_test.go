@@ -106,7 +106,8 @@ class Probe {
 // frontend-provenance.mjs enumerateObjects: `Class.prototype.m.call(recv)`
 // runs the class's own method (here a generator) with this = recv.
 func TestGogenA22PrototypeCallNodeOracle(t *testing.T) {
-	a19Check(t, map[string]string{"probe.ts": `class Reg {
+	a19Check(t, map[string]string{"probe.ts": `interface IReg { getObjects(): Generator<string, void, undefined>; label(prefix: string, n: number): string }
+class Reg implements IReg {
  items: string[] = [];
  tag = "r";
  *getObjects(): Generator<string, void, undefined> { for (const x of this.items) yield this.tag + x; }
@@ -114,11 +115,12 @@ func TestGogenA22PrototypeCallNodeOracle(t *testing.T) {
 }
 class Sub extends Reg { constructor() { super(); this.tag = "s"; } }
 class Probe {
+ static viaInterface(reg: IReg): string { return [...Reg.prototype.getObjects.call(reg)].join(";"); }
  static run(): string {
   const r = new Reg(); r.items.push("a", "b");
   const s = new Sub(); s.items.push("c");
   const all = [...Reg.prototype.getObjects.call(r)].filter((x) => x !== "rb");
-  return all.join(",") + "|" + [...Reg.prototype.getObjects.call(s)].join(",") + "|" + Reg.prototype.label.call(s, "p", 2);
+  return all.join(",") + "|" + [...Reg.prototype.getObjects.call(s)].join(",") + "|" + Reg.prototype.label.call(s, "p", 2) + "|" + Probe.viaInterface(r);
  }
 }`})
 }

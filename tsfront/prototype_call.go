@@ -9,7 +9,8 @@ import (
 // provenance.mjs: `core.Registry.prototype.getObjects.call(reg)`): C's own
 // m runs with this = recv. That is the virtual call recv.m(...args) exactly
 // when no lowered subclass of C overrides m; the receiver is checked to be
-// a C (a structural non-C receiver, which JS would accept, raises instead).
+// a C (a structural non-C receiver, which JS would accept, raises instead;
+// an interface-typed receiver is cast with that check).
 func (l *lowerer) prototypeCall(n *ast.Node) (*hir.Expr, bool) {
 	if !l.unprunedFeatures || n.Kind != ast.KindCallExpression {
 		return nil, false
@@ -52,6 +53,11 @@ func (l *lowerer) prototypeCall(n *ast.Node) (*hir.Expr, bool) {
 	recv := l.expr(args[0])
 	if recv == nil {
 		return nil, true
+	}
+	if recv.Type.Kind == hir.InterfaceRef {
+		// A receiver typed by an interface the class implements: checked
+		// downcast (castRef raises for another implementation).
+		recv = &hir.Expr{Kind: hir.Cast, Node: l.node(args[0]), Type: hir.Ref(c.Name), X: recv}
 	}
 	recv = l.coerce(recv, hir.Ref(c.Name))
 	if !l.acceptsType(hir.Ref(c.Name), recv.Type) {

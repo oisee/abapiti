@@ -178,7 +178,7 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 			case d.Name().Kind == ast.KindIdentifier && isRequirer(init):
 				requirers[d.Symbol()] = true
 				plumbing++
-			case init != nil && init.Kind == ast.KindCallExpression && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression())):
+			case init != nil && init.Kind == ast.KindCallExpression && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression()) && d.Type() != nil):
 				// req("<spec>") or the direct createRequire(base)("<spec>").
 				if mod := l.requiredModule(d, init); mod != nil && l.bindRequired(d, mod) {
 					plumbing++
@@ -209,7 +209,8 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 			if len(decls) == 1 {
 				d := decls[0]
 				init := d.Initializer()
-				if init != nil && init.Kind == ast.KindCallExpression && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression())) {
+				// An untyped lazy require keeps its ordinary lowering.
+				if init != nil && init.Kind == ast.KindCallExpression && d.Type() != nil && (symbolIn(init.Expression(), requirers) || isRequirer(init.Expression())) {
 					if mod := l.requiredModule(d, init); mod != nil && l.bindRequired(d, mod) {
 						l.require.skip[n] = true
 					}
