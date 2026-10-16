@@ -63,7 +63,7 @@ func (l *lowerer) conditionalExpression(n *ast.Node) *hir.Expr {
 			candidates = append(candidates, context)
 		}
 	}
-	if joined, ok := l.conditionalBranchJoin(y.Type, z.Type); ok {
+	if joined, ok := l.conditionalBranchJoin(y.Type, z.Type); ok && l.conditionalJoinFitsContext(joined, y.Type, z.Type, context) {
 		candidates = append(candidates, joined)
 	}
 	for _, target := range candidates {
@@ -108,8 +108,8 @@ func (l *lowerer) conditionalBranchJoin(a, b hir.Type) (hir.Type, bool) {
 		b = b.Args[0]
 	}
 	joined := a
-	if !l.acceptsType(a, b) {
-		if !l.acceptsType(b, a) {
+	if !l.acceptsType(a, b) && !l.familyMember(a, b) {
+		if !l.acceptsType(b, a) && !l.familyMember(b, a) {
 			return hir.Type{}, false
 		}
 		joined = b
@@ -176,7 +176,75 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef && dst.Name != hir.RootObject {
 		return l.interfaceHasClassBase(src.Name, dst) || l.unionPartsAccepted(src.Name, dst)
 	}
-	return l.acceptsType(dst, src)
+	return l.acceptsType(dst, src) || l.familyMember(dst, src) || l.flowProjection(n, src, dst)
+}
+
+// flowProjection reports a declared family value that the checker narrowed
+// at this branch (`k === "x" ? I : outer`) into a subset that dst includes.
+// union.project keeps the same storage and still checks membership.
+func (l *lowerer) flowProjection(n *ast.Node, src, dst hir.Type) bool {
+	if !l.unprunedFeatures || src.Kind != hir.UnionRef || dst.Kind != hir.UnionRef || src.Equal(dst) {
+		return false
+	}
+	from, to := l.out.Union(src.Name), l.out.Union(dst.Name)
+	if from == nil || to == nil || !hir.UnionIncludes(from, to) {
+		return false
+	}
+	flow := l.conditionalCheckerType(n, l.ck.GetTypeAtLocation(n))
+	if flow.Kind == hir.Optional {
+		flow = flow.Args[0]
+	}
+	if flow.Kind != hir.UnionRef {
+		return false
+	}
+	narrowed := l.out.Union(flow.Name)
+	return narrowed != nil && hir.UnionIncludes(to, narrowed)
+}
+
+// A family join is a widening; the enclosing assignment can widen it further
+// but never narrows it to a checker-narrowed family subset.
+func (l *lowerer) conditionalJoinFitsContext(joined, a, b, context hir.Type) bool {
+	base := func(t hir.Type) hir.Type {
+		if t.Kind == hir.Optional {
+			return t.Args[0]
+		}
+		return t
+	}
+	if !l.familyMember(base(joined), base(a)) && !l.familyMember(base(joined), base(b)) {
+		return true
+	}
+	if context.Kind == "" || context.Kind == hir.Void || context.Kind == hir.Dynamic {
+		return true
+	}
+	if joined.Kind == hir.Optional && context.Kind != hir.Optional {
+		return false
+	}
+	return base(context).Equal(base(joined)) || l.familyMember(base(context), base(joined))
+}
+
+// familyMember reports a recursive-family value that coerce admits to dst
+// without a copy: a payload of one of dst's alternatives (union.admit) or a
+// subset family that dst includes (union.widen).
+func (l *lowerer) familyMember(dst, src hir.Type) bool {
+	if !l.unprunedFeatures || dst.Kind != hir.UnionRef {
+		return false
+	}
+	u := l.out.Union(dst.Name)
+	if u == nil {
+		return false
+	}
+	switch src.Kind {
+	case hir.UnionRef:
+		other := l.out.Union(src.Name)
+		return other != nil && hir.UnionIncludes(u, other)
+	case hir.ClassRef:
+		for _, a := range u.Alternatives {
+			if src.Equal(a.Payload) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Keep conversion temporaries inside the chosen branch, including optional
@@ -206,6 +274,11 @@ func (l *lowerer) conditionalConversion(n *ast.Node, x *hir.Expr, dst hir.Type) 
 	}
 	// Reuse existing proven nominal/interface conversions before decomposing
 	// an optional. Only optional boxing needs our presence-preserving path.
+	if l.flowProjection(n, x.Type, dst) {
+		projected := l.rtOp("union.project", x, dst)
+		projected.Node = l.node(n)
+		return projected
+	}
 	boxingOptional := x.Type.Kind == hir.Optional && (dst.Kind == hir.Dynamic || dst.Kind == hir.Optional && dst.Args[0].Kind == hir.Dynamic)
 	if !boxingOptional {
 		converted := l.coerce(x, dst)

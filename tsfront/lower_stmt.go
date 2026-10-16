@@ -13,7 +13,45 @@ import (
 // scope; reads carry the checker's narrowed type through hir.Narrow.
 
 func (l *lowerer) push() { l.scope = append(l.scope, map[string]hir.Type{}) }
-func (l *lowerer) pop()  { l.scope = l.scope[:len(l.scope)-1] }
+func (l *lowerer) pop() {
+	depth := len(l.scope) - 1
+	if shadows := l.fnShadows[depth]; len(shadows) > 0 {
+		delete(l.fnShadows, depth)
+		for i := len(shadows) - 1; i >= 0; i-- {
+			s := shadows[i]
+			delete(l.pendingFns, s.name)
+			delete(l.localFns, s.name)
+			if s.hadPending {
+				l.pendingFns[s.name] = s.pending
+			}
+			if s.hadLocal {
+				l.localFns[s.name] = s.local
+			}
+		}
+	}
+	l.scope = l.scope[:depth]
+}
+
+// activateLocalFn makes this declaration the binding of its name until the
+// enclosing block ends. withLocalFns registers names per method body, so a
+// name reused in another block would otherwise resolve to the last arrow.
+func (l *lowerer) activateLocalFn(name string, fn *ast.Node) {
+	pending, hadPending := l.pendingFns[name]
+	local, hadLocal := l.localFns[name]
+	if hadLocal && local.fn == fn || !(hadPending && pending != fn || hadLocal) {
+		return
+	}
+	if len(l.scope) == 0 {
+		l.push()
+	}
+	if l.fnShadows == nil {
+		l.fnShadows = map[int][]fnShadow{}
+	}
+	depth := len(l.scope) - 1
+	l.fnShadows[depth] = append(l.fnShadows[depth], fnShadow{name: name, pending: pending, hadPending: hadPending, local: local, hadLocal: hadLocal})
+	l.pendingFns[name] = fn
+	delete(l.localFns, name)
+}
 func (l *lowerer) declare(n string, t hir.Type) {
 	if len(l.scope) == 0 {
 		l.push()
@@ -270,6 +308,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 	sym := d.Symbol()
 	init := d.Initializer()
 	if init != nil && (init.Kind == ast.KindArrowFunction || init.Kind == ast.KindFunctionExpression) {
+		l.activateLocalFn(name, init)
 		if _, lifted := l.pendingFns[name]; lifted {
 			// Lifted to a method; calls resolve through localFns.
 			l.declare(name, hir.T(hir.Void))
@@ -368,7 +407,7 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			}
 			return []*hir.Stmt{l.localDeclaration(d, name, typ, value)}
 		}
-		if l.comparisonScalar(d, typ) {
+		if l.comparisonScalar(d, typ) || l.arrayAssignmentScalar(d, typ) {
 			typ = hir.T(hir.Optional, typ)
 			if l.erasedScalars == nil {
 				l.erasedScalars = map[*ast.Symbol]bool{}
@@ -399,6 +438,22 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			l.hint = hir.Type{}
 			if x == nil {
 				return nil
+			}
+			if d.Type() == nil && isArrayAssignment(init) && x.Type.Kind == hir.Array {
+				if !typ.Equal(x.Type) {
+					if l.widenedLets == nil {
+						l.widenedLets = map[*ast.Symbol]bool{}
+					}
+					l.widenedLets[sym] = true
+				}
+				typ = x.Type
+			}
+			if d.Type() == nil && l.matchGroupValue(init, x) {
+				typ = x.Type
+				if l.matchGroupBindings == nil {
+					l.matchGroupBindings = map[*ast.Symbol]bool{}
+				}
+				l.matchGroupBindings[sym] = true
 			}
 			if d.Type() == nil && l.ck.GetTypeOfSymbol(sym).Flags()&checker.TypeFlagsAny != 0 {
 				typ = x.Type
@@ -457,6 +512,15 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 			if u.Operator == ast.KindMinusMinusToken {
 				op = "-"
 			}
+			if optionalNumber(target.Type) {
+				x := l.updateTarget(n, target, op, false)
+				if x == nil {
+					return nil
+				}
+				pre := l.pend
+				l.pend = nil
+				return hir.B(pre...)
+			}
 			return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: target.Type, Op: op, X: target, Y: hir.L(target.Type, 1)}}
 		}
 	}
@@ -474,6 +538,9 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 			target := l.assignTarget(b.Left)
 			if target == nil {
 				return nil
+			}
+			if optionalNumber(target.Type) {
+				return l.optionalNumberCompound(n, target, op, b.Right)
 			}
 			// `x += s` on strings concatenates.
 			if l.ck.GetTypeAtLocation(b.Left).IsStringLike() {
@@ -493,6 +560,13 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 }
 
 func (l *lowerer) assignment(at *ast.Node, lhs, rhs *ast.Node) *hir.Stmt {
+	if lhs.Kind == ast.KindArrayLiteralExpression {
+		value := l.arrayAssignment(at, lhs, rhs)
+		if value == nil {
+			return nil
+		}
+		return &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(at), X: value}
+	}
 	target := l.assignTarget(lhs)
 	if target == nil {
 		return nil
@@ -733,6 +807,11 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	x := l.expr(f.Expression)
 	if x == nil {
 		return nil
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.OrderedMap {
+		if loop, handled := l.mapForOf(n, decls[0], x); handled {
+			return loop
+		}
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Dynamic {
 		// Consume only the existing checked any[] reference adapter. Parsed

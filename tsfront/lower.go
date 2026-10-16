@@ -490,6 +490,7 @@ type lowerer struct {
 	modules            map[*ast.SourceFile]*hir.Class
 	modvars            map[*ast.Symbol]string // module variable symbol -> field name
 	scope              []map[string]hir.Type
+	fnShadows          map[int][]fnShadow
 	class              *hir.Class  // class whose member is being lowered
 	method             *hir.Method // method being lowered
 	serial             int
@@ -532,9 +533,10 @@ type lowerer struct {
 	gogenMappedTypes map[*checker.Type]hir.Type
 	// thisOverride replaces `this` while a closure body is lowered.
 	thisOverride *hir.Expr
-	// widenedLets: let symbols whose HIR type is the common base of their
-	// assignments; the checker's narrower view of them is not applied.
+	// widenedLets marks bindings whose physical storage is wider than the
+	// checker view: common assignment bases or inferred optional array elements.
 	widenedLets        map[*ast.Symbol]bool
+	matchGroupBindings map[*ast.Symbol]bool
 	collectionShapes   map[string]bool
 	collectionElements map[string]bool
 	// guards: locals proven present by an enclosing definedness guard
@@ -601,6 +603,17 @@ type localFn struct {
 	method   *hir.Method
 	captures []localCapture
 	owner    *hir.Class
+	fn       *ast.Node
+}
+
+// fnShadow restores a local function name when the block that redeclared it
+// ends (sibling or nested blocks may reuse one name for different arrows).
+type fnShadow struct {
+	name       string
+	pending    *ast.Node
+	hadPending bool
+	local      *localFn
+	hadLocal   bool
 }
 
 type localCapture struct {

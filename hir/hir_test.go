@@ -114,7 +114,7 @@ func TestRuntimeCatalogue(t *testing.T) {
 		case OrderedMap:
 			typ.Args = []Type{T(I32), T(String)}
 		}
-		if op == "array.matchIndex" {
+		if op == "array.matchIndex" || op == "array.matchGroups" {
 			typ = T(Array, T(String))
 		}
 		if op == "chai.throwMatch" {

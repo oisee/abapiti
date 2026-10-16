@@ -409,26 +409,13 @@ func (l *lowerer) isGlobalArrayExpr(e *ast.Node) bool {
 // arrayStatic lowers Array.from(x) and Array.isArray(x).
 func (l *lowerer) arrayStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 	args := n.Arguments()
+	if name == "from" && len(args) >= 1 {
+		return l.arrayFrom(n), true
+	}
 	if len(args) != 1 {
 		return nil, false
 	}
 	switch name {
-	case "from":
-		x := l.expr(args[0])
-		if x == nil {
-			return nil, true
-		}
-		if l.generatorABIFor(x.Type) != nil {
-			return l.drainGenerator(x), true
-		}
-		switch x.Type.Kind {
-		case hir.Array:
-			return l.rtOp("array.slice0", x, x.Type), true
-		case hir.OrderedSet:
-			return l.rtOp("set.values", x, hir.T(hir.Array, x.Type.Args[0])), true
-		}
-		l.diagf(n, "unsupported-call", "Array.from on %s is not lowered", x.Type.Kind)
-		return nil, true
 	case "isArray":
 		x := l.expr(args[0])
 		if x == nil {

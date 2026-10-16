@@ -1,6 +1,8 @@
 package golang
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/jsregex"
 )
@@ -14,6 +16,9 @@ func reviewedRegexp(pattern, flags string) bool {
 func (e *emitter) checkRegexp(x *hir.Expr) {
 	if len(x.Args) == 0 {
 		return
+	}
+	if x.Name == "iteratorGrammar" {
+		e.regexA16 = true
 	}
 	pattern := x.Args[0]
 	flags := ""
@@ -35,8 +40,15 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 			return
 		}
 	}
+	if !reviewedRegexp(p, flags) && (strings.Contains(flags, "u") || strings.Contains(p, "(?<") || p == "" || p == "(?:)" || p == jsregex.IteratorLabelPattern) {
+		e.regexA16 = true
+	}
 	if !reviewedRegexp(p, flags) {
-		if _, ok := jsregex.TranslateSubset(p, flags); ok {
+		translate := jsregex.TranslateSubset
+		if e.regexA16 {
+			translate = jsregex.TranslateIteratorSubset
+		}
+		if _, ok := translate(p, flags); ok {
 			e.extendedRegex = true
 		} else {
 			e.unsupported(x.Node, "JavaScript regexp /"+p+"/"+flags)

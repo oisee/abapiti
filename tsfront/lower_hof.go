@@ -386,6 +386,15 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			}
 			l.widenedLets[params[i].Symbol()] = true
 		}
+		if i == 0 && n.Expression() != nil && n.Expression().Kind == ast.KindPropertyAccessExpression && n.Expression().Name().Text() == "from" && l.isGlobalArrayExpr(n.Expression().Expression()) {
+			// Array-like holes supply undefined even when TS inferred a
+			// non-optional index signature. Bind the actual iteration value.
+			t = elem
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[params[i].Symbol()] = true
+		}
 		l.declare(p, t)
 	}
 	if len(names) == 0 {
@@ -533,6 +542,13 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 					return true
 				}
 				return l.ck.IsArrayType(t) || t.IsTupleType()
+			}
+			// An any initializer (untyped JavaScript) reads through the same
+			// checked view: array storage is required at run time instead,
+			// anything else traps rather than running another iterator.
+			untyped := func(t *checker.Type) bool { return t != nil && t.Flags()&checker.TypeFlagsAny != 0 }
+			if pattern.Parent != nil && pattern.Parent.Initializer() != nil && untyped(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
+				arrays = untyped
 			}
 			if pattern.Parent == nil || pattern.Parent.Initializer() == nil || !arrays(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
 				l.diagf(pattern, "unsupported-binding", "dynamic array destructuring requires checked array storage")
