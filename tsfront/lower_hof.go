@@ -3,7 +3,6 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
-	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"strings"
 )
 
@@ -525,35 +524,22 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 			l.pendStmt(decl)
 		}
 	case ast.KindArrayBindingPattern:
+		erased := x.Type.Kind == hir.Dynamic
 		if x.Type.Kind == hir.Dynamic {
-			// A union of array storages is boxed rather than retagged as one
-			// generic array. Read each checked binding through that live box.
-			var arrays func(*checker.Type) bool
-			arrays = func(t *checker.Type) bool {
-				if t == nil {
-					return false
+			for _, el := range pattern.AsBindingPattern().Elements.Nodes {
+				if el.Kind == ast.KindOmittedExpression {
+					continue
 				}
-				if t.IsUnion() {
-					for _, part := range t.AsUnionOrIntersectionType().Types() {
-						if !arrays(part) {
-							return false
-						}
-					}
-					return true
+				if el.Kind != ast.KindBindingElement || el.Name() == nil || el.Name().Kind != ast.KindIdentifier || el.Initializer() != nil || el.AsBindingElement().DotDotDotToken != nil {
+					l.diagf(el, "unsupported-binding", "checked dynamic array destructuring supports simple bindings and elisions only")
+					return
 				}
-				return l.ck.IsArrayType(t) || t.IsTupleType()
 			}
-			// An any initializer (untyped JavaScript) reads through the same
-			// checked view: array storage is required at run time instead,
-			// anything else traps rather than running another iterator.
-			untyped := func(t *checker.Type) bool { return t != nil && t.Flags()&checker.TypeFlagsAny != 0 }
-			if pattern.Parent != nil && pattern.Parent.Initializer() != nil && untyped(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
-				arrays = untyped
-			}
-			if pattern.Parent == nil || pattern.Parent.Initializer() == nil || !arrays(l.ck.GetTypeAtLocation(pattern.Parent.Initializer())) {
-				l.diagf(pattern, "unsupported-binding", "dynamic array destructuring requires checked array storage")
-				return
-			}
+			// The checked view preserves the original array storage. Inferred
+			// any (notably for-of bindings) has no initializer on the pattern.
+			view := l.rtOp("dynamic.arrayView", x, hir.T(hir.Array, hir.T(hir.Dynamic)))
+			view.Node = l.node(pattern)
+			x = l.tempInit(pattern, view.Type, view)
 		}
 		for i, el := range pattern.AsBindingPattern().Elements.Nodes {
 			if el.Kind != ast.KindBindingElement || el.Name() == nil || el.Name().Kind != ast.KindIdentifier {
@@ -561,16 +547,7 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 			}
 			local := el.Name().Text()
 			var value *hir.Expr
-			if x.Type.Kind == hir.Dynamic {
-				if el.AsBindingElement().DotDotDotToken != nil {
-					l.diagf(el, "unsupported-binding", "rest binding of boxed array storage")
-					return
-				}
-				typ := l.mapCheckerType(el, l.ck.GetTypeAtLocation(el.Name()))
-				view := l.rtOp("dynamic.arrayView", x, hir.T(hir.Array, hir.T(hir.Dynamic)))
-				view.Node = l.node(el)
-				value = l.coerce(&hir.Expr{Kind: hir.IndexGet, Node: l.node(el), Type: hir.T(hir.Dynamic), X: view, Y: hir.L(hir.T(hir.I32), i)}, typ)
-			} else if x.Type.Kind == hir.Array {
+			if x.Type.Kind == hir.Array {
 				if el.AsBindingElement().DotDotDotToken != nil {
 					value = l.rtOp("array.slice1", x, x.Type, hir.L(hir.T(hir.I32), i))
 				} else {
@@ -591,6 +568,10 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 			} else {
 				field := "f" + itoa(i)
 				value = &hir.Expr{Kind: hir.FieldGet, Node: l.node(el), Type: l.patternFieldType(x.Type, field), Name: field, X: x}
+			}
+			if erased {
+				typ := l.mapCheckerType(el, l.ck.GetTypeAtLocation(el.Name()))
+				value = l.coerce(value, typ)
 			}
 			l.declare(local, value.Type)
 			decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value}

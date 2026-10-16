@@ -19,7 +19,7 @@ func TestMutualCaptureNodeOracle(t *testing.T) {
 }
 
 func TestDestructuredCallbackCaptureNodeOracle(t *testing.T) {
-	gogenOracle(t, `function signature(name:string):string {const [intf,meth]=name.includes("~")?name.split("~"):[null,name];const param=(x:string):string=>(intf??"local")+":"+meth+":"+x;return ["x","y"].map(x=>param(x)).join("/");}class Probe {static run():string{return signature("I~M")+"/"+signature("M");}}`, "I:M:x/I:M:y/local:M:x/local:M:y", "dynamic array view across native element storages")
+	gogenOracle(t, `function signature(name:string):string {const [intf,meth]=name.includes("~")?name.split("~"):[null,name];const param=(x:string):string=>(intf??"local")+":"+meth+":"+x;return ["x","y"].map(x=>param(x)).join("/");}class Probe {static run():string{return signature("I~M")+"/"+signature("M");}}`, "I:M:x/I:M:y/local:M:x/local:M:y")
 }
 
 func TestDestructuredSharedCaptureNodeOracle(t *testing.T) {

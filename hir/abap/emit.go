@@ -808,6 +808,8 @@ type body struct {
 	code                         strings.Builder
 	locals                       map[string]string
 	serial                       int
+	loopDepth                    int
+	finalizers                   []int
 	lastInit, lastName, lastType string
 	constants                    map[string]string
 }
@@ -2532,10 +2534,6 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		if x.Type.Args[0].Kind == hir.Dynamic {
-			b.e.refuse(fmt.Errorf("node %d (%s): ABAP dynamic array view across native element storages is unsupported", x.ID, x.Source))
-			return
-		}
 		b.arrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
@@ -2993,7 +2991,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("IF " + a + " = abap_false.")
 		b.line("EXIT.")
 		b.line("ENDIF.")
+		b.loopDepth++
 		b.stmt(s.Body)
+		b.loopDepth--
 		b.line("ENDDO.")
 	case hir.ForEach:
 		a := b.expr(s.X)
@@ -3011,6 +3011,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if !s.Type.IsRef() && s.Type.Kind != hir.Optional {
 			b.line(a + "->dense( ).")
 		}
+		b.loopDepth++
 		if e.arrayViews {
 			idx := b.temp(hir.T(hir.I32))
 			b.line("DO.\n" + a + "->load( ).\nIF " + idx + " >= lines( " + a + "->items ).\nEXIT.\nENDIF.")
@@ -3034,22 +3035,22 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.stmt(s.Body)
 			b.line("ENDLOOP.")
 		}
+		b.loopDepth--
 		if ok {
 			b.locals[s.Name] = old
 		} else {
 			delete(b.locals, s.Name)
 		}
-	case hir.Break:
-		b.line("EXIT.")
-	case hir.Continue:
-		b.line("CONTINUE.")
+	case hir.Break, hir.Continue:
+		b.complete(s.Kind, "")
 	case hir.Return:
+		value := ""
 		if s.X != nil && (b.m.Result.Kind == hir.Void || s.X.Type.Kind == hir.Void) {
 			b.expr(s.X)
 		} else if s.X != nil {
-			b.line("result = " + b.value(s.X, b.m.Result) + ".")
+			value = b.value(s.X, b.m.Result)
 		}
-		b.line("RETURN.")
+		b.complete(hir.Return, value)
 	case hir.Trap:
 		name := e.name("exception.unexecuted")
 		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.\nPUBLIC SECTION.\nDATA source_location TYPE string.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nENDCLASS.\n"
@@ -3082,17 +3083,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.line("RAISE EXCEPTION " + n + ".")
 	case hir.Finally:
-		// Normal completion runs the finally block after the TRY; anything
-		// leaving the body is caught, the block runs, and the same exception
-		// object is raised again.
-		n := b.rawTemp("REF TO cx_root")
-		b.line("TRY.")
-		b.stmt(s.Body)
-		b.line("CATCH cx_root INTO " + n + ".")
-		b.stmt(s.Else)
-		b.line("RAISE EXCEPTION " + n + ".")
-		b.line("ENDTRY.")
-		b.stmt(s.Else)
+		b.finally(s)
 	case hir.Try:
 		name := e.exception(s.Type)
 		value := "payload"

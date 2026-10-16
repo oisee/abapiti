@@ -1,0 +1,179 @@
+{
+  "baseCommit": "683d0e3036a2358946c4b84873ab89bf1d616b7e",
+  "osgCommit": "1638d1cbc2549003b5ad2c4384b749c34beb034b",
+  "abaplintCommit": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+  "assignmentMismatchTraps": {
+    "base": 2,
+    "final": 2
+  },
+  "changedGeneratedGo": [
+    "literals.go",
+    "hir.go",
+    "site_profile.go",
+    "hir_profile.go"
+  ],
+  "abapOracles": {
+    "destructure": [
+      {
+        "testclass": "LTCL_STORAGE",
+        "method": "ORACLE",
+        "status": "SUCCESS",
+        "message": ""
+      }
+    ],
+    "sort": [
+      {
+        "testclass": "LTCL_STORAGE",
+        "method": "ORACLE",
+        "status": "SUCCESS",
+        "message": ""
+      }
+    ],
+    "sortThrow": [
+      {
+        "testclass": "LTCL_STORAGE",
+        "method": "ORACLE",
+        "status": "SUCCESS",
+        "message": ""
+      }
+    ],
+    "finally": [
+      {
+        "testclass": "LTCL_STORAGE",
+        "method": "ORACLE",
+        "status": "SUCCESS",
+        "message": ""
+      }
+    ],
+    "finallyForUpdate": [
+      {
+        "testclass": "LTCL_STORAGE",
+        "method": "ORACLE",
+        "status": "SUCCESS",
+        "message": ""
+      }
+    ]
+  },
+  "sha256": {
+    "base-clean.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "base-seeded.txt": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+    "release/zabapgit-check-kit/expected-clean.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "release/zabapgit-check-kit/expected-seeded.txt": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+    "release/zabapgit-check-kit/actual-clean.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "release/zabapgit-check-kit/actual-seeded.txt": "0a08fa85133e89faa08a841a01572b228428191c50844b62e0c8bb9965145e50",
+    "m1-kit/expected-clean.txt": "95d37bc666403557ceecbb6f0e12e31867c18d3c2870e105e3ceafb5b9267428",
+    "m1-kit/actual-clean.txt": "95d37bc666403557ceecbb6f0e12e31867c18d3c2870e105e3ceafb5b9267428"
+  },
+  "pilot": {
+    "base": {
+      "summary": [
+        "osg 1638d1cb",
+        "ref a13702d55b1eecdb",
+        "{\"files\":56,\"loaded\":51,\"bodies\":422,\"executed\":226,\"unmatched\":3}",
+        "full: 304 blocking (206 root, 98 cascade), 1691 HIR errors in 37 files",
+        "294.69 s 1414316 KB",
+        "root top: [('identifier X is not a lowered local or module value', 48), ('property X is not lowered', 13), ('call to KindIdentifier is not lowered', 12), ('mixed tagged operands require value-preserving truthiness', 9), ('writes through a mixed index signature require an exact named-slot ali', 9), ('checker type X is not lowered', 6)]",
+        "files: [('frontend.mjs', 101), ('frontend-expressions-calls.mjs', 34), ('sink-locals.ts', 26), ('frontend-session.mjs', 23), ('ir-writes.mjs', 18), ('frontend-inventory.mjs', 18)]"
+      ],
+      "sites": {
+        "destructure": [
+          "tools/gogen/emit-go.mjs:968:14",
+          "tools/gogen/frontend.mjs:2562:13",
+          "tools/gogen/sink-locals.ts:112:14"
+        ],
+        "sort": [
+          "tools/gogen/emit-exception.ts:81:8",
+          "tools/gogen/frontend-artifact-digests.mjs:21:36",
+          "tools/gogen/frontend.mjs:321:23",
+          "tools/gogen/frontend.mjs:4951:47"
+        ],
+        "finally": [
+          "tools/gogen/frontend.mjs:1334:17",
+          "tools/gogen/frontend.mjs:3133:159",
+          "tools/gogen/frontend.mjs:3377:15"
+        ]
+      },
+      "diagnosticOccurrences": {
+        "destructure": 3,
+        "sort": 6,
+        "finally": 3
+      }
+    },
+    "final": {
+      "summary": [
+        "osg 1638d1cb",
+        "ref a13702d55b1eecdb",
+        "{\"files\":56,\"loaded\":51,\"bodies\":422,\"executed\":226,\"unmatched\":3}",
+        "full: 274 blocking (185 root, 89 cascade), 1677 HIR errors in 37 files",
+        "262.63 s 1411928 KB",
+        "root top: [('identifier X is not a lowered local or module value', 39), ('call to KindIdentifier is not lowered', 13), ('property X is not lowered', 13), ('mixed tagged operands require value-preserving truthiness', 9), ('writes through a mixed index signature require an exact named-slot ali', 9), ('checker type X is not lowered', 6)]",
+        "files: [('frontend.mjs', 87), ('frontend-expressions-calls.mjs', 34), ('frontend-session.mjs', 23), ('ir-writes.mjs', 18), ('frontend-inventory.mjs', 18), ('emit-go.mjs', 15)]"
+      ],
+      "sites": {
+        "destructure": [],
+        "sort": [],
+        "finally": []
+      },
+      "diagnosticOccurrences": {
+        "destructure": 0,
+        "sort": 0,
+        "finally": 0
+      },
+      "replacementDefaultSortRefusals": []
+    }
+  },
+  "kit": {
+    "release": "v0.5.2",
+    "assetSHA256": "2be51f82cfc1947416faef522c21b52c485e94f43bc6ea65d40fb8e9fb421de8",
+    "baseLog": [
+      "using /work/.local/zabaplint-base",
+      "clean: equal to Node (0 issues, 22 s)",
+      "seeded: equal to Node (5 issues, 25 s)",
+      "46.94 s 2430324 KB"
+    ],
+    "finalLog": [
+      "using /work/.local/zabaplint-final",
+      "clean: equal to Node (0 issues, 30 s)",
+      "seeded: equal to Node (5 issues, 35 s)",
+      "65.00 s 2786300 KB"
+    ]
+  },
+  "M1": {
+    "issues": 80,
+    "log": [
+      "equal to pinned Node",
+      "50.43 s 2122164 KB"
+    ]
+  },
+  "gates": {
+    "build": "pass",
+    "vet": "pass",
+    "shortSuite": {
+      "status": "pass",
+      "command": "go test -short -p 2 -timeout 30m ./hir/... ./tsfront/... ./cmd/abapiti/... ./internal/abapfixture/...",
+      "log": [
+        "ok  \tgithub.com/oisee/abapiti/hir\t0.010s",
+        "ok  \tgithub.com/oisee/abapiti/hir/abap\t8.634s",
+        "ok  \tgithub.com/oisee/abapiti/hir/fixtures\t0.090s",
+        "ok  \tgithub.com/oisee/abapiti/hir/golang\t44.206s",
+        "ok  \tgithub.com/oisee/abapiti/hir/jsregex\t0.199s",
+        "ok  \tgithub.com/oisee/abapiti/hir/rewrite\t5.692s",
+        "ok  \tgithub.com/oisee/abapiti/tsfront\t597.410s",
+        "ok  \tgithub.com/oisee/abapiti/tsfront/cmd/tsdump\t0.664s",
+        "?   \tgithub.com/oisee/abapiti/tsfront/cmd/tslower\t[no test files]",
+        "ok  \tgithub.com/oisee/abapiti/tsfront/overrides\t0.004s",
+        "ok  \tgithub.com/oisee/abapiti/cmd/abapiti\t67.633s",
+        "ok  \tgithub.com/oisee/abapiti/internal/abapfixture\t0.101s"
+      ]
+    },
+    "hostio": {
+      "status": "pass",
+      "log": [
+        "ok  \tgithub.com/oisee/abapiti/extern/hostio\t0.303s"
+      ]
+    },
+    "nodeAndGoOracles": "pass",
+    "kitComparisons": "cmp-equal base/final/expected for clean and seeded",
+    "M1Comparison": "cmp-equal, 80 issues"
+  }
+}

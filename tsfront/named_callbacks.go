@@ -19,9 +19,10 @@ func (l *lowerer) refuseUndefinedThis(fn *ast.Node) bool {
 }
 
 // Function-valued locals are captured once before iteration. The callback ABI
-// supplies exactly value, index and array; excess declarations fail explicitly.
+// supplies the operation's arguments (two elements for sort, otherwise value,
+// index and array); excess required declarations fail explicitly.
 func (l *lowerer) localValueCallback(n, cb *ast.Node, elem hir.Type) (*hir.Expr, []string, bool) {
-	if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression && (callee.Name().Text() == "sort" || callee.Name().Text() == "reduce") {
+	if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "reduce" {
 		return nil, nil, false
 	}
 	typ, ok := l.lookup(cb.Text())
@@ -56,12 +57,22 @@ func (l *lowerer) localValueCallback(n, cb *ast.Node, elem hir.Type) (*hir.Expr,
 	}
 	recv = l.tempInit(cb, typ, recv)
 	types := []hir.Type{elem, hir.T(hir.Number), hir.T(hir.Array, elem)}
-	count := len(m.Params)
-	if count > 3 {
-		count = 3
+	minimum := 1
+	if callee := n.Expression(); callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "sort" {
+		types, minimum = []hir.Type{elem, elem}, 2
+		for i, p := range m.Params {
+			if i >= 2 && p.Type.Kind != hir.Optional {
+				l.diagf(cb, "unsupported-callback", "sort comparator requires more than two arguments")
+				return nil, nil, true
+			}
+		}
 	}
-	if count == 0 {
-		count = 1
+	count := len(m.Params)
+	if count > len(types) {
+		count = len(types)
+	}
+	if count < minimum {
+		count = minimum
 	}
 	names := make([]string, count)
 	var args []*hir.Expr

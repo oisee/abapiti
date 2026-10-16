@@ -381,23 +381,6 @@ func (v *verifier) body(c *Class, m *Method) {
 	}
 }
 
-// exits reports a return, break or continue anywhere in the block.
-func exits(s *Stmt) bool {
-	if s == nil {
-		return false
-	}
-	switch s.Kind {
-	case Return, Break, Continue:
-		return true
-	}
-	for _, x := range s.List {
-		if exits(x) {
-			return true
-		}
-	}
-	return exits(s.Body) || exits(s.Else)
-}
-
 // CanFallThrough reports whether the verifier lacks a proof that every path
 // terminates. Frontends use the same proof when preserving implicit returns.
 func CanFallThrough(s *Stmt) bool { return !returns(s) }
@@ -419,10 +402,31 @@ func returns(s *Stmt) bool {
 		}
 	case If, Try:
 		return returns(s.Body) && returns(s.Else)
+	case Finally:
+		return returns(s.Else) || returns(s.Body) && !escapingLoopControl(s.Else)
 	case While:
 		return s.X != nil && s.X.Kind == Lit && s.X.Value == true && !exitsLoop(s.Body)
 	}
 	return false
+}
+
+// A finalizer may replace a pending return with a loop completion.
+func escapingLoopControl(s *Stmt) bool {
+	if s == nil {
+		return false
+	}
+	switch s.Kind {
+	case Break, Continue:
+		return true
+	case While, ForEach:
+		return false
+	}
+	for _, child := range s.List {
+		if escapingLoopControl(child) {
+			return true
+		}
+	}
+	return escapingLoopControl(s.Body) || escapingLoopControl(s.Else)
 }
 
 // A literal infinite loop cannot fall through unless its body can break it.
@@ -551,13 +555,8 @@ func (v *verifier) stmt(c *Class, m *Method, s *Stmt, env map[string]Type, loops
 			v.fail(s.Node, "finally needs a body and a finally block")
 			break
 		}
-		if exits(s.Body) {
-			v.fail(s.Node, "finally body must not return, break or continue")
-		}
-		// Both blocks run at loop depth 0 of their own: a break inside the
-		// finally block would not be a loop control of the enclosing loop.
-		v.stmt(c, m, s.Body, clone(env), 0)
-		v.stmt(c, m, s.Else, clone(env), 0)
+		v.stmt(c, m, s.Body, clone(env), loops)
+		v.stmt(c, m, s.Else, clone(env), loops)
 	default:
 		v.fail(s.Node, "unknown statement "+string(s.Kind))
 	}

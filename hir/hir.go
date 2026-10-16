@@ -226,8 +226,9 @@ const (
 	Try   StmtKind = "try"
 	// Async catches only source-language throws and returns a settled rejection.
 	Async StmtKind = "async"
-	// Finally runs Body, then Else exactly once: after normal completion, or
-	// before re-raising whatever left Body (Body has no return/break/continue).
+	// Finally runs Else exactly once after Body. Normal completion of Else
+	// preserves Body's completion; an abrupt completion of Else replaces it.
+	// Return values and the targets of break/continue survive the boundary.
 	Finally StmtKind = "finally"
 )
 
