@@ -903,6 +903,10 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.New:
+		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {
+			e.unsupported(x.Node, "boxed Map allocation requires value-based SameValueZero")
+			return "nil"
+		}
 		a := []string{}
 		if t.Kind == hir.ClassRef {
 			m, _ := e.method(e.classBy(t.Name), "constructor")

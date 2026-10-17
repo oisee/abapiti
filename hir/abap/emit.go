@@ -1261,6 +1261,10 @@ func (b *body) expr(x *hir.Expr) string {
 			b.arrayElement(n, row, t)
 		}
 	case hir.New:
+		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {
+			e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map allocation requires value-based SameValueZero", x.ID, x.Source))
+			return n
+		}
 		if t.Kind == hir.OrderedSet && len(t.Args) == 1 && (t.Args[0].Kind == hir.Optional || t.Args[0].Kind == hir.Dynamic) {
 			e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
 			return n
@@ -2072,6 +2076,10 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
+		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map writes require value-based SameValueZero", x.ID, x.Source))
+		return
+	}
 	if b.bigintRuntime(x, n) {
 		return
 	}

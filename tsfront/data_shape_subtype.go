@@ -66,7 +66,13 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 }
 
 func (l *lowerer) mapStorageView(dst, src hir.Type) bool {
-	if !l.unprunedFeatures || dst.Kind != hir.OrderedMap || src.Kind != hir.OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 || dst.Args[1].Kind != hir.ClassRef || src.Args[1].Kind != hir.ClassRef || !dst.Args[0].Equal(src.Args[0]) || dst.Args[1].Equal(src.Args[1]) {
+	if !l.unprunedFeatures || dst.Kind != hir.OrderedMap || src.Kind != hir.OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 {
+		return false
+	}
+	if dst.Args[0].Kind == hir.Dynamic && src.Args[0].Kind == hir.String && dst.Args[1].Equal(src.Args[1]) {
+		return true
+	}
+	if dst.Args[1].Kind != hir.ClassRef || src.Args[1].Kind != hir.ClassRef || !dst.Args[0].Equal(src.Args[0]) || dst.Args[1].Equal(src.Args[1]) {
 		return false
 	}
 	return hir.StructuralStorageEquivalent(l.out, dst.Args[1], src.Args[1], l.shapeLike)

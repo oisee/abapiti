@@ -19,6 +19,20 @@ func (b *body) mapView(x *hir.Expr) string {
 	e := b.e
 	source := b.expr(x.X)
 	key, to := e.typ(x.Type.Args[0]), e.typ(x.Type.Args[1])
+	if x.Type.Args[0].Kind == hir.Dynamic && x.X.Type.Args[0].Kind == hir.String {
+		// A nullable or erased query never coerces to a string Map key.
+		// Delegate string queries to the original storage, keeping aliases live.
+		return fmt.Sprintf(`func(src %s) %s {
+ if src==nil {panic(newRangeFault())}
+ return &%s{proxy:&mapProxy[*dynamic,%s]{source:box(src),
+ get:func(k *dynamic) optional[%s] {if k==nil || k.Tag!=1 {return optional[%s]{}};return src.get(dynString(k))},
+ set:func(k *dynamic,v %s){panic(newTrap("boxed Map writes require value-based SameValueZero"))},
+ has:func(k *dynamic)bool{return k!=nil && k.Tag==1 && src.has(dynString(k))},
+ remove:func(k *dynamic)bool{return k!=nil && k.Tag==1 && src.delete(dynString(k))},
+ keys:func()*array[*dynamic]{out:=&array[*dynamic]{};for _,k:=range src.keys().Items {out.push(box(k))};return out},
+ size:src.mapSize,insertions:src.mapInsertions}}
+ }(%s)`, e.typ(x.X.Type), e.typ(x.Type), strings.TrimPrefix(e.typ(x.Type), "*"), to, to, to, to, source)
+	}
 	decoded := e.viewValue(x.Type.Args[1], "box(v.Value)")
 	encoded := e.viewValue(x.X.Type.Args[1], "box(v)")
 	return fmt.Sprintf(`func(src %s) %s {

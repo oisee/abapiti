@@ -237,6 +237,11 @@ func (v *verifier) typ(n Node, t Type) {
 		if t.Kind == OrderedSet && k.Kind == Optional {
 			k = k.Args[0]
 		}
+		// Boxed Map keys are supported by checked storage views. Backends
+		// still refuse raw allocations and writes without value-based hashing.
+		if t.Kind == OrderedMap && k.Kind == Dynamic {
+			return
+		}
 		if k.Kind != Number && k.Kind != String && k.Kind != Bool && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
 			v.fail(n, "unsupported collection key "+k.String())
 		}

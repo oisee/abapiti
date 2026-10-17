@@ -2027,9 +2027,16 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.rtOp("set.copy", recv, recv.Type, one()), true
 		}
 	case hir.OrderedMap:
+		key := func() *hir.Expr {
+			x := one()
+			if l.unprunedFeatures && recv.Type.Args[0].Kind == hir.Dynamic {
+				x = l.coerce(x, recv.Type.Args[0])
+			}
+			return x
+		}
 		switch name {
 		case "get":
-			return l.mapRead(recv, one()), true
+			return l.mapRead(recv, key()), true
 		case "set":
 			var a, b *hir.Expr
 			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
@@ -2046,9 +2053,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
-			return l.rtOp("map.has", recv, boolT, one()), true
+			return l.rtOp("map.has", recv, boolT, key()), true
 		case "delete":
-			return l.rtOp("map.delete", recv, boolT, one()), true
+			return l.rtOp("map.delete", recv, boolT, key()), true
 		case "size":
 			return l.rtOp("map.size", recv, i32), true
 		}
