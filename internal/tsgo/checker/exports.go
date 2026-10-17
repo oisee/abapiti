@@ -371,3 +371,9 @@ func (c *Checker) ResolvedTypeArguments(s *Signature) []*Type {
 	}
 	return result
 }
+
+// CheckExpressionWithContextualType types an expression as if it appeared
+// where contextualType is expected (literal members keep their literal types).
+func (c *Checker) CheckExpressionWithContextualType(node *ast.Node, contextualType *Type) *Type {
+	return c.checkExpressionWithContextualType(node, contextualType, nil, CheckModeNormal)
+}

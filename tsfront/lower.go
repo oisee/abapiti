@@ -520,7 +520,10 @@ type lowerer struct {
 	familyFailed map[string]familyFailure
 	familyShapes map[string]hir.Type
 	familyChecks map[string]*checker.Type
-	familyKeys   *familyKeyMemo // family_key_memo.go
+	// contextLiteralTypes types object literals that a lowering places in a
+	// family context the checker did not see (literalFamilyIndex).
+	contextLiteralTypes map[*ast.Node]*checker.Type
+	familyKeys          *familyKeyMemo // family_key_memo.go
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

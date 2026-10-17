@@ -648,6 +648,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
+		if x, handled := l.literalFamilyIndex(n); handled {
+			return x
+		}
 		if x, ok := l.processRead(n); ok {
 			return x
 		}

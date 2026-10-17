@@ -64,6 +64,9 @@ func (l *lowerer) familyLiteral(n *ast.Node, hint hir.Type) *hir.Expr {
 		return nil
 	}
 	t := l.ck.GetTypeAtLocation(n)
+	if contextual := l.contextLiteralTypes[n]; contextual != nil {
+		t = contextual
+	}
 	if l.unprunedFeatures && objectLiteralHasSpread(n) {
 		return l.familySpreadLiteral(n, hint, u, t)
 	}
