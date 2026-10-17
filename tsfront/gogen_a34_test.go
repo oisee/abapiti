@@ -67,3 +67,38 @@ export class Probe {
 }
 `, true)
 }
+
+// Registry extends IRegistry with literal getObject overloads and retains
+// its general overload. Upcasting keeps that general ABI; literal calls
+// still get their checked result views; the upcast preserves identity.
+func TestGogenA34InterfaceOverloadUpcastNodeOracle(t *testing.T) {
+	gogenTSOracle(t, `class Item { name(): string { return "base"; } }
+class A extends Item { onlyA(): string { return "A"; } }
+class B extends Item { onlyB(): string { return "B"; } }
+interface Base { get(kind: string): Item | undefined; }
+interface Refined extends Base {
+  get(kind: "a"): A | undefined;
+  get(kind: "b"): B | undefined;
+  get(kind: string): Item | undefined;
+}
+class Store implements Refined {
+  get(kind: "a"): A | undefined;
+  get(kind: "b"): B | undefined;
+  get(kind: string): Item | undefined;
+  get(kind: string): Item | undefined {
+    if (kind === "a") return new A();
+    if (kind === "b") return new B();
+    return undefined;
+  }
+}
+class Probe {
+  static fromBase(r: Base): string { return r.get("b")!.name(); }
+  static upcast(r: Base): Base { return r; }
+  static run(): string {
+    const store = new Store();
+    const r: Refined = store;
+    const a = r.get("a"), b = r.get("b");
+    return a!.onlyA() + "|" + b!.onlyB() + "|" + Probe.fromBase(r) + "|" + (r.get("none") === undefined) + "|" + (Probe.upcast(r) === store);
+  }
+}`, "")
+}

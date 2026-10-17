@@ -629,6 +629,9 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, name)
 			continue
 		}
+		if general := l.coveringInterfaceOverload(node, m); general != nil && general != m {
+			continue
+		}
 		name, ok := l.memberName(m, nil)
 		if !ok {
 			continue
