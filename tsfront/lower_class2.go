@@ -686,9 +686,10 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		saved := l.tempInit(nil, x.Type, x)
 		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.familyAdmission(saved, dst.Args[0])}
 	}
-	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef {
-		// A flow-narrowed payload stored into `F | undefined` is admitted to
-		// F first; the optional wrapping is the ordinary present value.
+	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.UnionRef && !x.Type.Equal(dst.Args[0])) {
+		// A flow-narrowed payload (or a subset family value) stored into
+		// `F | undefined` is admitted to (widened into) F first; the optional
+		// wrapping is the ordinary present value.
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
 			return l.coerce(admitted, dst)
 		}
