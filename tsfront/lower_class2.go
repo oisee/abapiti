@@ -690,6 +690,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return l.rtOp("union.project", x, dst)
 		}
 	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// A checker-narrowed object (a type predicate over a wider object
+		// graph) holds a family payload: project its live storage checked,
+		// a value outside the family raises, never retags.
+		if u := l.out.Union(dst.Name); u != nil && u.Complete {
+			return l.rtOp("union.project", l.coerce(x, hir.T(hir.Dynamic)), dst)
+		}
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
 		return l.familyAdmission(x, dst)
 	}

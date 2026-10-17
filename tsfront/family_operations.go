@@ -308,6 +308,9 @@ func (l *lowerer) familyFieldRead(n, expression *ast.Node, name string) (*hir.Ex
 	if recv.Type.Kind == hir.Optional && len(recv.Type.Args) == 1 && recv.Type.Args[0].Kind == hir.UnionRef {
 		recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
 	}
+	if recv.Type.Kind == hir.ClassRef && recv.Type.Name == hir.RootObject {
+		recv = l.coerce(recv, mapped)
+	}
 	// A checker family can already have projected to its concrete payload.
 	// Read that storage directly; union.read requires an actual family value.
 	if recv.Type.Kind == hir.ClassRef {
