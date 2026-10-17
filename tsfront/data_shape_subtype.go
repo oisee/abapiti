@@ -102,7 +102,7 @@ func (l *lowerer) structuralEqualityTypes(a, b hir.Type) bool {
 	if b.Kind == hir.Optional {
 		b = b.Args[0]
 	}
-	return l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a)
+	return l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a) || l.setReferenceView(a, b) || l.setReferenceView(b, a)
 }
 
 // Required checker properties may carry optional primitive storage because an

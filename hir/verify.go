@@ -972,6 +972,10 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "set.view":
+		if len(e.Args) != 0 || a.Kind != OrderedSet || t.Kind != OrderedSet || len(a.Args) != 1 || len(t.Args) != 1 || !a.Args[0].IsRef() || t.Args[0].Kind != ClassRef || !DataClassView(v.p, t.Args[0].Name) {
+			v.fail(e.Node, "Set view needs reference keys and a public data layout")
+		}
 	case "map.view":
 		if len(e.Args) != 0 || !MapViewCompatible(v.p, t, a) {
 			v.fail(e.Node, "map view needs identical structural value layouts and invariant keys")

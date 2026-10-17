@@ -43,6 +43,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"bigint.compare":            {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"dynamic.asBigInt":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "None", Conservative: "Go uses a located refusal for a wrong tag; ABAP raises a cast exception."},
 	"map.view":                  {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
+	"set.view":                  {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "Receiver", Conservative: "Reference Set keys share erased storage; checked element views are applied on reads."},
 	"host.stderrWrite":          {Reads: OpReads{Receiver: true}, Writes: "Global", MayRaise: "None", Aliases: "None"},
 	"union.check":               {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "Receiver"},
 	"union.admit":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},

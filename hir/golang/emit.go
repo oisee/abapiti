@@ -41,6 +41,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.characterSets()
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
+	_, e.referenceSets = hir.UsedRuntimeOps(p)["set.view"]
 	if len(p.Unions) > 0 {
 		e.extraRuntimeKeys = true
 	}
@@ -298,6 +299,7 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	referenceSets     bool
 	externAdapters    []string
 	externImports     map[string]string
 	hirStrconv        bool
@@ -452,10 +454,15 @@ func (e *emitter) typ(t hir.Type) string {
 		return "*" + name + "[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
 	case hir.OrderedSet:
 		name := "orderedSet"
-		if e.directCollectionKey(t.Args[0]) {
+		elem := t.Args[0]
+		if e.referenceSets && elem.IsRef() {
+			// A program with a reference Set view shares erased keys across
+			// all aliases, including writes through the original typed Set.
+			elem = hir.Ref(hir.RootObject)
+		} else if e.directCollectionKey(elem) {
 			name = "fastOrderedSet"
 		}
-		return "*" + name + "[" + e.typ(t.Args[0]) + "]"
+		return "*" + name + "[" + e.typ(elem) + "]"
 	default:
 		e.unsupported(hir.Node{}, "type "+t.String())
 		return "any"
