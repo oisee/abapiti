@@ -900,10 +900,14 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 			return c
 		}
 	}
-	// A data object with a subset of a data interface's fields (the rest
-	// optional) is that data interface with the others absent: plain
-	// objects have no identity of their own.
+	// An explicit type literal describes only its listed fields. Adopting
+	// unrelated optional padding can reject a valid structural argument
+	// whose extra fields have different types. Inferred object layouts
+	// retain their existing optional-superset storage reuse.
 	for _, c := range l.out.Classes {
+		if l.unprunedFeatures && n.Kind == ast.KindTypeLiteral {
+			break
+		}
 		if (!l.shapeLike[c.Name] && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(c.Name, "shape."))) || c.Ctor == nil || len(c.Fields) <= len(fields) {
 			continue
 		}
