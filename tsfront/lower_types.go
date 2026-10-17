@@ -850,6 +850,13 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 				same = false
 				break
 			}
+			if l.unprunedFeatures && f.Type.Kind == hir.Optional && existing.Type.Kind != hir.Optional && f.Type.Args[0].IsRef() {
+				// Sharing a physical reference slot must not erase its declared
+				// absence. Partial<T> accepts records missing this property,
+				// whereas T's required slot does not.
+				same = false
+				break
+			}
 			a, b := f.Type, existing.Type
 			if a.Kind == hir.Optional && a.Args[0].IsRef() {
 				a = a.Args[0]

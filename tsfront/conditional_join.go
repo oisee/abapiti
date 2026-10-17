@@ -176,9 +176,10 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		if emptyConditionalArray(n, x) {
 			return true
 		}
-		// Both backends share reference-element storage. Primitive/optional
-		// element changes require a live generic view we cannot prove here.
-		return src.Args[0].IsRef() && dst.Args[0].IsRef() && l.acceptsType(dst, src)
+		// Structural reference elements use coerce's live array view, keeping
+		// the array and its elements aliased. Primitive/optional element
+		// changes still require a storage proof we do not have here.
+		return src.Args[0].IsRef() && dst.Args[0].IsRef() && (l.acceptsType(dst, src) || l.unprunedFeatures && l.dataShapeSubtype(dst.Args[0], src.Args[0]))
 	}
 	if src.Kind == hir.Dynamic {
 		if dst.Kind == hir.UnionRef && l.unprunedFeatures {

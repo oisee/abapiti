@@ -963,6 +963,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		if recv.Type.Kind == hir.Optional {
 			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
 		}
+		if l.unprunedFeatures && f.Name == "size" {
+			// A data interface inheriting Map/Set can register the library's
+			// property symbol as a field. The actual collection receiver still
+			// owns its builtin ABI, rather than that interface's class layout.
+			switch recv.Type.Kind {
+			case hir.OrderedMap:
+				return l.rtOp("map.size", recv, hir.T(hir.I32))
+			case hir.OrderedSet:
+				return l.rtOp("set.size", recv, hir.T(hir.I32))
+			}
+		}
 		// The receiver's lowered class owns the field's type: the checker's
 		// property symbol may belong to a structural view of it.
 		if recv.Type.Kind == hir.ClassRef {
@@ -1223,8 +1234,8 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 						if !ok2 {
 							return nil
 						}
-						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
-							Type: l.callbackResultType(ref), Args: args}
+						return l.assertedDirectCallResult(n, &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
+							Type: l.callbackResultType(ref), Args: args})
 					}
 				}
 			}
@@ -2715,6 +2726,18 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if !base.Equal(y.Type) {
 			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 		}
+		if l.unprunedFeatures && (!l.conditionalConvertible(b.Left, left, result) || !l.conditionalConvertible(b.Right, y, result)) {
+			// A fresh collection in the fallback can make the checker infer
+			// Map<any, any>, even though lowering gave that branch a typed
+			// collection. Keep a proven context/operand ABI rather than
+			// changing the storage of an existing map to that inferred type.
+			for _, target := range []hir.Type{hint, y.Type, base} {
+				if l.conditionalConvertible(b.Left, left, target) && l.conditionalConvertible(b.Right, y, target) {
+					result = target
+					break
+				}
+			}
+		}
 		if result.Kind == hir.Void {
 			return nil
 		}
@@ -3151,6 +3174,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	}
 	if fixed, ok := l.assertionOverride(n); ok {
 		return l.assertedView(n, x, fixed)
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef && mapped.Kind == hir.ClassRef {
+		// A family assertion needs its checked payload projection, just as
+		// flow narrowing does. A property-only assertion can instead read a
+		// live structural view of the same boxed object; never cast the
+		// family's storage directly to a class layout.
+		if projected := l.narrowed(n, x, mapped); projected != x {
+			return projected
+		}
+		if l.shapeLike[mapped.Name] {
+			return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), mapped)
+		}
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && mapped.Kind == hir.Optional &&
 		mapped.Args[0].Kind == hir.ClassRef && l.acceptsType(x.Type, mapped.Args[0]) {
