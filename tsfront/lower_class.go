@@ -630,16 +630,28 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, name)
 			continue
 		}
-		if general := l.coveringInterfaceOverload(node, m); general != nil && general != m {
+		general := l.coveringInterfaceOverload(node, m)
+		if general != nil && general != m {
 			continue
+		}
+		var merged *hir.Method
+		if general == nil {
+			var handled bool
+			merged, handled = l.booleanInterfaceOverload(node, m)
+			if handled && merged == nil {
+				continue
+			}
 		}
 		name, ok := l.memberName(m, nil)
 		if !ok {
 			continue
 		}
-		hm := &hir.Method{Node: l.node(m), Name: name, Virtual: true}
+		hm := merged
 		before := len(l.diags)
-		l.signature(m, hm)
+		if hm == nil {
+			hm = &hir.Method{Node: l.node(m), Name: name, Virtual: true}
+			l.signature(m, hm)
+		}
 		if l.methodFailed(hm) || hasBlocking(l.diags[before:]) {
 			// Members whose types do not map stay out of the lowered
 			// interface; nothing calls them in the lowered set.
