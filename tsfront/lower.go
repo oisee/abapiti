@@ -808,6 +808,9 @@ func (l *lowerer) trapLocation(n *ast.Node) string {
 // accesses on interface-typed receivers can resolve without a parent through
 // the checker pool; the member name node carries the full symbol.
 func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
+	if mod := l.inlineRequire(n); mod != nil {
+		return mod
+	}
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
