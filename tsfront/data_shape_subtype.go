@@ -11,6 +11,10 @@ import (
 // Native classes/configs remain nominal. Readonly nested slots may use an
 // equivalent structural layout through the existing live array/data views.
 func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
+	return l.dataShapeSubtypeSeen(dst, src, map[string]bool{})
+}
+
+func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool) bool {
 	if dst.Kind != hir.ClassRef || src.Kind != hir.ClassRef || dst.Equal(src) || !l.shapeLike[dst.Name] || !l.shapeLike[src.Name] {
 		return false
 	}
@@ -18,6 +22,12 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 	if d == nil || s == nil || len(d.Methods) != 0 || len(s.Methods) != 0 || d.Super != "" || s.Super != "" {
 		return false
 	}
+	key := dst.Name + "\x00" + src.Name
+	if active[key] {
+		return true
+	}
+	active[key] = true
+	defer delete(active, key)
 	for _, f := range d.Fields {
 		if f.Static {
 			return false
@@ -28,7 +38,7 @@ func (l *lowerer) dataShapeSubtype(dst, src hir.Type) bool {
 			if g.Type.Kind == hir.Optional && len(g.Type.Args) == 1 && f.Type.Equal(g.Type.Args[0]) && l.widenedRequiredProperty(s, g.Name) {
 				compatible = true
 			}
-			if f.Readonly && g.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike)) {
+			if f.Readonly && g.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike) || l.readonlyShapeRead(f.Type, g.Type, active)) {
 				compatible = true
 			}
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
@@ -81,4 +91,22 @@ func (l *lowerer) widenedRequiredProperty(c *hir.Class, name string) bool {
 		return prop != nil && prop.Flags&ast.SymbolFlagsOptional == 0 && l.literalPropertyAbsent(prop)
 	}
 	return false
+}
+
+// Readonly slots may recursively widen data properties. Mutable nested
+// containers retain their existing invariant storage compatibility checks.
+func (l *lowerer) readonlyShapeRead(dst, src hir.Type, active map[string]bool) bool {
+	if dst.Equal(src) {
+		return true
+	}
+	if dst.Kind == hir.Optional && len(dst.Args) == 1 {
+		if src.Kind == hir.Optional && len(src.Args) == 1 {
+			src = src.Args[0]
+		}
+		return l.readonlyShapeRead(dst.Args[0], src, active)
+	}
+	if dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 {
+		return l.readonlyShapeRead(dst.Args[0], src.Args[0], active)
+	}
+	return l.dataShapeSubtypeSeen(dst, src, active)
 }
