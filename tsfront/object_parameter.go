@@ -71,7 +71,12 @@ func (l *lowerer) bindObjectParameter(p *ast.Node, hp hir.Param) []*hir.Stmt {
 		}
 		value = l.objectBindingDefault(el, value)
 		l.declare(local, value.Type)
-		out = append(out, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value})
+		decl := &hir.Stmt{Kind: hir.VarDecl, Node: l.node(el), Name: local, Type: value.Type, X: value}
+		if l.declSymbols == nil {
+			l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
+		}
+		l.declSymbols[decl] = l.ck.GetSymbolAtLocation(be.Name())
+		out = append(out, decl)
 	}
 	return out
 }

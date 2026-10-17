@@ -73,6 +73,37 @@ func bodyNodes(s *hir.Stmt) (map[int]bool, map[string]bool) {
 // verification traps bodies using those members. Constructors keep a trapping
 // zero-argument stub, so a dropped constructor can never become a silent new().
 func (l *lowerer) repairFailedBodies() {
+	// Synthetic members often have ID zero. Give each declaration its own
+	// identity before attributing signature errors, so a failed signature
+	// cannot remove unrelated enum slots, capture cells or constructors.
+	var declarations []*hir.Node
+	for _, c := range l.out.Classes {
+		l.serial = max(l.serial, c.ID)
+		for i := range c.Fields {
+			declarations = append(declarations, &c.Fields[i].Node)
+		}
+		for _, m := range append(append([]*hir.Method{}, c.Methods...), c.Ctor) {
+			if m != nil {
+				declarations = append(declarations, &m.Node)
+			}
+		}
+	}
+	for _, i := range l.out.Interfaces {
+		l.serial = max(l.serial, i.ID)
+		for _, m := range i.Methods {
+			if m != nil {
+				declarations = append(declarations, &m.Node)
+			}
+		}
+	}
+	for _, n := range declarations {
+		l.serial = max(l.serial, n.ID)
+	}
+	for _, n := range declarations {
+		if n.ID == 0 {
+			n.ID = l.nextID()
+		}
+	}
 	// Late numeric diagnostics and module-value diagnostics are not emitted
 	// inside a body's boundary. Trap their retained uses before consuming them.
 	for _, d := range l.diags {

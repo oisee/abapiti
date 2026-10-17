@@ -135,6 +135,12 @@ def main(args):
         raise ValueError('temporary host/config files already exist in checkout')
 
     def heavy(command, name, cwd=osg, stdout=None, extra=None, memory='16G'):
+        subprocess.run(['df', '-h', '/mnt/ssd-510'], check=True)
+        subprocess.run(['grep', 'MemAvailable', '/proc/meminfo'], check=True)
+        available = next(int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()
+                         if line.startswith('MemAvailable:'))
+        if available <= 30 * 1024**2:
+            raise RuntimeError('memory available at or below 30G; stopping')
         usage = shutil.disk_usage(out)
         if usage.free < 40 * 1024**3:
             raise RuntimeError('disk free below 40G; stopping')
@@ -210,7 +216,9 @@ def main(args):
                '--overrides', 'registry', '--trap-on-failure', '--reachability', out / 'reach.json',
                '--initialize', out / 'initialization.json',
                '-o', out / 'go', *lists], 'emit')
-        heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G')
+        # Keep the large generated package's compiler heap below the scope cap.
+        heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go',
+              extra={'GOMEMLIMIT': env.get('GOMEMLIMIT', '12GiB'), 'GOGC': env.get('GOGC', '50')})
         build = 'ok'
         with actual.open('wb') as f:
             try:
