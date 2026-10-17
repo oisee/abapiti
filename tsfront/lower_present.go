@@ -656,3 +656,63 @@ func (l *lowerer) dynamicSearchValue(recv, x *hir.Expr) *hir.Expr {
 	}
 	return l.coerce(x, recv.Type.Args[0])
 }
+
+// sinkArrayType types a local array of fresh literals (an array literal or
+// a map) by the one typed slot it is stored into: every `{name}` or
+// `{key: name}` use in an object literal must have the same contextual
+// array type, of a lowered class or family element. Other uses keep the
+// checker's view and fail verification if they disagree.
+func (l *lowerer) sinkArrayType(d *ast.Node, typ hir.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures || d.Type() != nil || d.Symbol() == nil || typ.Kind != hir.Array || typ.Args[0].Kind != hir.ClassRef || !strings.HasPrefix(typ.Args[0].Name, "shape.") {
+		return hir.Type{}, false
+	}
+	body := d.Parent
+	for body != nil && body.Body() == nil && body.Kind != ast.KindSourceFile {
+		body = body.Parent
+	}
+	if body == nil {
+		return hir.Type{}, false
+	}
+	sym := d.Symbol()
+	var found hir.Type
+	ok, bad := false, false
+	var walk func(*ast.Node)
+	walk = func(c *ast.Node) {
+		if c == nil || bad {
+			return
+		}
+		var value, prop *ast.Node
+		switch c.Kind {
+		case ast.KindShorthandPropertyAssignment:
+			if l.ck.GetShorthandAssignmentValueSymbol(c) == sym {
+				value, prop = c.Name(), c
+			}
+		case ast.KindPropertyAssignment:
+			if init := c.Initializer(); init != nil && init.Kind == ast.KindIdentifier && l.resolve(init) == sym {
+				value, prop = init, c
+			}
+		}
+		if prop != nil {
+			t := l.ck.GetContextualType(value, checker.ContextFlagsNone)
+			if t == nil {
+				bad = true
+				return
+			}
+			before := len(l.diags)
+			mapped := l.mapCheckerType(value, t)
+			blocked := hasBlocking(l.diags[before:])
+			l.diags = l.diags[:before]
+			if mapped.Kind == hir.Optional {
+				mapped = mapped.Args[0]
+			}
+			if blocked || mapped.Kind != hir.Array || (mapped.Args[0].Kind != hir.ClassRef && mapped.Args[0].Kind != hir.UnionRef) || mapped.Args[0].Name == hir.RootObject || strings.HasPrefix(mapped.Args[0].Name, "shape.") || ok && !mapped.Equal(found) {
+				bad = true
+				return
+			}
+			found, ok = mapped, true
+		}
+		c.ForEachChild(func(child *ast.Node) bool { walk(child); return false })
+	}
+	walk(body)
+	return found, ok && !bad
+}
