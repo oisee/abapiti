@@ -85,3 +85,35 @@ function variable`, 1)
 func TestStep4FrontendIRBindsNodeOracle(t *testing.T) {
 	runMjsOracleTypes(t, step4FrontendIR[0], step4FrontendIR[1], false, true)
 }
+
+// OSG frontend.mjs createObject(): {s: "assign", value: same ? made : convert(made, t)}
+// joins an Expr literal (one payload) and a ValueExpr (a view subset of Expr)
+// in the slot's Expr context.
+func TestStep4FrontendIRValueJoinNodeOracle(t *testing.T) {
+	runMjsOracleTypes(t, step4FrontendIR[0], `/** @param {import("./types.ts").Expr} x @param {import("./types.ts").Type} to @returns {import("./types.ts").ValueExpr} */
+function convert(x, to) {
+  return {e: "bin", op: "conv", l: x, r: {e: "nop", type: to}, type: to};
+}
+/** @param {import("./types.ts").Expr} x @returns {string} */
+function expr(x) {
+  switch (x.e) {
+    case "var": return x.name + "/" + x.type.k;
+    case "int": return String(x.value);
+    case "nop": return "nop";
+    case "bin": return "(" + expr(x.l) + x.op + expr(x.r) + ")";
+  }
+  throw new Error("expr");
+}
+/** @param {string} name @param {boolean} same @returns {import("./types.ts").FrontendStmt} */
+function createObject(name, same) {
+  /** @type {import("./types.ts").Type} */ const to = {k: "c", len: 3};
+  /** @type {import("./types.ts").Expr} */ const made = {e: "var", name, type: {k: "i"}};
+  return {s: "move", target: made, source: same ? made : convert(made, to)};
+}
+export class Probe {
+  /** @returns {string} */ static run() {
+    return [createObject("a", true), createObject("b", false)].map((s) => s.s === "move" ? expr(s.target) + "=" + expr(s.source) : "?").join(";");
+  }
+}
+`, false, true)
+}

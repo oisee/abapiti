@@ -196,6 +196,11 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 	if src.Kind == hir.InterfaceRef && dst.Kind == hir.ClassRef && dst.Name != hir.RootObject {
 		return l.interfaceHasClassBase(src.Name, dst) || l.unionPartsAccepted(src.Name, dst)
 	}
+	if l.unprunedFeatures && src.Kind == hir.UnionRef && dst.Kind == hir.UnionRef && l.familyViewSubtype(dst, src, map[string]bool{}) {
+		// A ValueExpr branch in an Expr slot: coerce widens it by the
+		// checked live view (familyAdmission), the same object.
+		return true
+	}
 	return l.acceptsType(dst, src) || l.familyMember(dst, src) || l.flowProjection(n, src, dst)
 }
 
