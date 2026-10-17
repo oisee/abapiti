@@ -547,7 +547,7 @@ func (l *lowerer) familyReceiverProjection(n *ast.Node, x *hir.Expr, t *checker.
 	}
 	for _, a := range u.Alternatives {
 		original := l.familyChecks[a.Payload.Name]
-		if original == nil || !(l.familyRefinesLayout(t, original) && l.ck.IsTypeAssignableTo(t, original) || l.familyCopyShape(t, original)) {
+		if original == nil || !(l.familyFlowLayout(t, original) && l.ck.IsTypeAssignableTo(t, original) || l.familyCopyShape(t, original)) {
 			continue
 		}
 		match := true
@@ -567,4 +567,20 @@ func (l *lowerer) familyReceiverProjection(n *ast.Node, x *hir.Expr, t *checker.
 		return &hir.Expr{Kind: hir.RuntimeOp, Node: l.node(n), Op: "union.project", Owner: u.Name, Name: a.ID, Type: a.Payload, X: x}
 	}
 	return nil
+}
+
+// A flow predicate can refine a nested slot as well as a literal tag. Project
+// the original payload layout; each subsequent field read applies its own flow
+// narrowing. Extra properties still need a separate data view.
+func (l *lowerer) familyFlowLayout(part, original *checker.Type) bool {
+	a, b := l.ck.GetPropertiesOfType(part), l.ck.GetPropertiesOfType(original)
+	if len(a) != len(b) {
+		return false
+	}
+	for _, p := range b {
+		if l.ck.GetPropertyOfType(part, p.Name) == nil {
+			return false
+		}
+	}
+	return true
 }
