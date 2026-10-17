@@ -1,0 +1,117 @@
+{
+  "compilerCommits": [
+    "c95bc7ae",
+    "466b6bc2"
+  ],
+  "nodeReferencePrefix": "b9064878",
+  "lists": {
+    "before": {
+      "reached": 134,
+      "unknownA": 1,
+      "unknownG": 39,
+      "unreached": 291,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "fde7cda68637d859b7cfafb4b7c54856d2f9c3faa0e0a39a01ad3c39f6c0e3b0"
+    },
+    "803-base-before": {
+      "reached": 139,
+      "unknownA": 3,
+      "unknownG": 39,
+      "unreached": 307,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "15fdee172ba3a2136dceb1e616f5d52241e95acdeac714aeeaad067c4b386edd"
+    },
+    "803-before": {
+      "reached": 144,
+      "unknownA": 3,
+      "unknownG": 39,
+      "unreached": 306,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "268144a9f88e4421421fa6c8abf2e71a0c62f0920603e86a6a44479b5c2a9109"
+    },
+    "complete-after": {
+      "reached": 130,
+      "unknownA": 1,
+      "unknownG": 39,
+      "unreached": 290,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "13d2c0c1c915a8e2bfda863a36155a63d45763802e3a4caf7f97d0ffa9911342",
+      "newLocations": [],
+      "removedLocations": [
+        "tools/gogen/emit-owned.ts:20:1",
+        "tools/gogen/emit-owned.ts:6:1",
+        "tools/gogen/frontend-expressions-calls.mjs:209:157",
+        "tools/gogen/frontend-owned.ts:12:1"
+      ]
+    },
+    "complete-803-base-after": {
+      "reached": 135,
+      "unknownA": 3,
+      "unknownG": 39,
+      "unreached": 306,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "ed1c4fbc65e2f83f24ace5851e6973f827be639c849f1ab9e88b4643315a90ce",
+      "newLocations": [],
+      "removedLocations": [
+        "tools/gogen/emit-owned.ts:20:1",
+        "tools/gogen/emit-owned.ts:6:1",
+        "tools/gogen/frontend-expressions-calls.mjs:209:157",
+        "tools/gogen/frontend-owned.ts:12:1"
+      ]
+    },
+    "complete-803-after": {
+      "reached": 135,
+      "unknownA": 3,
+      "unknownG": 39,
+      "unreached": 305,
+      "referenceSHA256": "b90648781967b2cf3eaa4787f6dc9d41618682c26d18092e7608db18cfff5261",
+      "reachedListSHA256": "f1fd35c2c64284ecf4704bb9640ab2e864e48ed8fb477a65cf16bb65d0b8f457",
+      "newLocations": [],
+      "removedLocations": [
+        "tools/gogen/emit-owned.ts:20:1",
+        "tools/gogen/emit-owned.ts:6:1",
+        "tools/gogen/frontend-expressions-calls.mjs:209:157",
+        "tools/gogen/frontend-owned.ts:12:1",
+        "tools/gogen/frontend.mjs:227:147",
+        "tools/gogen/frontend.mjs:227:39",
+        "tools/gogen/frontend.mjs:228:66",
+        "tools/gogen/frontend.mjs:230:47",
+        "tools/gogen/frontend.mjs:231:51"
+      ]
+    }
+  },
+  "pr803NewLocationsAfter": [],
+  "complete-gates": {
+    "complete-vet": 0,
+    "complete-tests": 0,
+    "complete-grace": 0,
+    "complete-fixture": 0
+  },
+  "complete-native-validation": {
+    "rename-abaplint": 0,
+    "rename-zabapgit": 0,
+    "abaplint-base-assignment-traps": 2,
+    "abaplint-complete-assignment-traps": 2,
+    "m1": 0,
+    "m1-sha256": "95d37bc666403557ceecbb6f0e12e31867c18d3c2870e105e3ceafb5b9267428"
+  },
+  "compilerBase": "b992f16a",
+  "osgCommits": {
+    "original": "1f6b7ef4",
+    "803Base": "e718aa49",
+    "803": "3b378469"
+  },
+  "artifacts": {
+    "abapiti-base": "dee52f8c04ac3cca57d2cb406153c28acfe70cfd283e9ac0a2ec48855dbf398e",
+    "abapiti-complete": "47de2aa91c471575d03ac8f369805c28ae5c830936205f89e8d03c7183c5e76b",
+    "rename-complete-abaplint": "layout-rename-check: 8 files, 0 renames, 0 differing files",
+    "rename-complete-zabapgit": "layout-rename-check: 7 files, 0 renames, 0 differing files"
+  },
+  "pr803NewLocationsBefore": [
+    "tools/gogen/frontend.mjs:227:147",
+    "tools/gogen/frontend.mjs:227:39",
+    "tools/gogen/frontend.mjs:228:66",
+    "tools/gogen/frontend.mjs:230:47",
+    "tools/gogen/frontend.mjs:231:51"
+  ]
+}
