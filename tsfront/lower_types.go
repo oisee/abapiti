@@ -961,6 +961,12 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 // shapePropertyReadonly includes checker-created mapped/const properties as well
 // as explicit readonly signatures. Readonly remains metadata on the HIR field.
 func shapePropertyReadonly(p *ast.Symbol) bool {
+	// These properties retain origin declarations for source locations, but
+	// their modifiers have already been resolved by the checker. In particular
+	// Mutable<T> and writable intersection members can remove readonly.
+	if p.CheckFlags&(ast.CheckFlagsMapped|ast.CheckFlagsReverseMapped|ast.CheckFlagsSyntheticProperty) != 0 {
+		return p.CheckFlags&ast.CheckFlagsReadonly != 0
+	}
 	if p.CheckFlags&ast.CheckFlagsReadonly != 0 {
 		return true
 	}

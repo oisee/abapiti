@@ -723,6 +723,22 @@ func (l *lowerer) modvarOf(sym *ast.Symbol) (string, string, bool) {
 			return mod.Name, name, true
 		}
 	}
+	// A known lexical declaration cannot be a module value. In particular,
+	// failed local initializers must not fall through to a same-named global.
+	declarations := sym.Declarations
+	if len(declarations) == 0 && sym.ValueDeclaration != nil {
+		declarations = []*ast.Node{sym.ValueDeclaration}
+	}
+	for _, declaration := range declarations {
+		for parent := declaration.Parent; parent != nil; parent = parent.Parent {
+			if ast.IsFunctionLike(parent) {
+				return "", "", false
+			}
+			if parent.Kind == ast.KindSourceFile {
+				break
+			}
+		}
+	}
 	if f := l.fileOfSymbol(sym); f != nil {
 		if r, ok := l.modvarsByName[f.FileName()+" "+sym.Name]; ok {
 			return r.owner, r.field, true

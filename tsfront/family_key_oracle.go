@@ -124,8 +124,9 @@ func familyKeyOracleCheck(rows [][2]string) (violations []string, compared, skip
 	return violations, compared, skipped
 }
 
-// familyTypeKeyMerkle186 is the #186 id without memo: the reference for
-// acyclic ids and for the equivalence oracle.
+// familyTypeKeyMerkle186 is the independent #186-style Merkle traversal,
+// using the resolved-field schema for intersections and generic data records.
+// It is the acyclic and equivalence reference, without SCC memoization.
 func (l *lowerer) familyTypeKeyMerkle186(t *checker.Type, named bool, visiting map[*checker.Type]bool, deadline time.Time, backs *int) (key string) {
 	if time.Now().After(deadline) {
 		panic(familyKeyOracleTimeout{})
@@ -140,7 +141,7 @@ func (l *lowerer) familyTypeKeyMerkle186(t *checker.Type, named bool, visiting m
 		return "missing"
 	}
 	if named {
-		if t.Alias() != nil {
+		if t.Alias() != nil && !l.familyStructuralAlias(t) {
 			if name := l.familySymbolKey(t.Alias().Symbol()); name != "" {
 				for _, a := range t.Alias().TypeArguments() {
 					name += "[" + l.familyTypeKeyMerkle186(a, true, map[*checker.Type]bool{}, deadline, backs) + "]"
@@ -162,7 +163,7 @@ func (l *lowerer) familyTypeKeyMerkle186(t *checker.Type, named bool, visiting m
 	}
 	visiting[t] = true
 	defer delete(visiting, t)
-	if t.IsUnion() || t.Flags()&checker.TypeFlagsIntersection != 0 {
+	if t.IsUnion() {
 		parts := []string{}
 		for _, p := range t.AsUnionOrIntersectionType().Types() {
 			parts = append(parts, l.familyTypeKeyMerkle186(p, true, visiting, deadline, backs))
@@ -170,8 +171,8 @@ func (l *lowerer) familyTypeKeyMerkle186(t *checker.Type, named bool, visiting m
 		sort.Strings(parts)
 		return fmt.Sprintf("%d:%s", t.Flags(), strings.Join(parts, "|"))
 	}
-	if t.Flags()&checker.TypeFlagsObject != 0 {
-		if args := l.familyArguments(t); len(args) > 0 {
+	if t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0 {
+		if args := l.familyArguments(t); len(args) > 0 && l.familyKeyContainer(t) {
 			parts := []string{}
 			for _, a := range args {
 				parts = append(parts, l.familyTypeKeyMerkle186(a, true, visiting, deadline, backs))
@@ -187,6 +188,9 @@ func (l *lowerer) familyTypeKeyMerkle186(t *checker.Type, named bool, visiting m
 			parts = append(parts, fmt.Sprintf("%q:%t:%t:%s", p.Name, p.Flags&ast.SymbolFlagsOptional != 0, shapePropertyReadonly(p), l.familyTypeKeyMerkle186(l.ck.GetTypeOfPropertyOfType(t, p.Name), true, visiting, deadline, backs)))
 		}
 		sort.Strings(parts)
+		for _, info := range l.ck.GetIndexInfosOfType(t) {
+			parts = append(parts, fmt.Sprintf("[%t]%s:%s", info.IsReadonly(), l.familyTypeKeyMerkle186(info.KeyType(), true, visiting, deadline, backs), l.familyTypeKeyMerkle186(info.ValueType(), true, visiting, deadline, backs)))
+		}
 		return "{" + strings.Join(parts, ";") + "}"
 	}
 	return l.ck.TypeToString(t)

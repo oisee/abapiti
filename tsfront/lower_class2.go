@@ -463,6 +463,14 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 		case ast.KindPropertyAccessExpression:
 			walk(x.Expression())
 			return
+		case ast.KindPropertyAssignment:
+			// {path: value} names a property; only a computed key and the
+			// value read bindings ({path} shorthand stays a read below).
+			if name := x.Name(); name != nil && name.Kind == ast.KindComputedPropertyName {
+				walk(name)
+			}
+			walk(x.Initializer())
+			return
 		case ast.KindParameter, ast.KindVariableDeclaration, ast.KindFunctionDeclaration, ast.KindFunctionExpression:
 			if x.Name() != nil && x.Name().Kind == ast.KindIdentifier {
 				declared[l.ck.GetSymbolAtLocation(x.Name())] = true
@@ -686,6 +694,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// validates membership; a mismatch raises, never retags.
 		if u := l.out.Union(dst.Name); u != nil && u.Complete {
 			return l.rtOp("union.project", x, dst)
+		}
+	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// A checker-narrowed object (a type predicate over a wider object
+		// graph) holds a family payload: project its live storage checked,
+		// a value outside the family raises, never retags.
+		if u := l.out.Union(dst.Name); u != nil && u.Complete {
+			return l.rtOp("union.project", l.coerce(x, hir.T(hir.Dynamic)), dst)
 		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
