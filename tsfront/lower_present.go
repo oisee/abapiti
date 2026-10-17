@@ -647,3 +647,12 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 	l.diagf(n, "note-dynamic-record", "object literal lowered as a tagged property snapshot")
 	return record
 }
+
+// dynamicSearchValue boxes an indexOf/includes search value for an any[]
+// receiver; the runtime then compares the boxed values as JS does.
+func (l *lowerer) dynamicSearchValue(recv, x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures || recv.Type.Kind != hir.Array || recv.Type.Args[0].Kind != hir.Dynamic || x.Type.Kind == hir.Dynamic {
+		return x
+	}
+	return l.coerce(x, recv.Type.Args[0])
+}

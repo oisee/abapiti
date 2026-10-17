@@ -2009,11 +2009,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "pop", "shift":
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
-			return l.rtOp("array.indexOf", recv, i32, one()), true
+			return l.rtOp("array.indexOf", recv, i32, l.dynamicSearchValue(recv, one())), true
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
-			x := one()
+			x := l.dynamicSearchValue(recv, one())
 			if x != nil && l.unprunedFeatures {
 				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
 					return probe, true

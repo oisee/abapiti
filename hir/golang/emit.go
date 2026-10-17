@@ -238,6 +238,13 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
 	}
+	if e.dynamicSearch {
+		length := "int32(len(a.Items))"
+		if e.liveStorage() {
+			length = "a.length()"
+		}
+		runtime += strings.ReplaceAll(dynamicSearchSource, "LENGTH", length)
+	}
 	generated := e.code.String() + e.extra.String()
 	if e.hirStrconv {
 		generated = strings.Replace(generated, "package "+pkg+"\n", "package "+pkg+"\nimport \"strconv\"\n", 1)
@@ -321,6 +328,7 @@ type emitter struct {
 	hirMath           bool
 	extraRuntimeKeys  bool
 	recordDeletion    bool
+	dynamicSearch     bool
 	usesLiveArrays    bool
 	spreadRuntime     bool
 	collectionProbe   bool

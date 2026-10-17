@@ -108,6 +108,14 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	code := ""
 	switch x.Op {
+	case "array.indexOf", "array.includes":
+		if x.X.Type.Kind == hir.Array && x.X.Type.Args[0].Kind == hir.Dynamic {
+			// any[] search compares boxed values: === for indexOf, SameValueZero for includes.
+			b.e.dynamicSearch = true
+			code = "dynArray" + strings.ToUpper(x.Op[6:7]) + x.Op[7:] + "(" + a + "," + strings.Join(args, ",") + ")"
+			break
+		}
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "array.spread0":
 		length := "int32(len(" + a + ".Items))"
 		if b.e.liveStorage() {
@@ -119,7 +127,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		}
 		code = helper + "(" + a + "," + length + ")"
 
-	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.spliceDrop2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
+	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.spliceDrop2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.parseFloatNumber":
 		code = "parseFloatNumber(" + a + ")"
