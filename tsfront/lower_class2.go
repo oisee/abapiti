@@ -756,6 +756,19 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
 	}
+	if l.unprunedFeatures && l.inJSFile() && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.InterfaceRef) {
+		// Unchecked JavaScript passes a wider reference where JSDoc declares a
+		// subtype (an INode argument for an ExpressionNode parameter): the
+		// object flows on through a checked cast, which raises only when no
+		// declared subtype holds it.
+		target := dst
+		if target.Kind == hir.Optional && len(target.Args) == 1 {
+			target = target.Args[0]
+		}
+		if (target.Kind == hir.ClassRef || target.Kind == hir.InterfaceRef) && target.Name != hir.RootObject && !l.refAccepts(target, x.Type) && l.refSharedSubtype(x.Type, target) {
+			return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: target, X: x}, dst)
+		}
+	}
 	// A present-only use of an optional primitive (TypeScript already typed
 	// it as the base): checked narrowing, absent raises.
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(dst) && !dst.IsRef() && dst.Kind != hir.Optional && dst.Kind != hir.Dynamic {
@@ -859,4 +872,58 @@ func (l *lowerer) lookupPendingAllowed() bool { return l.pendingFns != nil }
 // inJSFile reports lowering inside a .js/.mjs/.cjs source (no checkJs).
 func (l *lowerer) inJSFile() bool {
 	return l.file != nil && ast.IsInJSFile(l.file.AsNode())
+}
+
+// refAccepts mirrors the verifier's reference upcast: the class chain and its
+// declared interfaces, or an interface whose methods src provides alike.
+func (l *lowerer) refAccepts(dst, src hir.Type) bool {
+	if dst.Equal(src) {
+		return true
+	}
+	if dst.Kind == hir.InterfaceRef && src.Kind == hir.InterfaceRef {
+		for _, i := range l.out.Interfaces {
+			if i.Name != dst.Name {
+				continue
+			}
+			for _, m := range i.Methods {
+				other := l.interfaceMethod(src.Name, m.Name)
+				if other == nil || !m.Result.Equal(other.Result) || len(m.Params) != len(other.Params) {
+					return false
+				}
+				for k, p := range m.Params {
+					if !p.Type.Equal(other.Params[k].Type) {
+						return false
+					}
+				}
+			}
+			return true
+		}
+		return false
+	}
+	if src.Kind != hir.ClassRef {
+		return false
+	}
+	for c := l.classByName(src.Name); c != nil; c = l.classByName(c.Super) {
+		if dst.Kind == hir.ClassRef && c.Name == dst.Name {
+			return true
+		}
+		for _, i := range c.Implements {
+			if dst.Kind == hir.InterfaceRef && dst.Name == i {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// refSharedSubtype reports a lowered class both references accept, so a
+// checked cast between them can succeed.
+func (l *lowerer) refSharedSubtype(a, b hir.Type) bool {
+	for _, c := range l.out.Classes {
+		ref := hir.Ref(c.Name)
+		if l.refAccepts(a, ref) && l.refAccepts(b, ref) {
+			return true
+		}
+	}
+	return false
 }
