@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strconv"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
@@ -12,6 +14,13 @@ func (l *lowerer) assignRecords(n *ast.Node) *hir.Expr {
 	if len(args) == 0 {
 		l.diagf(n, "unsupported-call", "Object.assign needs a record target")
 		return nil
+	}
+	if len(args) == 2 {
+		if lit := ast.SkipParentheses(args[1]); lit.Kind == ast.KindObjectLiteralExpression {
+			if x, handled := l.assignLiteralFields(n, args[0], lit); handled {
+				return x
+			}
+		}
 	}
 	var values []*hir.Expr
 	var targetType hir.Type
@@ -59,4 +68,90 @@ func (l *lowerer) assignRecords(n *ast.Node) *hir.Expr {
 		l.pendStmt(copy)
 	}
 	return target
+}
+
+// assignLiteralFields lowers Object.assign(target, {k: v, ...}) onto a typed
+// record target. The literal's own keys are its plain data properties, in
+// source order (no array-index keys, duplicates, spreads, accessors, methods
+// or computed keys, so no symbols and no getters). JS evaluates the target,
+// then every value, then [[Set]]s each key left to right and returns the
+// target: exactly `t.k = v` per key, each key a declared data field.
+func (l *lowerer) assignLiteralFields(n, targetNode, lit *ast.Node) (*hir.Expr, bool) {
+	checked := l.ck.GetTypeAtLocation(targetNode)
+	if l.mapCheckerType(targetNode, checked).Kind != hir.ClassRef {
+		return nil, false
+	}
+	// The call's type is target & literal, a different record shape; its
+	// value (the target) is exact only where the result is discarded or
+	// that intersection maps to the target's own type.
+	if parent := n.Parent; (parent == nil || parent.Kind != ast.KindExpressionStatement) && !l.mapCheckerType(n, l.ck.GetTypeAtLocation(n)).Equal(l.mapCheckerType(targetNode, checked)) {
+		l.diagf(n, "unsupported-call", "Object.assign onto a typed record: only a discarded result is lowered")
+		return nil, true
+	}
+	type prop struct {
+		key   string
+		value *ast.Node
+		at    *ast.Node
+	}
+	var props []prop
+	seen := map[string]bool{}
+	for _, el := range lit.AsObjectLiteralExpression().Properties.Nodes {
+		var key string
+		var value *ast.Node
+		switch el.Kind {
+		case ast.KindPropertyAssignment:
+			name := el.Name()
+			if name.Kind != ast.KindIdentifier && name.Kind != ast.KindStringLiteral {
+				l.diagf(el, "unsupported-call", "Object.assign onto a typed record needs plain literal keys")
+				return nil, true
+			}
+			key, value = name.Text(), el.Initializer()
+		case ast.KindShorthandPropertyAssignment:
+			if el.AsShorthandPropertyAssignment().ObjectAssignmentInitializer != nil {
+				l.diagf(el, "unsupported-call", "Object.assign onto a typed record needs plain literal keys")
+				return nil, true
+			}
+			key, value = el.Name().Text(), el.Name()
+		default:
+			l.diagf(el, "unsupported-call", "Object.assign onto a typed record supports data properties only, not %s", el.Kind.String())
+			return nil, true
+		}
+		if _, err := strconv.ParseUint(key, 10, 64); key == "__proto__" || seen[key] || err == nil {
+			l.diagf(el, "unsupported-call", "Object.assign key %q changes own-key order or the prototype", key)
+			return nil, true
+		}
+		seen[key] = true
+		p := l.ck.GetPropertyOfType(checked, key)
+		if p == nil || p.Flags&ast.SymbolFlagsProperty == 0 || p.Flags&ast.SymbolFlagsAccessor != 0 {
+			l.diagf(el, "unsupported-call", "Object.assign key %s is not a declared data property of the target", key)
+			return nil, true
+		}
+		props = append(props, prop{key, value, el})
+	}
+	target := l.expr(targetNode)
+	if target == nil {
+		return nil, true
+	}
+	target = l.tempInit(targetNode, target.Type, target)
+	var writes []*hir.Stmt
+	for _, p := range props {
+		field := l.shapeWriteTarget(p.at, target, p.key)
+		if field == nil || field.Kind != hir.FieldGet {
+			l.diagf(p.at, "unsupported-call", "Object.assign key %s is not a field of the target record", p.key)
+			return nil, true
+		}
+		old := l.hint
+		l.hint = field.Type
+		v := l.expr(p.value)
+		l.hint = old
+		if v == nil {
+			return nil, true
+		}
+		v = l.tempInit(p.at, v.Type, v)
+		writes = append(writes, &hir.Stmt{Kind: hir.Assign, Node: l.node(p.at), X: field, Y: l.coerce(v, field.Type)})
+	}
+	for _, w := range writes {
+		l.pendStmt(w)
+	}
+	return target, true
 }
