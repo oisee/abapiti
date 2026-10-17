@@ -3147,6 +3147,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	if fixed, ok := l.assertionOverride(n); ok {
 		return l.assertedView(n, x, fixed)
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef && mapped.Kind == hir.ClassRef {
+		// A family assertion needs its checked payload projection, just as
+		// flow narrowing does. A property-only assertion can instead read a
+		// live structural view of the same boxed object; never cast the
+		// family's storage directly to a class layout.
+		if projected := l.narrowed(n, x, mapped); projected != x {
+			return projected
+		}
+		if l.shapeLike[mapped.Name] {
+			return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), mapped)
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && mapped.Kind == hir.Optional &&
 		mapped.Args[0].Kind == hir.ClassRef && l.acceptsType(x.Type, mapped.Args[0]) {
 		value := x
