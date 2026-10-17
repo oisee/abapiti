@@ -942,6 +942,11 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 				return nil
 			}
 			l.hint = hir.T(hir.Optional, valT)
+			if l.unprunedFeatures && valT.Kind == hir.Optional {
+				// Partial<Record<K, F>>: the value hint is F | undefined, not
+				// a doubly optional view a family literal cannot match.
+				l.hint = valT
+			}
 			v := l.expr(value)
 			l.hint = hir.Type{}
 			if v == nil {
