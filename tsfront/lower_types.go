@@ -453,6 +453,11 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 	}
 	l.mappingTypes[t] = true
 	defer delete(l.mappingTypes, t)
+	if picked, ok := l.pickedMethodsSource(n, t); ok && l.slotInterfaceRef(picked) {
+		// Pick<ArtifactObject, "getType" | "getName"> holds the same
+		// objects as the slot interface; not a structural copy.
+		return picked
+	}
 	if mapped, ok := l.gogenCheckerType(n, t); ok {
 		return mapped
 	}

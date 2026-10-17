@@ -53,6 +53,18 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-expr", "element access without an argument")
 		return nil
 	}
+	if l.unprunedFeatures && !ast.IsAssignmentTarget(n) && l.slotInterfaceRef(recv.Type) {
+		key := l.expr(arg)
+		if key == nil {
+			return nil
+		}
+		if key.Type.Kind != hir.String {
+			if key = l.primitiveString(n, key); key == nil {
+				return nil
+			}
+		}
+		return l.slotRead(n, recv, key)
+	}
 	switch recv.Type.Kind {
 	case hir.ClassValue:
 		if arg.Kind == ast.KindStringLiteral && arg.Text() == "name" {
@@ -930,6 +942,11 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 				return nil
 			}
 			l.hint = hir.T(hir.Optional, valT)
+			if l.unprunedFeatures && valT.Kind == hir.Optional {
+				// Partial<Record<K, F>>: the value hint is F | undefined, not
+				// a doubly optional view a family literal cannot match.
+				l.hint = valT
+			}
 			v := l.expr(value)
 			l.hint = hir.Type{}
 			if v == nil {
