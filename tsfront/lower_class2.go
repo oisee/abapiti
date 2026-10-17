@@ -90,12 +90,22 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 		if p.Initializer() != nil && i < len(hm.Params) && hm.Params[i].Type.Kind == hir.Optional {
 			hp := hm.Params[i]
 			l.hint = hp.Type.Args[0]
+			// The initializer and its conversion run only when the argument
+			// is absent: their temporaries belong to that branch.
+			saved := l.pend
+			l.pend = nil
 			def := l.expr(p.Initializer())
 			l.hint = hir.Type{}
+			var value *hir.Expr
+			if def != nil {
+				value = l.coerce(def, hp.Type)
+			}
+			pre := l.pend
+			l.pend = saved
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
+					Body: hir.B(append(pre, &hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: value})...)})
 			}
 		}
 		out = append(out, l.bindObjectParameter(p, hm.Params[i])...)
