@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/scanner"
