@@ -451,8 +451,11 @@ type lowerer struct {
 	externFunctions map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
-	gogenCallables     map[*ast.Node]bool
-	unprunedFeatures   bool
+	gogenCallables   map[*ast.Node]bool
+	unprunedFeatures bool
+	// liftResultHint is the element type an array callback with early
+	// returns constructs; liftLocalFn consumes it for that one callback.
+	liftResultHint     hir.Type
 	absentFields       map[*ast.Node]bool
 	absentParams       map[*ast.Node]bool
 	checkedFields      map[*ast.Node]bool
