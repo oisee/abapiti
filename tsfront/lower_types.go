@@ -117,7 +117,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindFunctionType, ast.KindConstructorType, ast.KindTypeQuery, ast.KindIndexedAccessType,
 		ast.KindIntersectionType, ast.KindMappedType,
-		ast.KindConditionalType, ast.KindTemplateLiteralType, ast.KindAnyKeyword, ast.KindUnknownKeyword, ast.KindImportType:
+		ast.KindConditionalType, ast.KindTemplateLiteralType, ast.KindAnyKeyword, ast.KindUnknownKeyword, ast.KindImportType, ast.KindJSDocVariadicType:
 		// No syntax mapping: let the checker's resolved type decide.
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindTypeReference:

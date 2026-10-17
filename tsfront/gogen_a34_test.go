@@ -52,3 +52,18 @@ class Probe { static run(): string { return Object.keys(Severity).join(",") + ":
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
+
+// parseObserved(reg) supplies no extra arguments to a JSDoc rest parameter.
+// {...unknown} resolves to unknown[], including an empty argument list.
+func TestGogenA34UnknownRestNodeOracle(t *testing.T) {
+	runMjsOracle(t, `/** @param {string} tag @param {...unknown} args @returns {string} */
+function take(tag, ...args) { return tag + ":" + args.length; }
+export class Probe {
+  /** @returns {string} */ static run() {
+    take("ignored");
+    const a = take("empty");
+    return a + "|" + take("mixed", 1, undefined, "x");
+  }
+}
+`, true)
+}
