@@ -438,6 +438,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 	if mapped, ok := l.gogenValueType(t); ok {
 		return mapped
 	}
+	if mapped, ok := l.arrayInterfaceType(n, t); ok {
+		return mapped
+	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
 		return mapped
 	}
