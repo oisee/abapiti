@@ -781,6 +781,10 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
+	if l.prototypeAlias(sym) != nil {
+		l.diagf(n, "unsupported-call", "unbound prototype method %s is lowered only as %s.call(receiver, ...); JavaScript binds this to undefined otherwise", name, name)
+		return nil
+	}
 	l.diagf(n, "unsupported-expr", "identifier %s is not a lowered local or module value", name)
 	return nil
 }
@@ -788,6 +792,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 // propertyAccess lowers member reads; call targets are handled in call.
 func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	if x, ok := l.processRead(n); ok {
+		return x
+	}
+	if x, ok := l.requiredMemberRead(n); ok {
 		return x
 	}
 	if x, handled := l.direntMember(n, false, 0); handled {
@@ -1164,6 +1171,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
+		}
+	}
+	if callee.Kind == ast.KindPropertyAccessExpression {
+		if x, handled := l.requiredMemberCall(n, callee); handled {
+			return x
 		}
 	}
 	if x, ok := l.thunkCall(n, callee); ok {
@@ -2087,8 +2099,16 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	// GetSubstitution. Preserve the original native HIR without temporaries.
 	literalReplacement := (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$")
 	if !literalReplacement {
-		// Save values before subsequent arguments can mutate their bindings.
+		// Save values in source evaluation order, before subsequent arguments
+		// can mutate the receiver or the pattern binding.
 		recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	}
+	// A literal callback inside the exec-loop subset lowers on every target;
+	// richer callbacks (offset, input, groups) use replaceCallback below.
+	if args[1].Kind == ast.KindArrowFunction || args[1].Kind == ast.KindFunctionExpression {
+		if at, _ := l.callableReplaceRefusal(n, recv, args); at == nil || !l.unprunedFeatures {
+			return l.callableReplace(n, recv, args)
+		}
 	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr
@@ -2361,6 +2381,11 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			}
 			if a != nil && a.Type.Kind == hir.Optional && a.Type.Args[0].Kind == hir.Array {
 				return l.setFromOptionalArray(n, a)
+			}
+			if a != nil && a.Type.Kind == hir.Dynamic && l.unprunedFeatures {
+				if x := l.setFromDynamic(n, a, savedHint); x != nil {
+					return x
+				}
 			}
 		}
 	}
@@ -3066,6 +3091,13 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: mapped,
 			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved},
 			Y: &hir.Expr{Kind: hir.Lit, Type: mapped}, Z: value}
+	}
+	if l.unprunedFeatures && mapped.Kind == hir.Dynamic && t.Flags()&checker.TypeFlagsUnknown != 0 && x.Type.IsRef() && x.Type.Kind != hir.Dynamic {
+		// `x as unknown` (not `as any`, whose receiver keeps its lowered
+		// type): the same object behind the tagged value, so a
+		// following assertion (`as unknown as T`) reaches the checked
+		// erased-reference boundary instead of a refused nominal cast.
+		return l.coerce(x, mapped)
 	}
 	switch {
 	case x.Type.Kind == hir.Dynamic && mapped.Kind == hir.String:

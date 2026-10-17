@@ -74,6 +74,12 @@ func (e *emitter) liveView(t hir.Type) string {
 }
 
 func (e *emitter) viewValue(t hir.Type, d string) string {
+	return e.viewValueWithLocal(t, d, false)
+}
+
+// Getter locals need an explicit use when conversion is refused. Other callers
+// pass parameters or expressions, and retain their original conversion bodies.
+func (e *emitter) viewValueWithLocal(t hir.Type, d string, local bool) string {
 	if t.Kind == hir.Optional {
 		v := e.viewValue(t.Args[0], d)
 		if !t.Args[0].IsRef() {
@@ -112,7 +118,11 @@ func (e *emitter) viewValue(t hir.Type, d string) string {
 	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	default:
-		return "func() " + e.typ(t) + " {panic(newTrap(\"unsupported live class field conversion\"))}()"
+		use := ""
+		if local {
+			use = "_ = " + d + ";"
+		}
+		return "func() " + e.typ(t) + " {" + use + "panic(newTrap(\"unsupported live class field conversion\"))}()"
 	}
 }
 func (e *emitter) liveFields(c *hir.Class) {
@@ -122,7 +132,7 @@ func (e *emitter) liveFields(c *hir.Class) {
 		}
 		read := e.name("view.read." + c.Name + "." + f.Name)
 		write := e.name("view.write." + c.Name + "." + f.Name)
-		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};%sif self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), e.unionPayloadGuard(c.Name), f.Name, e.viewValue(f.Type, "d"), e.member(f.Name))
+		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};%sif self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), e.unionPayloadGuard(c.Name), f.Name, e.viewValueWithLocal(f.Type, "d", true), e.member(f.Name))
 		value := "box(value)"
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"

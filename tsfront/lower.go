@@ -336,7 +336,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				if d.Name() == nil || d.Name().Kind != ast.KindIdentifier {
 					continue
 				}
-				if l.moduleCallable(d) {
+				if l.moduleCallable(d) || l.prototypeAlias(d.Symbol()) != nil {
 					continue
 				}
 				before := len(l.diags)
@@ -795,7 +795,7 @@ func (l *lowerer) qualifiedName(f *ast.SourceFile, name string) string {
 // node_modules) is named from its node_modules segment: generated names and
 // locations never depend on where the project or its packages live.
 func (l *lowerer) relFile(f *ast.SourceFile) string {
-	return relativeSource(l.prog.configDir, f.FileName())
+	return l.prog.sourceName(f.FileName())
 }
 
 // trapLocation is the location a trap reports at run time: relative
@@ -808,6 +808,9 @@ func (l *lowerer) trapLocation(n *ast.Node) string {
 // accesses on interface-typed receivers can resolve without a parent through
 // the checker pool; the member name node carries the full symbol.
 func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
+	if mod := l.inlineRequire(n); mod != nil {
+		return mod
+	}
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
@@ -882,6 +885,10 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 	name := d.Name().Text()
 	init := d.Initializer()
 	sym := d.Symbol()
+	if l.prototypeAlias(sym) != nil {
+		l.diagf(d, "note-prototype-alias", "%s holds a prototype method; lowered only as %s.call(receiver, ...)", name, name)
+		return nil
+	}
 	if init != nil && !l.moduleInitializer(init) && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(l.relFile(l.file), "test/")) {
 		l.diagf(init, "unsupported-static-init", "module initializer is not provably pure and order-independent")
 		return nil
@@ -914,10 +921,17 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, x, typ)}
 	case l.isNewCollection(init):
 		var expr *hir.Expr
+		// new Map(iterable) builds its value in pending statements; the
+		// module initializer runs them before the assignment.
+		saved := l.pend
+		l.pend = nil
 		stmts, expr = l.collectionInit(init)
+		prelude := l.pend
+		l.pend = saved
 		if expr == nil {
 			return nil
 		}
+		stmts = append(prelude, stmts...)
 		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		stmts = append(stmts, l.assignStatic(mod, d, name, expr, typ))

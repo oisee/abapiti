@@ -30,7 +30,13 @@ func (l *lowerer) objectBindingDefault(el *ast.Node, value *hir.Expr) *hir.Expr 
 	if def == nil {
 		return value
 	}
-	present := l.coerce(read, typ)
+	present := read
+	if read.Type.Kind == hir.Optional && typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+		// The default applies exactly when the property is undefined, so
+		// this branch reads a present value.
+		present = &hir.Expr{Kind: hir.Narrow, Node: l.node(el), Type: read.Type.Args[0], X: read}
+	}
+	present = l.coerce(present, typ)
 	return &hir.Expr{Kind: hir.Seq, Node: l.node(el), Type: typ, Stmt: hir.B(pre...), Y: &hir.Expr{Kind: hir.Conditional, Type: typ, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: read}, Y: def, Z: present}}
 }
 

@@ -1,6 +1,8 @@
 package tsfront
 
 import (
+	"strings"
+
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -149,7 +151,15 @@ func (l *lowerer) moduleStatementList(statements []*ast.Node) []*hir.Stmt {
 				continue
 			}
 			l.diagf(stmt, "note-module-statement", "module-level statement lowered into the module initializer")
-			out = append(out, l.stmts(stmt)...)
+			before := len(l.diags)
+			lowered := l.stmts(stmt)
+			if trap := l.moduleFailure(stmt, before); trap != nil {
+				// JavaScript runs this statement here: refuse at this point
+				// rather than continue without its effects.
+				out = append(out, trap)
+				continue
+			}
+			out = append(out, lowered...)
 		case ast.KindModuleDeclaration, ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindInterfaceDeclaration, ast.KindTypeAliasDeclaration, ast.KindJSTypeAliasDeclaration, ast.KindEnumDeclaration, ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindVariableStatement, ast.KindEmptyStatement:
 			// Declarations have their own lowering/use-site fallback.
 		default:
@@ -159,6 +169,24 @@ func (l *lowerer) moduleStatementList(statements []*ast.Node) []*hir.Stmt {
 		}
 	}
 	return out
+}
+
+// moduleFailure consumes the blocking diagnostics reported since start
+// while lowering a module-level statement or declaration and returns the
+// located trap that replaces it under the fail-closed policy (nil when it
+// lowered, or without that policy).
+func (l *lowerer) moduleFailure(n *ast.Node, start int) *hir.Stmt {
+	if !l.integerOptions.TrapOnFailure || !hasBlocking(l.diags[start:]) {
+		return nil
+	}
+	var messages []string
+	for i := start; i < len(l.diags); i++ {
+		if d := &l.diags[i]; !strings.HasPrefix(d.Category, "note-") {
+			messages = append(messages, d.String())
+			d.Category = "note-trap-failure"
+		}
+	}
+	return failureBody(l.node(n), l.locOf(n)+": "+strings.Join(messages, "; "))
 }
 
 // indexOnlyInterface maps an interface declared with a single string index
@@ -422,10 +450,13 @@ func (l *lowerer) objectPartsAreArrays(t *checker.Type) bool {
 	}
 	objects := 0
 	for _, c := range parts {
-		if c.Flags()&checker.TypeFlagsObject == 0 {
+		// Primitives, null and undefined never carry the object tag. Any
+		// other constituent (an intersection such as Pick<T, K> & {...}, the
+		// object keyword, a type parameter, unknown) may be a non-array object.
+		if c.Flags()&(checker.TypeFlagsPrimitive|checker.TypeFlagsNever) != 0 && c.Flags()&checker.TypeFlagsObject == 0 {
 			continue
 		}
-		if !l.ck.IsArrayType(c) {
+		if c.Flags()&checker.TypeFlagsObject == 0 || !l.ck.IsArrayType(c) {
 			return false
 		}
 		objects++

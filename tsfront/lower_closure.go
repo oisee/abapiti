@@ -181,7 +181,7 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		call.Result = signature.Result
 		call.Params = append([]hir.Param(nil), signature.Params...)
 		for _, p := range n.Parameters() {
-			if p.Name() == nil || p.Name().Kind != ast.KindIdentifier {
+			if p.Name() == nil || p.Name().Kind != ast.KindIdentifier && !l.objectParameter(p) {
 				l.diagf(p, "unsupported-closure", "function value parameter requires an identifier")
 				return nil
 			}
@@ -258,6 +258,11 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		aliases := *call
 		aliases.Params = append([]hir.Param(nil), call.Params...)
 		for i, p := range n.Parameters() {
+			if p.Name().Kind != ast.KindIdentifier {
+				// An object binding pattern: applyDefaults binds its
+				// elements from the argument, as for a declared function.
+				continue
+			}
 			sourceName := p.Name().Text()
 			param := call.Params[i]
 			l.declare(sourceName, param.Type)
@@ -273,6 +278,23 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 	}
 	before := len(l.diags)
 	l.pend = nil
+	var pre []*hir.Stmt
+	patterns := false
+	if general {
+		for _, p := range n.Parameters() {
+			patterns = patterns || p.Name().Kind != ast.KindIdentifier
+		}
+	}
+	if patterns {
+		// Binding-pattern locals must be in scope for the body: bind them
+		// (and apply defaults, in parameter order) first, as a declared
+		// function's prologue does.
+		pre = l.applyDefaults(n, defaults)
+		if len(l.pend) > 0 {
+			pre = append(l.pend, pre...)
+			l.pend = nil
+		}
+	}
 	restore := l.withLocalFns(body)
 	var inner *hir.Stmt
 	if l.asyncMethods[call] && body.Kind != ast.KindBlock {
@@ -281,10 +303,14 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		inner = l.functionBody(body)
 	}
 	if general {
-		pre := l.applyDefaults(n, defaults)
+		if !patterns {
+			pre = l.applyDefaults(n, defaults)
+		}
 		symbols := map[string]*ast.Symbol{}
 		for _, p := range n.Parameters() {
-			symbols[p.Name().Text()] = l.ck.GetSymbolAtLocation(p.Name())
+			if p.Name().Kind == ast.KindIdentifier {
+				symbols[p.Name().Text()] = l.ck.GetSymbolAtLocation(p.Name())
+			}
 		}
 		for _, stmt := range pre {
 			walkNumberStmt(stmt, func(s *hir.Stmt) {}, func(e *hir.Expr) {

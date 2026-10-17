@@ -554,8 +554,16 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 			}
 			// `x += s` on strings concatenates.
 			if l.ck.GetTypeAtLocation(b.Left).IsStringLike() {
+				x, y := l.expr(b.Left), l.expr(b.Right)
+				if x == nil || y == nil {
+					return nil
+				}
+				x, y = l.primitiveString(n, x), l.primitiveString(n, y)
+				if x == nil || y == nil {
+					return nil
+				}
 				return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
-					Y: l.rtOp("string.concat", l.expr(b.Left), hir.T(hir.String), l.expr(b.Right))}
+					Y: l.rtOp("string.concat", x, hir.T(hir.String), y)}
 			}
 			return &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: target,
 				Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: target.Type,

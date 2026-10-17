@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/scanner"
@@ -22,8 +21,7 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 		if !ok {
 			continue
 		}
-		rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
-		rel = filepath.ToSlash(rel)
+		rel := l.prog.sourceName(f.FileName())
 		selected[rel] = true
 		var walk func(*ast.Node, string)
 		var failure error

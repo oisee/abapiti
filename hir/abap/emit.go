@@ -1289,7 +1289,7 @@ func (b *body) expr(x *hir.Expr) string {
 		if t.Kind == hir.RegExp {
 			e.regexpUsed = true
 			if raw, ok := x.Args[0].Value.(string); x.Args[0].Kind == hir.Lit && ok && regexHasClassComplement(raw) {
-				e.refuse(fmt.Errorf("JavaScript regexp %q: \\S inside a character class is not expressible on the legacy POSIX path", raw))
+				e.refuse(fmt.Errorf("node %d (%s): JavaScript regexp %q: \\S inside a character class is not expressible on the legacy POSIX path", x.ID, x.Source, raw))
 			}
 			js := regexNeedsJS(x) || e.execUsed && regexMayHaveState(x)
 			original := b.value(x.Args[0], hir.T(hir.String))
@@ -2900,7 +2900,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = xsdbool( sy-subrc = 0 ).")
 		return
 	}
-	if x.Op == "set.clear" {
+	if x.Op == "set.clear" || x.Op == "map.clear" {
 		b.line("CLEAR " + a + "->entries.")
 		return
 	}

@@ -465,11 +465,17 @@ func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Clas
 				values := l.moduleVar(d, mod)
 				if l.integerOptions.TrapOnFailure && hasBlocking(l.diags[before:]) {
 					// Do not expose a zero-initialized value for a declaration
-					// whose initializer was dropped. Retained uses fail verification.
+					// whose initializer was dropped. Retained uses fail
+					// verification. An initializer that may have effects
+					// (calls, constructions, writes) refuses where JavaScript
+					// would evaluate it instead of silently skipping them.
 					for i := len(mod.Fields) - 1; i >= 0; i-- {
 						if mod.Fields[i].Name == d.Name().Text() {
 							mod.Fields = append(mod.Fields[:i], mod.Fields[i+1:]...)
 						}
+					}
+					if mayHaveEffects(d.Initializer()) {
+						*body = append(*body, l.moduleFailure(d, before))
 					}
 					continue
 				}
@@ -477,6 +483,39 @@ func (l *lowerer) lowerModuleVarStatements(statements []*ast.Node, mod *hir.Clas
 			}
 		}
 	}
+}
+
+// mayHaveEffects reports whether evaluating n may run code or write state:
+// a call, construction, assignment, update, delete, await, yield or tagged
+// template outside nested function bodies (which only create values).
+func mayHaveEffects(n *ast.Node) bool {
+	found := false
+	var walk func(*ast.Node)
+	walk = func(x *ast.Node) {
+		if x == nil || found {
+			return
+		}
+		switch x.Kind {
+		case ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindClassExpression:
+			return
+		case ast.KindCallExpression, ast.KindNewExpression, ast.KindTaggedTemplateExpression, ast.KindDeleteExpression, ast.KindAwaitExpression, ast.KindYieldExpression, ast.KindPostfixUnaryExpression:
+			found = true
+			return
+		case ast.KindPrefixUnaryExpression:
+			if op := x.AsPrefixUnaryExpression().Operator; op == ast.KindPlusPlusToken || op == ast.KindMinusMinusToken {
+				found = true
+				return
+			}
+		case ast.KindBinaryExpression:
+			if ast.IsAssignmentOperator(x.AsBinaryExpression().OperatorToken.Kind) {
+				found = true
+				return
+			}
+		}
+		x.ForEachChild(func(c *ast.Node) bool { walk(c); return found })
+	}
+	walk(n)
+	return found
 }
 
 // moduleFunctions lowers module-level function declarations to static

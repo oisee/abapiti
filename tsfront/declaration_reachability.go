@@ -3,7 +3,6 @@ package tsfront
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -156,8 +155,7 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 			if e, ok := l.overrides[c]; ok && e.Method != nil {
 				for _, ref := range e.References {
 					for decl, owner := range owners {
-						rel, _ := filepath.Rel(l.prog.configDir, owner.FileName())
-						if filepath.ToSlash(rel) == ref.File && decl.Name() != nil && decl.Name().Text() == ref.Symbol && decl.Kind.String() == ref.Kind {
+						if l.prog.sourceName(owner.FileName()) == ref.File && decl.Name() != nil && decl.Name().Text() == ref.Symbol && decl.Kind.String() == ref.Kind {
 							keep(decl, ref.Kind == "KindClassDeclaration")
 						}
 					}
@@ -243,8 +241,7 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 		for _, m := range n.Members() {
 			if m.Body() != nil {
 				line, _ := lineCol(f, scanner.GetTokenPosOfNode(m, f, false))
-				rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
-				l.unexecuted[m] = fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line)
+				l.unexecuted[m] = fmt.Sprintf("%s:%d", l.prog.sourceName(f.FileName()), line)
 			}
 		}
 	}
@@ -269,7 +266,6 @@ func (l *lowerer) pruneDeclarations(files []string) ([]string, error) {
 
 func (l *lowerer) typeOnlyLocation(n *ast.Node) string {
 	f := ast.GetSourceFileOfNode(n)
-	rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
 	line, _ := lineCol(f, scanner.GetTokenPosOfNode(n, f, false))
-	return fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line)
+	return fmt.Sprintf("%s:%d", l.prog.sourceName(f.FileName()), line)
 }

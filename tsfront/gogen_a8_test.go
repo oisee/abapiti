@@ -30,7 +30,7 @@ func TestGogenA8MapIntersectionMember(t *testing.T) {
 	gogenTSOracle(t, `type StructType={k:"struct";name:string}; type StructDefinitions=Map<string,StructType & {readonly fields:readonly {name:string}[]}>; interface Layers {structs?:StructDefinitions;} class Probe {static read(p:Layers):string {return p.structs ? p.structs.get("s")!.fields[0].name : "none";} static run():string {const m:StructDefinitions=new Map();m.set("s",{k:"struct",name:"S",fields:[{name:"ok"}]});return Probe.read({structs:m});}}`, "")
 }
 func TestGogenA8IndexWriteRefusal(t *testing.T) {
-	for _, write := range []string{`n[k]=3`, `n["extra"]=3`, `n.extra=3`, `n[k]+=3`, `n[k]++`} {
+	for _, write := range []string{`n[k]=3`, `n[k]+=3`, `n[k]++`, `n.__proto__=null`} {
 		_, ds := lowerProbe(t, sourceProbe(t, `interface WalkNode {[key:string]:unknown;name:string;} function f(n:WalkNode,k:string):void {`+write+`;}`))
 		found := false
 		for _, d := range ds {
