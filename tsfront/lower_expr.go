@@ -902,6 +902,11 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		if recv == nil {
 			return nil
 		}
+		if optionalBase(recv.Type).Kind == hir.Dynamic {
+			// A known property symbol does not give erased storage a native
+			// class layout. Read the actual JS property, preserving absence.
+			return l.rtOp("dynamic.get", l.coerce(recv, hir.T(hir.Dynamic)), hir.T(hir.Dynamic), hir.L(hir.T(hir.String), f.Name))
+		}
 		if recv.Type.Kind == hir.Optional {
 			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
 		}

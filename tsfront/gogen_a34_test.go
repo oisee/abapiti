@@ -203,3 +203,18 @@ export class Probe {
 		t.Fatal(err)
 	}
 }
+
+func TestGogenA34OptionalDiskMethodNodeOracle(t *testing.T) {
+	gogenTSOracle(t, `interface Disk { begin(): void; finish(n: number): void; shadow?: {probe(): void}; }
+interface Session { [key: string]: unknown; disk?: Disk; }
+let calls = 0, effects = 0, reads = 0;
+function mark(): number { effects++; return 3; }
+function getSession(session: Partial<Session> | null | undefined): Partial<Session> | null | undefined { reads++; return session; }
+const disk: Disk = {begin() {}, finish(n: number) { calls += n; }};
+function finish(session: Partial<Session> | null | undefined): void { getSession(session)?.disk?.finish(mark()); }
+class Probe { static run(): string {
+ finish(undefined); finish(null); finish({}); finish({disk});
+ return calls + ":" + effects + ":" + reads;
+} }
+`, "")
+}
