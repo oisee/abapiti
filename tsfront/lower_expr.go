@@ -1385,6 +1385,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// The checker typed the receiver present (`if (map[k]) map[k].f()`).
 				recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recv.Type.Args[0], X: recv}
 			}
+			recv = l.nullableMethodReceiver(p.Expression, recv)
 			// In unpruned tests, a generic array may actually contain another
 			// implementation of its erased constraint. Dispatch common methods
 			// through that constraint instead of asserting a nominal element cast.
@@ -3660,6 +3661,35 @@ func alwaysTruthyObject(t hir.Type) bool {
 // checkedContainerReceiver views a tagged receiver as the Map, Set or array
 // its checked type names (a member read through a union lowered as a tagged
 // value). The reference view checks the stored value; nothing is converted.
+// nullableMethodReceiver views a T | null | undefined receiver (boxed as
+// Dynamic) through T for a method call. JavaScript calls the method on a
+// present value; the checked view raises on null or undefined, where
+// JavaScript raises its TypeError.
+func (l *lowerer) nullableMethodReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
+	if recv.Type.Kind != hir.Dynamic {
+		return recv
+	}
+	t := l.ck.GetTypeAtLocation(expr)
+	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 || !t.IsUnion() {
+		return recv
+	}
+	nonNull := l.ck.GetNonNullableType(t)
+	if nonNull == t || nonNull.IsUnion() {
+		return recv
+	}
+	before := len(l.diags)
+	typ := l.mapCheckerType(expr, nonNull)
+	if hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return recv
+	}
+	l.diags = l.diags[:before]
+	if typ.Kind != hir.ClassRef && typ.Kind != hir.InterfaceRef {
+		return recv
+	}
+	return l.dynamicReference(recv, typ)
+}
+
 func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
 	t := l.ck.GetTypeAtLocation(expr)
 	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 {
