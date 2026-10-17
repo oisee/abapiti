@@ -282,7 +282,7 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 			if other == nil {
 				return nil, true
 			}
-			l.diagf(n, "note-locale-compare", "localeCompare lowered on the object-name alphabet [_/0-9A-Z]; other code units raise")
+			l.diagf(n, "note-locale-compare", "localeCompare lowered on checked ICU root domains (Go [_-./#0-9A-Za-z], ABAP [_/0-9A-Z]); other code units raise")
 			return l.rtOp("string.localeCompareNames", recv, hir.T(hir.I32), other), true
 		}
 	case hir.ClassRef:

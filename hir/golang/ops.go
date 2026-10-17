@@ -185,8 +185,10 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.compareRegistryKey":
 		code = "compareDomain(" + a + "," + args[0] + `,"_0123456789abcdefghijklmnopqrstuvwxyz")`
-	case "string.compareObjectName", "string.localeCompareNames":
+	case "string.compareObjectName":
 		code = "compareDomain(" + a + "," + args[0] + `,"_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")`
+	case "string.localeCompareNames":
+		code = "localeCompareRoot(" + a + "," + args[0] + ")"
 	case "regexp.new":
 		flags := "str(\"\")"
 		if len(args) > 1 {
