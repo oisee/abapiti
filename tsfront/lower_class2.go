@@ -680,6 +680,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// field read the checker types as any): checked narrowing, absent raises.
 		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && l.inJSFile() && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// Unchecked JavaScript stores an object-typed value (the checker's
+		// type for a family table read) where JSDoc declares the family: the
+		// boxed object goes through the checked projection below.
+		x = l.coerce(x, hir.T(hir.Dynamic))
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
 		// A boxed value (a flow-narrowed `F | null` local) stored into a
 		// family slot: the family shares the boxed storage and the projection
@@ -803,6 +809,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// JSDoc declares a present one (`f(map.get(k))`): the value flows on
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && l.slotInterfaceRef(x.Type.Args[0]) && (dst.Args[0].Kind == hir.InterfaceRef || dst.Args[0].Kind == hir.ClassRef) && !dst.Args[0].Equal(x.Type.Args[0]) && l.acceptsType(x.Type.Args[0], dst.Args[0]) {
+		// Unchecked JavaScript passes ArtifactObject[] where JSDoc declares
+		// IObject[]: the same array (reference arrays share storage), each
+		// element checked as the subtype when it is read.
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
 	}
 	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.UnionRef && dst.Kind == hir.ClassRef {
 		// Unchecked JavaScript passes a family value where JSDoc declares one

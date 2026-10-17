@@ -114,9 +114,13 @@ type Class struct {
 	// storage cannot yet retain undefined. JSON must refuse rather than infer
 	// creation order from subsequent assignments or fabricate zero values.
 	UndefinedDefineFields bool `json:",omitempty"`
-	Fields                []Field
-	Methods               []*Method
-	Ctor                  *Method
+	// FieldsDropped marks a class whose instance fields lost a declaration to
+	// a lowering trap: a by-name property lookup that misses must trap rather
+	// than report the dropped property absent.
+	FieldsDropped bool `json:",omitempty"`
+	Fields        []Field
+	Methods       []*Method
+	Ctor          *Method
 }
 type Interface struct {
 	Node

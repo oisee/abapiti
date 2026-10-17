@@ -205,6 +205,9 @@ func (l *lowerer) closureAdapter(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Ex
 	tagged := omitted > 0
 	for i := range outer.Params {
 		tagged = tagged || inner.Params[i].Type.Kind == hir.Dynamic || outer.Params[i].Type.Kind == hir.Dynamic
+		// An IObject callback where ArtifactObject is passed: the adapter
+		// hands the same object on through the checked downcast.
+		tagged = tagged || l.slotInterfaceRef(outer.Params[i].Type) && !inner.Params[i].Type.Equal(outer.Params[i].Type)
 	}
 	tagged = tagged || inner.Result.Kind == hir.Dynamic || outer.Result.Kind == hir.Dynamic
 	if !tagged {

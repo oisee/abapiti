@@ -46,6 +46,9 @@ func (l *lowerer) signaturesFile(f *ast.SourceFile) {
 // isDataInterface reports whether the interface has a property member: those
 // lower to synthesized shape classes (constructed like object literals).
 func (l *lowerer) isDataInterface(node *ast.Node) bool {
+	if l.slotInterface(node) {
+		return false
+	}
 	if l.gogenInheritedData(node) || l.gogenResolvedData(node) {
 		return true
 	}
@@ -621,7 +624,13 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 		return
 	}
 	defer l.interfaceHeritage(node, i)
+	slots := l.slotInterface(node)
 	for _, m := range node.Members() {
+		if slots && m.Kind == ast.KindPropertySignature {
+			// Optional unknown data slots are read from the object itself
+			// (slotRead), never through the interface's method table.
+			continue
+		}
 		if m.Kind != ast.KindMethodDeclaration && m.Kind != ast.KindMethodSignature {
 			name := m.Kind.String()
 			if n := m.Name(); n != nil && (n.Kind == ast.KindIdentifier || n.Kind == ast.KindPrivateIdentifier || n.Kind == ast.KindStringLiteral) {
