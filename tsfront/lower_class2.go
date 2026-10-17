@@ -762,6 +762,16 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
 	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && dst.Kind == hir.Optional && len(dst.Args) == 1 {
+		// The same for a possibly-undefined wider reference stored where
+		// JSDoc declares `Subtype | undefined`: undefined stays undefined.
+		from, to := x.Type.Args[0], dst.Args[0]
+		if (from.Kind == hir.ClassRef || from.Kind == hir.InterfaceRef) && (to.Kind == hir.ClassRef || to.Kind == hir.InterfaceRef) && to.Name != hir.RootObject && !l.refAccepts(to, from) && l.refSharedSubtype(from, to) {
+			x = l.tempInit(nil, x.Type, x)
+			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: to, X: &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: from, X: x}}
+			return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, dst)}
+		}
+	}
 	if l.unprunedFeatures && l.inJSFile() && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.InterfaceRef) {
 		// Unchecked JavaScript passes a wider reference where JSDoc declares a
 		// subtype (an INode argument for an ExpressionNode parameter): the
