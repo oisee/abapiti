@@ -19,8 +19,10 @@ func (l *lowerer) readonlyArrayArgument(x *hir.Expr, target hir.Type, param *ast
 	if target.Kind != hir.Array || target.Args[0].Kind != hir.Dynamic {
 		return x
 	}
+	// The checker identifies the global array even when ambient Node typings
+	// augment it. A declaration-provenance check would reject those typings.
 	typ := l.ck.GetNonNullableType(l.ck.GetTypeOfSymbol(param))
-	if typ.Symbol() == nil || typ.Symbol().Name != "ReadonlyArray" || !l.librarySymbol(typ.Symbol()) {
+	if typ.Symbol() == nil || typ.Symbol().Name != "ReadonlyArray" || !l.ck.IsArrayType(typ) {
 		return x
 	}
 	return l.rtOp("dynamic.arrayView", l.coerce(x, hir.T(hir.Dynamic)), target)

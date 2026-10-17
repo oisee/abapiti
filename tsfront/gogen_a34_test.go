@@ -2,7 +2,10 @@ package tsfront
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
@@ -146,4 +149,57 @@ export class Probe {
   }
 }
 `, true)
+}
+
+func TestGogenA34ImportedReadonlyArrayNodeOracle(t *testing.T) {
+	dir := t.TempDir()
+	sources := map[string]string{
+		"types.ts": `export type Scalar = string | number | boolean | null | undefined;`,
+		"compat.d.ts": `interface RelativeIndexable<T> { at(index: number): T | undefined; }
+interface ReadonlyArray<T> extends RelativeIndexable<T> {}`,
+		"view.mjs": `/** @param {readonly import("./types.ts").Scalar[]} values @returns {readonly import("./types.ts").Scalar[]} */
+export function view(values = []) { return values; }`,
+		"probe.mjs": `import {view} from "./view.mjs";
+export class Probe {
+ /** @returns {string} */ static run() {
+  /** @type {string[]} */ const xs = ["a"];
+  const alias = view(xs);
+  xs.push("b");
+  return (alias === xs) + "|" + alias.map((x) => String(x)).join(",") + "|" + view().length;
+ }
+}`,
+		"tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022","module":"nodenext","allowImportingTsExtensions":true,"noEmit":true,"allowJs":true},"include":["*.mjs","*.ts"]}`,
+	}
+	for name, source := range sources {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := exec.Command("node", "--input-type=module", "-e", `import {Probe} from `+fmt.Sprintf("%q", filepath.Join(dir, "probe.mjs"))+`;console.log(Probe.run())`).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	p, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	prog, diags, err := p.LowerWithOptions([]string{"probe.mjs", "view.mjs"}, LowerOptions{TrapOnFailure: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range diags {
+		if !strings.HasPrefix(d.Category, "note-") {
+			t.Errorf("lower: %s", d)
+		}
+	}
+	if errs := hir.Verify(prog); len(errs) != 0 {
+		t.Fatal(errs[0])
+	}
+	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.mjs.Probe", "run")))
+	if got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	if _, err := emitABAP(t, prog); err != nil {
+		t.Fatal(err)
+	}
 }
