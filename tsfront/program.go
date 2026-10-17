@@ -32,6 +32,9 @@ type Program struct {
 	prog      *compiler.Program
 	configDir string                     // absolute directory of the tsconfig
 	files     map[string]*ast.SourceFile // cleaned absolute path -> file
+	// packageNames names files of separate package checkouts outside
+	// configDir by their path inside the package (see packageSourceNames).
+	packageNames map[string]string
 	// mapProbe caches whether any source tests `x instanceof Map`; only then
 	// do Map constructions carry the runtime JS Map marker.
 	mapProbeOnce sync.Once
@@ -67,7 +70,11 @@ func Load(tsconfigPath string) (*Program, error) {
 	for _, f := range p.SourceFiles() {
 		files[filepath.Clean(f.FileName())] = f
 	}
-	return &Program{prog: p, configDir: currentDir, files: files}, nil
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	return &Program{prog: p, configDir: currentDir, files: files, packageNames: packageSourceNames(currentDir, names)}, nil
 }
 
 // SourceFiles returns the (sorted) file names of the program.
@@ -245,7 +252,7 @@ func relativeSource(root, file string) string {
 
 func (p *Program) locString(f *ast.SourceFile, pos int) string {
 	line, col := lineCol(f, pos)
-	return fmt.Sprintf("%s:%d:%d", relativeSource(p.configDir, f.FileName()), line, col)
+	return fmt.Sprintf("%s:%d:%d", p.sourceName(f.FileName()), line, col)
 }
 
 // locString is for standalone diagnostics without a project root.

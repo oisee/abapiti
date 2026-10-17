@@ -781,6 +781,10 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 	if x, ok := l.namespaceRef(n); ok {
 		return x
 	}
+	if l.prototypeAlias(sym) != nil {
+		l.diagf(n, "unsupported-call", "unbound prototype method %s is lowered only as %s.call(receiver, ...); JavaScript binds this to undefined otherwise", name, name)
+		return nil
+	}
 	l.diagf(n, "unsupported-expr", "identifier %s is not a lowered local or module value", name)
 	return nil
 }
@@ -2087,8 +2091,16 @@ func (l *lowerer) replaceCall(n *ast.Node, recv *hir.Expr, args []*ast.Node) *hi
 	// GetSubstitution. Preserve the original native HIR without temporaries.
 	literalReplacement := (args[1].Kind == ast.KindStringLiteral || args[1].Kind == ast.KindNoSubstitutionTemplateLiteral) && !strings.Contains(args[1].Text(), "$")
 	if !literalReplacement {
-		// Save values before subsequent arguments can mutate their bindings.
+		// Save values in source evaluation order, before subsequent arguments
+		// can mutate the receiver or the pattern binding.
 		recv = l.tempInit(n.Expression().Expression(), recv.Type, recv)
+	}
+	// A literal callback inside the exec-loop subset lowers on every target;
+	// richer callbacks (offset, input, groups) use replaceCallback below.
+	if args[1].Kind == ast.KindArrowFunction || args[1].Kind == ast.KindFunctionExpression {
+		if at, _ := l.callableReplaceRefusal(n, recv, args); at == nil || !l.unprunedFeatures {
+			return l.callableReplace(n, recv, args)
+		}
 	}
 	lineBreak := args[0].Kind == ast.KindRegularExpressionLiteral && (args[0].Text() == `/\r/g` || args[0].Text() == `/\n/g`)
 	var pat *hir.Expr

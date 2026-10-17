@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/checker"
@@ -28,8 +27,7 @@ func (l *lowerer) settledLabel(n *ast.Node) string {
 		name = n.Parent.Name().Text() + "." + name
 	}
 	f := ast.GetSourceFileOfNode(n)
-	path, _ := filepath.Rel(l.prog.configDir, f.FileName())
-	return fmt.Sprintf("%s at %s", name, filepath.ToSlash(path))
+	return fmt.Sprintf("%s at %s", name, l.prog.sourceName(f.FileName()))
 }
 
 // The dynamic class is pinned only by a fresh constructor and immutable aliases.
