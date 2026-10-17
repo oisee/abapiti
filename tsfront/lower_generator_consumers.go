@@ -247,6 +247,11 @@ func (l *lowerer) generatorArrayAdapter(x *hir.Expr, dst hir.Type) *hir.Expr {
 		c.Methods = []*hir.Method{next, close, iterate}
 		l.out.Classes = append(l.out.Classes, c)
 	}
+	if want := hir.T(hir.Array, a.element); l.unprunedFeatures && !x.Type.Equal(want) && l.slotInterfaceRef(x.Type.Args[0]) {
+		// ArtifactObject[] into Iterable<IObject>: the same array, viewed
+		// with each element checked as it is read.
+		x = l.coerce(x, want)
+	}
 	return &hir.Expr{Kind: hir.Cast, Type: dst, X: &hir.Expr{Kind: hir.New, Type: a.arrayClass, Args: []*hir.Expr{x}}}
 }
 

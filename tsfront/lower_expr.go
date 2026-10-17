@@ -222,6 +222,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return x
 	}
+	if l.unprunedFeatures && (t.Flags()&checker.TypeFlagsNever != 0 || t.Flags()&checker.TypeFlagsIntersection != 0 && l.ck.GetReducedType(t).Flags()&checker.TypeFlagsNever != 0) {
+		// The checker found the guarded branch impossible (an intersection
+		// that reduced to never), yet the guard held at run time.
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+	}
 	base := x.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
@@ -241,11 +248,20 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
 	}
+	if narrowed, ok := l.slotIntersectionNarrowing(n, x, base, t); ok {
+		return narrowed
+	}
 	before := len(l.diags)
 	typ := l.mapCheckerType(n, t)
-	if hasBlocking(l.diags[before:]) {
+	blocked := hasBlocking(l.diags[before:]) || typ.Kind == hir.Void
+	if blocked || typ.Kind == hir.ClassRef && typ.Name == hir.RootObject && !x.Type.Equal(typ) {
 		l.diags = l.diags[:before] // quiet: narrowing is optional
-		return x
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+		if blocked {
+			return x
+		}
 	}
 	l.diags = l.diags[:before]
 	if l.shapeAliasOf(typ, x.Type) {
@@ -648,6 +664,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
+		if x, handled := l.literalFamilyIndex(n); handled {
+			return x
+		}
 		if x, ok := l.processRead(n); ok {
 			return x
 		}
@@ -882,6 +901,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	f, hasField := l.fieldOf(sym)
+	if hasField && l.slotInterfaceReceiver(p.Expression) {
+		hasField = false // slotRead below: the object's own property
+	}
 	if sym != nil && hasField {
 		if f.Static {
 			owner := l.classOf(sym.Parent)
@@ -951,6 +973,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	base := recv.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
+	}
+	if l.unprunedFeatures && !ast.IsAssignmentTarget(n) && l.slotInterfaceRef(base) {
+		return l.slotRead(n, recv, hir.L(hir.T(hir.String), n.Name().Text()))
 	}
 	if base.Kind == hir.Dynamic || base.Kind == hir.ClassRef && base.Name == hir.RootObject && n.Name().Text() != "constructor" {
 		if recv.Type.Kind == hir.Optional {
@@ -1190,7 +1215,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// A class method is called through its class, never as a stored
 		// function value, even when a structural shape lists it as a field.
 		// Interface/type-literal method signatures are stored functions.
-		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+		if sym := l.resolve(callee); (sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration) && !l.slotInterfaceReceiver(callee.Expression()) {
 			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
 				return l.functionValueCall(n, callee)
 			}
@@ -1991,11 +2016,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "pop", "shift":
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
-			return l.rtOp("array.indexOf", recv, i32, one()), true
+			return l.rtOp("array.indexOf", recv, i32, l.dynamicSearchValue(recv, one())), true
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
-			x := one()
+			x := l.dynamicSearchValue(recv, one())
 			if x != nil && l.unprunedFeatures {
 				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
 					return probe, true
@@ -2046,7 +2071,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.mapRead(recv, key()), true
 		case "set":
 			var a, b *hir.Expr
-			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
+			// A fresh literal value is built as the map's value type.
+			literal := l.unprunedFeatures && len(args) == 2 && recv.Type.Args[1].Kind == hir.ClassRef && recv.Type.Args[1].Name != hir.RootObject && ast.SkipParentheses(args[1]).Kind == ast.KindObjectLiteralExpression
+			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef || literal) && len(args) == 2 {
 				a = l.expr(args[0])
 				saved := l.hint
 				l.hint = recv.Type.Args[1]
@@ -2753,6 +2780,13 @@ func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *h
 		x, y = l.absentNumericOperand(x), l.absentNumericOperand(y)
 	}
 	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
+	if l.unprunedFeatures && (op == "-" || op == "*" || op == "/" || op == "%") && (x.Type.Kind == hir.Dynamic) != (y.Type.Kind == hir.Dynamic) && (numberType(x.Type) || numberType(y.Type)) {
+		// An any operand (an untyped local's c.type.getLength()) next to a
+		// number: the checked unboxing yields the number, any other payload
+		// (a string ToNumber would convert) raises.
+		number := hir.T(hir.Number)
+		x, y = l.coerce(x, number), l.coerce(y, number)
+	}
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
 }
 

@@ -334,7 +334,12 @@ func (l *lowerer) globalCall(n *ast.Node, callee *ast.Node) (*hir.Expr, bool) {
 			l.diagf(n, "unsupported-call", "Boolean accepts one non-spread argument")
 			return nil, true
 		}
+		// The argument's own value is converted by truthiness: an outer
+		// boolean context does not type `a || b` inside it as boolean.
+		saved := l.hint
+		l.hint = hir.Type{}
 		x := l.expr(args[0])
+		l.hint = saved
 		if x == nil {
 			return nil, true
 		}

@@ -280,6 +280,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
+	l.slotInterfaceImplements()
 	l.covariantImplements()
 	l.eraseGenericOverrides()
 	l.completeInterfaceValueSlots()
@@ -306,7 +307,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				continue
 			}
 			mod := l.moduleClassOf(f)
-			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
+			hm := &hir.Method{Node: l.node(fn), Name: l.moduleFunctionMethod(fn.Name().Text()), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
 			if e, ok := l.overrides[fn]; ok && e.Method != nil {
 				hm = e.Method()
@@ -316,7 +317,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				l.signature(fn, hm)
 			}
 			mod.Methods = append(mod.Methods, hm)
-			l.funcsBy[f.FileName()+" "+hm.Name] = funcRef{owner: mod.Name, method: hm.Name}
+			l.funcsBy[f.FileName()+" "+fn.Name().Text()] = funcRef{owner: mod.Name, method: hm.Name}
 			l.methodsBy[mod.Name+"."+hm.Name] = hm
 		}
 		done()
@@ -450,8 +451,11 @@ type lowerer struct {
 	externFunctions map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
-	gogenCallables     map[*ast.Node]bool
-	unprunedFeatures   bool
+	gogenCallables   map[*ast.Node]bool
+	unprunedFeatures bool
+	// liftResultHint is the element type an array callback with early
+	// returns constructs; liftLocalFn consumes it for that one callback.
+	liftResultHint     hir.Type
 	absentFields       map[*ast.Node]bool
 	absentParams       map[*ast.Node]bool
 	checkedFields      map[*ast.Node]bool
@@ -520,7 +524,11 @@ type lowerer struct {
 	familyFailed map[string]familyFailure
 	familyShapes map[string]hir.Type
 	familyChecks map[string]*checker.Type
-	familyKeys   *familyKeyMemo // family_key_memo.go
+	// contextLiteralTypes types object literals that a lowering places in a
+	// family context the checker did not see (literalFamilyIndex).
+	contextLiteralTypes map[*ast.Node]*checker.Type
+	slotIfaces          map[string]bool // slot_interface.go
+	familyKeys          *familyKeyMemo  // family_key_memo.go
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

@@ -15,7 +15,7 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+	return l.functionBodyToMethod(fn, owner, l.moduleFunctionMethod(fn.Name().Text()))
 }
 
 func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {
@@ -190,6 +190,8 @@ func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	resultHint := l.liftResultHint
+	l.liftResultHint = hir.Type{}
 	undefinedThis := l.refuseUndefinedThis(fn)
 	receiver := l.gogenRefuseReceiver(fn)
 	if undefinedThis || receiver {
@@ -320,6 +322,11 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		if sigs := l.ck.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 && isIntrinsicVoid(l.ck.GetReturnTypeOfSignature(sigs[0])) {
 			m.Result = hir.T(hir.Void)
 		}
+	}
+	if fn.Type() == nil && m.Result.Kind == hir.ClassRef && m.Result.Name == hir.RootObject && (resultHint.Kind == hir.ClassRef || resultHint.Kind == hir.UnionRef) && resultHint.Name != hir.RootObject {
+		// The checker infers the union of the returned literals, which has
+		// no lowered type; the array the callback fills gives their type.
+		m.Result = resultHint
 	}
 	// Distinct lexical functions may share a source name in this class.
 	baseName := m.Name
@@ -680,6 +687,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// field read the checker types as any): checked narrowing, absent raises.
 		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && l.inJSFile() && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// Unchecked JavaScript stores an object-typed value (the checker's
+		// type for a family table read) where JSDoc declares the family: the
+		// boxed object goes through the checked projection below.
+		x = l.coerce(x, hir.T(hir.Dynamic))
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
 		// A boxed value (a flow-narrowed `F | null` local) stored into a
 		// family slot: the family shares the boxed storage and the projection
@@ -803,6 +816,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// JSDoc declares a present one (`f(map.get(k))`): the value flows on
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && l.slotInterfaceRef(x.Type.Args[0]) && (dst.Args[0].Kind == hir.InterfaceRef || dst.Args[0].Kind == hir.ClassRef) && !dst.Args[0].Equal(x.Type.Args[0]) && l.acceptsType(x.Type.Args[0], dst.Args[0]) {
+		// Unchecked JavaScript passes ArtifactObject[] where JSDoc declares
+		// IObject[]: the same array (reference arrays share storage), each
+		// element checked as the subtype when it is read.
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
 	}
 	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.UnionRef && dst.Kind == hir.ClassRef {
 		// Unchecked JavaScript passes a family value where JSDoc declares one
