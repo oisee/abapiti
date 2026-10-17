@@ -2900,7 +2900,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = xsdbool( sy-subrc = 0 ).")
 		return
 	}
-	if x.Op == "set.clear" {
+	if x.Op == "set.clear" || x.Op == "map.clear" {
 		b.line("CLEAR " + a + "->entries.")
 		return
 	}

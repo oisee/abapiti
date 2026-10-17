@@ -294,6 +294,17 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 					}
 					return
 				}
+				// const {f, g} = /** @type {typeof import("<spec>")} */ (req("<spec>"));
+				// the inline annotation proves the module as a declared type does.
+				if init != nil && d.Type() == nil && d.Name().Kind == ast.KindObjectBindingPattern && ast.IsJSDocTypeAssertion(init) {
+					as := init.Expression()
+					if call := as.Expression(); call != nil && call.Kind == ast.KindCallExpression && (symbolIn(call.Expression(), requirers) || isRequirer(call.Expression())) {
+						if mod := l.requiredModuleTyped(as.Type(), call); mod != nil && l.bindRequired(d, mod) {
+							l.require.skip[n] = true
+						}
+						return
+					}
+				}
 			}
 		}
 		n.ForEachChild(func(c *ast.Node) bool { nested(c, false); return false })

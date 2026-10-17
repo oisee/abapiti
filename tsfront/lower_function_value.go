@@ -190,6 +190,10 @@ func (l *lowerer) finishCaptureCells() {
 func (l *lowerer) valueSymbol(n *ast.Node) *ast.Symbol {
 	if n != nil && n.Kind == ast.KindIdentifier && n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment {
 		if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+			// {f} where f is a static require binding names the module export.
+			if target := l.requireTarget(value); target != nil {
+				return target
+			}
 			if value.Flags&ast.SymbolFlagsAlias != 0 {
 				if target, ok := l.ck.ResolveAlias(value); ok {
 					return target

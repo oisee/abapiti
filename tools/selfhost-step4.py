@@ -40,6 +40,10 @@ function imports(file, text, runtime) {
     let spec;
     if ((ts.isImportDeclaration(n) || ts.isExportDeclaration(n)) && n.moduleSpecifier && ts.isStringLiteral(n.moduleSpecifier)) spec = n.moduleSpecifier.text;
     if (!runtime && ts.isCallExpression(n) && n.expression.kind === ts.SyntaxKind.ImportKeyword && n.arguments[0] && ts.isStringLiteral(n.arguments[0])) spec = n.arguments[0].text;
+    // A lazy require("<relative literal>") (gogen requires through frontend-base.mjs's
+    // createRequire) is lowered like a dynamic import: in the closure, not in the
+    // eager initialization graph, because Node loads it at the call.
+    if (!runtime && ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === 'require' && n.arguments.length === 1 && ts.isStringLiteral(n.arguments[0])) spec = n.arguments[0].text;
     if (spec?.startsWith('.')) {
       const base = resolve(dirname(file), spec);
       const found = [base, base.replace(/\.js$/, '.ts'), base + '.ts', base + '/index.ts'].find(f => existsSync(f) && statSync(f).isFile());
