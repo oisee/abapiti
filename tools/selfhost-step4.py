@@ -319,8 +319,6 @@ def main(args):
         raise ValueError('temporary host/config files already exist in checkout')
 
     def heavy(command, name, cwd=osg, stdout=None, extra=None, memory='16G'):
-        subprocess.run(['df', '-h', '/mnt/ssd-510'], check=True)
-        subprocess.run(['grep', 'MemAvailable', '/proc/meminfo'], check=True)
         available = next(int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()
                          if line.startswith('MemAvailable:'))
         if available <= 30 * 1024**2:
