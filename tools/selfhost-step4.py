@@ -217,6 +217,10 @@ def main(args):
                 location = re.search(r'([^\s;()]+\.(?:ts|mjs|js):\d+:\d+[^\n]*)', log)
                 reason = location.group(1).strip() if location else log.splitlines()[0] if log else 'unknown (see run.log)'
                 run = 'trap at ' + reason.split(';', 1)[0]
+        # A clean exit without output must not read as success when Node
+        # printed something (dropped statements once looked exactly so).
+        if run == 'ok' and actual.stat().st_size == 0 and ref.stat().st_size > 0:
+            run = 'ok-empty'
         cmp_result = subprocess.run(['cmp', '-s', str(ref), str(actual)])
         if cmp_result.returncode > 1:
             raise RuntimeError(f'cmp failed (exit {cmp_result.returncode})')
