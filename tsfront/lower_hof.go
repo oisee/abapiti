@@ -383,6 +383,12 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 				l.diags = l.diags[:before]
 			}
 		}
+		if l.unprunedFeatures && i != index && elem.Kind == hir.UnionRef && !t.Equal(elem) && l.familyMember(elem, t) && reduceElementParam(n, i) {
+			// leaves.every((t) => t.k === "x") narrowed the receiver, so the
+			// checker types the element as one member. The loop binds the
+			// family element; each read projects it (narrowedAt), checked.
+			t = elem
+		}
 		if i == 0 && (l.collectionShapes[elem.Name] || l.collectionElements[elem.String()]) && params[i].Type() == nil {
 			// Inferred callback types can repeat the checker's first-row
 			// structural reduction. Bind the original collection's slot layout.
@@ -1047,4 +1053,11 @@ func (l *lowerer) callbackIndexParam(n *ast.Node) int {
 		return 2
 	}
 	return -1
+}
+
+// reduceElementParam reports the element parameter of an arr.reduce callback,
+// which reduceLoop binds to the receiver's element type.
+func reduceElementParam(n *ast.Node, i int) bool {
+	callee := n.Expression()
+	return i == 1 && callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "reduce" && len(n.Arguments()) == 2
 }

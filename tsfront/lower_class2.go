@@ -90,12 +90,22 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 		if p.Initializer() != nil && i < len(hm.Params) && hm.Params[i].Type.Kind == hir.Optional {
 			hp := hm.Params[i]
 			l.hint = hp.Type.Args[0]
+			// The initializer and its conversion run only when the argument
+			// is absent: their temporaries belong to that branch.
+			saved := l.pend
+			l.pend = nil
 			def := l.expr(p.Initializer())
 			l.hint = hir.Type{}
+			var value *hir.Expr
+			if def != nil {
+				value = l.coerce(def, hp.Type)
+			}
+			pre := l.pend
+			l.pend = saved
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
+					Body: hir.B(append(pre, &hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: value})...)})
 			}
 		}
 		out = append(out, l.bindObjectParameter(p, hm.Params[i])...)
@@ -769,6 +779,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.ClassRef && x.Type.Args[0].Kind == hir.ClassRef && l.dataShapeSubtype(dst.Args[0], x.Type.Args[0]) {
 		// Reuse the original array and convert its element views on access.
 		// Snapshotting would lose aliases and later pushes by the caller.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
+	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Args[0].Kind == hir.UnionRef && !dst.Equal(x.Type) && l.familyViewSubtype(dst.Args[0], x.Type.Args[0], map[string]bool{}) {
+		// ValueExpr[] stored where Expr[] is declared: family values share
+		// the boxed storage, so the same array is viewed as the wider family
+		// (as a scalar is widened); every read validates its member.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {

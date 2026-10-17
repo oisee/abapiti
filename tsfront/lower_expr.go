@@ -662,7 +662,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 				if sv == nil {
 					return nil
 				}
-				if elem.Kind == hir.Optional {
+				if elem.Kind == hir.Optional && l.unprunedFeatures && sv.Type.Args[0].IsRef() && elem.Args[0].IsRef() {
+					sv = l.spreadSnapshotAs(el, sv, typ)
+				} else if elem.Kind == hir.Optional {
 					sv = l.coerce(l.spreadSnapshot(el, sv), typ)
 				} else if l.unprunedFeatures && elem.Kind == hir.ClassRef && sv.Type.Args[0].Kind == hir.ClassRef && !sv.Type.Equal(typ) && l.dataShapeSubtype(elem, sv.Type.Args[0]) {
 					// Rows of a data interface spread among rows of its
