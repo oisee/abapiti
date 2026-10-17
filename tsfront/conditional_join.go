@@ -173,7 +173,7 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		return true
 	}
 	if src.Kind == hir.Array && dst.Kind == hir.Array {
-		if emptyConditionalArray(n, x) {
+		if emptyConditionalArray(n, x) || l.readonlyStringArrayView(n, src, dst) {
 			return true
 		}
 		// Both backends share reference-element storage. Primitive/optional
@@ -332,7 +332,22 @@ func (l *lowerer) conditionalConversion(n *ast.Node, x *hir.Expr, dst hir.Type) 
 		copy.Type = dst
 		return &copy
 	}
+	if l.readonlyStringArrayView(n, x.Type, dst) {
+		return l.rtOp("dynamic.arrayView", l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	return l.coerce(x, dst)
+}
+
+// readonlyStringArrayView reports a branch the checker types as a readonly
+// string array (set?.size ? providers : frozenEmpty) joined in a tagged
+// array context. Like a readonly argument (readonlyArrayArgument), it is the
+// same storage seen through tagged elements; nothing can write through it.
+func (l *lowerer) readonlyStringArrayView(n *ast.Node, src, dst hir.Type) bool {
+	if !l.unprunedFeatures || src.Kind != hir.Array || dst.Kind != hir.Array || src.Args[0].Kind != hir.String || dst.Args[0].Kind != hir.Dynamic {
+		return false
+	}
+	t := l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(n))
+	return t != nil && t.Symbol() != nil && t.Symbol().Name == "ReadonlyArray" && l.ck.IsArrayType(t)
 }
 
 func (l *lowerer) conditionalAbsent(node hir.Node, dst hir.Type) *hir.Expr {
