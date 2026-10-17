@@ -44,6 +44,10 @@ func TestEmitGoFailureTrapsAndModuleInitialization(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	sites, err := os.ReadFile(filepath.Join(dir, "go", "evidence", "trap-sites.json"))
+	if err != nil || !strings.Contains(string(sites), `"Method": "bad"`) || !strings.Contains(string(sites), `"Source": "probe.ts:1:`) || !strings.Contains(string(sites), `"Kind": "body"`) {
+		t.Fatalf("trap-sites.json lacks the located body trap: %v\n%s", err, sites)
+	}
 	program := exec.Command(filepath.Join(dir, "go", "program"))
 	output, err := program.CombinedOutput()
 	if err == nil || !strings.Contains(string(output), "probe.ts:1:") || !strings.Contains(string(output), "lowering trap:") {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -47,8 +46,7 @@ func (l *lowerer) validateIntegerExceptions(files []string) error {
 		if !ok {
 			continue
 		}
-		rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
-		rel = filepath.ToSlash(rel)
+		rel := l.prog.sourceName(f.FileName())
 		selected[rel] = true
 		var failure error
 		var walk func(*ast.Node)

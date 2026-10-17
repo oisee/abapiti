@@ -61,6 +61,48 @@ emission failure leaves `run=not-run cmp=not-run out=none`; its step log
 contains the error. The final line is also saved in `summary.txt`. Exit 0
 requires a successful run and equal output; every other outcome exits 1.
 
+## Listing all reached traps (`--list-traps`)
+
+A full run reveals only the first runtime trap. `--list-traps` runs the same
+reference, closure, coverage and `emit-go` steps, then skips `go build`, the
+run and `cmp`. It lists every trap site from that one emission whose source
+the Node reference executed:
+
+```sh
+python3 tools/selfhost-step4.py --list-traps <abapiti-bin> <osg-checkout> <abaplint> <transpiler> <out-dir>
+```
+
+Trap sites come from `go/evidence/trap-sites.json`, which `emit-go
+--trap-on-failure` writes after Go emission: every trap statement with its
+class, method, node source and message. Kind `body` means a refused or
+unexecuted function. Kind `guard` means a trap on the direct branch of a
+runtime check. All other trap statements are `stmt`. Older binaries that only
+write `registry-traps.json` contribute body traps only.
+
+Each site is matched against the raw V8 block coverage of the reference run.
+A statement uses the innermost range that contains it, so a count-0 branch
+inside an executed function counts as not reached. A body trap fires on
+entry, so it uses the call count of the function V8 starts at or just after
+the trap node. Abaplint and transpiler sources run from their
+`node_modules` builds, which have no source maps. Their body traps are
+matched by function name within the compiled file (evidence `name`).
+Unmatched ones are unknown: A for abaplint/transpiler, G for gogen. Files
+Node never loaded are unreached.
+
+To order the sites, a second run replays the original driver under
+`--inspect-brk` (`tools/selfhost-step4-order.mjs`). It sets one breakpoint
+per reached site, inside the body for body traps, and records the first hit
+of each. Its output must equal the reference byte for byte. Sites the replay
+does not hit follow by file:line:col.
+
+`reached-traps.tsv` has these columns: location, kind and message, hit count,
+root or cascade, owner method, and coverage evidence. A trap counts as a
+cascade when its message is `unresolved field|method X` and X itself is a
+trapped function. Reached guards are listed in `reached-guards.tsv` and are
+not counted. They trap only when their runtime check fails. The same goes for
+runtime domain checks such as castRef, which have no trap site. The summary
+line is `step4-traps: N reached (A/G unknown) M unreached`.
+
 Boundary tests: `PYTHONDONTWRITEBYTECODE=1 python3 tools/selfhost-step4-test.py`.
 
 After merging s9 (`778644a9`, integration tip `dc8eec38`), the baseline

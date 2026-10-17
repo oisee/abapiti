@@ -16,10 +16,20 @@ func (l *lowerer) prototypeCall(n *ast.Node) (*hir.Expr, bool) {
 		return nil, false
 	}
 	callee := n.Expression()
+	if callee.Kind == ast.KindIdentifier && l.prototypeAlias(l.resolve(callee)) != nil {
+		l.diagf(n, "unsupported-call", "unbound prototype method %s is lowered only as %s.call(receiver, ...); JavaScript binds this to undefined otherwise", callee.Text(), callee.Text())
+		return nil, true
+	}
 	if callee.Kind != ast.KindPropertyAccessExpression || callee.Name().Text() != "call" || n.AsCallExpression().QuestionDotToken != nil {
 		return nil, false
 	}
 	member := callee.Expression()
+	if member.Kind == ast.KindIdentifier {
+		// A module const holding C.prototype.m is that method value.
+		if init := l.prototypeAlias(l.resolve(member)); init != nil {
+			member = init
+		}
+	}
 	if member.Kind != ast.KindPropertyAccessExpression || member.AsPropertyAccessExpression().QuestionDotToken != nil {
 		return nil, false
 	}
@@ -88,4 +98,42 @@ func (l *lowerer) classExtends(sub *hir.Class, name string) bool {
 		cur = next
 	}
 	return false
+}
+
+// prototypeAlias returns the initializer C.prototype.m of a top-level const
+// binding (frontend-inventory.mjs: const enumerate =
+// core.Registry.prototype.getObjects) when C is a lowered class and m one of
+// its instance methods. The binding holds the method captured at module
+// initialization; it is lowered only as alias.call(receiver, ...) through
+// prototypeCall and has no storage of its own.
+func (l *lowerer) prototypeAlias(sym *ast.Symbol) *ast.Node {
+	if !l.unprunedFeatures || sym == nil || sym.ValueDeclaration == nil {
+		return nil
+	}
+	d := sym.ValueDeclaration
+	if d.Kind != ast.KindVariableDeclaration || d.Name() == nil || d.Name().Kind != ast.KindIdentifier || d.Parent == nil || d.Parent.Kind != ast.KindVariableDeclarationList || d.Parent.Flags&ast.NodeFlagsConst == 0 {
+		return nil
+	}
+	if stmt := d.Parent.Parent; stmt == nil || stmt.Kind != ast.KindVariableStatement || stmt.Parent == nil || stmt.Parent.Kind != ast.KindSourceFile {
+		return nil
+	}
+	init := d.Initializer()
+	for init != nil && init.Kind == ast.KindParenthesizedExpression {
+		init = init.Expression()
+	}
+	if init == nil || init.Kind != ast.KindPropertyAccessExpression || init.AsPropertyAccessExpression().QuestionDotToken != nil {
+		return nil
+	}
+	proto := init.Expression()
+	if proto.Kind != ast.KindPropertyAccessExpression || proto.Name().Text() != "prototype" || proto.AsPropertyAccessExpression().QuestionDotToken != nil {
+		return nil
+	}
+	if c := l.classOf(l.resolve(proto.Expression())); c == nil {
+		return nil
+	}
+	m := l.resolve(init)
+	if m == nil || m.ValueDeclaration == nil || m.ValueDeclaration.Kind != ast.KindMethodDeclaration || ast.IsStatic(m.ValueDeclaration) {
+		return nil
+	}
+	return init
 }

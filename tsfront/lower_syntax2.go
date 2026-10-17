@@ -450,10 +450,13 @@ func (l *lowerer) objectPartsAreArrays(t *checker.Type) bool {
 	}
 	objects := 0
 	for _, c := range parts {
-		if c.Flags()&checker.TypeFlagsObject == 0 {
+		// Primitives, null and undefined never carry the object tag. Any
+		// other constituent (an intersection such as Pick<T, K> & {...}, the
+		// object keyword, a type parameter, unknown) may be a non-array object.
+		if c.Flags()&(checker.TypeFlagsPrimitive|checker.TypeFlagsNever) != 0 && c.Flags()&checker.TypeFlagsObject == 0 {
 			continue
 		}
-		if !l.ck.IsArrayType(c) {
+		if c.Flags()&checker.TypeFlagsObject == 0 || !l.ck.IsArrayType(c) {
 			return false
 		}
 		objects++

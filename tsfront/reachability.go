@@ -103,6 +103,11 @@ func (l *lowerer) validateReachability(files []string, coverage *Reachability) e
 		rel = filepath.ToSlash(rel)
 		spans := byFile[rel]
 		delete(byFile, rel)
+		// A separate package checkout may be recorded by its package name.
+		if name := l.prog.sourceName(f.FileName()); name != rel {
+			spans = append(spans, byFile[name]...)
+			delete(byFile, name)
+		}
 		if len(spans) == 0 {
 			continue
 		}
