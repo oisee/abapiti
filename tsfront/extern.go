@@ -164,6 +164,11 @@ func (l *lowerer) externDeclaration(n *ast.Node) (*ast.Node, bool) {
 	if d == nil {
 		return nil, false
 	}
+	if d.Kind == ast.KindPropertySignature || d.Kind == ast.KindMethodSignature {
+		// A member of an exported data interface (host-io.ts DirectoryEntry's
+		// name) is read off the caller's own object, not an extern export.
+		return nil, false
+	}
 	f := ast.GetSourceFileOfNode(d)
 	if f == nil {
 		return nil, false
