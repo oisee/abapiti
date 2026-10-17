@@ -40,7 +40,7 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 			return
 		}
 	}
-	if !reviewedRegexp(p, flags) && (strings.Contains(flags, "u") || strings.Contains(p, "(?<") || p == "" || p == "(?:)" || p == jsregex.IteratorLabelPattern || p == jsregex.BindingScannerPattern || p == jsregex.BindingMaskPattern) {
+	if !reviewedRegexp(p, flags) && (strings.Contains(flags, "u") || strings.Contains(p, "(?<") || p == "" || p == "(?:)" || p == jsregex.IteratorLabelPattern || p == jsregex.BindingScannerPattern || p == jsregex.BindingMaskPattern || p == jsregex.TabIndentPattern || p == jsregex.VarBindingPattern) {
 		e.regexA16 = true
 	}
 	if !reviewedRegexp(p, flags) {

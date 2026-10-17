@@ -13,12 +13,24 @@ const BindingScannerPattern = `\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*
 // BindingMaskPattern preserves line breaks while masking UTF-16 units.
 const BindingMaskPattern = `[^\n]`
 
+// Scanner languages outside the legacy parser's grammar: a control-character
+// capture, and an end assertion inside an alternative. Their matching alphabet
+// and capture behavior agree on UTF-16 units in JS and RE2.
+const TabIndentPattern = `^(\t*)`
+const VarBindingPattern = `\bvar\s*(?:\(|$)`
+
 // TranslateIteratorSubset extends the existing certified grammar. Unicode
 // mode changes the input alphabet to code points; it does not enable Unicode
 // case folding or escapes. Named captures are certified as ordinary captures
 // first, then their names are restored in the translated expression. Keeping
 // the legacy translator separate preserves frozen deployment runtime bytes.
 func TranslateIteratorSubset(pattern, flags string) (string, bool) {
+	if pattern == TabIndentPattern {
+		return `^(\t*)`, flags == ""
+	}
+	if pattern == VarBindingPattern {
+		return `\bvar` + execSpace + `*(?:\(|\z)`, flags == ""
+	}
 	if pattern == BindingMaskPattern {
 		return `[^\n]`, flags == "g"
 	}
