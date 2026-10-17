@@ -2596,6 +2596,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
 		return
 	case "object.get", "object.hasOwn", "object.has":
+		if x.X.Type.Kind == hir.InterfaceRef {
+			b.e.refuse(fmt.Errorf("node %d (%s): property lookup on an interface value is not emitted on ABAP", x.ID, x.Source))
+			return
+		}
 		if x.X.Type.Name == hir.RootObject {
 			if x.Op != "object.get" {
 				b.erasedPropertyHas(x, n, a, args[0])

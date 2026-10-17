@@ -280,6 +280,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
+	l.slotInterfaceImplements()
 	l.covariantImplements()
 	l.eraseGenericOverrides()
 	l.completeInterfaceValueSlots()
@@ -523,7 +524,8 @@ type lowerer struct {
 	// contextLiteralTypes types object literals that a lowering places in a
 	// family context the checker did not see (literalFamilyIndex).
 	contextLiteralTypes map[*ast.Node]*checker.Type
-	familyKeys          *familyKeyMemo // family_key_memo.go
+	slotIfaces          map[string]bool // slot_interface.go
+	familyKeys          *familyKeyMemo  // family_key_memo.go
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt

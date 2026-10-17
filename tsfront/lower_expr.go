@@ -241,6 +241,9 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
 	}
+	if narrowed, ok := l.slotIntersectionNarrowing(n, x, base, t); ok {
+		return narrowed
+	}
 	before := len(l.diags)
 	typ := l.mapCheckerType(n, t)
 	blocked := hasBlocking(l.diags[before:]) || typ.Kind == hir.Void
@@ -891,6 +894,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	f, hasField := l.fieldOf(sym)
+	if hasField && l.slotInterfaceReceiver(p.Expression) {
+		hasField = false // slotRead below: the object's own property
+	}
 	if sym != nil && hasField {
 		if f.Static {
 			owner := l.classOf(sym.Parent)
@@ -960,6 +966,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	base := recv.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
+	}
+	if l.unprunedFeatures && !ast.IsAssignmentTarget(n) && l.slotInterfaceRef(base) {
+		return l.slotRead(n, recv, hir.L(hir.T(hir.String), n.Name().Text()))
 	}
 	if base.Kind == hir.Dynamic || base.Kind == hir.ClassRef && base.Name == hir.RootObject && n.Name().Text() != "constructor" {
 		if recv.Type.Kind == hir.Optional {
@@ -1199,7 +1208,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// A class method is called through its class, never as a stored
 		// function value, even when a structural shape lists it as a field.
 		// Interface/type-literal method signatures are stored functions.
-		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+		if sym := l.resolve(callee); (sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration) && !l.slotInterfaceReceiver(callee.Expression()) {
 			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
 				return l.functionValueCall(n, callee)
 			}

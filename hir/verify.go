@@ -1005,7 +1005,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		eq(t, T(String))
 		args([]Type{T(Optional, T(Dynamic)), T(Optional, T(String))})
 	case "object.get", "object.hasOwn", "object.has":
-		if a.Kind != ClassRef {
+		if a.Kind != ClassRef && !(e.Op == "object.get" && a.Kind == InterfaceRef && v.interfaces[a.Name] != nil) {
 			v.fail(e.Node, "property lookup needs a class receiver")
 		}
 		args([]Type{T(String)})

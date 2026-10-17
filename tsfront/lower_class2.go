@@ -775,6 +775,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
 	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && l.slotInterfaceRef(x.Type.Args[0]) && (dst.Args[0].Kind == hir.InterfaceRef || dst.Args[0].Kind == hir.ClassRef) && !dst.Args[0].Equal(x.Type.Args[0]) && l.acceptsType(x.Type.Args[0], dst.Args[0]) {
+		// Unchecked JavaScript passes ArtifactObject[] where JSDoc declares
+		// IObject[]: the same array (reference arrays share storage), each
+		// element checked as the subtype when it is read.
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
+	}
 	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.UnionRef && dst.Kind == hir.ClassRef {
 		// Unchecked JavaScript passes a family value where JSDoc declares one
 		// of its members (sameSort(a, b) after a.k === b.k narrowed only a):

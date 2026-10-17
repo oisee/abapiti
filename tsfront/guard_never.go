@@ -61,10 +61,26 @@ func (l *lowerer) neverGuardNarrowing(n *ast.Node, x *hir.Expr, t *checker.Type)
 	return nil, false
 }
 
-// guardPredicateType is the asserted type of a true `pred(sym, ...)` guard,
-// possibly one conjunct of `&&`.
+// guardPredicateType is the asserted type of a true `pred(sym, ...)` or
+// `sym instanceof C` guard, possibly one conjunct of `&&`.
 func (l *lowerer) guardPredicateType(guard *ast.Node, sym *ast.Symbol) *checker.Type {
 	guard = ast.SkipParentheses(guard)
+	if guard.Kind == ast.KindBinaryExpression && guard.AsBinaryExpression().OperatorToken.Kind == ast.KindInstanceOfKeyword {
+		// `x instanceof C`: the instance type of the class C names.
+		b := guard.AsBinaryExpression()
+		left := ast.SkipParentheses(b.Left)
+		if left.Kind != ast.KindIdentifier || l.resolve(left) != sym {
+			return nil
+		}
+		class := l.resolve(b.Right)
+		if class != nil && class.Flags&ast.SymbolFlagsAlias != 0 {
+			class, _ = l.ck.ResolveAlias(class)
+		}
+		if class == nil || class.Flags&ast.SymbolFlagsClass == 0 {
+			return nil
+		}
+		return l.ck.GetDeclaredTypeOfSymbol(class)
+	}
 	if guard.Kind == ast.KindBinaryExpression {
 		b := guard.AsBinaryExpression()
 		if b.OperatorToken.Kind != ast.KindAmpersandAmpersandToken {
