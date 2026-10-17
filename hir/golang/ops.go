@@ -51,7 +51,7 @@ var supportedOps = map[string]bool{
 	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
 	"map.delete": true, "string.trimStart": true, "string.trimEnd": true,
 	"map.set": true, "map.get": true, "map.has": true, "map.size": true, "map.keys": true,
-	"set.add": true, "set.has": true, "set.size": true, "set.values": true,
+	"set.iterationValues": true, "set.add": true, "set.has": true, "set.size": true, "set.values": true,
 	"string.length": true, "string.concat": true, "string.substring": true, "string.charCodeAt": true,
 	"i32.toString": true, "i64.toString": true, "i64.remainder2": true,
 	"number.ceil": true, "number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
@@ -149,6 +149,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".deleteProperty(" + args[0] + ")"
 	case "record.delete":
 		code = "func() bool {" + a + ".delete(" + args[0] + ");return true}()"
+	case "set.iterationValues":
+		code = a + ".iterationValues()"
 	case "set.clear":
 		// Deleting from the end keeps every set representation's index and
 		// side tables consistent without moving the remaining items.
@@ -434,7 +436,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		// The outer lookup box carries membership; JS get exposes its payload.
 		code += ".Value"
 	}
-	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values") && x.Type.Args[0].IsRef() {
+	if (x.Op == "map.keys" || x.Op == "map.values" || x.Op == "set.values" || x.Op == "set.iterationValues") && x.Type.Args[0].IsRef() {
 		code = "referenceArray(" + code + ")"
 	}
 	if x.Op == "set.fromArray" && x.X.Type.Args[0].IsRef() {

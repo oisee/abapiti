@@ -93,7 +93,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"set.copy":      {OrderedSet, 1, false},
 	"set.fromArray": {OrderedSet, 1, true},
 	// Snapshot iteration exposes an Array to the ordinary ForEach node.
-	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false},
+	"map.keys": {OrderedMap, 0, false}, "set.values": {OrderedSet, 0, false}, "set.iterationValues": {OrderedSet, 0, false},
 	"classvalue.name":  {ClassValue, 0, false},
 	"classvalue.has":   {ClassValue, 1, false},
 	"regexp.lastIndex": {RegExp, 0, false}, "regexp.setLastIndex": {RegExp, 1, false}, "regexp.exec": {RegExp, 1, false}, "regexp.match_test": {RegExp, 1, false}, "regexp.test": {RegExp, 1, false}, "regexp.source": {RegExp, 0, false}, "regexp.toString": {RegExp, 0, false},
@@ -331,7 +331,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return []Type{t}, t, true
 	case "set.fromArray":
 		return []Type{T(Array, t.Args[0])}, t, true
-	case "map.keys", "set.values":
+	case "map.keys", "set.values", "set.iterationValues":
 		return nil, T(Array, t.Args[0]), true
 	case "classvalue.name":
 		return nil, T(String), true

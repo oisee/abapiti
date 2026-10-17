@@ -163,6 +163,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	runtime = sameValueZeroRuntime(runtime)
 	runtime += e.gogenRuntimeSource()
 	runtime = e.mapInsertionsRuntime(runtime)
+	runtime = e.setIterationRuntime(runtime)
 	if e.usesStorageIdentity() {
 		runtime = storageIdentityRuntime(runtime)
 	}
