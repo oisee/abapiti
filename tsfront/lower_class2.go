@@ -700,6 +700,26 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		}
 		return view
 	}
+	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 {
+		src := x.Type
+		if src.Kind == hir.Optional && len(src.Args) == 1 {
+			src = src.Args[0]
+		}
+		// Keep anonymous contextual return shapes on their existing ABI.
+		// Declared data-interface destinations have a stable live-view layout.
+		if !strings.HasPrefix(dst.Args[0].Name, "shape.") && l.dataShapeSubtype(dst.Args[0], src) {
+			if x.Type.Kind != hir.Optional {
+				return l.coerce(l.coerce(x, dst.Args[0]), dst)
+			}
+			// Preserve absence and evaluate the source only once. The present
+			// branch keeps the same backing object through the live class view.
+			saved := l.tempInit(nil, x.Type, x)
+			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: src, X: saved}
+			return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst,
+				X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
+				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.coerce(present, dst.Args[0]), dst)}
+		}
+	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not
 		// nominal TS types. Reuse the live data-class view: never copy fields
