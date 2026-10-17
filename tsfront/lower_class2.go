@@ -485,6 +485,12 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 	for _, name := range names {
 		for _, node := range used[name] {
 			symbol := l.ck.GetSymbolAtLocation(node)
+			if node.Parent != nil && node.Parent.Kind == ast.KindShorthandPropertyAssignment {
+				// {go, type} reads the binding named type, not the property.
+				if value := l.ck.GetShorthandAssignmentValueSymbol(node.Parent); value != nil {
+					symbol = value
+				}
+			}
 			if declared[symbol] {
 				continue
 			}
@@ -690,8 +696,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved}, Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.familyAdmission(saved, dst.Args[0])}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.UnionRef && !x.Type.Equal(dst.Args[0])) {
-		// A flow-narrowed payload stored into `F | undefined` is admitted to
-		// F first; the optional wrapping is the ordinary present value.
+		// A flow-narrowed payload (or a subset family value) stored into
+		// `F | undefined` is admitted to (widened into) F first; the optional
+		// wrapping is the ordinary present value.
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
 			return l.coerce(admitted, dst)
 		}
@@ -784,6 +791,53 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic && (dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool) {
 		// TypeScript typed the tagged value as the primitive: absence raises.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && (dst.Kind == hir.ClassRef || dst.Kind == hir.InterfaceRef) {
+		// An any value (obj?.getMainABAPFile()?.getStructure() on an erased
+		// receiver) passed where JSDoc declares a present reference: absence
+		// reaches the use as `x!` does, a present payload is unboxed checked.
+		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic && dst.IsRef() && dst.Kind != hir.Dynamic {
+		// Unchecked JavaScript passes a possibly-undefined reference where the
+		// JSDoc declares a present one (`f(map.get(k))`): the value flows on
+		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
+		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.UnionRef && dst.Kind == hir.ClassRef {
+		// Unchecked JavaScript passes a family value where JSDoc declares one
+		// of its members (sameSort(a, b) after a.k === b.k narrowed only a):
+		// the checked projection keeps the object and raises on another member.
+		if u := l.out.Union(x.Type.Name); u != nil && u.Complete {
+			for _, a := range u.Alternatives {
+				if a.Payload.Equal(dst) {
+					return &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: "union.project", Owner: u.Name, Name: a.ID, Type: dst, X: x}
+				}
+			}
+		}
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && dst.Kind == hir.Optional && len(dst.Args) == 1 {
+		// The same for a possibly-undefined wider reference stored where
+		// JSDoc declares `Subtype | undefined`: undefined stays undefined.
+		from, to := x.Type.Args[0], dst.Args[0]
+		if (from.Kind == hir.ClassRef || from.Kind == hir.InterfaceRef) && (to.Kind == hir.ClassRef || to.Kind == hir.InterfaceRef) && to.Name != hir.RootObject && !l.refAccepts(to, from) && l.refSharedSubtype(from, to) {
+			x = l.tempInit(nil, x.Type, x)
+			present := &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: to, X: &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: from, X: x}}
+			return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, dst)}
+		}
+	}
+	if l.unprunedFeatures && l.inJSFile() && (x.Type.Kind == hir.ClassRef || x.Type.Kind == hir.InterfaceRef) {
+		// Unchecked JavaScript passes a wider reference where JSDoc declares a
+		// subtype (an INode argument for an ExpressionNode parameter): the
+		// object flows on through a checked cast, which raises only when no
+		// declared subtype holds it.
+		target := dst
+		if target.Kind == hir.Optional && len(target.Args) == 1 {
+			target = target.Args[0]
+		}
+		if (target.Kind == hir.ClassRef || target.Kind == hir.InterfaceRef) && target.Name != hir.RootObject && !l.refAccepts(target, x.Type) && l.refSharedSubtype(x.Type, target) {
+			return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: target, X: x}, dst)
+		}
 	}
 	// A present-only use of an optional primitive (TypeScript already typed
 	// it as the base): checked narrowing, absent raises.
@@ -884,3 +938,62 @@ func sortStrings(s []string) {
 
 // lookupPendingAllowed reports whether lazy lifting is active in this body.
 func (l *lowerer) lookupPendingAllowed() bool { return l.pendingFns != nil }
+
+// inJSFile reports lowering inside a .js/.mjs/.cjs source (no checkJs).
+func (l *lowerer) inJSFile() bool {
+	return l.file != nil && ast.IsInJSFile(l.file.AsNode())
+}
+
+// refAccepts mirrors the verifier's reference upcast: the class chain and its
+// declared interfaces, or an interface whose methods src provides alike.
+func (l *lowerer) refAccepts(dst, src hir.Type) bool {
+	if dst.Equal(src) {
+		return true
+	}
+	if dst.Kind == hir.InterfaceRef && src.Kind == hir.InterfaceRef {
+		for _, i := range l.out.Interfaces {
+			if i.Name != dst.Name {
+				continue
+			}
+			for _, m := range i.Methods {
+				other := l.interfaceMethod(src.Name, m.Name)
+				if other == nil || !m.Result.Equal(other.Result) || len(m.Params) != len(other.Params) {
+					return false
+				}
+				for k, p := range m.Params {
+					if !p.Type.Equal(other.Params[k].Type) {
+						return false
+					}
+				}
+			}
+			return true
+		}
+		return false
+	}
+	if src.Kind != hir.ClassRef {
+		return false
+	}
+	for c := l.classByName(src.Name); c != nil; c = l.classByName(c.Super) {
+		if dst.Kind == hir.ClassRef && c.Name == dst.Name {
+			return true
+		}
+		for _, i := range c.Implements {
+			if dst.Kind == hir.InterfaceRef && dst.Name == i {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// refSharedSubtype reports a lowered class both references accept, so a
+// checked cast between them can succeed.
+func (l *lowerer) refSharedSubtype(a, b hir.Type) bool {
+	for _, c := range l.out.Classes {
+		ref := hir.Ref(c.Name)
+		if l.refAccepts(a, ref) && l.refAccepts(b, ref) {
+			return true
+		}
+	}
+	return false
+}

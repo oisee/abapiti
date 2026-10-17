@@ -1385,6 +1385,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 				// The checker typed the receiver present (`if (map[k]) map[k].f()`).
 				recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(p.Expression), Type: recv.Type.Args[0], X: recv}
 			}
+			recv = l.nullableMethodReceiver(p.Expression, recv)
 			// In unpruned tests, a generic array may actually contain another
 			// implementation of its erased constraint. Dispatch common methods
 			// through that constraint instead of asserting a nominal element cast.
@@ -1994,7 +1995,13 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
-			return l.rtOp("array.includes", recv, boolT, one()), true
+			x := one()
+			if x != nil && l.unprunedFeatures {
+				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
+					return probe, true
+				}
+			}
+			return l.rtOp("array.includes", recv, boolT, x), true
 		case "join":
 			sep := &hir.Expr{Kind: hir.Lit, Type: hir.T(hir.Optional, str)}
 			if len(args) == 1 {
@@ -3667,6 +3674,35 @@ func alwaysTruthyObject(t hir.Type) bool {
 // checkedContainerReceiver views a tagged receiver as the Map, Set or array
 // its checked type names (a member read through a union lowered as a tagged
 // value). The reference view checks the stored value; nothing is converted.
+// nullableMethodReceiver views a T | null | undefined receiver (boxed as
+// Dynamic) through T for a method call. JavaScript calls the method on a
+// present value; the checked view raises on null or undefined, where
+// JavaScript raises its TypeError.
+func (l *lowerer) nullableMethodReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
+	if recv.Type.Kind != hir.Dynamic {
+		return recv
+	}
+	t := l.ck.GetTypeAtLocation(expr)
+	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 || !t.IsUnion() {
+		return recv
+	}
+	nonNull := l.ck.GetNonNullableType(t)
+	if nonNull == t || nonNull.IsUnion() {
+		return recv
+	}
+	before := len(l.diags)
+	typ := l.mapCheckerType(expr, nonNull)
+	if hasBlocking(l.diags[before:]) {
+		l.diags = l.diags[:before]
+		return recv
+	}
+	l.diags = l.diags[:before]
+	if typ.Kind != hir.ClassRef && typ.Kind != hir.InterfaceRef {
+		return recv
+	}
+	return l.dynamicReference(recv, typ)
+}
+
 func (l *lowerer) checkedContainerReceiver(expr *ast.Node, recv *hir.Expr) *hir.Expr {
 	t := l.ck.GetTypeAtLocation(expr)
 	if t == nil || t.Flags()&checker.TypeFlagsAnyOrUnknown != 0 {
@@ -3703,4 +3739,29 @@ func plainObjectLiteralMethod(n *ast.Node) bool {
 		return x.ForEachChild(observes)
 	}
 	return !observes(m.Body)
+}
+
+// scalarIncludesProbe lowers string[].includes(x) for an x that may not be a
+// string: undefined (an optional field read) or a tagged value (an untyped
+// JS parameter). SameValueZero finds no such value among the strings, so the
+// search runs only on a present string, exactly as in JavaScript.
+func (l *lowerer) scalarIncludesProbe(n *ast.Node, recv, x *hir.Expr) (*hir.Expr, bool) {
+	if recv.Type.Kind != hir.Array || len(recv.Type.Args) != 1 || recv.Type.Args[0].Kind != hir.String {
+		return nil, false
+	}
+	boolT, str := hir.T(hir.Bool), hir.T(hir.String)
+	switch {
+	case x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.String:
+		recv = l.tempInit(n, recv.Type, recv)
+		x = l.tempInit(n, x.Type, x)
+		found := l.rtOp("array.includes", recv, boolT, &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: str, X: x})
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: boolT, X: &hir.Expr{Kind: hir.IsUndefined, Type: boolT, X: x}, Y: hir.L(boolT, false), Z: found}, true
+	case x.Type.Kind == hir.Dynamic:
+		recv = l.tempInit(n, recv.Type, recv)
+		x = l.tempInit(n, x.Type, x)
+		isString := &hir.Expr{Kind: hir.Binary, Type: boolT, Op: "==", X: l.rtOp("dynamic.typeof", x, str), Y: hir.L(str, "string")}
+		found := l.rtOp("array.includes", recv, boolT, l.rtOp("dynamic.asString", x, str))
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: boolT, X: isString, Y: found, Z: hir.L(boolT, false)}, true
+	}
+	return nil, false
 }

@@ -208,6 +208,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.regexA16 {
 		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateSubset(p,f);accepted", "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", 1)
 	}
+	if e.regexExtended {
+		runtime += strings.Replace(strings.TrimPrefix(jsregex.ExtendedRuntimeSource, "package jsregex"), "import \"strings\"\n", "", 1)
+		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", "if translated,accepted:=TranslateExtendedSubset(p,f);accepted", 1)
+	}
 	if e.constructorArgs {
 		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
 	}
@@ -299,6 +303,7 @@ type emitter struct {
 	typeofUsed        bool
 	extendedRegex     bool
 	regexA16          bool
+	regexExtended     bool
 	regexSplit        bool
 	constructorArgs   bool
 	configJSON        bool

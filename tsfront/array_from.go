@@ -51,6 +51,12 @@ func (l *lowerer) arrayFrom(n *ast.Node) *hir.Expr {
 			return nil
 		}
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Dynamic && l.arrayBranchSource(args[0]) {
+		// Array.from(Array.isArray(all) ? all : all.getAll()): the checker
+		// types the source any, but a branch is an array. Its elements are
+		// any; the checked view raises on a non-array source.
+		x = l.rtOp("dynamic.arrayView", x, hir.T(hir.Array, hir.T(hir.Dynamic)))
+	}
 	if x.Type.Kind == hir.Dynamic {
 		// Unannotated JS helpers erase their string input to any. Keep the
 		// string iterator's code-point semantics behind the existing checked
@@ -155,4 +161,22 @@ func (l *lowerer) arrayFrom(n *ast.Node) *hir.Expr {
 		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: i, Y: &hir.Expr{Kind: hir.Binary, Type: i.Type, Op: "+", X: i, Y: hir.L(i.Type, 1)}})
 	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Type: hir.T(hir.Bool), Op: "<", X: i, Y: length}, Body: hir.B(statements...)})
 	return result
+}
+
+// arrayBranchSource reports an any-typed conditional source with a branch
+// the checker types as an array (narrowed by Array.isArray).
+func (l *lowerer) arrayBranchSource(n *ast.Node) bool {
+	for n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	if n.Kind != ast.KindConditionalExpression {
+		return false
+	}
+	c := n.AsConditionalExpression()
+	for _, branch := range []*ast.Node{c.WhenTrue, c.WhenFalse} {
+		if t := l.ck.GetTypeAtLocation(branch); t != nil && l.ck.IsArrayType(t) {
+			return true
+		}
+	}
+	return false
 }

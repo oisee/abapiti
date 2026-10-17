@@ -50,6 +50,8 @@ func (e *emitter) checkRegexp(x *hir.Expr) {
 		}
 		if _, ok := translate(p, flags); ok {
 			e.extendedRegex = true
+		} else if _, ok := jsregex.TranslateExtendedSubset(p, flags); ok {
+			e.extendedRegex, e.regexA16, e.regexExtended = true, true, true
 		} else {
 			e.unsupported(x.Node, "JavaScript regexp /"+p+"/"+flags)
 		}
