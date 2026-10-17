@@ -794,6 +794,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	if x, ok := l.processRead(n); ok {
 		return x
 	}
+	if x, ok := l.requiredMemberRead(n); ok {
+		return x
+	}
 	if x, handled := l.direntMember(n, false, 0); handled {
 		return x
 	}
@@ -1168,6 +1171,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 					}
 				}
 			}
+		}
+	}
+	if callee.Kind == ast.KindPropertyAccessExpression {
+		if x, handled := l.requiredMemberCall(n, callee); handled {
+			return x
 		}
 	}
 	if x, ok := l.thunkCall(n, callee); ok {
@@ -2374,6 +2382,11 @@ func (l *lowerer) newExpression(n *ast.Node) *hir.Expr {
 			if a != nil && a.Type.Kind == hir.Optional && a.Type.Args[0].Kind == hir.Array {
 				return l.setFromOptionalArray(n, a)
 			}
+			if a != nil && a.Type.Kind == hir.Dynamic && l.unprunedFeatures {
+				if x := l.setFromDynamic(n, a, savedHint); x != nil {
+					return x
+				}
+			}
 		}
 	}
 	// new Array<T>(n): n still-undefined slots.
@@ -3078,6 +3091,13 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: mapped,
 			X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: saved},
 			Y: &hir.Expr{Kind: hir.Lit, Type: mapped}, Z: value}
+	}
+	if l.unprunedFeatures && mapped.Kind == hir.Dynamic && t.Flags()&checker.TypeFlagsUnknown != 0 && x.Type.IsRef() && x.Type.Kind != hir.Dynamic {
+		// `x as unknown` (not `as any`, whose receiver keeps its lowered
+		// type): the same object behind the tagged value, so a
+		// following assertion (`as unknown as T`) reaches the checked
+		// erased-reference boundary instead of a refused nominal cast.
+		return l.coerce(x, mapped)
 	}
 	switch {
 	case x.Type.Kind == hir.Dynamic && mapped.Kind == hir.String:

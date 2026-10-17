@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	gohir "github.com/oisee/abapiti/hir/golang"
 )
 
 func TestTrapFailureIsOptIn(t *testing.T) {
@@ -103,5 +104,87 @@ func TestTrapVerificationDoesNotPoisonZeroIDSiblings(t *testing.T) {
 	}
 	if errors := hir.Verify(p); len(errors) > 0 {
 		t.Fatal(errors)
+	}
+}
+
+func TestTrapMissingInterfaceImplementation(t *testing.T) {
+	s := hir.T(hir.String)
+	signature := &hir.Method{Name: "run", Params: []hir.Param{{Name: "input", Type: s}}, Result: s}
+	good := &hir.Method{Name: "good", Result: s, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(s, "ok")})}
+	c := &hir.Class{Node: hir.Node{ID: 1, Source: "probe.ts:7:3"}, Name: "Probe", Implements: []string{"Runner", "AlsoRunner"}, Methods: []*hir.Method{good}}
+	p := &hir.Program{Interfaces: []*hir.Interface{{Name: "Runner", Methods: []*hir.Method{signature}}, {Name: "AlsoRunner", Methods: []*hir.Method{signature}}}, Classes: []*hir.Class{c}}
+	if errors := hir.Verify(p); len(errors) == 0 {
+		t.Fatal("fixture must require a missing method")
+	}
+	(&lowerer{out: p, serial: 1}).repairFailedBodies()
+	if errors := hir.Verify(p); len(errors) > 0 {
+		t.Fatal(errors)
+	}
+	if len(c.Methods) != 2 || c.Methods[0] != good || isFailureBody(good.Body) {
+		t.Fatal("valid sibling replaced or duplicate stub added")
+	}
+	stub := c.Methods[1]
+	if !isFailureBody(stub.Body) || !strings.Contains(stub.Body.List[0].Name, "probe.ts:7:3: missing interface implementation run") {
+		t.Fatal("missing located refusal", stub)
+	}
+	main := `defer func(){x:=recover();if x==nil{panic("missing interface trap")};fmt.Print(x)}();` + hir.NewNames().Get("body.Probe.run") + `(` + hir.NewNames().Get("new.Probe") + `(),str("input"))`
+	if got := runGoHIR(t, p, main); !strings.Contains(got, "probe.ts:7:3: missing interface implementation run") {
+		t.Fatal(got)
+	}
+}
+
+func TestTrapMissingInterfacePreservesInheritedImplementation(t *testing.T) {
+	s := hir.T(hir.String)
+	m := &hir.Method{Name: "run", Virtual: true, Result: s, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(s, "ok")})}
+	base := &hir.Class{Name: "Base", Methods: []*hir.Method{m}}
+	child := &hir.Class{Name: "Child", Super: "Base", Implements: []string{"Runner"}}
+	p := &hir.Program{Interfaces: []*hir.Interface{{Name: "Runner", Methods: []*hir.Method{{Name: "run", Result: s}}}}, Classes: []*hir.Class{base, child}}
+	(&lowerer{out: p}).repairFailedBodies()
+	if errors := hir.Verify(p); len(errors) > 0 {
+		t.Fatal(errors)
+	}
+	if len(child.Methods) != 0 || len(base.Methods) != 1 || base.Methods[0] != m || isFailureBody(m.Body) {
+		t.Fatal("existing inherited implementation changed")
+	}
+}
+
+func TestTrapIncompatibleInterfaceConversionPreservesMethodABI(t *testing.T) {
+	s, n := hir.T(hir.String), hir.T(hir.Number)
+	good := &hir.Method{Name: "run", Virtual: true, Result: s, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(s, "ok")})}
+	use := &hir.Method{Node: hir.Node{ID: 2, Source: "probe.ts:9:3"}, Name: "use", Static: true, Result: hir.Type{Kind: hir.InterfaceRef, Name: "Runner"}, Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.New, Type: hir.Ref("Probe")}})}
+	c := &hir.Class{Node: hir.Node{ID: 1, Source: "probe.ts:7:3"}, Name: "Probe", Implements: []string{"Runner"}, Methods: []*hir.Method{good, use}}
+	p := &hir.Program{Interfaces: []*hir.Interface{{Name: "Runner", Methods: []*hir.Method{{Name: "run", Result: n}}}}, Classes: []*hir.Class{c}}
+	(&lowerer{out: p, serial: 2}).repairFailedBodies()
+	if errors := hir.Verify(p); len(errors) > 0 {
+		t.Fatal(errors)
+	}
+	if len(c.Implements) != 0 || isFailureBody(good.Body) || !good.Result.Equal(s) {
+		t.Fatal("invalid interface ABI was guessed")
+	}
+	if !isFailureBody(use.Body) || !strings.Contains(use.Body.List[0].Name, "probe.ts:9:3") {
+		t.Fatal("conversion did not become a located refusal")
+	}
+	if got := runGoHIR(t, p, `defer func(){x:=recover();if x==nil{panic("missing conversion trap")};fmt.Print(x)}();`+hir.NewNames().Get("body.Probe.use")+`()`); !strings.Contains(got, "probe.ts:9:3") {
+		t.Fatal(got)
+	}
+}
+
+func TestEmitGoBackendRefusalBecomesLocatedTrap(t *testing.T) {
+	n := hir.Node{ID: 1, Source: "probe.ts:17:6"}
+	regex := &hir.Expr{Node: n, Kind: hir.New, Type: hir.T(hir.RegExp), Args: []*hir.Expr{hir.L(hir.T(hir.String), "(?=a)a"), hir.L(hir.T(hir.String), "")}}
+	bad := &hir.Method{Node: hir.Node{ID: 2, Source: "probe.ts:16:3"}, Name: "bad", Static: true, Result: hir.T(hir.RegExp), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: regex})}
+	good := &hir.Method{Name: "good", Static: true, Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: hir.L(hir.T(hir.String), "ok")})}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{bad, good}}}}
+	if _, err := gohir.Emit(p); err == nil {
+		t.Fatal("fixture must have a backend-only refusal")
+	}
+	if _, err := EmitGoWithTraps(&RegistryLowering{Prog: p}); err != nil {
+		t.Fatal(err)
+	}
+	if !isFailureBody(bad.Body) || isFailureBody(good.Body) {
+		t.Fatal("backend refusal crossed body boundary")
+	}
+	if got := runGoHIR(t, p, `defer func(){x:=recover();if x==nil{panic("missing backend trap")};fmt.Print(x)}();`+hir.NewNames().Get("body.Probe.bad")+`()`); !strings.Contains(got, "probe.ts:17:6") || !strings.Contains(got, "JavaScript regexp") {
+		t.Fatal(got)
 	}
 }

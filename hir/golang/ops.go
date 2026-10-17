@@ -45,7 +45,7 @@ var supportedOps = map[string]bool{
 
 	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
-	"array.spread0": true, "array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.spliceDrop2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.clear": true, "set.copy": true,
+	"array.spread0": true, "array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.spliceDrop2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.clear": true, "map.clear": true, "set.copy": true,
 
 	"string.substr": true, "string.trim": true, "string.slice": true, "string.charAt": true, "string.replaceAll": true, "string.split": true, "string.splitRegex": true, "string.toUpperCase": true, "set.fromArray": true,
 	"array.push": true, "array.get": true, "array.has": true, "array.delete": true, "array.length": true,
@@ -153,6 +153,10 @@ func (b *body) runtime(x *hir.Expr) string {
 		// Deleting from the end keeps every set representation's index and
 		// side tables consistent without moving the remaining items.
 		code = "func() {s:=" + a + ";for len(s.Items)>0 {s.delete(s.Items[len(s.Items)-1])}}()"
+	case "map.clear":
+		// Keys go through delete (proxy-aware for Map views), last first so
+		// no remaining entry moves.
+		code = "func() {m:=" + a + ";k:=m.keys().Items;for i:=len(k)-1;i>=0;i-- {m.delete(k[i])}}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
 		if x.Op == "array.length" && b.e.liveStorage() {

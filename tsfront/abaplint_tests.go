@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/oisee/abapiti/hir"
-	gohir "github.com/oisee/abapiti/hir/golang"
 )
 
 // LowerAbaplintTests verifies and lowers a tools/abaplint-tests-closure.mjs
@@ -115,32 +114,9 @@ func EmitAbaplintTests(dir string, lowering *RegistryLowering) (map[string]strin
 			}
 		}
 	}
-	var files map[string]string
-	for {
-		files, err = gohir.Emit(lowering.Prog)
-		if err == nil {
-			break
-		}
-		e, ok := err.(hir.Error)
-		if !ok || e.ID == 0 {
-			return nil, err
-		}
-		trapped := false
-		for _, c := range lowering.Prog.Classes {
-			for _, m := range append(append([]*hir.Method{}, c.Methods...), c.Ctor) {
-				if m != nil && bodyIDs(m.Body)[e.ID] {
-					m.Body = failureBody(m.Node, e.Error())
-					trapped = true
-				}
-			}
-		}
-		if !trapped {
-			return nil, err
-		}
-		(&lowerer{out: lowering.Prog}).repairFailedBodies()
-		if errors := hir.Verify(lowering.Prog); len(errors) > 0 {
-			return nil, fmt.Errorf("after Go failure trap: %s", errors[0])
-		}
+	files, err := EmitGoWithTraps(lowering)
+	if err != nil {
+		return nil, err
 	}
 	files["go.mod"] = "module abaplinttests\n\ngo 1.26.0\n"
 	// Async rejection preserves a typed TS payload. Unwrap primitive reasons

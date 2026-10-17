@@ -92,6 +92,13 @@ func (l *lowerer) gogenIndexWrite(n *ast.Node) bool {
 	if n.Kind == ast.KindPropertyAccessExpression && l.ck.GetPropertyOfType(t, n.Name().Text()) != nil {
 		return false
 	}
+	// A literal key the type does not declare names no typed slot of this
+	// type: the write lands in the shared property store, exactly as Node.
+	// A subtype that declares the key keeps a checked view: a later typed
+	// read of a value outside its slot type traps at its location.
+	if key := gogenLiteralKey(n); key != "" && key != "__proto__" && l.ck.GetPropertyOfType(t, key) == nil {
+		return false
+	}
 	l.diagf(n, "unsupported-assignment", "writes through a mixed index signature require an exact named-slot alias policy")
 	return true
 }
@@ -197,4 +204,15 @@ func (l *lowerer) gogenIndexedType(t *checker.Type) (hir.Type, bool) {
 		}
 	}
 	return hir.Type{}, false
+}
+
+// gogenLiteralKey is the static key of o.k or o["k"], or "".
+func gogenLiteralKey(n *ast.Node) string {
+	if n.Kind == ast.KindPropertyAccessExpression {
+		return n.Name().Text()
+	}
+	if arg := n.AsElementAccessExpression().ArgumentExpression; arg != nil && arg.Kind == ast.KindStringLiteral {
+		return arg.Text()
+	}
+	return ""
 }

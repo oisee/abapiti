@@ -148,6 +148,12 @@ func (l *lowerer) moduleInitializer(n *ast.Node) bool {
 		if l.integerOptions.TrapOnFailure && (x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression) && l.isDeferredTestCallback(x) {
 			return
 		}
+		// A nested function's reads happen when it is called, exactly like
+		// a module function declaration's (whose body this check does not
+		// inspect either): creating the function value reads nothing.
+		if l.unprunedFeatures && (x.Kind == ast.KindArrowFunction || x.Kind == ast.KindFunctionExpression) {
+			return
+		}
 		if x.Kind == ast.KindPropertyAccessExpression {
 			p := x.AsPropertyAccessExpression()
 			if l.classOf(l.resolve(p.Expression)) != nil {

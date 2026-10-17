@@ -193,6 +193,9 @@ func (l *lowerer) closureAdapter(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Ex
 	if inner == nil || outer == nil || dst.Name == thunkInterfaceName {
 		return nil
 	}
+	if adapted, handled := l.variadicClosureAdapter(n, x, dst, inner, outer); handled {
+		return adapted
+	}
 	// A function with trailing optional parameters is also a value of a
 	// shorter function type: JavaScript binds the omitted ones to undefined.
 	omitted := trailingOptional(inner, outer)

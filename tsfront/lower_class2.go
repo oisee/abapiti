@@ -383,7 +383,15 @@ func (l *lowerer) functionBody(body *ast.Node) *hir.Stmt {
 	if l.method.Result.Kind == hir.Void {
 		stmt = l.expressionStatement(body)
 	} else {
-		stmt = &hir.Stmt{Kind: hir.Return, Node: l.node(body), X: l.expr(body)}
+		// A concise body is `return body`: the declared result type is its
+		// contextual type, as for a return statement.
+		l.hint = l.method.Result
+		x := l.expr(body)
+		l.hint = hir.Type{}
+		if x != nil {
+			x = l.coerce(l.presentValue(body, x, l.method.Result), l.method.Result)
+		}
+		stmt = &hir.Stmt{Kind: hir.Return, Node: l.node(body), X: x}
 	}
 	return hir.B(append(l.pend, stmt)...)
 }

@@ -3,6 +3,7 @@ package tsfront
 import (
 	"context"
 
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/core"
 )
@@ -47,8 +48,28 @@ import (
 
 // requireBindings holds the facts of all lowered files.
 type requireBindings struct {
-	targets map[*ast.Symbol]*ast.Symbol // binding variable -> module or export
-	skip    map[*ast.Node]bool          // top-level statements that are only plumbing
+	targets   map[*ast.Symbol]*ast.Symbol // binding variable -> module or export
+	skip      map[*ast.Node]bool          // top-level statements that are only plumbing
+	requirers map[*ast.Symbol]bool        // createRequire results, of every file
+	inline    map[*ast.Node]*ast.Symbol   // typed inline require expression -> module
+}
+
+// inlineRequire returns the module of a typed inline require expression,
+// `/** @type {typeof import("<spec>")} */ (req("<spec>"))`, or nil.
+func (l *lowerer) inlineRequire(n *ast.Node) *ast.Symbol {
+	if l.require == nil || len(l.require.inline) == 0 {
+		return nil
+	}
+	for n != nil && n.Kind == ast.KindParenthesizedExpression {
+		if mod := l.require.inline[n]; mod != nil {
+			return mod
+		}
+		n = n.Expression()
+	}
+	if n == nil {
+		return nil
+	}
+	return l.require.inline[n]
 }
 
 // requireTarget maps a static require binding to its module or export symbol.
@@ -86,19 +107,64 @@ func (l *lowerer) dropRequirePlumbing(nodes []*ast.Node) []*ast.Node {
 // scanRequireBindings records the static require bindings of files. It runs
 // before any statement list is read.
 func (l *lowerer) scanRequireBindings(files []string) {
-	l.require = &requireBindings{targets: map[*ast.Symbol]*ast.Symbol{}, skip: map[*ast.Node]bool{}}
+	l.require = &requireBindings{targets: map[*ast.Symbol]*ast.Symbol{}, skip: map[*ast.Node]bool{},
+		requirers: map[*ast.Symbol]bool{}, inline: map[*ast.Node]*ast.Symbol{}}
 	saved, savedCk := l.file, l.ck
 	defer func() { l.file, l.ck = saved, savedCk }()
-	for _, name := range files {
-		f, ok := l.prog.File(name)
-		if !ok || !requireCandidate(f) {
+	// Files creating requirers first; then files that only import one (a
+	// requirer exported by another module, as gogen's frontend-base.mjs).
+	for _, creating := range []bool{true, false} {
+		for _, name := range files {
+			f, ok := l.prog.File(name)
+			if !ok || requireCandidate(f) != creating {
+				continue
+			}
+			ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
+			l.file, l.ck = f, ck
+			if creating || l.importsRequirer(f) {
+				l.scanRequireFile(f)
+			}
+			done()
+		}
+	}
+}
+
+// importsRequirer: f imports a binding that resolves to a requirer.
+func (l *lowerer) importsRequirer(f *ast.SourceFile) bool {
+	if len(l.require.requirers) == 0 {
+		return false
+	}
+	for _, stmt := range f.Statements.Nodes {
+		if stmt.Kind != ast.KindImportDeclaration {
 			continue
 		}
-		ck, done := l.prog.prog.GetTypeCheckerForFile(context.Background(), f)
-		l.file, l.ck = f, ck
-		l.scanRequireFile(f)
-		done()
+		clause := stmt.AsImportDeclaration().ImportClause
+		if clause == nil || clause.AsImportClause().NamedBindings == nil || clause.AsImportClause().NamedBindings.Kind != ast.KindNamedImports {
+			continue
+		}
+		for _, el := range clause.AsImportClause().NamedBindings.AsNamedImports().Elements.Nodes {
+			if l.requirerSymbol(el.Symbol()) {
+				return true
+			}
+		}
 	}
+	return false
+}
+
+// requirerSymbol: sym is a requirer or an import/export alias of one.
+func (l *lowerer) requirerSymbol(sym *ast.Symbol) bool {
+	if sym == nil {
+		return false
+	}
+	if l.require.requirers[sym] {
+		return true
+	}
+	if sym.Flags&ast.SymbolFlagsAlias != 0 {
+		if resolved, ok := l.ck.ResolveAlias(sym); ok {
+			return l.require.requirers[resolved]
+		}
+	}
+	return false
 }
 
 // requireCandidate: only files importing createRequire can bind statically.
@@ -116,8 +182,8 @@ func isNodeModuleSpecifier(spec *ast.Node) bool {
 }
 
 func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
-	creators := map[*ast.Symbol]bool{}  // createRequire import bindings
-	requirers := map[*ast.Symbol]bool{} // createRequire results
+	creators := map[*ast.Symbol]bool{} // createRequire import bindings
+	requirers := l.require.requirers   // createRequire results
 	for _, stmt := range f.Statements.Nodes {
 		if stmt.Kind != ast.KindImportDeclaration || !isNodeModuleSpecifier(stmt.AsImportDeclaration().ModuleSpecifier) {
 			continue
@@ -136,14 +202,16 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 			}
 		}
 	}
-	if len(creators) == 0 {
-		return
-	}
 	symbolIn := func(n *ast.Node, set map[*ast.Symbol]bool) bool {
 		if n == nil || n.Kind != ast.KindIdentifier {
 			return false
 		}
 		sym := l.ck.GetSymbolAtLocation(n)
+		if sym != nil && sym.Flags&ast.SymbolFlagsAlias != 0 && !set[sym] {
+			if resolved, ok := l.ck.ResolveAlias(sym); ok {
+				sym = resolved
+			}
+		}
 		return sym != nil && set[sym]
 	}
 	// createRequire(import.meta.url) or createRequire(r.resolve("<literal>")).
@@ -204,6 +272,16 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 		if n == nil {
 			return
 		}
+		if !top && n.Kind == ast.KindAsExpression && ast.IsJSDocTypeAssertion(n.Parent) {
+			// A typed inline require: (req("<spec>")).member, the
+			// annotation proving the module as for a declaration.
+			if call := n.Expression(); call != nil && call.Kind == ast.KindCallExpression && (symbolIn(call.Expression(), requirers) || isRequirer(call.Expression())) {
+				if mod := l.requiredModuleTyped(n.Type(), call); mod != nil {
+					l.require.inline[n.Parent] = mod
+				}
+				return
+			}
+		}
 		if !top && n.Kind == ast.KindVariableStatement {
 			decls := n.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes
 			if len(decls) == 1 {
@@ -215,6 +293,17 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 						l.require.skip[n] = true
 					}
 					return
+				}
+				// const {f, g} = /** @type {typeof import("<spec>")} */ (req("<spec>"));
+				// the inline annotation proves the module as a declared type does.
+				if init != nil && d.Type() == nil && d.Name().Kind == ast.KindObjectBindingPattern && ast.IsJSDocTypeAssertion(init) {
+					as := init.Expression()
+					if call := as.Expression(); call != nil && call.Kind == ast.KindCallExpression && (symbolIn(call.Expression(), requirers) || isRequirer(call.Expression())) {
+						if mod := l.requiredModuleTyped(as.Type(), call); mod != nil && l.bindRequired(d, mod) {
+							l.require.skip[n] = true
+						}
+						return
+					}
 				}
 			}
 		}
@@ -237,13 +326,17 @@ func (l *lowerer) scanRequireFile(f *ast.SourceFile) {
 // `typeof import("<same literal>")`; the module is the program's resolution
 // of that import type.
 func (l *lowerer) requiredModule(d, call *ast.Node) *ast.Symbol {
+	return l.requiredModuleTyped(d.Type(), call)
+}
+
+func (l *lowerer) requiredModuleTyped(declared, call *ast.Node) *ast.Symbol {
 	args := call.Arguments()
 	if len(args) != 1 || args[0].Kind != ast.KindStringLiteral {
 		l.diagf(call, "unsupported-require", "dynamic require: the argument must be one string literal")
 		return nil
 	}
 	spec := args[0].Text()
-	typ := l.pickedImportType(d.Type())
+	typ := l.pickedImportType(declared)
 	if typ == nil || !ast.IsLiteralImportTypeNode(typ) || !typ.AsImportTypeNode().IsTypeOf || typ.AsImportTypeNode().Qualifier != nil || typ.AsImportTypeNode().TypeArguments != nil {
 		l.diagf(call, "unsupported-require", "dynamic require(%q): the declaration needs a JSDoc @type {typeof import(%q)}", spec, spec)
 		return nil
@@ -365,4 +458,85 @@ func (l *lowerer) requireNamespaceValue(n *ast.Node) bool {
 	}
 	l.diagf(n, "unsupported-require", "namespace %s bound by require is not a value; use its members", n.Text())
 	return true
+}
+
+// requiredMember resolves `m.name` where m is a require-bound module (a
+// binding, an import of one, or a typed inline require) to the module's
+// export symbol, aliases resolved; nil otherwise. The member is read live
+// from the module, as Node's exports object would give it.
+func (l *lowerer) requiredMember(n *ast.Node) *ast.Symbol {
+	if l.require == nil || n == nil || n.Kind != ast.KindPropertyAccessExpression {
+		return nil
+	}
+	recv := n.Expression()
+	mod := l.inlineRequire(recv)
+	if mod == nil && recv.Kind == ast.KindIdentifier {
+		mod = l.requireTarget(l.ck.GetSymbolAtLocation(recv))
+	}
+	if mod == nil || mod.Flags&ast.SymbolFlagsValueModule == 0 {
+		return nil
+	}
+	name := n.Name().Text()
+	for _, sym := range l.ck.GetExportsOfModule(mod) {
+		if sym.Name != name {
+			continue
+		}
+		if sym.Flags&ast.SymbolFlagsAlias != 0 {
+			if resolved, ok := l.ck.ResolveAlias(sym); ok {
+				return resolved
+			}
+		}
+		return sym
+	}
+	return nil
+}
+
+// requiredMemberRead lowers a read of a module variable through a required
+// module, like an imported binding's read.
+func (l *lowerer) requiredMemberRead(n *ast.Node) (*hir.Expr, bool) {
+	sym := l.requiredMember(n)
+	if sym == nil {
+		return nil, false
+	}
+	owner, fieldName, ok := l.modvarOf(sym)
+	if !ok {
+		return nil, false
+	}
+	for _, mod := range l.out.Classes {
+		if mod.Name != owner {
+			continue
+		}
+		for _, f := range mod.Fields {
+			if f.Name == fieldName {
+				return l.testModuleRead(n, mod, fieldName, f.Type), true
+			}
+		}
+	}
+	return nil, false
+}
+
+// requiredMemberCall lowers `m.f(args)` for a module function f of a
+// required module m as the direct call `f(args)`.
+func (l *lowerer) requiredMemberCall(n, callee *ast.Node) (*hir.Expr, bool) {
+	sym := l.requiredMember(callee)
+	if sym == nil {
+		return nil, false
+	}
+	f := l.fileOfSymbol(sym)
+	if f == nil {
+		return nil, false
+	}
+	ref, ok := l.funcsBy[f.FileName()+" "+sym.Name]
+	if !ok {
+		if _, _, isVar := l.modvarOf(sym); isVar {
+			return l.functionValueCall(n, callee), true
+		}
+		return nil, false
+	}
+	args, ok := l.callArgsStatic(n, n.Arguments(), ref)
+	if !ok {
+		return nil, true
+	}
+	return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
+		Type: l.callbackResultType(ref), Args: args}, true
 }

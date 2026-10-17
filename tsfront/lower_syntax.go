@@ -249,6 +249,9 @@ func (l *lowerer) syntaxLibraryCall(n *ast.Node, name string, recv *hir.Expr) (*
 		if name == "values" && len(args) == 0 {
 			return l.rtOp("map.values", recv, hir.T(hir.Array, recv.Type.Args[1])), true
 		}
+		if name == "clear" && len(args) == 0 {
+			return l.rtOp("map.clear", recv, hir.T(hir.Void)), true
+		}
 	case hir.String:
 		switch name {
 		case "slice":

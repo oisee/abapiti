@@ -808,6 +808,9 @@ func (l *lowerer) trapLocation(n *ast.Node) string {
 // accesses on interface-typed receivers can resolve without a parent through
 // the checker pool; the member name node carries the full symbol.
 func (l *lowerer) resolve(n *ast.Node) *ast.Symbol {
+	if mod := l.inlineRequire(n); mod != nil {
+		return mod
+	}
 	sym := l.ck.GetSymbolAtLocation(n)
 	if sym == nil {
 		return nil
@@ -918,10 +921,17 @@ func (l *lowerer) moduleVar(d *ast.Node, mod *hir.Class) []*hir.Stmt {
 		stmts = []*hir.Stmt{l.assignStatic(mod, d, name, x, typ)}
 	case l.isNewCollection(init):
 		var expr *hir.Expr
+		// new Map(iterable) builds its value in pending statements; the
+		// module initializer runs them before the assignment.
+		saved := l.pend
+		l.pend = nil
 		stmts, expr = l.collectionInit(init)
+		prelude := l.pend
+		l.pend = saved
 		if expr == nil {
 			return nil
 		}
+		stmts = append(prelude, stmts...)
 		expr = l.sealJSMap(init, expr)
 		typ = expr.Type
 		stmts = append(stmts, l.assignStatic(mod, d, name, expr, typ))

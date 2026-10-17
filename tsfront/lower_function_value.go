@@ -21,6 +21,18 @@ func (l *lowerer) functionType(n *ast.Node, t *checker.Type) hir.Type {
 	sig := sigs[0]
 	m := &hir.Method{Name: "call", Virtual: true, Result: l.mapCheckerType(n, l.ck.GetReturnTypeOfSignature(sig))}
 	for _, p := range sig.Parameters() {
+		if elems := l.fixedRestTuple(p); elems != nil {
+			// ...args: [a: X, b: Y] (a variadic tuple type parameter
+			// instantiated at the call site) is the fixed list (a: X, b: Y).
+			for _, et := range elems {
+				typ := l.mapCheckerType(n, et)
+				if typ.Kind == hir.Void {
+					return hir.T(hir.Void)
+				}
+				m.Params = append(m.Params, hir.Param{Name: "arg" + itoa(len(m.Params)), Type: typ})
+			}
+			continue
+		}
 		typ := l.mapCheckerType(n, l.ck.GetTypeOfSymbol(p))
 		if typ.Kind == hir.Void {
 			return hir.T(hir.Void)
@@ -178,6 +190,10 @@ func (l *lowerer) finishCaptureCells() {
 func (l *lowerer) valueSymbol(n *ast.Node) *ast.Symbol {
 	if n != nil && n.Kind == ast.KindIdentifier && n.Parent != nil && n.Parent.Kind == ast.KindShorthandPropertyAssignment {
 		if value := l.ck.GetShorthandAssignmentValueSymbol(n.Parent); value != nil {
+			// {f} where f is a static require binding names the module export.
+			if target := l.requireTarget(value); target != nil {
+				return target
+			}
 			if value.Flags&ast.SymbolFlagsAlias != 0 {
 				if target, ok := l.ck.ResolveAlias(value); ok {
 					return target
