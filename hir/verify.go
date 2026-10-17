@@ -237,7 +237,7 @@ func (v *verifier) typ(n Node, t Type) {
 		if t.Kind == OrderedSet && k.Kind == Optional {
 			k = k.Args[0]
 		}
-		if k.Kind != Number && k.Kind != String && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
+		if k.Kind != Number && k.Kind != String && k.Kind != Bool && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
 			v.fail(n, "unsupported collection key "+k.String())
 		}
 	}

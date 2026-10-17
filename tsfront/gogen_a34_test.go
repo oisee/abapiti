@@ -218,3 +218,16 @@ class Probe { static run(): string {
 } }
 `, "")
 }
+
+func TestGogenA34BooleanCollectionKeysNodeOracle(t *testing.T) {
+	gogenTSOracle(t, `class Probe { static run(): string {
+  const m = new Map<boolean, string>();
+  m.set(false, "f"); m.set(true, "t"); m.set(false, "updated");
+  const before = [...m].map(([k,v]) => String(k) + ":" + v).join(",");
+  m.delete(false); m.set(false, "again");
+  const s = new Set<boolean>([true, false, true]);
+  s.delete(true); s.add(true);
+  return before + "|" + [...m.keys()].map((k) => String(k)).join(",") + "|" + m.get(false) + "|" + m.size + "|" + [...s].map((k) => String(k)).join(",") + "|" + s.size;
+} }
+`, "")
+}
