@@ -818,6 +818,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && dst.Args[0].Kind == hir.ClassRef {
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && dst.Args[0].Kind == hir.Dynamic && (x.Type.Args[0].Kind == hir.InterfaceRef || x.Type.Args[0].Kind == hir.ClassRef) {
+		// A typed reference array stored in a slot laid out as tagged values
+		// (a family payload's parts: TemplatePart[] of an untagged union): the
+		// same array is viewed, never copied, so later pushes stay visible.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.ClassValue {
 		return l.rtOp("dynamic.asClassValue", x, dst)
 	}
