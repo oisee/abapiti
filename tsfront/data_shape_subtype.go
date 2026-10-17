@@ -34,6 +34,9 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 		}
 		found := false
 		for _, g := range s.Fields {
+			if g.Static || f.Name != g.Name {
+				continue
+			}
 			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
 			if g.Type.Kind == hir.Optional && len(g.Type.Args) == 1 && f.Type.Equal(g.Type.Args[0]) && l.widenedRequiredProperty(s, g.Name) {
 				compatible = true
@@ -107,6 +110,9 @@ func (l *lowerer) readonlyShapeRead(dst, src hir.Type, active map[string]bool) b
 	}
 	if dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 {
 		return l.readonlyShapeRead(dst.Args[0], src.Args[0], active)
+	}
+	if dst.Kind == hir.UnionRef {
+		return l.familyViewSubtype(dst, src, active)
 	}
 	return l.dataShapeSubtypeSeen(dst, src, active)
 }

@@ -28,6 +28,9 @@ func (l *lowerer) familyAdmission(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return &hir.Expr{Kind: hir.RuntimeOp, Node: x.Node, Op: "union.admit", Owner: u.Name, Name: a.ID, Type: dst, X: x}
 		}
 	}
+	if u.Complete && l.familyViewSubtype(dst, x.Type, map[string]bool{}) {
+		return l.rtOp("union.check", l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	return x // A mismatch remains a verifier error, never erased membership.
 }
 
