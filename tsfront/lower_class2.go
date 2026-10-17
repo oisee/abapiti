@@ -771,6 +771,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// Snapshotting would lose aliases and later pushes by the caller.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
+	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Args[0].Kind == hir.UnionRef && !dst.Equal(x.Type) && l.familyViewSubtype(dst.Args[0], x.Type.Args[0], map[string]bool{}) {
+		// ValueExpr[] stored where Expr[] is declared: family values share
+		// the boxed storage, so the same array is viewed as the wider family
+		// (as a scalar is widened); every read validates its member.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
 		// Property-only interfaces are nominal storage layouts in HIR, not
 		// nominal TS types. Reuse the live data-class view: never copy fields

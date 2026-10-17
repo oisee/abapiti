@@ -79,3 +79,9 @@ function variable`, 1)
 	}
 	runMjsOracleTypes(t, step4FrontendIR[0], probe, false, true)
 }
+
+// ValueExpr[] stored in binds: readonly FrontendIR<Expr>[] (Expr[]): the
+// same array viewed as the wider family.
+func TestStep4FrontendIRBindsNodeOracle(t *testing.T) {
+	runMjsOracleTypes(t, step4FrontendIR[0], step4FrontendIR[1], false, true)
+}
