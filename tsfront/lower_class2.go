@@ -463,6 +463,14 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 		case ast.KindPropertyAccessExpression:
 			walk(x.Expression())
 			return
+		case ast.KindPropertyAssignment:
+			// {path: value} names a property; only a computed key and the
+			// value read bindings ({path} shorthand stays a read below).
+			if name := x.Name(); name != nil && name.Kind == ast.KindComputedPropertyName {
+				walk(name)
+			}
+			walk(x.Initializer())
+			return
 		case ast.KindParameter, ast.KindVariableDeclaration, ast.KindFunctionDeclaration, ast.KindFunctionExpression:
 			if x.Name() != nil && x.Name().Kind == ast.KindIdentifier {
 				declared[l.ck.GetSymbolAtLocation(x.Name())] = true
