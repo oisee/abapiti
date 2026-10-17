@@ -750,6 +750,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// TypeScript typed the tagged value as the primitive: absence raises.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
 	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].Kind == hir.Dynamic && (dst.Kind == hir.ClassRef || dst.Kind == hir.InterfaceRef) {
+		// An any value (obj?.getMainABAPFile()?.getStructure() on an erased
+		// receiver) passed where JSDoc declares a present reference: absence
+		// reaches the use as `x!` does, a present payload is unboxed checked.
+		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: hir.T(hir.Dynamic), X: x}, dst)
+	}
 	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && x.Type.Args[0].IsRef() && x.Type.Args[0].Kind != hir.Dynamic && dst.IsRef() && dst.Kind != hir.Dynamic {
 		// Unchecked JavaScript passes a possibly-undefined reference where the
 		// JSDoc declares a present one (`f(map.get(k))`): the value flows on
