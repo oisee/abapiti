@@ -130,13 +130,23 @@ func (l *lowerer) arrayAt(n *ast.Node, receiver *hir.Expr, args []*ast.Node) *hi
 // spreadSnapshot materializes iterator values: holes become present undefined
 // elements. Array literal spreads and push spreads share this boundary.
 func (l *lowerer) spreadSnapshot(n *ast.Node, xs *hir.Expr) *hir.Expr {
+	return l.spreadSnapshotAs(n, xs, xs.Type)
+}
+
+// spreadSnapshotAs copies a spread source into a fresh array of typ. A
+// reference source spread among optional slots ([...nodes, ...maybeNodes])
+// has its own element storage: each element is converted as it is pushed.
+func (l *lowerer) spreadSnapshotAs(n *ast.Node, xs *hir.Expr, into hir.Type) *hir.Expr {
 	typ := xs.Type
 	if typ.Args[0].IsRef() {
 		source := l.tempInit(n, typ, xs)
-		result := l.tempInit(n, typ, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: typ})
+		result := l.tempInit(n, into, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: into})
 		index := l.tempInit(n, hir.T(hir.I32), hir.L(hir.T(hir.I32), 0))
 		limit := l.tempInit(n, hir.T(hir.I32), l.rtOp("array.length", source, hir.T(hir.I32)))
 		value := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: typ.Args[0], X: l.rtOp("array.get", source, hir.T(hir.Optional, typ.Args[0]), index)}
+		if !into.Equal(typ) {
+			value = l.coerce(value, into.Args[0])
+		}
 		l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "<", Type: hir.T(hir.Bool), X: index, Y: limit},
 			Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, hir.T(hir.I32), value)},
 				&hir.Stmt{Kind: hir.Assign, X: index, Y: &hir.Expr{Kind: hir.Binary, Op: "+", Type: index.Type, X: index, Y: hir.L(index.Type, 1)}})})
