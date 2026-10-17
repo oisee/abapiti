@@ -130,3 +130,20 @@ class Probe { static run(): string {
 } }`, "")
 	})
 }
+
+func TestGogenA34ReadonlyScalarArrayNodeOracle(t *testing.T) {
+	runMjsOracleTypes(t, `export type Scalar = string | number | boolean | null | undefined;
+`, `/** @param {readonly import("./types.ts").Scalar[]} values @returns {readonly import("./types.ts").Scalar[]} */
+function view(values = []) { return values; }
+export class Probe {
+  /** @returns {string} */ static run() {
+    /** @type {string[]} */ const xs = ["a"];
+    const alias = view(xs);
+    const before = alias.map((value) => String(value)).join(",");
+    xs[0] = "b";
+    xs.push("c");
+    return (alias === xs) + "|" + before + "|" + alias.map((value) => String(value)).join(",") + "|" + view().length;
+  }
+}
+`, true)
+}

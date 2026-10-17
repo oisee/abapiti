@@ -710,7 +710,7 @@ func (l *lowerer) callArgsMethod(at *ast.Node, args []*ast.Node, m *hir.Method, 
 		if len(fixedArgsIn) > len(fixed) {
 			fixedArgsIn = fixedArgsIn[:len(fixed)]
 		}
-		out, ok := l.fixedArgs(at, fixedArgsIn, fixed, true)
+		out, ok := l.fixedArgs(at, fixedArgsIn, fixed, true, l.paramSymbols[m])
 		if !ok {
 			return nil, false
 		}
@@ -749,12 +749,12 @@ func (l *lowerer) callArgsMethod(at *ast.Node, args []*ast.Node, m *hir.Method, 
 		}
 		return append(out, arr), true
 	}
-	out, ok := l.fixedArgs(at, args, params, false)
+	out, ok := l.fixedArgs(at, args, params, false, l.paramSymbols[m])
 	return out, ok
 }
 
 // fixedArgs lowers arguments for a fixed parameter list.
-func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, restPrelude bool) ([]*hir.Expr, bool) {
+func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, restPrelude bool, symbols map[string]*ast.Symbol) ([]*hir.Expr, bool) {
 	snapshot := func(value *hir.Expr) *hir.Expr {
 		if restPrelude {
 			l.serial++
@@ -785,6 +785,7 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, 
 				a = l.observedArrayIndex(a)
 			}
 			a = l.presentValue(args[i], a, p.Type)
+			a = l.readonlyArrayArgument(a, p.Type, symbols[p.Name])
 			out = append(out, snapshot(l.coerce(a, p.Type)))
 			continue
 		}
