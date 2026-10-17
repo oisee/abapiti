@@ -15,7 +15,7 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+	return l.functionBodyToMethod(fn, owner, l.moduleFunctionMethod(fn.Name().Text()))
 }
 
 func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {

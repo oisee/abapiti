@@ -534,12 +534,12 @@ func (l *lowerer) moduleFunctions(f *ast.SourceFile, mod *hir.Class) {
 		if stmt.Kind != ast.KindFunctionDeclaration || stmt.Name() == nil || isOverloadSignature(stmt) {
 			continue
 		}
-		name := stmt.Name().Text()
+		name := l.moduleFunctionMethod(stmt.Name().Text())
 		hm := l.functionToMethod(stmt, mod)
 		if hm == nil {
 			continue
 		}
-		l.funcsBy[f.FileName()+" "+name] = funcRef{owner: mod.Name, method: name}
+		l.funcsBy[f.FileName()+" "+stmt.Name().Text()] = funcRef{owner: mod.Name, method: name}
 		l.methodsBy[mod.Name+"."+name] = hm
 	}
 }
@@ -784,4 +784,14 @@ func trivialInitializer(n *ast.Node) bool {
 		return true
 	}
 	return false
+}
+
+// moduleFunctionMethod names the static method of a module function. A
+// function named constructor is an ordinary function, not the class
+// constructor that HIR and both emitters reserve that name for.
+func (l *lowerer) moduleFunctionMethod(name string) string {
+	if name == "constructor" && l.unprunedFeatures {
+		return "constructor_function"
+	}
+	return name
 }

@@ -307,7 +307,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				continue
 			}
 			mod := l.moduleClassOf(f)
-			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
+			hm := &hir.Method{Node: l.node(fn), Name: l.moduleFunctionMethod(fn.Name().Text()), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
 			if e, ok := l.overrides[fn]; ok && e.Method != nil {
 				hm = e.Method()
@@ -317,7 +317,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				l.signature(fn, hm)
 			}
 			mod.Methods = append(mod.Methods, hm)
-			l.funcsBy[f.FileName()+" "+hm.Name] = funcRef{owner: mod.Name, method: hm.Name}
+			l.funcsBy[f.FileName()+" "+fn.Name().Text()] = funcRef{owner: mod.Name, method: hm.Name}
 			l.methodsBy[mod.Name+"."+hm.Name] = hm
 		}
 		done()
