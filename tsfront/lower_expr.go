@@ -3208,6 +3208,12 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
 			return nil
 		}
+		if l.unprunedFeatures && mapped.Kind == hir.ClassRef && (x.Type.Kind == hir.UnionRef || x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.UnionRef) {
+			// A structural view of a union payload (`/** @type {{value?: T}} */
+			// (expr)`) erases in JS: read the payload's own properties through
+			// the checked record view instead of an unverified nominal cast.
+			return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), mapped)
+		}
 		l.diagf(n, "note-cast", "cast to %s recorded as an unchecked view", mapped.String())
 		return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}
 	}
