@@ -3,6 +3,7 @@ package tsfront
 import (
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 	"strings"
 )
 
@@ -362,11 +363,17 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 	// Parameter types come from the checker (the element for the first
 	// parameter of map/filter/some, the accumulator for reduce, the index
 	// for the second), falling back to the element type.
+	index := l.callbackIndexParam(n)
 	for i, p := range names {
 		if i >= len(params) {
 			break
 		}
 		t := elem
+		if i == index {
+			// An untyped receiver (any, or a member of never) leaves the
+			// index any; the array method still passes a number.
+			t = hir.T(hir.Number)
+		}
 		if ps := params[i].Symbol(); ps != nil {
 			before := len(l.diags)
 			mapped := l.mapCheckerType(n, l.ck.GetTypeOfSymbol(ps))
@@ -1016,4 +1023,24 @@ func (l *lowerer) recordPatternBinding(name *ast.Node, decl *hir.Stmt) {
 		l.declSymbols = map[*hir.Stmt]*ast.Symbol{}
 	}
 	l.declSymbols[decl] = l.ck.GetSymbolAtLocation(name)
+}
+
+// callbackIndexParam is the position of the index parameter of an array
+// method callback when only an untyped receiver hides it from the checker,
+// or -1. Typed receivers keep the checker's parameter types.
+func (l *lowerer) callbackIndexParam(n *ast.Node) int {
+	if !l.unprunedFeatures || !ast.IsInJSFile(n) || n.Kind != ast.KindCallExpression || n.Expression().Kind != ast.KindPropertyAccessExpression {
+		return -1
+	}
+	callee := n.Expression()
+	if recv := l.ck.GetTypeAtLocation(callee.Expression()); recv == nil || recv.Flags()&checker.TypeFlagsAny == 0 {
+		return -1
+	}
+	switch callee.Name().Text() {
+	case "map", "filter", "some", "every", "find", "findIndex", "forEach", "flatMap":
+		return 1
+	case "reduce":
+		return 2
+	}
+	return -1
 }
