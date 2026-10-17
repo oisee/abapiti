@@ -485,6 +485,12 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 	for _, name := range names {
 		for _, node := range used[name] {
 			symbol := l.ck.GetSymbolAtLocation(node)
+			if node.Parent != nil && node.Parent.Kind == ast.KindShorthandPropertyAssignment {
+				// {go, type} reads the binding named type, not the property.
+				if value := l.ck.GetShorthandAssignmentValueSymbol(node.Parent); value != nil {
+					symbol = value
+				}
+			}
 			if declared[symbol] {
 				continue
 			}
