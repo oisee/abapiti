@@ -356,6 +356,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if evolved, ok := l.evolvedArrayType(d, typ); ok {
 			typ = evolved
 		}
+		if sink, ok := l.sinkArrayType(d, typ); ok {
+			typ = sink
+		}
 		l.hint = typ
 		x = l.expr(init)
 		l.hint = hir.Type{}
@@ -433,6 +436,11 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 		if d.Type() == nil && init != nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst == 0 {
 			typ = l.widenLet(d, sym, typ)
+		}
+		if init != nil && init.Kind == ast.KindCallExpression {
+			if sink, ok := l.sinkArrayType(d, typ); ok {
+				typ = sink
+			}
 		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.

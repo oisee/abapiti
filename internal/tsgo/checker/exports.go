@@ -377,3 +377,9 @@ func (c *Checker) ResolvedTypeArguments(s *Signature) []*Type {
 func (c *Checker) CheckExpressionWithContextualType(node *ast.Node, contextualType *Type) *Type {
 	return c.checkExpressionWithContextualType(node, contextualType, nil, CheckModeNormal)
 }
+
+// GetReducedType reduces an intersection whose discriminants or private
+// members conflict to never, as the checker does before reporting it.
+func (c *Checker) GetReducedType(t *Type) *Type {
+	return c.getReducedType(t)
+}

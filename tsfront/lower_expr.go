@@ -222,6 +222,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return x
 	}
+	if l.unprunedFeatures && (t.Flags()&checker.TypeFlagsNever != 0 || t.Flags()&checker.TypeFlagsIntersection != 0 && l.ck.GetReducedType(t).Flags()&checker.TypeFlagsNever != 0) {
+		// The checker found the guarded branch impossible (an intersection
+		// that reduced to never), yet the guard held at run time.
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+	}
 	base := x.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
@@ -2009,11 +2016,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "pop", "shift":
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
-			return l.rtOp("array.indexOf", recv, i32, one()), true
+			return l.rtOp("array.indexOf", recv, i32, l.dynamicSearchValue(recv, one())), true
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
-			x := one()
+			x := l.dynamicSearchValue(recv, one())
 			if x != nil && l.unprunedFeatures {
 				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
 					return probe, true
@@ -2064,7 +2071,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.mapRead(recv, key()), true
 		case "set":
 			var a, b *hir.Expr
-			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
+			// A fresh literal value is built as the map's value type.
+			literal := l.unprunedFeatures && len(args) == 2 && recv.Type.Args[1].Kind == hir.ClassRef && recv.Type.Args[1].Name != hir.RootObject && ast.SkipParentheses(args[1]).Kind == ast.KindObjectLiteralExpression
+			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef || literal) && len(args) == 2 {
 				a = l.expr(args[0])
 				saved := l.hint
 				l.hint = recv.Type.Args[1]

@@ -462,7 +462,11 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 // exits that invocation and cannot escape the surrounding array operation.
 func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, []string, bool) {
 	l.serial++
+	if l.unprunedFeatures && l.hint.Kind == hir.Array {
+		l.liftResultHint = l.hint.Args[0]
+	}
 	lf := l.liftLocalFn("callback_"+itoa(l.serial), cb)
+	l.liftResultHint = hir.Type{}
 	if lf == nil || lf.method.Result.Kind == hir.Void {
 		return nil, nil, false
 	}

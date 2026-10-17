@@ -15,7 +15,7 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+	return l.functionBodyToMethod(fn, owner, l.moduleFunctionMethod(fn.Name().Text()))
 }
 
 func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {
@@ -190,6 +190,8 @@ func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	resultHint := l.liftResultHint
+	l.liftResultHint = hir.Type{}
 	undefinedThis := l.refuseUndefinedThis(fn)
 	receiver := l.gogenRefuseReceiver(fn)
 	if undefinedThis || receiver {
@@ -320,6 +322,11 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		if sigs := l.ck.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 && isIntrinsicVoid(l.ck.GetReturnTypeOfSignature(sigs[0])) {
 			m.Result = hir.T(hir.Void)
 		}
+	}
+	if fn.Type() == nil && m.Result.Kind == hir.ClassRef && m.Result.Name == hir.RootObject && (resultHint.Kind == hir.ClassRef || resultHint.Kind == hir.UnionRef) && resultHint.Name != hir.RootObject {
+		// The checker infers the union of the returned literals, which has
+		// no lowered type; the array the callback fills gives their type.
+		m.Result = resultHint
 	}
 	// Distinct lexical functions may share a source name in this class.
 	baseName := m.Name
