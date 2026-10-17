@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Emit, build and compare TS-HG gogen against the pinned Node step-4 driver.
 
-Usage: tools/selfhost-step4.py [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+Usage: tools/selfhost-step4.py [--inputs PATH] [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+
+--inputs stages an alternative inputs JSON for Node, replay and Go, restoring the
+captured inputs on exit, and prints its Node reference SHA256. --expect-ref is optional.
 
 --list-traps skips go build/run/cmp: from the one emission it lists every trap
 site whose source lies in code the Node reference executed (V8 block coverage)
@@ -285,6 +288,15 @@ def write_traps(out, rows, unknown_a, unknown_g):
 
 
 def main(args):
+    inputs = None
+    if '--inputs' in args:
+        i = args.index('--inputs')
+        if i + 1 >= len(args):
+            print(__doc__, file=sys.stderr)
+            return 2
+        inputs = Path(args[i + 1]).resolve().read_bytes()
+        json.loads(inputs)  # Reject malformed JSON before changing the checkout.
+        args = args[:i] + args[i + 2:]
     expect = None
     if '--expect-ref' in args:
         i = args.index('--expect-ref')
@@ -312,6 +324,8 @@ def main(args):
     ref, actual = out / 'ref.go', out / 'gogen.go'
     driver = osg / '.local/step4/step4-driver.mjs'
     original = driver.read_bytes()
+    inputs_path = driver.with_name('step4-inputs.json')
+    original_inputs = inputs_path.read_bytes() if inputs is not None and inputs_path.exists() else None
     host_ts = driver.with_name('step4-host.ts')
     config_path = osg / 'tsconfig.selfhost-step4.json'
     temporary = [host_ts, config_path]
@@ -337,12 +351,17 @@ def main(args):
             raise RuntimeError(f'{name} failed (exit {result.returncode}); see {out / (name + ".log")}')
 
     try:
+        if inputs is not None:
+            (out / 'inputs.json').write_bytes(inputs)
+            inputs_path.write_bytes(inputs)
         # The reference executes the original driver, with coverage from that
         # exact execution. Validate before adapting any source.
         with ref.open('wb') as f:
             heavy(['node', driver], 'reference', stdout=f, extra={'NODE_V8_COVERAGE': str(out / 'v8')})
         if digest(ref) == EMPTY_SHA256:
             raise RuntimeError('Node reference is empty; see reference.log')
+        if inputs is not None:
+            print(f'step4-reference: sha256={digest(ref)}')
         if expect and not digest(ref).startswith(expect):
             raise RuntimeError(f'reference SHA256 mismatch: {digest(ref)}; expected {expect}')
         (out / 'closure.mjs').write_text(CLOSURE)
@@ -450,6 +469,11 @@ def main(args):
         print(str(error), file=sys.stderr)
         return 1
     finally:
+        if inputs is not None:
+            if original_inputs is None:
+                inputs_path.unlink(missing_ok=True)
+            else:
+                inputs_path.write_bytes(original_inputs)
         driver.write_bytes(original)
         for path in temporary:
             path.unlink(missing_ok=True)
