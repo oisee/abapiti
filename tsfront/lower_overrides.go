@@ -15,6 +15,18 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 	if len(registry.Inventory()) == 0 {
 		return nil
 	}
+	var relativeFiles []string
+	for _, name := range files {
+		if f, ok := l.prog.File(name); ok {
+			rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
+			relativeFiles = append(relativeFiles, filepath.ToSlash(rel))
+		}
+	}
+	var err error
+	registry, err = registry.ForFiles(relativeFiles)
+	if err != nil {
+		return err
+	}
 	seen := map[string]int{}
 	selected := map[string]bool{}
 	for _, name := range files {

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
+	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
 // A mutable destructured option is one shared binding across the callbacks
@@ -230,4 +231,81 @@ func TestGogenA34BooleanCollectionKeysNodeOracle(t *testing.T) {
   return before + "|" + [...m.keys()].map((k) => String(k)).join(",") + "|" + m.get(false) + "|" + m.size + "|" + [...s].map((k) => String(k)).join(",") + "|" + s.size;
 } }
 `, "")
+}
+
+func TestGogenA34ExternalPinnedAdapterNodeOracle(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "lib/src"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	method := `static run(): string { const item: Item = Probe.make(); return item.has === undefined ? "src/literal" : item["src/key"]; }`
+	source := `class Item { "src/key" = "src/literal"; has(): boolean { return true; } }
+class Other {}
+class Probe { static make(): any { return new Other(); } ` + method + ` }`
+	for name, text := range map[string]string{
+		"lib/src/probe.ts": source,
+		"tsconfig.json":    `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["lib/**/*.ts"]}`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	registry, err := overrides.New(overrides.Entry{
+		ID: "external-probe", Key: overrides.Key{File: "src/probe.ts", Symbol: "Probe.run", Kind: "KindMethodDeclaration"}, SHA256: overrides.Fingerprint(method), Rationale: "source-pinned equivalent concrete factory view",
+		Method: func() *hir.Method {
+			return &hir.Method{Name: "run", Static: true, Result: hir.T(hir.String), Body: hir.B(&hir.Stmt{Kind: hir.Return, X: &hir.Expr{Kind: hir.FieldGet, Name: "src/key", Type: hir.T(hir.String), X: &hir.Expr{Kind: hir.New, Type: hir.Ref("src/probe.ts.Item")}}})}
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	load := func() (*hir.Program, error) {
+		p, e := Load(filepath.Join(dir, "tsconfig.json"))
+		if e != nil {
+			return nil, e
+		}
+		prog, ds, e := p.LowerWithOverrides([]string{"lib/src/probe.ts"}, registry)
+		for _, d := range ds {
+			if !strings.HasPrefix(d.Category, "note-") {
+				t.Errorf("lower: %s", d)
+			}
+		}
+		return prog, e
+	}
+	prog, err := load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Without a relocated adapter the erased factory is cast before its guard.
+	// Its result must still be the exact Node value, including the literal prefix.
+	want := conversionOracle(t, source)
+	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("lib/src/probe.ts.Probe", "run")))
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	if _, err := emitABAP(t, prog); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "second/src"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "second/src/probe.ts"), []byte(source), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["lib/**/*.ts","second/**/*.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ambiguous, err := Load(filepath.Join(dir, "tsconfig.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ambiguous.LowerWithOverrides([]string{"lib/src/probe.ts", "second/src/probe.ts"}, registry); err == nil || !strings.Contains(err.Error(), "ambiguous override package") {
+		t.Fatalf("ambiguous package accepted: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "lib/src/probe.ts"), []byte(strings.Replace(source, method, strings.Replace(method, `"src/literal"`, `"changed"`, 1), 1)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := load(); err == nil || !strings.Contains(err.Error(), "external-probe is stale") {
+		t.Fatalf("relocated stale pin accepted: %v", err)
+	}
 }
