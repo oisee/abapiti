@@ -1,10 +1,16 @@
 package hir
 
-// MapViewCompatible permits alternate names for the same complete data layout.
-// Keys and nested containers remain invariant. Both directions are required:
-// writes through either alias must remain readable through the other.
+// MapViewCompatible permits equivalent value layouts and boxed queries over
+// string-keyed storage. Other key changes and nested containers stay invariant.
+// Boxed allocations and writes require a separate value-based hashing contract.
 func MapViewCompatible(p *Program, dst, src Type) bool {
-	if dst.Kind != OrderedMap || src.Kind != OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 || !dst.Args[0].Equal(src.Args[0]) {
+	if dst.Kind != OrderedMap || src.Kind != OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 {
+		return false
+	}
+	if dst.Args[0].Kind == Dynamic && src.Args[0].Kind == String && dst.Args[1].Equal(src.Args[1]) {
+		return true
+	}
+	if !dst.Args[0].Equal(src.Args[0]) {
 		return false
 	}
 	return dst.Args[1].Kind == ClassRef && src.Args[1].Kind == ClassRef && StructuralStorageEquivalent(p, dst.Args[1], src.Args[1], nil)

@@ -117,7 +117,7 @@ func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindFunctionType, ast.KindConstructorType, ast.KindTypeQuery, ast.KindIndexedAccessType,
 		ast.KindIntersectionType, ast.KindMappedType,
-		ast.KindConditionalType, ast.KindTemplateLiteralType, ast.KindAnyKeyword, ast.KindUnknownKeyword, ast.KindImportType:
+		ast.KindConditionalType, ast.KindTemplateLiteralType, ast.KindAnyKeyword, ast.KindUnknownKeyword, ast.KindImportType, ast.KindJSDocVariadicType:
 		// No syntax mapping: let the checker's resolved type decide.
 		return l.mapTypeNodeViaChecker(n)
 	case ast.KindTypeReference:
@@ -238,6 +238,11 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	}
 	if i := l.ifaceOf(sym); i != nil {
 		return hir.Type{Kind: hir.InterfaceRef, Name: i.Name}
+	}
+	if t := l.ck.GetTypeFromTypeNode(n); t != nil {
+		if picked, ok := l.pickedMethodsSource(n, t); ok {
+			return picked
+		}
 	}
 	beforeAlias := len(l.diags)
 	if c := l.synthFromAlias(n, sym); c != nil {
@@ -373,6 +378,25 @@ func (l *lowerer) union(n *ast.Node, parts []hir.Type, optional bool) hir.Type {
 			if k == hir.ClassValue {
 				l.diagf(n, "note-dynamic-union", "union of class values lowered as Dynamic")
 				return hir.T(hir.Dynamic)
+			}
+		}
+	}
+	if l.unprunedFeatures && len(kinds) == 1 && kinds[hir.Array] {
+		// A[] | B[] where B accepts every A (`self ? [n] : n.getChildren()`):
+		// the wider array view; arrays are covariant and never copied.
+		for _, d := range distinct {
+			dominates := true
+			for _, o := range distinct {
+				if !o.Equal(d) && !l.acceptsType(d.Args[0], o.Args[0]) {
+					dominates = false
+					break
+				}
+			}
+			if dominates {
+				if optional {
+					return hir.T(hir.Optional, d)
+				}
+				return d
 			}
 		}
 	}
@@ -722,6 +746,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 			if i := l.ifaceOf(t.Symbol()); i != nil {
 				return hir.Type{Kind: hir.InterfaceRef, Name: i.Name}
 			}
+		}
+		if picked, ok := l.pickedMethodsSource(n, t); ok {
+			return picked
 		}
 		if alias := t.Alias(); alias != nil && alias.Symbol() != nil {
 			if c := l.synthOf(alias.Symbol()); c != nil {
@@ -1394,4 +1421,57 @@ func (l *lowerer) genericClassIntersection(t *checker.Type) (hir.Type, bool) {
 		return hir.Type{}, false
 	}
 	return hir.Ref(c.Name), true
+}
+
+// pickedMethodsSource maps Pick<T, K> whose picked members are all methods of
+// a lowered class or interface T (OSG's FieldChain = Pick<ExpressionNode,
+// "getChildren" | "concatTokens">) to T itself. The values are T's objects,
+// called by dynamic dispatch exactly as in JavaScript; a structural copy of
+// bound methods would lose identity. A value that is not a T is refused or
+// raises at its checked cast, never reinterpreted.
+func (l *lowerer) pickedMethodsSource(n *ast.Node, t *checker.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures {
+		return hir.Type{}, false
+	}
+	alias := t.Alias()
+	if alias == nil || alias.Symbol() == nil {
+		return hir.Type{}, false
+	}
+	var source *checker.Type
+	if alias.Symbol().Name == "Pick" && l.librarySymbol(alias.Symbol()) && len(alias.TypeArguments()) == 2 {
+		source = alias.TypeArguments()[0]
+	} else {
+		for _, d := range alias.Symbol().Declarations {
+			if d.Kind != ast.KindTypeAliasDeclaration || d.Type() == nil || d.Type().Kind != ast.KindTypeReference {
+				continue
+			}
+			ref := d.Type().AsTypeReferenceNode()
+			sym := l.ck.GetSymbolAtLocation(ref.TypeName)
+			if sym == nil || sym.Name != "Pick" || !l.librarySymbol(sym) || ref.TypeArguments == nil || len(ref.TypeArguments.Nodes) != 2 {
+				continue
+			}
+			source = l.ck.GetTypeFromTypeNode(ref.TypeArguments.Nodes[0])
+		}
+	}
+	if source == nil || source.Symbol() == nil || source.Symbol().Flags&(ast.SymbolFlagsClass|ast.SymbolFlagsInterface) == 0 {
+		return hir.Type{}, false
+	}
+	props := l.ck.GetPropertiesOfType(t)
+	if len(props) == 0 {
+		return hir.Type{}, false
+	}
+	for _, p := range props {
+		// A mapped Pick member is a property; its origin decides.
+		origin := l.ck.GetPropertyOfType(source, p.Name)
+		if origin == nil || origin.Flags&ast.SymbolFlagsMethod == 0 {
+			return hir.Type{}, false
+		}
+	}
+	before := len(l.diags)
+	typ := l.mapCheckerType(n, source)
+	if hasBlocking(l.diags[before:]) || typ.Kind != hir.ClassRef && typ.Kind != hir.InterfaceRef || strings.HasPrefix(typ.Name, "shape.") || l.shapeLike[typ.Name] {
+		l.diags = l.diags[:before]
+		return hir.Type{}, false
+	}
+	return typ, true
 }

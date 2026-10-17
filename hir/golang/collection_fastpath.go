@@ -130,6 +130,9 @@ func fastCollectionRuntime(source string) (string, error) {
 	}
 	var extra strings.Builder
 	fast := fastCollectionSource
+	if strings.Contains(source, " iteration *array[T];") {
+		fast = setIterationFastRuntime(fast)
+	}
 	if strings.Contains(source, " inserts int32;") {
 		if !strings.Contains(fast, " m.index[k]=len(m.Entries);") {
 			panic("map insertion fast-path patch target moved")

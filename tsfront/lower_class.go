@@ -169,14 +169,15 @@ func (l *lowerer) dataInterfaceClass(node *ast.Node, i *hir.Interface) {
 		if (m.QuestionToken() != nil || l.absentFields[m]) && ft.Kind != hir.Optional {
 			ft = hir.T(hir.Optional, ft)
 		}
-		c.Fields = append(c.Fields, hir.Field{Node: l.node(m), Name: name, Type: ft})
+		field := hir.Field{Node: l.node(m), Name: name, Type: ft, Readonly: l.unprunedFeatures && m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
+		c.Fields = append(c.Fields, field)
 		ctor.Params = append(ctor.Params, hir.Param{Name: name, Type: ft})
 		list = append(list, &hir.Stmt{Kind: hir.Assign, Node: l.node(m),
 			X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(m), Name: name, Type: ft,
 				X: &hir.Expr{Kind: hir.This, Node: l.node(m), Type: hir.Ref(c.Name)}},
 			Y: hir.V(name, ft)})
 		if ms := m.Symbol(); ms != nil {
-			l.fields[ms] = hir.Field{Node: l.node(m), Name: name, Type: ft}
+			l.fields[ms] = hir.Field{Node: l.node(m), Name: name, Type: ft, Readonly: field.Readonly}
 		}
 	}
 	ctor.Body = hir.B(list...)
@@ -629,13 +630,28 @@ func (l *lowerer) interfaceSignatures(node *ast.Node, i *hir.Interface) {
 			l.diagf(m, "skipped-interface-member", "interface %s: non-method member %s is skipped", i.Name, name)
 			continue
 		}
+		general := l.coveringInterfaceOverload(node, m)
+		if general != nil && general != m {
+			continue
+		}
+		var merged *hir.Method
+		if general == nil {
+			var handled bool
+			merged, handled = l.booleanInterfaceOverload(node, m)
+			if handled && merged == nil {
+				continue
+			}
+		}
 		name, ok := l.memberName(m, nil)
 		if !ok {
 			continue
 		}
-		hm := &hir.Method{Node: l.node(m), Name: name, Virtual: true}
+		hm := merged
 		before := len(l.diags)
-		l.signature(m, hm)
+		if hm == nil {
+			hm = &hir.Method{Node: l.node(m), Name: name, Virtual: true}
+			l.signature(m, hm)
+		}
 		if l.methodFailed(hm) || hasBlocking(l.diags[before:]) {
 			// Members whose types do not map stay out of the lowered
 			// interface; nothing calls them in the lowered set.

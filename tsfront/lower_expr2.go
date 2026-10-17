@@ -721,8 +721,14 @@ func (l *lowerer) objectStatic(n *ast.Node, name string) (*hir.Expr, bool) {
 			return nil, false
 		}
 		hint := l.hint
-		if hint.Kind == hir.OrderedMap {
-			l.hint = hir.T(hir.Array, l.tupleShape(n, []hir.Type{hint.Args[0], hint.Args[1]}))
+		target := hint
+		if target.Kind == hir.Optional && len(target.Args) == 1 && target.Args[0].Kind == hir.OrderedMap {
+			// An optional record slot (`value?: Record<string, ...>`) is
+			// filled with a present map: the map is the pair context.
+			target = target.Args[0]
+		}
+		if target.Kind == hir.OrderedMap {
+			l.hint = hir.T(hir.Array, l.tupleShape(n, []hir.Type{target.Args[0], target.Args[1]}))
 		} else if l.unprunedFeatures && hint.Kind != "" && hint.Kind != hir.Void {
 			// A surrounding tagged value/shape is not the pair's element
 			// context. Preserve each heterogeneous row as key and tagged value.

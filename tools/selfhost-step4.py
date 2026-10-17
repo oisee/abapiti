@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Emit, build and compare TS-HG gogen against the pinned Node step-4 driver.
 
-Usage: tools/selfhost-step4.py [--expect-ref <sha256-prefix>] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+Usage: tools/selfhost-step4.py [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+
+--list-traps skips go build/run/cmp: from the one emission it lists every trap
+site whose source lies in code the Node reference executed (V8 block coverage)
+in <out-dir>/reached-traps.tsv, ordered by first execution in a breakpoint
+replay of the reference, and prints `step4-traps: N reached (A/G unknown) M unreached`.
 
 Environment: STEP4_NO_SYSTEMD=1 (or no systemd-run on PATH) runs steps directly under the
 caller's memory cap; GOCACHE defaults to <out-dir>/go-build when unset.
@@ -103,6 +108,182 @@ def adapt_driver(source):
     return source
 
 
+SOURCE = re.compile(r'^(.+?):(\d+)(?::(\d+))?$')
+LOCATED = re.compile(r'([^\s;()]+\.(?:ts|mjs|js)):(\d+)(?::(\d+))?')
+
+
+def site_location(site):
+    """Return (file, line, column-or-None) of a trap site, preferring its node."""
+    for text in (site.get('Source', ''), site.get('Location', ''), site.get('Message', '')):
+        m = SOURCE.match(text or '') or LOCATED.search(text or '')
+        if m and re.search(r'\.(?:ts|mjs|js|tsx|cjs)$', m.group(1)):
+            return m.group(1), int(m.group(2)), int(m.group(3)) if m.group(3) else None
+    return None
+
+
+def utf16_offset(text, line, column):
+    """1-based line and UTF-16 column (None: first non-blank) to a UTF-16 offset."""
+    lines = text.split('\n')
+    if line < 1 or line > len(lines):
+        return None
+    before = sum(len(l.encode('utf-16-le')) // 2 + 1 for l in lines[:line - 1])
+    current = lines[line - 1]
+    if column is None:
+        column = len(current) - len(current.lstrip()) + 1
+    return before + column - 1
+
+
+def utf16_line_column(text, offset):
+    """UTF-16 offset to the 0-based line and column V8 breakpoints take."""
+    units = text.encode('utf-16-le')[:offset * 2].decode('utf-16-le', errors='ignore')
+    return units.count('\n'), len(units) - units.rfind('\n') - 1
+
+
+def body_probe(text, start):
+    """UTF-16 offset just inside the body of the function that starts at start."""
+    units = text.encode('utf-16-le')
+    chars = [units[i:i + 2].decode('utf-16-le', errors='replace') for i in range(0, len(units), 2)]
+    depth = 0
+    for i in range(start, min(len(chars), start + 4096)):
+        c = chars[i]
+        if c in '([':
+            depth += 1
+        elif c in ')]':
+            depth -= 1
+        elif depth == 0 and c == '{':
+            return i + 1
+        elif depth == 0 and c == '=' and i + 1 < len(chars) and chars[i + 1] == '>':
+            j = i + 2
+            while j < len(chars) and chars[j].isspace():
+                j += 1
+            return j
+    return start
+
+
+def covered_hits(functions, offset, body=False, text=None):
+    """Execution count of the code at a UTF-16 offset in one V8 script.
+
+    Block coverage nests: the innermost range containing the offset decides,
+    so a count-0 branch inside an executed function is not executed. A body
+    trap fires on entry, so it takes the count of the function V8 starts at
+    or just after the trap node (keyword, modifiers and name come first).
+    Returns (count, evidence, probe offset for an entry breakpoint).
+    """
+    if body:
+        best = None
+        for fn in functions:
+            r = fn['ranges'][0]
+            gap = r['startOffset'] - offset
+            # Nearest start wins; at equal starts the innermost (shortest) range.
+            if 0 <= gap < 512 and r['endOffset'] > r['startOffset'] and (best is None or (r['startOffset'], r['endOffset']) < (best['startOffset'], best['endOffset'])):
+                if text is None or not re.search(r'[{};]', text.encode('utf-16-le')[offset * 2:r['startOffset'] * 2].decode('utf-16-le', errors='ignore')):
+                    best = r
+        if best is not None:
+            return best['count'], 'function', body_probe(text, best['startOffset']) if text is not None else best['startOffset']
+    inner = None
+    for fn in functions:
+        for r in fn['ranges']:
+            if r['startOffset'] <= offset < r['endOffset'] and (inner is None or r['endOffset'] - r['startOffset'] <= inner['endOffset'] - inner['startOffset']):
+                inner = r
+    return (inner['count'] if inner else 0), 'block', offset
+
+
+def load_coverage(v8):
+    """Merge V8 coverage dumps into {absolute path: [functions]}."""
+    from urllib.parse import unquote, urlparse
+    scripts = {}
+    for dump in sorted(Path(v8).glob('*.json')):
+        for script in json.loads(dump.read_text())['result']:
+            if script['url'].startswith('file:'):
+                scripts.setdefault(unquote(urlparse(script['url']).path), []).extend(script['functions'])
+    return scripts
+
+
+def compiled_path(path, lint, transpiler):
+    """The node_modules build file Node executes for an abaplint/transpiler source."""
+    for root, package in ((lint / 'packages/core', '@abaplint/core'), (transpiler / 'packages/transpiler', '@abaplint/transpiler')):
+        try:
+            rel = path.relative_to(root)
+        except ValueError:
+            continue
+        if rel.parts and rel.parts[0] == 'src':
+            return package, rel.with_suffix('.js')
+    return None
+
+
+# A member that is unresolved because its own definition was refused (a
+# trapped method or module function of that name) is a follow-on, not a root.
+CASCADE = re.compile(r'unresolved (?:field|method) (\w+)')
+
+
+def classify_traps(sites, osg, lint, transpiler, scripts):
+    """Attach coverage evidence to trap sites; returns (rows, unknown_a, unknown_g)."""
+    texts, rows, unknown = {}, [], {'A': 0, 'G': 0}
+    trapped = {s['Method'] for s in sites if s.get('Kind') == 'body' and 'lowering trap' in s.get('Message', '')}
+    for site in sites:
+        loc = site_location(site)
+        side = 'A' if loc is None and not site.get('Class', '').startswith('tools/') else 'G'
+        row = dict(site, file=None, line=0, col=0, hits=None, evidence='none', url=None, probe=None)
+        if loc:
+            path = (osg / loc[0]).resolve()
+            row.update(file=os.path.relpath(path, osg), line=loc[1], col=loc[2] or 0)
+            compiled = compiled_path(path, lint, transpiler)
+            side = 'A' if compiled or not str(path).startswith(str(osg) + os.sep) else 'G'
+            if compiled:
+                build = osg / 'node_modules' / compiled[0] / 'build' / compiled[1]
+                functions = scripts.get(str(build.resolve())) or scripts.get(str(build))
+                name = site['Method'] if site['Method'] != 'constructor' else site['Class'].rsplit('.', 1)[-1]
+                matches = [fn for fn in functions or [] if fn.get('functionName') == name]
+                if site.get('Kind') == 'body' and matches:
+                    best = max(matches, key=lambda fn: fn['ranges'][0]['count'])
+                    if build not in texts:
+                        texts[build] = build.read_text(errors='replace') if build.exists() else ''
+                    row.update(hits=best['ranges'][0]['count'], evidence='name', url=build.resolve().as_uri(),
+                               probe=body_probe(texts[build], best['ranges'][0]['startOffset']) if texts[build] else None)
+                    if row['probe'] is not None:
+                        row['text'] = build
+            elif path.exists():
+                functions = scripts.get(str(path))
+                if path not in texts:
+                    texts[path] = path.read_text(errors='replace')
+                offset = utf16_offset(texts[path], loc[1], loc[2])
+                if functions is None:
+                    row.update(hits=0, evidence='unloaded')
+                elif offset is not None:
+                    hits, evidence, probe = covered_hits(functions, offset, site.get('Kind') == 'body', texts[path])
+                    row.update(hits=hits, evidence=evidence, url=path.as_uri(), probe=probe, text=path)
+        if row['hits'] is None and site.get('Kind') != 'guard':
+            unknown[side] += 1
+        message = site.get('Message', '')
+        m = CASCADE.search(message)
+        row['root'] = 'cascade' if m and m.group(1) in trapped - {site['Method']} else 'root'
+        if row.get('text') is not None:
+            row['bp'] = utf16_line_column(texts[row['text']], row['probe'])
+        rows.append(row)
+    return rows, unknown['A'], unknown['G']
+
+
+def order_rows(rows, hits_order):
+    """Reached rows by first execution; rows the replay missed follow by file:line:col."""
+    rank = {i: n for n, i in enumerate(hits_order)}
+    return sorted(rows, key=lambda r: (rank.get(r['index'], len(rank)), r['file'] or '', r['line'], r['col']))
+
+
+def write_traps(out, rows, unknown_a, unknown_g):
+    """Write reached traps; runtime-check guards go to reached-guards.tsv and are not counted."""
+    certain = [r for r in rows if r.get('Kind') != 'guard']
+    reached = [r for r in certain if r['hits']]
+    unreached = sum(1 for r in certain if r['hits'] == 0)
+    for name, selected in (('reached-traps.tsv', reached), ('reached-guards.tsv', [r for r in rows if r.get('Kind') == 'guard' and r['hits']])):
+        with (out / name).open('w') as f:
+            f.write('location\tkind: message\thits\troot-or-cascade\tmethod\tevidence\n')
+            for r in selected:
+                location = f"{r['file']}:{r['line']}:{r['col']}"
+                message = ' '.join(r.get('Message', '').split())
+                f.write(f"{location}\t{r.get('Kind', 'body')}: {message}\t{r['hits']}\t{r['root']}\t{r['Class']}.{r['Method']}\t{r['evidence']}\n")
+    return f'step4-traps: {len(reached)} reached ({unknown_a}/{unknown_g} unknown) {unreached} unreached'
+
+
 def main(args):
     expect = None
     if '--expect-ref' in args:
@@ -112,6 +293,8 @@ def main(args):
             return 2
         expect = args[i + 1].lower()
         args = args[:i] + args[i + 2:]
+    list_traps = '--list-traps' in args
+    args = [a for a in args if a != '--list-traps']
     if len(args) != 5:
         print(__doc__, file=sys.stderr)
         return 2
@@ -125,6 +308,7 @@ def main(args):
         env['GOCACHE'] = str(out / 'go-build')
     env.setdefault('TMPDIR', str(out))
     build, run, comparison = 'fail', 'not-run', 'not-run'
+    traps = None
     ref, actual = out / 'ref.go', out / 'gogen.go'
     driver = osg / '.local/step4/step4-driver.mjs'
     original = driver.read_bytes()
@@ -135,6 +319,10 @@ def main(args):
         raise ValueError('temporary host/config files already exist in checkout')
 
     def heavy(command, name, cwd=osg, stdout=None, extra=None, memory='16G'):
+        available = next(int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()
+                         if line.startswith('MemAvailable:'))
+        if available <= 30 * 1024**2:
+            raise RuntimeError('memory available at or below 30G; stopping')
         usage = shutil.disk_usage(out)
         if usage.free < 40 * 1024**3:
             raise RuntimeError('disk free below 40G; stopping')
@@ -210,7 +398,35 @@ def main(args):
                '--overrides', 'registry', '--trap-on-failure', '--reachability', out / 'reach.json',
                '--initialize', out / 'initialization.json',
                '-o', out / 'go', *lists], 'emit')
-        heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G')
+        if list_traps:
+            # The replay runs the original driver, like the reference.
+            driver.write_bytes(original)
+            for path in temporary:
+                path.unlink(missing_ok=True)
+            sites_path = out / 'go/evidence/trap-sites.json'
+            if sites_path.exists():
+                sites = json.loads(sites_path.read_text()) or []
+            else:  # older abapiti: whole-body traps only
+                sites = [dict(s, Kind='body', Source='', Message=s['Location'])
+                         for s in json.loads((out / 'go/evidence/registry-traps.json').read_text()) or []]
+            rows, unknown_a, unknown_g = classify_traps(sites, osg, lint, transpiler, load_coverage(out / 'v8'))
+            for n, row in enumerate(rows):
+                row['index'] = n
+            breakpoints = [{'id': r['index'], 'url': r['url'], 'line': r['bp'][0], 'column': r['bp'][1]}
+                           for r in rows if r['hits'] and r.get('bp') and r.get('Kind') != 'guard']
+            (out / 'order-breakpoints.json').write_text(json.dumps(breakpoints) + '\n')
+            hits = out / 'order-hits.txt'
+            hits.write_text('')
+            heavy(['node', REPO / 'tools/selfhost-step4-order.mjs', out / 'order-breakpoints.json', hits,
+                   out / 'order-ref.go', driver], 'order')
+            if digest(out / 'order-ref.go') != digest(ref):
+                raise RuntimeError('breakpoint replay output differs from the reference')
+            order = [int(x) for x in hits.read_text().split()]
+            traps = write_traps(out, order_rows(rows, order), unknown_a, unknown_g)
+            return 0
+        # Keep the large generated package's compiler heap below the scope cap.
+        heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G',
+              extra={'GOMEMLIMIT': env.get('GOMEMLIMIT', '12GiB'), 'GOGC': env.get('GOGC', '50')})
         build = 'ok'
         with actual.open('wb') as f:
             try:
@@ -240,6 +456,8 @@ def main(args):
         # Preserve logs and coverage-derived evidence, discard bulky raw V8 data.
         shutil.rmtree(out / 'v8', ignore_errors=True)
         summary = f'step4: build={build} run={run} cmp={comparison} ref={digest(ref)[:16] if ref.exists() else "none"} out={digest(actual)[:16] if actual.exists() else "none"}'
+        if list_traps:
+            summary = traps or 'step4-traps: failed before listing'
         (out / 'summary.txt').write_text(summary + '\n')
         print(summary)
 

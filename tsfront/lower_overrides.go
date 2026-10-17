@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/scanner"
@@ -13,6 +14,18 @@ import (
 func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry) error {
 	if len(registry.Inventory()) == 0 {
 		return nil
+	}
+	var relativeFiles []string
+	for _, name := range files {
+		if f, ok := l.prog.File(name); ok {
+			rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
+			relativeFiles = append(relativeFiles, filepath.ToSlash(rel))
+		}
+	}
+	var err error
+	registry, err = registry.ForFiles(relativeFiles)
+	if err != nil {
+		return err
 	}
 	seen := map[string]int{}
 	selected := map[string]bool{}

@@ -873,6 +873,13 @@ func (p *numberPass) stmt(s *hir.Stmt, env map[string]numberInterval) (map[strin
 	case hir.Throw:
 		p.expr(s.X, env)
 		return env, false
+	case hir.Finally:
+		// The protected body executes before its cleanup, including on an
+		// abrupt exit. Analyze both so nested expression temporaries have
+		// facts when rewriting. Cleanup can also run after a body exception.
+		a, al := p.stmt(s.Body, cloneNumbers(env))
+		b, bl := p.stmt(s.Else, joinNumbers(env, a))
+		return b, al && bl
 	case hir.Try:
 		a, al := p.stmt(s.Body, cloneNumbers(env))
 		catch := joinNumbers(env, a)

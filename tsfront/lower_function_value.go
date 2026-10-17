@@ -140,6 +140,14 @@ func (l *lowerer) finishCaptureCells() {
 			args := []*hir.Expr{}
 			if decl.X != nil {
 				args = append(args, decl.X)
+			} else if decl.Type.Kind == hir.Optional || decl.Type.Kind == hir.Dynamic {
+				// The binding starts as undefined even without an initializer.
+				// A cell constructor still needs that explicit physical argument.
+				typ := decl.Type
+				if typ.Kind == hir.Dynamic {
+					typ = hir.T(hir.Optional, typ)
+				}
+				args = append(args, l.coerce(&hir.Expr{Kind: hir.Lit, Node: decl.Node, Type: typ}, decl.Type))
 			}
 			decl.Type = cell
 			decl.X = &hir.Expr{Kind: hir.New, Node: decl.Node, Type: cell, Args: args}
@@ -400,6 +408,11 @@ func (l *lowerer) functionValueCall(n, callee *ast.Node) *hir.Expr {
 	}
 	if (x.Type.Kind == hir.Dynamic || x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.Dynamic) && l.checkedStoredCallable(callee) != nil {
 		typ := l.functionType(callee, l.checkedStoredCallable(callee))
+		if x.Type.Kind == hir.Optional {
+			// Keep a chained property's absence until the call decides whether
+			// to short-circuit (?.()) or require a callable (()).
+			typ = hir.T(hir.Optional, typ)
+		}
 		x = l.coerce(x, typ)
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.") {

@@ -12,3 +12,9 @@ var RuntimeSource string
 //
 //go:embed iterator_subset.go
 var IteratorRuntimeSource string
+
+// ExtendedRuntimeSource adds dotAll, control escapes and alternative-start
+// anchors. It is emitted only when a program's literal needs it.
+//
+//go:embed extended_subset.go
+var ExtendedRuntimeSource string
