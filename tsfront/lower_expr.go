@@ -1243,6 +1243,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	if x, handled := l.assertedMethodReceiverCall(n, callee); handled {
+		return x
+	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		if x, handled := l.requiredMemberCall(n, callee); handled {
 			return x
