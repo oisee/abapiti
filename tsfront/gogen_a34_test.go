@@ -102,3 +102,31 @@ class Probe {
   }
 }`, "")
 }
+
+// Captured optional records and tagged values start as JavaScript undefined,
+// and each later write remains visible through the shared binding.
+func TestGogenA34UninitializedCapturedBindingNodeOracle(t *testing.T) {
+	t.Run("record", func(t *testing.T) {
+		gogenTSOracle(t, `type Hook = {run: () => string};
+class Probe { static run(): string {
+  let hook: Hook | undefined;
+  const read = (): string => hook ? hook.run() : "absent";
+  const first = read();
+  hook = {run: () => "live"};
+  const second = read();
+  hook = undefined;
+  return first + "|" + second + "|" + read();
+} }`, "")
+	})
+	t.Run("tagged", func(t *testing.T) {
+		gogenTSOracle(t, `class Probe { static run(): string {
+  let value: unknown;
+  const read = (): string => typeof value + ":" + String(value);
+  const first = read();
+  value = "live";
+  const second = read();
+  value = undefined;
+  return first + "|" + second + "|" + read();
+} }`, "")
+	})
+}
