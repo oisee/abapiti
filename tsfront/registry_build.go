@@ -317,6 +317,11 @@ func (r *RegistryLowering) Evidence(dump bool) (map[string][]byte, error) {
 		return nil, err
 	}
 	out["registry-traps.json"] = append(data, '\n')
+	data, err = json.MarshalIndent(TrapSites(r.Prog), "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	out["trap-sites.json"] = append(data, '\n')
 	var lines []string
 	for _, v := range r.Verification {
 		lines = append(lines, v.Error())
