@@ -958,6 +958,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		if recv.Type.Kind == hir.Optional {
 			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
 		}
+		if l.unprunedFeatures && f.Name == "size" {
+			// A data interface inheriting Map/Set can register the library's
+			// property symbol as a field. The actual collection receiver still
+			// owns its builtin ABI, rather than that interface's class layout.
+			switch recv.Type.Kind {
+			case hir.OrderedMap:
+				return l.rtOp("map.size", recv, hir.T(hir.I32))
+			case hir.OrderedSet:
+				return l.rtOp("set.size", recv, hir.T(hir.I32))
+			}
+		}
 		// The receiver's lowered class owns the field's type: the checker's
 		// property symbol may belong to a structural view of it.
 		if recv.Type.Kind == hir.ClassRef {
