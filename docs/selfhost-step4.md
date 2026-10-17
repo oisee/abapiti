@@ -16,6 +16,14 @@ Both executions run in the supplied OSG checkout. Input folders must point to
 its prepared libraries. Abaplint core sources and the transpiler rearranger
 are resolved through tsconfig paths, as in the pilot measurement kit.
 
+For a smaller experiment, pass `--inputs /absolute/path/to/inputs.json`.
+The harness computes a fresh Node reference and prints its full SHA256;
+`--expect-ref` remains optional and can pin that custom reference. The JSON
+is copied to `out-dir/inputs.json` and temporarily staged at the driver's
+usual input path for the reference, coverage replay and generated program.
+The captured inputs are restored on success or failure. Without `--inputs`,
+the original input handling and summary output are unchanged.
+
 Every Node, abapiti, generated program and Go build subprocess runs under
 `systemd-run --user --scope -q -p MemoryMax=16G nice` (24G for the generated
 module build). The harness checks for at least 40 GiB free before each step.
