@@ -232,6 +232,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	if mapped, ok := l.mapInterfaceType(n, l.ck.GetTypeFromTypeNode(n)); ok {
 		return mapped
 	}
+	if mapped, ok := l.optionalSlotIntersection(l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
+	}
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
 	}
@@ -445,6 +448,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return mapped
 	}
 	if mapped, ok := l.mapInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.optionalSlotIntersection(t); ok {
 		return mapped
 	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {

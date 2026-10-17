@@ -1636,6 +1636,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return x
 		}
 		x, handled := l.libraryCall(n, name, recv)
+		if x == nil && !handled && recv.Type.Kind == hir.InterfaceRef && n.AsCallExpression().QuestionDotToken != nil {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
+		}
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
 			for _, c := range l.out.Classes {
 				if c.Structural {
