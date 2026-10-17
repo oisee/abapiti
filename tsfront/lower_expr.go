@@ -317,6 +317,28 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 		// checked presence, then the family projection.
 		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// A type predicate narrowed a wider object to a family (member): the
+		// object holds the family's live storage. Project it checked rather
+		// than downcasting the root reference.
+		if typ.Kind == hir.UnionRef {
+			return l.coerce(x, typ)
+		}
+		if typ.Kind == hir.ClassRef {
+		families:
+			for _, u := range l.out.Unions {
+				if u == nil || !u.Complete || strings.HasPrefix(u.Name, "family.subset.") {
+					continue
+				}
+				for _, a := range u.Alternatives {
+					if a.Payload.Equal(typ) {
+						x = l.coerce(x, hir.Type{Kind: hir.UnionRef, Name: u.Name})
+						break families
+					}
+				}
+			}
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
 		if typ.Equal(x.Type) {
 			return x

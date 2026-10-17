@@ -62,11 +62,26 @@ func (l *lowerer) objectEntries(n *ast.Node) *hir.Expr {
 	keys := l.recordPropertyKeys(n, recv)
 	str, i := hir.T(hir.String), hir.T(hir.I32)
 	valueType := recv.Type.Args[1]
-	pair := l.tupleShape(n, []hir.Type{str, valueType})
-	result := l.tempVar(n, hir.T(hir.Array, pair))
 	l.serial++
 	key := hir.V("entryKey"+itoa(l.serial), str)
 	value := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: valueType, X: l.rtOp("map.get", recv, hir.T(hir.Optional, valueType), key)}
+	if valueType.Equal(str) {
+		// [string, string] is a homogeneous tuple: the checker-mapped type of
+		// the result is string[][], so each entry is a fresh two-element array.
+		row := hir.T(hir.Array, str)
+		result := l.tempVar(n, hir.T(hir.Array, row))
+		l.serial++
+		pair := hir.V("entryRow"+itoa(l.serial), row)
+		l.declare(pair.Name, row)
+		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: str, X: keys, Body: hir.B(
+			&hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: pair.Name, Type: row, X: &hir.Expr{Kind: hir.New, Node: l.node(n), Type: row}},
+			&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", pair, i, key)},
+			&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", pair, i, value)},
+			&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, i, pair)})})
+		return result
+	}
+	pair := l.tupleShape(n, []hir.Type{str, valueType})
+	result := l.tempVar(n, hir.T(hir.Array, pair))
 	row := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: pair, Args: []*hir.Expr{key, value}}
 	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: str, X: keys, Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", result, i, row)})})
 	return result

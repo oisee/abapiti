@@ -44,6 +44,11 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 			if f.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike) || l.readonlyShapeRead(f.Type, g.Type, active)) {
 				compatible = true
 			}
+			if f.Type.Kind == hir.Optional && len(f.Type.Args) == 1 && l.dataShapeSubtypeSeen(f.Type.Args[0], g.Type, active) {
+				// A present nested record viewed through an optional slot of a
+				// property-only supertype: the same live nested view.
+				compatible = true
+			}
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
 				if f.Type.Kind == hir.Optional && g.Type.IsRef() {
 					compatible = true
