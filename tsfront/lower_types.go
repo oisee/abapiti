@@ -229,6 +229,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		// Generic instantiations erase to the declaration's constraint.
 		l.diagf(n, "note-generic-erased", "type arguments of %s are erased", name)
 	}
+	if mapped, ok := l.mapInterfaceType(n, l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
+	}
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
 	}
@@ -439,6 +442,9 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return mapped
 	}
 	if mapped, ok := l.arrayInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.mapInterfaceType(n, t); ok {
 		return mapped
 	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
