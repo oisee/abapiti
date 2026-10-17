@@ -103,6 +103,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 			return x
 		}
 	}
+	diagnostics := len(l.diags)
 	saved := l.pend
 	l.pend = nil
 	var x *hir.Expr
@@ -132,6 +133,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	}
 	if x != nil && !l.settledCallUse(n, x) {
 		x = nil
+	}
+	if x == nil {
+		x = l.asyncRefusalExpression(n, diagnostics)
 	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
