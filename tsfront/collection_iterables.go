@@ -81,10 +81,16 @@ func (l *lowerer) newMapFromIterable(n *ast.Node) (*hir.Expr, bool) {
 		}
 		l.serial++
 		v := hir.V("r"+itoa(l.serial), row)
-		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v.Name, Type: row, X: src,
-			Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("map.set", m, typ,
-				l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f0", Type: f0, X: v}, keyT),
-				l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f1", Type: f1, X: v}, valT))})})
+		// Coercing a row field may introduce temporaries; they read the row
+		// variable, so they belong inside the loop body.
+		saved := l.pend
+		l.pend = nil
+		set := &hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("map.set", m, typ,
+			l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f0", Type: f0, X: v}, keyT),
+			l.coerce(&hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: "f1", Type: f1, X: v}, valT))}
+		body := append(l.pend, set)
+		l.pend = saved
+		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: v.Name, Type: row, X: src, Body: hir.B(body...)})
 		return m, true
 	}
 	l.diagf(n, "unsupported-new", "new Map needs an array of [key, value] rows or a Map")
