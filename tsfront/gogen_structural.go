@@ -86,6 +86,10 @@ func (l *lowerer) gogenGenericShape(n *ast.Node, t *checker.Type) (hir.Type, boo
 			}
 		}
 		if c := l.synthFromPropertyTypes(n, props, slots); c != nil {
+			if l.shapeLike == nil {
+				l.shapeLike = map[string]bool{}
+			}
+			l.shapeLike[c.Name] = true
 			return hir.Ref(c.Name), true
 		}
 		return hir.Type{}, false

@@ -440,6 +440,14 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 			x = l.expr(init)
 			l.hint = hir.Type{}
 			if x == nil {
+				if l.unprunedFeatures && l.integerOptions.TrapOnFailure {
+					// Keep the checked binding visible to later closures. A failed
+					// initializer must not expose an unrelated module global of
+					// the same name. The initializer still refuses execution.
+					declaration := l.localDeclaration(d, name, typ, nil)
+					trap := &hir.Stmt{Kind: hir.Trap, Node: l.node(init), Name: "lowering trap: " + l.locOf(init) + ": initializer of " + name + " was not lowered"}
+					return []*hir.Stmt{declaration, trap}
+				}
 				return nil
 			}
 			if d.Type() == nil && isArrayAssignment(init) && x.Type.Kind == hir.Array {
