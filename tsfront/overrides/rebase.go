@@ -146,8 +146,8 @@ func rebaseBuild[T any](build func() *T, rename func(string) string) func() *T {
 				}
 				return
 			}
-			if v.Type() == reflect.TypeOf(hir.Type{}) {
-				v.Set(reflect.ValueOf(rebaseType(v.Interface().(hir.Type), rename)))
+			if t, ok := v.Interface().(hir.Type); ok && v.Type() == reflect.TypeOf(hir.Type{}) {
+				v.Set(reflect.ValueOf(rebaseType(t, rename)))
 				return
 			}
 			switch v.Kind() {
