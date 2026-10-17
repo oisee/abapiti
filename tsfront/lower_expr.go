@@ -2764,6 +2764,13 @@ func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *h
 		x, y = l.absentNumericOperand(x), l.absentNumericOperand(y)
 	}
 	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
+	if l.unprunedFeatures && (op == "-" || op == "*" || op == "/" || op == "%") && (x.Type.Kind == hir.Dynamic) != (y.Type.Kind == hir.Dynamic) && (numberType(x.Type) || numberType(y.Type)) {
+		// An any operand (an untyped local's c.type.getLength()) next to a
+		// number: the checked unboxing yields the number, any other payload
+		// (a string ToNumber would convert) raises.
+		number := hir.T(hir.Number)
+		x, y = l.coerce(x, number), l.coerce(y, number)
+	}
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
 }
 
