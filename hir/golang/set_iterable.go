@@ -13,7 +13,7 @@ func (e *emitter) setIterationRuntime(runtime string) string {
 	patches := [][2]string{
 		{"type orderedSet[T comparable] struct {", "type orderedSet[T comparable] struct { iteration *array[T];"},
 		{"s.index[key]=len(s.Items);s.Items=append(s.Items,collectionValue(v));", "s.index[key]=len(s.Items);s.Items=append(s.Items,collectionValue(v));if s.iteration!=nil {s.iteration.push(collectionValue(v))};"},
-		{"delete(s.index,key)\n", "delete(s.index,key)\n if s.iteration!=nil {for j:=len(s.iteration.Items)-1;j>=0;j-- {if s.iteration.has(int32(j)) && collectionKey(s.iteration.Items[j])==key {s.iteration.delete(int32(j));break}}}\n"},
+		{"delete(s.index,key)\n", "delete(s.index,key)\n if s.iteration!=nil {for j:=len(s.iteration.Items)-1;j>=0;j-- {if s.iteration.has(int32(j)) && setKey(s.iteration.Items[j])==key {s.iteration.delete(int32(j));break}}}\n"},
 	}
 	for _, patch := range patches {
 		if !strings.Contains(runtime, patch[0]) {
