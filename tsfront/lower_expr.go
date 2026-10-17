@@ -1229,8 +1229,8 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 						if !ok2 {
 							return nil
 						}
-						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
-							Type: l.callbackResultType(ref), Args: args}
+						return l.assertedDirectCallResult(n, &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
+							Type: l.callbackResultType(ref), Args: args})
 					}
 				}
 			}
