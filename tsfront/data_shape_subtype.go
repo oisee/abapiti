@@ -44,6 +44,12 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 			if f.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike) || l.readonlyShapeRead(f.Type, g.Type, active)) {
 				compatible = true
 			}
+			if f.Type.Kind == hir.Array && g.Type.Kind == hir.Array && f.Type.Args[0].IsRef() && g.Type.Args[0].IsRef() && l.readonlyShapeRead(f.Type, g.Type, active) {
+				// Reference arrays already share erased element storage. A
+				// structural field can expose their live covariant element view
+				// even when the property holding the readonly array is mutable.
+				compatible = true
+			}
 			if l.dataShapeSubtypeSeen(f.Type, g.Type, active) {
 				// A nested record of a property-only subtype (QueryContext's
 				// program: QueryProgram over CompilationContext's
