@@ -2057,7 +2057,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			return l.mapRead(recv, one()), true
 		case "set":
 			var a, b *hir.Expr
-			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
+			// A fresh literal value is built as the map's value type.
+			literal := l.unprunedFeatures && len(args) == 2 && recv.Type.Args[1].Kind == hir.ClassRef && recv.Type.Args[1].Name != hir.RootObject && ast.SkipParentheses(args[1]).Kind == ast.KindObjectLiteralExpression
+			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef || literal) && len(args) == 2 {
 				a = l.expr(args[0])
 				saved := l.hint
 				l.hint = recv.Type.Args[1]
