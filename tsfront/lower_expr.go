@@ -2721,6 +2721,18 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if !base.Equal(y.Type) {
 			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 		}
+		if l.unprunedFeatures && (!l.conditionalConvertible(b.Left, left, result) || !l.conditionalConvertible(b.Right, y, result)) {
+			// A fresh collection in the fallback can make the checker infer
+			// Map<any, any>, even though lowering gave that branch a typed
+			// collection. Keep a proven context/operand ABI rather than
+			// changing the storage of an existing map to that inferred type.
+			for _, target := range []hir.Type{hint, y.Type, base} {
+				if l.conditionalConvertible(b.Left, left, target) && l.conditionalConvertible(b.Right, y, target) {
+					result = target
+					break
+				}
+			}
+		}
 		if result.Kind == hir.Void {
 			return nil
 		}
