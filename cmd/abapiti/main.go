@@ -24,8 +24,7 @@ var version = "0.5.1"
 var rootCmd = &cobra.Command{
 	Use:   "abapiti [file.wasm]",
 	Short: "ABAPiti: because we can. Compile WASM, LLVM IR and TypeScript into ABAP.",
-	Long: `ABAPiti: because we can.
-a new identity for your code.
+	Long: `ABAPiti: because we can — transpile to ABAP.
 
 Compiles WebAssembly, LLVM IR / C and TypeScript into ABAP source.
 Fully offline: no SAP connection is needed. Deploy the output with vsp
