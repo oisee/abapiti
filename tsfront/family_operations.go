@@ -31,6 +31,13 @@ func (l *lowerer) familyAdmission(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if u.Complete && l.familyViewSubtype(dst, x.Type, map[string]bool{}) {
 		return l.rtOp("union.check", l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
+	if u.Complete && x.Type.Kind == hir.ClassRef && l.shapeLike[x.Type.Name] && l.inJSFile() {
+		// A named data interface that restates one member of the family
+		// (`interface StaticSlotExpr {e: "static"; ...}` returned where
+		// ValueExpr is declared) is its own storage layout, not a payload:
+		// its live record is validated as a member, a mismatch raises.
+		return l.rtOp("union.check", l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
 	return x // A mismatch remains a verifier error, never erased membership.
 }
 
