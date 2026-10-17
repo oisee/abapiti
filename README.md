@@ -1,7 +1,7 @@
 # ABAPiti
 
 **ABAPiti: because we can**
-*a new identity for your code*
+*transpile to ABAP*
 
 [![CI](https://github.com/oisee/abapiti/actions/workflows/ci.yml/badge.svg)](https://github.com/oisee/abapiti/actions/workflows/ci.yml)
 
