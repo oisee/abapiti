@@ -222,6 +222,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return x
 	}
+	if l.unprunedFeatures && (t.Flags()&checker.TypeFlagsNever != 0 || t.Flags()&checker.TypeFlagsIntersection != 0 && l.ck.GetReducedType(t).Flags()&checker.TypeFlagsNever != 0) {
+		// The checker found the guarded branch impossible (an intersection
+		// that reduced to never), yet the guard held at run time.
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+	}
 	base := x.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]

@@ -91,6 +91,22 @@ func (l *lowerer) guardPredicateType(guard *ast.Node, sym *ast.Symbol) *checker.
 		}
 		return l.guardPredicateType(b.Left, sym)
 	}
+	if guard.Kind == ast.KindBinaryExpression && guard.AsBinaryExpression().OperatorToken.Kind == ast.KindInstanceOfKeyword && l.unprunedFeatures {
+		// `x instanceof C` held: x is an instance of C's construct result.
+		b := guard.AsBinaryExpression()
+		if left := ast.SkipParentheses(b.Left); left.Kind != ast.KindIdentifier || l.resolve(left) != sym {
+			return nil
+		}
+		ctor := l.ck.GetTypeAtLocation(b.Right)
+		if ctor == nil {
+			return nil
+		}
+		sigs := l.ck.GetSignaturesOfType(ctor, checker.SignatureKindConstruct)
+		if len(sigs) != 1 {
+			return nil
+		}
+		return l.ck.GetReturnTypeOfSignature(sigs[0])
+	}
 	if guard.Kind != ast.KindCallExpression {
 		return nil
 	}
