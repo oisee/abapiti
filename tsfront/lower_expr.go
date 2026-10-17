@@ -664,6 +664,11 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 				}
 				if elem.Kind == hir.Optional {
 					sv = l.coerce(l.spreadSnapshot(el, sv), typ)
+				} else if l.unprunedFeatures && elem.Kind == hir.ClassRef && sv.Type.Args[0].Kind == hir.ClassRef && !sv.Type.Equal(typ) && l.dataShapeSubtype(elem, sv.Type.Args[0]) {
+					// Rows of a data interface spread among rows of its
+					// extension (Param[] into FrontendParam[]): the copied
+					// rows are the same objects seen through the wider view.
+					sv = l.coerce(sv, typ)
 				}
 				nxt := l.rtOp("array.concat", arr, typ, sv)
 				l.serial++
