@@ -243,9 +243,15 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	}
 	before := len(l.diags)
 	typ := l.mapCheckerType(n, t)
-	if hasBlocking(l.diags[before:]) {
+	blocked := hasBlocking(l.diags[before:]) || typ.Kind == hir.Void
+	if blocked || typ.Kind == hir.ClassRef && typ.Name == hir.RootObject && !x.Type.Equal(typ) {
 		l.diags = l.diags[:before] // quiet: narrowing is optional
-		return x
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+		if blocked {
+			return x
+		}
 	}
 	l.diags = l.diags[:before]
 	if l.shapeAliasOf(typ, x.Type) {
