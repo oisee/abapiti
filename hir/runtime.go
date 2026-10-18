@@ -106,6 +106,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
 	"map.view":                true,
+	"set.view":                true,
 	"union.check":             true, // Dynamic -> validated complete family
 	"union.admit":             true,
 	"union.widen":             true,

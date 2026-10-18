@@ -289,6 +289,15 @@ func (l *lowerer) emptyCollectionFallback(n *ast.Node) (*hir.Expr, bool) {
 	if recv == nil {
 		return nil, true
 	}
+	if recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.Optional && recv.Type.Args[0].Kind == hir.Dynamic {
+		// A collection read through an erased program union retains its
+		// checker-proven collection view, including optional-chain absence.
+		target := typ
+		if recv.Type.Kind == hir.Optional || typeMayBeUndefined(l.ck.GetTypeAtLocation(b.Left)) {
+			target = hir.T(hir.Optional, typ)
+		}
+		recv = l.coerce(recv, target)
+	}
 	recv = l.tempInit(b.Left, recv.Type, recv)
 	present := recv
 	optional := recv.Type.Kind == hir.Optional

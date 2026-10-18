@@ -11,7 +11,7 @@ import (
 
 var supportedOps = map[string]bool{
 	"union.declarations": true,
-	"map.view":           true, "union.check": true, "union.admit": true,
+	"map.view":           true, "set.view": true, "union.check": true, "union.admit": true,
 	"union.widen":            true,
 	"union.project":          true,
 	"union.tag":              true,
@@ -80,6 +80,9 @@ func RuntimeOps() (supported, unsupported []string) {
 }
 
 func (b *body) runtime(x *hir.Expr) string {
+	if x.Op == "set.view" {
+		return b.expr(x.X)
+	}
 	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
 		b.e.unsupported(x.Node, "boxed Map writes require value-based SameValueZero")
 		return ""

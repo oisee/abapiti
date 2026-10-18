@@ -103,6 +103,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 			return x
 		}
 	}
+	diagnostics := len(l.diags)
 	saved := l.pend
 	l.pend = nil
 	var x *hir.Expr
@@ -132,6 +133,9 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	}
 	if x != nil && !l.settledCallUse(n, x) {
 		x = nil
+	}
+	if x == nil {
+		x = l.asyncRefusalExpression(n, diagnostics)
 	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
@@ -1243,6 +1247,9 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			}
 		}
 	}
+	if x, handled := l.assertedMethodReceiverCall(n, callee); handled {
+		return x
+	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		if x, handled := l.requiredMemberCall(n, callee); handled {
 			return x
@@ -1636,6 +1643,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return x
 		}
 		x, handled := l.libraryCall(n, name, recv)
+		if x == nil && !handled && recv.Type.Kind == hir.InterfaceRef && n.AsCallExpression().QuestionDotToken != nil {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
+		}
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
 			for _, c := range l.out.Classes {
 				if c.Structural {

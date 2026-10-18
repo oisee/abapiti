@@ -229,6 +229,12 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 		// Generic instantiations erase to the declaration's constraint.
 		l.diagf(n, "note-generic-erased", "type arguments of %s are erased", name)
 	}
+	if mapped, ok := l.mapInterfaceType(n, l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
+	}
+	if mapped, ok := l.optionalSlotIntersection(l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
+	}
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
 	}
@@ -439,6 +445,12 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return mapped
 	}
 	if mapped, ok := l.arrayInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.mapInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.optionalSlotIntersection(t); ok {
 		return mapped
 	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
@@ -888,10 +900,14 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 			return c
 		}
 	}
-	// A data object with a subset of a data interface's fields (the rest
-	// optional) is that data interface with the others absent: plain
-	// objects have no identity of their own.
+	// An explicit type literal describes only its listed fields. Adopting
+	// unrelated optional padding can reject a valid structural argument
+	// whose extra fields have different types. Inferred object layouts
+	// retain their existing optional-superset storage reuse.
 	for _, c := range l.out.Classes {
+		if l.unprunedFeatures && n.Kind == ast.KindTypeLiteral {
+			break
+		}
 		if (!l.shapeLike[c.Name] && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(c.Name, "shape."))) || c.Ctor == nil || len(c.Fields) <= len(fields) {
 			continue
 		}

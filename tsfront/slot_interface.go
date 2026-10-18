@@ -190,6 +190,9 @@ func (l *lowerer) slotInterfaceReceiver(recv *ast.Node) bool {
 	if t != nil {
 		t = l.ck.GetNonNullableType(t)
 	}
+	if _, ok := l.optionalSlotIntersection(t); ok {
+		return true
+	}
 	if t == nil || t.Symbol() == nil || t.Flags()&checker.TypeFlagsObject == 0 {
 		return false
 	}
@@ -202,4 +205,37 @@ func (l *lowerer) slotInterfaceReceiver(recv *ast.Node) bool {
 		}
 	}
 	return false
+}
+
+// A slot interface intersected with optional members still carries the same
+// objects. Optional prototype methods are dispatched on their runtime class;
+// they must not turn the existing method interface into copied function fields.
+func (l *lowerer) optionalSlotIntersection(t *checker.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures || t == nil || t.Flags()&checker.TypeFlagsIntersection == 0 {
+		return hir.Type{}, false
+	}
+	for _, part := range t.AsUnionOrIntersectionType().Types() {
+		if part.Symbol() == nil {
+			continue
+		}
+		base := l.ifaceOf(part.Symbol())
+		if base == nil {
+			continue
+		}
+		typ := hir.Type{Kind: hir.InterfaceRef, Name: base.Name}
+		if !l.slotInterfaceRef(typ) {
+			continue
+		}
+		valid := true
+		for _, prop := range l.ck.GetPropertiesOfType(t) {
+			if l.ck.GetPropertyOfType(part, prop.Name) == nil && prop.Flags&ast.SymbolFlagsOptional == 0 {
+				valid = false
+				break
+			}
+		}
+		if valid {
+			return typ, true
+		}
+	}
+	return hir.Type{}, false
 }

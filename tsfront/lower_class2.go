@@ -749,6 +749,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
 			Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.familyAdmission(present, dst.Args[0]), dst)}
 	}
+	if l.setReferenceView(dst, x.Type) {
+		return l.rtOp("set.view", x, dst)
+	}
 	if l.mapStorageView(dst, x.Type) {
 		view := l.rtOp("map.view", x, dst)
 		if view.Source == "" && l.method != nil {

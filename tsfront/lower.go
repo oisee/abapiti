@@ -878,8 +878,8 @@ func (l *lowerer) registerFile(f *ast.SourceFile) {
 			if members := stmt.Members(); len(members) == 1 && members[0].Kind == ast.KindIndexSignature && stmt.AsInterfaceDeclaration().HeritageClauses == nil {
 				continue
 			}
-			if l.arrayInterfaceDeclaration(stmt) {
-				// Its values are arrays: references lower to the array ABI.
+			if l.arrayInterfaceDeclaration(stmt) || l.mapInterfaceDeclaration(stmt) {
+				// Collection interfaces retain their library collection ABI.
 				continue
 			}
 			if l.isDataInterface(stmt) && stmt.Name() != nil && stmt.Symbol() != nil {
