@@ -766,7 +766,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		}
 		// Keep anonymous contextual return shapes on their existing ABI.
 		// Declared data-interface destinations have a stable live-view layout.
-		if !strings.HasPrefix(dst.Args[0].Name, "shape.") && l.dataShapeSubtype(dst.Args[0], src) {
+		// Optional covariant arrays use the same checked element views as
+		// present arrays, preserving absence and their live backing storage.
+		if !strings.HasPrefix(dst.Args[0].Name, "shape.") && l.dataShapeSubtype(dst.Args[0], src) || l.dataArraySubtype(dst.Args[0], src) {
 			if x.Type.Kind != hir.Optional {
 				return l.coerce(l.coerce(x, dst.Args[0]), dst)
 			}
@@ -779,7 +781,7 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.coerce(present, dst.Args[0]), dst)}
 		}
 	}
-	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.ClassRef && x.Type.Args[0].Kind == hir.ClassRef && l.dataShapeSubtype(dst.Args[0], x.Type.Args[0]) {
+	if l.unprunedFeatures && l.dataArraySubtype(dst, x.Type) {
 		// Reuse the original array and convert its element views on access.
 		// Snapshotting would lose aliases and later pushes by the caller.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)

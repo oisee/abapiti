@@ -5,6 +5,13 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
+// dataArraySubtype uses the same data-only element proof for present and
+// optional array destinations. Conversion attaches a live view; it never copies
+// storage or admits unrelated nominal/structural element layouts.
+func (l *lowerer) dataArraySubtype(dst, src hir.Type) bool {
+	return dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 && l.dataShapeSubtype(dst.Args[0], src.Args[0])
+}
+
 // Property-only structural compatibility. Container storage remains invariant;
 // a present primitive or reference may widen to its optional slot through the live
 // adapter. Absent writes into required backing storage still explicitly refuse.
