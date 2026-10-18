@@ -87,3 +87,30 @@ func TestStep4OptionalArrayViewRejectsUnrelated(t *testing.T) {
 		})
 	}
 }
+
+// OSG's mapped len reads a partially shared property of a typed union. The
+// optional array destination must still contextualize the callback's record;
+// its len uses the ordinary checked scalar coercion, as a present array does.
+func TestStep4OptionalArrayMapContextNodeOracle(t *testing.T) {
+	runMjsOracleTypes(t, `export type Ty = {readonly k: "c"; readonly len: number} | {readonly k: "s"};
+export interface Field {readonly name: string; readonly type: Ty}
+export type Expr =
+  | {readonly e: "lit"; readonly text: string}
+  | {readonly e: "conv"; readonly x: Expr;
+     readonly fields?: readonly {readonly name: string; readonly len: number}[]};
+`, `/** @param {import("./types.ts").Field[]} fields @returns {import("./types.ts").Expr} */
+function convert(fields) {
+  if (fields.every(f => f.type.k === "c" && Number.isInteger(f.type.len))) {
+    return {e: "conv", x: {e: "lit", text: "x"}, fields: fields.map(f => ({name: f.name, len: f.type.len}))};
+  }
+  return {e: "conv", x: {e: "lit", text: "y"}};
+}
+export class Probe {
+  /** @returns {string} */ static run() {
+    const value = convert([{name: "a", type: {k: "c", len: 3}}]);
+    if (value.e !== "conv" || value.fields === undefined) return "unexpected";
+    return value.fields.map(f => f.name + (f.len + 1)).join(",") + ":" + JSON.stringify(convert([{name: "s", type: {k: "s"}}]));
+  }
+}
+`, false, true)
+}

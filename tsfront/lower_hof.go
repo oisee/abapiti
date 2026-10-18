@@ -165,6 +165,32 @@ func (l *lowerer) toBool(n *ast.Node, x *hir.Expr) *hir.Expr {
 	return &hir.Expr{Kind: hir.ToBoolean, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
 }
 
+// A narrower record may add keys that the contextual constructor cannot
+// store. Let those callbacks retain their inferred layout; coerce attaches the
+// structural array view afterwards, preserving the extra keys and identities.
+func (l *lowerer) optionalArrayCallbackHint(value *ast.Node, elem hir.Type) hir.Type {
+	for value.Kind == ast.KindParenthesizedExpression {
+		value = value.Expression()
+	}
+	if value.Kind != ast.KindObjectLiteralExpression || elem.Kind != hir.ClassRef {
+		return elem
+	}
+	target := l.classByName(elem.Name)
+	if target == nil {
+		return elem
+	}
+	for _, prop := range l.ck.GetPropertiesOfType(l.ck.GetTypeAtLocation(value)) {
+		found := false
+		for _, field := range target.Fields {
+			found = found || field.Name == prop.Name
+		}
+		if !found {
+			return hir.Type{}
+		}
+	}
+	return elem
+}
+
 // tempInit declares a fresh local initialized with x.
 func (l *lowerer) tempInit(at *ast.Node, t hir.Type, x *hir.Expr) *hir.Expr {
 	l.serial++
@@ -451,6 +477,10 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		l.hint = l.mapTypeNode(cb.Type())
 	} else if l.hint.Kind == hir.Array {
 		l.hint = l.hint.Args[0]
+	} else if l.unprunedFeatures && l.hint.Kind == hir.Optional && l.hint.Args[0].Kind == hir.Array {
+		// A present mapped array in an optional slot retains the same
+		// element context and checked field coercions as a required slot.
+		l.hint = l.optionalArrayCallbackHint(value, l.hint.Args[0].Args[0])
 	} else {
 		l.hint = hir.Type{}
 	}
