@@ -818,7 +818,10 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}
 		}
 	}
-	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && dst.Args[0].Kind == hir.ClassRef {
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && (dst.Args[0].Kind == hir.ClassRef || dst.Args[0].Kind == hir.InterfaceRef) {
+		// Family payloads can erase an untagged element union to Dynamic.
+		// Recover its checked reference-array view when a typed local captures
+		// the field, retaining both storage and per-element reference checks.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && dst.Args[0].Kind == hir.Dynamic && (x.Type.Args[0].Kind == hir.InterfaceRef || x.Type.Args[0].Kind == hir.ClassRef) {

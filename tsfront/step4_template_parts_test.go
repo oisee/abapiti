@@ -42,11 +42,12 @@ function liveParts() {
   /** @type {import("./types.ts").Part[]} */ const parts = [first];
   const value = withParts(parts);
   if (value.e !== "template") return "unexpected variant";
-  const before = value.parts.length;
+  const view = value.parts;
+  const before = view.length;
   const pushed = parts.push(later);
-  const after = value.parts.length;
+  const after = view.length;
   parts.push(first);
-  return (value.parts === parts) + ":" + before + ":" + pushed + ":" + after + ":" + value.parts.length + ":" + (value.parts[0] === first) + ":" + (value.parts[1] === later) + ":" + (value.parts[2] === first) + ":" + show(value);
+  return (view === parts) + ":" + before + ":" + pushed + ":" + after + ":" + view.length + ":" + (view[0] === first) + ":" + (view[1] === later) + ":" + (view[2] === first) + ":" + show(value);
 }
 export class Probe {
   /** @returns {string} */ static run() {
