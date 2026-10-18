@@ -148,6 +148,8 @@ go test ./hir/... ./tsfront ./cmd/...       # unit tests, emitter fixtures, the 
 
 How it works in more depth: [the ADRs](docs/adr/) (own object HIR, tsgo front end, ABAP 7.50 target, number semantics, reachability pruning).
 
+**Go frontend research:** [typed Go AST → HIR → Grace → ABAP](docs/history/reports/2026-10-18-go-frontend-hir-feasibility.md) assesses feasibility, semantic gaps and a staged validation plan. A follow-up [daemon and channel proposal](docs/history/reports/2026-10-18-go-concurrency-abap-daemons-proposal.md) explores Go concurrency using ABAP Daemons, APC and AMC. These are research proposals; a Go frontend and concurrency runtime have not been implemented.
+
 Super greets to [@larshp](https://github.com/larshp) for abaplint, the transpiler and the acceptance test: check `zabapgit_standalone` on the stack in under 5 minutes.
 
 <details>
