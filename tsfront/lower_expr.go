@@ -2114,6 +2114,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		key := func() *hir.Expr {
 			x := one()
 			if l.unprunedFeatures && recv.Type.Args[0].Kind == hir.Dynamic {
+				x = observedBoxedMapKey(x)
 				x = l.coerce(x, recv.Type.Args[0])
 			}
 			return x
@@ -2135,6 +2136,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				a, b = two()
 			}
 			if l.unprunedFeatures && a != nil && b != nil {
+				if recv.Type.Args[0].Kind == hir.Dynamic {
+					a = observedBoxedMapKey(a)
+				}
 				a, b = l.coerce(a, recv.Type.Args[0]), l.coerce(b, recv.Type.Args[1])
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true

@@ -48,6 +48,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Type.Kind == hir.OrderedMap && len(x.Type.Args) == 2 && x.Type.Args[0].Kind == hir.Dynamic {
+					e.boxedMaps = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "arrayLike.length" {
 					e.nonfiniteNumbers = true
 					e.toNumber = true
@@ -167,6 +170,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	runtime = e.setIterationRuntime(runtime)
 	if e.usesStorageIdentity() {
 		runtime = storageIdentityRuntime(runtime)
+	}
+	if e.boxedMaps {
+		runtime = boxedMapRuntime(runtime)
 	}
 	if e.usesMapViews() {
 		runtime = mapViewRuntime(runtime)
@@ -299,6 +305,7 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	boxedMaps         bool
 	referenceSets     bool
 	externAdapters    []string
 	externImports     map[string]string
@@ -923,10 +930,6 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.New:
-		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {
-			e.unsupported(x.Node, "boxed Map allocation requires value-based SameValueZero")
-			return "nil"
-		}
 		a := []string{}
 		if t.Kind == hir.ClassRef {
 			m, _ := e.method(e.classBy(t.Name), "constructor")

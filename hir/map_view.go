@@ -2,7 +2,8 @@ package hir
 
 // MapViewCompatible permits equivalent value layouts and boxed queries over
 // string-keyed storage. Other key changes and nested containers stay invariant.
-// Boxed allocations and writes require a separate value-based hashing contract.
+// Backends must separately implement value-based boxed-key hashing. String-key
+// query views keep their original storage and cannot accept non-string writes.
 func MapViewCompatible(p *Program, dst, src Type) bool {
 	if dst.Kind != OrderedMap || src.Kind != OrderedMap || len(dst.Args) != 2 || len(src.Args) != 2 {
 		return false
