@@ -805,7 +805,17 @@ func (l *lowerer) locOf(n *ast.Node) string {
 		}
 		return l.prog.locString(l.file, 0)
 	}
-	return l.prog.locString(l.file, scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/))
+	// Imported aliases and inherited members retain their declaring source,
+	// even when reached while lowering another file.
+	if owner := ast.GetSourceFileOfNode(n); owner != nil {
+		return l.prog.locString(owner, scanner.GetTokenPosOfNode(n, owner, false /*includeJSDoc*/))
+	}
+	// Synthesized/ownerless nodes have no meaningful offset in l.file.
+	// Keep the current project-relative filename, at its start.
+	if l.file != nil {
+		return l.prog.locString(l.file, 0)
+	}
+	return "<unknown>"
 }
 
 // qualifiedName builds the stable identity of a declaration: the file path
