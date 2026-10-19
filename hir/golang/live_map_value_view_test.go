@@ -42,6 +42,24 @@ record:=parseJSON(str("{}"));record.put(str("values"),box(source));view:=` + ent
 	}
 }
 
+func TestLiveStructuralExactMapViewRequiresJSMapBrand(t *testing.T) {
+	value := &hir.Class{Name: "probe.ts.Value", Structural: true, Fields: []hir.Field{{Name: "value", Type: str}}}
+	mapType := hir.T(hir.OrderedMap, str, hir.Ref(value.Name))
+	program := &hir.Class{Name: "probe.ts.Program", Structural: true, Fields: []hir.Field{{Name: "values", Type: mapType}}}
+	view := &hir.Method{Name: "view", Static: true, Params: []hir.Param{{Name: "value", Type: hir.T(hir.Dynamic)}}, Result: hir.Ref(program.Name),
+		Body: hir.B(ret(rt("dynamic.classView", local("value", hir.T(hir.Dynamic)), hir.Ref(program.Name))))}
+	mark := &hir.Method{Name: "mark", Static: true, Params: []hir.Param{{Name: "value", Type: mapType}}, Result: mapType,
+		Body: hir.B(ret(rt("map.markJS", local("value", mapType), mapType)))}
+	module := &hir.Class{Name: "probe.ts", Methods: []*hir.Method{view, mark}}
+	p := &hir.Program{Classes: []*hir.Class{value, program, module}}
+	n := hir.NewNames()
+	main := `unbranded:=&fastOrderedMap[jsString,*` + n.Get("struct."+value.Name) + `]{};unbranded.set(str("key"),&` + n.Get("struct."+value.Name) + `{` + n.Get("member.value") + `:str("v")});bad:=parseJSON(str("{}"));bad.put(str("values"),box(unbranded));badView:=` + entry(module.Name, "view") + `(bad);func(){defer func(){if x:=recover();x!=nil {if _,ok:=x.(rangeFault);!ok {panic(x)}} else {panic("unbranded exact map was accepted")}}();badView.` + n.Get("view.read."+program.Name+".values") + `()}();`
+	main += `branded:=` + entry(module.Name, "mark") + `(unbranded);good:=parseJSON(str("{}"));good.put(str("values"),box(branded));goodView:=` + entry(module.Name, "view") + `(good);projected:=goodView.` + n.Get("view.read."+program.Name+".values") + `();if projected!=branded {panic("branded exact Map identity changed")};if !dynIsCollection(box(projected),"orderedMap[") {panic("branded exact Map lost its JS Map brand")};fmt.Println("ok")`
+	if got := execute(t, p, main); got != "ok\n" {
+		t.Fatal(got)
+	}
+}
+
 func TestStructuralMapValueDecoderRequiresCompatibleFields(t *testing.T) {
 	source := &hir.Class{Name: "probe.ts.Source", Structural: true, Fields: []hir.Field{{Name: "value", Type: str}}}
 	target := &hir.Class{Name: "probe.ts.Target", Structural: true, Fields: []hir.Field{{Name: "value", Type: hir.T(hir.Number)}}}

@@ -340,7 +340,7 @@ func (e *emitter) liveMapValueView(t hir.Type, d string) string {
 	decode := e.viewValue(t.Args[1], "value")
 	return fmt.Sprintf(`func(d *dynamic) %s {
  if d==nil || d.Tag!=2 {panic(newRangeFault())}
- if m,ok:=d.Value.(%s);ok {return m}
+ if m,ok:=d.Value.(%s);ok {if storage,branded:=any(m).(stringMapStorage);branded && storage.stringMapBrand() {return m};panic(newRangeFault())}
  src,ok:=d.Value.(stringMapStorage);if !ok || !src.stringMapBrand() {panic(newRangeFault())}
  return &%s{jsMap:true,proxy:&mapProxy[jsString,%s]{source:d,
  get:func(k jsString) optional[%s] {value,has:=src.stringMapGet(k);if !has{return optional[%s]{}};return present(%s)},
