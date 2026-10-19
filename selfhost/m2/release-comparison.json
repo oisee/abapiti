@@ -1,0 +1,12 @@
+{
+  "release": "v0.5.1",
+  "releaseCompilerCommit": "6ed0e12230c7e491c32f04775d23f6bdff6a374e",
+  "releaseURL": "https://github.com/oisee/abapiti/releases/download/v0.5.1/abaplint-577f875e-a4h.zip",
+  "releaseZipSha256": "bba0fbc463ac8aa77860ec3dfe95e6274bc816e14804ca723ce62f7ee0f1f910",
+  "freshZipSha256": "bba0fbc463ac8aa77860ec3dfe95e6274bc816e14804ca723ce62f7ee0f1f910",
+  "zipByteIdentical": true,
+  "memberBytesIdentical": true,
+  "added": [],
+  "removed": [],
+  "changed": []
+}

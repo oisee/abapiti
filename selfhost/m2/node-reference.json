@@ -1,0 +1,5753 @@
+{
+  "schema": "selfhost-node-reference/1",
+  "abaplintPin": {
+    "sha": "577f875ebec44cfaf64841cfe71c8ab8dc32622e",
+    "package": "@abaplint/core",
+    "version": "2.120.56"
+  },
+  "workloadSha256": "26c2bf72e27031fcefcd1719543dfd14ff4a668f521211b3daecabd09e81c23f",
+  "configSha256": "53385376b70cfef2b5c7d39b879fd68ebc9fe484aa6b1f0035cc68b5976c1eed",
+  "totalIssues": 20179,
+  "byRule": {
+    "unknown_types": 222,
+    "allowed_object_naming": 0,
+    "check_syntax": 19946,
+    "implement_methods": 0,
+    "superclass_final": 11,
+    "parser_error": 0
+  },
+  "byObject": [
+    {
+      "object": "CLAS ZCL_LNT_ABAPDOC",
+      "issues": 67
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABAPDOC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABAP_OBJECT",
+      "issues": 29
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABP_FL_INFRMTN_PRSR",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABSTRACT_FILE",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABSTRACT_METHODS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABSTRACT_NODE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABSTRACT_OBJECT",
+      "issues": 23
+    },
+    {
+      "object": "CLAS ZCL_LNT_ABSTRACT_TOKEN",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_ADD_TEST_ATTRIBUTES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ADD_TST_ATTRBTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_AFF_AND_XML",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_AFF_AND_XML_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALGN_PSD_CMMNTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALGN_TYP_EXPRSSNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALIGN_PARAMETERS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALIGN_PARAMETERS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALIGN_PSEUDO_COMMENTS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALIGN_TYPE_EXPRESSIONS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALLOWED_OBJECT_NAMING",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALLOWED_OBJECT_TYPES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALLWD_OBJCT_NMNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALLWD_OBJCT_TYPS_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_ALTERNATIVE_PRIORITY",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_AMBGS_STTMNT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_AMBIGUOUS_STATEMENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARITH_OPERATOR",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARROW",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARROW_OR_DASH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARTIFACTS_ABAP",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARTIFACTS_MODULE",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARTIFACTS_OBJECTS",
+      "issues": 52
+    },
+    {
+      "object": "CLAS ZCL_LNT_ARTIFACTS_RULES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ASSIGN_LOCAL_COPY",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ASSIGN_SOURCE",
+      "issues": 44
+    },
+    {
+      "object": "CLAS ZCL_LNT_ATTRIBUTES",
+      "issues": 50
+    },
+    {
+      "object": "CLAS ZCL_LNT_AT_PF",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_AVOID_USE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_AVOID_USE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_BASIC_RULE_CONFIG",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_BASIC_TYPES",
+      "issues": 169
+    },
+    {
+      "object": "CLAS ZCL_LNT_BEGIN_END_NAMES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_BEGIN_END_NAMES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_BEGIN_SINGLE_INCLUDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_BGN_SNGL_INCLD_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_BLOCK_NAME",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_BREAK",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_BREAK_ID",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_BUILT_IN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_BUILT_IN_METHOD",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_DATABASE",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_DIALOG",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_OLE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_SCREEN",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_SELECTION_SCREEN",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_CALL_SUBSCREEN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CATCH_AND_RAISE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_CATCH_AND_RAISE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_AGGREGATE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ANNOTATE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ANNOTATION",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ANNOTATION_ARRAY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ANNOTATION_OBJECT",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ANNOTATION_SIMPLE",
+      "issues": 62
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ARITHMETICS",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ARITH_PAREN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_AS",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ASSCTN_NM_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ASSOCIATION",
+      "issues": 50
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ASSOCIATION_NAME",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CARDINALITY",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CASE",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CAST",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CHECK_SYNTAX",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CHECK_SYNTAX_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_COMMENT_STYLE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_COMMENT_STYLE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_COMPOSITION",
+      "issues": 36
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_CONDITION",
+      "issues": 72
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DEFINE_ABSTRACT",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DEFINE_CUSTOM",
+      "issues": 38
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DEFINE_HIERARCHY",
+      "issues": 130
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DEFINE_PROJECTION",
+      "issues": 82
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DEFINE_VIEW",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DFN_EXTRNL_ENTTY",
+      "issues": 78
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DFN_TBL_ENTTY",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_DFN_TBL_FNCTN",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_ELEMENT",
+      "issues": 80
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_EXTEND_VIEW",
+      "issues": 186
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_FIELD_ORDER",
+      "issues": 37
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_FIELD_ORDER_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_FUNCTION",
+      "issues": 168
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_FUNCTION_INPUT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_GROUP_BY",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_INTEGER",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_JOIN",
+      "issues": 58
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_LEGACY_VIEW",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_LEGACY_VIEW_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_NAME",
+      "issues": 21
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_NAMING",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_NAMING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PARAMETERS",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PARAMETERS_SELECT",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PAREN_SELECT",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PARSER",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PARSER_ERROR",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PARSER_ERROR_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PREFIXED_NAME",
+      "issues": 94
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_PROVIDER_CONTRACT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_RELATION",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_SELECT",
+      "issues": 86
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_SOURCE",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_STRING",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_TABLE_FIELD",
+      "issues": 46
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_WITH_PARAMETERS",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_CD_CDS_TYPE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHANGE_IF_TO_CASE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHANGE_IF_TO_CASE_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHARACTER_TYPE",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHCK_DTBS_FLDS_MDL",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHCK_TRNSFRMTN_EXSTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHCK_TRNSFRM_EXSTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHCK_TXT_ELMNTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_ABSTRACT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_ABSTRACT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_COMMENTS",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_COMMENTS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_DDIC",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_DDIC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_INCLUDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_INCLUDE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_SUBRC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_SUBRC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_SYNTAX",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_SYNTAX_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHECK_TEXT_ELEMENTS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHN_MNLY_DCLRTNS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CHN_MNLY_DCLRTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLASS_ATTRIBUTE_NAMES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLASS_DATA_BEGIN",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLASS_DATA_END",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLASS_DEFINITION_LOAD",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLASS_FRIENDS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLL_TRNSCT_ATHRTY_CHCK",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLL_TRNSFRMTN_OPTNS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLL_TRNSFRMTN_PRMTRS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLL_TRNS_ATHR_CHCK_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLN_MSSNG_SPC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLOUD_TYPES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLOUD_TYPES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLR_EXPRTNG_PRMTRS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLR_EXPRTNG_PRMTRS_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLSSC_EXCPTNS_OVRLP",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLSSC_EXCPTN_OVRLP_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CLSS_ATTRBT_NMS_CNF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CMPNNT_CMPR_SNGL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CNSTRCTR_VSBLTY_PBLC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CNSTRC_VSBLTY_PBLC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CODE_ACTIONS",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_CODE_LENS",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_COLON_MISSING_SPACE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_COLOR",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMBI",
+      "issues": 19
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMMAND",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMMENTED_CODE",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMMENTED_CODE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMMIT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMMUNICATION",
+      "issues": 40
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMPONENT_CHAIN_SIMPLE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMPONENT_COND_SUB",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_COMPUTE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONCATENATED_CONSTANT",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONDITIONS",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_COND_SUB",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONFIG",
+      "issues": 29
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONSTANT_BEGIN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONSTANT_CLASSES",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONSTANT_CLASSES_CONF",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONSTANT_FIELD_LENGTH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONSTANT_STRING",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONTAINS_TAB",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONTAINS_TAB_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CONTEXTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CREATE_OLE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_CROSS_INCLUDE_MACROS",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_CRRSPNDNG_BDY_BS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CRRSPNDNG_BDY_MPPNG",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_CURRENT_SCOPE",
+      "issues": 158
+    },
+    {
+      "object": "CLAS ZCL_LNT_CYCLIC_OO",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_CYCLIC_OO_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_CYCLMTC_CMPLXTY_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_CYCLOMATIC_COMPLEXITY",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_C_GENERIC_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_C_LIKE_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_C_SEQUENCE_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_DANGEROUS_STATEMENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DATABASE_CONNECTION",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_DATABASE_SOURCE_INFO",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DATA_BEGIN",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_DATA_ELEMENT",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_DATA_END",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_DB_OPERATION_IN_LOOP",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DB_OPRTN_IN_LP_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDIC",
+      "issues": 192
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDIC_REFERENCES",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_ASPECT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_EXTEND",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_EXTEND_TYPE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_FOREIGN_KEY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_FOREIGN_KEY_TARGET",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_INCLUDE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_LEXER",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_NAME",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_NAMED_INCLUDE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_PARSER",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_QUALIFIED_NAME",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_STRUCTURE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_STRUCTURE_FIELD",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_TABLE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_TABLE_FIELD",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_TYPE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_VALUE_HELP",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDL_WHERE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEFERRED_INFORMATION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEFINITION",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEFINITIONS_TOP",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEFINITIONS_TOP_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEFINITION_NAME",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_DELETE_DATASET",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DELETE_DYNPRO",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DELETE_TEXTPOOL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_DEMAND",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_DERIVED_TYPES_MODULE",
+      "issues": 190
+    },
+    {
+      "object": "CLAS ZCL_LNT_DESCRIPTION_EMPTY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DESCRIPTION_EMPTY_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DESTINATION",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_DNGRS_STTMNT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOCUMENT_SYMBOL",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOMAIN",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOUBLE_SPACE",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOUBLE_SPACE_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOWNPORT",
+      "issues": 210
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOWNPORT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DUMP_SCOPE",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_DYNAMIC_ACCESS_MODULE",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_DYNPROS_MODULE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_DYNPRO_CHECKS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_DYNPRO_CHECKS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_DYNPRO_HEADER",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_EASY_TO_FIND_MESSAGES",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_EDIT_DRAFT",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_EDIT_HELPER",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_EDIT_HELPER_MODULE",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_EML_ENTITY_PATH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_EVENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_EVENT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_LINEIN_STATEMENT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_LNN_STTMNT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_STATEMENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_STATEMENT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_STRUCTURE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_EMPTY_STRUCTURE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_ENHNCMNT_SCTN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_FORM",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_FUNCTION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_ON",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_PROVIDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_TEST_SEAM",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_END_WITH",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ENHANCEMENT_POINT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ENHANCEMENT_SPOT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ENTITY_ASSOCIATION",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ESY_T_FND_MSSGS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EVENTS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_EVENT_DEFINITION",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_EVENT_HANDLER",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXCEPTION_NAME",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXIT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXIT_OR_CHECK",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXIT_OR_CHECK_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXPAND_MACROS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXPORTING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXPORTING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXPORT_DYNPRO",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXPRESSION_NODE",
+      "issues": 33
+    },
+    {
+      "object": "CLAS ZCL_LNT_EXTRACT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_FAIL_COMBINATOR",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_FAIL_STAR",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_FIELDS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FIELD_SUB",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_FINAL_METHODS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FIND_TYPE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_FIX",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FIX_CASE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_FLLY_TYP_CNSNTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FLOATING_POINT_TYPE",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_FM_GLBL_PRMTRS_OBSLT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FM_GLBL_PRMT_OBSLT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FNCTNL_WRTNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FNCTN_EXPRTNG_PRMTR",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_FNCTN_MDL_DFNTN",
+      "issues": 63
+    },
+    {
+      "object": "CLAS ZCL_LNT_FNCTN_MDL_RCMMNDTNS",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_FNCTN_MDL_RCMMNDTN_CNF",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_FND_GLBL_DFNTNS",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORBIDDEN_IDENTIFIER",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORBIDDEN_VOID_TYPE",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_CHANGING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_LENGTH_STATS",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_NAME",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_PARAM_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_PARAM_TYPE",
+      "issues": 38
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_RAISING",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_TABLES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_TABLES_OBSOLETE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FORM_USING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FRBDDN_IDNTFR_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_FRBDDN_PSD_AND_PRGM",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_FRBDDN_VD_TYP_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_FRBDD_PSD_AND_PRGM_CNF",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_FREE_MEMORY",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_FREE_OBJECT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_FRM_TBLS_OBSLT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FULLY_TYPE_CONSTANTS",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_FULLY_TYPE_I_TABS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FULLY_TYPE_I_TABS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FUNCTIONAL_WRITING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_FUNCTION_GROUP",
+      "issues": 29
+    },
+    {
+      "object": "CLAS ZCL_LNT_FUNCTION_LENGTH_STATS",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_FUNCTION_POOL",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATE_DYNPRO",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATE_REPORT",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATE_SUBROUTINE",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATOR_56ABC8E2",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATOR_6103C831",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATOR_7CAF715C",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_GENERATOR_8FF31C96",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_GET",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_GET_DATASET",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_GET_PROPERTY",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_GLOBAL_CLASS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_GLOBAL_CLASS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_GRAPH",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_HELP",
+      "issues": 94
+    },
+    {
+      "object": "CLAS ZCL_LNT_HEX_TYPE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_HIDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_HIGHLIGHT",
+      "issues": 35
+    },
+    {
+      "object": "CLAS ZCL_LNT_HOVER",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_IABAPLEXER_RESULT",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_IABAPPARSER_OPTIONS",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_IABAPPARSER_RESULT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_IALLOWED_NAMING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IBUILTIN_METHOD",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICANDIDATE",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICFSERVICE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICODE_ACTION_PARAMS",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICONFIG",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICURSOR_DATA",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_ICYCLMTC_CMPLXTY_RSLT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDCMNT_SYMBL_PRMS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDDLPARSER_RESULT",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_CONDITIONS",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_CONTENTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_DESCRIPTIONS",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_FORM_NAMES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_MOVE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDENTICAL_MOVE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDNTCL_CNDTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDNTCL_CNTNTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDNTCL_DSCRPTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IDNTCL_FRM_NMS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IFILENAME_AND_TOKEN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IF_IN_IF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IF_IN_IF_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IGLOBAL_CONFIG",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_IISSUE_DATA",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_IKEYWORD",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_ILIST_ITEM_S",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ILIST_ITEM_T",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ILOOKUP_RESULT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMATCH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMETHOD",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMETHOD_LENGTH_RESULT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPLCT_STRT_OF_SLCTN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPLEMENTATION",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPLEMENT_METHODS",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPLEMENT_METHODS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPL_STRT_OF_SLCTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IMPORT_NAMETAB",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INCLUDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INCLUDE_GRAPH",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_INCLUDE_GRAPH_MODULE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_INCLUDE_NAME",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_INDENT",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_INDENTATION",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_INDENTATION_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INDX_CMPLTLY_CNTND",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_INDX_CMPLTLY_CNTND_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFOTYPES",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_ALIAS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_ATTRIBUTE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_CLASS_DEFINITION",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_CONSTANT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_FORM_DEFINITION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_IMPLEMENTING",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_METHOD_DEFINITION",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_INFO_METHOD_PARAMETER",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INF_CLSS_IMPLMNTTN",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_INF_INTRFC_DFNTN",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_INLINE_FIELD",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_INLN_DT_OLD_VRSNS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INLN_DT_OLD_VRSNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTEGER",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTERFACE_DEF",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTERFACE_DEFINITION",
+      "issues": 31
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTERFACE_LOAD",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTF_REFERENCING_CLAS",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_INTF_RFRNCNG_CLS_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_INVALID_TABLE_INDEX",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_INVLD_TBL_INDX_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IN_STTMNT_INDNTTN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IN_STTMNT_INDNTTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IOBJECT_AND_TOKEN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IPARAMETER_DATA",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_IPARSE_RESULT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_IPREPARE_RESULT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRANGE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_IREFERENCE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRENAME_PARAMS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRENAME_RESULT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRENAME_SETTINGS",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRULE_METADATA",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_IRUN_INPUT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISCOPE_DATA",
+      "issues": 21
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISCOPE_IDENTIFIER",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISCOPE_VARIABLE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISSUE",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISTATEMENT_RESULT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISTRUCTURE_COMPONENT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISTRUCTURE_RESULT",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISYNTAX_RESULT",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ISYNTAX_SETTINGS",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITABLE_KEY",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITABLE_OPTIONS",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITEXT_DOCUMENT_RANGE",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITEXT_EDIT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITRNSLTN_TXT_ELMNTS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ITXT_DCMNT_PSTN_PRMS",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_IVARIABLE_REFERENCE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_KEYWORD_CASE",
+      "issues": 19
+    },
+    {
+      "object": "CLAS ZCL_LNT_KEYWORD_CASE_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_KP_SN_PRM_CLL_ON_ON_LN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_K_SN_PR_CL_ON_ON_LN_CN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LANGUAGE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LANGUAGE_SERVER",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LCL_CLSS_NMNG_CNF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_LCL_TSTCLSS_CNSSTNCY",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_LCL_TSTCLS_CNSSTNC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LCL_VRBL_NMS_CNF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_LEAVE",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_LENGTH",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LEXER",
+      "issues": 66
+    },
+    {
+      "object": "CLAS ZCL_LNT_LEXER_BUFFER",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_LEXER_STREAM",
+      "issues": 29
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_BREAK_STYLE",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_BREAK_STYLE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_LENGTH",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_LENGTH_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_ONLY_PUNC",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_LINE_ONLY_PUNC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LIST",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_LN_BRK_MLTPL_PRMTRS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LN_BRK_MLTPL_PRMTR_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOAD_OF_PROGRAM",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOAD_REPORT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOB_HANDLE_TYPE_MODULE",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOCAL",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOCAL_CLASS_NAMING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOCAL_VARIABLE_NAMES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOCATION",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOCK_OBJECT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOOP_GROUP_BY_TARGET",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOOP_SOURCE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LOOP_TARGET",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_LP_GRP_BY_CMPNNT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_LSP_EDIT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_LSP_LOOKUP",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_LSP_LOOKUP_RESULT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_LS_TOKEN",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACROS",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_CALL",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_CONTENT",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_NAMING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_NAMING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MACRO_RECURSION",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_MAIN_FILE_CONTENTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MANY_PARENTHESES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MANY_PARENTHESES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MAX_ONE_STATEMENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MAX_ONE_STATEMENT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MDFY_ONLY_OWN_DB_TBLS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MDF_ONL_OWN_DB_TBL_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MERGE_DATABASE",
+      "issues": 128
+    },
+    {
+      "object": "CLAS ZCL_LNT_MESSAGE_EXISTS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MESSAGE_EXISTS_RULE",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_MESSAGE_SOURCE_SOURCE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF",
+      "issues": 198
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEFINITION",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEFINITIONS",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF_CHANGING",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF_EXCEPTIONS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF_EXPORTING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF_IMPORTING",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF_RAISING",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_LENGTH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_LENGTH_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_LENGTH_STATS",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_PARAMETER_NAMES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_PARAM_OPTIONAL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MIX_RETURNING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MIX_RETURNING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MN_FL_CNTNTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MODIFY_LINE",
+      "issues": 58
+    },
+    {
+      "object": "CLAS ZCL_LNT_MSAG_CONSISTENCY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MSAG_CONSISTENCY_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MTHD_IMPLMNTD_TWC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MTHD_IMPLMNTD_TWC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MTHD_OVRWRTS_BLT_IN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MTHD_OVRWRT_BLT_IN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MTHD_PRMTR_NMS_CNF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_MX_ON_MTHD_PRMTR_PR_LN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_MX_ON_MT_PRM_PR_LN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NAMES_NO_DASH",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NAMES_NO_DASH_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NAME_VALIDATOR",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_NAMING_RULE_CONFIG",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_NATIVE_SQL",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_NEPTUNE_API",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NESTING",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_NESTING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NEW_LINE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_NEW_PAGE",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_NODES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_ALIASES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_ALIASES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_CHAINED_ASSIGNMENT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_DYNAMIC_STUFF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_DYNAMIC_STUFF_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_EXCLAMATION_ESCAPE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_EXTERNAL_FORM_CALLS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_MACROS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_MACROS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_PREFIXES",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_PREFIXES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_PUBLIC_ATTRIBUTES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NO_YODA_CONDITIONS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NROB_CONSISTENCY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NROB_CONSISTENCY_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_NUMERIC_GENERIC_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_NUMERIC_TYPE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_NWLN_BTWN_MTHDS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_NWLN_BTWN_MTHDS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_CHND_ASSGNMNT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_CMMNTS_BTWN_MTHDS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_CMMNT_BTWN_MTHDS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_EXCLMTN_ESCP_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_EXTRNL_FRM_CLLS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_INLN_IN_OPTNL_BRNCHS",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_INL_IN_OPTN_BRNC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_MD_FS_XM_PR_LB_FX_A2",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_MNDT_IN_DTBS_OPRTNS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_MND_IN_DTBS_OPRT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_PBLC_ATTRBTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_N_YD_CNDTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OAUTH2_PROFILE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OBJECT_NAMING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OBJECT_NAMING_CONF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_OBJECT_ORIENTED",
+      "issues": 50
+    },
+    {
+      "object": "CLAS ZCL_LNT_OBSLT_STTMNT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OBSOLETE_STATEMENT",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_OB_DATA_DEFINITION",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_OB_MESSAGE_CLASS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_OB_PROGRAM",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_OB_TABLE_TYPE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_OLE_EXPORTING",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMIT_PARAMETER_NAME",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMIT_PRECEDING_ZEROS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMIT_RECEIVING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMIT_RECEIVING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMT_PRCDNG_ZRS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OMT_PRMTR_NM_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_OVERLAY",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_PACKED_TYPE",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARAMETER_EXCEPTION",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSED_DATA_DEFINITION",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSED_MESSAGE_CLASS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSED_PROXY",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSER702_CHAINING",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSER_BAD_EXCEPTIONS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSER_ERROR",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSER_ERROR_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSER_MISSING_SPACE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_PARSING_PERFORMANCE",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_PASS_BY_VALUE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_PERFORM_CHANGING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PERFORM_TABLES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PERFORM_USING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PERMUTATION",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRAGMA_STYLE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRAGMA_STYLE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_ABAP_BOOL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_ABAP_BOOL_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_CORRESPONDING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_INLINE",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_INLINE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_IS_NOT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_IS_NOT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_PRAGMAS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_PRAGMAS_CONF",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_XSDBOOL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PREFER_XSDBOOL_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRETTY_PRINTER",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFRRD_CMPR_OPRTR",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFRRD_CMPR_OPRTR_CNF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_CRRSPNDNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_INSRT_INT_TBL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_INSRT_INT_TBL_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_RS_EXCPTN_NW",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_RS_EXCPTN_NW_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_RTRNNG_T_EXPRTNG",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFR_RTRNN_T_EXPRT_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFX_IS_CRRNT_CLSS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRFX_IS_CRRNT_CLSS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRINT_CONTROL",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_PROCEDURAL",
+      "issues": 40
+    },
+    {
+      "object": "CLAS ZCL_LNT_PROVIDE_FIELD_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_PROXY_OBJECT",
+      "issues": 21
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSD_BHVR_DFNTN",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSD_FL_INFRMTN",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSD_MTDT_EXTNSN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSR702_CHNNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSR_BD_EXCPTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PRSR_MSSNG_SPC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_PUT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_P_GENERIC_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_RAISE_ENTITY_EVENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RANGE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_RDC_PRCDRL_CD_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RDC_STRNG_TMPLTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RDC_STRNG_TMPLTS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RDNDNT_CNVRSN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_READ_LINE",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_READ_TABLE_TARGET",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_RECEIVE_PARAMETERS",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_REDEFINITION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_REDUCE_PROCEDURAL_CODE",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_REDUNDANT_CONVERSION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_REFERENCES",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_REFRESH_CONTROL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_REGEX",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_REGISTRY",
+      "issues": 86
+    },
+    {
+      "object": "CLAS ZCL_LNT_REGISTRY_A4H",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_REGISTRY_RUN",
+      "issues": 27
+    },
+    {
+      "object": "CLAS ZCL_LNT_REJECT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_RELEASE_IDOC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RELEASE_IDOC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_REMOVE_DESCRIPTIONS",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME",
+      "issues": 31
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAMER",
+      "issues": 148
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAMER_HELPER",
+      "issues": 51
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_DATA_ELEMENT",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_DOMAIN",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_FILE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_GLOBAL_CLASS",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_ICF_SERVICE",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_MESSAGE_CLASS",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_PROGRAM",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_TABLE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAME_TABLE_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_REPORT",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_REPORT_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_RESERVE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RESULT_NODE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_RETRY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RFC_ERROR_HANDLING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RFC_ERRR_HNDLNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RL_EXPAND_MACROS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RL_FNCTN_MDL_RCMMN_MDL",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_RL_SOURCE",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_RL_UNUSED_VARIABL_W_AR",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_RMV_DSCRPTNS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_RNM_GLBL_INTRFC",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_ROLLBACK",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ROLLBACK_ENTITIES",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_RULES_RUNNER",
+      "issues": 19
+    },
+    {
+      "object": "CLAS ZCL_LNT_SCROLL_LIST",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_SECONDARY_INDEX",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_ADD_ORDER_BY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_CORE_MODULE",
+      "issues": 364
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_CTE",
+      "issues": 142
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_PERFORMANCE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_SINGLE_FULL_KEY",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SEMANTIC_HIGHLIGHTING",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SEQUENTIAL_BLANK",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_SEQUENTIAL_BLANK_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_BLANK",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_COUNTRY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_CURSOR",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_DATASET",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_EXTENDED_CHECK",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_LANGUAGE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_LEFT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_LOCKS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_MARGIN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_PROPERTY",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_RUN_TIME",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_SCREEN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SET_USER_COMMAND",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SEVEN_BIT_ASCII",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SEVEN_BIT_ASCII_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_01FF58F8",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_048F4E75",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_07ECA885",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_08DB6D95",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_0DBCB8A9",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_124357CF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_14FEA903",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_15A60572",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_16F7D740",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_193F560F",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_1ADC9D0C",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_1C5B9FBE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_1CD8E7A1",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_23C80867",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_24C9E428",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_27D92870",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_28FAC025",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_2A920A58",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_2B6275D5",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_2D2F513B",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_33D96643",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_33DFA816",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_3488A94D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_36BC2E57",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_3940DAAB",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_399759D1",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_427DB3F3",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_46ABDEF4",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_4D146093",
+      "issues": 40
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_50142CBD",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_5383185C",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_5543F3F8",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_57C6F233",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_57D803EA",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_59E28496",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_5AE9C337",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_5BD99AC8",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_610D43D5",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_63D6A181",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_67DB130D",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_6C44845D",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_6FAC5803",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_73439A98",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_748AE280",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_7C1B39E6",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_7DDEB4AB",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_7E12C7B7",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_7FBAEC50",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_8306A8A1",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_88C047D7",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_897EAE97",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_8C37FA55",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_90194F02",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_9A575E77",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_9C8B3027",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_9D228663",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_9F7A8372",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A19BF969",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A2ACA1AA",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A3286981",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A38E878F",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A6B0F742",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_A83BB7E1",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_AD5972CC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_AEA25758",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B346F020",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B49975AF",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B51782E2",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B7BFE072",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B90FC0D5",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_B963746F",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_BBA3CD09",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C1D59DC9",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C2A0F525",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C5606A32",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C7BFD3D6",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C82321F8",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C99129BE",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_C9BC8812",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_CA561C1A",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D1B5EE6B",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D48DA73B",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D6DAFB2C",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D77DA4ED",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D7BBE0C3",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_D88073DA",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_DF104AB4",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_DF3D0820",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_DFEB56FD",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_E7645ABA",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_E8FB1D71",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_EEBDC95B",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_EF834E92",
+      "issues": 68
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_F12A9826",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_F2185CD1",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHAPE_F5FBBC32",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHORT_CASE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SHORT_CASE_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SICF_CONSISTENCY",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SICF_CONSISTENCY_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SIMPLE_FIELD_CHAIN",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SIMPLE_FIELD_CHAIN2",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SIMPLE_SOURCE1",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SIMPLE_SOURCE2",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SIMPLE_TARGET",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_SKIP_LOGIC",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCTN_SCRN_NMNG",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCTN_SCRN_NMNG_CNF",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCTN_SCRN_TXTS_MSSNG",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCT_ADD_ORDR_BY_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCT_PRFRMNC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLCT_SNGL_FLL_KY_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLC_SCRN_TXTS_MSSN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLOW_PARAMETER_PASSING",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SLW_PRMTR_PSSNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SMIM_CONSISTENCY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SMIM_CONSISTENCY_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SORT_DATASET",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPACE_BEFORE_COLON",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPACE_BEFORE_DOT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPACE_BEFORE_DOT_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPAGHETTI_SCOPE",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPAGHETTI_SCOPE_NODE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SPC_BFR_CLN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQLCDS_PARAMETERS",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQLCTE_ASSOCIATIONS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQLCTE_HIERARCHY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQLCTE_PATH_PREFIX",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_AGGREGATION",
+      "issues": 196
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_AGGREGATION_MODULE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ALIAS_FIELD",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ARITHMETICS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ARTHMTC_OPRTR",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ASSOCIATIONS_LIST",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ASSOCIATION_ENTRY",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_AS_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CASE",
+      "issues": 66
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CLIENT",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_COND",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CREATING",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CREATING_COLUMNS",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CREATING_FOR_SCOPE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_CREATING_TYPE_SPEC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_DFNNG_NW_ASSCTN",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_DML_OPTIONS",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ESCP_HST_VRBLS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_ESCP_HST_VRBLS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_EXPOSE_CLIENT_AS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_EXTENDED_RESULT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELD",
+      "issues": 140
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELDS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELDS_LOOP",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELD_AND_VALUE",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELD_LIST",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELD_LIST_LOOP",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FLD_LST_LP_GRDY",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FROM_BODY",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FROM_SOURCE",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FUNCTION",
+      "issues": 132
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FUNCTION_INPUT",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_GROUPING_SETS",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_GROUP_BY",
+      "issues": 52
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_HIERARCHY_ACCESSOR",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_HIERARCHY_SOURCE",
+      "issues": 120
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_HINTS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_HRRCHY_AGGRGT",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_INDICATORS",
+      "issues": 36
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_INTO_LIST",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_INTO_STRUCTURE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_INTO_TABLE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_JOIN",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_JOIN_SOURCE",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_LIKE_REGEXPR",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_LOCATE_REGEXPR",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_MPPNG_FRM_ENTTY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_OCCRRNCS_RGXPR",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_OPTIONS",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_OVER",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_OVER_MODULE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PATH_CARDINALITY",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PATH_FOR_COLUMN",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PATH_FOR_ENTITY",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PATH_JOIN_TYPE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PATH_SEGMENT",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PRIVILEGED_ACCESS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_PROVIDED_BY",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_REGEXPR_FROM",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_REGEXPR_GROUP",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_REGEXPR_OCCURRENCE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_REGEXPR_PATTERN",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_REPLACE_REGEXPR",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_SET_OP",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_SOURCE_NO_SPACE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_SOURCE_SIMPLE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_SUBSTRING_REGEXPR",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_TARGET",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_TYPED_LITERAL",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_VALUE_CONVERSION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_VL_CNVRSN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SRC_FLD_SYMBL_CHN",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SR_ALTERNATIVE",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_SR_SEQUENCE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_STACK",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_START_AT_TAB",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_START_AT_TAB_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STATEMENT_MAP",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_STATEMENT_NODE",
+      "issues": 33
+    },
+    {
+      "object": "CLAS ZCL_LNT_STATEMENT_PARSER",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_STATIC_BEGIN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_STATIC_END",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STOP_BEFORE1",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRICT_SQL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRICT_SQL_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRING_TEMPLATE_SOURCE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRNG_TMPLT_FRMTTNG",
+      "issues": 70
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRUCTURE_NODE",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_STRUCTURE_TYPE",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_STTC_CLL_V_INSTNC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_STTC_CLL_V_INSTNC_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ADD",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ADD_CORRESPONDING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ALTERNATIVE",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_APPEND",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ASSERT",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ASSIGN",
+      "issues": 52
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_AT",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ATTRIBUTE_CHAIN",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_AT_SELECTION_SCREEN",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_AUTHORITY_CHECK",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL_BADI",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL_FUNCTION",
+      "issues": 46
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL_KERNEL",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL_TRANSACTION",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CALL_TRANSFORMATION",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CASE_TYPE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CAST",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CATCH",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CHECK",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLASS_DEFERRED",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLASS_DEFINITION",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLASS_LOCAL_FRIENDS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLEANUP",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLEAR",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLOSE_CURSOR",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CLOSE_DATASET",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CMPNNT_CMPR_SMPL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COLLECT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMBI_MODULE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMMENT",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMMIT_ENTITIES",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMPARE",
+      "issues": 54
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMPONENT_CHAIN",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMPONENT_COMPARE",
+      "issues": 44
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COMPONENT_COND",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CONCATENATE",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COND",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CONDENSE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_COND_BODY",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CONTROLS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CONVERT",
+      "issues": 58
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CONV_BODY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CORRESPONDING_BODY",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CREATE_DATA",
+      "issues": 70
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CREATE_OBJECT",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_CTCH_SYSTM_EXCPTNS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DATA",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DATABASE_TABLE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DATA_DEFINITION",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DEFAULT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DEFINE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DELETE_CLUSTER",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DELETE_DATABASE",
+      "issues": 64
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DELETE_INTERNAL",
+      "issues": 90
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DELETE_MEMORY",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DELETE_REPORT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DEREFERENCE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DESCRIBE",
+      "issues": 72
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DIVIDE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DO",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DYNAMIC",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_DYNPRO_LOOP",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EDITOR_CALL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ENHANCEMENT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ENHANCEMENT_SECTION",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXEC_SQL",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXPAND_MACROS",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXPORT",
+      "issues": 78
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXPRES_FIELD_SYMBOL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXPRES_SELECT",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_EXPRES_TYPE",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FETCH_NEXT_CURSOR",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FIELD_CHAIN",
+      "issues": 38
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FIELD_GROUP",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FIELD_LENGTH",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FIELD_OFFSET",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FILTER_BODY",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FIND",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FOR",
+      "issues": 62
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FORM",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FORMAT",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FORM_DEFINITION",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FORM_PARAM",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FREE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FUNCTION_MODULE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_FUNCTION_PARAMETERS",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_BADI",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_CURSOR",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_LOCALE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_PARAMETER",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_PERMISSIONS",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_PF_STATUS",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_REFERENCE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_RUN_TIME",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_GET_TIME",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_IMPORT",
+      "issues": 82
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_IMPORT_DYNPRO",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INCLUDE_TYPE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INLINE_DATA",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INLINE_FS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INLN_FLD_DFNTN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INLN_LP_DFNTN",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INSERT_DATABASE",
+      "issues": 50
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INSERT_FIELD_GROUP",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INSERT_INTERNAL",
+      "issues": 68
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INSERT_REPORT",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INSERT_TEXTPOOL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INTERFACE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_INTERFACE_DEFERRED",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LET",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LOG_POINT",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LOOP",
+      "issues": 44
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LOOP_AT_SCREEN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LOOP_EXTRACT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_LOOP_GROUP_BY",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MESSAGE",
+      "issues": 98
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MESSAGE_CLASS",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MESSAGE_SOURCE",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_CALL_BODY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_CALL_CHAIN",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_CALL_PARAM",
+      "issues": 38
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_PARAM",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_PARAMETERS",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_METHOD_SOURCE",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MODIFY_DATABASE",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MODIFY_ENTITIES",
+      "issues": 128
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MODIFY_INTERNAL",
+      "issues": 72
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MODIFY_SCREEN",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MODULE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MOVE",
+      "issues": 46
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MOVE_CORRESPONDING",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MTHD_DF_RTRNNG",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MTHD_IMPLMNTTN",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_MULTIPLY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_NEW_OBJECT",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_ON_CHANGE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_OPEN_CURSOR",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_OPEN_DATASET",
+      "issues": 44
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_PACK",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_PARAMETER",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_PERFORM",
+      "issues": 58
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_POSITION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_PROGRAM",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_PROVIDE",
+      "issues": 30
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RAISE",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RAISE_EVENT",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RAISE_WITH",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RANGES",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_READ_DATASET",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_READ_ENTITIES",
+      "issues": 92
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_READ_REPORT",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_READ_TABLE",
+      "issues": 64
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_READ_TEXTPOOL",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RECEIVE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_REDUCE_BODY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_REDUCE_NEXT",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_REFRESH",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_REPLACE",
+      "issues": 50
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RESULT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_RETURN",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SBTRCT_CRRSPNDNG",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SCAN",
+      "issues": 46
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SEARCH",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SELECTION_SCREEN",
+      "issues": 176
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SELECT_OPTION",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SEQUENCE",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_BIT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_HANDLER",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_LOCALE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_PARAMETER",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_PF_STATUS",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SET_TITLEBAR",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SHIFT",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SKIP",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SORT",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SOURCE",
+      "issues": 208
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SPLIT",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_COMPARE",
+      "issues": 102
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_FROM",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_IN",
+      "issues": 60
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_ORDER_BY",
+      "issues": 28
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_SET_OP_GROUP",
+      "issues": 24
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SQL_SOURCE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STAR",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STATEM_CONSTANT",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STATEM_FIELD",
+      "issues": 44
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STATEM_FIELD_SYMBOL",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STATEM_TYPE",
+      "issues": 54
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STATIC",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_STRING_TEMPLATE",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SUBMIT",
+      "issues": 82
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SUBTRACT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SWITCH_BODY",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SYNTAX_CHECK",
+      "issues": 56
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SYSTEM_CALL",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TABLES",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TABLE_EXPRESSION",
+      "issues": 36
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TARGET",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TEST_INJECTION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TEST_SEAM",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TOKEN",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TRANSFER",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TRANSLATE",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TRUNCATE_DATASET",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_ENUM",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_MESH",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_POOL",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_TABLE",
+      "issues": 150
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_TABLE_KEY",
+      "issues": 42
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_UNPACK",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_UPDATE_DATABASE",
+      "issues": 48
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_VALUE_BODY",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WAIT",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WHEN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WHEN_TYPE",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WHILE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WITH",
+      "issues": 26
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_WRITE",
+      "issues": 88
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPERCLASS_FINAL",
+      "issues": 27
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPERCLASS_FINAL_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPERFLUOUS_VALUE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPERFLUOUS_VALUE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPPLY",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_SUPPRESS_DIALOG",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SYNTAX_INPUT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SYNTAX_LOGIC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SYNTAX_PERFORMANCE",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_APPEND",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_ASSIGN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_ATTRIBUTE_CHAIN",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_CATCH",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_CONSTANTS",
+      "issues": 13
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_CREATE_OBJECT",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_DELETE_DATABASE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_DELETE_INTERNAL",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_DO",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_EXPRES_SELECT",
+      "issues": 25
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_FIELD_CHAIN",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_FIND",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_FORM_PARAM",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_FUNCTION_PARAMETERS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_INCLUDE_TYPE",
+      "issues": 37
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_INSERT_INTERNAL",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_LOOP",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_METHOD_CALL_CHAIN",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_METHOD_PARAM",
+      "issues": 23
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_METHOD_PARAMETERS",
+      "issues": 113
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_METHOD_SOURCE",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_MODIFICATION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_MODIFICATION_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_MOVE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_MTHD_DF_RTRNNG",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_NEW_OBJECT",
+      "issues": 33
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_PARAMETER_PARAMETER",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_PERFORM",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_PERFORM_PARAMETER",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_RAISE_EVENT",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_RANGES",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_RD_RSTRCTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_READ_RESTRICTION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_READ_TABLE",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_SELECT_OPTION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_SOURCE",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_STATEM_CONSTANT",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_STATICS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_STRUCT_CLASS_DATA",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_STRUCT_DATA",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_SWITCH_BODY",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_SYNTAX_MODULE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_TARGET",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_TYPES",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_TYPE_ENUM",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_UPDATE_DATABASE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_VALUE_BODY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_SY_WRITE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TABLE",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_TABLE_BODY",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_TARGET_FIELD_SYMBOL",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TBLS_DCLRD_LCLLY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TBLS_DCLRD_LCLLY_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TBL_ENHNCMNT_CTGRY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TBL_ENHNCMNT_CTGRY_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TEST_SEAM_NAME",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_TEXT_DOCUMENT_EDIT",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_TEXT_EDIT",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TEXT_ELEMENT",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TEXT_ELEMENT_STRING",
+      "issues": 12
+    },
+    {
+      "object": "CLAS ZCL_LNT_THROW",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_TOKEN_AND_KEYWORD",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TOKEN_NODE",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_TOP_OF_PAGE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TRANSACTION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TRANSPORTING_FIELDS",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_TRY_WITHOUT_CATCH",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TRY_WITHOUT_CATCH_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPED_IDENTIFIER",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPES_NAMING",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPES_NAMING_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_BEGIN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_DEFINITIONS_ENTRY",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_ENUM_BEGIN",
+      "issues": 14
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_ENUM_END",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_FORM_PARAMETERS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_MESH_BEGIN",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_MESH_END",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_NAME",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_PARAM",
+      "issues": 58
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_POOLS",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_SIMPLE_REF",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_STRUCTURE",
+      "issues": 100
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYPE_UTILS",
+      "issues": 29
+    },
+    {
+      "object": "CLAS ZCL_LNT_TYP_FRM_PRMTRS_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_TY_CLASS_DEFINITION",
+      "issues": 86
+    },
+    {
+      "object": "CLAS ZCL_LNT_TY_CLSS_IMPLMNTTN",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_TY_METHOD_PARAMETERS",
+      "issues": 33
+    },
+    {
+      "object": "CLAS ZCL_LNT_TY_MTHD_IMPLMNTTN",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZCL_LNT_TY_TABLE_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_ULINE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNCAUGHT_EXCEPTION",
+      "issues": 23
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNCGHT_EXCPTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNION_0FB2DE53",
+      "issues": 8
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNKNOWN",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNKNOWN_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNKNOWN_TYPES",
+      "issues": 20
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNKNOWN_TYPES_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNCSSRY_CHNNG_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNCSSRY_PRGM_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNCSSRY_RTRN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNECESSARY_CHAINING",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNECESSARY_PRAGMA",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNNECESSARY_RETURN",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNREACHABLE_CODE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNREACHABLE_CODE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNSECURE_FAE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNSECURE_FAE_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_DDIC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_DDIC_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_MACROS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_MACROS_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_METHODS",
+      "issues": 21
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_METHODS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_TYPES",
+      "issues": 33
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_TYPES_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_VARIABLES",
+      "issues": 32
+    },
+    {
+      "object": "CLAS ZCL_LNT_UNUSED_VARIABLES_CONF",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZCL_LNT_USE_BOOL_EXPRESSION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_USE_LINE_EXISTS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_USE_LINE_EXISTS_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_USE_NEW",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_USE_NEW_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_US_BL_EXPRSSN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_US_CLSS_BSD_EXCPTNS",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_US_CLSS_BSD_EXCPTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_VALUE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_VALUE_BODY_LINE",
+      "issues": 18
+    },
+    {
+      "object": "CLAS ZCL_LNT_VALUE_BODY_LINES",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZCL_LNT_VERIFICATION_MESSAGE",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_VERSION_MODULE",
+      "issues": 34
+    },
+    {
+      "object": "CLAS ZCL_LNT_VIEW",
+      "issues": 15
+    },
+    {
+      "object": "CLAS ZCL_LNT_WEB_MIME",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_WHEN_OTHERS_LAST",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_WHEN_OTHERS_LAST_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_WHITESPACE_END",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_WHITESPACE_END_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_WINDOW",
+      "issues": 6
+    },
+    {
+      "object": "CLAS ZCL_LNT_WITH_NAME",
+      "issues": 16
+    },
+    {
+      "object": "CLAS ZCL_LNT_WORD_SEQUENCE",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZCL_LNT_WRITE_OFFSET_LENGTH",
+      "issues": 40
+    },
+    {
+      "object": "CLAS ZCL_LNT_WRNG_ABPDC_PSTN_CNF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_WRONG_ABAPDOC_POSITION",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_XMLBOM",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZCL_LNT_XMLBOM_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_XML_CONSISTENCY",
+      "issues": 162
+    },
+    {
+      "object": "CLAS ZCL_LNT_XML_CONSISTENCY_CONF",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZCL_LNT_XML_UTILS_MODULE",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZCL_LNT_X_GENERIC_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZCL_LNT_X_SEQUENCE_TYPE",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZLNT_CLASS_REFUSA_99EAC77BBE39",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CH_7F15176A28F4",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CL_30EEC8E8805D",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CL_8460E5EE8E5F",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CL_8DCBF0C99F6F",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CL_B5DB639D3852",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_CL_E4A48BC113B2",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_JS_DD4BF8EC1AA1",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_JS_EBCC2DF7D5E4",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_RE_478AC52845E5",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_RE_5CAB895C5DEB",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_RE_BB8CB5BB6246",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_ST_3209C6B944D9",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_ST_FA837731BE5A",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_TS_BF7A77BB9E12",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_EXCEPTION_UN_5F2D02892FE8",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_PROPERTY_LOO_01D5731631CA",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZLNT_PROPERTY_LOO_4FC4E3D24764",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZLNT_PROPERTY_LOO_DB26A22FAA3B",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_3615468A4BF8",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_595B0CB55F64",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_8D6BB411953D",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_8ECD6AFE19E0",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_A3200B8DC4AD",
+      "issues": 5
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_AC33216D35C4",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_B72089862D0F",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_BBB890A0BF90",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_C22708FAF2E3",
+      "issues": 11
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_EA03A77504B6",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_ARRA_ECC84E7320E6",
+      "issues": 3
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_CONF_5B63794ECCEF",
+      "issues": 846
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_DYNA_1AD87E6A776F",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_DYNA_A429568D5BE8",
+      "issues": 17
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_JSON_3BDC898797FB",
+      "issues": 7
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_JSON_5744959EA211",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_JSON_7C6B3012AF76",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_LSPG_9F4574EF5F1A",
+      "issues": 1
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__05E804AB454E",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__0A96E2468AAE",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__0FBCC10173B8",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__126B79E3F8A9",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__1746889B1684",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__1966ACAD182D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__1A1C43CD0638",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__201F3699A39E",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__363847CD8BB7",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__36824941F28A",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__3D720B31A8F8",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__3E259F4987B9",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__41B3BB94DF3D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__4FDF767B61BA",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__5A3C0EC03A13",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__617FF131B0F3",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__64901630341D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__64C5859ED39F",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__68AA8717233D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__6EC5BB307EFB",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__755FCB8E49F3",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__7946C121F0E1",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__7F28925F9DEB",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__89BA5E9F6101",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__8A73EAE8287F",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__9AF21EC489FC",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__9F51CBBE9DE8",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__A8DB3647AD44",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__B1B44C588059",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__B4FE03E97505",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__BE9B74E2658E",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__C27AD0D4C484",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__CA02E874F6D5",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__D1F17AFCC3E9",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__DF7EA9CA9D2A",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__E02FAB5A9752",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__E0D0C31D82D4",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__E91283F90792",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__EB808F96A04F",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__F0AB54F50466",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__F8CD1B113B3E",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__F9D623F88B73",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_MAP__FC7CFBD4D3C1",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_OWNK_4497B85E405D",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_REGE_57DF8B70DC9E",
+      "issues": 2
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_REGE_5A210F82384E",
+      "issues": 22
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_REGE_8D1CC1058680",
+      "issues": 174
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_STRI_248D3505915C",
+      "issues": 9
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_XMLV_61D3741DE077",
+      "issues": 4
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_XMLW_D7BCCE7C35AD",
+      "issues": 10
+    },
+    {
+      "object": "CLAS ZLNT_VIEW_REFUSAL_6FCECBE45FBF",
+      "issues": 2
+    }
+  ],
+  "topObjects": [
+    {
+      "object": "CLAS ZLNT_RUNTIME_CONF_5B63794ECCEF",
+      "issues": 846
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_CORE_MODULE",
+      "issues": 364
+    },
+    {
+      "object": "CLAS ZCL_LNT_DOWNPORT",
+      "issues": 210
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SOURCE",
+      "issues": 208
+    },
+    {
+      "object": "CLAS ZCL_LNT_METHOD_DEF",
+      "issues": 198
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_AGGREGATION",
+      "issues": 196
+    },
+    {
+      "object": "CLAS ZCL_LNT_DDIC",
+      "issues": 192
+    },
+    {
+      "object": "CLAS ZCL_LNT_DERIVED_TYPES_MODULE",
+      "issues": 190
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_EXTEND_VIEW",
+      "issues": 186
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_SELECTION_SCREEN",
+      "issues": 176
+    },
+    {
+      "object": "CLAS ZLNT_RUNTIME_REGE_8D1CC1058680",
+      "issues": 174
+    },
+    {
+      "object": "CLAS ZCL_LNT_BASIC_TYPES",
+      "issues": 169
+    },
+    {
+      "object": "CLAS ZCL_LNT_CDS_FUNCTION",
+      "issues": 168
+    },
+    {
+      "object": "CLAS ZCL_LNT_XML_CONSISTENCY",
+      "issues": 162
+    },
+    {
+      "object": "CLAS ZCL_LNT_CURRENT_SCOPE",
+      "issues": 158
+    },
+    {
+      "object": "CLAS ZCL_LNT_ST_TYPE_TABLE",
+      "issues": 150
+    },
+    {
+      "object": "CLAS ZCL_LNT_RENAMER",
+      "issues": 148
+    },
+    {
+      "object": "CLAS ZCL_LNT_SELECT_CTE",
+      "issues": 142
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FIELD",
+      "issues": 140
+    },
+    {
+      "object": "CLAS ZCL_LNT_SQL_FUNCTION",
+      "issues": 132
+    }
+  ],
+  "normalizedSha256": "be3771e2dd549e3732642bb525174e16cb09be60a96a0131d5701cf33fc12b71",
+  "normalization": "objects sorted by type/name; issues sorted by compact JSON UTF-16 lexical order; sha256(JSON.stringify(objects) + LF); positions are 1-based; paths relative to synthetic root",
+  "kitDumpSha256": "99d7b40fc9e71b68280ab8e3c8ed7678e19eac57f62ac0c5249f67ccd72d2964",
+  "expectedFile": {
+    "path": ".tmp/selfhost-m2/zlnt-check-kit/expected-clean.txt",
+    "sha256": "6a54bd9e3353589b01b669595e011414c0e91651382c6b0568ef8b8a48de2d53",
+    "bytes": 2376160
+  },
+  "sortedIssues": {
+    "path": ".tmp/selfhost-m2/zlnt-check-kit/issues-sorted.txt",
+    "sha256": "67b2f1fb7056689b3fc0c5cd9b1164eded6e7992cee234ad99ca19fb8bd9f764"
+  },
+  "timings": {
+    "buildSeconds": 9.987698236,
+    "addSeconds": 0.13476703699999962,
+    "checkSeconds": 63.672116863999996,
+    "stages": "lexer=2137 statements=28053 structures=20597 objects=50811 macros=4 globals=487 syntax=11754 allowed_object_naming=0 check_syntax=2 implement_methods=146 parser_error=24 superclass_final=3 unknown_types=201",
+    "peakRSSKiB": 4164092,
+    "node": "v26.9.0"
+  },
+  "registryObjects": 2339,
+  "fullResult": {
+    "path": ".tmp/selfhost-m2/node-reference-full.json",
+    "sha256": "aae794800a916c155ddbf266ade2680f02933f03fcefcd0be52b4ace502a7c6c",
+    "bytes": 7272233
+  }
+}
