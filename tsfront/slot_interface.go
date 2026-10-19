@@ -109,7 +109,7 @@ func sameMethodSignature(a, b *hir.Method) bool {
 		return false
 	}
 	for i, p := range a.Params {
-		if p.Name != b.Params[i].Name || !p.Type.Equal(b.Params[i].Type) {
+		if p.Name != b.Params[i].Name || !p.Type.Equal(b.Params[i].Type) || p.Variadic != b.Params[i].Variadic {
 			return false
 		}
 	}

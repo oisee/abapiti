@@ -161,15 +161,9 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 			common := l.interfaceMethod(x.Type.Name, member.Name().Text())
 			selected := l.methodOf(l.resolve(member))
 			if common != nil && selected != nil && !selected.Static && sameMethodSignature(common, selected) {
-				variadic := true
-				for i := range common.Params {
-					variadic = variadic && common.Params[i].Variadic == selected.Params[i].Variadic
-				}
-				if variadic {
-					// The common virtual slot already accepts this receiver.
-					// Negative predicates need not prove its runtime class.
-					return x
-				}
+				// The common virtual slot already accepts this receiver.
+				// Negative predicates need not prove its runtime class.
+				return x
 			}
 		}
 	}
