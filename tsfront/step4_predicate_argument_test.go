@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -17,11 +18,21 @@ function readArray(values:(A|B)[]):string {
  if(isA(values[0],0)) return "zero";
  return isA(values[0],1)?"one":"other";
 }
-class Probe {static run():string{return read(new A())+"|"+read(new B())+"|"+readArray([new A()])+"|"+readArray([new B()]);}}`
-	want := conversionOracle(t, source)
-	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
-	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
-	if got != want {
-		t.Fatalf("Go %q Node %q", got, want)
+function collect(values:(A|B)[]):A[] {
+ const ret=[];
+ for(const value of values) {if(value instanceof A) ret.push(value);}
+ return ret;
+}
+class Probe {static run():string{return read(new A())+"|"+read(new B())+"|"+readArray([new A()])+"|"+readArray([new B()])+"|"+collect([new A(),new B()]).length;}}`
+	for _, parameterType := range []string{"unknown", "any"} {
+		t.Run(parameterType, func(t *testing.T) {
+			probe := strings.ReplaceAll(source, "value:unknown", "value:"+parameterType)
+			want := conversionOracle(t, probe)
+			p := lowerStatementsProbe(t, map[string]string{"probe.ts": probe}, []string{"probe.ts"})
+			got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+			if got != want {
+				t.Fatalf("Go %q Node %q", got, want)
+			}
+		})
 	}
 }

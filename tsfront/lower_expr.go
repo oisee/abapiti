@@ -156,17 +156,18 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if n.Parent != nil && n.Parent.Kind == ast.KindCallExpression {
-		call := n.Parent.AsCallExpression()
-		if call.Arguments != nil {
-			for _, arg := range call.Arguments.Nodes {
-				if arg == n {
+		call := n.Parent
+		if sig := l.ck.GetResolvedSignature(call); sig != nil {
+			if predicate := l.ck.GetTypePredicateOfSignature(sig); predicate != nil && predicate.Kind() == checker.TypePredicateKindIdentifier {
+				i := int(predicate.ParameterIndex())
+				args := call.Arguments()
+				if i >= 0 && i < len(args) && args[i] == n {
 					if context := l.ck.GetContextualType(n, 0); context != nil && context.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
-						// The callee accepts the original value. A previous false
-						// type predicate may have excluded a class that still occurs
-						// at runtime; narrowing before the callee checks it would throw.
+						// A prior false predicate can exclude a class that still
+						// occurs at runtime. Pass the original value to the next
+						// predicate, which accepts and checks that value itself.
 						return x
 					}
-					break
 				}
 			}
 		}
