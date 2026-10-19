@@ -25,6 +25,14 @@ func (e *emitter) arrayReference(t hir.Type, value string) string {
 	if base.Kind == hir.UnionRef {
 		return e.unionValidator(base.Name, "") + "(box(" + value + "))"
 	}
+	if base.Kind == hir.InterfaceRef {
+		if view := e.structuralUnion(base); view != "" {
+			if t.Kind == hir.Optional {
+				return "func() " + e.typ(t) + " {v:=" + value + ";if nilRef(v) {return nil};return " + view + "(box(v))}()"
+			}
+			return view + "(box(" + value + "))"
+		}
+	}
 	if base.Kind == hir.ClassRef && e.liveClasses[base.Name] {
 		return "func() " + e.typ(t) + " {v:=" + value + ";if row,ok:=any(v).(" + e.typ(t) + ");ok {return row};return " + e.liveView(base) + "(box(v))}()"
 	}
@@ -117,7 +125,12 @@ func (e *emitter) viewValueWithLocal(t hir.Type, d string, local bool) string {
 			decode = "liveStringElement(d)"
 		}
 		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + decode + "})"
-	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
+	case hir.InterfaceRef:
+		if view := e.structuralUnion(t); view != "" {
+			return view + "(" + d + ")"
+		}
+		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
+	case hir.OrderedMap, hir.OrderedSet:
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	default:
 		use := ""

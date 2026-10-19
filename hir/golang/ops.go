@@ -428,7 +428,15 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.e.viewValue(x.Type, "checkedArraySource("+a+", false)")
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
-		if x.Type.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic {
+		if x.Owner != "" {
+			code = b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name) + "(" + a + ")"
+		}
+		if x.Type.Kind == hir.InterfaceRef {
+			if view := b.e.structuralUnion(x.Type); view != "" {
+				code = view + "(" + a + ")"
+			}
+		}
+		if x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || b.e.p.StructuralArrayUnion(x.Type)) {
 			code = b.e.viewValue(x.Type, "checkedArraySource("+a+", true)")
 		}
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {

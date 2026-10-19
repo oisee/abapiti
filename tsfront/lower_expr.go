@@ -340,6 +340,18 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if typ.Kind == hir.ClassRef {
+		if view := l.structuralReferenceUnion(x.Type); view != nil {
+			for _, part := range view.parts {
+				if part.Equal(typ) {
+					projection := l.rtOp("dynamic.asRef", l.coerce(x, hir.T(hir.Dynamic)), typ)
+					projection.Node = l.node(n)
+					projection.Owner = x.Type.Name
+					return projection
+				}
+			}
+		}
+	}
 	if x.Type.Kind == hir.InterfaceRef && typ.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(n, x, typ); adapted != nil {
 			return adapted
@@ -3233,6 +3245,18 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	}
 	if fixed, ok := l.assertionOverride(n); ok {
 		return l.assertedView(n, x, fixed)
+	}
+	if mapped.Kind == hir.ClassRef {
+		if view := l.structuralReferenceUnion(x.Type); view != nil {
+			for _, part := range view.parts {
+				if part.Equal(mapped) {
+					return l.narrowed(n, x, mapped)
+				}
+			}
+		}
+	}
+	if l.unprunedFeatures && l.structuralUnionProjection(x.Type, mapped) {
+		return l.dynamicReference(l.coerce(l.checkedStructuralUnion(x), hir.T(hir.Dynamic)), mapped)
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef && mapped.Kind == hir.ClassRef {
 		// A family assertion needs its checked payload projection, just as

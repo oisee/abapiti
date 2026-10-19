@@ -62,6 +62,23 @@ func classViewTargets(p *Program) map[string]bool {
 		if x.Kind == RuntimeOp && x.Op == "dynamic.arrayView" && x.Type.Args[0].Kind == ClassRef {
 			out[x.Type.Args[0].Name] = true
 		}
+		if x.Kind == RuntimeOp && x.Op == "dynamic.asRef" {
+			if x.Owner != "" {
+				out[x.Type.Name] = true
+			}
+			t := x.Type
+			if t.Kind == Array {
+				t = t.Args[0]
+			}
+			if t.Kind == Optional {
+				t = t.Args[0]
+			}
+			if t.Kind == InterfaceRef {
+				for _, member := range p.StructuralUnion(t.Name) {
+					out[member.Type.Name] = true
+				}
+			}
+		}
 		expr(x.X)
 		expr(x.Y)
 		expr(x.Z)
@@ -107,6 +124,15 @@ func classViewTargets(p *Program) map[string]bool {
 			if c := classes[t.Name]; c != nil && c.Structural {
 				out[c.Name] = true
 				expand(c.Name)
+			}
+		} else if t.Kind == InterfaceRef {
+			for _, iface := range p.Interfaces {
+				if iface.Name == t.Name {
+					for _, member := range iface.StructuralMembers {
+						row(member.Type)
+					}
+					break
+				}
 			}
 		}
 	}

@@ -261,7 +261,15 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 			return
 		}
 		fallthrough
-	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
+	case hir.InterfaceRef:
+		if view := e.structuralUnion(t); view != "" {
+			b.line(n + " = " + view + "=>decode( " + d + " ).")
+			return
+		}
+		v := b.rawTemp("REF TO object")
+		b.line(v + " = " + d + "->as_ref( ).")
+		b.line(n + " ?= " + v + ".")
+	case hir.OrderedMap, hir.OrderedSet:
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line(n + " ?= " + v + ".")

@@ -126,7 +126,33 @@ type Interface struct {
 	Node
 	Name    string
 	Methods []*Method
+	// StructuralMembers retains the closed data alternatives of a reference
+	// union. Ordinary (including nominal) interfaces have no such admission.
+	StructuralMembers []StructuralMember `json:",omitempty"`
 }
+
+type StructuralMember struct {
+	Type   Type
+	Fields []StructuralField
+}
+
+// These are source domains, before optional reference erasure. Nested values
+// retain the usual lazy typed-view boundary; admission checks the outer slots.
+type StructuralField struct {
+	Name     string
+	Type     Type
+	Optional bool `json:",omitempty"`
+	Domains  []StructuralDomain
+}
+
+// Exact scalar literals and presence survive scalar/reference ABI erasure.
+// Object and array domains check the outer slot; their members remain lazy.
+type StructuralDomain struct {
+	Kind    Kind
+	Exact   bool   `json:",omitempty"`
+	Literal string `json:",omitempty"`
+}
+
 type Field struct {
 	Node
 	Name              string

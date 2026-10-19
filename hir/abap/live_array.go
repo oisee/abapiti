@@ -45,7 +45,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b.liveUnbox(value, item, t.Args[0])
 	}
 	b.line("ELSE.")
-	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: native load: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nENDIF.\nAPPEND " + value + " TO items.\n" + index + " = " + index + " + 1.\nENDWHILE.\nRETURN.\nENDIF.")
@@ -61,7 +61,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b.liveUnbox(v, node, t.Args[0])
 	}
 	b.line("ELSE.")
-	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: load: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nENDIF.\nAPPEND " + v + " TO items.\nENDLOOP.")
@@ -130,7 +130,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b.liveUnbox(v, "p1", t.Args[0])
 	}
 	b.line("ELSE.")
-	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: put: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nput( p0 = " + idx + " p1 = " + v + " ).")
@@ -187,14 +187,28 @@ func (b *body) arrayView(t hir.Type, n, a string) {
 		row := b.temp(hir.Ref(hir.RootObject))
 		v := b.temp(t.Args[0])
 		b.line("LOOP AT " + n + "->items INTO " + row + ".")
+		b.line("READ TABLE " + n + "->missing WITH TABLE KEY table_line = sy-tabix TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.")
 		b.arrayElement(v, row, t.Args[0])
-		b.line("ENDLOOP.")
+		b.line("ENDIF.\nENDLOOP.")
 	}
 	b.line("ENDIF.")
 }
 func (b *body) arrayElement(n, row string, t hir.Type) {
 	if t.Kind == hir.Optional {
+		if t.Args[0].Kind == hir.InterfaceRef && b.e.structuralUnion(t.Args[0]) != "" {
+			b.line("CLEAR " + n + ".\nIF " + row + " IS BOUND.")
+			b.arrayElement(n, row, t.Args[0])
+			b.line("ENDIF.")
+			return
+		}
 		t = t.Args[0]
+	}
+	if t.Kind == hir.InterfaceRef && b.e.structuralUnion(t) != "" {
+		b.line("IF " + row + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + b.e.name("view.refusal") + " EXPORTING reason = `structural union array requires a present record`.\nENDIF.")
+		d := b.temp(hir.T(hir.Dynamic))
+		b.liveBox(d, row, t)
+		b.liveUnbox(n, d, t)
+		return
 	}
 	if t.Name == hir.RootObject {
 		b.line(n + " = " + row + ".")

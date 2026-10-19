@@ -41,6 +41,13 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.characterSets()
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
+	for _, iface := range p.Interfaces {
+		for _, member := range iface.StructuralMembers {
+			if e.liveClasses[member.Type.Name] {
+				e.extraRuntimeKeys = true
+			}
+		}
+	}
 	_, e.referenceSets = hir.UsedRuntimeOps(p)["set.view"]
 	if len(p.Unions) > 0 {
 		e.extraRuntimeKeys = true
@@ -78,7 +85,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
 				}
-				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic) {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || p.StructuralArrayUnion(x.Type))) {
 					e.usesLiveArrays = true
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS") {

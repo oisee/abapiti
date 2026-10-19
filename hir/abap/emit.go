@@ -2821,6 +2821,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		return
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+		if x.Op == "dynamic.asRef" && x.Owner != "" {
+			view := b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name)
+			b.line(n + " = " + view + "=>decode( " + a + " ).")
+			return
+		}
+		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.InterfaceRef && b.e.structuralUnion(x.Type) != "" {
+			b.liveUnbox(n, a, x.Type)
+			return
+		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array {
 			// A tagged array's as_ref returns the graph itself, not a typed
 			// table wrapper. Publish a live view instead of downcasting it.

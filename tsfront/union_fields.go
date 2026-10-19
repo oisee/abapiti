@@ -224,7 +224,8 @@ func (l *lowerer) unionFieldAccess(n *ast.Node) (*hir.Expr, bool) {
 	if recv == nil {
 		return nil, true
 	}
-	recv = l.dynamicReference(l.coerce(narrowPresent(n, recv), hir.T(hir.Dynamic)), hir.Ref(key))
+	recv = l.checkedStructuralUnion(narrowPresent(n, recv))
+	recv = l.dynamicReference(l.coerce(recv, hir.T(hir.Dynamic)), hir.Ref(key))
 	return &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Name: name, Type: result, X: recv}, true
 }
 

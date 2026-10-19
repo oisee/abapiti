@@ -62,6 +62,7 @@ func Verify(p *Program) []error {
 		v.interfaces[i.Name] = i
 	}
 	v.unionDeclarations()
+	v.structuralUnions()
 	for _, c := range p.Classes {
 		if c == nil {
 			continue
@@ -1067,6 +1068,17 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		}
 		args(nil)
 	case "dynamic.asRef":
+		// A named structural family certifies a checked member projection,
+		// independently of the representative used by its common interface.
+		if e.Owner != "" {
+			member := false
+			for _, m := range v.p.StructuralUnion(e.Owner) {
+				member = member || m.Type.Equal(e.Type)
+			}
+			if e.Type.Kind != ClassRef || !member || e.Name != "" {
+				v.fail(e.Node, "dynamic.asRef structural projection needs a declared family member")
+			}
+		}
 		if a.Kind != Dynamic || !(ref(t) || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet) {
 			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")
 		}
