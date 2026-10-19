@@ -48,3 +48,14 @@ func (l *lowerer) emptyArrayFallbackBase(left, right *ast.Node, base hir.Type) h
 	}
 	return base
 }
+
+// A checker-erased array can flow into a contextual string[] slot (and back).
+// These are the element domains supported by the checked live array runtime;
+// other primitive or tuple element layouts still require their own proof.
+func (l *lowerer) erasedStringArrayView(src, dst hir.Type) bool {
+	if !l.unprunedFeatures || src.Kind != hir.Array || dst.Kind != hir.Array || len(src.Args) != 1 || len(dst.Args) != 1 {
+		return false
+	}
+	a, b := src.Args[0].Kind, dst.Args[0].Kind
+	return a == hir.Dynamic && b == hir.String || a == hir.String && b == hir.Dynamic
+}

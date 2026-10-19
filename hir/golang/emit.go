@@ -78,7 +78,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
 				}
-				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic) {
 					e.usesLiveArrays = true
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS") {

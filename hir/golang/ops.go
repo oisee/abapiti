@@ -425,9 +425,12 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":
-		code = b.e.viewValue(x.Type, a)
+		code = b.e.viewValue(x.Type, "checkedArraySource("+a+", false)")
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
+		if x.Type.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic {
+			code = b.e.viewValue(x.Type, "checkedArraySource("+a+", true)")
+		}
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {
 			code = "dynMap[" + b.e.typ(x.Type.Args[1]) + "](" + a + ")"
 		}

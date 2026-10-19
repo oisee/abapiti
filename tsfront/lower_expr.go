@@ -3133,7 +3133,8 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 		}
 	}
 
-	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || !loose && (optionalBase(x.Type).Kind == hir.UnionRef || optionalBase(y.Type).Kind == hir.UnionRef) || l.structuralEqualityTypes(x.Type, y.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
+	arrayIdentity := optionalBase(x.Type).Kind == hir.Array && optionalBase(y.Type).Kind == hir.Array && !optionalBase(x.Type).Equal(optionalBase(y.Type))
+	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || !loose && (optionalBase(x.Type).Kind == hir.UnionRef || optionalBase(y.Type).Kind == hir.UnionRef) || l.structuralEqualityTypes(x.Type, y.Type) || arrayIdentity)
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")

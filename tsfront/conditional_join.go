@@ -173,7 +173,7 @@ func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type)
 		return true
 	}
 	if src.Kind == hir.Array && dst.Kind == hir.Array {
-		if emptyConditionalArray(n, x) || l.readonlyStringArrayView(n, src, dst) {
+		if emptyConditionalArray(n, x) || l.readonlyStringArrayView(n, src, dst) || l.erasedStringArrayView(src, dst) {
 			return true
 		}
 		// Structural reference elements use coerce's live array view, keeping

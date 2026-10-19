@@ -2574,7 +2574,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		b.arrayView(x.Type, n, a)
+		b.requiredArrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")

@@ -82,6 +82,14 @@ type liveArrayStorage interface {
  liveReverse()
  liveDelete(int32) bool
 }
+// Explicit erased-array conversions preserve the existing invalid-iterable
+// error domain. Field getters use liveArrayView directly so missing properties
+// remain observable as undefined until an operation actually consumes them.
+func checkedArraySource(d *dynamic,erased bool) *dynamic {
+ if erased {if d==nil {panic(newRangeFault())};if _,ok:=d.Value.(liveArrayStorage);!ok {panic(newRangeFault())}}
+ if d==nil {panic(newTrap("live typed array requires array storage"))}
+ return d
+}
 func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  if d==nil {return nil}
  a,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("live typed array requires array storage"))}

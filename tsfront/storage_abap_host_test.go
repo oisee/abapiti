@@ -28,7 +28,10 @@ func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMeth
 		if len(refusalException) > 0 {
 			exception = refusalException[0]
 		}
-		fmt.Fprintf(&unit, "TRY.\n%s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+refusedMethod), names.Get(exception))
+		if !strings.HasPrefix(exception, "cx_") {
+			exception = names.Get(exception)
+		}
+		fmt.Fprintf(&unit, "TRY.\n%s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+refusedMethod), exception)
 	}
 	fmt.Fprint(&unit, "ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()
