@@ -155,6 +155,22 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if n.Parent != nil && n.Parent.Kind == ast.KindCallExpression {
+		call := n.Parent.AsCallExpression()
+		if call.Arguments != nil {
+			for _, arg := range call.Arguments.Nodes {
+				if arg == n {
+					if context := l.ck.GetContextualType(n, 0); context != nil && context.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+						// The callee accepts the original value. A previous false
+						// type predicate may have excluded a class that still occurs
+						// at runtime; narrowing before the callee checks it would throw.
+						return x
+					}
+					break
+				}
+			}
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Array && (isArrayAssignment(n) || l.hint.Kind == hir.Array && l.hint.Args[0].Kind == hir.Optional && x.Type.Equal(l.hint)) {
 		// Array assignment preserves the actual RHS storage, including values
 		// that unchecked TypeScript array annotations fail to mark optional.

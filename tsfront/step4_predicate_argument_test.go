@@ -1,0 +1,27 @@
+package tsfront
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestStep4PredicateUnknownArgumentRetainsRuntimeValue(t *testing.T) {
+	source := `class A {kind=1;name():string{return "a";}}
+class B {name():string{return "b";}}
+function isA(value:unknown,kind:number):value is A {return value instanceof A && value.kind===kind;}
+function read(value:A|B):string {
+ if(isA(value,0)) return "zero";
+ return isA(value,1)?"one":"other";
+}
+function readArray(values:(A|B)[]):string {
+ if(isA(values[0],0)) return "zero";
+ return isA(values[0],1)?"one":"other";
+}
+class Probe {static run():string{return read(new A())+"|"+read(new B())+"|"+readArray([new A()])+"|"+readArray([new B()]);}}`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}
