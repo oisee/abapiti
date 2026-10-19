@@ -480,19 +480,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return mapped
 	}
 	if t.IsUnion() {
-		// Unlike arbitrary mixed null unions, a match array has a nullable
-		// reference ABI; no tagged Dynamic payload is needed.
-		matchArray, onlyMatch := false, true
-		for _, part := range t.AsUnionOrIntersectionType().Types() {
-			if part.Symbol() != nil && (part.Symbol().Name == "RegExpMatchArray" || part.Symbol().Name == "RegExpExecArray") && l.librarySymbol(part.Symbol()) {
-				matchArray = true
-			} else if part.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) == 0 {
-				onlyMatch = false
-			}
-		}
-		if matchArray && onlyMatch {
-			return hir.T(hir.Optional, hir.T(hir.Array, hir.T(hir.String)))
-		}
+		// Match-array null unions use the ordinary tagged-null mapping below;
+		// Optional alone only represents undefined, including during boxing.
 		if l.unprunedFeatures && len(l.familyShapes) > 0 {
 			// `F | undefined` for a published family F: its members map back
 			// to F (as family layouts do), not to separate payload classes.

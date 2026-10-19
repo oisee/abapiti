@@ -295,13 +295,6 @@ func (l *lowerer) conditionalConversion(n *ast.Node, x *hir.Expr, dst hir.Type) 
 	if x.Type.Equal(dst) {
 		return x
 	}
-	if dst.Kind == hir.Array && x.Kind == hir.RuntimeOp && x.Op == "dynamic.null" {
-		// RegExp.exec uses a nil array reference for a non-match. A null
-		// fallback in that same array join must retain absence, rather than
-		// ask the live array view to find storage inside a null value.
-		absent := l.conditionalAbsent(x.Node, hir.T(hir.Optional, dst))
-		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: absent}
-	}
 	if x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional {
 		return l.conditionalAbsent(x.Node, dst)
 	}

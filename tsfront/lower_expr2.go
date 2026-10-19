@@ -1042,6 +1042,15 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	}
 	saved := l.pend
 	l.pend = nil
+	if elem.Kind == hir.Dynamic {
+		// The nullish test guards this checked array view. Retain the
+		// array's typed operations (including match metadata) in the live
+		// branch rather than looking up native properties on an erased box.
+		typ := l.conditionalCheckerType(base, l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(base)))
+		if typ.Kind == hir.Array {
+			unwrapped = l.dynamicReference(unwrapped, typ)
+		}
+	}
 	value := l.withLocal(base, unwrapped, func() *hir.Expr {
 		switch n.Kind {
 		case ast.KindCallExpression:

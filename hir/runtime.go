@@ -22,6 +22,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"regexp.clone":              {RegExp, 0, false},
 	"regexp.flags":              {RegExp, 0, false},
 	"regexp.matchAllNext":       {RegExp, 1, true},
+	"regexp.boxMatch":           {Optional, 0, false},
 	"array.matchGroups":         {Array, 0, false},
 	"string.parseFloatNumber":   {String, 0, false},
 	"string.parseIntNumber":     {String, 0, false},
@@ -146,6 +147,11 @@ func optionalOf(t Type) Type {
 }
 
 func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
+	// Only this boundary interprets the regex runtime's absent array as null.
+	// Ordinary Optional absence remains JavaScript undefined.
+	if op == "regexp.boxMatch" {
+		return nil, T(Dynamic), t.Equal(T(Optional, T(Array, T(String))))
+	}
 	s, ok := RuntimeSpecs[op]
 	if !ok || s.Receiver != t.Kind || (t.Kind != String && len(t.Args) != map[Kind]int{Array: 1, OrderedMap: 2, OrderedSet: 1}[t.Kind]) {
 		return nil, Type{}, false

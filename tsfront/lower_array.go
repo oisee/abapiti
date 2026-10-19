@@ -34,3 +34,17 @@ func (l *lowerer) emptyArrayLiteral(n *ast.Node) *hir.Expr {
 	l.diagf(n, "unsupported-array", "empty array literal needs an inferable contextual element type")
 	return nil
 }
+
+// A fresh [] fallback can use the checker's proven non-null array ABI even
+// when the nullable source needs tagged storage. Only the selected present
+// branch is unboxed; no existing array storage is copied or reinterpreted.
+func (l *lowerer) emptyArrayFallbackBase(left, right *ast.Node, base hir.Type) hir.Type {
+	if base.Kind != hir.Dynamic || right.Kind != ast.KindArrayLiteralExpression || len(right.AsArrayLiteralExpression().Elements.Nodes) != 0 {
+		return base
+	}
+	typ := l.conditionalCheckerType(left, l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(left)))
+	if typ.Kind == hir.Array {
+		return typ
+	}
+	return base
+}
