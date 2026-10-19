@@ -2,6 +2,7 @@ package tsfront
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -23,4 +24,5 @@ func TestStep4NullableArrayFallbackNodeOracle(t *testing.T) {
 	if got != want {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(want), "")
 }
