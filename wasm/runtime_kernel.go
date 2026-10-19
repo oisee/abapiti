@@ -8,6 +8,8 @@ import (
 
 func kernelRuntimeBody(name string) string {
 	switch name {
+	case "div_s32", "rem_s32", "div_s64", "rem_s64":
+		return signedDivisionBody(strings.HasSuffix(name, "64"), strings.HasPrefix(name, "rem"))
 	case "div_u32", "rem_u32":
 		op := "DIV"
 		if name == "rem_u32" {
@@ -16,6 +18,7 @@ func kernelRuntimeBody(name string) string {
 		return `DATA lv_a TYPE int8.
 DATA lv_b TYPE int8.
 DATA lv_result TYPE int8.
+IF iv_b = 0. ` + wasmTrap + ` ENDIF.
 lv_a = iv_a.
 lv_b = iv_b.
 IF lv_a < 0. lv_a = lv_a + 4294967296. ENDIF.
@@ -168,7 +171,7 @@ DATA lv_q TYPE int8.
 DATA lv_r TYPE int8.
 DATA lv_bit TYPE int8.
 DATA lv_carry TYPE int8.
-IF iv_b = 0. rv = iv_a DIV iv_b. RETURN. ENDIF.
+IF iv_b = 0. ` + wasmTrap + ` ENDIF.
 IF iv_b < 0.
   lv_q = 0.
   lv_r = iv_a.
@@ -183,8 +186,9 @@ ELSEIF iv_a >= 0.
   lv_q = iv_a DIV iv_b.
   lv_r = iv_a MOD iv_b.
 ELSE.
-  lv_half = iv_a DIV 2 + 9223372036854775807 + 1.
-  lv_bit = iv_a MOD 2.
+  lv_half = iv_a + 9223372036854775807 + 1.
+  lv_bit = lv_half MOD 2.
+  lv_half = lv_half DIV 2 + 4611686018427387904.
   lv_q = lv_half DIV iv_b.
   lv_r = lv_half MOD iv_b.
   lv_carry = 0.
@@ -201,6 +205,61 @@ ELSE.
   lv_q = lv_q * 2 + lv_carry.
 ENDIF.
 rv = ` + result + `.`
+}
+
+// Divide non-negative magnitudes, then restore the WASM sign. For INT64_MIN,
+// divide |a|-1 and carry the missing unit through the remainder. Divisors of
+// magnitude 2^63 and quotients of magnitude 2^63 are handled before negation.
+func signedDivisionBody(is64, remainder bool) string {
+	min := "-2147483648"
+	if is64 {
+		min = "( 0 - 9223372036854775807 - 1 )"
+	}
+	body := `DATA lv_a TYPE int8.
+DATA lv_b TYPE int8.
+DATA lv_q TYPE int8.
+DATA lv_r TYPE int8.
+IF iv_b = 0. ` + wasmTrap + ` ENDIF.
+`
+	if !remainder {
+		body += "IF iv_a = " + min + " AND iv_b = -1. " + wasmTrap + " ENDIF.\n"
+	}
+	if is64 {
+		body += "IF iv_b = " + min + ".\n"
+		if remainder {
+			body += "IF iv_a = iv_b. rv = 0. ELSE. rv = iv_a. ENDIF.\n"
+		} else {
+			body += "IF iv_a = iv_b. rv = 1. ELSE. rv = 0. ENDIF.\n"
+		}
+		body += "RETURN.\nENDIF.\n"
+		body += "IF iv_a = " + min + " AND ( iv_b = 1 OR iv_b = -1 ).\n"
+		if remainder {
+			body += "rv = 0.\n"
+		} else {
+			body += "rv = iv_a.\n"
+		}
+		body += "RETURN.\nENDIF.\n"
+	}
+	body += `lv_b = iv_b.
+IF lv_b < 0. lv_b = 0 - lv_b. ENDIF.
+lv_a = iv_a.
+`
+	if is64 {
+		body += "IF iv_a = " + min + ".\nlv_a = 0 - ( iv_a + 1 ).\nENDIF.\n"
+	}
+	body += `IF lv_a < 0. lv_a = 0 - lv_a. ENDIF.
+lv_q = lv_a DIV lv_b.
+lv_r = lv_a MOD lv_b.
+`
+	if is64 {
+		body += "IF iv_a = " + min + ".\nlv_r = lv_r + 1.\nIF lv_r = lv_b.\nlv_q = lv_q + 1.\nlv_r = 0.\nENDIF.\nENDIF.\n"
+	}
+	if remainder {
+		body += "IF iv_a < 0. lv_r = 0 - lv_r. ENDIF.\nrv = lv_r."
+	} else {
+		body += "IF ( iv_a < 0 AND iv_b > 0 ) OR ( iv_a >= 0 AND iv_b < 0 ).\nlv_q = 0 - lv_q.\nENDIF.\nrv = lv_q."
+	}
+	return body
 }
 
 func count64Body(name string) string {
