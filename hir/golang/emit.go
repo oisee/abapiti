@@ -543,6 +543,7 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	if e.liveClasses[c.Name] {
 		e.line("viewSource *dynamic")
+		e.line("viewCheck func(*dynamic)")
 	}
 	// Only materializable data shapes can acquire a dynamic source. Other
 	// objects still escape normally, but need no permanently nil source slot.

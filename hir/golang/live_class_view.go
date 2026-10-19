@@ -42,7 +42,17 @@ func (e *emitter) arrayReference(t hir.Type, value string) string {
 // liveView retains native references unchanged and attaches a data-only layout
 // to structural storage. All embedded ancestor layouts share that same source.
 func (e *emitter) liveView(t hir.Type) string {
-	name := e.name("view." + t.Name)
+	return e.liveViewMode(t, false)
+}
+
+// A member projection needs its own provenance guard. A fresh wrapper leaves
+// the original native object untouched and keeps identity through viewSource.
+func (e *emitter) liveViewMode(t hir.Type, fresh bool) string {
+	key := "view." + t.Name
+	if fresh {
+		key += ".fresh"
+	}
+	name := e.name(key)
 	if e.liveViews == nil {
 		e.liveViews = map[string]bool{}
 	}
@@ -53,7 +63,10 @@ func (e *emitter) liveView(t hir.Type) string {
 	var b strings.Builder
 	line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
 	line("func %s(d *dynamic) %s {", name, e.typ(t))
-	line("if d==nil {return nil};if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
+	line("if d==nil {return nil}")
+	if !fresh {
+		line("if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
+	}
 	if !hir.DataClassView(e.p, t.Name) {
 		line("panic(newTrap(%q))", "structural class view requires data-only public ancestry: "+t.Name)
 	} else {
@@ -147,7 +160,7 @@ func (e *emitter) liveFields(c *hir.Class) {
 		}
 		read := e.name("view.read." + c.Name + "." + f.Name)
 		write := e.name("view.write." + c.Name + "." + f.Name)
-		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};%sif self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), e.unionPayloadGuard(c.Name), f.Name, e.viewValueWithLocal(f.Type, "d", true), e.member(f.Name))
+		e.line("func (self *%s) %s() %s {if self==nil {panic(newRangeFault())};%sif self.viewSource!=nil {d:=self.viewSource.get(str(%q));return %s};return self.%s}", e.obj(c.Name), read, e.typ(f.Type), "if self.viewCheck!=nil {self.viewCheck(self.viewSource)};"+e.unionPayloadGuard(c.Name), f.Name, e.viewValueWithLocal(f.Type, "d", true), e.member(f.Name))
 		value := "box(value)"
 		if f.Type.Kind == hir.Optional && !f.Type.Args[0].IsRef() {
 			value = "func() *dynamic {if !value.Has {return nil};return box(value.Value)}()"

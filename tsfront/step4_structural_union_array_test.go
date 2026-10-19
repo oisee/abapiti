@@ -81,7 +81,11 @@ func TestStep4StructuralUnionArrayObservables(t *testing.T) {
 			if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
 				t.Fatal(got)
 			}
-			storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(string(want)), method)
+			exception := "view.refusal"
+			if method == "invalidAlias" {
+				exception = "cx_sy_range_out_of_bounds"
+			}
+			storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(string(want)), method, exception)
 		})
 	}
 
@@ -314,5 +318,102 @@ func TestStep4StructuralUnionArrayOverlapAliases(t *testing.T) {
 	if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
 		t.Fatal(got)
 	}
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(string(want)), "invalid", "cx_sy_range_out_of_bounds")
+}
+
+const structuralMemberGuardSource = `interface Left {readonly kind:"left";name:string;readonly required:number}
+interface Right {readonly kind:"right";name:string;readonly other:string}
+interface Bag {readonly items:readonly (Left|Right)[]}
+class Probe {
+ static run():string {const raw=JSON.parse('{"items":[{"kind":"left","name":"a","required":1}]}');const bag=raw as Bag;const member=bag.items[0] as Left;raw.items[0].name="live";return (member===raw.items[0])+":"+member.name+"|"+Probe.native();}
+ static native():string {const original:Left={kind:"left",name:"a",required:1};const raw:any=original;const bag:any={items:[original]};const view=bag as Bag;const member=view.items[0] as Left;raw.name="live";return (member===original)+":"+member.name;}
+ static invalid():void {const raw=JSON.parse('{"items":[{"kind":"left","name":"a","required":1}]}');const bag=raw as Bag;const member=bag.items[0] as Left;raw.items[0].kind="bad";const name=member.name;}
+ static invalidRequired():void {const raw=JSON.parse('{"items":[{"kind":"left","name":"a","required":1}]}');const bag=raw as Bag;const member=bag.items[0] as Left;raw.items[0].required="bad";const name=member.name;}
+ static invalidNative():void {const original:Left={kind:"left",name:"a",required:1};const raw:any=original;const bag:any={items:[original]};const view=bag as Bag;const member=view.items[0] as Left;raw.kind="bad";const name=member.name;}
+ static invalidNativeRequired():void {const original:Left={kind:"left",name:"a",required:1};const raw:any=original;const bag:any={items:[original]};const view=bag as Bag;const member=view.items[0] as Left;raw.required="bad";const name=member.name;}
+}`
+
+func TestStep4StructuralMemberGuard(t *testing.T) {
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, structuralMemberGuardSource).CombinedOutput()
+	if err != nil || string(want) != "true:live|true:live\n" {
+		t.Fatal(err, string(want))
+	}
+	p := structuralUnionProgram(t, structuralMemberGuardSource)
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "true:live|true:live\n" {
+		t.Fatal(got)
+	}
+	// Native required-field writes already enforce the numeric storage domain;
+	// parsed writes can succeed and must be caught by the unrelated getter.
+	for _, method := range []string{"invalid", "invalidRequired", "invalidNative", "invalidNativeRequired"} {
+		t.Run(method, func(t *testing.T) {
+			main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("retained member must revalidate")};fmt.Println("refused")}();%s()`, goEntry("probe.ts.Probe", method))
+			if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
+				t.Fatal(got)
+			}
+			exception := "view.refusal"
+			if method == "invalidNativeRequired" {
+				exception = "cx_sy_move_cast_error"
+			}
+			storageABAPProbe(t, p, "probe.ts.Probe", "true:live|true:live", method, exception)
+		})
+	}
+}
+
+const structuralNestedDirectSource = `interface A {readonly kind:"a";readonly name:string}
+interface B {readonly kind:"b";readonly name:string}
+class Probe {
+ static run():string {const raw=JSON.parse('[[{"kind":"a","name":"A"}]]');const rows=raw as (readonly (A|B)[])[];const before=rows[0][0];raw[0][0].name="live";const alias:any[]=raw[0];alias.push({kind:"b",name:"late"});return (rows===raw)+":"+(rows[0]===raw[0])+":"+(before===raw[0][0])+":"+before.name+":"+rows[0][1].name;}
+ static invalid():void {const raw=JSON.parse('[[{"kind":"a","name":"A"}]]');const rows=raw as (readonly (A|B)[])[];raw[0][0]={kind:"bad",name:"bad"};const name=rows[0][0].name;}
+}`
+
+func TestStep4StructuralNestedDirectArray(t *testing.T) {
+	p := structuralUnionProgram(t, structuralNestedDirectSource)
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "true:true:true:live:late\n" {
+		t.Fatal(got)
+	}
+	main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("nested replacement must refuse")};fmt.Println("refused")}();%s()`, goEntry("probe.ts.Probe", "invalid"))
+	if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
+		t.Fatal(got)
+	}
+	storageABAPProbe(t, p, "probe.ts.Probe", "true:true:true:live:late", "invalid")
+}
+
+const structuralNestedOptionalSource = `interface A {readonly kind:"a";readonly name:string}
+interface B {readonly kind:"b";readonly name:string}
+class Probe {
+ static run():string {const raw=JSON.parse('[null,[null,{"kind":"a","name":"A"}]]');raw[0]=undefined;raw[1][0]=undefined;const rows=raw as (readonly (A|B|undefined)[]|undefined)[];const inner=rows[1]!;const first=inner[1]!;raw[1][1].name="live";const alias:any[]=raw[1];alias.push({kind:"b",name:"late"});return (rows===raw)+":"+(inner===raw[1])+":"+(first===raw[1][1])+":"+(rows[0]===undefined)+":"+(inner[0]===undefined)+":"+first.name+":"+inner[2]!.name;}
+ static invalid():void {const raw=JSON.parse('[null,[null,{"kind":"a","name":"A"}]]');raw[0]=undefined;raw[1][0]=undefined;const rows=raw as (readonly (A|B|undefined)[]|undefined)[];raw[1][1]={kind:"bad",name:"bad"};const name=rows[1]![1]!.name;}
+}`
+
+func TestStep4StructuralNestedOptionalArray(t *testing.T) {
+	p := structuralUnionProgram(t, structuralNestedOptionalSource)
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, structuralNestedOptionalSource).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("nested optional replacement must refuse")};fmt.Println("refused")}();%s()`, goEntry("probe.ts.Probe", "invalid"))
+	if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
+		t.Fatal(got)
+	}
 	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(string(want)), "invalid")
+}
+
+// An explicit checked asRef uses the ordinary host error lane; implicit views keep
+// their distinct refusal lane (covered by the invalid array/getter probes).
+func TestStep4StructuralUnionAsRefHostLane(t *testing.T) {
+	source := `interface A {readonly kind:"a";readonly name:string}
+ interface B {readonly kind:"b";readonly name:string}
+ class Probe {static read(raw:any):string{const x=raw as A|B;return x.name;} static run():string{return Probe.read(JSON.parse('{"kind":"a","name":"ok"}'));} static invalid():void{Probe.read(JSON.parse('{"kind":"bad","name":"bad"}'));}}`
+	p := structuralUnionProgram(t, source)
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != "ok\n" {
+		t.Fatal(got)
+	}
+	main := fmt.Sprintf(`defer func(){if _,ok:=recover().(rangeFault);!ok {panic("checked asRef must refuse")};fmt.Println("refused")}();%s()`, goEntry("probe.ts.Probe", "invalid"))
+	if got := runStructuralUnionGo(t, p, main); got != "refused\n" {
+		t.Fatal(got)
+	}
+	storageABAPProbe(t, p, "probe.ts.Probe", "ok", "invalid", "cx_sy_range_out_of_bounds")
 }

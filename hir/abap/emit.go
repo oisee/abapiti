@@ -2823,17 +2823,23 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
 		if x.Op == "dynamic.asRef" && x.Owner != "" {
 			view := b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name)
-			b.line(n + " = " + view + "=>decode( " + a + " ).")
+			b.line(n + " = " + view + "=>convert( " + a + " ).")
 			return
 		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.InterfaceRef && b.e.structuralUnion(x.Type) != "" {
-			b.liveUnbox(n, a, x.Type)
+			b.line(n + " = " + b.e.structuralUnion(x.Type) + "=>convert( " + a + " ).")
 			return
 		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array {
 			// A tagged array's as_ref returns the graph itself, not a typed
 			// table wrapper. Publish a live view instead of downcasting it.
+			if b.e.p.StructuralArrayUnion(x.Type) {
+				b.line("TRY.")
+			}
 			b.arrayView(x.Type, n, a)
+			if b.e.p.StructuralArrayUnion(x.Type) {
+				b.line("CATCH " + b.e.name("view.refusal") + ".\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDTRY.")
+			}
 			return
 		}
 		// The box methods use snake_case ABAP names.

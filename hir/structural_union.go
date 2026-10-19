@@ -19,7 +19,10 @@ func (p *Program) StructuralArrayUnion(t Type) bool {
 		return false
 	}
 	elem := t.Args[0]
-	if elem.Kind == Optional {
+	for elem.Kind == Optional || elem.Kind == Array {
+		if len(elem.Args) != 1 {
+			return false
+		}
 		elem = elem.Args[0]
 	}
 	return elem.Kind == InterfaceRef && len(p.StructuralUnion(elem.Name)) > 0
@@ -60,6 +63,7 @@ func (v *verifier) structuralUnions() {
 				}
 			}
 			for _, f := range m.Fields {
+				v.typ(i.Node, f.Type)
 				t, ok := fields[f.Name]
 				if !ok || !t.Equal(f.Type) {
 					v.fail(i.Node, "structural union field does not match payload layout")
@@ -67,6 +71,9 @@ func (v *verifier) structuralUnions() {
 				delete(fields, f.Name)
 				base := f.Type
 				if base.Kind == Optional {
+					if len(base.Args) != 1 {
+						continue
+					}
 					base = base.Args[0]
 				}
 				if f.Optional && f.Type.Kind != Optional && !base.IsRef() {

@@ -543,9 +543,10 @@ type lowerer struct {
 	nsNeeded map[string]bool
 	require  *requireBindings // static createRequire bindings (require_binding.go)
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
-	views    map[string]*hir.Interface
-	unions   map[string]*unionView
-	abiReady bool
+	views                  map[string]*hir.Interface
+	unions                 map[string]*unionView
+	structuralUnionSources map[string]*checker.Type
+	abiReady               bool
 	// Interface heritage (lower_iface_heritage.go).
 	ifaceDone       map[*hir.Interface]bool
 	ifaceBases      map[*hir.Interface][]*hir.Interface

@@ -59,18 +59,43 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 			b.structuralField(valid, adapter, f)
 		}
 		b.line("IF " + valid + " = abap_true.")
-		native := b.temp(m.Type)
-		b.line("IF p0->tag = " + d + "=>tag_ref.\nTRY.\n" + native + " ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF " + native + " IS BOUND.\nresult = " + native + ".\nRETURN.\nENDIF.\nENDIF.")
-		row := b.temp(m.Type)
-		if e.liveClasses[m.Type.Name] {
-			b.liveView(&hir.Expr{Type: m.Type}, row, "p0")
+		if member != "" {
+			b.line("result = p0.\nRETURN.\nENDIF.")
 		} else {
-			b.line("RAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union member has no live data layout`.")
+			native := b.temp(m.Type)
+			b.line("IF p0->tag = " + d + "=>tag_ref.\nTRY.\n" + native + " ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF " + native + " IS BOUND.\nresult = " + native + ".\nRETURN.\nENDIF.\nENDIF.")
+			row := b.temp(m.Type)
+			if e.liveClasses[m.Type.Name] {
+				b.liveView(&hir.Expr{Type: m.Type}, row, "p0")
+			} else {
+				b.line("RAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union member has no live data layout`.")
+			}
+			b.line("result = " + row + ".\nRETURN.\nENDIF.")
 		}
-		b.line("result = " + row + ".\nRETURN.\nENDIF.")
 	}
 	b.line("RAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `value is outside structural union members`.")
-	e.files[file] = "CLASS " + name + " DEFINITION PUBLIC FINAL CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS decode IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE " + e.typ(result) + ".\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD decode.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\nENDCLASS.\n"
+	method := func(name string, b *body) string {
+		return "METHOD " + name + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n"
+	}
+	definition := "CLASS " + name + " DEFINITION PUBLIC FINAL CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS decode IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE " + e.typ(result) + ".\nCLASS-METHODS convert IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE " + e.typ(result) + ".\n"
+	implementation := ""
+	if member != "" {
+		guard := e.name("view.guard")
+		definition += "INTERFACES " + guard + ".\nCLASS-METHODS validate IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE REF TO " + d + ".\n"
+		implementation += method("validate", b)
+		decode := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}}
+		checked := decode.temp(hir.T(hir.Dynamic))
+		decode.line(checked + " = validate( p0 ).")
+		decode.liveView(&hir.Expr{Type: result}, "result", checked, true)
+		decode.line("result->" + e.name("view.guardSlot") + " = NEW " + name + "( ).")
+		implementation += method("decode", decode)
+		implementation += "METHOD " + guard + "~check.\nDATA checked TYPE REF TO " + d + ".\nchecked = validate( p0 ).\nENDMETHOD.\n"
+	} else {
+		implementation += method("decode", b)
+	}
+	implementation += "METHOD convert.\nTRY.\nresult = decode( p0 ).\nCATCH " + refusal + ".\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDTRY.\nENDMETHOD.\n"
+	e.files[file] = definition + "ENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + implementation + "ENDCLASS.\n"
+
 	return name
 }
 

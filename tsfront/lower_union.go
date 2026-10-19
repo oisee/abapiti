@@ -231,19 +231,7 @@ func (l *lowerer) structuralUnionMembers(parts []hir.Type) []hir.StructuralMembe
 		if part.Kind != hir.ClassRef || c == nil || !c.Structural || !hir.DataClassView(l.out, c.Name) {
 			return nil
 		}
-		var source *checker.Type
-		for sym, candidate := range l.classes {
-			if candidate.Name == c.Name {
-				source = l.ck.GetDeclaredTypeOfSymbol(sym)
-				break
-			}
-		}
-		for sym, candidate := range l.synths {
-			if candidate.Name == c.Name {
-				source = l.ck.GetDeclaredTypeOfSymbol(sym)
-				break
-			}
-		}
+		source := l.structuralUnionSource(c.Name)
 		if source == nil {
 			return nil
 		}
@@ -351,12 +339,9 @@ func (l *lowerer) structuralUnionProjection(src, dst hir.Type) bool {
 	if src.Kind != hir.InterfaceRef || dst.Kind != hir.ClassRef || !l.shapeLike[dst.Name] {
 		return false
 	}
-	for _, view := range l.unions {
-		if view.iface.Name != src.Name {
-			continue
-		}
+	if view := l.structuralReferenceUnion(src); view != nil {
 		for _, part := range view.parts {
-			if part.Kind != hir.ClassRef || !l.shapeLike[part.Name] || part.Equal(dst) {
+			if part.Equal(dst) {
 				return false
 			}
 		}
@@ -374,13 +359,51 @@ func (l *lowerer) structuralReferenceUnion(t hir.Type) *unionView {
 			continue
 		}
 		for _, part := range view.parts {
-			if part.Kind != hir.ClassRef || !l.shapeLike[part.Name] || !hir.DataClassView(l.out, part.Name) {
+			if part.Kind != hir.ClassRef || !l.shapeLike[part.Name] || !hir.DataClassView(l.out, part.Name) || l.structuralUnionSource(part.Name) == nil {
 				return nil
 			}
 		}
 		return view
 	}
 	return nil
+}
+
+// Reused physical layouts are not source-domain proofs. Anonymous family
+// views can share a layout without having a declaration for every slot; keep
+// their existing native boundary instead of emitting an unprovable projection.
+func (l *lowerer) structuralUnionSource(name string) *checker.Type {
+	source := l.structuralUnionSources[name]
+	if source == nil {
+		for sym, candidate := range l.classes {
+			if candidate.Name == name {
+				source = l.ck.GetDeclaredTypeOfSymbol(sym)
+				break
+			}
+		}
+	}
+	if source == nil {
+		for sym, candidate := range l.synths {
+			if candidate.Name == name {
+				source = l.ck.GetDeclaredTypeOfSymbol(sym)
+				break
+			}
+		}
+	}
+	if source == nil {
+		return nil
+	}
+	for c := l.classByName(name); c != nil; c = l.classByName(c.Super) {
+		for _, field := range c.Fields {
+			if !field.Static && l.ck.GetPropertyOfType(source, field.Name) == nil {
+				return nil
+			}
+		}
+	}
+	if l.structuralUnionSources == nil {
+		l.structuralUnionSources = map[string]*checker.Type{}
+	}
+	l.structuralUnionSources[name] = source
+	return source
 }
 
 func (l *lowerer) checkedStructuralUnion(x *hir.Expr) *hir.Expr {

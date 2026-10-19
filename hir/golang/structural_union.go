@@ -53,7 +53,13 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	e.liveViews[name] = true
 	var b strings.Builder
 	line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
-	line("func %s(d *dynamic) %s {", name, e.typ(result))
+	check := name
+	if member != "" {
+		check = e.name(key + ".check")
+		line("func %s(d *dynamic) *dynamic {", check)
+	} else {
+		line("func %s(d *dynamic) %s {", name, e.typ(result))
+	}
 	line("if d==nil {panic(newRangeFault())}")
 	line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newRangeFault())}}")
 	line("keys:=dynamicKeys(d);_ = keys")
@@ -66,14 +72,25 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 			}
 			line("{v:=d.get(str(%q));_ = v;if !(%s) {valid=false}}", f.Name, condition)
 		}
-		line("if valid && d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(m.Type))
-		if e.liveClasses[m.Type.Name] {
-			line("if valid {return %s(d)}}", e.liveView(m.Type))
+		if member != "" {
+			line("if valid {return d}}")
 		} else {
-			line("if valid {panic(newRangeFault())}}")
+			line("if valid && d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(m.Type))
+			if e.liveClasses[m.Type.Name] {
+				line("if valid {return %s(d)}}", e.liveView(m.Type))
+			} else {
+				line("if valid {panic(newRangeFault())}}")
+			}
 		}
 	}
 	line("panic(newRangeFault())}")
+	if member != "" {
+		line("func %s(d *dynamic) %s {d=%s(d);out:=%s(d)", name, e.typ(result), check, e.liveViewMode(result, true))
+		for c := e.classBy(result.Name); c != nil; c = e.classBy(c.Super) {
+			line("out.%s().viewCheck=func(source *dynamic){%s(source)}", e.getter(c.Name), check)
+		}
+		line("return out}")
+	}
 	e.extra.WriteString(b.String())
 	return name
 }

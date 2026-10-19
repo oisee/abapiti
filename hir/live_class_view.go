@@ -67,10 +67,7 @@ func classViewTargets(p *Program) map[string]bool {
 				out[x.Type.Name] = true
 			}
 			t := x.Type
-			if t.Kind == Array {
-				t = t.Args[0]
-			}
-			if t.Kind == Optional {
+			for t.Kind == Array || t.Kind == Optional {
 				t = t.Args[0]
 			}
 			if t.Kind == InterfaceRef {

@@ -20,6 +20,7 @@ func TestStructuralUnionMembershipMetadata(t *testing.T) {
 		func() { a.Implements = nil },
 		func() { iface.StructuralMembers[0].Fields = nil },
 		func() { iface.StructuralMembers[0].Fields[0].Type = T(Number) },
+		func() { iface.StructuralMembers[0].Fields[0].Type = T(Optional) },
 		func() {
 			iface.StructuralMembers[0].Fields[0].Domains = []StructuralDomain{{Kind: Number, Exact: true, Literal: "1); panic(0)"}}
 		},
@@ -52,5 +53,30 @@ func TestStructuralUnionMemberProjectionTyping(t *testing.T) {
 	method.Result = projection.Type
 	if len(Verify(p)) == 0 {
 		t.Fatal("unrelated member projection accepted")
+	}
+}
+
+// Optional storage carries undefined, never null. Null needs tagged Dynamic storage.
+func TestStructuralUnionNullDomainStorage(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		typ      Type
+		accepted bool
+	}{
+		{"string", T(String), false}, {"optional-string", T(Optional, T(String)), false}, {"dynamic", T(Dynamic), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			member := func(name string) StructuralMember {
+				return StructuralMember{Type: Ref(name), Fields: []StructuralField{{Name: "value", Type: tc.typ, Domains: []StructuralDomain{{Kind: "null"}}}}}
+			}
+			row := func(name string) *Class {
+				return &Class{Name: name, Structural: true, Implements: []string{"Rows"}, Fields: []Field{{Name: "value", Type: tc.typ}}}
+			}
+			p := &Program{Classes: []*Class{row("A"), row("B")}, Interfaces: []*Interface{{Name: "Rows", StructuralMembers: []StructuralMember{member("A"), member("B")}}}}
+			errors := Verify(p)
+			if (len(errors) == 0) != tc.accepted {
+				t.Fatalf("accepted=%v errors=%v", tc.accepted, errors)
+			}
+		})
 	}
 }
